@@ -15,6 +15,11 @@ class HoldoutBudgetExhausted(RuntimeError):
     pass
 
 
+# Keep the development sequence deterministic so a campaign can be extended
+# safely when a tier requests more seeds than an older manifest stored.
+DEFAULT_DEV_SEEDS = (101, 211, 307, 401, 503, 607, 709, 809)
+
+
 @dataclass(frozen=True)
 class SeedReservation:
     split: str
@@ -46,7 +51,15 @@ class Campaign:
             raise FileExistsError("campaign already exists")
         secret = secrets.token_bytes(32)
         secret_path.write_bytes(secret)
-        manifest = {"schema_version": 1, "campaign_id": secrets.token_hex(8), "dev_seeds": [101, 211, 307], "holdout_uses": 0, "max_holdout_uses": int(max_holdout_uses), "thresholds_locked": False, "runs": []}
+        manifest = {
+            "schema_version": 1,
+            "campaign_id": secrets.token_hex(8),
+            "dev_seeds": list(DEFAULT_DEV_SEEDS),
+            "holdout_uses": 0,
+            "max_holdout_uses": int(max_holdout_uses),
+            "thresholds_locked": False,
+            "runs": [],
+        }
         _atomic_json(manifest_path, manifest)
         return cls(directory, manifest, secret)
 
@@ -64,7 +77,18 @@ class Campaign:
     def reserve(self, split: str, tier: str) -> SeedReservation:
         tier_config = load_config(None).tier(tier)
         if split == "dev":
-            seeds = tuple(self.manifest["dev_seeds"][: tier_config.dev_seeds])
+            stored = [int(seed) for seed in self.manifest.get("dev_seeds", [])]
+            if len(stored) < tier_config.dev_seeds:
+                for seed in DEFAULT_DEV_SEEDS:
+                    if seed not in stored:
+                        stored.append(seed)
+                    if len(stored) >= tier_config.dev_seeds:
+                        break
+                if len(stored) < tier_config.dev_seeds:
+                    raise ValueError("development seed schedule is shorter than requested tier")
+                self.manifest["dev_seeds"] = stored
+                self._save()
+            seeds = tuple(stored[: tier_config.dev_seeds])
             attempt = None
             commitment = hashlib.sha256(json.dumps(list(seeds)).encode("utf-8")).hexdigest()
         elif split == "holdout":

@@ -286,36 +286,6 @@ def _center_attention_k(
     return (grouped - center).reshape_as(dense)
 
 
-def _attention_heavy_tail_guard(
-    calib_qkv_list: Sequence[dict[str, Any]],
-    head_dim: int,
-) -> bool:
-    """Detect a broad K tail before enabling midrange centering.
-
-    Midrange centering can amplify block-scale error for long, heavy-tailed
-    heads. The guard uses only calibration K magnitudes and no scenario name;
-    it is deliberately restricted to larger heads where the observed failure
-    is stable and the extra quantile cost is negligible relative to attention
-    calibration.
-    """
-
-    if int(head_dim) < 128:
-        return False
-    samples: list[torch.Tensor] = []
-    for sample in calib_qkv_list:
-        k = _dequantize_nvfp4_float32(*sample["k"])
-        rows = _sample_rows(k, 2048).abs().reshape(-1)
-        if int(rows.numel()) > 0:
-            samples.append(rows)
-    if not samples:
-        return False
-    values = torch.cat(samples)
-    median = torch.quantile(values, torch.tensor(0.50, dtype=values.dtype))
-    upper = torch.quantile(values, torch.tensor(0.99, dtype=values.dtype))
-    tail_ratio = upper / median.clamp_min(_EPS)
-    return bool(float(tail_ratio) > 6.0)
-
-
 def _e6m2_encode_nearest(value: torch.Tensor) -> torch.Tensor:
     """Encode non-negative FP32 values into finite unsigned E6M2 codes.
 
@@ -1560,9 +1530,6 @@ def hif4_calibration_attention(
     flat_attention_profile = bool(
         float(attention_pressure_span) < _ATTN_FLAT_PRESSURE_SPAN
     )
-    heavy_tail_guard = _attention_heavy_tail_guard(
-        calib_qkv_list, head_dim
-    )
     identity_d = torch.ones(
         kv_num_heads,
         head_dim,
@@ -1919,13 +1886,6 @@ def hif4_calibration_attention(
             best_budget_objective = candidate_objective
 
     q_refine_ratio, k_refine_ratio, v_refine_ratio = best_refine_ratios
-    # Keep calibration-derived importance and smoothing, but avoid applying a
-    # midrange K shift online when a large head has a broad calibration tail.
-    # The shift is an exact attention invariance before quantization, yet its
-    # finite-precision interaction is harmful for this distribution.
-    online_center_mode = (
-        0 if heavy_tail_guard and best_center_mode == 2 else best_center_mode
-    )
 
     offsets = torch.tensor(_DYNAMIC_OFFSETS, dtype=torch.int8, device="cpu")
     top_ranks = torch.tensor(
@@ -1961,12 +1921,12 @@ def hif4_calibration_attention(
         "head_dim": int(head_dim),
         "refine_mode": int(best_refine_mode),
         "flat_profile": bool(flat_attention_profile),
-        "version": 10,
+        "version": 9,
     }
     k_state = {
         "multiplier": k_multiplier_state,
         "permutation": k_permutation_state,
-        "center_mode": int(online_center_mode),
+        "center_mode": int(best_center_mode),
         "importance": _cpu_state_tensor(h_q_for_k),
         "offsets": offsets.clone(),
         "top_ranks": top_ranks.clone(),
@@ -1979,8 +1939,7 @@ def hif4_calibration_attention(
         "head_dim": int(head_dim),
         "refine_mode": int(best_refine_mode),
         "flat_profile": bool(flat_attention_profile),
-        "heavy_tail_guard": bool(heavy_tail_guard),
-        "version": 10,
+        "version": 9,
     }
     v_state = {
         "offsets": offsets.clone(),
@@ -1994,8 +1953,7 @@ def hif4_calibration_attention(
         "head_dim": int(head_dim),
         "refine_mode": int(best_refine_mode),
         "flat_profile": bool(flat_attention_profile),
-        "heavy_tail_guard": bool(heavy_tail_guard),
-        "version": 10,
+        "version": 9,
     }
     return {"q_state": q_state, "k_state": k_state, "v_state": v_state}
 

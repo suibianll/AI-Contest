@@ -8,7 +8,8 @@ HiF4 基准计算分数，再把结果写成可审计的 JSON 报告。现阶段
 
 ## 当前基线
 
-下载的 v9 `solution.py` 已按原始字节固化为初始 Champion，SHA256 为：
+下载的 v9 代码已按原始字节固化到 `solution_v9_champion.py`，作为初始 Champion；当前待评估、后续可自动修改的竞赛主代码仍是 `solution.py`。
+初始 Champion SHA256 为：
 
 ```text
 a6b8b858156164333d1d3ca25c6233b4845061f40a16d4cf74695ecdbb9041f7
@@ -35,13 +36,13 @@ Torch 的可选互操作提示，不代表系统使用 NumPy 模拟。
 
 ## 常用命令
 
-先固化 Champion：
+首次建立注册表时固化 v9 Champion（只执行一次）：
 
 ```powershell
-.\.venv\Scripts\python cli.py init --champion solution.py --root .
+.\.venv\Scripts\python cli.py init --champion solution_v9_champion.py --root .
 ```
 
-执行 CPU 权威 smoke 评测：
+评估当前候选 `solution.py` 的 CPU 权威 smoke：
 
 ```powershell
 .\.venv\Scripts\python cli.py evaluate solution.py --tier smoke --device cpu --split dev --root .
@@ -82,6 +83,8 @@ CUDA 不可用时命令会明确失败（退出码 4），不会自动退回其�
   私有量化函数。
 - `hif4_system/compliance.py` 检查六个竞赛接口、NumPy 导入、文件 I/O、
   非法状态和疑似用 `A @ W` 拟合校准的路径。
+- 活跃评测路径只使用 Torch；仓库中保留的旧 NumPy 模拟器仅作历史参考，
+  不会被当前 CLI 或 worker 导入。
 - `hif4_system/runner.py` 使用隔离 worker，父进程负责超时、崩溃和结果协
   议；Torch tensor 不跨进程传递。
 - `hif4_system/statistics.py` 的 bootstrap 只使用 Torch，不依赖 NumPy。

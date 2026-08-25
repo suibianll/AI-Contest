@@ -21,17 +21,17 @@ def _reports(sha256: str) -> dict[str, dict[str, object]]:
 
 def test_initial_champion_preserves_v9_hash(tmp_path: Path) -> None:
     registry = Registry(tmp_path)
-    record = registry.initialize(ROOT / "solution.py", EXPECTED_V9_SHA256)
+    record = registry.initialize(ROOT / "solution_v9_champion.py", EXPECTED_V9_SHA256)
 
     assert record.sha256 == EXPECTED_V9_SHA256
     assert sha256_file(record.solution_path) == EXPECTED_V9_SHA256
-    assert record.solution_path != (ROOT / "solution.py").resolve()
+    assert record.solution_path != (ROOT / "solution_v9_champion.py").resolve()
     assert registry.champion().id == record.id
 
 
 def test_promotion_rejects_changed_candidate(tmp_path: Path) -> None:
     registry = Registry(tmp_path)
-    registry.initialize(ROOT / "solution.py", EXPECTED_V9_SHA256)
+    registry.initialize(ROOT / "solution_v9_champion.py", EXPECTED_V9_SHA256)
     candidate_source = tmp_path / "candidate.py"
     candidate_source.write_text((ROOT / "tests" / "fixtures" / "minimal_solution.py").read_text(encoding="utf-8"), encoding="utf-8")
     candidate = registry.register_candidate(candidate_source, _reports(sha256_file(candidate_source)))
@@ -43,7 +43,7 @@ def test_promotion_rejects_changed_candidate(tmp_path: Path) -> None:
 
 def test_promotion_requires_all_tracks_and_rollback_is_history_only(tmp_path: Path) -> None:
     registry = Registry(tmp_path)
-    initial = registry.initialize(ROOT / "solution.py", EXPECTED_V9_SHA256)
+    initial = registry.initialize(ROOT / "solution_v9_champion.py", EXPECTED_V9_SHA256)
     candidate_source = tmp_path / "candidate.py"
     candidate_source.write_text((ROOT / "tests" / "fixtures" / "minimal_solution.py").read_text(encoding="utf-8"), encoding="utf-8")
     candidate_sha = sha256_file(candidate_source)
@@ -62,7 +62,7 @@ def test_promotion_requires_all_tracks_and_rollback_is_history_only(tmp_path: Pa
 
 def test_promotion_rejects_missing_or_failed_report(tmp_path: Path) -> None:
     registry = Registry(tmp_path)
-    registry.initialize(ROOT / "solution.py", EXPECTED_V9_SHA256)
+    registry.initialize(ROOT / "solution_v9_champion.py", EXPECTED_V9_SHA256)
     candidate_source = tmp_path / "candidate.py"
     candidate_source.write_text("candidate", encoding="utf-8")
     candidate_sha = sha256_file(candidate_source)

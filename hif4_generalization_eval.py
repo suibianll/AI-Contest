@@ -42,8 +42,6 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--attention-mask", choices=("both", "causal", "noncausal"), default="both")
     parser.add_argument("--compute-dtypes", default="fp32")
     parser.add_argument("--max-holdout-uses", type=int, default=3)
-    parser.add_argument("--numpy-variant")
-    parser.add_argument("--numpy-incumbent-variant")
     parser.add_argument("--config")
     args = parser.parse_args(values)
     return lifecycle_main(

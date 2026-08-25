@@ -26,10 +26,10 @@ def _run_cli(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
 
 
 def test_v9_cpu_smoke_report_is_auditable(tmp_path: Path) -> None:
-    initialized = _run_cli(tmp_path, "init", "--champion", str(ROOT / "solution.py"))
+    initialized = _run_cli(tmp_path, "init", "--champion", str(ROOT / "solution_v9_champion.py"))
     assert initialized.returncode == 0, initialized.stderr
 
-    evaluated = _run_cli(tmp_path, "evaluate", str(ROOT / "solution.py"), "--tier", "smoke", "--device", "cpu")
+    evaluated = _run_cli(tmp_path, "evaluate", str(ROOT / "solution_v9_champion.py"), "--tier", "smoke", "--device", "cpu")
     assert evaluated.returncode == 0, evaluated.stderr
     reports = sorted((tmp_path / "reports").glob("*.json"))
     assert reports
@@ -43,8 +43,17 @@ def test_v9_cpu_smoke_report_is_auditable(tmp_path: Path) -> None:
     assert _sha256(next((tmp_path / "registry" / "versions").glob("*/solution.py"))) == EXPECTED_V9_SHA256
 
 
+def test_current_solution_cpu_smoke_is_bound_to_source_hash(tmp_path: Path) -> None:
+    evaluated = _run_cli(tmp_path, "evaluate", str(ROOT / "solution.py"), "--tier", "smoke", "--device", "cpu")
+    assert evaluated.returncode == 0, evaluated.stderr
+    report = json.loads(sorted((tmp_path / "reports").glob("*.json"))[-1].read_text(encoding="utf-8"))
+
+    assert report["metadata"]["candidate_sha256"] == _sha256(ROOT / "solution.py")
+    assert report["summary"]["case_count"] > 0
+
+
 def test_holdout_report_does_not_write_raw_seeds(tmp_path: Path) -> None:
-    evaluated = _run_cli(tmp_path, "evaluate", str(ROOT / "solution.py"), "--tier", "smoke", "--device", "cpu", "--split", "holdout")
+    evaluated = _run_cli(tmp_path, "evaluate", str(ROOT / "solution_v9_champion.py"), "--tier", "smoke", "--device", "cpu", "--split", "holdout")
     assert evaluated.returncode == 0, evaluated.stderr
     campaign = json.loads((tmp_path / "campaigns" / "default" / "campaign.json").read_text(encoding="utf-8"))
     assert campaign["holdout_uses"] == 1

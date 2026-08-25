@@ -40,59 +40,42 @@ Linear 包含 balanced、hierarchy、outlier、heavy-tail、校准—测试幅�
 
 ## 4. 推荐运行流程
 
-### 4.1 当前机器无 PyTorch：验证评估协议
+### 4.1 当前 CPU/Torch 环境：先验证评估协议
 
-```bash
-python hif4_generalization_eval.py \
-  --candidate solution-v4.py \
-  --incumbent solution-0818.py \
-  --backend numpy --tier smoke --split dev \
-  --config hif4_eval_config.json \
-  --output result_numpy_smoke.json
+```powershell
+.\.venv\Scripts\python cli.py evaluate solution.py `
+  --tier smoke --device cpu --split dev --root .
 ```
 
-NumPy 后端使用已有镜像中的 `full_current` 与 `transform_only` 消融策略，只能验证指标、切分和风险门控是否工作，不能直接执行传入的 PyTorch `solution.py`，因此永远不会给出“允许晋级”。
+当前活动评测只执行 Torch CPU/CUDA 路径，不使用 NumPy 模拟。仓库中的旧
+NumPy 模拟器文件保留为下载资料，不会被 CLI、worker 或评分器导入。
 
 ### 4.2 PyTorch 环境：开发集精确评估
 
-```bash
-python hif4_generalization_eval.py \
-  --candidate solution-v4.py \
-  --incumbent solution-0818.py \
-  --backend torch --tier standard --split dev \
-  --attention-mask both --compute-dtypes fp32,bf16 \
-  --config hif4_eval_config.json \
-  --output result_v4_dev.json
+```powershell
+.\.venv\Scripts\python cli.py evaluate solution.py `
+  --tier standard --device cpu --split dev --root .
 ```
 
 先根据开发集完成参数和算法选择。建议一次只改变一个机制，并保留消融结果。不要因为单个 seed 或单个场景下降就立即针对性补丁；只有能解释的系统性失败才应修改算法。
 
 ### 4.3 候选冻结后的隐藏集晋级
 
-```bash
-python hif4_generalization_eval.py \
-  --candidate solution-v4.py \
-  --incumbent solution-0818.py \
-  --backend torch --tier standard --split holdout \
-  --attention-mask both --compute-dtypes fp32,bf16 \
-  --config hif4_eval_config.json \
-  --output result_v4_holdout.json
+```powershell
+.\.venv\Scripts\python cli.py evaluate solution.py `
+  --tier standard --device cpu --split holdout --root .
 ```
 
 每次 holdout 调用都会消耗一次预算并生成一批新种子。若代码变化，应先回到 dev；不要连续调用 holdout 搜索阈值。
 
 ### 4.4 提交前压力测试
 
-```bash
-python hif4_generalization_eval.py \
-  --candidate solution-v4.py \
-  --incumbent solution-0818.py \
-  --backend torch --tier soak --split dev \
-  --attention-mask both --compute-dtypes fp32,bf16 \
-  --output result_v4_soak.json
+```powershell
+.\.venv\Scripts\python cli.py evaluate solution.py `
+  --tier soak --device cpu --split dev --root .
 ```
 
-随后还必须执行官方 `self_check.py`，并在鲲鹏 920B 或相近 CPU 上确认总时间低于 5 分钟。合成泛化评估无法替代真实比赛测试集。
+随后还必须执行官方 `self_check.py`，并在鲲鹏 920B 或相近 CPU 上确认总时间低于 5 分钟。当前仓库没有提供官方 `self_check.py`，所以本地评测是独立代理，不能替代真实比赛测试集。
 
 ## 5. 晋级标准
 

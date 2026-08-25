@@ -86,7 +86,7 @@ CPU 配对复评与运行时间门控
 
 ### 5.1 初始化
 
-`init --champion solution.py` 校验 v9 哈希和接口，复制不可变快照到注册表，写入 Champion 指针。初始固化只声明合法性和可执行性，不声明相对提分。
+`init --champion solution_v9_champion.py` 校验 v9 哈希和接口，复制不可变快照到注册表，写入 Champion 指针。初始固化只声明合法性和可执行性，不声明相对提分。
 
 ### 5.2 精度轨
 
@@ -164,7 +164,7 @@ requirements.txt
 ## 10. CLI
 
 ```powershell
-python cli.py init --champion solution.py
+python cli.py init --champion solution_v9_champion.py
 python cli.py evaluate solution.py --tier smoke --device cuda
 python cli.py validate --candidate candidate.py --tier standard
 python cli.py promote --candidate-id <id>

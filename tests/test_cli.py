@@ -21,7 +21,7 @@ def _cli_runner(*args: str) -> subprocess.CompletedProcess[str]:
 
 
 def test_init_cli_freezes_v9(tmp_path: Path) -> None:
-    result = _cli_runner("init", "--champion", str(ROOT / "solution.py"), "--root", str(tmp_path))
+    result = _cli_runner("init", "--champion", str(ROOT / "solution_v9_champion.py"), "--root", str(tmp_path))
 
     assert result.returncode == 0, result.stderr
     assert EXPECTED_V9_SHA256 in result.stdout
@@ -33,7 +33,7 @@ def test_init_cli_rejects_wrong_hash_with_stable_code(tmp_path: Path) -> None:
     result = _cli_runner(
         "init",
         "--champion",
-        str(ROOT / "solution.py"),
+        str(ROOT / "solution_v9_champion.py"),
         "--expected-sha256",
         "0" * 64,
         "--root",

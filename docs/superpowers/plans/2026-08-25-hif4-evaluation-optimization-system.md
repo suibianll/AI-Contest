@@ -463,7 +463,7 @@ Expected: all non-CUDA tests pass; CUDA tests pass when a compatible NVIDIA runt
 
 - [ ] **Step 3: Initialize v9 as Champion**
 
-Run: `.venv\Scripts\python cli.py init --champion solution.py --root .`  
+Run: `.venv\Scripts\python cli.py init --champion solution_v9_champion.py --root .`
 Expected: stdout reports the exact v9 SHA256 and the immutable snapshot path.
 
 - [ ] **Step 4: Run GPU and CPU smoke evaluations**
