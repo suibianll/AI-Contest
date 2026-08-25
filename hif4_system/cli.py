@@ -84,7 +84,15 @@ def _decision_for_track(
     if track.status != "passed" or summary is None:
         return Decision(False, {"track_passed": False})
     if incumbent_summary is None:
-        return Decision(True, {"track_passed": True, "incumbent_available": False})
+        return decide(
+            summary,
+            None,
+            None,
+            track.timing,
+            None,
+            config.thresholds,
+            track.authoritative_timing,
+        )
     return decide(
         summary,
         incumbent_summary,
@@ -293,6 +301,7 @@ def _cmd_validate(args: argparse.Namespace) -> int:
                 commitment=dev_reservation.commitment,
                 track=gpu_track,
                 config=config,
+                decision=Decision(gpu_track.status == "passed", {"accuracy_track_passed": gpu_track.status == "passed"}),
             )
             all_reports["gpu_dev"] = gpu_payload
             if gpu_track.status != "passed":
@@ -465,6 +474,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     except (ConfigError, FileNotFoundError, HoldoutBudgetExhausted, RegistryError, ValueError, OSError) as error:
         print(str(error), file=sys.stderr)
         return EXIT_ARGUMENT
+
+
 
 
 
