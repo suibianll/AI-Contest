@@ -143,6 +143,9 @@ def _track_payload(
         },
         "errors": list(track.errors),
         "metadata": {
+            "candidate_sha256": candidate_sha256,
+            "device_type": device,
+            "authoritative_timing": track.authoritative_timing,
             "environment": _environment(),
             "runner": track.metadata or {},
             "config_sha256": _config_hash(),
@@ -462,4 +465,6 @@ def main(argv: Sequence[str] | None = None) -> int:
     except (ConfigError, FileNotFoundError, HoldoutBudgetExhausted, ValueError, OSError) as error:
         print(str(error), file=sys.stderr)
         return EXIT_ARGUMENT
+
+
 
