@@ -5,6 +5,7 @@ from typing import Iterable, Sequence
 
 import torch
 
+from .compliance import validate_state
 from .formats import (
     dequantize_hif4,
     dequantize_nvfp4,
@@ -52,6 +53,7 @@ def _linear_cases(
         player_seconds += time.perf_counter() - start
         if not isinstance(calibrated, dict) or set(calibrated) != {"weight_params", "activation_state"}:
             raise ValueError("weight calibration must return weight_params and activation_state")
+        validate_state(calibrated["activation_state"])
         candidate_weight = calibrated["weight_params"]
         validate_hif4_params(candidate_weight, weight_dense.shape)
         candidate_weight_dense = dequantize_hif4(candidate_weight)
@@ -106,6 +108,9 @@ def _attention_cases(
         player_seconds += time.perf_counter() - start
         if not isinstance(states, dict) or set(states) != {"q_state", "k_state", "v_state"}:
             raise ValueError("attention calibration must return q_state, k_state, and v_state")
+        validate_state(states["q_state"])
+        validate_state(states["k_state"])
+        validate_state(states["v_state"])
         for test_index, raw_sample in enumerate(case.tests):
             sample = {key: _move_pair(value, device) for key, value in raw_sample.items()}
             dense = {key: dequantize_nvfp4(*value) for key, value in sample.items()}
@@ -181,3 +186,5 @@ def evaluate_solution(
         TimingResult(player_seconds, wall_seconds),
         {"device": str(device), "case_count": len(all_cases), "candidate_sha256": api.sha256},
     )
+
+

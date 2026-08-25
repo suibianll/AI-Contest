@@ -31,6 +31,8 @@ def test_worker_captures_timeout() -> None:
     response = run_isolated(_request(FIXTURES / "hanging_solution.py"), timeout_seconds=0.5)
 
     assert response.status == "timeout"
+    temporary_root = ROOT / ".runner_tmp"
+    assert not (list(temporary_root.iterdir()) if temporary_root.exists() else [])
 
 
 def test_cpu_track_is_authoritative() -> None:
@@ -47,3 +49,5 @@ def test_accuracy_track_is_not_authoritative_when_run_on_cpu() -> None:
 
     assert report.status == "passed"
     assert report.authoritative_timing is False
+
+

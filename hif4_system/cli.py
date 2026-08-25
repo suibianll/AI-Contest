@@ -462,9 +462,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         args = parser.parse_args(list(argv) if argv is not None else None)
         return int(args.handler(args))
-    except (ConfigError, FileNotFoundError, HoldoutBudgetExhausted, ValueError, OSError) as error:
+    except (ConfigError, FileNotFoundError, HoldoutBudgetExhausted, RegistryError, ValueError, OSError) as error:
         print(str(error), file=sys.stderr)
         return EXIT_ARGUMENT
+
+
 
 
 

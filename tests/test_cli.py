@@ -29,6 +29,21 @@ def test_init_cli_freezes_v9(tmp_path: Path) -> None:
     assert pointer["sha256"] == EXPECTED_V9_SHA256
 
 
+def test_init_cli_rejects_wrong_hash_with_stable_code(tmp_path: Path) -> None:
+    result = _cli_runner(
+        "init",
+        "--champion",
+        str(ROOT / "solution.py"),
+        "--expected-sha256",
+        "0" * 64,
+        "--root",
+        str(tmp_path),
+    )
+
+    assert result.returncode == 2
+    assert "hash mismatch" in (result.stdout + result.stderr).lower()
+
+
 def test_legacy_wrapper_rejects_non_torch_backend() -> None:
     result = subprocess.run(
         [sys.executable, "hif4_generalization_eval.py", "--backend", "numpy"],
@@ -40,3 +55,5 @@ def test_legacy_wrapper_rejects_non_torch_backend() -> None:
 
     assert result.returncode == 2
     assert "torch" in (result.stdout + result.stderr).lower()
+
+

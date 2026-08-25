@@ -109,27 +109,32 @@ def run_isolated(request: WorkerRequest, timeout_seconds: float) -> WorkerRespon
         stderr=subprocess.PIPE,
         text=True,
     )
+    stdout = ""
+    stderr = ""
     try:
-        stdout, stderr = process.communicate(timeout=float(timeout_seconds))
-    except subprocess.TimeoutExpired:
-        process.kill()
-        process.communicate()
-        return WorkerResponse("timeout", error=f"worker timed out after {timeout_seconds:.3f}s")
-    try:
-        if response_path.is_file():
-            payload = json.loads(response_path.read_text(encoding="utf-8"))
-            response = _parse_response(payload)
-            if response.status == "crashed" and not response.error:
-                detail = stderr.strip() or stdout.strip()
-                response = WorkerResponse(
-                    response.status, response.cases, response.timing, response.metadata, detail
-                )
-            return response
-        detail = stderr.strip() or stdout.strip() or f"worker exited with code {process.returncode}"
-        return WorkerResponse("crashed", error=detail)
-    except (OSError, TypeError, ValueError, KeyError) as error:
-        detail = stderr.strip() or stdout.strip()
-        return WorkerResponse("crashed", error=f"invalid worker response: {error}; {detail}")
+        try:
+            stdout, stderr = process.communicate(timeout=float(timeout_seconds))
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.communicate()
+            return WorkerResponse("timeout", error=f"worker timed out after {timeout_seconds:.3f}s")
+        try:
+            if response_path.is_file():
+                payload = json.loads(response_path.read_text(encoding="utf-8"))
+                response = _parse_response(payload)
+                if process.returncode not in (0, None) and response.status == "passed":
+                    return WorkerResponse("crashed", error=f"worker exited with code {process.returncode}")
+                if response.status == "crashed" and not response.error:
+                    detail = stderr.strip() or stdout.strip()
+                    response = WorkerResponse(
+                        response.status, response.cases, response.timing, response.metadata, detail
+                    )
+                return response
+            detail = stderr.strip() or stdout.strip() or f"worker exited with code {process.returncode}"
+            return WorkerResponse("crashed", error=detail)
+        except (OSError, TypeError, ValueError, KeyError) as error:
+            detail = stderr.strip() or stdout.strip()
+            return WorkerResponse("crashed", error=f"invalid worker response: {error}; {detail}")
     finally:
         for path in run_dir.iterdir():
             path.unlink(missing_ok=True)
@@ -225,3 +230,5 @@ def run_accuracy_track(
     return _run_track(
         Path(candidate), seeds, tier, device, compute_dtypes, causal_modes, timeout_seconds, False
     )
+
+
