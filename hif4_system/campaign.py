@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from .config import load_config
+from .config import EvaluationConfig, load_config
 
 
 class HoldoutBudgetExhausted(RuntimeError):
@@ -74,8 +74,13 @@ class Campaign:
     def _save(self) -> None:
         _atomic_json(self.manifest_path, self.manifest)
 
-    def reserve(self, split: str, tier: str) -> SeedReservation:
-        tier_config = load_config(None).tier(tier)
+    def reserve(
+        self,
+        split: str,
+        tier: str,
+        config: EvaluationConfig | None = None,
+    ) -> SeedReservation:
+        tier_config = (config or load_config(None)).tier(tier)
         if split == "dev":
             stored = [int(seed) for seed in self.manifest.get("dev_seeds", [])]
             if len(stored) < tier_config.dev_seeds:

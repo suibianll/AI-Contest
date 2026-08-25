@@ -31,7 +31,8 @@ def _write_json_atomic(path: Path, value: Mapping[str, Any]) -> None:
 
 
 def _evaluate(request: Mapping[str, Any]) -> dict[str, Any]:
-    config = load_config(None)
+    config_value = request.get("config_path")
+    config = load_config(Path(str(config_value)) if config_value else None)
     tier_name = str(request["tier"])
     tier = config.tier(tier_name)
     device = torch.device(str(request["device"]))

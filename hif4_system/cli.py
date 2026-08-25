@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import platform
 import sys
 import time
@@ -69,6 +70,25 @@ def _seed_name(split: str, device: str) -> str:
     return f"{split}_{device}"
 
 
+def _device_consistent(gpu: TrackReport, cpu: TrackReport, tolerance: float) -> bool:
+    """Require paired GPU/CPU scores to agree within the configured tolerance."""
+
+    if gpu.status != "passed" or cpu.status != "passed":
+        return False
+    if len(gpu.cases) != len(cpu.cases):
+        return False
+    left = sorted(gpu.cases, key=lambda row: (row.seed_id, row.kind, row.scenario, row.test_index, row.causal, row.compute_dtype))
+    right = sorted(cpu.cases, key=lambda row: (row.seed_id, row.kind, row.scenario, row.test_index, row.causal, row.compute_dtype))
+    for gpu_case, cpu_case in zip(left, right):
+        gpu_key = (gpu_case.seed_id, gpu_case.kind, gpu_case.scenario, gpu_case.test_index, gpu_case.causal, gpu_case.compute_dtype)
+        cpu_key = (cpu_case.seed_id, cpu_case.kind, cpu_case.scenario, cpu_case.test_index, cpu_case.causal, cpu_case.compute_dtype)
+        if gpu_key != cpu_key or not math.isfinite(float(gpu_case.score)) or not math.isfinite(float(cpu_case.score)):
+            return False
+        if abs(float(gpu_case.score) - float(cpu_case.score)) > float(tolerance):
+            return False
+    return True
+
+
 def _summary_or_none(cases: Sequence[CaseResult], config: EvaluationConfig, seed: int) -> Summary | None:
     return summarize(cases, config.bootstrap_rounds, seed) if cases else None
 
@@ -113,6 +133,7 @@ def _track_payload(
     commitment: str,
     track: TrackReport,
     config: EvaluationConfig,
+    config_path: Path | None = None,
     comparison: Comparison | None = None,
     decision: Decision | None = None,
 ) -> dict[str, Any]:
@@ -156,7 +177,7 @@ def _track_payload(
             "authoritative_timing": track.authoritative_timing,
             "environment": _environment(),
             "runner": track.metadata or {},
-            "config_sha256": _config_hash(),
+            "config_sha256": _config_hash(config_path),
         },
     }
 
@@ -167,16 +188,17 @@ def _run_track(
     tier: str,
     device: str,
     config: EvaluationConfig,
+    config_path: Path | None = None,
 ) -> TrackReport:
     timeout = config.timeouts[tier]
     dtypes = ("fp32",)
     causal = (False, True)
     if device == "cpu":
-        return run_cpu_track(candidate, seeds, tier, dtypes, causal, timeout)
+        return run_cpu_track(candidate, seeds, tier, dtypes, causal, timeout, config_path)
     if device == "cuda":
         if not torch.cuda.is_available():
             raise RuntimeError("CUDA requested but torch.cuda.is_available() is false")
-        return run_accuracy_track(candidate, seeds, tier, "cuda", dtypes, causal, timeout)
+        return run_accuracy_track(candidate, seeds, tier, "cuda", dtypes, causal, timeout, config_path)
     raise ConfigError(f"unsupported device: {device}")
 
 
@@ -195,6 +217,7 @@ def _evaluate_once(
     device: str,
     split: str,
     config: EvaluationConfig,
+    config_path: Path | None = None,
 ) -> tuple[int, Path | None, dict[str, Any], SeedReservation | None]:
     source = candidate.resolve()
     candidate_sha = sha256_file(source)
@@ -204,7 +227,7 @@ def _evaluate_once(
     status = "failed"
     report_path: Path | None = None
     try:
-        reservation = campaign.reserve(split, tier)
+        reservation = campaign.reserve(split, tier, config)
         compliance = check_static(source)
         if not compliance.passed:
             report = {
@@ -222,7 +245,7 @@ def _evaluate_once(
             report_path = _write_report(root, _seed_name(split, device), report)
             return EXIT_COMPLIANCE, report_path, report, reservation
         try:
-            track = _run_track(source, reservation.seeds, tier, device, config)
+            track = _run_track(source, reservation.seeds, tier, device, config, config_path)
             report = _track_payload(
                 candidate_sha256=candidate_sha,
                 split=split,
@@ -231,6 +254,7 @@ def _evaluate_once(
                 commitment=reservation.commitment,
                 track=track,
                 config=config,
+                config_path=config_path,
             )
             status = track.status
             report_path = _write_report(root, _seed_name(split, device), report)
@@ -273,13 +297,17 @@ def _cmd_init(args: argparse.Namespace) -> int:
 def _cmd_evaluate(args: argparse.Namespace) -> int:
     root = Path(args.root).resolve()
     config = load_config(Path(args.config) if args.config else None)
-    code, path, payload, _ = _evaluate_once(Path(args.candidate), root, args.tier, args.device, args.split, config)
+    config_path = Path(args.config).resolve() if args.config else None
+    code, path, payload, _ = _evaluate_once(
+        Path(args.candidate), root, args.tier, args.device, args.split, config, config_path
+    )
     return _print_report(code, path, payload)
 
 
 def _cmd_validate(args: argparse.Namespace) -> int:
     root = Path(args.root).resolve()
     config = load_config(Path(args.config) if args.config else None)
+    config_path = Path(args.config).resolve() if args.config else None
     source = Path(args.candidate).resolve()
     registry = Registry(root / "registry")
     champion = registry.champion()
@@ -287,12 +315,13 @@ def _cmd_validate(args: argparse.Namespace) -> int:
     campaign = _campaign_for(root)
     all_reports: dict[str, Any] = {}
     failures: list[str] = []
+    gpu_track: TrackReport | None = None
 
-    dev_reservation = campaign.reserve("dev", args.tier)
+    dev_reservation = campaign.reserve("dev", args.tier, config)
     dev_status = "failed"
     try:
         try:
-            gpu_track = _run_track(source, dev_reservation.seeds, args.tier, "cuda", config)
+            gpu_track = _run_track(source, dev_reservation.seeds, args.tier, "cuda", config, config_path)
             gpu_payload = _track_payload(
                 candidate_sha256=candidate_sha,
                 split="dev",
@@ -301,6 +330,7 @@ def _cmd_validate(args: argparse.Namespace) -> int:
                 commitment=dev_reservation.commitment,
                 track=gpu_track,
                 config=config,
+                config_path=config_path,
                 decision=Decision(gpu_track.status == "passed", {"accuracy_track_passed": gpu_track.status == "passed"}),
             )
             all_reports["gpu_dev"] = gpu_payload
@@ -311,12 +341,21 @@ def _cmd_validate(args: argparse.Namespace) -> int:
             failures.append(f"gpu dev: {error}")
 
         try:
-            cpu_track = _run_track(source, dev_reservation.seeds, args.tier, "cpu", config)
-            incumbent_track = _run_track(champion.solution_path, dev_reservation.seeds, args.tier, "cpu", config)
+            cpu_track = _run_track(source, dev_reservation.seeds, args.tier, "cpu", config, config_path)
+            incumbent_track = _run_track(champion.solution_path, dev_reservation.seeds, args.tier, "cpu", config, config_path)
             candidate_summary = _summary_or_none(cpu_track.cases, config, 20260826)
             incumbent_summary = _summary_or_none(incumbent_track.cases, config, 20260826)
             comparison = compare(cpu_track.cases, incumbent_track.cases, config.bootstrap_rounds, 20260827) if candidate_summary and incumbent_summary else None
             decision = _decision_for_track(cpu_track, config, candidate_summary, incumbent_summary, comparison, incumbent_track.timing)
+            device_consistency = _device_consistent(gpu_track, cpu_track, config.device_tolerance) if gpu_track is not None else False
+            decision = Decision(
+                decision.promote and device_consistency,
+                {**decision.checks, "device_consistency": device_consistency},
+            )
+            if gpu_track is not None:
+                gpu_decision = all_reports["gpu_dev"]["decision"]
+                gpu_decision["checks"]["device_consistency"] = device_consistency
+                gpu_decision["promote"] = bool(gpu_decision["promote"] and device_consistency)
             cpu_payload = _track_payload(
                 candidate_sha256=candidate_sha,
                 split="dev",
@@ -325,12 +364,15 @@ def _cmd_validate(args: argparse.Namespace) -> int:
                 commitment=dev_reservation.commitment,
                 track=cpu_track,
                 config=config,
+                config_path=config_path,
                 comparison=comparison,
                 decision=decision,
             )
             all_reports["cpu_dev"] = cpu_payload
             if not decision.promote:
                 failures.append("cpu dev promotion gates failed")
+            if not device_consistency:
+                failures.append("GPU/CPU device consistency gate failed")
         except Exception as error:
             all_reports["cpu_dev"] = {"status": "crashed", "candidate_sha256": candidate_sha, "error": str(error)}
             failures.append(f"cpu dev: {error}")
@@ -343,12 +385,12 @@ def _cmd_validate(args: argparse.Namespace) -> int:
         path = _write_report(root, "validate", combined)
         return _print_report(EXIT_EVALUATION, path, combined)
 
-    holdout_reservation = campaign.reserve("holdout", args.tier)
+    holdout_reservation = campaign.reserve("holdout", args.tier, config)
     holdout_status = "failed"
     try:
         try:
-            holdout_track = _run_track(source, holdout_reservation.seeds, args.tier, "cpu", config)
-            incumbent_holdout = _run_track(champion.solution_path, holdout_reservation.seeds, args.tier, "cpu", config)
+            holdout_track = _run_track(source, holdout_reservation.seeds, args.tier, "cpu", config, config_path)
+            incumbent_holdout = _run_track(champion.solution_path, holdout_reservation.seeds, args.tier, "cpu", config, config_path)
             candidate_summary = _summary_or_none(holdout_track.cases, config, 20260828)
             incumbent_summary = _summary_or_none(incumbent_holdout.cases, config, 20260828)
             comparison = compare(holdout_track.cases, incumbent_holdout.cases, config.bootstrap_rounds, 20260829) if candidate_summary and incumbent_summary else None
@@ -361,6 +403,7 @@ def _cmd_validate(args: argparse.Namespace) -> int:
                 commitment=holdout_reservation.commitment,
                 track=holdout_track,
                 config=config,
+                config_path=config_path,
                 comparison=comparison,
                 decision=decision,
             )
@@ -379,7 +422,7 @@ def _cmd_validate(args: argparse.Namespace) -> int:
         "reports": all_reports,
         "errors": failures,
         "environment": _environment(),
-        "config_sha256": _config_hash(),
+        "config_sha256": _config_hash(config_path),
     }
     path = _write_report(root, "validate", combined)
     if not failures:

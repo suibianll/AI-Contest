@@ -93,7 +93,17 @@ NumPy 模拟器文件保留为下载资料，不会被 CLI、worker 或评分器
 - `metadata.seed_commitment`：本轮隐藏种子的承诺值，报告不包含真实隐藏 seed。
 - `campaign.json`：所有评估历史、代码哈希和 holdout 使用次数，便于审计。
 
-## 7. 版本开发纪律
+## 7. 当前实现合规审计
+
+本地审计已覆盖实际候选 `solution.py` 与独立评测器：
+
+- 六个竞赛接口均可加载，输入/输出 shape、HiF4 五字段、有限值和 state 的 CPU/深度/节点限制均在评测器中校验。
+- Linear 校准路径不计算 `A @ W`，只使用激活二阶统计、Weight 统计和量化残差；Attention 校准使用完整 softmax 输出代理，符合两类算子的不同规则边界。
+- GQA 的 head 映射、causal/non-causal mask、标准 HiF4 基线和逐 case 配对评分均由独立 Torch 评测器执行，候选私有量化实现不会被当作标准基线。
+- 活动路径不导入 NumPy；CUDA 只用于精度筛选，CPU 计时是权威轨。当前机器没有 CUDA，因此 GPU 轨只能在安装 CUDA 版 PyTorch 后验收。
+- 仓库未提供官方 `self_check.py` 或真实比赛数据；本系统是可审计的合成泛化代理，不能据此宣称官方排行榜分数。提交前仍需运行官方检查和鲲鹏/相近 CPU 实测。
+
+## 8. 版本开发纪律
 
 1. 每个版本只修改一类机制，例如 scale 搜索、排列、Attention 门控或精修比例。
 2. 使用相同 dev campaign 做配对消融，至少跨 3 个 seed。

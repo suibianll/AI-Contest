@@ -310,8 +310,12 @@ def _attention_heavy_tail_guard(
     if not samples:
         return False
     values = torch.cat(samples)
-    median = torch.quantile(values, torch.tensor(0.50, dtype=values.dtype))
-    upper = torch.quantile(values, torch.tensor(0.99, dtype=values.dtype))
+    median = torch.quantile(
+        values, torch.tensor(0.50, dtype=values.dtype, device=values.device)
+    )
+    upper = torch.quantile(
+        values, torch.tensor(0.99, dtype=values.dtype, device=values.device)
+    )
     tail_ratio = upper / median.clamp_min(_EPS)
     return bool(float(tail_ratio) > 6.0)
 
@@ -1453,8 +1457,13 @@ def hif4_calibration_attention(
     if q_channels % 64 != 0 or kv_channels % 64 != 0:
         raise ValueError("Flattened Q/K/V dimensions must be divisible by 64")
 
-    q_sum_square = torch.zeros(q_num_heads, head_dim, dtype=torch.float32)
-    k_sum_square = torch.zeros(kv_num_heads, head_dim, dtype=torch.float32)
+    stats_device = calib_qkv_list[0]["q"][0].device
+    q_sum_square = torch.zeros(
+        q_num_heads, head_dim, dtype=torch.float32, device=stats_device
+    )
+    k_sum_square = torch.zeros(
+        kv_num_heads, head_dim, dtype=torch.float32, device=stats_device
+    )
     k_mean_sum_square = torch.zeros_like(k_sum_square)
     k_mid_sum_square = torch.zeros_like(k_sum_square)
     q_peak_square = torch.zeros_like(q_sum_square)

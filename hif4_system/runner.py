@@ -30,6 +30,7 @@ class WorkerRequest:
     device: str
     compute_dtypes: tuple[str, ...]
     causal_modes: tuple[bool, ...]
+    config_path: str | None = None
 
     def to_jsonable(self) -> dict[str, Any]:
         return {
@@ -39,6 +40,7 @@ class WorkerRequest:
             "device": self.device,
             "compute_dtypes": list(self.compute_dtypes),
             "causal_modes": list(self.causal_modes),
+            "config_path": self.config_path,
         }
 
 
@@ -167,6 +169,7 @@ def _run_track(
     causal_modes: Sequence[bool],
     timeout_seconds: float,
     authoritative_timing: bool,
+    config_path: Path | None = None,
 ) -> TrackReport:
     torch_device = torch.device(device)
     all_cases: list[CaseResult] = []
@@ -182,6 +185,7 @@ def _run_track(
             device=str(torch_device),
             compute_dtypes=tuple(compute_dtypes),
             causal_modes=tuple(bool(value) for value in causal_modes),
+            config_path=str(config_path.resolve()) if config_path is not None else None,
         )
         response = run_isolated(request, timeout_seconds)
         if response.status != "passed":
@@ -212,9 +216,10 @@ def run_cpu_track(
     compute_dtypes: Sequence[str],
     causal_modes: Sequence[bool],
     timeout_seconds: float,
+    config_path: Path | None = None,
 ) -> TrackReport:
     return _run_track(
-        Path(candidate), seeds, tier, "cpu", compute_dtypes, causal_modes, timeout_seconds, True
+        Path(candidate), seeds, tier, "cpu", compute_dtypes, causal_modes, timeout_seconds, True, config_path
     )
 
 
@@ -226,9 +231,10 @@ def run_accuracy_track(
     compute_dtypes: Sequence[str],
     causal_modes: Sequence[bool],
     timeout_seconds: float,
+    config_path: Path | None = None,
 ) -> TrackReport:
     return _run_track(
-        Path(candidate), seeds, tier, device, compute_dtypes, causal_modes, timeout_seconds, False
+        Path(candidate), seeds, tier, device, compute_dtypes, causal_modes, timeout_seconds, False, config_path
     )
 
 

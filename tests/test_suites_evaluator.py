@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 import torch
 
 from hif4_system.config import load_config
@@ -39,3 +40,20 @@ def test_minimal_solution_produces_linear_and_attention_cases() -> None:
     assert {row.kind for row in result.cases} == {"linear", "attention"}
     assert len(result.cases) > 0
     assert result.timing.wall_seconds >= result.timing.player_quant_seconds
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA is not available in this environment")
+def test_solution_attention_calibration_runs_on_cuda() -> None:
+    config = load_config(None)
+    suite = build_suite(101, config.tier("smoke"), torch.device("cuda"))
+    api = load_solution(ROOT / "solution.py")
+
+    result = evaluate_solution(
+        api,
+        suite,
+        torch.device("cuda"),
+        compute_dtypes=("fp32",),
+        causal_modes=(False, True),
+    )
+
+    assert result.cases

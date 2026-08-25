@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from hif4_system.runner import WorkerRequest, run_accuracy_track, run_cpu_track, run_isolated
@@ -51,3 +52,24 @@ def test_accuracy_track_is_not_authoritative_when_run_on_cpu() -> None:
     assert report.authoritative_timing is False
 
 
+
+
+def test_custom_config_reaches_isolated_worker(tmp_path: Path) -> None:
+    config = json.loads((ROOT / "config" / "default.json").read_text(encoding="utf-8"))
+    config["tiers"]["smoke"]["dev_seeds"] = 2
+    config_path = tmp_path / "config.json"
+    config_path.write_text(json.dumps(config), encoding="utf-8")
+
+    report = run_cpu_track(
+        FIXTURES / "minimal_solution.py",
+        [101, 211],
+        "smoke",
+        ("fp32",),
+        (False, True),
+        30,
+        config_path,
+    )
+
+    assert report.status == "passed"
+    assert len(report.cases) == 48
+    assert report.metadata["seed-00"]["case_count"] == 24
