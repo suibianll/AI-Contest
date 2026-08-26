@@ -97,27 +97,31 @@ GPT-2 12 层、2 个校准批次和 2 个测试批次：
 
 参数含义：`--layers` 为层数，`--seq` 为序列长度，`--calib`/`--test` 为
 校准/测试批次数，`--mode` 可选 `amax6`、`amax4`、`pow2`，`--kv-heads`
-用于 GQA 烟测。评测输出包含 q/k/v/o/fc/proj 六项 Linear 分数及 Attention
-分数；运行时间请在命令外层记录。
+用于 GQA 烟测，`--token-offset` 用于锁定不同的本地测试窗口。评测输出包含
+q/k/v/o/fc/proj 六项 Linear 分数、causal/non-causal Attention 分数和统一边界
+的算法阶段/API 时间。
 
-## 版本归档流程
+## 本地评测与版本归档流程
 
-每次优化只修改根目录 `solution.py`，完成本地评测后再提交官方评测。收到
-官方分数和耗时后：
+当前无法使用官方评测，因此版本晋级只依据可复现的本地配对结果，不再等待
+官方分数或用本地指标推测官方绝对分数：
 
-1. 新建 `solutions/YYYYMMDD_vNNN_topic_scoreSCORE_timeTIME/`。
-2. 将实际提交的根 `solution.py` 原样复制进去。
-3. 在同目录 `result.md` 记录源码哈希、单一改动、局部分项分数、官方分数、
-   耗时、结论和下一步方向。
-4. 在 `solutions/README.md` 追加一行；未知值使用 `NA`，近似值使用明确的
-   `plus` 或 `time300plus` 标记。
-5. 核对根文件和归档文件 SHA256 相同后再提交 Git。
+1. B0 与候选必须使用相同模型、设备、mask、mode、token offset 和样本数配对运行。
+2. offset `0` 是开发集；`97`、`193`、`389` 是锁定的本地回归窗口。它们已在
+   A1 裁决中使用，后续不得根据这些窗口调参，也不再宣称它们是盲测集。
+3. 开发筛选同时检查 `amax6/amax4/pow2`、MHA/GQA 和 causal/non-causal；
+   head_dim 128 与 saturated-logit 场景使用合成安全测试补足。
+4. 只有目标均值、逐层尾部、状态合法性和 CPU 时间门槛全部通过才晋级。
+5. 晋级后新建本地结果归档，记录精确源码 SHA256、完整配置、分项和时间；
+   `Official Score/Time` 保持 `NA`，不能填入本地估算值。
 
 当前版本记录：
 
 - v000：旧 v9 基线，约 9000+；
 - v001：原活跃基线，10250 分、127 秒；
-- v002：`youxilee/hif4` v2.0，15000+，已设为当前活跃 solution。
+- v002：`youxilee/hif4` v2.0，历史 Champion 归档；
+- 根 `solution.py`：A1-only 本地 Champion。GQA non-causal 的已知单层尾部
+  退化作为下一候选的优化目标记录，不再因此整体回退 B0。
 
 虚拟环境 `.venv/`、Python 缓存和其他本地产物已由 `.gitignore` 排除，
 不会进入算法归档或比赛提交。
