@@ -1,9 +1,9 @@
 """HiF4 solution for the 2026 Huawei algorithm competition.
 
 The implementation keeps the official HiF4 conversion as an explicit fallback,
-selects calibration-gated equivalent scaling/reordering transforms, and applies
-bounded scale/hierarchy refinement to difficult blocks. All calibration states
-are plain CPU data.
+selects calibration-gated equivalent scaling/reordering/block-matrix transforms,
+and applies bounded scale/hierarchy refinement to difficult blocks. All
+calibration states are plain CPU data.
 """
 
 from __future__ import annotations
@@ -27,26 +27,138 @@ _LINEAR_EVAL_TOKENS = 128
 _LINEAR_WEIGHT_EVAL_ROWS = 256
 _ATTN_STATS_TOKENS = 4096
 _ATTN_EVAL_TOKENS = 128
-_ATTN_TRUE_TOKENS = 64
-_ATTN_FLAT_PRESSURE_SPAN = 0.75
+
+# Tunable calibration/refinement knobs.  Values are deliberately
+# conservative so worst-case calibration and dynamic-quantization time stay
+# bounded on large models; the sweep harness overrides them to find a better
+# accuracy/runtime trade-off.
+_WEIGHT_SMOOTH_ALPHAS = (0.25, 0.50, 0.75)
+# 宽层（FFN 的 fc/proj，输入或输出 ≥ 2048）用更细的 alpha 网格：
+# 通道多、候选统计更稳，细网格实测 +fc 0.0012 / +proj 0.0044；
+# 窄层（q/k/v/o，768）细网格反而过拟合（-0.0003~-0.0021），保持 3 档。
+_WEIGHT_SMOOTH_ALPHAS_WIDE = (0.25, 0.375, 0.50, 0.625, 0.75)
+_WIDE_LAYER_MIN_DIM = 2048
+# Matrix SmoothQuant candidates.  After the diagonal scale and optional
+# permutation, apply the same orthogonal block transform to X and W.  In the
+# usual X @ W convention this is a block-diagonal S on X and S^{-1} on W;
+# orthogonality makes S^{-1}=S^T, so the row-major weight carrier can use the
+# same right transform.  Only the winning block size enters dynamic state.
+_BLOCK_SMOOTH_ALLOWED_SIZES = (4, 8, 16)
+_BLOCK_SMOOTH_SIZES = _BLOCK_SMOOTH_ALLOWED_SIZES
+_BLOCK_SMOOTH_SEEDS = (0, 1, 2, 3)
+# Evaluation-only override used by the sweep harness.  Zero keeps the guarded
+# production behavior; 4/8/16 forces that size while still choosing its best
+# deterministic sign seed on calibration data.
+_BLOCK_SMOOTH_FORCE_SIZE = 0
+_BLOCK_SMOOTH_MIN_IMPROVEMENT = 0.005
+_BLOCK_SMOOTH_WORST_TOLERANCE = 0.005
+_WEIGHT_REFINE_ERROR_THRESHOLD = 1.0e-7
+_WEIGHT_REFINE_ACCEPT_MARGIN = 0.005
+_WEIGHT_REFINE_MAX_RATIO_SMALL = 1.0
+_WEIGHT_REFINE_MAX_RATIO_LARGE = 1.0
+_WEIGHT_REFINE_MAX_BLOCKS = 65_536
+
+_ACTIVATION_REFINE_ERROR_THRESHOLD = 1.0e-7
+_ACTIVATION_REFINE_ACCEPT_MARGIN = 0.02
+_ACTIVATION_REFINE_MAX_RATIO = 0.70
+_ACTIVATION_REFINE_MAX_BLOCKS = 32_768
+
+_QK_SMOOTH_ALPHAS = (0.25, 0.50)
+_WEIGHT_SMOOTH_RMS = True
+_QK_SMOOTH_RMS = True
+_ATTN_CENTER_MODES = (0, 2)
+# Rank refinement by absolute block error (True) or normalized error (False).
+_REFINE_RANK_BY_ABSOLUTE = True
+_ATTN_REFINE_ERROR_THRESHOLD = 1.0e-7
+_Q_REFINE_ACCEPT_MARGIN = 0.03
+_Q_REFINE_MAX_RATIO = 0.60
+_Q_REFINE_MAX_BLOCKS = 16_384
+_K_REFINE_ACCEPT_MARGIN = 0.03
+_K_REFINE_MAX_RATIO = 0.70
+_K_REFINE_MAX_BLOCKS = 24_576
+_V_REFINE_ACCEPT_MARGIN = 0.01
+_V_REFINE_MAX_RATIO = 0.60
+_V_REFINE_MAX_BLOCKS = 24_576
+
+_SMOOTH_SCALE_MIN = 1.0 / 8.0
+_SMOOTH_SCALE_MAX = 8.0
+_QK_SMOOTH_MIN = 1.0 / 16.0
+_QK_SMOOTH_MAX = 16.0
+
+# Importance weights are mean-normalized; a floor keeps every channel at least
+# this fraction of the mean.  Without it, calibrated importance can be ~0 for
+# whole blocks (e.g. outlier-heavy Q/K data), their weighted losses vanish, and
+# the scale search drifts on numerical noise while degrading the unweighted
+# reconstruction of those blocks.
+_IMPORTANCE_FLOOR = 0.05
 
 # E6M2 code offsets.  Offset +2 is roughly the E6M2 analogue of the
-# alternative 1.5x scale mode seen in microscaling scale search.  The
-# extended set is attempted first; when its calibrated true-metric gate
-# fails, the conservative set is the fallback stored per case.
-_DYNAMIC_OFFSETS = (-2, -1, 1, 2, 3)
-_DYNAMIC_OFFSET_SETS = ((-2, -1, 1, 2, 3), (-1, 2))
-# The batched candidate solve materializes [candidates, blocks, 8, 2, 4]
-# temporaries; beyond this element budget the sequential loop is used.
-_BATCH_SOLVE_MAX_CANDIDATES = 32_768
+# alternative 1.5x scale mode seen in microscaling scale search.
+#
+# Exact-solve analysis: the standard amax/7 code frequently rounds DOWN
+# (clipping the block peak), and all other 4-element subgroups sit on
+# arbitrary log phases, so the useful neighborhood is +1..+3 (~1.25x..2x
+# scale).  Negative offsets shrink the representable range and almost never
+# win on the common NVFP4 input regimes; -1 is kept as a fallback for
+# overshooting codes.  -2 is kept for weights (calibration-only cost) as
+# insurance for finer-grained input encodings where it wins up to a few
+# percent of blocks, but dropped from the per-sample dynamic path.
+_DYNAMIC_OFFSETS = (-1, 1, 2, 3)
 _WEIGHT_OFFSETS = (-2, -1, 1, 2, 3)
-_DYNAMIC_TOP_RANKS = (2,)
-_LINEAR_DYNAMIC_OFFSETS = (-2, -1, 1, 2, 3)
-_LINEAR_FAST_OFFSETS = (-2, -1, 2)
-_LINEAR_DYNAMIC_TOP_RANKS: tuple[int, ...] = ()
-_WEIGHT_TOP_RANKS: tuple[int, ...] = ()
-_LINEAR_FULL_SEARCH_ELEMENTS = 262_144
-_ATTN_FULL_SEARCH_ELEMENTS = 262_144
+
+# The per-block scale error over E6M2 codes is locally unimodal, so if the
+# best fixed-window offset lands on a window edge, the true optimum may lie
+# outside the window.  Extend the search beyond the winning edge (only for
+# blocks that actually hit the edge) by up to this many extra codes.
+_REFINE_EDGE_EXTENSION = True
+_REFINE_EDGE_EXTEND_STEPS = 2
+
+# Data-driven per-layer refine budgets: instead of a global hand-tuned ratio,
+# calibration estimates the block-loss distribution and stores the smallest
+# refine fraction that captures a target share of the total weighted loss.
+_DATA_DRIVEN_RATIO = True
+# 时间预算允许放宽后，把损失覆盖目标从 0.99 提到 0.999：实际 refine
+# 比例从 ~0.95 提到 ~0.99（几乎全量），8 批测试上 7 类得分全部为正
+# （attn +0.0018，其余 +0.0001~0.0003），动态耗时 +约 5%。
+_RATIO_CAPTURE_TARGET = 0.999
+_RATIO_MIN = 0.10
+
+# Weight quantization can use the full per-block activation covariance as a
+# quadratic loss (true output-MSE weighting) instead of the diagonal
+# per-channel importance.  This is calibration-only: the Gram/covariance
+# never enters a dynamic state, so the 4096-node state limit is unaffected.
+_WEIGHT_QUADRATIC = True
+_WEIGHT_QUADRATIC_MAX_FEATURES = 4096
+
+# Dynamic activation quantization can also use the full weight Gram (W^T W)
+# as quadratic error weights.  Unlike Q/K covariances (estimated from a few
+# calibration tokens), the weight Gram is static and well conditioned, so the
+# same machinery that helped weight quantization should transfer.  Only the
+# per-4-group 4x4 blocks are stored in the state (~4*channels elements).
+_ACTIVATION_QUADRATIC = True
+# Gram state is ~4*channels elements; cap so the single stored tensor stays
+# within 4096 elements even under a strict element-count reading of the state
+# node limit.  Wide layers (e.g. FFN down-projection, 3072) fall back to the
+# diagonal importance automatically.
+_ACTIVATION_QUADRATIC_MAX_FEATURES = 1024
+
+# Permutation search bases.  The initial hierarchy-aware ordering combines the
+# paired operands via max(log range); real-data diagnostics show the operand
+# with the larger quantization burden (usually the weight/K side) often yields
+# a better single-sided ordering.  Each basis is evaluated with the exact
+# paired metric and accepted only when it clears the same safety gate as the
+# smoothing candidates.
+_PERMUTATION_BASES = True
+
+# V 量化目前没有任何重要性：V 的误差进入 softmax 输出时被注意力权重
+# 放大，而校准期可以静态估计每 KV head 的平均平方注意力质量
+# E[A^2]（softmax 概率，因果掩码下按 token 位置平均）。head_dim=64 时
+# 一个 HiF4 64 块恰好是一个 head 的一条位置切片，按 head 加权可以直接
+# 作用到块上。与 Q/K 协方差不同，这是静态概率统计，不会过拟合少量 token。
+_V_ATTENTION_IMPORTANCE = True
+# 向均匀权重收缩的比例（0.0 = 均匀，1.0 = 完全按 E[A^2] 加权），
+# 实测完全加权最优（attn +0.0010），收缩反而稀释收益。
+_V_ATTENTION_IMPORTANCE_SHRINK = 1.0
 
 
 def dequantize_nvfp4(
@@ -122,7 +234,93 @@ def _normalize_importance(
     mean = w.mean()
     if float(mean) <= _EPS:
         return torch.ones_like(w)
-    return w / mean
+    return (w / mean).clamp_min(_IMPORTANCE_FLOOR)
+
+
+def _standard_block_losses(
+    dense: torch.Tensor,
+    importance: Optional[torch.Tensor],
+) -> torch.Tensor:
+    """Per-block importance-weighted squared error of standard HiF4."""
+
+    prefix = tuple(int(v) for v in dense.shape[:-1])
+    channels = int(dense.shape[-1])
+    if channels % _HIF4_BLOCK_SIZE != 0:
+        raise ValueError(
+            f"Last dim {channels} is not divisible by HiF4 block size 64"
+        )
+    blocks = channels // _HIF4_BLOCK_SIZE
+
+    x = torch.nan_to_num(
+        dense.detach().to(torch.float32),
+        nan=0.0,
+        posinf=_E6M2_MAX * _HIF4_MAX_INNER,
+        neginf=-_E6M2_MAX * _HIF4_MAX_INNER,
+    )
+    x_grouped = x.reshape(*prefix, blocks, 8, 2, 4)
+    x_abs = x_grouped.abs()
+    max4 = x_abs.amax(dim=-1)
+    max8 = max4.amax(dim=-1)
+    amax = max8.amax(dim=-1)
+    _, standard_scale = _standard_e6m2_scale(amax)
+
+    e2 = max8 >= (4.0 * standard_scale[..., None])
+    scale_lv2 = 1.0 + e2.to(torch.float32)
+    e3 = max4 >= (
+        2.0 * standard_scale[..., None, None] * scale_lv2[..., None]
+    )
+    scale_lv3 = 1.0 + e3.to(torch.float32)
+    denominator = (
+        standard_scale[..., None, None, None]
+        * scale_lv2[..., None, None]
+        * scale_lv3[..., None]
+    )
+    mantissa = (
+        torch.round(x_abs * (4.0 / denominator)).clamp_(0.0, 7.0) * 0.25
+    )
+
+    channel_importance = _normalize_importance(importance, channels)
+    if channel_importance is None:
+        weighted_error = (x_abs - mantissa * denominator).square()
+    else:
+        weighted_error = (
+            (x_abs - mantissa * denominator).square()
+            * channel_importance.reshape(*([1] * len(prefix)), blocks, 8, 2, 4)
+        )
+    return weighted_error.sum(dim=(-1, -2, -3)).reshape(-1)
+
+
+def _loss_capture_ratio(
+    losses: torch.Tensor,
+    *,
+    target: float,
+    ratio_min: float,
+) -> float:
+    """Smallest fraction of the largest-loss blocks covering ``target`` of the
+    total loss.  This converts the per-block loss tail into a refine budget."""
+
+    losses = losses.detach().to(torch.float32).reshape(-1)
+    total = float(losses.sum())
+    if total <= _EPS:
+        return float(ratio_min)
+    sorted_descending = torch.sort(losses, descending=True).values
+    cumulative = torch.cumsum(sorted_descending, dim=0)
+    k = int((cumulative < float(target) * total).sum()) + 1
+    return float(
+        min(1.0, max(float(ratio_min), k / max(1, int(losses.numel()))))
+    )
+
+
+def _flat_group_gram(cov: torch.Tensor, channels: int) -> torch.Tensor:
+    """Extract per-4-group 4x4 block-diagonal quadratic weights as a flat
+    ``[channels // 4, 4, 4]`` tensor (the only part the solver needs)."""
+
+    blocks = channels // _HIF4_BLOCK_SIZE
+    g = cov.reshape(blocks, 64, blocks, 64)
+    g = torch.diagonal(g, dim1=0, dim2=2).permute(2, 0, 1)
+    g = g.reshape(blocks, 16, 4, 16, 4)
+    g = torch.diagonal(g, dim1=1, dim2=3).permute(0, 3, 1, 2)
+    return g.reshape(blocks * 16, 4, 4)
 
 
 def _identity_permutation(length: int, device: torch.device) -> torch.Tensor:
@@ -132,8 +330,6 @@ def _identity_permutation(length: int, device: torch.device) -> torch.Tensor:
 def _hierarchy_aware_permutation(
     first_range: torch.Tensor,
     second_range: torch.Tensor,
-    combine_mode: int = 0,
-    preserve_blocks: bool = False,
 ) -> torch.Tensor:
     """Cluster similarly scaled channels for the 64/8/4 HiF4 hierarchy.
 
@@ -148,48 +344,41 @@ def _hierarchy_aware_permutation(
     log_second = torch.log2(second_range.to(torch.float32).clamp_min(_EPS))
     log_first = log_first - torch.median(log_first)
     log_second = log_second - torch.median(log_second)
-    if int(combine_mode) == 0:
-        pressure = torch.maximum(log_first, log_second).reshape(-1)
-    elif int(combine_mode) == 1:
-        pressure = (0.5 * (log_first + log_second)).reshape(-1)
-    else:
-        raise ValueError("Unsupported hierarchy pressure mode")
+    pressure = torch.maximum(log_first, log_second).reshape(-1)
     if int(pressure.numel()) == 0:
         return torch.empty(0, dtype=torch.int64, device=pressure.device)
-    if bool(preserve_blocks):
-        if int(pressure.numel()) % _HIF4_BLOCK_SIZE != 0:
-            raise ValueError("Block-preserving ordering requires a width divisible by 64")
-        grouped = pressure.reshape(-1, _HIF4_BLOCK_SIZE)
-        local_permutation = torch.argsort(grouped, dim=-1, descending=True)
-        spread = grouped.amax(dim=-1) - grouped.amin(dim=-1)
-        local_identity = torch.arange(
-            _HIF4_BLOCK_SIZE,
-            dtype=torch.int64,
-            device=pressure.device,
-        )[None, :].expand_as(local_permutation)
-        local_permutation = torch.where(
-            spread[:, None] >= 0.25,
-            local_permutation,
-            local_identity,
-        )
-        block_base = (
-            torch.arange(
-                int(grouped.shape[0]),
-                dtype=torch.int64,
-                device=pressure.device,
-            )[:, None]
-            * _HIF4_BLOCK_SIZE
-        )
-        return (local_permutation + block_base).reshape(-1)
     if float(pressure.max() - pressure.min()) < 0.25:
         return _identity_permutation(int(pressure.numel()), pressure.device)
     return torch.argsort(pressure, descending=True)
 
 
+def _range_permutation(ranges: torch.Tensor) -> torch.Tensor:
+    """1D argsort of log ranges; identity when the log spread is negligible."""
+
+    log_r = torch.log2(ranges.to(torch.float32).clamp_min(_EPS))
+    log_r = log_r - torch.median(log_r)
+    flat = log_r.reshape(-1)
+    if float(flat.max() - flat.min()) < 0.25:
+        return _identity_permutation(int(flat.numel()), flat.device)
+    return torch.argsort(flat, descending=True)
+
+
+def _headwise_range_permutation(ranges: torch.Tensor) -> torch.Tensor:
+    """Per-head argsort of log ranges (ranges: [heads, head_dim])."""
+
+    log_r = torch.log2(ranges.to(torch.float32).clamp_min(_EPS))
+    log_r = log_r - log_r.median(dim=-1, keepdim=True).values
+    spread = log_r.amax(dim=-1) - log_r.amin(dim=-1)
+    identity = torch.arange(
+        int(ranges.shape[-1]), dtype=torch.int64, device=ranges.device
+    ).expand_as(ranges)
+    ordered = torch.argsort(log_r, dim=-1, descending=True)
+    return torch.where(spread[:, None] >= 0.25, ordered, identity)
+
+
 def _headwise_hierarchy_permutation(
     q_range: torch.Tensor,
     k_range: torch.Tensor,
-    combine_mode: int = 0,
 ) -> torch.Tensor:
     """Return a local feature permutation for each paired Q/KV head."""
 
@@ -199,12 +388,7 @@ def _headwise_hierarchy_permutation(
     k_log = torch.log2(k_range.to(torch.float32).clamp_min(_EPS))
     q_log = q_log - q_log.median(dim=-1, keepdim=True).values
     k_log = k_log - k_log.median(dim=-1, keepdim=True).values
-    if int(combine_mode) == 0:
-        pressure = torch.maximum(q_log, k_log)
-    elif int(combine_mode) == 1:
-        pressure = 0.5 * (q_log + k_log)
-    else:
-        raise ValueError("Unsupported headwise hierarchy pressure mode")
+    pressure = torch.maximum(q_log, k_log)
     permutation = torch.argsort(pressure, dim=-1, descending=True)
 
     spread = pressure.amax(dim=-1) - pressure.amin(dim=-1)
@@ -243,27 +427,6 @@ def _candidate_is_safe(
     return True
 
 
-def _attention_mask_consensus(
-    candidate: tuple[float, tuple[float, ...]],
-    baseline: tuple[float, tuple[float, ...]],
-    min_improvement: float = 0.002,
-) -> bool:
-    """Require both non-causal and causal calibration domains to improve."""
-
-    if len(candidate[1]) != len(baseline[1]):
-        return False
-    for mask_index in (0, 1):
-        current = candidate[1][mask_index::2]
-        reference = baseline[1][mask_index::2]
-        if not current or len(current) != len(reference):
-            return False
-        current_mean = sum(current) / float(len(current))
-        reference_mean = sum(reference) / float(len(reference))
-        if current_mean > reference_mean * (1.0 - min_improvement):
-            return False
-    return True
-
-
 def _center_attention_k(
     dense: torch.Tensor,
     num_heads: int,
@@ -280,9 +443,7 @@ def _center_attention_k(
     if int(dense.shape[1]) != int(num_heads) * int(head_dim):
         raise ValueError("Invalid dimensions for attention centering")
     grouped = dense.reshape(-1, int(num_heads), int(head_dim))
-    if mode == 1:
-        center = grouped.mean(dim=0, keepdim=True)
-    elif mode == 2:
+    if mode == 2:
         center = 0.5 * (
             grouped.amax(dim=0, keepdim=True)
             + grouped.amin(dim=0, keepdim=True)
@@ -292,34 +453,31 @@ def _center_attention_k(
     return (grouped - center).reshape_as(dense)
 
 
-def _attention_heavy_tail_guard(
-    calib_qkv_list: Sequence[dict[str, Any]],
-) -> bool:
-    """Detect a broad K tail before enabling midrange centering.
+def _attention_head_square_mass(
+    q: torch.Tensor,
+    k: torch.Tensor,
+    q_num_heads: int,
+    kv_num_heads: int,
+    head_dim: int,
+) -> torch.Tensor:
+    """每个 KV head 的平均平方注意力质量 E[A^2]（因果 softmax）。
 
-    Midrange centering can amplify block-scale error for long, heavy-tailed
-    heads. The guard uses only calibration K magnitudes and no scenario name;
-    it relies only on the observed distribution, so the same guard generalizes
-    across head sizes instead of treating shape as a scenario label.
+    V 输出误差被 A 加权，输出 MSE 中 V 通道的静态权重近似为
+    ``E_t,s[A(t,s,h)^2]``。GQA 下每个 KV head 对应 group 个 Q head，
+    取组内平均。返回 ``[kv_num_heads]``。
     """
 
-    samples: list[torch.Tensor] = []
-    for sample in calib_qkv_list:
-        k = _dequantize_nvfp4_float32(*sample["k"])
-        rows = _sample_rows(k, 2048).abs().reshape(-1)
-        if int(rows.numel()) > 0:
-            samples.append(rows)
-    if not samples:
-        return False
-    values = torch.cat(samples)
-    median = torch.quantile(
-        values, torch.tensor(0.50, dtype=values.dtype, device=values.device)
-    )
-    upper = torch.quantile(
-        values, torch.tensor(0.99, dtype=values.dtype, device=values.device)
-    )
-    tail_ratio = upper / median.clamp_min(_EPS)
-    return bool(float(tail_ratio) > 6.0)
+    seq = int(q.shape[0])
+    group = q_num_heads // kv_num_heads
+    qh = q.reshape(seq, q_num_heads, head_dim)
+    kh = k.reshape(seq, kv_num_heads, head_dim).repeat_interleave(group, dim=1)
+    scores = torch.einsum("thd,shd->tsh", qh, kh) / math.sqrt(float(head_dim))
+    mask = torch.triu(
+        torch.full((seq, seq), float("-inf"), device=scores.device), 1
+    ).unsqueeze(-1)
+    probs = torch.softmax(scores + mask, dim=1)
+    per_q_head = probs.square().mean(dim=(0, 1))
+    return per_q_head.reshape(kv_num_heads, group).mean(dim=1)
 
 
 def _e6m2_encode_nearest(value: torch.Tensor) -> torch.Tensor:
@@ -390,6 +548,8 @@ def _solve_exact_hierarchy(
     x_abs: torch.Tensor,
     scale: torch.Tensor,
     importance: Optional[torch.Tensor],
+    sign: Optional[torch.Tensor] = None,
+    group_gram: Optional[torch.Tensor] = None,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     """Exactly solve lv2/lv3 for fixed scales using three loss tables.
 
@@ -397,19 +557,31 @@ def _solve_exact_hierarchy(
         x_abs: ``[num_blocks, 8, 2, 4]`` absolute values.
         scale: ``[num_blocks]`` finite E6M2 values.
         importance: optional tensor with the same shape as ``x_abs``.
+        sign: ``[num_blocks, 8, 2, 4]`` signs (required with ``group_gram``).
+        group_gram: ``[num_blocks, 8, 2, 4, 4]`` per-group quadratic weights;
+            when given, the loss is the quadratic form ``delta^T G delta``
+            instead of the diagonal per-channel weighted squares.
     """
 
     losses: list[torch.Tensor] = []
     mantissas: list[torch.Tensor] = []
 
     for total_exponent in (0, 1, 2):
-        local_scale = scale[:, None, None, None] * float(1 << total_exponent)
+        local_scale = scale[..., None, None, None] * float(1 << total_exponent)
         mant_code = torch.round(x_abs * (4.0 / local_scale)).clamp_(0.0, 7.0)
         mantissa = mant_code * 0.25
-        error = (x_abs - mantissa * local_scale).square()
-        if importance is not None:
-            error = error * importance
-        losses.append(error.sum(dim=-1))
+        if group_gram is not None:
+            delta = sign * (x_abs - mantissa * local_scale)
+            losses.append(
+                torch.einsum(
+                    "...abi,...abij,...abj->...ab", delta, group_gram, delta
+                )
+            )
+        else:
+            error = (x_abs - mantissa * local_scale).square()
+            if importance is not None:
+                error = error * importance
+            losses.append(error.sum(dim=-1))
         mantissas.append(mantissa)
 
     loss_0, loss_1, loss_2 = losses
@@ -424,97 +596,19 @@ def _solve_exact_hierarchy(
     block_loss = torch.where(e2, cost_e2_1, cost_e2_0).sum(dim=-1)
     total_exponent = e2.to(torch.int64)[..., None] + e3.to(torch.int64)
 
-    # [N, 8, 2, 3, 4], gather the mantissa matching k=e2+e3.
-    mantissa_stack = torch.stack(mantissas, dim=3)
-    gather_index = total_exponent[..., None, None].expand(-1, -1, -1, 1, 4)
-    mantissa = torch.gather(mantissa_stack, 3, gather_index).squeeze(3)
+    # [..., 3, 4]，指数维固定在倒数第二维（批量时随输入维度自然后移）。
+    mantissa_stack = torch.stack(mantissas, dim=-2)
+    gather_index = total_exponent[..., None, None].expand(
+        *total_exponent.shape, 1, 4
+    )
+    gather_dim = mantissa_stack.ndim - 2  # 指数维：4D 输入为 3，批量时随维度后移
+    mantissa = torch.gather(
+        mantissa_stack, gather_dim, gather_index
+    ).squeeze(-2)
 
     scale_lv2 = 1.0 + e2.to(torch.float32)
     scale_lv3 = 1.0 + e3.to(torch.float32)
     return block_loss, scale_lv2, scale_lv3, mantissa
-
-
-def _solve_hierarchy_candidates_batched(
-    x_abs: torch.Tensor,
-    candidate_codes: list[torch.Tensor],
-    importance: Optional[torch.Tensor],
-) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-    """Exactly solve lv2/lv3 for all candidate scales in one batched pass.
-
-    Numerically identical to evaluating ``_solve_exact_hierarchy`` once per
-    candidate and keeping the first strictly-better candidate (ties keep the
-    earliest candidate, matching the sequential update order).
-
-    Args:
-        x_abs: ``[num_blocks, 8, 2, 4]`` absolute values.
-        candidate_codes: list of ``[num_blocks]`` E6M2 codes.
-        importance: optional tensor with the same shape as ``x_abs``.
-
-    Returns:
-        (loss [num_blocks], scale [num_blocks], scale_lv2 [num_blocks, 8],
-         scale_lv3 [num_blocks, 8, 2], mantissa [num_blocks, 8, 2, 4]).
-    """
-
-    code_all = torch.stack(candidate_codes, dim=0)
-    scale_all = _e6m2_decode(code_all)
-    num_candidates = int(code_all.shape[0])
-    num_blocks = int(x_abs.shape[0])
-
-    losses: list[torch.Tensor] = []
-    for total_exponent in (0, 1, 2):
-        local_scale = (
-            scale_all[:, :, None, None, None] * float(1 << total_exponent)
-        )
-        mant_code = torch.round(
-            x_abs[None] * (4.0 / local_scale)
-        ).clamp_(0.0, 7.0)
-        mantissa = mant_code * 0.25
-        error = (x_abs[None] - mantissa * local_scale).square()
-        if importance is not None:
-            error = error * importance[None]
-        losses.append(error.sum(dim=-1))
-
-    loss_0, loss_1, loss_2 = losses
-    choose_01 = loss_1 < loss_0
-    choose_12 = loss_2 < loss_1
-    cost_e2_0 = torch.minimum(loss_0, loss_1).sum(dim=-1)
-    cost_e2_1 = torch.minimum(loss_1, loss_2).sum(dim=-1)
-    e2 = cost_e2_1 < cost_e2_0
-    e3 = torch.where(e2[..., None], choose_12, choose_01)
-    block_loss = torch.where(e2, cost_e2_1, cost_e2_0).sum(dim=-1)
-
-    candidate_min = block_loss.min(dim=0).values
-    is_min = block_loss == candidate_min[None, :]
-    order = torch.arange(
-        num_candidates, dtype=torch.int64, device=code_all.device
-    )
-    pick = torch.where(is_min, order[:, None], num_candidates)
-    candidate_index = pick.min(dim=0).values
-
-    flat_index = candidate_index[None]
-    scale_sel = scale_all.gather(0, flat_index.expand_as(scale_all))[0]
-    e2_sel = e2.gather(
-        0,
-        flat_index[..., None].expand(-1, -1, x_abs.shape[1]),
-    )[0]
-    e3_sel = e3.gather(
-        0,
-        flat_index[..., None, None].expand(
-            -1, -1, x_abs.shape[1], x_abs.shape[2]
-        ),
-    )[0]
-
-    scale_lv2 = 1.0 + e2_sel.to(torch.float32)
-    scale_lv3 = 1.0 + e3_sel.to(torch.float32)
-    denominator = (
-        scale_sel[:, None, None, None]
-        * scale_lv2[:, :, None, None]
-        * scale_lv3[:, :, :, None]
-    )
-    mantissa = (
-        torch.round(x_abs * (4.0 / denominator)).clamp_(0.0, 7.0) * 0.25
-    )
-    return candidate_min, scale_sel, scale_lv2, scale_lv3, mantissa
 
 
 def _pack_hif4_params(
@@ -546,15 +640,28 @@ def _dense_to_hif4(
     dense: torch.Tensor,
     *,
     importance: Optional[torch.Tensor] = None,
+    group_gram: Optional[torch.Tensor] = None,
     search_offsets: Optional[Union[Sequence[int], torch.Tensor]] = None,
-    search_top_ranks: Optional[Union[Sequence[int], torch.Tensor]] = None,
     error_threshold: float = 0.0,
     accept_margin: float = 0.0,
     max_refine_ratio: float = 0.0,
     max_refine_blocks: Optional[int] = None,
-    selection_mode: str = "relative",
 ) -> dict[str, torch.Tensor]:
     """Quantize a dense tensor into valid HiF4 parameters."""
+
+    if group_gram is not None:
+        expected_gram_shape = dense.shape[:-1] + (
+            dense.shape[-1] // 64,
+            8,
+            2,
+            4,
+            4,
+        )
+        if tuple(group_gram.shape) != tuple(expected_gram_shape):
+            raise ValueError(
+                f"group_gram shape {tuple(group_gram.shape)} does not match "
+                f"expected {expected_gram_shape}"
+            )
 
     if dense.ndim < 1:
         raise ValueError("dense must have at least one dimension")
@@ -598,21 +705,8 @@ def _dense_to_hif4(
     )
 
     offsets = _offsets_as_tuple(search_offsets)
-    if search_top_ranks is None:
-        top_ranks: tuple[int, ...] = ()
-    elif torch.is_tensor(search_top_ranks):
-        top_ranks = tuple(
-            int(v) for v in search_top_ranks.detach().to("cpu").reshape(-1).tolist()
-            if 1 <= int(v) <= _HIF4_BLOCK_SIZE
-        )
-    else:
-        top_ranks = tuple(
-            int(v) for v in search_top_ranks
-            if 1 <= int(v) <= _HIF4_BLOCK_SIZE
-        )
-    top_ranks = tuple(dict.fromkeys(top_ranks))
     refine_ratio = max(0.0, min(float(max_refine_ratio), 1.0))
-    if refine_ratio <= 0.0 or (len(offsets) == 0 and len(top_ranks) == 0):
+    if refine_ratio <= 0.0 or len(offsets) == 0:
         return _pack_hif4_params(
             prefix,
             blocks,
@@ -626,7 +720,14 @@ def _dense_to_hif4(
     channel_importance = _normalize_importance(importance, channels)
     if channel_importance is not None:
         channel_importance = channel_importance.to(x.device)
-    if channel_importance is None:
+    if group_gram is not None:
+        delta = sign * (x_abs - mantissa * denominator)
+        weighted_error = torch.einsum(
+            "...abi,...abij,...abj->...ab", delta, group_gram, delta
+        )
+        weighted_energy = x_abs.square()
+        importance_view = None
+    elif channel_importance is None:
         weighted_error = (x_abs - mantissa * denominator).square()
         weighted_energy = x_abs.square()
         importance_view = None
@@ -637,22 +738,14 @@ def _dense_to_hif4(
         weighted_error = (x_abs - mantissa * denominator).square() * importance_view
         weighted_energy = x_abs.square() * importance_view
 
-    standard_loss = weighted_error.sum(dim=(-1, -2, -3))
+    loss_reduce_dims = (-1, -2) if group_gram is not None else (-1, -2, -3)
+    standard_loss = weighted_error.sum(dim=loss_reduce_dims)
     energy = weighted_energy.sum(dim=(-1, -2, -3))
-    if selection_mode == "hybrid":
-        # For static Weight, pure relative error over-prioritizes tiny-energy
-        # blocks while pure absolute error can be dominated by a few rows.
-        # L/sqrt(E) is a stable compromise under a fixed refinement budget.
-        normalized_error = standard_loss / torch.sqrt(energy + _EPS)
-    elif selection_mode == "absolute":
-        normalized_error = standard_loss
-    elif selection_mode == "relative":
-        normalized_error = standard_loss / (energy + _EPS)
-    else:
-        raise ValueError("selection_mode must be relative, hybrid, or absolute")
+    normalized_error = standard_loss / (energy + _EPS)
 
-    flat_error = normalized_error.reshape(-1)
-    hard_mask = flat_error > float(error_threshold)
+    flat_norm = normalized_error.reshape(-1)
+    flat_loss = standard_loss.reshape(-1)
+    hard_mask = flat_norm > float(error_threshold)
     hard_indices = torch.nonzero(hard_mask, as_tuple=False).reshape(-1)
     if int(hard_indices.numel()) == 0:
         return _pack_hif4_params(
@@ -665,12 +758,20 @@ def _dense_to_hif4(
             mantissa,
         )
 
-    total_blocks = int(flat_error.numel())
+    total_blocks = int(flat_norm.numel())
     refine_cap = max(1, int(math.ceil(total_blocks * refine_ratio)))
     if max_refine_blocks is not None:
         refine_cap = min(refine_cap, max(1, int(max_refine_blocks)))
     if int(hard_indices.numel()) > refine_cap:
-        hard_indices = torch.topk(flat_error, k=refine_cap, largest=True).indices
+        if _REFINE_RANK_BY_ABSOLUTE:
+            # Rank by the block's absolute (importance-weighted) reconstruction
+            # error, i.e. its true contribution to the output MSE, instead of
+            # the normalized error: under a fixed refinement budget this
+            # greedily maximizes the total MSE reduction (and hence the
+            # competition score).
+            hard_indices = torch.topk(flat_loss, k=refine_cap, largest=True).indices
+        else:
+            hard_indices = torch.topk(flat_norm, k=refine_cap, largest=True).indices
 
     x_flat = x_abs.reshape(-1, 8, 2, 4)
     x_hard = x_flat.index_select(0, hard_indices)
@@ -684,6 +785,15 @@ def _dense_to_hif4(
     best_mantissa = mantissa.reshape(-1, 8, 2, 4).index_select(
         0, hard_indices
     ).clone()
+    sign_hard = sign.reshape(-1, 8, 2, 4).index_select(0, hard_indices)
+    group_gram_hard = (
+        None
+        if group_gram is None
+        else group_gram.reshape(-1, 8, 2, 4, 4).index_select(0, hard_indices)
+    )
+    best_offset = torch.zeros(
+        int(hard_indices.numel()), dtype=torch.int64, device=x.device
+    )
 
     if channel_importance is None:
         importance_hard = None
@@ -692,68 +802,131 @@ def _dense_to_hif4(
         channel_block_ids = torch.remainder(hard_indices, blocks)
         importance_hard = block_importance.index_select(0, channel_block_ids)
 
-    candidate_codes: list[torch.Tensor] = []
-    for offset in offsets:
-        candidate_codes.append(
-            (standard_code_hard.to(torch.int64) + int(offset)).clamp(
-                min=0, max=254
-            )
+    # 全部 offset 一次性批量求解：把 [N] 块沿 offset 维展开成 [K, N]，
+    # 一次精确求解后按块取 argmin。标准 code（offset 0）必须保留在候选里：
+    # 阈值式 lv2/lv3 与精确解不等价（真实数据约半数块有更低损失），
+    # offset 0 会把 hard 块的 lv2/lv3 升级为精确解。
+    offset_values = torch.tensor(
+        [int(o) for o in offsets], dtype=torch.int64, device=x.device
+    )
+    expanded_codes = (
+        standard_code_hard.to(torch.int64).unsqueeze(0)
+        + offset_values.unsqueeze(1)
+    ).clamp(min=0, max=254)
+    candidate_scales = _e6m2_decode(expanded_codes)
+    num_offsets = int(offset_values.numel())
+    x_expanded = x_hard.unsqueeze(0).expand(
+        num_offsets, -1, -1, -1, -1
+    )
+    sign_expanded = sign_hard.unsqueeze(0).expand(
+        num_offsets, -1, -1, -1, -1
+    )
+    importance_expanded = (
+        None
+        if importance_hard is None
+        else importance_hard.unsqueeze(0).expand(
+            num_offsets, -1, -1, -1, -1
         )
-    if top_ranks:
-        largest_rank = max(top_ranks)
-        ranked_values = torch.topk(
-            x_hard.reshape(-1, _HIF4_BLOCK_SIZE),
-            k=largest_rank,
-            dim=-1,
-            largest=True,
-            sorted=True,
-        ).values
-        for rank in top_ranks:
-            rank_scale = (
-                ranked_values[:, int(rank) - 1].to(torch.bfloat16)
-                * _BF16_ONE_SEVENTH
-            ).to(torch.float32)
-            candidate_codes.append(
-                _e6m2_encode_nearest(rank_scale).to(torch.int64)
-            )
+    )
+    gram_expanded = (
+        None
+        if group_gram_hard is None
+        else group_gram_hard.unsqueeze(0).expand(
+            num_offsets, -1, -1, -1, -1, -1
+        )
+    )
+    all_losses, all_lv2, all_lv3, all_mantissa = _solve_exact_hierarchy(
+        x_expanded,
+        candidate_scales,
+        importance_expanded,
+        sign_expanded,
+        gram_expanded,
+    )
+    best_k = all_losses.argmin(dim=0)
+    hard_arange = torch.arange(
+        int(hard_indices.numel()), device=x.device
+    )
+    candidate_loss = all_losses[best_k, hard_arange]
+    candidate_scale = candidate_scales[best_k, hard_arange]
+    candidate_lv2 = all_lv2[best_k, hard_arange]
+    candidate_lv3 = all_lv3[best_k, hard_arange]
+    candidate_mantissa = all_mantissa[best_k, hard_arange]
 
-    if candidate_codes and (
-        len(candidate_codes) * int(candidate_codes[0].numel())
-        <= _BATCH_SOLVE_MAX_CANDIDATES
-    ):
-        # Batched solve: one vectorized pass over all candidate scales with
-        # semantics identical to the sequential loop below (ties keep the
-        # earliest candidate, and the standard path always wins ties).
-        cand_loss, cand_scale, cand_lv2, cand_lv3, cand_mantissa = (
-            _solve_hierarchy_candidates_batched(
-                x_hard, candidate_codes, importance_hard
-            )
-        )
-        improve = cand_loss < best_loss
-        best_loss = torch.where(improve, cand_loss, best_loss)
-        best_scale = torch.where(improve, cand_scale, best_scale)
-        best_lv2 = torch.where(improve[:, None], cand_lv2, best_lv2)
-        best_lv3 = torch.where(improve[:, None, None], cand_lv3, best_lv3)
-        best_mantissa = torch.where(
-            improve[:, None, None, None], cand_mantissa, best_mantissa
-        )
-    else:
-        for candidate_code in candidate_codes:
-            candidate_scale = _e6m2_decode(candidate_code)
-            candidate_loss, candidate_lv2, candidate_lv3, candidate_mantissa = (
-                _solve_exact_hierarchy(x_hard, candidate_scale, importance_hard)
-            )
+    improve = candidate_loss < best_loss
+    best_loss = torch.where(improve, candidate_loss, best_loss)
+    best_scale = torch.where(improve, candidate_scale, best_scale)
+    best_lv2 = torch.where(improve[:, None], candidate_lv2, best_lv2)
+    best_lv3 = torch.where(improve[:, None, None], candidate_lv3, best_lv3)
+    best_mantissa = torch.where(
+        improve[:, None, None, None], candidate_mantissa, best_mantissa
+    )
+    best_offset = torch.where(
+        improve, offset_values[best_k], best_offset
+    )
 
-            improve = candidate_loss < best_loss
-            best_loss = torch.where(improve, candidate_loss, best_loss)
-            best_scale = torch.where(improve, candidate_scale, best_scale)
-            best_lv2 = torch.where(improve[:, None], candidate_lv2, best_lv2)
-            best_lv3 = torch.where(
-                improve[:, None, None], candidate_lv3, best_lv3
-            )
-            best_mantissa = torch.where(
-                improve[:, None, None, None], candidate_mantissa, best_mantissa
-            )
+    if _REFINE_EDGE_EXTENSION and len(offsets) > 1:
+        lo_offset = int(offsets[0])
+        hi_offset = int(offsets[-1])
+
+        def extend_edge(edge: int, direction: int) -> None:
+            nonlocal best_loss, best_scale
+            nonlocal best_lv2, best_lv3, best_mantissa, best_offset
+            mask = best_offset == edge
+            for _ in range(_REFINE_EDGE_EXTEND_STEPS):
+                if not bool(mask.any()):
+                    return
+                edge_indices = torch.nonzero(mask, as_tuple=False).reshape(-1)
+                target = edge + direction
+                if target < -254 or target > 254:
+                    return
+                edge_code = (
+                    standard_code_hard.index_select(0, edge_indices).to(
+                        torch.int64
+                    )
+                    + target
+                ).clamp(min=0, max=254)
+                edge_scale = _e6m2_decode(edge_code)
+                edge_importance = (
+                    None
+                    if importance_hard is None
+                    else importance_hard.index_select(0, edge_indices)
+                )
+                edge_loss, edge_lv2, edge_lv3, edge_mantissa = (
+                    _solve_exact_hierarchy(
+                        x_hard.index_select(0, edge_indices),
+                        edge_scale,
+                        edge_importance,
+                        sign_hard.index_select(0, edge_indices),
+                        (
+                            None
+                            if group_gram_hard is None
+                            else group_gram_hard.index_select(0, edge_indices)
+                        ),
+                    )
+                )
+                improve = edge_loss < best_loss.index_select(0, edge_indices)
+                improved = edge_indices[improve]
+                if int(improved.numel()) == 0:
+                    return
+                best_loss.index_copy_(
+                    0, improved, edge_loss[improve]
+                )
+                best_scale.index_copy_(0, improved, edge_scale[improve])
+                best_lv2.index_copy_(0, improved, edge_lv2[improve])
+                best_lv3.index_copy_(0, improved, edge_lv3[improve])
+                best_mantissa.index_copy_(
+                    0, improved, edge_mantissa[improve]
+                )
+                best_offset.index_copy_(
+                    0,
+                    improved,
+                    torch.full_like(best_offset[improved], target),
+                )
+                edge = target
+                mask = best_offset == target
+
+        extend_edge(hi_offset, +1)
+        extend_edge(lo_offset, -1)
 
     margin = max(0.0, min(float(accept_margin), 0.99))
     accept = best_loss <= ((1.0 - margin) * standard_loss_hard)
@@ -796,12 +969,14 @@ def _nvfp4_to_hif4(
     *,
     multiplier: Optional[torch.Tensor] = None,
     permutation: Optional[torch.Tensor] = None,
+    block_smooth_size: int = 0,
+    block_smooth_seed: int = 0,
     center_mode: int = 0,
     center_num_heads: Optional[int] = None,
     center_head_dim: Optional[int] = None,
     importance: Optional[torch.Tensor] = None,
+    group_gram: Optional[torch.Tensor] = None,
     search_offsets: Optional[Union[Sequence[int], torch.Tensor]] = None,
-    search_top_ranks: Optional[Union[Sequence[int], torch.Tensor]] = None,
     error_threshold: float = 0.0,
     accept_margin: float = 0.0,
     max_refine_ratio: float = 0.0,
@@ -828,11 +1003,30 @@ def _nvfp4_to_hif4(
         if int(order.numel()) != channels:
             raise ValueError("Permutation width does not match tensor width")
         dense = dense.index_select(-1, order)
+    if int(block_smooth_size) != 0:
+        dense = _block_hadamard_transform(
+            dense, int(block_smooth_size), int(block_smooth_seed)
+        )
+    gram = None
+    if group_gram is not None:
+        gram = group_gram.detach().to(
+            device=dense.device, dtype=torch.float32
+        )
+        expected = (channels // 4, 4, 4)
+        if tuple(gram.shape) != expected:
+            raise ValueError(
+                f"group_gram shape {tuple(gram.shape)} does not match "
+                f"expected {expected}"
+            )
+        blocks = channels // _HIF4_BLOCK_SIZE
+        gram = gram.reshape(blocks, 8, 2, 4, 4).unsqueeze(0).expand(
+            int(dense.shape[0]), blocks, 8, 2, 4, 4
+        )
     return _dense_to_hif4(
         dense,
         importance=importance,
+        group_gram=gram,
         search_offsets=search_offsets,
-        search_top_ranks=search_top_ranks,
         error_threshold=error_threshold,
         accept_margin=accept_margin,
         max_refine_ratio=max_refine_ratio,
@@ -859,12 +1053,131 @@ def _smooth_scale(
     d = (activation_amax + _EPS).pow(alpha) / (
         weight_amax + _EPS
     ).pow(1.0 - alpha)
-    d = torch.nan_to_num(d, nan=1.0, posinf=8.0, neginf=1.0 / 8.0)
-    d = d.clamp(min=1.0 / 8.0, max=8.0)
+    d = torch.nan_to_num(
+        d, nan=1.0, posinf=_SMOOTH_SCALE_MAX, neginf=_SMOOTH_SCALE_MIN
+    )
+    d = d.clamp(min=_SMOOTH_SCALE_MIN, max=_SMOOTH_SCALE_MAX)
     # A global normalization prevents an arbitrary overall scale drift while
     # retaining the relative channel smoothing.
     geometric_mean = torch.exp(torch.log(d).mean())
-    return (d / geometric_mean).clamp(min=1.0 / 8.0, max=8.0)
+    return (d / geometric_mean).clamp(
+        min=_SMOOTH_SCALE_MIN, max=_SMOOTH_SCALE_MAX
+    )
+
+
+def _hadamard_matrix(
+    size: int,
+    device: torch.device,
+    dtype: torch.dtype,
+) -> torch.Tensor:
+    """Return a normalized Sylvester Hadamard matrix (size 4/8/16)."""
+
+    n = int(size)
+    if n not in _BLOCK_SMOOTH_ALLOWED_SIZES:
+        raise ValueError(
+            "block_smooth_size must be one of "
+            f"{_BLOCK_SMOOTH_ALLOWED_SIZES}, got {n}"
+        )
+    h = torch.ones(1, 1, dtype=dtype, device=device)
+    while int(h.shape[0]) < n:
+        h = torch.cat(
+            (torch.cat((h, h), dim=1), torch.cat((h, -h), dim=1)), dim=0
+        )
+    return h * (1.0 / math.sqrt(float(n)))
+
+
+def _block_hadamard_transform(
+    dense: torch.Tensor,
+    block_size: int,
+    seed: int = 0,
+) -> torch.Tensor:
+    """Apply a deterministic signed orthogonal transform to feature blocks.
+
+    The signs avoid concentrating positively correlated channels in the DC
+    Hadamard coefficient.  They are derived from the absolute feature index,
+    so calibration and dynamic quantization only share ``block_size`` and a
+    small integer ``seed``.
+    """
+
+    size = int(block_size)
+    if size == 0:
+        return dense
+    channels = int(dense.shape[-1])
+    if channels % size != 0:
+        raise ValueError(
+            f"Feature width {channels} is not divisible by block size {size}"
+        )
+    indices = torch.arange(channels, dtype=torch.int64, device=dense.device)
+    bits = (
+        indices * 1_103_515_245 + int(seed) * 214_013 + 12_345
+    ).bitwise_and(1 << 30)
+    signs = torch.where(bits == 0, 1.0, -1.0).to(dtype=dense.dtype)
+    grouped = dense.reshape(*dense.shape[:-1], channels // size, size)
+    grouped = grouped * signs.reshape(channels // size, size)
+    h = _hadamard_matrix(size, dense.device, dense.dtype)
+    return torch.matmul(grouped, h).reshape_as(dense)
+
+
+def _linear_pair_transform(
+    dense: torch.Tensor,
+    d: torch.Tensor,
+    permutation: torch.Tensor,
+    block_smooth_size: int,
+    block_smooth_seed: int = 0,
+    *,
+    weight_side: bool,
+) -> torch.Tensor:
+    """Apply one side of the exactly equivalent Linear transform."""
+
+    scale = d if weight_side else d.reciprocal()
+    transformed = (dense * scale.unsqueeze(0)).index_select(-1, permutation)
+    return _block_hadamard_transform(
+        transformed, block_smooth_size, block_smooth_seed
+    )
+
+
+def _transformed_second_moment(
+    second_moment: torch.Tensor,
+    d: torch.Tensor,
+    permutation: torch.Tensor,
+    block_smooth_size: int,
+    block_smooth_seed: int = 0,
+) -> torch.Tensor:
+    """Diagonal covariance after scale/permutation/block rotation.
+
+    Without a full covariance the diagonal after a normalized Hadamard is the
+    mean variance of each block.  The full covariance path below is still used
+    for the quadratic weight solver once a candidate has been selected.
+    """
+
+    moment = (second_moment / d.square()).index_select(0, permutation)
+    size = int(block_smooth_size)
+    if size != 0:
+        moment = moment.reshape(-1, size).mean(dim=-1, keepdim=True).expand(
+            -1, size
+        ).reshape(-1)
+    return moment
+
+
+def _transformed_covariance(
+    covariance: torch.Tensor,
+    d: torch.Tensor,
+    permutation: torch.Tensor,
+    block_smooth_size: int,
+    block_smooth_seed: int = 0,
+) -> torch.Tensor:
+    """Full activation covariance after the equivalent transform."""
+
+    scale = d.reciprocal().to(dtype=covariance.dtype)
+    cov = covariance * scale.unsqueeze(0) * scale.unsqueeze(1)
+    cov = cov.index_select(0, permutation).index_select(1, permutation)
+    size = int(block_smooth_size)
+    if size != 0:
+        cov = _block_hadamard_transform(cov, size, block_smooth_seed)
+        cov = _block_hadamard_transform(
+            cov.t(), size, block_smooth_seed
+        ).t()
+    return cov
 
 
 def _linear_candidate_metrics(
@@ -873,7 +1186,8 @@ def _linear_candidate_metrics(
     activation_samples: Sequence[torch.Tensor],
     d: torch.Tensor,
     permutation: torch.Tensor,
-    refinement_aware: bool = False,
+    block_smooth_size: int = 0,
+    block_smooth_seed: int = 0,
 ) -> tuple[float, tuple[float, ...]]:
     """Score an equivalent Linear transform from operand-side statistics."""
 
@@ -882,21 +1196,18 @@ def _linear_candidate_metrics(
     if int(order.numel()) != channels:
         raise ValueError("Linear candidate permutation has an invalid width")
 
-    weight_smooth = (weight * d.unsqueeze(0)).index_select(-1, order)
-    h_x = (activation_second_moment / d.square()).index_select(0, order)
-    if refinement_aware:
-        weight_params = _dense_to_hif4(
-            weight_smooth,
-            importance=h_x,
-            search_offsets=_WEIGHT_OFFSETS,
-            search_top_ranks=_WEIGHT_TOP_RANKS,
-            error_threshold=1.0e-7,
-            accept_margin=0.0,
-            max_refine_ratio=0.50,
-            max_refine_blocks=16_384,
-        )
-    else:
-        weight_params = _dense_to_hif4(weight_smooth)
+    weight_smooth = _linear_pair_transform(
+        weight,
+        d,
+        order,
+        block_smooth_size,
+        block_smooth_seed,
+        weight_side=True,
+    )
+    h_x = _transformed_second_moment(
+        activation_second_moment, d, order, block_smooth_size
+    )
+    weight_params = _dense_to_hif4(weight_smooth)
     weight_hat = _dequantize_hif4(weight_params)
 
     weight_error = (
@@ -911,20 +1222,15 @@ def _linear_candidate_metrics(
 
     case_scores: list[float] = []
     for sample in activation_samples:
-        smooth = (sample / d.unsqueeze(0)).index_select(-1, order)
-        if refinement_aware:
-            params = _dense_to_hif4(
-                smooth,
-                importance=h_w,
-                search_offsets=_LINEAR_DYNAMIC_OFFSETS,
-                search_top_ranks=_LINEAR_DYNAMIC_TOP_RANKS,
-                error_threshold=1.0e-7,
-                accept_margin=0.0,
-                max_refine_ratio=0.60,
-                max_refine_blocks=8_192,
-            )
-        else:
-            params = _dense_to_hif4(smooth)
+        smooth = _linear_pair_transform(
+            sample,
+            d,
+            order,
+            block_smooth_size,
+            block_smooth_seed,
+            weight_side=False,
+        )
+        params = _dense_to_hif4(smooth)
         reconstructed = _dequantize_hif4(params)
         error = ((smooth - reconstructed).square() * h_w.unsqueeze(0)).sum()
         energy = (smooth.square() * h_w.unsqueeze(0)).sum()
@@ -940,6 +1246,62 @@ def _linear_candidate_metrics(
         case_scores.append(float(torch.nan_to_num(weight_score, nan=1.0e30)))
     mean_score = sum(case_scores) / float(len(case_scores))
     return mean_score, tuple(case_scores)
+
+
+def _linear_output_candidate_metrics(
+    weight: torch.Tensor,
+    activation_samples: Sequence[torch.Tensor],
+    d: torch.Tensor,
+    permutation: torch.Tensor,
+    block_smooth_size: int = 0,
+    block_smooth_seed: int = 0,
+) -> tuple[float, tuple[float, ...]]:
+    """Score a transform by the actual sampled Linear output error.
+
+    Operand-local reconstruction error is a useful cheap proxy for diagonal
+    smoothing, but it misses cancellation between activation and weight errors
+    after a non-diagonal transform.  Block-S candidates therefore use the
+    end-to-end sampled objective that the competition ultimately measures.
+    """
+
+    order = permutation.to(device=weight.device, dtype=torch.int64).reshape(-1)
+    weight_transformed = _linear_pair_transform(
+        weight,
+        d,
+        order,
+        block_smooth_size,
+        block_smooth_seed,
+        weight_side=True,
+    )
+    weight_hat = _dequantize_hif4(_dense_to_hif4(weight_transformed))
+    case_scores: list[float] = []
+    for sample in activation_samples:
+        activation_transformed = _linear_pair_transform(
+            sample,
+            d,
+            order,
+            block_smooth_size,
+            block_smooth_seed,
+            weight_side=False,
+        )
+        activation_hat = _dequantize_hif4(
+            _dense_to_hif4(activation_transformed)
+        )
+        reference = activation_transformed.mm(weight_transformed.t())
+        reconstructed = activation_hat.mm(weight_hat.t())
+        score = (reference - reconstructed).square().sum() / (
+            reference.square().sum() + _EPS
+        )
+        case_scores.append(
+            float(
+                torch.nan_to_num(
+                    score, nan=1.0e30, posinf=1.0e30, neginf=1.0e30
+                )
+            )
+        )
+    if not case_scores:
+        return 1.0e30, (1.0e30,)
+    return sum(case_scores) / float(len(case_scores)), tuple(case_scores)
 
 
 def _cpu_state_tensor(x: torch.Tensor) -> torch.Tensor:
@@ -973,6 +1335,14 @@ def hif4_calibration_and_quantize_weight(
     activation_amax = torch.zeros_like(sum_square)
     token_count = 0
     activation_samples: list[torch.Tensor] = []
+    use_quadratic = (
+        _WEIGHT_QUADRATIC
+        and in_features <= _WEIGHT_QUADRATIC_MAX_FEATURES
+    )
+    if use_quadratic:
+        cov_sum = torch.zeros(
+            in_features, in_features, dtype=torch.float32, device=weight.device
+        )
 
     for pair in calib_activation_list:
         if not isinstance(pair, (tuple, list)) or len(pair) != 2:
@@ -982,6 +1352,8 @@ def hif4_calibration_and_quantize_weight(
             raise ValueError("Calibration activation shape is incompatible with weight")
         stats_sample = _sample_rows(activation, _LINEAR_STATS_TOKENS)
         sum_square += stats_sample.square().sum(dim=0)
+        if use_quadratic:
+            cov_sum += stats_sample.t().mm(stats_sample)
         activation_amax = torch.maximum(
             activation_amax, stats_sample.abs().amax(dim=0)
         )
@@ -992,37 +1364,46 @@ def hif4_calibration_and_quantize_weight(
 
     activation_second_moment = sum_square / float(max(token_count, 1))
     weight_amax = weight.abs().amax(dim=0)
+    activation_rms = torch.sqrt(activation_second_moment.clamp_min(_EPS))
+    weight_rms = torch.sqrt((weight * weight).mean(dim=0).clamp_min(_EPS))
 
     identity_d = torch.ones(
         in_features, dtype=torch.float32, device=weight.device
     )
     identity_perm = _identity_permutation(in_features, weight.device)
-    smooth_candidates = [
-        identity_d,
-        _smooth_scale(activation_amax, weight_amax, 0.25),
-        _smooth_scale(activation_amax, weight_amax, 0.50),
-    ]
+    smooth_candidates = [identity_d]
+    smooth_alphas = (
+        _WEIGHT_SMOOTH_ALPHAS_WIDE
+        if (
+            in_features >= _WIDE_LAYER_MIN_DIM
+            or out_features >= _WIDE_LAYER_MIN_DIM
+        )
+        else _WEIGHT_SMOOTH_ALPHAS
+    )
+    for alpha in smooth_alphas:
+        smooth_candidates.append(
+            _smooth_scale(activation_amax, weight_amax, alpha)
+        )
+        if _WEIGHT_SMOOTH_RMS:
+            smooth_candidates.append(
+                _smooth_scale(activation_rms, weight_rms, alpha)
+            )
 
     # Candidate search touches only sampled output rows.  The selected
     # transform is then applied to the full Weight exactly once.
     weight_sample = _sample_rows(weight, _LINEAR_WEIGHT_EVAL_ROWS)
-    # On middle/small matrices, select equivalent transforms with the same
-    # difficult-block policy used by the final Weight/Activation paths.  The
-    # former standard-only proxy can rank transforms incorrectly after
-    # refinement.  Large matrices retain the cheap proxy to protect the
-    # five-minute global runtime limit; this changes calibration cost only.
-    refinement_aware_selection = bool(int(weight.numel()) <= 4_194_304)
     baseline_metrics = _linear_candidate_metrics(
         weight_sample,
         activation_second_moment,
         activation_samples,
         identity_d,
         identity_perm,
-        refinement_aware=refinement_aware_selection,
     )
     best_metrics = baseline_metrics
     best_d = identity_d
     best_perm = identity_perm
+    best_block_smooth_size = 0
+    best_block_smooth_seed = 0
 
     for candidate_index, candidate_d in enumerate(smooth_candidates):
         candidate_permutations = [identity_perm]
@@ -1042,7 +1423,6 @@ def hif4_calibration_and_quantize_weight(
                 activation_samples,
                 candidate_d,
                 candidate_perm,
-                refinement_aware=refinement_aware_selection,
             )
             uses_reordering = not torch.equal(candidate_perm, identity_perm)
             if (
@@ -1058,61 +1438,137 @@ def hif4_calibration_and_quantize_weight(
                 best_d = candidate_d
                 best_perm = candidate_perm
 
-    # The max-pressure ordering above is a strong global default.  Evaluate
-    # two complementary layouts only for the selected smoothing scale: a
-    # joint-pressure global sort and a 64-block-preserving local sort.  This
-    # adds hierarchy diversity without multiplying the full D/P grid.
-    selected_d = best_d
-    selected_first_range = activation_amax / selected_d
-    selected_second_range = weight_amax * selected_d
-    for combine_mode, preserve_blocks in ((1, False), (0, True)):
-        candidate_perm = _hierarchy_aware_permutation(
-            selected_first_range,
-            selected_second_range,
-            combine_mode=combine_mode,
-            preserve_blocks=preserve_blocks,
-        )
-        if torch.equal(candidate_perm, identity_perm) or torch.equal(
-            candidate_perm, best_perm
-        ):
-            continue
-        metrics = _linear_candidate_metrics(
-            weight_sample,
-            activation_second_moment,
-            activation_samples,
-            selected_d,
-            candidate_perm,
-            refinement_aware=refinement_aware_selection,
-        )
-        if (
-            metrics[0] < best_metrics[0]
-            and _candidate_is_safe(
-                metrics,
-                baseline_metrics,
-                min_mean_improvement=0.02,
-                worst_tolerance=0.005,
+    # 置换基扩展：同一平滑 d 下比较 weight-only / activation-only 排序，
+    # 诊断显示单侧排序常优于 max(log range) 组合排序。
+    if _PERMUTATION_BASES:
+        basis_ranges = {
+            "w_amax": weight_amax * best_d,
+            "x_amax": activation_amax / best_d,
+            "w_rms": weight_rms * best_d,
+            "x_rms": activation_rms / best_d,
+        }
+        seen = {tuple(best_perm.tolist())}
+        for bname, b_range in basis_ranges.items():
+            b_perm = _range_permutation(b_range)
+            if torch.equal(b_perm, identity_perm):
+                continue
+            if tuple(b_perm.tolist()) in seen:
+                continue
+            seen.add(tuple(b_perm.tolist()))
+            b_metrics = _linear_candidate_metrics(
+                weight_sample,
+                activation_second_moment,
+                activation_samples,
+                best_d,
+                b_perm,
             )
-        ):
-            best_metrics = metrics
-            best_d = selected_d
-            best_perm = candidate_perm
+            if (
+                b_metrics[0] < best_metrics[0]
+                and _candidate_is_safe(
+                    b_metrics,
+                    baseline_metrics,
+                    min_mean_improvement=0.02,
+                    worst_tolerance=0.005,
+                )
+            ):
+                best_metrics = b_metrics
+                best_perm = b_perm
 
-    weight_smooth = (weight * best_d.unsqueeze(0)).index_select(
-        -1, best_perm
+    # Matrix SmoothQuant extension: within the channel groups selected above,
+    # try non-diagonal block transforms of size 4/8/16.  The transform is a
+    # deterministic signed Hadamard, hence exactly orthogonal and represented
+    # in dynamic state by two small integers rather than a dense matrix.
+    force_block_size = int(_BLOCK_SMOOTH_FORCE_SIZE)
+    candidate_block_sizes = (
+        (force_block_size,) if force_block_size else _BLOCK_SMOOTH_SIZES
     )
-    h_x_smooth = (activation_second_moment / best_d.square()).index_select(
-        0, best_perm
+    forced_choice: Optional[tuple[tuple[float, tuple[float, ...]], int, int]] = None
+    block_baseline_metrics = _linear_output_candidate_metrics(
+        weight_sample,
+        activation_samples,
+        best_d,
+        best_perm,
     )
+    block_best_metrics = block_baseline_metrics
+    if candidate_block_sizes:
+        for candidate_size in candidate_block_sizes:
+            size = int(candidate_size)
+            if size <= 0 or in_features % size != 0:
+                continue
+            for candidate_seed in _BLOCK_SMOOTH_SEEDS:
+                seed = int(candidate_seed)
+                block_metrics = _linear_output_candidate_metrics(
+                    weight_sample,
+                    activation_samples,
+                    best_d,
+                    best_perm,
+                    size,
+                    seed,
+                )
+                if force_block_size:
+                    if (
+                        forced_choice is None
+                        or block_metrics[0] < forced_choice[0][0]
+                    ):
+                        forced_choice = (block_metrics, size, seed)
+                    continue
+                if (
+                    block_metrics[0] < block_best_metrics[0]
+                    and _candidate_is_safe(
+                        block_metrics,
+                        block_baseline_metrics,
+                        min_mean_improvement=_BLOCK_SMOOTH_MIN_IMPROVEMENT,
+                        worst_tolerance=_BLOCK_SMOOTH_WORST_TOLERANCE,
+                    )
+                ):
+                    block_best_metrics = block_metrics
+                    best_block_smooth_size = size
+                    best_block_smooth_seed = seed
+    if forced_choice is not None:
+        _, best_block_smooth_size, best_block_smooth_seed = forced_choice
+
+    weight_smooth = _linear_pair_transform(
+        weight,
+        best_d,
+        best_perm,
+        best_block_smooth_size,
+        best_block_smooth_seed,
+        weight_side=True,
+    )
+    h_x_smooth = _transformed_second_moment(
+        activation_second_moment,
+        best_d,
+        best_perm,
+        best_block_smooth_size,
+    )
+    weight_group_gram = None
+    if use_quadratic:
+        gram = _transformed_covariance(
+            cov_sum / float(max(token_count, 1)),
+            best_d,
+            best_perm,
+            best_block_smooth_size,
+            best_block_smooth_seed,
+        )
+        blocks = in_features // _HIF4_BLOCK_SIZE
+        weight_group_gram = _flat_group_gram(gram, in_features).reshape(
+            blocks, 8, 2, 4, 4
+        ).unsqueeze(0).expand(
+            int(weight.shape[0]), blocks, 8, 2, 4, 4
+        )
     weight_params = _dense_to_hif4(
         weight_smooth,
         importance=h_x_smooth,
+        group_gram=weight_group_gram,
         search_offsets=_WEIGHT_OFFSETS,
-        search_top_ranks=_WEIGHT_TOP_RANKS,
-        error_threshold=1.0e-7,
-        accept_margin=0.0,
-        max_refine_ratio=0.50 if int(weight.numel()) <= 4_194_304 else 0.25,
-        max_refine_blocks=65_536,
-        selection_mode="hybrid",
+        error_threshold=_WEIGHT_REFINE_ERROR_THRESHOLD,
+        accept_margin=_WEIGHT_REFINE_ACCEPT_MARGIN,
+        max_refine_ratio=(
+            _WEIGHT_REFINE_MAX_RATIO_SMALL
+            if int(weight.numel()) <= 4_194_304
+            else _WEIGHT_REFINE_MAX_RATIO_LARGE
+        ),
+        max_refine_blocks=_WEIGHT_REFINE_MAX_BLOCKS,
     )
 
     weight_hat = _dequantize_hif4(weight_params)
@@ -1131,25 +1587,55 @@ def hif4_calibration_and_quantize_weight(
     if not torch.equal(best_d, identity_d):
         smooth_inv_state = _cpu_state_tensor(best_d.reciprocal())
 
+    if _DATA_DRIVEN_RATIO:
+        loss_parts = []
+        for sample in activation_samples:
+            transformed = sample.to(dtype=torch.float32)
+            if smooth_inv_state is not None:
+                transformed = transformed * smooth_inv_state.reshape(1, -1)
+            if permutation_state is not None:
+                transformed = transformed.index_select(-1, permutation_state)
+            if best_block_smooth_size != 0:
+                transformed = _block_hadamard_transform(
+                    transformed,
+                    best_block_smooth_size,
+                    best_block_smooth_seed,
+                )
+            loss_parts.append(
+                _standard_block_losses(transformed, activation_importance)
+            )
+        activation_ratio = _loss_capture_ratio(
+            torch.cat(loss_parts),
+            target=_RATIO_CAPTURE_TARGET,
+            ratio_min=_RATIO_MIN,
+        )
+    else:
+        activation_ratio = _ACTIVATION_REFINE_MAX_RATIO
+
+    activation_gram_state = None
+    if (
+        _ACTIVATION_QUADRATIC
+        and in_features <= _ACTIVATION_QUADRATIC_MAX_FEATURES
+    ):
+        gram = weight_smooth.t().mm(weight_smooth)
+        activation_gram_state = _cpu_state_tensor(
+            _flat_group_gram(gram, in_features)
+        )
+
     activation_state = {
         "smooth_inv": smooth_inv_state,
         "permutation": permutation_state,
+        "block_smooth_size": int(best_block_smooth_size),
+        "block_smooth_seed": int(best_block_smooth_seed),
         "importance": _cpu_state_tensor(activation_importance),
-        "offsets": torch.tensor(
-            _LINEAR_DYNAMIC_OFFSETS, dtype=torch.int8, device="cpu"
-        ),
-        "fast_offsets": torch.tensor(
-            _LINEAR_FAST_OFFSETS, dtype=torch.int8, device="cpu"
-        ),
-        "top_ranks": torch.tensor(
-            _LINEAR_DYNAMIC_TOP_RANKS, dtype=torch.int8, device="cpu"
-        ),
-        "error_threshold": 1.0e-7,
-        "accept_margin": 0.0,
-        "max_refine_ratio": 0.60,
-        "max_refine_blocks": 32_768,
+        "gram": activation_gram_state,
+        "offsets": torch.tensor(_DYNAMIC_OFFSETS, dtype=torch.int8, device="cpu"),
+        "error_threshold": _ACTIVATION_REFINE_ERROR_THRESHOLD,
+        "accept_margin": _ACTIVATION_REFINE_ACCEPT_MARGIN,
+        "max_refine_ratio": float(activation_ratio),
+        "max_refine_blocks": _ACTIVATION_REFINE_MAX_BLOCKS,
         "in_features": int(in_features),
-        "version": 8,
+        "version": 3,
     }
     return {
         "weight_params": weight_params,
@@ -1168,17 +1654,16 @@ def hif4_dynamic_quantize_activation(
     channels = int(activation_quant.shape[-1])
     if channels != int(activation_state.get("in_features", -1)):
         raise ValueError("Activation hidden size does not match calibration state")
-    search_offsets = activation_state["offsets"]
-    if int(activation_quant.numel()) > _LINEAR_FULL_SEARCH_ELEMENTS:
-        search_offsets = activation_state["fast_offsets"]
     return _nvfp4_to_hif4(
         activation_quant,
         activation_scale,
         multiplier=activation_state["smooth_inv"],
         permutation=activation_state["permutation"],
+        block_smooth_size=int(activation_state.get("block_smooth_size", 0)),
+        block_smooth_seed=int(activation_state.get("block_smooth_seed", 0)),
         importance=activation_state["importance"],
-        search_offsets=search_offsets,
-        search_top_ranks=activation_state["top_ranks"],
+        group_gram=activation_state.get("gram"),
+        search_offsets=activation_state["offsets"],
         error_threshold=float(activation_state["error_threshold"]),
         accept_margin=float(activation_state["accept_margin"]),
         max_refine_ratio=float(activation_state["max_refine_ratio"]),
@@ -1193,8 +1678,8 @@ def _smooth_qk_scale(
 ) -> torch.Tensor:
     d = (k_peak + _EPS).pow(alpha) / (q_peak + _EPS).pow(1.0 - alpha)
     return torch.nan_to_num(
-        d, nan=1.0, posinf=16.0, neginf=1.0 / 16.0
-    ).clamp(min=1.0 / 16.0, max=16.0)
+        d, nan=1.0, posinf=_QK_SMOOTH_MAX, neginf=_QK_SMOOTH_MIN
+    ).clamp(min=_QK_SMOOTH_MIN, max=_QK_SMOOTH_MAX)
 
 
 def _attention_candidate_metrics(
@@ -1267,288 +1752,6 @@ def _attention_candidate_metrics(
     return sum(case_scores) / float(len(case_scores)), tuple(case_scores)
 
 
-def _attention_dense_output(
-    q: torch.Tensor,
-    k: torch.Tensor,
-    v: torch.Tensor,
-    q_num_heads: int,
-    kv_num_heads: int,
-    head_dim: int,
-    causal: bool,
-) -> torch.Tensor:
-    """Small-window FP32 GQA used only during calibration."""
-
-    seq_len = int(q.shape[0])
-    group_size = q_num_heads // kv_num_heads
-    qh = q.to(torch.float32).reshape(
-        seq_len, q_num_heads, head_dim
-    ).transpose(0, 1)
-    kh = k.to(torch.float32).reshape(
-        seq_len, kv_num_heads, head_dim
-    ).repeat_interleave(group_size, dim=1).transpose(0, 1)
-    vh = v.to(torch.float32).reshape(
-        seq_len, kv_num_heads, head_dim
-    ).repeat_interleave(group_size, dim=1).transpose(0, 1)
-    logits = torch.matmul(qh, kh.transpose(-1, -2)) * (
-        1.0 / math.sqrt(float(head_dim))
-    )
-    if causal and seq_len > 1:
-        mask = torch.triu(
-            torch.ones(
-                seq_len, seq_len, dtype=torch.bool, device=logits.device
-            ),
-            diagonal=1,
-        )
-        logits = logits.masked_fill(mask[None, :, :], -float("inf"))
-    probabilities = torch.softmax(logits, dim=-1)
-    output = torch.matmul(probabilities, vh)
-    return output.transpose(0, 1).reshape(seq_len, q_num_heads * head_dim)
-
-
-def _transform_attention_pair(
-    q: torch.Tensor,
-    k: torch.Tensor,
-    d_kv: torch.Tensor,
-    q_num_heads: int,
-    kv_num_heads: int,
-    head_dim: int,
-    q_permutation: torch.Tensor,
-    k_permutation: torch.Tensor,
-    center_mode: int,
-) -> tuple[torch.Tensor, torch.Tensor]:
-    group_size = q_num_heads // kv_num_heads
-    d_q = d_kv.repeat_interleave(group_size, dim=0).reshape(-1)
-    d_k = d_kv.reciprocal().reshape(-1)
-    q_order = q_permutation.to(device=q.device, dtype=torch.int64).reshape(-1)
-    k_order = k_permutation.to(device=k.device, dtype=torch.int64).reshape(-1)
-    q_transformed = (q * d_q.reshape(1, -1)).index_select(-1, q_order)
-    k_centered = _center_attention_k(
-        k, kv_num_heads, head_dim, center_mode
-    )
-    k_transformed = (k_centered * d_k.reshape(1, -1)).index_select(
-        -1, k_order
-    )
-    return q_transformed, k_transformed
-
-
-def _attention_true_metrics(
-    q_samples: Sequence[torch.Tensor],
-    k_samples: Sequence[torch.Tensor],
-    v_samples: Sequence[torch.Tensor],
-    d_kv: torch.Tensor,
-    q_num_heads: int,
-    kv_num_heads: int,
-    head_dim: int,
-    q_permutation: torch.Tensor,
-    k_permutation: torch.Tensor,
-    center_mode: int,
-    q_importance: Optional[torch.Tensor] = None,
-    k_importance: Optional[torch.Tensor] = None,
-    refine_mode: int = 0,
-    refine_ratios: Optional[tuple[float, float, float]] = None,
-    search_offsets: Optional[tuple[int, ...]] = None,
-) -> tuple[float, tuple[float, ...]]:
-    """Evaluate real Attention MSE under causal and non-causal masks.
-
-    refine_mode: 0 = standard transformed quantization, 1 = refine Q/K only,
-    2 = refine Q/K/V. Every sample/mask pair is a separate risk case.
-    """
-
-    if search_offsets is None:
-        search_offsets = _DYNAMIC_OFFSETS
-
-    case_scores: list[float] = []
-    if refine_ratios is None:
-        q_ratio = 0.08 if int(refine_mode) >= 1 else 0.0
-        k_ratio = 0.12 if int(refine_mode) >= 1 else 0.0
-        v_ratio = 0.10 if int(refine_mode) >= 2 else 0.0
-    else:
-        q_ratio, k_ratio, v_ratio = (
-            max(0.0, min(float(value), 1.0)) for value in refine_ratios
-        )
-    for q, k, v in zip(q_samples, k_samples, v_samples):
-        q_transformed, k_transformed = _transform_attention_pair(
-            q,
-            k,
-            d_kv,
-            q_num_heads,
-            kv_num_heads,
-            head_dim,
-            q_permutation,
-            k_permutation,
-            center_mode,
-        )
-        if q_ratio > 0.0:
-            q_params = _dense_to_hif4(
-                q_transformed,
-                importance=q_importance,
-                search_offsets=search_offsets,
-                search_top_ranks=_DYNAMIC_TOP_RANKS,
-                error_threshold=1.0e-7,
-                accept_margin=0.03,
-                max_refine_ratio=q_ratio,
-                max_refine_blocks=4_096,
-            )
-        else:
-            q_params = _dense_to_hif4(q_transformed)
-        if k_ratio > 0.0:
-            k_params = _dense_to_hif4(
-                k_transformed,
-                importance=k_importance,
-                search_offsets=search_offsets,
-                search_top_ranks=_DYNAMIC_TOP_RANKS,
-                error_threshold=1.0e-7,
-                accept_margin=0.03,
-                max_refine_ratio=k_ratio,
-                max_refine_blocks=6_144,
-            )
-        else:
-            k_params = _dense_to_hif4(k_transformed)
-        if v_ratio > 0.0:
-            v_params = _dense_to_hif4(
-                v,
-                search_offsets=search_offsets,
-                search_top_ranks=_DYNAMIC_TOP_RANKS,
-                error_threshold=1.0e-7,
-                accept_margin=0.01,
-                max_refine_ratio=v_ratio,
-                max_refine_blocks=6_144,
-            )
-        else:
-            v_params = _dense_to_hif4(v)
-        q_hat = _dequantize_hif4(q_params)
-        k_hat = _dequantize_hif4(k_params)
-        v_hat = _dequantize_hif4(v_params)
-        for causal in (False, True):
-            reference = _attention_dense_output(
-                q,
-                k,
-                v,
-                q_num_heads,
-                kv_num_heads,
-                head_dim,
-                causal,
-            )
-            candidate = _attention_dense_output(
-                q_hat,
-                k_hat,
-                v_hat,
-                q_num_heads,
-                kv_num_heads,
-                head_dim,
-                causal,
-            )
-            loss = (reference - candidate).square().mean()
-            energy = reference.square().mean()
-            normalized = torch.nan_to_num(
-                loss / (energy + _EPS),
-                nan=1.0e30,
-                posinf=1.0e30,
-                neginf=1.0e30,
-            )
-            case_scores.append(float(normalized))
-    if not case_scores:
-        return 1.0e30, (1.0e30,)
-    return sum(case_scores) / float(len(case_scores)), tuple(case_scores)
-
-
-def _attention_jacobian_importance(
-    q_samples: Sequence[torch.Tensor],
-    k_samples: Sequence[torch.Tensor],
-    v_samples: Sequence[torch.Tensor],
-    d_kv: torch.Tensor,
-    q_num_heads: int,
-    kv_num_heads: int,
-    head_dim: int,
-    q_permutation: torch.Tensor,
-    k_permutation: torch.Tensor,
-    center_mode: int,
-) -> tuple[torch.Tensor, torch.Tensor]:
-    """Diagonal softmax-output sensitivity in selected Q/K coordinates."""
-
-    group_size = q_num_heads // kv_num_heads
-    q_importance = torch.zeros(
-        q_num_heads, head_dim, dtype=torch.float32, device=d_kv.device
-    )
-    k_importance_q_heads = torch.zeros_like(q_importance)
-    contribution_count = 0
-    for q, k, v in zip(q_samples, k_samples, v_samples):
-        q_transformed, k_transformed = _transform_attention_pair(
-            q,
-            k,
-            d_kv,
-            q_num_heads,
-            kv_num_heads,
-            head_dim,
-            q_permutation,
-            k_permutation,
-            center_mode,
-        )
-        seq_len = int(q.shape[0])
-        qh = q_transformed.reshape(
-            seq_len, q_num_heads, head_dim
-        ).transpose(0, 1)
-        kh = k_transformed.reshape(
-            seq_len, kv_num_heads, head_dim
-        ).repeat_interleave(group_size, dim=1).transpose(0, 1)
-        vh = v.reshape(
-            seq_len, kv_num_heads, head_dim
-        ).repeat_interleave(group_size, dim=1).transpose(0, 1)
-        base_logits = torch.matmul(qh, kh.transpose(-1, -2)) * (
-            1.0 / math.sqrt(float(head_dim))
-        )
-        for causal in (False, True):
-            logits = base_logits
-            if causal and seq_len > 1:
-                mask = torch.triu(
-                    torch.ones(
-                        seq_len,
-                        seq_len,
-                        dtype=torch.bool,
-                        device=logits.device,
-                    ),
-                    diagonal=1,
-                )
-                logits = logits.masked_fill(mask[None, :, :], -float("inf"))
-            probabilities = torch.softmax(logits, dim=-1)
-            output = torch.matmul(probabilities, vh)
-            v_norm = vh.square().sum(dim=-1)
-            o_norm = output.square().sum(dim=-1)
-            cross = torch.matmul(output, vh.transpose(-1, -2))
-            distance = (
-                o_norm[..., None] + v_norm[:, None, :] - 2.0 * cross
-            ).clamp_min(0.0)
-            sensitivity = probabilities.square() * distance
-            q_importance += torch.einsum(
-                "hij,hjd->hd", sensitivity, kh.square()
-            ) * (1.0 / float(head_dim))
-            k_importance_q_heads += torch.einsum(
-                "hij,hid->hd", sensitivity, qh.square()
-            ) * (1.0 / float(head_dim))
-            contribution_count += 1
-    if contribution_count > 0:
-        q_importance /= float(contribution_count)
-        k_importance_q_heads /= float(contribution_count)
-    k_importance = k_importance_q_heads.reshape(
-        kv_num_heads, group_size, head_dim
-    ).mean(dim=1)
-    q_flat = _normalize_importance(
-        q_importance.reshape(-1), q_num_heads * head_dim
-    )
-    k_flat = _normalize_importance(
-        k_importance.reshape(-1), kv_num_heads * head_dim
-    )
-    if q_flat is None:
-        q_flat = torch.ones(
-            q_num_heads * head_dim, dtype=torch.float32, device=d_kv.device
-        )
-    if k_flat is None:
-        k_flat = torch.ones(
-            kv_num_heads * head_dim, dtype=torch.float32, device=d_kv.device
-        )
-    return q_flat, k_flat
-
-
 @torch.no_grad()
 def hif4_calibration_attention(
     calib_qkv_list: list,
@@ -1569,27 +1772,19 @@ def hif4_calibration_attention(
     if q_channels % 64 != 0 or kv_channels % 64 != 0:
         raise ValueError("Flattened Q/K/V dimensions must be divisible by 64")
 
-    stats_device = calib_qkv_list[0]["q"][0].device
-    q_sum_square = torch.zeros(
-        q_num_heads, head_dim, dtype=torch.float32, device=stats_device
-    )
-    k_sum_square = torch.zeros(
-        kv_num_heads, head_dim, dtype=torch.float32, device=stats_device
-    )
-    k_mean_sum_square = torch.zeros_like(k_sum_square)
+    q_sum_square = torch.zeros(q_num_heads, head_dim, dtype=torch.float32)
+    k_sum_square = torch.zeros(kv_num_heads, head_dim, dtype=torch.float32)
     k_mid_sum_square = torch.zeros_like(k_sum_square)
     q_peak_square = torch.zeros_like(q_sum_square)
     k_peak_square = torch.zeros_like(k_sum_square)
-    k_mean_peak_square = torch.zeros_like(k_sum_square)
     k_mid_peak_square = torch.zeros_like(k_sum_square)
     q_token_count = 0
     k_token_count = 0
     sample_count = 0
+    v_head_mass = torch.zeros(kv_num_heads, dtype=torch.float32)
     q_samples: list[torch.Tensor] = []
     k_samples: list[torch.Tensor] = []
-    q_true_samples: list[torch.Tensor] = []
-    k_true_samples: list[torch.Tensor] = []
-    v_true_samples: list[torch.Tensor] = []
+    v_samples: list[torch.Tensor] = []
 
     for sample in calib_qkv_list:
         if not isinstance(sample, dict) or set(sample.keys()) != {"q", "k", "v"}:
@@ -1612,7 +1807,11 @@ def hif4_calibration_attention(
             raise ValueError("V calibration scale shape is invalid")
         if int(q.shape[0]) != int(k.shape[0]) or int(k.shape[0]) != int(v_quant.shape[0]):
             raise ValueError("Q/K/V in a calibration sample must share seq_len")
-        v = _dequantize_nvfp4_float32(v_quant, v_scale)
+
+        if _V_ATTENTION_IMPORTANCE:
+            v_head_mass += _attention_head_square_mass(
+                q, k, q_num_heads, kv_num_heads, head_dim
+            )
 
         q_stats = _sample_rows(q, _ATTN_STATS_TOKENS).reshape(
             -1, q_num_heads, head_dim
@@ -1620,12 +1819,6 @@ def hif4_calibration_attention(
         k_stats = _sample_rows(k, _ATTN_STATS_TOKENS).reshape(
             -1, kv_num_heads, head_dim
         )
-        k_mean_stats = _center_attention_k(
-            k_stats.reshape(-1, kv_channels),
-            kv_num_heads,
-            head_dim,
-            1,
-        ).reshape(-1, kv_num_heads, head_dim)
         k_mid_stats = _center_attention_k(
             k_stats.reshape(-1, kv_channels),
             kv_num_heads,
@@ -1634,54 +1827,42 @@ def hif4_calibration_attention(
         ).reshape(-1, kv_num_heads, head_dim)
         q_sum_square += q_stats.square().sum(dim=0)
         k_sum_square += k_stats.square().sum(dim=0)
-        k_mean_sum_square += k_mean_stats.square().sum(dim=0)
         k_mid_sum_square += k_mid_stats.square().sum(dim=0)
         q_peak_square += q_stats.abs().amax(dim=0).square()
         k_peak_square += k_stats.abs().amax(dim=0).square()
-        k_mean_peak_square += k_mean_stats.abs().amax(dim=0).square()
         k_mid_peak_square += k_mid_stats.abs().amax(dim=0).square()
         q_token_count += int(q_stats.shape[0])
         k_token_count += int(k_stats.shape[0])
         sample_count += 1
         q_samples.append(_sample_rows(q, _ATTN_EVAL_TOKENS).clone())
         k_samples.append(_sample_rows(k, _ATTN_EVAL_TOKENS).clone())
-        if len(q_true_samples) < 2:
-            q_true_samples.append(_sample_rows(q, _ATTN_TRUE_TOKENS).clone())
-            k_true_samples.append(_sample_rows(k, _ATTN_TRUE_TOKENS).clone())
-            v_true_samples.append(_sample_rows(v, _ATTN_TRUE_TOKENS).clone())
+        v_dense = _dequantize_nvfp4_float32(v_quant, v_scale)
+        v_samples.append(_sample_rows(v_dense, _ATTN_EVAL_TOKENS).clone())
+
+    v_importance = None
+    if _V_ATTENTION_IMPORTANCE and sample_count > 0:
+        head_importance = v_head_mass / float(max(sample_count, 1))
+        head_importance = head_importance / head_importance.mean().clamp_min(
+            _EPS
+        )
+        if _V_ATTENTION_IMPORTANCE_SHRINK < 1.0:
+            head_importance = 1.0 + _V_ATTENTION_IMPORTANCE_SHRINK * (
+                head_importance - 1.0
+            )
+        v_importance = _normalize_importance(
+            head_importance.repeat_interleave(head_dim).reshape(-1),
+            kv_channels,
+        )
 
     q_second_moment = q_sum_square / float(max(q_token_count, 1))
     k_second_moment = k_sum_square / float(max(k_token_count, 1))
-    k_mean_second_moment = k_mean_sum_square / float(max(k_token_count, 1))
     k_mid_second_moment = k_mid_sum_square / float(max(k_token_count, 1))
     q_peak = torch.sqrt(q_peak_square / float(max(sample_count, 1)))
     k_peak = torch.sqrt(k_peak_square / float(max(sample_count, 1)))
-    k_mean_peak = torch.sqrt(k_mean_peak_square / float(max(sample_count, 1)))
     k_mid_peak = torch.sqrt(k_mid_peak_square / float(max(sample_count, 1)))
 
     group_size = q_num_heads // kv_num_heads
     q_peak_kv = q_peak.reshape(kv_num_heads, group_size, head_dim).amax(dim=1)
-    # Finite-token peak noise can make an intrinsically balanced Q/K profile
-    # look transformable on calibration data, while the selected scale/order
-    # hurts unseen samples.  A robust 5--95% log-pressure span distinguishes
-    # these flat cases from useful K-shift/heavy-tail/QK-imbalance cases.
-    q_peak_log = torch.log2(q_peak_kv.clamp_min(_EPS))
-    k_peak_log = torch.log2(k_peak.clamp_min(_EPS))
-    q_peak_log = q_peak_log - q_peak_log.median(
-        dim=-1, keepdim=True
-    ).values
-    k_peak_log = k_peak_log - k_peak_log.median(
-        dim=-1, keepdim=True
-    ).values
-    attention_pressure = torch.maximum(q_peak_log, k_peak_log).reshape(-1)
-    attention_pressure_span = (
-        torch.quantile(attention_pressure, 0.95)
-        - torch.quantile(attention_pressure, 0.05)
-    )
-    flat_attention_profile = bool(
-        float(attention_pressure_span) < _ATTN_FLAT_PRESSURE_SPAN
-    )
-    heavy_tail_guard = _attention_heavy_tail_guard(calib_qkv_list)
     identity_d = torch.ones(
         kv_num_heads,
         head_dim,
@@ -1715,19 +1896,31 @@ def hif4_calibration_attention(
     best_q_perm = q_identity_perm
     best_k_perm = k_identity_perm
 
-    # Mean and midrange K-centering are exact softmax invariances.  First
-    # select the centering/smoothing pair with identity ordering, then test a
-    # small hierarchy-aware ordering set for the selected pair.
-    for center_mode, effective_second, effective_peak in (
-        (0, k_second_moment, k_peak),
-        (1, k_mean_second_moment, k_mean_peak),
-        (2, k_mid_second_moment, k_mid_peak),
-    ):
-        smooth_candidates = (
-            identity_d,
-            _smooth_qk_scale(q_peak_kv, effective_peak, 0.25),
-            _smooth_qk_scale(q_peak_kv, effective_peak, 0.50),
+    # Midrange K-centering is an exact softmax invariance.  First select the
+    # centering/smoothing pair with identity ordering, then test one hierarchy-
+    # aware ordering for the selected pair to bound calibration time.
+    for center_mode in _ATTN_CENTER_MODES:
+        if center_mode in (2, 3):
+            effective_second = k_mid_second_moment
+            effective_peak = k_mid_peak
+        else:
+            effective_second = k_second_moment
+            effective_peak = k_peak
+        q_rms_kv = torch.sqrt(
+            q_second_moment.reshape(
+                kv_num_heads, group_size, head_dim
+            ).mean(dim=1).clamp_min(_EPS)
         )
+        k_rms = torch.sqrt(effective_second.clamp_min(_EPS))
+        smooth_candidates = [identity_d]
+        for alpha in _QK_SMOOTH_ALPHAS:
+            smooth_candidates.append(
+                _smooth_qk_scale(q_peak_kv, effective_peak, alpha)
+            )
+            if _QK_SMOOTH_RMS:
+                smooth_candidates.append(
+                    _smooth_qk_scale(q_rms_kv, k_rms, alpha)
+                )
         for candidate_index, candidate_d in enumerate(smooth_candidates):
             if center_mode == 0 and candidate_index == 0:
                 continue
@@ -1757,33 +1950,21 @@ def hif4_calibration_attention(
                 best_d = candidate_d
                 best_center_mode = center_mode
 
-    if best_center_mode == 1:
-        selected_k_peak = k_mean_peak
-        selected_k_second = k_mean_second_moment
-    elif best_center_mode == 2:
-        selected_k_peak = k_mid_peak
-        selected_k_second = k_mid_second_moment
-    else:
-        selected_k_peak = k_peak
-        selected_k_second = k_second_moment
-
-    # Max pressure protects the harder Q/K side; joint pressure clusters
-    # channels that are simultaneously large.  Both are exact paired feature
-    # permutations, and calibration gates them against every sampled case.
-    for combine_mode in (0, 1):
-        local_permutation = _headwise_hierarchy_permutation(
-            q_peak_kv * best_d,
-            selected_k_peak * best_d.reciprocal(),
-            combine_mode=combine_mode,
-        )
-        candidate_k_perm = _flatten_head_permutation(local_permutation)
-        candidate_q_perm = _flatten_head_permutation(
-            local_permutation.repeat_interleave(group_size, dim=0)
-        )
-        if torch.equal(candidate_k_perm, k_identity_perm) or torch.equal(
-            candidate_k_perm, best_k_perm
-        ):
-            continue
+    selected_k_peak = (
+        k_mid_peak if best_center_mode in (2, 3) else k_peak
+    )
+    selected_k_second = (
+        k_mid_second_moment if best_center_mode in (2, 3) else k_second_moment
+    )
+    local_permutation = _headwise_hierarchy_permutation(
+        q_peak_kv * best_d,
+        selected_k_peak * best_d.reciprocal(),
+    )
+    candidate_k_perm = _flatten_head_permutation(local_permutation)
+    candidate_q_perm = _flatten_head_permutation(
+        local_permutation.repeat_interleave(group_size, dim=0)
+    )
+    if not torch.equal(candidate_k_perm, k_identity_perm):
         permutation_metrics = _attention_candidate_metrics(
             q_samples,
             k_samples,
@@ -1810,85 +1991,49 @@ def hif4_calibration_attention(
             best_q_perm = candidate_q_perm
             best_k_perm = candidate_k_perm
 
-    # The proxy above is cheap but does not model softmax or V.  Recheck the
-    # selected transform against the exact short-window Attention output under
-    # both causal and non-causal masks.  Any unstable transform is discarded.
-    baseline_true_metrics = _attention_true_metrics(
-        q_true_samples,
-        k_true_samples,
-        v_true_samples,
-        identity_d,
-        q_num_heads,
-        kv_num_heads,
-        head_dim,
-        q_identity_perm,
-        k_identity_perm,
-        0,
-        refine_mode=0,
-    )
-    chosen_d = identity_d
-    chosen_center_mode = 0
-    chosen_q_perm = q_identity_perm
-    chosen_k_perm = k_identity_perm
-    best_true_metrics = baseline_true_metrics
-    # Evaluate the proxy-selected centering/smoothing both before and after
-    # hierarchy-aware ordering.  This is a bounded Top-2 second stage rather
-    # than a full Cartesian search.
-    true_candidates = (() if flat_attention_profile else (
-        (best_d, best_center_mode, q_identity_perm, k_identity_perm),
-        (best_d, best_center_mode, best_q_perm, best_k_perm),
-    ))
-    seen_true_candidates: set[tuple[int, int, int]] = set()
-    for candidate_d, candidate_center, candidate_q_perm, candidate_k_perm in true_candidates:
-        candidate_key = (
-            int(candidate_center),
-            int(torch.sum(torch.abs(candidate_d - identity_d)) > 0),
-            int(torch.sum(candidate_k_perm != k_identity_perm)),
-        )
-        if candidate_key in seen_true_candidates:
-            continue
-        seen_true_candidates.add(candidate_key)
-        candidate_true_metrics = _attention_true_metrics(
-            q_true_samples,
-            k_true_samples,
-            v_true_samples,
-            candidate_d,
-            q_num_heads,
-            kv_num_heads,
-            head_dim,
-            candidate_q_perm,
-            candidate_k_perm,
-            candidate_center,
-            refine_mode=0,
-        )
-        if (
-            candidate_true_metrics[0] < best_true_metrics[0]
-            and _candidate_is_safe(
-                candidate_true_metrics,
-                baseline_true_metrics,
-                min_mean_improvement=0.005,
-                worst_tolerance=0.005,
+    # 置换基扩展：单侧排序（Q-only / K-only）常优于 max(log range) 组合。
+    if _PERMUTATION_BASES:
+        basis_ranges = {
+            "q_amax": q_peak_kv * best_d,
+            "k_amax": selected_k_peak * best_d.reciprocal(),
+        }
+        seen = {tuple(best_k_perm.tolist())}
+        for bname, b_range in basis_ranges.items():
+            b_local = _headwise_range_permutation(b_range)
+            b_k_perm = _flatten_head_permutation(b_local)
+            if torch.equal(b_k_perm, k_identity_perm):
+                continue
+            if tuple(b_k_perm.tolist()) in seen:
+                continue
+            seen.add(tuple(b_k_perm.tolist()))
+            b_q_perm = _flatten_head_permutation(
+                b_local.repeat_interleave(group_size, dim=0)
             )
-        ):
-            best_true_metrics = candidate_true_metrics
-            chosen_d = candidate_d
-            chosen_center_mode = candidate_center
-            chosen_q_perm = candidate_q_perm
-            chosen_k_perm = candidate_k_perm
-
-    best_d = chosen_d
-    best_center_mode = chosen_center_mode
-    best_q_perm = chosen_q_perm
-    best_k_perm = chosen_k_perm
-    if int(best_center_mode) == 0:
-        selected_k_peak = k_peak
-        selected_k_second = k_second_moment
-    elif int(best_center_mode) == 1:
-        selected_k_peak = k_mean_peak
-        selected_k_second = k_mean_second_moment
-    else:
-        selected_k_peak = k_mid_peak
-        selected_k_second = k_mid_second_moment
+            b_metrics = _attention_candidate_metrics(
+                q_samples,
+                k_samples,
+                best_d,
+                q_second_moment,
+                selected_k_second,
+                q_num_heads,
+                kv_num_heads,
+                head_dim,
+                b_q_perm,
+                b_k_perm,
+                best_center_mode,
+            )
+            if (
+                b_metrics[0] < best_metrics[0]
+                and _candidate_is_safe(
+                    b_metrics,
+                    baseline_metrics,
+                    min_mean_improvement=0.02,
+                    worst_tolerance=0.005,
+                )
+            ):
+                best_metrics = b_metrics
+                best_q_perm = b_q_perm
+                best_k_perm = b_k_perm
 
     d_q = best_d.repeat_interleave(group_size, dim=0)
     d_k = best_d.reciprocal()
@@ -1910,170 +2055,49 @@ def hif4_calibration_attention(
     if h_q_for_k is None:
         h_q_for_k = torch.ones(kv_channels, dtype=torch.float32)
 
-    # Blend stable second-moment sensitivity with a softmax-Jacobian estimate.
-    # The latter measures how Q/K perturbations propagate into the actual
-    # Attention output and includes V geometry.
-    jacobian_q, jacobian_k = _attention_jacobian_importance(
-        q_true_samples,
-        k_true_samples,
-        v_true_samples,
-        best_d,
-        q_num_heads,
-        kv_num_heads,
-        head_dim,
-        best_q_perm,
-        best_k_perm,
-        best_center_mode,
-    )
-    h_k_for_q = _normalize_importance(
-        0.25 * h_k_for_q + 0.75 * jacobian_q, q_channels
-    )
-    h_q_for_k = _normalize_importance(
-        0.25 * h_q_for_k + 0.75 * jacobian_k, kv_channels
-    )
-    if h_k_for_q is None:
-        h_k_for_q = torch.ones(q_channels, dtype=torch.float32)
-    if h_q_for_k is None:
-        h_q_for_k = torch.ones(kv_channels, dtype=torch.float32)
+    q_flat = d_q.reshape(-1)
+    k_flat = d_k.reshape(-1)
 
-    # Decide whether online difficult-block refinement is worth its risk.  V is
-    # evaluated jointly here even though it has no legal paired transform.
-    refine_baseline = _attention_true_metrics(
-        q_true_samples,
-        k_true_samples,
-        v_true_samples,
-        best_d,
-        q_num_heads,
-        kv_num_heads,
-        head_dim,
-        best_q_perm,
-        best_k_perm,
-        best_center_mode,
-        q_importance=h_k_for_q,
-        k_importance=h_q_for_k,
-        refine_mode=0,
-    )
-    best_refine_metrics = refine_baseline
-    best_refine_mode = 0
-    # Unvalidated offset sets must never leak into the runtime state: start
-    # from the conservative set and only keep an extended set that was
-    # actually accepted by the refinement gate below.
-    best_refine_offsets = _DYNAMIC_OFFSET_SETS[-1]
-    for candidate_offsets in _DYNAMIC_OFFSET_SETS:
-        if best_refine_mode > 0:
-            break
-        for candidate_refine_mode in (1, 2):
-            candidate_refine_metrics = _attention_true_metrics(
-                q_true_samples,
-                k_true_samples,
-                v_true_samples,
-                best_d,
-                q_num_heads,
-                kv_num_heads,
-                head_dim,
-                best_q_perm,
-                best_k_perm,
-                best_center_mode,
-                q_importance=h_k_for_q,
-                k_importance=h_q_for_k,
-                refine_mode=candidate_refine_mode,
-                search_offsets=candidate_offsets,
+    def q_transform(sample: torch.Tensor) -> torch.Tensor:
+        return (sample * q_flat.reshape(1, -1)).index_select(-1, best_q_perm)
+
+    def k_transform(sample: torch.Tensor) -> torch.Tensor:
+        return (
+            _center_attention_k(
+                sample, kv_num_heads, head_dim, int(best_center_mode)
             )
-            if (
-                candidate_refine_metrics[0] < best_refine_metrics[0]
-                and _candidate_is_safe(
-                    candidate_refine_metrics,
-                    refine_baseline,
-                    min_mean_improvement=0.005,
-                    worst_tolerance=0.005,
-                )
-            ):
-                best_refine_metrics = candidate_refine_metrics
-                best_refine_mode = candidate_refine_mode
-                best_refine_offsets = candidate_offsets
+            * k_flat.reshape(1, -1)
+        ).index_select(-1, best_k_perm)
 
-    best_refine_ratios = (
-        0.08 if best_refine_mode >= 1 else 0.0,
-        0.12 if best_refine_mode >= 1 else 0.0,
-        0.10 if best_refine_mode >= 2 else 0.0,
-    )
-    fallback_refine_ratios = best_refine_ratios
+    if _DATA_DRIVEN_RATIO:
+        q_ratio = _loss_capture_ratio(
+            torch.cat(
+                [_standard_block_losses(q_transform(s), h_k_for_q)
+                 for s in q_samples]
+            ),
+            target=_RATIO_CAPTURE_TARGET,
+            ratio_min=_RATIO_MIN,
+        )
+        k_ratio = _loss_capture_ratio(
+            torch.cat(
+                [_standard_block_losses(k_transform(s), h_q_for_k)
+                 for s in k_samples]
+            ),
+            target=_RATIO_CAPTURE_TARGET,
+            ratio_min=_RATIO_MIN,
+        )
+        v_ratio = _loss_capture_ratio(
+            torch.cat(
+                [_standard_block_losses(s, v_importance) for s in v_samples]
+            ),
+            target=_RATIO_CAPTURE_TARGET,
+            ratio_min=_RATIO_MIN,
+        )
+    else:
+        q_ratio = _Q_REFINE_MAX_RATIO
+        k_ratio = _K_REFINE_MAX_RATIO
+        v_ratio = _V_REFINE_MAX_RATIO
 
-    # The base 0/QK/QKV gate remains the mandatory fallback.  One calibrated
-    # high-budget QKV candidate captures nearly all of the score gain of a
-    # larger grid with one third of its extra calibration work.  It may replace
-    # the fallback only when every case is non-worse, both mask domains improve,
-    # and the gain survives a small online-cost penalty.  Each ratio candidate
-    # is evaluated under every offset set: the extended set can degrade a
-    # candidate's per-case profile enough to fail the worst-case gate even
-    # when the conservative set would have passed, so the best gate-passing
-    # (ratios, offsets) combination wins on objective value.
-    escalation_baseline = best_refine_metrics
-    best_budget_objective = best_refine_metrics[0] + 0.001 * sum(
-        best_refine_ratios
-    )
-    for candidate_ratios in (
-        (0.12, 0.16, 0.10),
-        (0.25, 0.30, 0.20),
-        (0.40, 0.48, 0.35),
-        (0.60, 0.70, 0.50),
-        (0.80, 0.90, 0.65),
-    ):
-        for candidate_offsets in _DYNAMIC_OFFSET_SETS:
-            candidate_metrics = _attention_true_metrics(
-                q_true_samples,
-                k_true_samples,
-                v_true_samples,
-                best_d,
-                q_num_heads,
-                kv_num_heads,
-                head_dim,
-                best_q_perm,
-                best_k_perm,
-                best_center_mode,
-                q_importance=h_k_for_q,
-                k_importance=h_q_for_k,
-                refine_ratios=candidate_ratios,
-                search_offsets=candidate_offsets,
-            )
-            candidate_objective = candidate_metrics[0] + 0.001 * sum(
-                candidate_ratios
-            )
-            if (
-                candidate_objective < best_budget_objective
-                and _candidate_is_safe(
-                    candidate_metrics,
-                    escalation_baseline,
-                    min_mean_improvement=0.01,
-                    worst_tolerance=0.0,
-                )
-                and _attention_mask_consensus(
-                    candidate_metrics,
-                    escalation_baseline,
-                    min_improvement=0.002,
-                )
-            ):
-                best_refine_metrics = candidate_metrics
-                best_refine_ratios = candidate_ratios
-                best_refine_mode = 3
-                best_refine_offsets = candidate_offsets
-                best_budget_objective = candidate_objective
-
-    q_refine_ratio, k_refine_ratio, v_refine_ratio = best_refine_ratios
-    # Keep calibration-derived importance and smoothing, but avoid applying a
-    # midrange K shift online when a large head has a broad calibration tail.
-    # The shift is an exact attention invariance before quantization, yet its
-    # finite-precision interaction is harmful for this distribution.
-    online_center_mode = (
-        0 if heavy_tail_guard and best_center_mode == 2 else best_center_mode
-    )
-
-    offsets = torch.tensor(
-        best_refine_offsets, dtype=torch.int8, device="cpu"
-    )
-    top_ranks = torch.tensor(
-        _DYNAMIC_TOP_RANKS, dtype=torch.int8, device="cpu"
-    )
     q_permutation_state = None
     k_permutation_state = None
     if not torch.equal(best_k_perm, k_identity_perm):
@@ -2093,52 +2117,43 @@ def hif4_calibration_attention(
         "multiplier": q_multiplier_state,
         "permutation": q_permutation_state,
         "importance": _cpu_state_tensor(h_k_for_q),
-        "offsets": offsets.clone(),
-        "top_ranks": top_ranks.clone(),
-        "error_threshold": 1.0e-7,
-        "accept_margin": 0.03,
-        "max_refine_ratio": float(q_refine_ratio),
-        "fast_refine_ratio": float(fallback_refine_ratios[0]),
-        "max_refine_blocks": 16_384,
+        "offsets": torch.tensor(_DYNAMIC_OFFSETS, dtype=torch.int8, device="cpu"),
+        "error_threshold": _ATTN_REFINE_ERROR_THRESHOLD,
+        "accept_margin": _Q_REFINE_ACCEPT_MARGIN,
+        "max_refine_ratio": float(q_ratio),
+        "max_refine_blocks": _Q_REFINE_MAX_BLOCKS,
         "num_heads": int(q_num_heads),
         "head_dim": int(head_dim),
-        "refine_mode": int(best_refine_mode),
-        "flat_profile": bool(flat_attention_profile),
-        "version": 11,
+        "version": 2,
     }
     k_state = {
         "multiplier": k_multiplier_state,
         "permutation": k_permutation_state,
-        "center_mode": int(online_center_mode),
+        "center_mode": int(best_center_mode),
         "importance": _cpu_state_tensor(h_q_for_k),
-        "offsets": offsets.clone(),
-        "top_ranks": top_ranks.clone(),
-        "error_threshold": 1.0e-7,
-        "accept_margin": 0.03,
-        "max_refine_ratio": float(k_refine_ratio),
-        "fast_refine_ratio": float(fallback_refine_ratios[1]),
-        "max_refine_blocks": 24_576,
+        "offsets": torch.tensor(_DYNAMIC_OFFSETS, dtype=torch.int8, device="cpu"),
+        "error_threshold": _ATTN_REFINE_ERROR_THRESHOLD,
+        "accept_margin": _K_REFINE_ACCEPT_MARGIN,
+        "max_refine_ratio": float(k_ratio),
+        "max_refine_blocks": _K_REFINE_MAX_BLOCKS,
         "num_heads": int(kv_num_heads),
         "head_dim": int(head_dim),
-        "refine_mode": int(best_refine_mode),
-        "flat_profile": bool(flat_attention_profile),
-        "heavy_tail_guard": bool(heavy_tail_guard),
-        "version": 11,
+        "version": 2,
     }
     v_state = {
-        "offsets": offsets.clone(),
-        "top_ranks": top_ranks.clone(),
-        "error_threshold": 1.0e-7,
-        "accept_margin": 0.01,
-        "max_refine_ratio": float(v_refine_ratio),
-        "fast_refine_ratio": float(fallback_refine_ratios[2]),
-        "max_refine_blocks": 24_576,
+        "offsets": torch.tensor(_DYNAMIC_OFFSETS, dtype=torch.int8, device="cpu"),
+        "importance": (
+            None
+            if v_importance is None
+            else _cpu_state_tensor(v_importance)
+        ),
+        "error_threshold": _ATTN_REFINE_ERROR_THRESHOLD,
+        "accept_margin": _V_REFINE_ACCEPT_MARGIN,
+        "max_refine_ratio": float(v_ratio),
+        "max_refine_blocks": _V_REFINE_MAX_BLOCKS,
         "num_heads": int(kv_num_heads),
         "head_dim": int(head_dim),
-        "refine_mode": int(best_refine_mode),
-        "flat_profile": bool(flat_attention_profile),
-        "heavy_tail_guard": bool(heavy_tail_guard),
-        "version": 11,
+        "version": 2,
     }
     return {"q_state": q_state, "k_state": k_state, "v_state": v_state}
 
@@ -2169,9 +2184,6 @@ def hif4_dynamic_quantize_q(
     state = _check_attention_state(q_state, q_num_heads, head_dim, "q")
     if int(q_quant.shape[-1]) != q_num_heads * head_dim:
         raise ValueError("Q width does not match q_num_heads * head_dim")
-    refine_ratio = float(state["max_refine_ratio"])
-    if int(q_quant.numel()) > _ATTN_FULL_SEARCH_ELEMENTS:
-        refine_ratio = float(state.get("fast_refine_ratio", refine_ratio))
     return _nvfp4_to_hif4(
         q_quant,
         q_scale,
@@ -2179,10 +2191,9 @@ def hif4_dynamic_quantize_q(
         permutation=state["permutation"],
         importance=state["importance"],
         search_offsets=state["offsets"],
-        search_top_ranks=state["top_ranks"],
         error_threshold=float(state["error_threshold"]),
         accept_margin=float(state["accept_margin"]),
-        max_refine_ratio=refine_ratio,
+        max_refine_ratio=float(state["max_refine_ratio"]),
         max_refine_blocks=int(state["max_refine_blocks"]),
     )
 
@@ -2198,9 +2209,6 @@ def hif4_dynamic_quantize_k(
     state = _check_attention_state(k_state, kv_num_heads, head_dim, "k")
     if int(k_quant.shape[-1]) != kv_num_heads * head_dim:
         raise ValueError("K width does not match kv_num_heads * head_dim")
-    refine_ratio = float(state["max_refine_ratio"])
-    if int(k_quant.numel()) > _ATTN_FULL_SEARCH_ELEMENTS:
-        refine_ratio = float(state.get("fast_refine_ratio", refine_ratio))
     return _nvfp4_to_hif4(
         k_quant,
         k_scale,
@@ -2211,10 +2219,9 @@ def hif4_dynamic_quantize_k(
         center_head_dim=head_dim,
         importance=state["importance"],
         search_offsets=state["offsets"],
-        search_top_ranks=state["top_ranks"],
         error_threshold=float(state["error_threshold"]),
         accept_margin=float(state["accept_margin"]),
-        max_refine_ratio=refine_ratio,
+        max_refine_ratio=float(state["max_refine_ratio"]),
         max_refine_blocks=int(state["max_refine_blocks"]),
     )
 
@@ -2230,16 +2237,13 @@ def hif4_dynamic_quantize_v(
     state = _check_attention_state(v_state, kv_num_heads, head_dim, "v")
     if int(v_quant.shape[-1]) != kv_num_heads * head_dim:
         raise ValueError("V width does not match kv_num_heads * head_dim")
-    refine_ratio = float(state["max_refine_ratio"])
-    if int(v_quant.numel()) > _ATTN_FULL_SEARCH_ELEMENTS:
-        refine_ratio = float(state.get("fast_refine_ratio", refine_ratio))
     return _nvfp4_to_hif4(
         v_quant,
         v_scale,
+        importance=state["importance"],
         search_offsets=state["offsets"],
-        search_top_ranks=state["top_ranks"],
         error_threshold=float(state["error_threshold"]),
         accept_margin=float(state["accept_margin"]),
-        max_refine_ratio=refine_ratio,
+        max_refine_ratio=float(state["max_refine_ratio"]),
         max_refine_blocks=int(state["max_refine_blocks"]),
     )

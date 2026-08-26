@@ -5,8 +5,8 @@ Root `solution.py` is the only active submission. Archived source files are immu
 | Version | Date | Topic | Local Linear | Local Attention | Local Time | Official Score | Official Time | Delta | Status | Directory |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |
 | v000 | 2026-08-25 | v9 baseline | NA | NA | NA | ~9000+ | NA | NA | accepted | [archive](20260825_v000_v9-baseline_score9000plus_timeNA/) |
-| v001 | 2026-08-26 | current baseline | NA | NA | NA | 10250 | 127s | NA | champion | [archive](20260826_v001_current-baseline_score10250_time127s/) |
-| v002 | 2026-08-26 | youxilee/hif4 v2.0 | 0.5668* | 0.3786* | NA | 15000+ | NA | NA | accepted | [archive](20260826_v002_youxilee-hif4_score15000plus_timeNA/) |
+| v001 | 2026-08-26 | current baseline | NA | NA | NA | 10250 | 127s | NA | accepted | [archive](20260826_v001_current-baseline_score10250_time127s/) |
+| v002 | 2026-08-26 | youxilee/hif4 v2.0 | 0.5668* | 0.3786* | NA | 15000+ | NA | NA | champion | [archive](20260826_v002_youxilee-hif4_score15000plus_timeNA/) |
 
 `*` v002 的 Linear/Attention 数值来自远程仓库 `CHANGELOG.md` 的 GPT-2
 12 层、2 calib + 2 test 报告，未在本地模型上重复运行；官方总分和耗时按用户提供/当前可见信息记录。

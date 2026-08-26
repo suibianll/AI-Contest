@@ -10,5 +10,5 @@
 - Local runtime: `NA` (not rerun locally; the changelog reports calibration/dynamic timings for separate sample-size settings).
 - Official score: `15000+` (user-provided).
 - Official runtime: `NA`.
-- Status: accepted archive; root `solution.py` remains the active candidate.
+- Status: champion archive and current active root `solution.py`.
 - Next direction: port or compare the remote block-SmoothQuant and refinement mechanisms one at a time, then rerun the local evaluator before official submission.
