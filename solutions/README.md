@@ -6,12 +6,18 @@ Root `solution.py` is the only active submission. Archived source files are immu
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |
 | v000 | 2026-08-25 | v9 baseline | NA | NA | NA | ~9000+ | NA | NA | accepted | [archive](20260825_v000_v9-baseline_score9000plus_timeNA/) |
 | v001 | 2026-08-26 | current baseline | NA | NA | NA | 10250 | 127s | NA | accepted | [archive](20260826_v001_current-baseline_score10250_time127s/) |
-| v002 | 2026-08-26 | youxilee/hif4 v2.0 | 0.5668* | 0.3786* | NA | 15000+ | NA | NA | champion | [archive](20260826_v002_youxilee-hif4_score15000plus_timeNA/) |
+| v002 | 2026-08-26 | youxilee/hif4 v2.0 | 0.5668* | 0.3786* | NA | ~15000 | ~140s | NA | champion | [archive](20260826_v002_youxilee-hif4_score15000plus_timeNA/) |
+| v003 | 2026-08-27 | C1 A1 real Attention selector | 0.5668 | 0.4497 | CPU stage 54.72s | NA | NA | local +0.0712 Attention | local-champion | [archive](20260827_v003_a1-real-attention-local_scoreNA_timeNA/) |
 
-`*` v002 的 Linear/Attention 数值来自远程仓库 `CHANGELOG.md` 的 GPT-2
-12 层、2 calib + 2 test 报告，未在本地模型上重复运行；官方总分和耗时按用户提供/当前可见信息记录。
+`*` v002 的 Linear/Attention 数值最初来自远程仓库 `CHANGELOG.md` 的 GPT-2
+12 层、2 calib + 2 test 报告，之后已由 GPU-compatible B0 derivative 在本地
+复现。该 derivative 与 v002 归档行为等价但 SHA256 不同，因此表中 Local Time
+仍为 `NA`；官方总分和耗时仍是用户提供的近似值，尚未完成精确 SHA 绑定。
 
-## Manual workflow
+v003 起允许只有本地结果时立即归档。官方列保持 `NA`，未来结果返回时追加
+提交 SHA、分数和时间，不覆盖既有本地配对表或实验结论。
+
+## Local-first workflow
 
 1. Modify only the root `solution.py`, with one primary mechanism change per iteration.
 2. Run the real-GPT evaluator:
@@ -20,13 +26,13 @@ Root `solution.py` is the only active submission. Archived source files are immu
    .\.venv\Scripts\python evaluator\real_data_eval.py --solution solution.py --model gpt2
    ```
 
-3. Record the six Linear component scores, Attention score, evaluator parameters, and local runtime.
-4. Submit the exact same root `solution.py` to the official evaluator.
-5. After the official score and runtime return, create the next immutable `vNNN` directory even when the result regresses or times out.
-6. Name the directory `YYYYMMDD_vNNN_topic_scoreSCORE_timeTIMEs`, keeping score and time at the end.
-7. Copy the submitted source to the archive as `solution.py` and verify that both SHA256 hashes match.
-8. Add `result.md` with the local breakdown, official result, single change, hypothesis, conclusion, and next direction.
-9. Append one row to this table. Mark the version `champion`, `accepted`, or `rejected`.
-10. Choose the next single-mechanism experiment by comparing whether local component changes and the official score move in the same direction.
+3. Record the six Linear components, full Attention matrix, tails, evaluator parameters and paired local runtime.
+4. Immediately create the next immutable `vNNN` directory, even when only local results exist or the candidate regresses.
+5. Use `scoreNA_timeNA` while official evaluation is unavailable; copy the exact evaluated source and verify SHA256 equality.
+6. Add `result.md` with parent/candidate IDs, local breakdown, single change, hypothesis, conclusion and next direction.
+7. Append one row to this table and mark `local-champion`, `local-accepted` or `local-rejected`.
+8. Build the next single-mechanism candidate from the latest local Champion; a rejected branch does not roll the Champion back to an older baseline.
+9. If official results later become available, append the submitted SHA, score, runtime and date to the same archive record and update this table.
+10. Never overwrite the local evidence when recording later official feedback.
 
 Use `NA`, `score9000plus`, or `time300plus` when a historical value is unavailable, approximate, or timed out. Never replace an unknown official value with a local estimate.
