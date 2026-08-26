@@ -124,6 +124,25 @@ Linear 与 B0 完全一致。A3/L1 开启时的数值见各自步骤小节。
   CPU ratio ≤1.15；通过后才运行固定矩阵。
 - 状态：`planned`。
 
+### C7 开发结论
+
+- offset 0 Linear mean 相对 C5 约 `+0.123pp`；q/k/v/o/fc/proj 六项均为
+  正增益，proj 最大 `+0.22pp`；Attention 精确不变。
+- CUDA algorithm-stage `21.99s`，9 项测试通过。
+- 状态：`local-accepted-not-promoted`。未达到 `+0.2pp`，不运行固定矩阵；
+  C5 保持 Champion，v010 归档 32×32 的明确正向边际。
+
+## C8 预注册：严格受限 top-K 64×64 Linear 二阶
+
+- Candidate ID：`C8`
+- Parent：`C5`，SHA256
+  `A093940D46BE4B3C3CA88B30CD4456DD112CAD1C5DE632FCDB0207A12D197288`
+- 唯一机制：保留 C5，只对最高损失 0.5% 的完整 64 通道 block 做一轮
+  `H·e` 坐标更新，cap 1024；禁止全量 64×64 GPTQ或增加 sweep。
+- 开发门：offset 0 Linear mean相对 C5 `+0.2pp`，Attention 不变，CPU
+  ratio ≤1.15；不通过即结束 group-size 扩展。
+- 状态：`planned`。
+
 ### C6 开发结论
 
 - offset 0 Linear mean 相对 C5 约 `+0.063pp`；六项均小幅为正，Attention

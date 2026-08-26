@@ -151,6 +151,12 @@ robust_attention_objective =
 
 在 C5 上只增加最高损失 1% 的连续 32 通道 `H·e` 更新，cap 2048、单 sweep。它验证新的相关性尺度，不扩大已饱和的 8×8/16×16 coverage；未达到 `+0.2pp` 即停止并归档。
 
+执行结果：`local-accepted-not-promoted`，六项均提升但 Linear mean 仅 `+0.123pp`；C5 保持 Champion。
+
+### C8：严格受限 top-K 64×64 Linear 二阶
+
+只在 C5 上增加最高损失 0.5% 的完整 64 通道 block，cap 1024、单 sweep。该候选是 8→16→64 渐进路线的最后尺度检查，禁止全量 GPTQ；若开发增益不足 `+0.2pp`，结束 group-size 扩展并转向新的独立机制。
+
 ### 暂缓
 
 - A2 H64：聚合有增益但尾部和 GQA 安全轨不足，待 C2 稳定后重新立项；
