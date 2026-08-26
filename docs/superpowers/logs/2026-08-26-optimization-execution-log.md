@@ -64,6 +64,42 @@ Linear 与 B0 完全一致。A3/L1 开启时的数值见各自步骤小节。
 - 下一候选固定为 C2 Segment-CVaR selector，只优化 A1 的跨 segment
   稳定性；不同时启用 A2/A3/L1。
 
+## C2 预注册：Segment-CVaR Attention selector
+
+- Candidate ID：`C2`
+- Parent：`C1`，SHA256
+  `310570B265C705D6F09E3863CD56B1931EA9E971BCEE7E6D8E2DDC029A184B88`
+- 唯一机制：将每个 Attention calibration prefix 固定切为 4 个连续 token
+  segment；候选选择和部署终验使用 `mean + 0.50×worst-quartile +
+  0.25×cross-segment-std`，其余量化器、候选集合和动态路径不变。
+- 开发数据：只使用 offset 0；offset 97/193/389 在候选定稿前不运行。
+- 目标：相对 C1 改善跨 segment 稳定性和 GQA non-causal 尾部，同时保持
+  MHA/GQA Attention 综合均值、Linear 等价和动态路径成本。
+- 晋级门：目标综合均值至少 `+0.2pp`，win rate ≥70%，tail mean 不低于
+  `-2pp` 或明确改善 C1 既有尾部，CPU time ratio ≤1.15；state/API/静态
+  安全条件全部通过。
+- 硬失败：综合均值下降、非目标 Linear 下降超过 `0.2pp`、数值/state/API
+  非法、缺少 SHA 或结果归档。
+- 开发结果：MHA causal/non-causal 相对 C1 为 `-3.42pp/+3.08pp`；GQA
+  为 `-0.13pp/+0.59pp`；win rate 50%。MHA CUDA algorithm-stage
+  `26.68s`，相对 C1 `20.57s` 为 `1.297×`。
+- 诊断：独立切段重置 causal 历史上下文，并把终验动态调用放大约 4 倍；
+  这不是需要的“只改变稳健统计”机制。
+- 状态：`local-rejected`。开发门失败后未运行 offset 97/193/389 或 CPU；
+  源码和结果归档为 v004，C1 保持本地 Champion。
+
+## C2a 预注册：Query-Segment CVaR
+
+- Candidate ID：`C2a`
+- Parent：`C1`，SHA256
+  `310570B265C705D6F09E3863CD56B1931EA9E971BCEE7E6D8E2DDC029A184B88`
+- 唯一机制：在完整序列上只执行一次候选量化与 causal/non-causal
+  Attention；保持完整 K/V 和 causal 历史，仅将输出 query 行切为 4 段计算
+  `mean + 0.50×worst-quartile + 0.25×cross-segment-std`。
+- 开发数据、晋级门和硬失败条件与 C2 相同；动态终验调用数必须恢复到 C1
+  量级，MHA causal 不允许再出现 C2 的上下文重置损失。
+- 状态：`in-progress`。
+
 ## 步骤 7（历史）：发布复核与计时修正（§1.1 / §7.3 / §10）
 
 - 用户提供的官方结果仍只有 **~15000 分 @ ~140s**。该数据绑定到 v002

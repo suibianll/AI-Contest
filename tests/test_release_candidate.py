@@ -70,6 +70,7 @@ def validate_state(value) -> tuple[int, int]:
 def test_release_flags_are_a1_only() -> None:
     solution = load_module("release_flags", ROOT / "solution.py")
     assert solution._ATTN_OUTPUT_SELECTOR is True
+    assert solution._ATTN_SEGMENT_CVAR is True
     assert solution._ATTN_H64 is False
     assert solution._V_IMPORTANCE_CANDIDATES is False
     assert solution._L1_DATA_DRIVEN_SCALE is False
@@ -205,3 +206,15 @@ def test_local_holdout_offsets_are_fixed_and_distinct() -> None:
         windows.append(rotated[:128])
     assert all(window.numel() == 128 for window in windows)
     assert len({tuple(window.tolist()) for window in windows}) == len(windows)
+
+
+def test_segment_cvar_penalizes_tail_instability() -> None:
+    solution = load_module("segment_cvar", ROOT / "solution.py")
+    stable = solution._attention_robust_objective(
+        [0.90, 0.90, 0.90, 0.90], [0.90, 0.90, 0.90, 0.90]
+    )
+    unstable = solution._attention_robust_objective(
+        [0.70, 0.70, 0.70, 1.40], [0.70, 0.70, 0.70, 1.40]
+    )
+    assert sum([0.70, 0.70, 0.70, 1.40]) / 4 < 0.90
+    assert unstable > stable
