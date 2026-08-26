@@ -892,7 +892,7 @@ def _linear_candidate_metrics(
             search_top_ranks=_WEIGHT_TOP_RANKS,
             error_threshold=1.0e-7,
             accept_margin=0.0,
-            max_refine_ratio=0.30,
+            max_refine_ratio=0.50,
             max_refine_blocks=16_384,
         )
     else:
@@ -919,8 +919,8 @@ def _linear_candidate_metrics(
                 search_offsets=_LINEAR_DYNAMIC_OFFSETS,
                 search_top_ranks=_LINEAR_DYNAMIC_TOP_RANKS,
                 error_threshold=1.0e-7,
-                accept_margin=0.02,
-                max_refine_ratio=0.20,
+                accept_margin=0.0,
+                max_refine_ratio=0.60,
                 max_refine_blocks=8_192,
             )
         else:
@@ -1110,7 +1110,7 @@ def hif4_calibration_and_quantize_weight(
         search_top_ranks=_WEIGHT_TOP_RANKS,
         error_threshold=1.0e-7,
         accept_margin=0.0,
-        max_refine_ratio=0.30 if int(weight.numel()) <= 4_194_304 else 0.15,
+        max_refine_ratio=0.50 if int(weight.numel()) <= 4_194_304 else 0.25,
         max_refine_blocks=65_536,
         selection_mode="hybrid",
     )
@@ -1145,8 +1145,8 @@ def hif4_calibration_and_quantize_weight(
             _LINEAR_DYNAMIC_TOP_RANKS, dtype=torch.int8, device="cpu"
         ),
         "error_threshold": 1.0e-7,
-        "accept_margin": 0.005,
-        "max_refine_ratio": 0.40,
+        "accept_margin": 0.0,
+        "max_refine_ratio": 0.60,
         "max_refine_blocks": 32_768,
         "in_features": int(in_features),
         "version": 8,
@@ -2012,7 +2012,13 @@ def hif4_calibration_attention(
     best_budget_objective = best_refine_metrics[0] + 0.001 * sum(
         best_refine_ratios
     )
-    for candidate_ratios in ((0.12, 0.16, 0.10), (0.25, 0.30, 0.20)):
+    for candidate_ratios in (
+        (0.12, 0.16, 0.10),
+        (0.25, 0.30, 0.20),
+        (0.40, 0.48, 0.35),
+        (0.60, 0.70, 0.50),
+        (0.80, 0.90, 0.65),
+    ):
         for candidate_offsets in _DYNAMIC_OFFSET_SETS:
             candidate_metrics = _attention_true_metrics(
                 q_true_samples,
