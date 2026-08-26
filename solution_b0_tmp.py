@@ -67,56 +67,6 @@ _QK_SMOOTH_ALPHAS = (0.25, 0.50)
 _WEIGHT_SMOOTH_RMS = True
 _QK_SMOOTH_RMS = True
 _ATTN_CENTER_MODES = (0, 2)
-# A1: score attention calibration candidates by the real attention output
-# error (causal primary, non-causal safety) instead of the Q/K reconstruction
-# proxy.  Calibration-only cost; the dynamic path is unchanged.
-# A1 is the current local Champion: it has a stable aggregate improvement
-# across MHA/GQA, masks, token windows, and NVFP4 scale modes.  Individual
-# tail regressions are tracked as the next optimization target instead of
-# discarding the aggregate gain.
-_ATTN_OUTPUT_SELECTOR = True
-_ATTN_A1_MAX_TOKENS = 256
-# A1 终验门：A1 候选排序基于朴素 HiF4 代理，部署路径（offset 搜索 +
-# importance 困难块精修）与隐藏 test 分布的排序都可能错位。终验门用完整
-# 部署路径重算真实 attention 输出误差，A1 winner 相对 B0 proxy winner
-# （当前 Champion 的选择）需满足：causal 均值至少相对改善
-# _A1_GATE_MIN_IMPROVEMENT，且逐样本与 non-causal 安全轨均值退化不超过
-# _A1_GATE_WORST_TOLERANCE；否则逐层回退 B0 选择，保证不低于 Champion。
-_A1_GATE_MIN_IMPROVEMENT = 0.005
-_A1_GATE_WORST_TOLERANCE = 0.02
-# A2 固定 H64：对 Q/K winner 施加组对齐 signed Hadamard 旋转（每个连续
-# 64 维 head block 独立旋转，GQA 中同组 Q heads 与 K head 共享同一旋转，
-# 保证 Q·K 点积不变）。首版只比较 2 个确定性 sign seed，旋转候选须通过
-# 与 A1 相同的真实 attention 输出门控，否则保持无旋转 winner。配对复核
-# 发现 MHA 单层和 GQA non-causal 尾部超过发布门槛；根候选回退为 A1-only，
-# A2 实现保留供后续单机制官方配对。
-_ATTN_H64 = False
-_ATTN_H64_SEEDS = (0, 1)
-_ATTN_H64_BLOCK = 64
-# A3 V importance 候选：当前 E[A^2]（二阶矩对角项）之外，比较
-#  - 一阶矩 E[A]（attention 概率推导的 head 权重，捕捉输出偏差项）；
-#  - E[A^2] + E[A]^2（对角项 + 均值交叉项，均值误差抑制）。
-# 候选仅改变 head 级 importance 向量（接口不变、动态路径零成本），
-# 须经真实 attention 输出门控，否则保持当前 importance。
-# 2026-08-26 配对评测：MHA causal -0.06pp / GQA 持平，未达 +0.2pp 晋级
-# 门槛（且 MHA L5 -0.8pp），按 spec §10 不晋级，默认关闭（实现保留）。
-_V_IMPORTANCE_CANDIDATES = False
-# L1 数据驱动 scale（spec §6.1）：困难块在固定 offset 网格之外，额外生成
-#  - 加权 LS 连续 scale：以当前五字段 winner 的离散解为锚点（mantissa
-#    视为固定）求闭式 LS scale，再经 ±1 相邻 E6M2 code 与精确层级求解
-#    交替更新（spec 所述“一至两轮交替”由相邻 code + exact solve 覆盖）；
-#  - 截尾分位数 scale：块内 |x| 的 _L1_TRIM_QUANTILES 分位映射到顶层
-#    mantissa（有意截断块内离群值，降低截尾 LS 误差）。
-# 所有候选仍为合法 E6M2 code，与当前完整五字段 winner 逐块比较，未降低
-# 损失时逐块回退（复用 offset 搜索的 improve-mask 机制）。
-# 2026-08-26 诊断（artifacts/diag_l1_weights.py）与配对评测：weights 触发
-# 15–119 块/矩阵但 plain MSE 仅改善 0.01–0.03%（分数 4 位小数不可见，
-# 未达 +0.2pp 门槛）；attention 逐块损失下降但真实输出退化（Q/K 经
-# softmax 非线性放大，proxy 错位，MHA -0.6pp）；dynamic 时间 +1.8s。
-# 判定不晋级，默认关闭（实现保留，触发路径见 _dense_to_hif4 困难块段）。
-_L1_DATA_DRIVEN_SCALE = False
-_L1_TRIM_QUANTILES = (0.90, 0.95)
-_L1_ADJACENT_CODE_DELTAS = (-1, 0, 1)
 # Rank refinement by absolute block error (True) or normalized error (False).
 _REFINE_RANK_BY_ABSOLUTE = True
 _ATTN_REFINE_ERROR_THRESHOLD = 1.0e-7
@@ -503,144 +453,18 @@ def _center_attention_k(
     return (grouped - center).reshape_as(dense)
 
 
-def _attention_forward(
-    q_dense: torch.Tensor,
-    k_dense: torch.Tensor,
-    v_dense: torch.Tensor,
-    q_num_heads: int,
-    kv_num_heads: int,
-    head_dim: int,
-    causal: bool,
-) -> torch.Tensor:
-    """Real attention output for (seq, channels) Q/K/V, evaluator-equivalent."""
-
-    seq = int(q_dense.shape[0])
-    group = q_num_heads // kv_num_heads
-    q = q_dense.reshape(seq, q_num_heads, head_dim).transpose(0, 1)
-    k = (
-        k_dense.reshape(seq, kv_num_heads, head_dim)
-        .transpose(0, 1)
-        .repeat_interleave(group, dim=0)
-    )
-    v = (
-        v_dense.reshape(seq, kv_num_heads, head_dim)
-        .transpose(0, 1)
-        .repeat_interleave(group, dim=0)
-    )
-    logits = q @ k.transpose(-1, -2) / math.sqrt(float(head_dim))
-    if causal:
-        logits = logits + torch.triu(
-            torch.full((seq, seq), float("-inf"), device=logits.device), 1
-        )
-    probs = torch.softmax(logits, dim=-1)
-    return (probs @ v).transpose(0, 1).reshape(seq, q_num_heads * head_dim)
-
-
-def _attention_deployed_mse(
-    q_pairs: list,
-    k_pairs: list,
-    v_hats: list,
-    refs: list,
-    q_state: dict,
-    k_state: dict,
-    q_num_heads: int,
-    kv_num_heads: int,
-    head_dim: int,
-) -> tuple:
-    """Per-sample real attention output MSE (causal, non-causal) through the
-    deployed dynamic quantization path, mirroring the evaluator scoring."""
-
-    causal_scores: list = []
-    safety_scores: list = []
-    for (q_quant, q_scale), (k_quant, k_scale), v_hat, (ref_c, ref_n) in zip(
-        q_pairs, k_pairs, v_hats, refs
-    ):
-        q_hat = _dequantize_hif4(
-            hif4_dynamic_quantize_q(
-                q_quant, q_scale, q_num_heads, head_dim, q_state
-            )
-        ).to(torch.float32)
-        k_hat = _dequantize_hif4(
-            hif4_dynamic_quantize_k(
-                k_quant, k_scale, kv_num_heads, head_dim, k_state
-            )
-        ).to(torch.float32)
-        out_c = _attention_forward(
-            q_hat, k_hat, v_hat, q_num_heads, kv_num_heads, head_dim, True
-        )
-        out_n = _attention_forward(
-            q_hat, k_hat, v_hat, q_num_heads, kv_num_heads, head_dim, False
-        )
-        causal_scores.append(float((out_c - ref_c).square().mean()))
-        safety_scores.append(float((out_n - ref_n).square().mean()))
-    return causal_scores, safety_scores
-
-
-def _a1_gate_passes(
-    winner_causal: list,
-    winner_safety: list,
-    reference_causal: list,
-    reference_safety: list,
-    safety_tolerance: Optional[float] = None,
-) -> bool:
-    """终验门判定：A1 winner 在部署路径上相对 B0 proxy winner 无退化。
-
-    ``safety_tolerance`` 允许对 non-causal 安全轨均值采用更严格的容忍
-    （默认取 _A1_GATE_WORST_TOLERANCE；旋转等纯方差均衡机制传 0.0 ——
-    若机制真实有效则不应使安全轨均值变差）。
-    """
-
-    if (
-        not winner_causal
-        or not winner_safety
-        or not reference_causal
-        or not reference_safety
-    ):
-        return False
-    if len(winner_causal) != len(reference_causal):
-        return False
-    for value in (
-        winner_causal + winner_safety + reference_causal + reference_safety
-    ):
-        if not math.isfinite(value):
-            return False
-    winner_mean = sum(winner_causal) / len(winner_causal)
-    reference_mean = sum(reference_causal) / len(reference_causal)
-    if winner_mean > max(reference_mean, 1.0e-12) * (
-        1.0 - _A1_GATE_MIN_IMPROVEMENT
-    ):
-        return False
-    tolerance = 1.0 + _A1_GATE_WORST_TOLERANCE
-    for value, reference in zip(winner_causal, reference_causal):
-        if value > max(reference, 1.0e-12) * tolerance:
-            return False
-    for value, reference in zip(winner_safety, reference_safety):
-        if value > max(reference, 1.0e-12) * tolerance:
-            return False
-    if safety_tolerance is None:
-        safety_tolerance = _A1_GATE_WORST_TOLERANCE
-    winner_safety_mean = sum(winner_safety) / len(winner_safety)
-    reference_safety_mean = sum(reference_safety) / len(reference_safety)
-    if winner_safety_mean > max(
-        reference_safety_mean, 1.0e-12
-    ) * (1.0 + safety_tolerance):
-        return False
-    return True
-
-
 def _attention_head_square_mass(
     q: torch.Tensor,
     k: torch.Tensor,
     q_num_heads: int,
     kv_num_heads: int,
     head_dim: int,
-) -> tuple:
-    """每个 KV head 的注意力质量（E[A] 与 E[A^2]）（因果 softmax）。
+) -> torch.Tensor:
+    """每个 KV head 的平均平方注意力质量 E[A^2]（因果 softmax）。
 
-    V 输出误差被 A 加权：输出 MSE 的对角项由 ``E[A^2]`` 主导，块间
-    偏差交叉项（均值误差）由 ``E[A]^2`` 主导。GQA 下每个 KV head 对应
-    group 个 Q head，取组内平均。返回 ``(mean_mass, square_mass)``，
-    形状均为 ``[kv_num_heads]``。
+    V 输出误差被 A 加权，输出 MSE 中 V 通道的静态权重近似为
+    ``E_t,s[A(t,s,h)^2]``。GQA 下每个 KV head 对应 group 个 Q head，
+    取组内平均。返回 ``[kv_num_heads]``。
     """
 
     seq = int(q.shape[0])
@@ -652,18 +476,8 @@ def _attention_head_square_mass(
         torch.full((seq, seq), float("-inf"), device=scores.device), 1
     ).unsqueeze(-1)
     probs = torch.softmax(scores + mask, dim=1)
-    square_mass = probs.square().mean(dim=(0, 1))
-    mean_mass = (
-        probs.mean(dim=(0, 1)) if _V_IMPORTANCE_CANDIDATES else None
-    )
-    return (
-        (
-            None
-            if mean_mass is None
-            else mean_mass.reshape(kv_num_heads, group).mean(dim=1)
-        ),
-        square_mass.reshape(kv_num_heads, group).mean(dim=1),
-    )
+    per_q_head = probs.square().mean(dim=(0, 1))
+    return per_q_head.reshape(kv_num_heads, group).mean(dim=1)
 
 
 def _e6m2_encode_nearest(value: torch.Tensor) -> torch.Tensor:
@@ -1114,85 +928,6 @@ def _dense_to_hif4(
         extend_edge(hi_offset, +1)
         extend_edge(lo_offset, -1)
 
-    if _L1_DATA_DRIVEN_SCALE:
-        # L1 数据驱动 scale 候选：锚定当前五字段 winner（best_* 来自
-        # offset 搜索 + 边缘扩展），生成每块独立候选 code，全部经
-        # _solve_exact_hierarchy 精确解后逐块 improve-mask 回退。
-        if importance_hard is not None:
-            l1_weights = importance_hard
-        elif group_gram_hard is not None:
-            l1_weights = torch.diagonal(
-                group_gram_hard, dim1=-2, dim2=-1
-            )
-        else:
-            l1_weights = None
-        hierarchy = best_lv2[:, :, None, None] * best_lv3[:, :, :, None]
-        model = hierarchy * best_mantissa
-        if l1_weights is None:
-            numerator = (model * x_hard).sum(dim=(1, 2, 3))
-            denominator = (model * model).sum(dim=(1, 2, 3))
-        else:
-            numerator = (l1_weights * model * x_hard).sum(dim=(1, 2, 3))
-            denominator = (l1_weights * model * model).sum(dim=(1, 2, 3))
-        ls_scale = numerator / denominator.clamp_min(_EPS)
-        flat_abs = x_hard.reshape(int(x_hard.shape[0]), -1)
-        base_codes = [_e6m2_encode_nearest(ls_scale)]
-        for trim_quantile in _L1_TRIM_QUANTILES:
-            trim_scale = torch.quantile(
-                flat_abs, float(trim_quantile), dim=1
-            ) * (4.0 / 7.0)
-            base_codes.append(_e6m2_encode_nearest(trim_scale))
-        code_deltas = torch.tensor(
-            _L1_ADJACENT_CODE_DELTAS, dtype=torch.int64, device=x.device
-        )
-        candidate_codes = torch.stack(
-            [
-                (
-                    base_code.to(torch.int64).unsqueeze(0)
-                    + code_deltas.unsqueeze(1)
-                ).clamp(min=0, max=254)
-                for base_code in base_codes
-            ],
-            dim=0,
-        ).reshape(-1, int(x_hard.shape[0]))
-        l1_scales = _e6m2_decode(candidate_codes)
-        num_l1 = int(candidate_codes.shape[0])
-        l1_losses, l1_lv2, l1_lv3, l1_mantissa = _solve_exact_hierarchy(
-            x_hard.unsqueeze(0).expand(num_l1, -1, -1, -1, -1),
-            l1_scales,
-            (
-                None
-                if importance_hard is None
-                else importance_hard.unsqueeze(0).expand(
-                    num_l1, -1, -1, -1, -1
-                )
-            ),
-            sign_hard.unsqueeze(0).expand(num_l1, -1, -1, -1, -1),
-            (
-                None
-                if group_gram_hard is None
-                else group_gram_hard.unsqueeze(0).expand(
-                    num_l1, -1, -1, -1, -1, -1
-                )
-            ),
-        )
-        l1_best = l1_losses.argmin(dim=0)
-        l1_loss = l1_losses[l1_best, hard_arange]
-        l1_scale = l1_scales[l1_best, hard_arange]
-        l1_lv2_best = l1_lv2[l1_best, hard_arange]
-        l1_lv3_best = l1_lv3[l1_best, hard_arange]
-        l1_mantissa_best = l1_mantissa[l1_best, hard_arange]
-        improve_l1 = l1_loss < best_loss
-        best_loss = torch.where(improve_l1, l1_loss, best_loss)
-        best_scale = torch.where(improve_l1, l1_scale, best_scale)
-        best_lv2 = torch.where(improve_l1[:, None], l1_lv2_best, best_lv2)
-        best_lv3 = torch.where(
-            improve_l1[:, None, None], l1_lv3_best, best_lv3
-        )
-        best_mantissa = torch.where(
-            improve_l1[:, None, None, None], l1_mantissa_best, best_mantissa
-        )
-
     margin = max(0.0, min(float(accept_margin), 0.99))
     accept = best_loss <= ((1.0 - margin) * standard_loss_hard)
     if not bool(torch.any(accept)):
@@ -1246,8 +981,6 @@ def _nvfp4_to_hif4(
     accept_margin: float = 0.0,
     max_refine_ratio: float = 0.0,
     max_refine_blocks: Optional[int] = None,
-    attention_rotation: Optional[torch.Tensor] = None,
-    rotation_num_heads: Optional[int] = None,
 ) -> dict[str, torch.Tensor]:
     dense = _dequantize_nvfp4_float32(quant_float, scale_float)
     channels = int(dense.shape[-1])
@@ -1270,20 +1003,6 @@ def _nvfp4_to_hif4(
         if int(order.numel()) != channels:
             raise ValueError("Permutation width does not match tensor width")
         dense = dense.index_select(-1, order)
-    if attention_rotation is not None:
-        if rotation_num_heads is None:
-            raise ValueError("Attention rotation requires head count")
-        signs = attention_rotation.detach().to(device="cpu")
-        head_dim = int(signs.shape[-1])
-        if int(rotation_num_heads) * head_dim != channels:
-            raise ValueError(
-                "Attention rotation does not match tensor width"
-            )
-        if head_dim < 4 or (head_dim & (head_dim - 1)) != 0:
-            raise ValueError("Attention rotation requires power-of-two head_dim")
-        dense = _apply_attention_rotation(
-            dense, int(rotation_num_heads), head_dim, signs
-        )
     if int(block_smooth_size) != 0:
         dense = _block_hadamard_transform(
             dense, int(block_smooth_size), int(block_smooth_seed)
@@ -1359,19 +1078,6 @@ def _hadamard_matrix(
             "block_smooth_size must be one of "
             f"{_BLOCK_SMOOTH_ALLOWED_SIZES}, got {n}"
         )
-    return _hadamard_matrix_unchecked(n, device, dtype)
-
-
-def _hadamard_matrix_unchecked(
-    size: int,
-    device: torch.device,
-    dtype: torch.dtype,
-) -> torch.Tensor:
-    """Return a normalized Sylvester Hadamard matrix for power-of-two sizes."""
-
-    n = int(size)
-    if n < 1 or (n & (n - 1)) != 0:
-        raise ValueError(f"Hadamard size must be a power of two, got {n}")
     h = torch.ones(1, 1, dtype=dtype, device=device)
     while int(h.shape[0]) < n:
         h = torch.cat(
@@ -1410,60 +1116,6 @@ def _block_hadamard_transform(
     grouped = grouped * signs.reshape(channels // size, size)
     h = _hadamard_matrix(size, dense.device, dense.dtype)
     return torch.matmul(grouped, h).reshape_as(dense)
-
-
-def _attention_rotation_signs(
-    kv_num_heads: int,
-    head_dim: int,
-    seed: int,
-) -> torch.Tensor:
-    """Deterministic per-(KV group, channel) signs shared by Q and K.
-
-    Signs derive from the flat index within the [kv_num_heads, head_dim]
-    layout using the same integer hash as the Linear block smoothing, so
-    calibration and dynamic quantization agree without extra state.
-    """
-
-    index = torch.arange(
-        kv_num_heads * head_dim, dtype=torch.int64, device="cpu"
-    )
-    bits = (
-        index * 1_103_515_245 + int(seed) * 214_013 + 12_345
-    ).bitwise_and(1 << 30)
-    signs = torch.where(bits == 0, 1.0, -1.0)
-    return signs.reshape(kv_num_heads, head_dim)
-
-
-def _apply_attention_rotation(
-    dense: torch.Tensor,
-    rotation_num_heads: int,
-    head_dim: int,
-    signs: torch.Tensor,
-) -> torch.Tensor:
-    """Apply the group-aligned signed Hadamard rotation to head blocks.
-
-    ``signs`` has shape [kv_num_heads, head_dim].  For K (or MHA) the heads
-    map one-to-one; for Q the heads of the same KV group share their K
-    rotation, which keeps Q·K dot products exactly invariant.
-    """
-
-    kv_num_heads = int(signs.shape[0])
-    group_size = int(rotation_num_heads) // kv_num_heads
-    if group_size * kv_num_heads != int(rotation_num_heads):
-        raise ValueError("Rotation head count is not a GQA multiple")
-    signs_f = signs.detach().to(
-        device=dense.device, dtype=dense.dtype
-    ).reshape(kv_num_heads, head_dim)
-    if group_size > 1:
-        signs_f = signs_f.repeat_interleave(group_size, dim=0)
-    x = dense.reshape(*dense.shape[:-1], int(rotation_num_heads), head_dim)
-    x = x * signs_f.reshape(int(rotation_num_heads), head_dim)
-    block = _ATTN_H64_BLOCK if head_dim % _ATTN_H64_BLOCK == 0 else head_dim
-    blocks = head_dim // block
-    h = _hadamard_matrix_unchecked(block, dense.device, dense.dtype)
-    x = x.reshape(*x.shape[:-2], int(rotation_num_heads), blocks, block)
-    x = torch.matmul(x, h)
-    return x.reshape(*dense.shape)
 
 
 def _linear_pair_transform(
@@ -2046,71 +1698,14 @@ def _attention_candidate_metrics(
     q_permutation: torch.Tensor,
     k_permutation: torch.Tensor,
     center_mode: int,
-    a1_context: Optional[dict] = None,
 ) -> tuple[float, tuple[float, ...]]:
-    """Q/K quantization proxy with GQA-aligned equivalent transforms.
-
-    With ``a1_context`` the score becomes the real attention output error
-    (A1): causal MSE is the primary selector, non-causal MSE interleaves into
-    the per-case tuple so ``_candidate_is_safe`` protects both masks.  The
-    V quantization is held fixed across candidates, isolating the Q/K
-    transform choice exactly like the proxy did.
-    """
+    """Q/K quantization proxy with GQA-aligned equivalent transforms."""
 
     group_size = q_num_heads // kv_num_heads
     d_q = d_kv.repeat_interleave(group_size, dim=0)
     d_k = d_kv.reciprocal()
     q_order = q_permutation.to(dtype=torch.int64, device=d_kv.device).reshape(-1)
     k_order = k_permutation.to(dtype=torch.int64, device=d_kv.device).reshape(-1)
-
-    if a1_context is not None:
-        causal_scores: list[float] = []
-        safety_scores: list[float] = []
-        identity_cases = a1_context["identity"]
-        for index, (q_full, k_full, v_hat, (ref_c, ref_n)) in enumerate(
-            zip(
-                a1_context["q_full"],
-                a1_context["k_full"],
-                a1_context["v_hat"],
-                a1_context["refs"],
-            )
-        ):
-            q_smooth = (q_full * d_q.reshape(1, -1)).index_select(-1, q_order)
-            k_centered = _center_attention_k(
-                k_full, kv_num_heads, head_dim, center_mode
-            )
-            k_smooth = (k_centered * d_k.reshape(1, -1)).index_select(
-                -1, k_order
-            )
-            q_hat = _dequantize_hif4(_dense_to_hif4(q_smooth))
-            k_hat = _dequantize_hif4(_dense_to_hif4(k_smooth))
-            out_c = _attention_forward(
-                q_hat, k_hat, v_hat, q_num_heads, kv_num_heads, head_dim, True
-            )
-            out_n = _attention_forward(
-                q_hat, k_hat, v_hat, q_num_heads, kv_num_heads, head_dim, False
-            )
-            err_c = float((out_c - ref_c).square().mean())
-            err_n = float((out_n - ref_n).square().mean())
-            id_c, id_n = identity_cases[index]
-            ratio_c = err_c / max(id_c, 1.0e-12)
-            ratio_n = err_n / max(id_n, 1.0e-12)
-            if not (math.isfinite(ratio_c) and math.isfinite(ratio_n)):
-                return 1.0e30, (1.0e30,)
-            causal_scores.append(ratio_c)
-            safety_scores.append(ratio_n)
-        if not causal_scores:
-            return 1.0e30, (1.0e30,)
-        primary = sum(causal_scores) / len(causal_scores)
-        if not math.isfinite(primary):
-            return 1.0e30, (1.0e30,)
-        cases = [
-            value
-            for pair in zip(causal_scores, safety_scores)
-            for value in pair
-        ]
-        cases.append(sum(safety_scores) / len(safety_scores))
-        return primary, tuple(cases)
 
     q_second_kv = q_second_moment.reshape(
         kv_num_heads, group_size, head_dim
@@ -2191,16 +1786,9 @@ def hif4_calibration_attention(
     k_token_count = 0
     sample_count = 0
     v_head_mass = torch.zeros(kv_num_heads, dtype=torch.float32)
-    v_head_mean_mass = torch.zeros(kv_num_heads, dtype=torch.float32)
     q_samples: list[torch.Tensor] = []
     k_samples: list[torch.Tensor] = []
     v_samples: list[torch.Tensor] = []
-    a1_q: list[torch.Tensor] = []
-    a1_k: list[torch.Tensor] = []
-    a1_v: list[torch.Tensor] = []
-    a1_q_pairs: list = []
-    a1_k_pairs: list = []
-    a1_v_pairs: list = []
 
     for sample in calib_qkv_list:
         if not isinstance(sample, dict) or set(sample.keys()) != {"q", "k", "v"}:
@@ -2232,15 +1820,11 @@ def hif4_calibration_attention(
             k_peak_square = k_peak_square.to(q.device)
             k_mid_peak_square = k_mid_peak_square.to(q.device)
             v_head_mass = v_head_mass.to(q.device)
-            v_head_mean_mass = v_head_mean_mass.to(q.device)
 
         if _V_ATTENTION_IMPORTANCE:
-            head_mean_mass, head_square_mass = _attention_head_square_mass(
+            v_head_mass += _attention_head_square_mass(
                 q, k, q_num_heads, kv_num_heads, head_dim
             )
-            v_head_mass += head_square_mass
-            if head_mean_mass is not None:
-                v_head_mean_mass += head_mean_mass
 
         q_stats = _sample_rows(q, _ATTN_STATS_TOKENS).reshape(
             -1, q_num_heads, head_dim
@@ -2267,92 +1851,21 @@ def hif4_calibration_attention(
         k_samples.append(_sample_rows(k, _ATTN_EVAL_TOKENS).clone())
         v_dense = _dequantize_nvfp4_float32(v_quant, v_scale)
         v_samples.append(_sample_rows(v_dense, _ATTN_EVAL_TOKENS).clone())
-        if _ATTN_OUTPUT_SELECTOR:
-            prefix = min(int(q.shape[0]), _ATTN_A1_MAX_TOKENS)
-            a1_q.append(q[:prefix].clone())
-            a1_k.append(k[:prefix].clone())
-            a1_v.append(v_dense[:prefix].clone())
-            a1_q_pairs.append(
-                (sample["q"][0][:prefix], sample["q"][1][:prefix])
-            )
-            a1_k_pairs.append(
-                (sample["k"][0][:prefix], sample["k"][1][:prefix])
-            )
-            a1_v_pairs.append((v_quant[:prefix], v_scale[:prefix]))
-
-    a1_context = None
-    if _ATTN_OUTPUT_SELECTOR and a1_q:
-        v_hats = [_dequantize_hif4(_dense_to_hif4(v)) for v in a1_v]
-        refs = []
-        identity_cases = []
-        for q, k, v, v_hat in zip(a1_q, a1_k, a1_v, v_hats):
-            ref_c = _attention_forward(
-                q, k, v, q_num_heads, kv_num_heads, head_dim, True
-            )
-            ref_n = _attention_forward(
-                q, k, v, q_num_heads, kv_num_heads, head_dim, False
-            )
-            refs.append((ref_c, ref_n))
-            q_hat = _dequantize_hif4(_dense_to_hif4(q))
-            k_hat = _dequantize_hif4(_dense_to_hif4(k))
-            id_c = _attention_forward(
-                q_hat, k_hat, v_hat, q_num_heads, kv_num_heads, head_dim, True
-            )
-            id_n = _attention_forward(
-                q_hat, k_hat, v_hat, q_num_heads, kv_num_heads, head_dim, False
-            )
-            identity_cases.append(
-                (
-                    float((id_c - ref_c).square().mean()),
-                    float((id_n - ref_n).square().mean()),
-                )
-            )
-        a1_context = {
-            "q_full": a1_q,
-            "k_full": a1_k,
-            "v_hat": v_hats,
-            "refs": refs,
-            "identity": identity_cases,
-        }
 
     v_importance = None
-    v_importance_candidates: dict = {}
     if _V_ATTENTION_IMPORTANCE and sample_count > 0:
         head_importance = v_head_mass / float(max(sample_count, 1))
-        head_mean_importance = v_head_mean_mass / float(
-            max(sample_count, 1)
-        )
         head_importance = head_importance / head_importance.mean().clamp_min(
             _EPS
-        )
-        head_mean_importance = head_mean_importance / (
-            head_mean_importance.mean().clamp_min(_EPS)
         )
         if _V_ATTENTION_IMPORTANCE_SHRINK < 1.0:
             head_importance = 1.0 + _V_ATTENTION_IMPORTANCE_SHRINK * (
                 head_importance - 1.0
             )
-            head_mean_importance = 1.0 + _V_ATTENTION_IMPORTANCE_SHRINK * (
-                head_mean_importance - 1.0
-            )
         v_importance = _normalize_importance(
             head_importance.repeat_interleave(head_dim).reshape(-1),
             kv_channels,
         )
-        if _V_IMPORTANCE_CANDIDATES and a1_context is not None:
-            # A3 候选：一阶矩 E[A] 与 E[A^2] + E[A]^2（均值交叉项）。
-            # 仅改变 head 级 importance 向量，V 坐标系不变。
-            first_moment = _normalize_importance(
-                head_mean_importance.repeat_interleave(head_dim).reshape(-1),
-                kv_channels,
-            )
-            combined_head = head_importance + head_mean_importance.square()
-            combined = _normalize_importance(
-                combined_head.repeat_interleave(head_dim).reshape(-1),
-                kv_channels,
-            )
-            v_importance_candidates["first_moment"] = first_moment
-            v_importance_candidates["mean_cross"] = combined
 
     q_second_moment = q_sum_square / float(max(q_token_count, 1))
     k_second_moment = k_sum_square / float(max(k_token_count, 1))
@@ -2377,102 +1890,139 @@ def hif4_calibration_attention(
         local_identity.repeat_interleave(group_size, dim=0)
     )
 
-    def _run_selection(use_a1: bool):
-        context = a1_context if use_a1 else None
-        baseline_metrics = _attention_candidate_metrics(
+    baseline_metrics = _attention_candidate_metrics(
+        q_samples,
+        k_samples,
+        identity_d,
+        q_second_moment,
+        k_second_moment,
+        q_num_heads,
+        kv_num_heads,
+        head_dim,
+        q_identity_perm,
+        k_identity_perm,
+        0,
+    )
+    best_metrics = baseline_metrics
+    best_d = identity_d
+    best_center_mode = 0
+    best_q_perm = q_identity_perm
+    best_k_perm = k_identity_perm
+
+    # Midrange K-centering is an exact softmax invariance.  First select the
+    # centering/smoothing pair with identity ordering, then test one hierarchy-
+    # aware ordering for the selected pair to bound calibration time.
+    for center_mode in _ATTN_CENTER_MODES:
+        if center_mode in (2, 3):
+            effective_second = k_mid_second_moment
+            effective_peak = k_mid_peak
+        else:
+            effective_second = k_second_moment
+            effective_peak = k_peak
+        q_rms_kv = torch.sqrt(
+            q_second_moment.reshape(
+                kv_num_heads, group_size, head_dim
+            ).mean(dim=1).clamp_min(_EPS)
+        )
+        k_rms = torch.sqrt(effective_second.clamp_min(_EPS))
+        smooth_candidates = [identity_d]
+        for alpha in _QK_SMOOTH_ALPHAS:
+            smooth_candidates.append(
+                _smooth_qk_scale(q_peak_kv, effective_peak, alpha)
+            )
+            if _QK_SMOOTH_RMS:
+                smooth_candidates.append(
+                    _smooth_qk_scale(q_rms_kv, k_rms, alpha)
+                )
+        for candidate_index, candidate_d in enumerate(smooth_candidates):
+            if center_mode == 0 and candidate_index == 0:
+                continue
+            metrics = _attention_candidate_metrics(
+                q_samples,
+                k_samples,
+                candidate_d,
+                q_second_moment,
+                effective_second,
+                q_num_heads,
+                kv_num_heads,
+                head_dim,
+                q_identity_perm,
+                k_identity_perm,
+                center_mode,
+            )
+            if (
+                metrics[0] < best_metrics[0]
+                and _candidate_is_safe(
+                    metrics,
+                    baseline_metrics,
+                    min_mean_improvement=0.01,
+                    worst_tolerance=0.02,
+                )
+            ):
+                best_metrics = metrics
+                best_d = candidate_d
+                best_center_mode = center_mode
+
+    selected_k_peak = (
+        k_mid_peak if best_center_mode in (2, 3) else k_peak
+    )
+    selected_k_second = (
+        k_mid_second_moment if best_center_mode in (2, 3) else k_second_moment
+    )
+    local_permutation = _headwise_hierarchy_permutation(
+        q_peak_kv * best_d,
+        selected_k_peak * best_d.reciprocal(),
+    )
+    candidate_k_perm = _flatten_head_permutation(local_permutation)
+    candidate_q_perm = _flatten_head_permutation(
+        local_permutation.repeat_interleave(group_size, dim=0)
+    )
+    if not torch.equal(candidate_k_perm, k_identity_perm):
+        permutation_metrics = _attention_candidate_metrics(
             q_samples,
             k_samples,
-            identity_d,
+            best_d,
             q_second_moment,
-            k_second_moment,
+            selected_k_second,
             q_num_heads,
             kv_num_heads,
             head_dim,
-            q_identity_perm,
-            k_identity_perm,
-            0,
-            context,
+            candidate_q_perm,
+            candidate_k_perm,
+            best_center_mode,
         )
-        best_metrics = baseline_metrics
-        best_d = identity_d
-        best_center_mode = 0
-        best_q_perm = q_identity_perm
-        best_k_perm = k_identity_perm
-
-        # Midrange K-centering is an exact softmax invariance.  First select
-        # the centering/smoothing pair with identity ordering, then test one
-        # hierarchy-aware ordering for the selected pair to bound calibration
-        # time.
-        for center_mode in _ATTN_CENTER_MODES:
-            if center_mode in (2, 3):
-                effective_second = k_mid_second_moment
-                effective_peak = k_mid_peak
-            else:
-                effective_second = k_second_moment
-                effective_peak = k_peak
-            q_rms_kv = torch.sqrt(
-                q_second_moment.reshape(
-                    kv_num_heads, group_size, head_dim
-                ).mean(dim=1).clamp_min(_EPS)
+        if (
+            permutation_metrics[0] < best_metrics[0]
+            and _candidate_is_safe(
+                permutation_metrics,
+                baseline_metrics,
+                min_mean_improvement=0.02,
+                worst_tolerance=0.005,
             )
-            k_rms = torch.sqrt(effective_second.clamp_min(_EPS))
-            smooth_candidates = [identity_d]
-            for alpha in _QK_SMOOTH_ALPHAS:
-                smooth_candidates.append(
-                    _smooth_qk_scale(q_peak_kv, effective_peak, alpha)
-                )
-                if _QK_SMOOTH_RMS:
-                    smooth_candidates.append(
-                        _smooth_qk_scale(q_rms_kv, k_rms, alpha)
-                    )
-            for candidate_index, candidate_d in enumerate(smooth_candidates):
-                if center_mode == 0 and candidate_index == 0:
-                    continue
-                metrics = _attention_candidate_metrics(
-                    q_samples,
-                    k_samples,
-                    candidate_d,
-                    q_second_moment,
-                    effective_second,
-                    q_num_heads,
-                    kv_num_heads,
-                    head_dim,
-                    q_identity_perm,
-                    k_identity_perm,
-                    center_mode,
-                    context,
-                )
-                if (
-                    metrics[0] < best_metrics[0]
-                    and _candidate_is_safe(
-                        metrics,
-                        baseline_metrics,
-                        min_mean_improvement=0.01,
-                        worst_tolerance=0.02,
-                    )
-                ):
-                    best_metrics = metrics
-                    best_d = candidate_d
-                    best_center_mode = center_mode
+        ):
+            best_metrics = permutation_metrics
+            best_q_perm = candidate_q_perm
+            best_k_perm = candidate_k_perm
 
-        selected_k_peak = (
-            k_mid_peak if best_center_mode in (2, 3) else k_peak
-        )
-        selected_k_second = (
-            k_mid_second_moment
-            if best_center_mode in (2, 3)
-            else k_second_moment
-        )
-        local_permutation = _headwise_hierarchy_permutation(
-            q_peak_kv * best_d,
-            selected_k_peak * best_d.reciprocal(),
-        )
-        candidate_k_perm = _flatten_head_permutation(local_permutation)
-        candidate_q_perm = _flatten_head_permutation(
-            local_permutation.repeat_interleave(group_size, dim=0)
-        )
-        if not torch.equal(candidate_k_perm, k_identity_perm):
-            permutation_metrics = _attention_candidate_metrics(
+    # 置换基扩展：单侧排序（Q-only / K-only）常优于 max(log range) 组合。
+    if _PERMUTATION_BASES:
+        basis_ranges = {
+            "q_amax": q_peak_kv * best_d,
+            "k_amax": selected_k_peak * best_d.reciprocal(),
+        }
+        seen = {tuple(best_k_perm.tolist())}
+        for bname, b_range in basis_ranges.items():
+            b_local = _headwise_range_permutation(b_range)
+            b_k_perm = _flatten_head_permutation(b_local)
+            if torch.equal(b_k_perm, k_identity_perm):
+                continue
+            if tuple(b_k_perm.tolist()) in seen:
+                continue
+            seen.add(tuple(b_k_perm.tolist()))
+            b_q_perm = _flatten_head_permutation(
+                b_local.repeat_interleave(group_size, dim=0)
+            )
+            b_metrics = _attention_candidate_metrics(
                 q_samples,
                 k_samples,
                 best_d,
@@ -2481,457 +2031,147 @@ def hif4_calibration_attention(
                 q_num_heads,
                 kv_num_heads,
                 head_dim,
-                candidate_q_perm,
-                candidate_k_perm,
+                b_q_perm,
+                b_k_perm,
                 best_center_mode,
-                context,
             )
             if (
-                permutation_metrics[0] < best_metrics[0]
+                b_metrics[0] < best_metrics[0]
                 and _candidate_is_safe(
-                    permutation_metrics,
+                    b_metrics,
                     baseline_metrics,
                     min_mean_improvement=0.02,
                     worst_tolerance=0.005,
                 )
             ):
-                best_metrics = permutation_metrics
-                best_q_perm = candidate_q_perm
-                best_k_perm = candidate_k_perm
+                best_metrics = b_metrics
+                best_q_perm = b_q_perm
+                best_k_perm = b_k_perm
 
-        # 置换基扩展：单侧排序（Q-only / K-only）常优于 max(log range) 组合。
-        if _PERMUTATION_BASES:
-            basis_ranges = {
-                "q_amax": q_peak_kv * best_d,
-                "k_amax": selected_k_peak * best_d.reciprocal(),
-            }
-            seen = {tuple(best_k_perm.tolist())}
-            for bname, b_range in basis_ranges.items():
-                b_local = _headwise_range_permutation(b_range)
-                b_k_perm = _flatten_head_permutation(b_local)
-                if torch.equal(b_k_perm, k_identity_perm):
-                    continue
-                if tuple(b_k_perm.tolist()) in seen:
-                    continue
-                seen.add(tuple(b_k_perm.tolist()))
-                b_q_perm = _flatten_head_permutation(
-                    b_local.repeat_interleave(group_size, dim=0)
-                )
-                b_metrics = _attention_candidate_metrics(
-                    q_samples,
-                    k_samples,
-                    best_d,
-                    q_second_moment,
-                    selected_k_second,
-                    q_num_heads,
-                    kv_num_heads,
-                    head_dim,
-                    b_q_perm,
-                    b_k_perm,
-                    best_center_mode,
-                    context,
-                )
-                if (
-                    b_metrics[0] < best_metrics[0]
-                    and _candidate_is_safe(
-                        b_metrics,
-                        baseline_metrics,
-                        min_mean_improvement=0.02,
-                        worst_tolerance=0.005,
-                    )
-                ):
-                    best_metrics = b_metrics
-                    best_q_perm = b_q_perm
-                    best_k_perm = b_k_perm
+    d_q = best_d.repeat_interleave(group_size, dim=0)
+    d_k = best_d.reciprocal()
+    q_second_kv = q_second_moment.reshape(
+        kv_num_heads, group_size, head_dim
+    ).mean(dim=1)
+    h_k = selected_k_second * d_k.square()
+    h_q = q_second_kv * best_d.square()
+    h_k_for_q = h_k.repeat_interleave(group_size, dim=0).reshape(-1)
+    h_q_for_k = h_q.reshape(-1)
+    h_k_for_q = _normalize_importance(
+        h_k_for_q.index_select(0, best_q_perm), q_channels
+    )
+    h_q_for_k = _normalize_importance(
+        h_q_for_k.index_select(0, best_k_perm), kv_channels
+    )
+    if h_k_for_q is None:
+        h_k_for_q = torch.ones(
+            q_channels, dtype=torch.float32, device=d_q.device
+        )
+    if h_q_for_k is None:
+        h_q_for_k = torch.ones(
+            kv_channels, dtype=torch.float32, device=d_k.device
+        )
 
-        return best_d, best_center_mode, best_q_perm, best_k_perm
+    q_flat = d_q.reshape(-1)
+    k_flat = d_k.reshape(-1)
 
-    # 双轨选择：A1 轨用真实 attention 输出误差（朴素 HiF4 代理量化），
-    # proxy 轨复刻当前 Champion（B0）的 Q/K 重建 proxy 选择逻辑。终验门
-    # 在部署路径上对比两个 winner，A1 无明确优势时回退 B0 选择。
-    if a1_context is not None:
-        a1_d, a1_center, a1_q_perm, a1_k_perm = _run_selection(True)
-        proxy_d, proxy_center, proxy_q_perm, proxy_k_perm = _run_selection(
-            False
+    def q_transform(sample: torch.Tensor) -> torch.Tensor:
+        return (sample * q_flat.reshape(1, -1)).index_select(-1, best_q_perm)
+
+    def k_transform(sample: torch.Tensor) -> torch.Tensor:
+        return (
+            _center_attention_k(
+                sample, kv_num_heads, head_dim, int(best_center_mode)
+            )
+            * k_flat.reshape(1, -1)
+        ).index_select(-1, best_k_perm)
+
+    if _DATA_DRIVEN_RATIO:
+        q_ratio = _loss_capture_ratio(
+            torch.cat(
+                [_standard_block_losses(q_transform(s), h_k_for_q)
+                 for s in q_samples]
+            ),
+            target=_RATIO_CAPTURE_TARGET,
+            ratio_min=_RATIO_MIN,
+        )
+        k_ratio = _loss_capture_ratio(
+            torch.cat(
+                [_standard_block_losses(k_transform(s), h_q_for_k)
+                 for s in k_samples]
+            ),
+            target=_RATIO_CAPTURE_TARGET,
+            ratio_min=_RATIO_MIN,
+        )
+        v_ratio = _loss_capture_ratio(
+            torch.cat(
+                [_standard_block_losses(s, v_importance) for s in v_samples]
+            ),
+            target=_RATIO_CAPTURE_TARGET,
+            ratio_min=_RATIO_MIN,
         )
     else:
-        (
-            proxy_d,
-            proxy_center,
-            proxy_q_perm,
-            proxy_k_perm,
-        ) = _run_selection(False)
-        a1_d, a1_center, a1_q_perm, a1_k_perm = (
-            proxy_d,
-            proxy_center,
-            proxy_q_perm,
-            proxy_k_perm,
-        )
+        q_ratio = _Q_REFINE_MAX_RATIO
+        k_ratio = _K_REFINE_MAX_RATIO
+        v_ratio = _V_REFINE_MAX_RATIO
 
-    def _build_v_state(importance) -> dict:
-        if _DATA_DRIVEN_RATIO:
-            v_ratio = _loss_capture_ratio(
-                torch.cat(
-                    [
-                        _standard_block_losses(s, importance)
-                        for s in v_samples
-                    ]
-                ),
-                target=_RATIO_CAPTURE_TARGET,
-                ratio_min=_RATIO_MIN,
-            )
-        else:
-            v_ratio = _V_REFINE_MAX_RATIO
-        return {
-            "offsets": torch.tensor(
-                _DYNAMIC_OFFSETS, dtype=torch.int8, device="cpu"
-            ),
-            "importance": (
-                None if importance is None else _cpu_state_tensor(importance)
-            ),
-            "error_threshold": _ATTN_REFINE_ERROR_THRESHOLD,
-            "accept_margin": _V_REFINE_ACCEPT_MARGIN,
-            "max_refine_ratio": float(v_ratio),
-            "max_refine_blocks": _V_REFINE_MAX_BLOCKS,
-            "num_heads": int(kv_num_heads),
-            "head_dim": int(head_dim),
-            "version": 2,
-        }
+    q_permutation_state = None
+    k_permutation_state = None
+    if not torch.equal(best_k_perm, k_identity_perm):
+        q_permutation_state = best_q_perm.detach().to(
+            device="cpu", dtype=torch.int64
+        ).contiguous()
+        k_permutation_state = best_k_perm.detach().to(
+            device="cpu", dtype=torch.int64
+        ).contiguous()
+    q_multiplier_state = None
+    k_multiplier_state = None
+    if not torch.equal(best_d, identity_d):
+        q_multiplier_state = _cpu_state_tensor(d_q.reshape(-1))
+        k_multiplier_state = _cpu_state_tensor(d_k.reshape(-1))
 
-    v_state = _build_v_state(v_importance)
-
-    def _build_qk_states(
-        d: torch.Tensor,
-        center_mode: int,
-        q_perm: torch.Tensor,
-        k_perm: torch.Tensor,
-        rotation: Optional[torch.Tensor] = None,
-    ) -> tuple:
-        d_q = d.repeat_interleave(group_size, dim=0)
-        d_k = d.reciprocal()
-        q_second_kv = q_second_moment.reshape(
-            kv_num_heads, group_size, head_dim
-        ).mean(dim=1)
-        eff_k_second = (
-            k_mid_second_moment
-            if int(center_mode) in (2, 3)
-            else k_second_moment
-        )
-        h_k = eff_k_second * d_k.square()
-        h_q = q_second_kv * d.square()
-        h_k_for_q = h_k.repeat_interleave(group_size, dim=0).reshape(-1)
-        h_q_for_k = h_q.reshape(-1)
-        h_k_for_q = _normalize_importance(
-            h_k_for_q.index_select(0, q_perm), q_channels
-        )
-        h_q_for_k = _normalize_importance(
-            h_q_for_k.index_select(0, k_perm), kv_channels
-        )
-        if h_k_for_q is None:
-            h_k_for_q = torch.ones(
-                q_channels, dtype=torch.float32, device=d_q.device
-            )
-        if h_q_for_k is None:
-            h_q_for_k = torch.ones(
-                kv_channels, dtype=torch.float32, device=d_k.device
-            )
-        q_flat = d_q.reshape(-1)
-        k_flat = d_k.reshape(-1)
-
-        def q_transform(sample: torch.Tensor) -> torch.Tensor:
-            transformed = (sample * q_flat.reshape(1, -1)).index_select(
-                -1, q_perm
-            )
-            if rotation is not None:
-                transformed = _apply_attention_rotation(
-                    transformed, q_num_heads, head_dim, rotation
-                )
-            return transformed
-
-        def k_transform(sample: torch.Tensor) -> torch.Tensor:
-            transformed = (
-                _center_attention_k(
-                    sample, kv_num_heads, head_dim, int(center_mode)
-                )
-                * k_flat.reshape(1, -1)
-            ).index_select(-1, k_perm)
-            if rotation is not None:
-                transformed = _apply_attention_rotation(
-                    transformed, kv_num_heads, head_dim, rotation
-                )
-            return transformed
-
-        if _DATA_DRIVEN_RATIO:
-            q_ratio = _loss_capture_ratio(
-                torch.cat(
-                    [_standard_block_losses(q_transform(s), h_k_for_q)
-                     for s in q_samples]
-                ),
-                target=_RATIO_CAPTURE_TARGET,
-                ratio_min=_RATIO_MIN,
-            )
-            k_ratio = _loss_capture_ratio(
-                torch.cat(
-                    [_standard_block_losses(k_transform(s), h_q_for_k)
-                     for s in k_samples]
-                ),
-                target=_RATIO_CAPTURE_TARGET,
-                ratio_min=_RATIO_MIN,
-            )
-        else:
-            q_ratio = _Q_REFINE_MAX_RATIO
-            k_ratio = _K_REFINE_MAX_RATIO
-
-        q_permutation_state = None
-        k_permutation_state = None
-        if not torch.equal(k_perm, k_identity_perm):
-            q_permutation_state = q_perm.detach().to(
-                device="cpu", dtype=torch.int64
-            ).contiguous()
-            k_permutation_state = k_perm.detach().to(
-                device="cpu", dtype=torch.int64
-            ).contiguous()
-        q_multiplier_state = None
-        k_multiplier_state = None
-        if not torch.equal(d, identity_d):
-            q_multiplier_state = _cpu_state_tensor(d_q.reshape(-1))
-            k_multiplier_state = _cpu_state_tensor(d_k.reshape(-1))
-
-        rotation_state = (
+    q_state = {
+        "multiplier": q_multiplier_state,
+        "permutation": q_permutation_state,
+        "importance": _cpu_state_tensor(h_k_for_q),
+        "offsets": torch.tensor(_DYNAMIC_OFFSETS, dtype=torch.int8, device="cpu"),
+        "error_threshold": _ATTN_REFINE_ERROR_THRESHOLD,
+        "accept_margin": _Q_REFINE_ACCEPT_MARGIN,
+        "max_refine_ratio": float(q_ratio),
+        "max_refine_blocks": _Q_REFINE_MAX_BLOCKS,
+        "num_heads": int(q_num_heads),
+        "head_dim": int(head_dim),
+        "version": 2,
+    }
+    k_state = {
+        "multiplier": k_multiplier_state,
+        "permutation": k_permutation_state,
+        "center_mode": int(best_center_mode),
+        "importance": _cpu_state_tensor(h_q_for_k),
+        "offsets": torch.tensor(_DYNAMIC_OFFSETS, dtype=torch.int8, device="cpu"),
+        "error_threshold": _ATTN_REFINE_ERROR_THRESHOLD,
+        "accept_margin": _K_REFINE_ACCEPT_MARGIN,
+        "max_refine_ratio": float(k_ratio),
+        "max_refine_blocks": _K_REFINE_MAX_BLOCKS,
+        "num_heads": int(kv_num_heads),
+        "head_dim": int(head_dim),
+        "version": 2,
+    }
+    v_state = {
+        "offsets": torch.tensor(_DYNAMIC_OFFSETS, dtype=torch.int8, device="cpu"),
+        "importance": (
             None
-            if rotation is None
-            else rotation.detach().to(
-                device="cpu", dtype=torch.float32
-            ).contiguous()
-        )
-        q_state = {
-            "multiplier": q_multiplier_state,
-            "permutation": q_permutation_state,
-            "importance": _cpu_state_tensor(h_k_for_q),
-            "offsets": torch.tensor(_DYNAMIC_OFFSETS, dtype=torch.int8, device="cpu"),
-            "error_threshold": _ATTN_REFINE_ERROR_THRESHOLD,
-            "accept_margin": _Q_REFINE_ACCEPT_MARGIN,
-            "max_refine_ratio": float(q_ratio),
-            "max_refine_blocks": _Q_REFINE_MAX_BLOCKS,
-            "num_heads": int(q_num_heads),
-            "head_dim": int(head_dim),
-            "version": 2,
-        }
-        k_state = {
-            "multiplier": k_multiplier_state,
-            "permutation": k_permutation_state,
-            "center_mode": int(center_mode),
-            "importance": _cpu_state_tensor(h_q_for_k),
-            "offsets": torch.tensor(_DYNAMIC_OFFSETS, dtype=torch.int8, device="cpu"),
-            "error_threshold": _ATTN_REFINE_ERROR_THRESHOLD,
-            "accept_margin": _K_REFINE_ACCEPT_MARGIN,
-            "max_refine_ratio": float(k_ratio),
-            "max_refine_blocks": _K_REFINE_MAX_BLOCKS,
-            "num_heads": int(kv_num_heads),
-            "head_dim": int(head_dim),
-            "version": 2,
-        }
-        if rotation_state is not None:
-            q_state["rotation"] = rotation_state
-            k_state["rotation"] = rotation_state
-        return q_state, k_state
-
-    q_state, k_state = _build_qk_states(
-        a1_d, int(a1_center), a1_q_perm, a1_k_perm
-    )
-    final_d, final_center = a1_d, int(a1_center)
-    final_q_perm, final_k_perm = a1_q_perm, a1_k_perm
-    a1_v_hats = None
-    base_causal = None
-    base_safety = None
-
-    # A1 终验门：A1 选择基于朴素 HiF4 代理，部署路径（offset 搜索 +
-    # importance 精修）与隐藏 test 分布上的排序都可能错位。用完整
-    # hif4_dynamic_quantize_q/k/v 路径在 calibration 前缀上重算真实
-    # attention 输出误差（causal 主轨 + non-causal 安全轨，V 部署路径
-    # 固定以隔离 Q/K 变换选择）；A1 winner 相对 B0 proxy winner（当前
-    # Champion 的选择）无明确改善或安全轨退化时，回退 B0 选择。
-    same_winner = (
-        torch.equal(a1_d, proxy_d)
-        and int(a1_center) == int(proxy_center)
-        and torch.equal(a1_q_perm, proxy_q_perm)
-        and torch.equal(a1_k_perm, proxy_k_perm)
-    )
-    if a1_context is not None and not same_winner:
-        proxy_q_state, proxy_k_state = _build_qk_states(
-            proxy_d, int(proxy_center), proxy_q_perm, proxy_k_perm
-        )
-        a1_v_hats = [
-            _dequantize_hif4(
-                hif4_dynamic_quantize_v(
-                    v_quant, v_scale, kv_num_heads, head_dim, v_state
-                )
-            ).to(torch.float32)
-            for v_quant, v_scale in a1_v_pairs
-        ]
-        winner_causal, winner_safety = _attention_deployed_mse(
-            a1_q_pairs,
-            a1_k_pairs,
-            a1_v_hats,
-            a1_context["refs"],
-            q_state,
-            k_state,
-            q_num_heads,
-            kv_num_heads,
-            head_dim,
-        )
-        proxy_causal, proxy_safety = _attention_deployed_mse(
-            a1_q_pairs,
-            a1_k_pairs,
-            a1_v_hats,
-            a1_context["refs"],
-            proxy_q_state,
-            proxy_k_state,
-            q_num_heads,
-            kv_num_heads,
-            head_dim,
-        )
-        if _a1_gate_passes(
-            winner_causal, winner_safety, proxy_causal, proxy_safety
-        ):
-            base_causal, base_safety = winner_causal, winner_safety
-        else:
-            q_state, k_state = proxy_q_state, proxy_k_state
-            final_d, final_center = proxy_d, int(proxy_center)
-            final_q_perm, final_k_perm = proxy_q_perm, proxy_k_perm
-            base_causal, base_safety = proxy_causal, proxy_safety
-
-    # A2 固定 H64：对最终 Q/K winner 施加组对齐 signed Hadamard(64)
-    # 旋转（同组 Q heads 与 K head 共享旋转，Q·K 点积严格不变），首版只
-    # 比较 2 个确定性 sign seed。旋转候选须通过同一真实 attention 输出
-    # 门控（causal 主轨 + non-causal 安全轨），否则保持无旋转 winner。
-    if (
-        _ATTN_H64
-        and a1_context is not None
-        and head_dim >= _ATTN_H64_BLOCK
-        and head_dim % _ATTN_H64_BLOCK == 0
-    ):
-        if a1_v_hats is None:
-            a1_v_hats = [
-                _dequantize_hif4(
-                    hif4_dynamic_quantize_v(
-                        v_quant, v_scale, kv_num_heads, head_dim, v_state
-                    )
-                ).to(torch.float32)
-                for v_quant, v_scale in a1_v_pairs
-            ]
-        if base_causal is None:
-            base_causal, base_safety = _attention_deployed_mse(
-                a1_q_pairs,
-                a1_k_pairs,
-                a1_v_hats,
-                a1_context["refs"],
-                q_state,
-                k_state,
-                q_num_heads,
-                kv_num_heads,
-                head_dim,
-            )
-        best_rotation_states = None
-        best_rotation_mean = None
-        for seed in _ATTN_H64_SEEDS:
-            signs = _attention_rotation_signs(kv_num_heads, head_dim, seed)
-            rotation_q_state, rotation_k_state = _build_qk_states(
-                final_d,
-                int(final_center),
-                final_q_perm,
-                final_k_perm,
-                rotation=signs,
-            )
-            rotation_causal, rotation_safety = _attention_deployed_mse(
-                a1_q_pairs,
-                a1_k_pairs,
-                a1_v_hats,
-                a1_context["refs"],
-                rotation_q_state,
-                rotation_k_state,
-                q_num_heads,
-                kv_num_heads,
-                head_dim,
-            )
-            if not _a1_gate_passes(
-                rotation_causal,
-                rotation_safety,
-                base_causal,
-                base_safety,
-                safety_tolerance=0.0,
-            ):
-                continue
-            rotation_mean = sum(rotation_causal) / len(rotation_causal)
-            if best_rotation_mean is None or rotation_mean < best_rotation_mean:
-                best_rotation_mean = rotation_mean
-                best_rotation_states = (
-                    rotation_q_state,
-                    rotation_k_state,
-                )
-        if best_rotation_states is not None:
-            q_state, k_state = best_rotation_states
-
-    # A3 V importance 候选：Q/K state 已定稿（A1 终验门 + A2 旋转），
-    # 仅更换 V 的 head 级 importance（当前 E[A^2] vs 一阶矩 E[A] vs
-    # E[A^2]+E[A]^2），用完整 hif4_dynamic_quantize_v 部署路径在
-    # calibration 前缀上重算真实 attention 输出误差；候选须通过同一
-    # 门控（causal 主轨 + non-causal 安全轨），否则保持当前 importance。
-    if v_importance_candidates and a1_context is not None:
-        if a1_v_hats is None:
-            a1_v_hats = [
-                _dequantize_hif4(
-                    hif4_dynamic_quantize_v(
-                        v_quant, v_scale, kv_num_heads, head_dim, v_state
-                    )
-                ).to(torch.float32)
-                for v_quant, v_scale in a1_v_pairs
-            ]
-        if base_causal is None:
-            base_causal, base_safety = _attention_deployed_mse(
-                a1_q_pairs,
-                a1_k_pairs,
-                a1_v_hats,
-                a1_context["refs"],
-                q_state,
-                k_state,
-                q_num_heads,
-                kv_num_heads,
-                head_dim,
-            )
-        best_v_state = None
-        best_v_mean = None
-        for candidate_importance in v_importance_candidates.values():
-            candidate_state = _build_v_state(candidate_importance)
-            candidate_v_hats = [
-                _dequantize_hif4(
-                    hif4_dynamic_quantize_v(
-                        v_quant, v_scale, kv_num_heads, head_dim, candidate_state
-                    )
-                ).to(torch.float32)
-                for v_quant, v_scale in a1_v_pairs
-            ]
-            candidate_causal, candidate_safety = _attention_deployed_mse(
-                a1_q_pairs,
-                a1_k_pairs,
-                candidate_v_hats,
-                a1_context["refs"],
-                q_state,
-                k_state,
-                q_num_heads,
-                kv_num_heads,
-                head_dim,
-            )
-            if not _a1_gate_passes(
-                candidate_causal, candidate_safety, base_causal, base_safety
-            ):
-                continue
-            candidate_mean = sum(candidate_causal) / len(candidate_causal)
-            if best_v_mean is None or candidate_mean < best_v_mean:
-                best_v_mean = candidate_mean
-                best_v_state = candidate_state
-        if best_v_state is not None:
-            v_state = best_v_state
+            if v_importance is None
+            else _cpu_state_tensor(v_importance)
+        ),
+        "error_threshold": _ATTN_REFINE_ERROR_THRESHOLD,
+        "accept_margin": _V_REFINE_ACCEPT_MARGIN,
+        "max_refine_ratio": float(v_ratio),
+        "max_refine_blocks": _V_REFINE_MAX_BLOCKS,
+        "num_heads": int(kv_num_heads),
+        "head_dim": int(head_dim),
+        "version": 2,
+    }
     return {"q_state": q_state, "k_state": k_state, "v_state": v_state}
 
 
@@ -2966,8 +2206,6 @@ def hif4_dynamic_quantize_q(
         q_scale,
         multiplier=state["multiplier"],
         permutation=state["permutation"],
-        attention_rotation=state.get("rotation"),
-        rotation_num_heads=int(q_num_heads),
         importance=state["importance"],
         search_offsets=state["offsets"],
         error_threshold=float(state["error_threshold"]),
@@ -2993,8 +2231,6 @@ def hif4_dynamic_quantize_k(
         k_scale,
         multiplier=state["multiplier"],
         permutation=state["permutation"],
-        attention_rotation=state.get("rotation"),
-        rotation_num_heads=int(kv_num_heads),
         center_mode=int(state["center_mode"]),
         center_num_heads=kv_num_heads,
         center_head_dim=head_dim,

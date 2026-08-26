@@ -6,6 +6,7 @@ import argparse
 import importlib.util
 import math
 import sys
+import time
 from pathlib import Path
 from types import ModuleType
 
@@ -89,6 +90,7 @@ def causal_attention(
     q_heads: int,
     kv_heads: int,
     head_dim: int,
+    causal: bool = True,
 ) -> torch.Tensor:
     batch, tokens, _ = q_dense.shape
     q = q_dense.reshape(batch, tokens, q_heads, head_dim).transpose(1, 2)
@@ -104,11 +106,13 @@ def causal_attention(
         .repeat_interleave(group, dim=1)
     )
     logits = q @ k.transpose(-1, -2) / math.sqrt(head_dim)
-    mask = torch.triu(
-        torch.full((tokens, tokens), float("-inf"), device=logits.device),
-        diagonal=1,
-    )
-    probabilities = torch.softmax(logits + mask, dim=-1)
+    if causal:
+        mask = torch.triu(
+            torch.full((tokens, tokens), float("-inf"), device=logits.device),
+            diagonal=1,
+        )
+        logits = logits + mask
+    probabilities = torch.softmax(logits, dim=-1)
     return (probabilities @ v).transpose(1, 2).reshape(
         batch, tokens, q_heads * head_dim
     )
@@ -130,6 +134,7 @@ def collect_real_data(
     calibration_samples: int,
     test_samples: int,
     device: str = "cpu",
+    token_offset: int = 0,
 ):
     from transformers import GPT2LMHeadModel, GPT2Tokenizer
 
@@ -140,6 +145,11 @@ def collect_real_data(
     ids = tokenizer(TEXT, return_tensors="pt", truncation=True, max_length=4096)[
         "input_ids"
     ][0]
+    if ids.numel() == 0:
+        raise ValueError("evaluation text tokenized to an empty sequence")
+    offset = int(token_offset) % int(ids.numel())
+    if offset:
+        ids = torch.cat((ids[offset:], ids[:offset]))
     required_tokens = (calibration_samples + test_samples) * sequence_length
     if required_tokens > ids.numel():
         repeats = (required_tokens + ids.numel() - 1) // ids.numel()
@@ -273,28 +283,16 @@ def score_attention(
     q_heads,
     kv_heads,
     head_dim,
+    masks=("causal",),
 ):
-    scores = []
+    scores = {mask: [] for mask in masks}
     for q_pair, k_pair, v_pair in qkv_pairs:
         q_reference = solution._dequantize_nvfp4_float32(*q_pair)
         k_reference = solution._dequantize_nvfp4_float32(*k_pair)
         v_reference = solution._dequantize_nvfp4_float32(*v_pair)
-        reference = causal_attention(
-            q_reference[None],
-            k_reference[None],
-            v_reference[None],
-            q_heads,
-            kv_heads,
-            head_dim,
-        )
-        standard = causal_attention(
-            std_hif4(solution, q_reference)[None],
-            std_hif4(solution, k_reference)[None],
-            std_hif4(solution, v_reference)[None],
-            q_heads,
-            kv_heads,
-            head_dim,
-        )
+        q_standard = std_hif4(solution, q_reference)
+        k_standard = std_hif4(solution, k_reference)
+        v_standard = std_hif4(solution, v_reference)
         q_player = solution._dequantize_hif4(
             solution.hif4_dynamic_quantize_q(
                 *q_pair, q_heads, head_dim, q_state
@@ -310,22 +308,101 @@ def score_attention(
                 *v_pair, kv_heads, head_dim, v_state
             )
         ).to(torch.float32)
-        player = causal_attention(
-            q_player[None],
-            k_player[None],
-            v_player[None],
-            q_heads,
-            kv_heads,
-            head_dim,
-        )
-        mse_standard = float((standard - reference).square().mean())
-        mse_player = float((player - reference).square().mean())
-        scores.append((mse_standard - mse_player) / mse_standard)
-    return sum(scores) / len(scores)
+        for mask in masks:
+            causal = mask == "causal"
+            reference = causal_attention(
+                q_reference[None],
+                k_reference[None],
+                v_reference[None],
+                q_heads,
+                kv_heads,
+                head_dim,
+                causal,
+            )
+            standard = causal_attention(
+                q_standard[None],
+                k_standard[None],
+                v_standard[None],
+                q_heads,
+                kv_heads,
+                head_dim,
+                causal,
+            )
+            player = causal_attention(
+                q_player[None],
+                k_player[None],
+                v_player[None],
+                q_heads,
+                kv_heads,
+                head_dim,
+                causal,
+            )
+            mse_standard = float((standard - reference).square().mean())
+            mse_player = float((player - reference).square().mean())
+            scores[mask].append((mse_standard - mse_player) / mse_standard)
+    return {
+        mask: sum(values) / len(values) for mask, values in scores.items()
+    }
+
+
+API_NAMES = (
+    "hif4_calibration_and_quantize_weight",
+    "hif4_calibration_attention",
+    "hif4_dynamic_quantize_activation",
+    "hif4_dynamic_quantize_q",
+    "hif4_dynamic_quantize_k",
+    "hif4_dynamic_quantize_v",
+)
+
+
+def instrument_solution(solution: ModuleType) -> dict:
+    """Evaluator-side timing wrapper around the six formal APIs.
+
+    Calibration may call a public dynamic API internally.  Only top-level
+    evaluator calls contribute to the calibration/dynamic split; nested calls
+    are recorded separately so their time is not counted twice.
+    """
+
+    stats = {
+        "first_start": None,
+        "last_end": None,
+        "calibration": 0.0,
+        "dynamic": 0.0,
+        "calls": {name: 0 for name in API_NAMES},
+        "nested_calls": {name: 0 for name in API_NAMES},
+        "depth": 0,
+    }
+    for name in API_NAMES:
+        original = getattr(solution, name)
+
+        def wrapped(*args, _original=original, _name=name, **kwargs):
+            top_level = stats["depth"] == 0
+            start = time.perf_counter()
+            if top_level and stats["first_start"] is None:
+                stats["first_start"] = start
+            stats["depth"] += 1
+            try:
+                return _original(*args, **kwargs)
+            finally:
+                end = time.perf_counter()
+                stats["depth"] -= 1
+                if top_level:
+                    stats["last_end"] = end
+                    if _name.startswith("hif4_calibration"):
+                        stats["calibration"] += end - start
+                    else:
+                        stats["dynamic"] += end - start
+                    stats["calls"][_name] += 1
+                else:
+                    stats["nested_calls"][_name] += 1
+
+        setattr(solution, name, wrapped)
+    return stats
 
 
 def evaluate(args: argparse.Namespace) -> None:
     solution = load_solution(args.solution)
+    stats = instrument_solution(solution)
     model, weights, calibration, tests, q_heads, head_dim = collect_real_data(
         args.model,
         args.layers,
@@ -333,6 +410,7 @@ def evaluate(args: argparse.Namespace) -> None:
         args.calib,
         args.test,
         device=args.device,
+        token_offset=args.token_offset,
     )
     layer_count = len(weights)
     hidden = int(model.config.n_embd)
@@ -346,7 +424,15 @@ def evaluate(args: argparse.Namespace) -> None:
     linear_scores = {
         name: [] for name in ("q", "k", "v", "o", "fc", "proj")
     }
-    attention_scores = []
+    masks = tuple(
+        {
+            "causal": ("causal",),
+            "non-causal": ("non-causal",),
+            "both": ("causal", "non-causal"),
+        }[args.attn_mask]
+    )
+    attention_scores = {mask: [] for mask in masks}
+    features: list[tuple[str, bool, bool, bool, bool]] = []
     for layer_index in range(layer_count):
         for name in linear_scores:
             weight_pair = nvfp4_encode(weights[layer_index][name], args.mode)
@@ -396,6 +482,29 @@ def evaluate(args: argparse.Namespace) -> None:
         states = solution.hif4_calibration_attention(
             qkv_calibration, q_heads, kv_heads, head_dim
         )
+        if args.verbose:
+            # Telemetry (§12.1): derive per-layer selection rates from the
+            # read-only state fields; never touches the solution itself.
+            for side in ("q_state", "k_state"):
+                layer_state = states[side]
+                features.append(
+                    (
+                        side,
+                        layer_state.get("multiplier") is not None,
+                        layer_state.get("permutation") is not None,
+                        layer_state.get("rotation") is not None,
+                        int(layer_state.get("center_mode", 0) or 0) != 0,
+                    )
+                )
+            features.append(
+                (
+                    "v_state",
+                    False,
+                    False,
+                    False,
+                    states["v_state"].get("importance") is not None,
+                )
+            )
 
         qkv_tests = []
         for batch in range(args.test):
@@ -413,23 +522,24 @@ def evaluate(args: argparse.Namespace) -> None:
                     nvfp4_encode(v_dense, args.mode),
                 )
             )
-        attention_scores.append(
-            score_attention(
-                solution,
-                qkv_tests,
-                states["q_state"],
-                states["k_state"],
-                states["v_state"],
-                q_heads,
-                kv_heads,
-                head_dim,
-            )
+        per_layer_attention = score_attention(
+            solution,
+            qkv_tests,
+            states["q_state"],
+            states["k_state"],
+            states["v_state"],
+            q_heads,
+            kv_heads,
+            head_dim,
+            masks=masks,
         )
+        for mask, value in per_layer_attention.items():
+            attention_scores[mask].append(value)
 
     print(
         f"GPT-2 layers={layer_count} hidden={hidden} heads={q_heads}x{head_dim} "
         f"kv_heads={kv_heads} mode={args.mode} seq={args.seq} "
-        f"calib={args.calib} test={args.test}"
+        f"calib={args.calib} test={args.test} attn_mask={args.attn_mask}"
     )
     print("Linear scores (mean across layers):")
     for name, values in linear_scores.items():
@@ -437,10 +547,55 @@ def evaluate(args: argparse.Namespace) -> None:
             f"  {name:5s} mean={sum(values) / len(values):.4f} "
             f"min={min(values):.4f} max={max(values):.4f}"
         )
-    print(
-        f"Attention mean={sum(attention_scores) / len(attention_scores):.4f} "
-        f"min={min(attention_scores):.4f} max={max(attention_scores):.4f}"
-    )
+    for mask, values in attention_scores.items():
+        print(
+            f"Attention[{mask}] mean={sum(values) / len(values):.4f} "
+            f"min={min(values):.4f} max={max(values):.4f}"
+        )
+    if args.verbose:
+        print("Per-layer attention scores:")
+        for mask, values in attention_scores.items():
+            print(
+                f"  [{mask}] "
+                + " ".join(f"{value:.4f}" for value in values)
+            )
+        print("Per-layer linear scores:")
+        for name, values in linear_scores.items():
+            print(
+                f"  {name:5s} "
+                + " ".join(f"{value:.4f}" for value in values)
+            )
+        if features:
+            print("State feature selection rates (per side, across layers):")
+            for side in ("q_state", "k_state", "v_state"):
+                rows = [f for f in features if f[0] == side]
+                rate = lambda flag: sum(1 for r in rows if r[flag]) / len(rows)  # noqa: E731
+                if side == "v_state":
+                    print(
+                        f"  {side}: importance={rate(4):.2f}"
+                    )
+                else:
+                    print(
+                        f"  {side}: multiplier={rate(1):.2f} "
+                        f"permutation={rate(2):.2f} rotation={rate(3):.2f} "
+                        f"centering={rate(4):.2f}"
+                    )
+    if stats["first_start"] is not None:
+        stage = stats["last_end"] - stats["first_start"]
+        api_total = stats["calibration"] + stats["dynamic"]
+        print(
+            f"Timing algorithm-stage={stage:.2f}s "
+            f"calibration={stats['calibration']:.2f}s "
+            f"dynamic={stats['dynamic']:.2f}s api-total={api_total:.2f}s"
+        )
+        nested_total = sum(stats["nested_calls"].values())
+        if nested_total:
+            nested = " ".join(
+                f"{name}={count}"
+                for name, count in stats["nested_calls"].items()
+                if count
+            )
+            print(f"Timing nested-api-calls={nested_total} ({nested})")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -464,7 +619,24 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--mode", default="amax6", choices=("amax6", "amax4", "pow2")
     )
+    parser.add_argument(
+        "--attn-mask",
+        default="causal",
+        choices=("causal", "non-causal", "both"),
+        help="attention mask used for scoring (causal is the primary local track)",
+    )
+    parser.add_argument(
+        "--token-offset",
+        type=int,
+        default=0,
+        help="deterministic rotation of the built-in token stream for local holdout windows",
+    )
     parser.add_argument("--kv-heads", type=int)
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="print per-layer scores for diagnostics",
+    )
     parser.add_argument(
         "--device",
         default="cpu",
@@ -473,6 +645,8 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if min(args.layers, args.seq, args.calib, args.test) <= 0:
         parser.error("--layers, --seq, --calib, and --test must be positive")
+    if args.token_offset < 0:
+        parser.error("--token-offset must be non-negative")
     evaluate(args)
     return 0
 
