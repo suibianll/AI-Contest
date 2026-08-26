@@ -100,6 +100,28 @@ Linear 与 B0 完全一致。A3/L1 开启时的数值见各自步骤小节。
   量级，MHA causal 不允许再出现 C2 的上下文重置损失。
 - 状态：`in-progress`。
 
+### C2a 开发结论
+
+- offset 0：MHA causal/non-causal 相对 C1 为 `-0.53pp/-0.52pp`；GQA
+  为 `0.00pp/-0.58pp`。
+- CUDA algorithm-stage 为 MHA `19.65s`、GQA `19.96s`；动态调用恢复到
+  C1 量级，证明完整上下文/query-row 分段解决了 C2 的工程错误。
+- 精度综合均值没有超过父 Champion，因此不运行固定回归 offset 或 CPU。
+- 状态：`local-rejected`，源码和结果归档为 v005；C1 继续作为 Champion。
+
+## C3 预注册：top-K 8×8 Linear 二阶
+
+- Candidate ID：`C3`
+- Parent：`C1`，SHA256
+  `310570B265C705D6F09E3863CD56B1931EA9E971BCEE7E6D8E2DDC029A184B88`
+- 唯一机制：在现有 4×4 Linear 二阶基础上，只对 calibration 损失最高的
+  少量 8 通道组使用 8×8 Gram 与 `H·e` 增量更新；其余组保持 C1。
+- 开发目标：优先提升 `fc/proj/o`，Linear mean 至少 `+0.2pp`，Attention
+  相对 C1 不下降超过 `0.2pp`，CPU ratio ≤1.15。
+- 开发数据：offset 0、amax6；先验证 Linear 分项和 Attention 双 mask，开发
+  门通过后才运行固定回归矩阵。
+- 状态：`in-progress`。
+
 ## 步骤 7（历史）：发布复核与计时修正（§1.1 / §7.3 / §10）
 
 - 用户提供的官方结果仍只有 **~15000 分 @ ~140s**。该数据绑定到 v002

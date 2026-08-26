@@ -70,7 +70,7 @@ def validate_state(value) -> tuple[int, int]:
 def test_release_flags_are_a1_only() -> None:
     solution = load_module("release_flags", ROOT / "solution.py")
     assert solution._ATTN_OUTPUT_SELECTOR is True
-    assert solution._ATTN_SEGMENT_CVAR is True
+    assert solution._ATTN_QUERY_SEGMENT_CVAR is True
     assert solution._ATTN_H64 is False
     assert solution._V_IMPORTANCE_CANDIDATES is False
     assert solution._L1_DATA_DRIVEN_SCALE is False
@@ -218,3 +218,12 @@ def test_segment_cvar_penalizes_tail_instability() -> None:
     )
     assert sum([0.70, 0.70, 0.70, 1.40]) / 4 < 0.90
     assert unstable > stable
+
+
+def test_query_segments_preserve_full_attention_context() -> None:
+    solution = load_module("query_segment_cvar", ROOT / "solution.py")
+    output = torch.arange(32, dtype=torch.float32).reshape(8, 4)
+    reference = output.clone()
+    reference[4:] += 2.0
+    cases = solution._attention_output_mse_cases(output, reference)
+    assert cases == [0.0, 0.0, 4.0, 4.0]
