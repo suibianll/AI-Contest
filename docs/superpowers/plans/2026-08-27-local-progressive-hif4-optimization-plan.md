@@ -169,6 +169,12 @@ robust_attention_objective =
 
 从 C5 出发，只把 activation quadratic 的 feature 上限由 1024 提到 4096，使当前自动回退到 diagonal importance 的 3072-wide FFN down-projection 输入复用既有 4×4 `W^T W` Gram。该变化不增加状态节点数，只增大单个 CPU Gram tensor；开发裁决要求 proj 至少 `+0.5pp`、Linear mean 为正、其余分项与 Attention 不下降且 CUDA algorithm-stage ratio 不超过 1.15。通过后才运行固定回归矩阵和 CPU 计时。
 
+执行结果：`local-champion`。offset 0 proj `+0.54pp`，六个固定配置的 Linear mean 全部正向，Attention 不变；同环境 CPU ratio `0.995`。C10 成为后续候选的新父版本。
+
+### C11：wide activation 8×8 residual
+
+在 C10 上只为 `in_features > 1024` 保存 8×8 `W^T W` Gram，并在 4×4 activation 求解后，对最高损失 2% 的完整 8-channel groups 做单次 `H·e` 坐标更新，cap 4096。目标是验证 C10 暴露出的跨 4-channel activation 相关性；开发门为 proj `+0.3pp`、Linear mean 为正、非目标分项和 Attention 不下降、CUDA time ratio ≤1.15。
+
 ### 暂缓
 
 - A2 H64：聚合有增益但尾部和 GQA 安全轨不足，待 C2 稳定后重新立项；

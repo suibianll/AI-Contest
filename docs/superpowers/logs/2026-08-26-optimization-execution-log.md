@@ -163,6 +163,30 @@ Linear 与 B0 完全一致。A3/L1 开启时的数值见各自步骤小节。
   通过后才运行固定矩阵和 CPU 计时。
 - 状态：`planned`。
 
+### C10 固定回归与晋级结论
+
+- offset 0 `proj 0.5192→0.5246`（`+0.54pp`），其余五个 Linear 分项和
+  Attention 不变；Linear mean `+0.090pp`。
+- 固定矩阵 Linear mean 相对 C5：amax6 offset 97/193/389 分别
+  `+0.107/+0.112/+0.163pp`，amax4/pow2 offset 0 分别
+  `+0.065/+0.085pp`；六个配置全胜。
+- GQA offset 193 Attention 精确保持 `0.4169/0.4928`。
+- 同环境 CPU 配对：C10 `50.99s`、C5 `51.25s`，ratio `0.995`；只判定
+  为时间持平，不宣称加速。9 项 release tests 通过。
+- 状态：`local-champion`；root 保留 C10。
+
+## C11 预注册：wide activation 8×8 residual
+
+- Candidate ID：`C11`
+- Parent：`C10`，SHA256
+  `DD8587257299626718A24EB89013447DA9105E8884F391104A6B350607399E44`
+- 唯一变化：仅对 `in_features > 1024` 的 activation state 保存 8×8
+  `W^T W` Gram，并在既有 4×4 求解后对最高损失 2% 的完整 8-channel
+  activation groups 做单 sweep `H·e` 增量更新；cap 4096。
+- 开发门：offset 0 proj 至少 `+0.3pp`、Linear mean 为正、其余五项及
+  Attention 不下降，CUDA algorithm-stage ratio ≤1.15；通过后运行固定矩阵。
+- 状态：`planned`。
+
 ### C7 开发结论
 
 - offset 0 Linear mean 相对 C5 约 `+0.123pp`；q/k/v/o/fc/proj 六项均为

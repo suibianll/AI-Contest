@@ -75,6 +75,7 @@ def test_release_flags_are_a1_only() -> None:
     assert solution._L1_DATA_DRIVEN_SCALE is False
     assert solution._WEIGHT_QUADRATIC8 is True
     assert solution._WEIGHT_QUADRATIC16 is True
+    assert solution._ACTIVATION_QUADRATIC_MAX_FEATURES == 4096
 
 
 def test_submission_has_no_file_io_or_debug_output() -> None:
@@ -263,3 +264,14 @@ def test_weight_quadratic16_refinement_is_non_increasing() -> None:
     )
     assert after_loss <= before_loss + 1.0e-5
     validate_state(refined)
+
+
+def test_wide_activation_gram_is_one_legal_state_tensor() -> None:
+    solution = load_module("wide_activation_gram", ROOT / "solution.py")
+    torch.manual_seed(4096)
+    weight = torch.randn(4, 3072)
+    gram = weight.T @ weight
+    state = solution._cpu_state_tensor(solution._flat_group_gram(gram, 3072))
+    tensor_count, elements = validate_state(state)
+    assert tensor_count == 1
+    assert elements == 12_288
