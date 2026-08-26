@@ -40,9 +40,10 @@ def e4m3_round_up(x: torch.Tensor) -> torch.Tensor:
 def e2m1_round_to_even(r: torch.Tensor) -> torch.Tensor:
     """把比值舍入到最近的 E2M1 值；平局时取尾数位为偶者。"""
     a = r.abs().contiguous()
-    idx = torch.bucketize(a, E2M1).clamp(1, len(E2M1) - 1)
-    lo = E2M1[idx - 1]
-    hi = E2M1[idx]
+    boundaries = E2M1.to(a.device)
+    idx = torch.bucketize(a, boundaries).clamp(1, len(E2M1) - 1)
+    lo = boundaries[idx - 1]
+    hi = boundaries[idx]
     d_lo = a - lo
     d_hi = hi - a
     tie = d_lo == d_hi

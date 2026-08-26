@@ -1592,9 +1592,13 @@ def hif4_calibration_and_quantize_weight(
         for sample in activation_samples:
             transformed = sample.to(dtype=torch.float32)
             if smooth_inv_state is not None:
-                transformed = transformed * smooth_inv_state.reshape(1, -1)
+                transformed = transformed * smooth_inv_state.to(
+                    transformed.device
+                ).reshape(1, -1)
             if permutation_state is not None:
-                transformed = transformed.index_select(-1, permutation_state)
+                transformed = transformed.index_select(
+                    -1, permutation_state.to(transformed.device)
+                )
             if best_block_smooth_size != 0:
                 transformed = _block_hadamard_transform(
                     transformed,
@@ -1807,6 +1811,15 @@ def hif4_calibration_attention(
             raise ValueError("V calibration scale shape is invalid")
         if int(q.shape[0]) != int(k.shape[0]) or int(k.shape[0]) != int(v_quant.shape[0]):
             raise ValueError("Q/K/V in a calibration sample must share seq_len")
+
+        if q_sum_square.device != q.device:
+            q_sum_square = q_sum_square.to(q.device)
+            k_sum_square = k_sum_square.to(q.device)
+            k_mid_sum_square = k_mid_sum_square.to(q.device)
+            q_peak_square = q_peak_square.to(q.device)
+            k_peak_square = k_peak_square.to(q.device)
+            k_mid_peak_square = k_mid_peak_square.to(q.device)
+            v_head_mass = v_head_mass.to(q.device)
 
         if _V_ATTENTION_IMPORTANCE:
             v_head_mass += _attention_head_square_mass(
@@ -2051,9 +2064,13 @@ def hif4_calibration_attention(
         h_q_for_k.index_select(0, best_k_perm), kv_channels
     )
     if h_k_for_q is None:
-        h_k_for_q = torch.ones(q_channels, dtype=torch.float32)
+        h_k_for_q = torch.ones(
+            q_channels, dtype=torch.float32, device=d_q.device
+        )
     if h_q_for_k is None:
-        h_q_for_k = torch.ones(kv_channels, dtype=torch.float32)
+        h_q_for_k = torch.ones(
+            kv_channels, dtype=torch.float32, device=d_k.device
+        )
 
     q_flat = d_q.reshape(-1)
     k_flat = d_k.reshape(-1)

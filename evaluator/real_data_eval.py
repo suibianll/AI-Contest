@@ -129,12 +129,13 @@ def collect_real_data(
     sequence_length: int,
     calibration_samples: int,
     test_samples: int,
+    device: str = "cpu",
 ):
     from transformers import GPT2LMHeadModel, GPT2Tokenizer
 
     model = GPT2LMHeadModel.from_pretrained(model_name_or_path)
     tokenizer = GPT2Tokenizer.from_pretrained(model_name_or_path)
-    model.eval()
+    model.eval().to(device)
 
     ids = tokenizer(TEXT, return_tensors="pt", truncation=True, max_length=4096)[
         "input_ids"
@@ -212,7 +213,7 @@ def collect_real_data(
             with torch.no_grad():
                 for batch_index in range(begin, end):
                     start = batch_index * sequence_length
-                    model(ids[start : start + sequence_length][None])
+                    model(ids[start : start + sequence_length][None].to(device))
                     for index in range(len(blocks)):
                         flat = lambda value: value.reshape(-1, value.shape[-1])
                         attention_input = flat(captured[index]["attn_in"])
@@ -331,6 +332,7 @@ def evaluate(args: argparse.Namespace) -> None:
         args.seq,
         args.calib,
         args.test,
+        device=args.device,
     )
     layer_count = len(weights)
     hidden = int(model.config.n_embd)
@@ -451,8 +453,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--model",
-        default="gpt2",
-        help="Hugging Face GPT-2 model name or local model directory",
+        default=str(Path(__file__).resolve().parents[1] / "models" / "gpt2"),
+        help="GPT-2 model name or local model directory "
+        "(default: bundled models/gpt2)",
     )
     parser.add_argument("--layers", type=int, default=12)
     parser.add_argument("--seq", type=int, default=128)
@@ -462,6 +465,11 @@ def main(argv: list[str] | None = None) -> int:
         "--mode", default="amax6", choices=("amax6", "amax4", "pow2")
     )
     parser.add_argument("--kv-heads", type=int)
+    parser.add_argument(
+        "--device",
+        default="cpu",
+        help="torch device for evaluation, e.g. cpu or cuda",
+    )
     args = parser.parse_args(argv)
     if min(args.layers, args.seq, args.calib, args.test) <= 0:
         parser.error("--layers, --seq, --calib, and --test must be positive")

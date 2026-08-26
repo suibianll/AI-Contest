@@ -72,18 +72,20 @@ python -m venv .venv
 .\.venv\Scripts\python -m pip install -r evaluator\requirements.txt
 ```
 
-运行默认的 GPT-2 12 层、2 个校准批次和 2 个测试批次：
+GPT-2 权重已放在 `models/gpt2/`（约 525MB，已被 `.gitignore`
+排除，不入库），评测器默认直接加载该目录，无需联网。运行默认的
+GPT-2 12 层、2 个校准批次和 2 个测试批次：
 
 ```powershell
-.\.venv\Scripts\python evaluator\real_data_eval.py `
-  --solution solution.py --model gpt2
+.\.venv\Scripts\python evaluator\real_data_eval.py
 ```
 
-首次使用 `gpt2` 时需要准备模型；也可以传入已下载的本地模型目录：
+需要 GPU 加速时加 `--device cuda`（默认 `cpu`）；也可以用 `--model`
+改用 Hugging Face 名称或其他本地模型目录：
 
 ```powershell
 .\.venv\Scripts\python evaluator\real_data_eval.py `
-  --solution solution.py --model D:\models\gpt2
+  --solution solution.py --model gpt2 --device cuda
 ```
 
 开发阶段可降低规模以快速比较算法方向：
