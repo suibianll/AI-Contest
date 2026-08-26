@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from dataclasses import replace
 
 import pytest
 import torch
@@ -40,6 +41,44 @@ def test_minimal_solution_produces_linear_and_attention_cases() -> None:
     assert {row.kind for row in result.cases} == {"linear", "attention"}
     assert len(result.cases) > 0
     assert result.timing.wall_seconds >= result.timing.player_quant_seconds
+
+
+
+def test_evaluator_rejects_fake_compute_dtype_labels() -> None:
+    config = load_config(None)
+    suite = build_suite(101, config.tier("smoke"), torch.device("cpu"), tier_name="smoke", split="dev")
+    api = load_solution(ROOT / "tests" / "fixtures" / "minimal_solution.py")
+
+    with pytest.raises(ValueError, match="FP32"):
+        evaluate_solution(
+            api,
+            suite,
+            torch.device("cpu"),
+            compute_dtypes=("bf16",),
+            causal_modes=(False,),
+        )
+
+
+def test_online_calls_receive_independent_state_copies() -> None:
+    config = load_config(None)
+    tier = replace(config.tier("smoke"), test_samples=2)
+    suite = build_suite(
+        101, tier, torch.device("cpu"), tier_name="smoke", split="dev"
+    )
+    api = load_solution(
+        ROOT / "tests" / "fixtures" / "state_mutating_solution.py"
+    )
+
+    result = evaluate_solution(
+        api,
+        suite,
+        torch.device("cpu"),
+        compute_dtypes=("fp32",),
+        causal_modes=(False,),
+    )
+
+    assert result.cases
+
 
 
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA is not available in this environment")

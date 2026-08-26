@@ -41,6 +41,8 @@ def _evaluation_policy(config: EvaluationConfig) -> dict[str, Any]:
     return {
         "schema_version": config.schema_version,
         "backends": list(config.backends),
+        "compute_dtypes": list(config.compute_dtypes),
+        "attention_causal_modes": list(config.attention_causal_modes),
         "tiers": {
             name: {
                 "calibration_samples": tier.calibration_samples,
@@ -61,6 +63,13 @@ def _evaluation_policy(config: EvaluationConfig) -> dict[str, Any]:
         "device_tolerance": float(config.device_tolerance),
         "bootstrap_rounds": int(config.bootstrap_rounds),
     }
+
+
+def evaluation_policy_fingerprint(config: EvaluationConfig) -> str:
+    encoded = json.dumps(
+        _evaluation_policy(config), sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
 
 
 class Campaign:
@@ -101,6 +110,13 @@ class Campaign:
 
     def _save(self) -> None:
         _atomic_json(self.manifest_path, self.manifest)
+
+    def matches_policy(self, config: EvaluationConfig) -> bool:
+        if not bool(self.manifest.get("thresholds_locked", False)):
+            return True
+        return self.manifest.get("locked_evaluation_policy") == _evaluation_policy(
+            config
+        )
 
     def reserve(
         self,

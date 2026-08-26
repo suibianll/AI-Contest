@@ -49,7 +49,7 @@ def _evaluate(request: Mapping[str, Any]) -> dict[str, Any]:
         suite,
         device,
         tuple(str(value) for value in request.get("compute_dtypes", ["fp32"])),
-        tuple(bool(value) for value in request.get("causal_modes", [False, True])),
+        tuple(bool(value) for value in request.get("causal_modes", [False])),
     )
     return {
         "status": "passed",

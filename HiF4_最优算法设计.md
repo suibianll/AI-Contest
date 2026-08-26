@@ -462,3 +462,26 @@ hif4_dynamic_quantize_v
 - **性能策略**：全量 Weight 只量化一次，在线不做策略搜索，只执行已选变换和有限困难块精修。
 
 这套方案不是理论上的无约束全局最优，而是在题面约束、隐藏测试风险和五分钟 CPU 预算下最有可能取得高分的**竞赛最优工程解**。
+
+## 13. schema v2 评测后的优化优先级
+
+修正后的 96-case standard/dev 配对结果显示：当前版本相对 v9 的 Attention 平均增益为 `+0.071727`，Linear 为 `+0.015343`。Attention 有 4 个配对退化 case，Linear 为 0；当前版本唯一绝对负分是 `saturated_logits_h4_kv1_d128_s48`，分数 `-0.000313`。因此新增计算预算应优先投向 Attention，而不是平均扩张所有 Linear block 搜索。
+
+当前 Attention 校准仍同时计算 causal/non-causal，并用双掩码共识否决候选；schema v2 正式代理只计 non-causal。这是下一轮最先验证的代理—目标错配，修正它只增加或减少校准开销，不增加在线时延。
+
+下一轮按以下顺序做单变量消融：
+
+1. 将真实 Attention 指标、Jacobian importance 和高预算门控改为 non-causal-only；causal 结果只写入独立鲁棒性实验，不参与正式 state 选择。
+2. 在 127 秒官方实测的基础上扩大 Q/K/V 精修预算，但每次只改变一组 ratio/cap；目标控制在 220～235 秒，为 300 秒上限保留抖动余量。
+3. 对 saturated-logits 尾部单独测试 Q/K offset 集、Q/K ratio 与逐 head 温度候选；必须用逐 case 零退化门控，不能用场景名硬编码。
+4. 对 V-outlier 的少量配对退化测试 V 残差均值抑制或更高 V 精修比例；只在真实 non-causal Attention 输出改善时启用。
+
+每个候选都与固化的 10250 分 `solution.py` 快照配对，而不是继续只和 v9 比。建议的实验矩阵为：
+
+| 实验 | 唯一变量 | 主要判据 |
+|---|---|---|
+| A | non-causal-only 校准选择 | Attention 均分、4 个退化 case、唯一负分 |
+| B | Q/K/V ratio 与 block cap | A 通过后，分数增益/本地时间斜率 |
+| C | saturated/V-outlier 尾部候选 | 最差 case 不退化、总体 CI 下界为正 |
+
+在 A/B/C 通过 dev 前不消耗新 schema v2 holdout。v9 继续保留为历史基线，但下一轮晋级的 incumbent 必须是官方 10250 分版本，才能把 2.0 倍时间门禁正确解释为约 254 秒而非相对旧 v9 的错误限制。

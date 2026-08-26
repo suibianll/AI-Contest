@@ -88,6 +88,7 @@ def test_cpu_audit_pairs_candidate_and_incumbent(tmp_path: Path) -> None:
     )
     assert report["status"] == "passed"
     assert report["candidate_sha256"] == report["incumbent_sha256"]
-    assert report["comparison"]["paired_cases"] == 9
+    assert report["comparison"]["paired_cases"] == 6
+    assert all(not case["causal"] for case in report["cases"])
     assert report["comparison"]["mean_score_delta"] == 0.0
     assert report["cases_redacted"] is False

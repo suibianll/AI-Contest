@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from hif4_system.campaign import Campaign, HoldoutBudgetExhausted
+from hif4_system.cli import _campaign_for
 from hif4_system.config import load_config
 
 
@@ -87,3 +88,17 @@ def test_policy_is_locked_after_first_holdout(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="policy changed"):
         campaign.reserve("dev", "smoke", changed)
+
+
+def test_cli_starts_new_campaign_when_locked_protocol_changes(tmp_path: Path) -> None:
+    config = load_config(None)
+    original = replace(config, attention_causal_modes=(False, True))
+    campaign = Campaign.create(tmp_path / "campaigns" / "default")
+    reservation = campaign.reserve("holdout", "smoke", original)
+    campaign.finish(reservation, status="passed", report="old.json")
+
+    selected = _campaign_for(tmp_path, config)
+
+    assert selected.directory != campaign.directory
+    assert selected.directory.parent == tmp_path / "campaigns"
+    assert selected.reserve("dev", "smoke", config).seeds == (101,)

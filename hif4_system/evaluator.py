@@ -5,7 +5,7 @@ from typing import Iterable, Sequence
 
 import torch
 
-from .compliance import validate_state
+from .compliance import clone_state, validate_state
 from .formats import (
     dequantize_hif4,
     dequantize_nvfp4,
@@ -62,10 +62,11 @@ def _linear_cases(
             test_pair = _move_pair(raw_pair, device)
             activation_dense = dequantize_nvfp4(*test_pair)
             standard_activation = dequantize_hif4(standard_hif4_quantize(activation_dense))
+            activation_state = clone_state(calibrated["activation_state"])
             _sync(device)
             start = time.perf_counter()
             candidate_activation = api.function("hif4_dynamic_quantize_activation")(
-                test_pair[0], test_pair[1], calibrated["activation_state"]
+                test_pair[0], test_pair[1], activation_state
             )
             _sync(device)
             player_seconds += time.perf_counter() - start
@@ -118,16 +119,19 @@ def _attention_cases(
                 key: dequantize_hif4(standard_hif4_quantize(value))
                 for key, value in dense.items()
             }
+            q_state = clone_state(states["q_state"])
+            k_state = clone_state(states["k_state"])
+            v_state = clone_state(states["v_state"])
             _sync(device)
             start = time.perf_counter()
             q_params = api.function("hif4_dynamic_quantize_q")(
-                sample["q"][0], sample["q"][1], case.q_num_heads, case.head_dim, states["q_state"]
+                sample["q"][0], sample["q"][1], case.q_num_heads, case.head_dim, q_state
             )
             k_params = api.function("hif4_dynamic_quantize_k")(
-                sample["k"][0], sample["k"][1], case.kv_num_heads, case.head_dim, states["k_state"]
+                sample["k"][0], sample["k"][1], case.kv_num_heads, case.head_dim, k_state
             )
             v_params = api.function("hif4_dynamic_quantize_v")(
-                sample["v"][0], sample["v"][1], case.kv_num_heads, case.head_dim, states["v_state"]
+                sample["v"][0], sample["v"][1], case.kv_num_heads, case.head_dim, v_state
             )
             _sync(device)
             player_seconds += time.perf_counter() - start
@@ -168,6 +172,10 @@ def evaluate_solution(
     compute_dtypes: Sequence[str],
     causal_modes: Sequence[bool],
 ) -> RunResult:
+    if tuple(compute_dtypes) != ("fp32",):
+        raise ValueError(
+            "official scoring computes outputs in FP32; only compute_dtypes=('fp32',) is valid"
+        )
     if device.type == "cuda" and not torch.cuda.is_available():
         raise RuntimeError("CUDA requested but torch.cuda.is_available() is false")
     all_cases: list[CaseResult] = []

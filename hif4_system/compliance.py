@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import copy
 import math
 from dataclasses import dataclass
 from pathlib import Path
@@ -101,7 +102,11 @@ def validate_state(value: Any, *, max_depth: int = 8, max_nodes: int = 4096) -> 
             raise ValueError("state node count exceeds 4096")
         if depth > max_depth:
             raise ValueError("state depth exceeds 8")
-        if item is None or isinstance(item, (bool, int, str)):
+        if item is None or isinstance(item, (bool, int)):
+            return
+        if isinstance(item, str):
+            if len(item.encode("utf-8")) > 4096:
+                raise ValueError("state strings must not exceed 4096 UTF-8 bytes")
             return
         if isinstance(item, float):
             if not math.isfinite(item):
@@ -110,6 +115,8 @@ def validate_state(value: Any, *, max_depth: int = 8, max_nodes: int = 4096) -> 
         if torch.is_tensor(item):
             if item.device.type != "cpu":
                 raise ValueError("state tensors must be CPU tensors")
+            if item.layout != torch.strided:
+                raise ValueError("state tensors must use dense strided layout")
             if item.requires_grad or item.is_complex() or item.dtype not in _ALLOWED_TENSOR_DTYPES:
                 raise ValueError("state tensor has an unsupported dtype or gradient")
             if item.is_floating_point() and not bool(torch.isfinite(item).all()):
@@ -124,6 +131,8 @@ def validate_state(value: Any, *, max_depth: int = 8, max_nodes: int = 4096) -> 
                 for key, child in item.items():
                     if not isinstance(key, str):
                         raise ValueError("state dict keys must be strings")
+                    if len(key.encode("utf-8")) > 4096:
+                        raise ValueError("state dict keys must not exceed 4096 UTF-8 bytes")
                     visit(child, depth + 1)
             finally:
                 active.remove(identity)
@@ -142,3 +151,10 @@ def validate_state(value: Any, *, max_depth: int = 8, max_nodes: int = 4096) -> 
         raise ValueError(f"state contains unsupported type: {type(item).__name__}")
 
     visit(value, 0)
+
+
+def clone_state(value: Any) -> Any:
+    """Return the independent online-test state required by the official runner."""
+
+    validate_state(value)
+    return copy.deepcopy(value)

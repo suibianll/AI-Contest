@@ -4,11 +4,54 @@ import pytest
 import torch
 
 from hif4_system.formats import (
+    E6M2_LEVELS,
     dequantize_hif4,
     dequantize_nvfp4,
     standard_hif4_quantize,
     validate_hif4_params,
 )
+
+
+def test_e6m2_has_all_255_finite_official_values() -> None:
+    assert E6M2_LEVELS.numel() == 255
+    assert torch.unique(E6M2_LEVELS).numel() == 255
+    assert E6M2_LEVELS[0].item() == 2.0 ** -48
+    assert E6M2_LEVELS[-1].item() == 49152.0
+
+
+def test_hif4_validator_rejects_non_e6m2_scale_and_fractional_mantissa() -> None:
+    params = standard_hif4_quantize(torch.ones(1, 64))
+    invalid_scale = {name: value.clone() for name, value in params.items()}
+    invalid_scale["scale_factor"].fill_(1.1)
+    with pytest.raises(ValueError, match="E6M2"):
+        validate_hif4_params(invalid_scale, (1, 64))
+
+    invalid_mantissa = {name: value.clone() for name, value in params.items()}
+    invalid_mantissa["mant"].flatten()[0] = 0.1
+    with pytest.raises(ValueError, match="multiple of 0.25"):
+        validate_hif4_params(invalid_mantissa, (1, 64))
+
+
+def test_standard_hierarchy_matches_exhaustive_group_search() -> None:
+    torch.manual_seed(50)
+    values = torch.randn(1, 64) * torch.exp(torch.randn(1, 64) * 1.5)
+    params = standard_hif4_quantize(values)
+    decoded = params["sign"] * params["mant"] * params["scale_lv3"] * params["scale_lv2"] * params["scale_factor"]
+    grouped = values.reshape(1, 1, 8, 2, 4)
+    scale = float(params["scale_factor"].item())
+    for group_index in range(8):
+        source = grouped[0, 0, group_index]
+        actual_loss = float((decoded[0, 0, group_index] - source).square().sum())
+        candidate_losses = []
+        for lv2 in (1.0, 2.0):
+            for lv3_left in (1.0, 2.0):
+                for lv3_right in (1.0, 2.0):
+                    lv3 = torch.tensor([[lv3_left], [lv3_right]])
+                    local_scale = scale * lv2 * lv3
+                    mantissa = torch.round(source.abs() * (4.0 / local_scale)).clamp(0, 7) * 0.25
+                    reconstructed = source.sign() * mantissa * local_scale
+                    candidate_losses.append(float((reconstructed - source).square().sum()))
+        assert actual_loss == pytest.approx(min(candidate_losses), abs=1.0e-6)
 
 
 def test_standard_hif4_shapes_match_logical_tensor() -> None:

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import math
+
 from typing import Mapping, Sequence
 
 import torch
@@ -15,6 +17,20 @@ _BF16_ONE_SEVENTH = 0.142578125
 NVFP4_LEVELS = torch.tensor(
     [-6.0, -4.0, -3.0, -2.0, -1.5, -1.0, -0.5, 0.0,
      0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 6.0],
+    dtype=torch.float32,
+)
+
+# Canonical finite E6M2 scale values from the task specification. There are
+# 64 exponent fields and four mantissa fields; only (63, 3) is the reserved
+# NaN encoding, leaving 255 legal positive scales. The minimum scale is 2^-48;
+# combining it with the smallest non-zero S1P2 mantissa gives 2^-50.
+E6M2_LEVELS = torch.tensor(
+    [
+        (2.0 ** (exponent_field - 48)) * (1.0 + mantissa_field / 4.0)
+        for exponent_field in range(64)
+        for mantissa_field in range(4)
+        if (exponent_field, mantissa_field) != (63, 3)
+    ],
     dtype=torch.float32,
 )
 
@@ -88,6 +104,53 @@ def _standard_e6m2_scale(amax: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor
     return code, _e6m2_decode(code)
 
 
+def _solve_standard_hierarchy(
+    absolute: torch.Tensor,
+    scale_factor: torch.Tensor,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    """Choose the MSE-optimal lv2/lv3 configuration per 8-value group.
+
+    With a fixed E6M2 base scale, each 8-value group has eight legal
+    ``(lv2, lv3_left, lv3_right)`` configurations. Strict comparisons
+    preserve the lower-exponent configuration on ties.
+    """
+
+    losses: list[torch.Tensor] = []
+    for total_exponent in (0, 1, 2):
+        local_scale = scale_factor[..., None, None, None] * float(
+            1 << total_exponent
+        )
+        mantissa = (
+            torch.round(absolute * (4.0 / local_scale))
+            .clamp_(0.0, 7.0)
+            * 0.25
+        )
+        losses.append(
+            (absolute - mantissa * local_scale).square().sum(dim=-1)
+        )
+
+    loss_0, loss_1, loss_2 = losses
+    choose_01 = loss_1 < loss_0
+    choose_12 = loss_2 < loss_1
+    cost_lv2_1 = torch.minimum(loss_0, loss_1).sum(dim=-1)
+    cost_lv2_2 = torch.minimum(loss_1, loss_2).sum(dim=-1)
+    use_lv2_2 = cost_lv2_2 < cost_lv2_1
+    use_lv3_2 = torch.where(use_lv2_2[..., None], choose_12, choose_01)
+
+    scale_lv2 = 1.0 + use_lv2_2.to(torch.float32)
+    scale_lv3 = 1.0 + use_lv3_2.to(torch.float32)
+    denominator = (
+        scale_factor[..., None, None, None]
+        * scale_lv2[..., None, None]
+        * scale_lv3[..., None]
+    )
+    mantissa = (
+        torch.round(absolute * (4.0 / denominator))
+        .clamp_(0.0, 7.0)
+        * 0.25
+    )
+    return scale_lv2, scale_lv3, mantissa
+
 def _pack_hif4(
     prefix: tuple[int, ...],
     blocks: int,
@@ -127,19 +190,11 @@ def standard_hif4_quantize(dense: torch.Tensor) -> dict[str, torch.Tensor]:
     grouped = x.reshape(*prefix, blocks, 8, 2, 4)
     absolute = grouped.abs()
     sign = torch.sign(grouped)
-    max4 = absolute.amax(dim=-1)
-    max8 = max4.amax(dim=-1)
-    amax = max8.amax(dim=-1)
+    amax = absolute.amax(dim=(-1, -2, -3))
     _, scale_factor = _standard_e6m2_scale(amax)
-    scale_lv2 = 1.0 + (max8 >= 4.0 * scale_factor[..., None]).to(torch.float32)
-    max4_scale = scale_factor[..., None, None] * scale_lv2[..., None]
-    scale_lv3 = 1.0 + (max4 >= 2.0 * max4_scale).to(torch.float32)
-    denominator = (
-        scale_factor[..., None, None, None]
-        * scale_lv2[..., None, None]
-        * scale_lv3[..., None]
+    scale_lv2, scale_lv3, mantissa = _solve_standard_hierarchy(
+        absolute, scale_factor
     )
-    mantissa = torch.round(absolute * (4.0 / denominator)).clamp(0.0, 7.0) * 0.25
     return _pack_hif4(prefix, blocks, scale_factor, scale_lv2, scale_lv3, sign, mantissa)
 
 
@@ -164,10 +219,26 @@ def validate_hif4_params(
     for name, tensor in params.items():
         if not torch.is_tensor(tensor):
             raise TypeError(f"HiF4 {name} must be a tensor")
-        if tensor.is_complex() or not torch.isfinite(tensor.to(torch.float32)).all():
+        if tensor.layout != torch.strided:
+            raise ValueError(f"HiF4 {name} must use dense strided layout")
+        if tensor.requires_grad:
+            raise ValueError(f"HiF4 {name} must not require gradients")
+        if tensor.is_complex() or not bool(
+            torch.isfinite(tensor.to(torch.float32)).all()
+        ):
             raise ValueError(f"HiF4 {name} must be finite and real")
-    sign = params["sign"]
+
+    scale_factor = params["scale_factor"].to(torch.float32)
+    nearest_scale = _e6m2_decode(_e6m2_encode_nearest(scale_factor))
+    if not bool(torch.all(scale_factor == nearest_scale)):
+        raise ValueError("HiF4 scale_factor contains a non-E6M2 value")
+
     mant = params["mant"]
+    mant_float = mant.to(torch.float32)
+    if not bool(torch.all(mant_float * 4.0 == torch.round(mant_float * 4.0))):
+        raise ValueError("HiF4 mantissa must be a multiple of 0.25")
+
+    sign = params["sign"]
     if not bool(torch.all((sign == -1) | (sign == 0) | (sign == 1))):
         raise ValueError("HiF4 sign contains an invalid value")
     if not bool(torch.all((mant >= 0) & (mant <= 1.75))):
@@ -181,6 +252,17 @@ def validate_hif4_params(
         if len(shape) == 0 or shape[-1] % HIF4_BLOCK_SIZE != 0:
             raise ValueError("logical shape is not HiF4 block aligned")
         blocks = shape[-1] // HIF4_BLOCK_SIZE
+        dense = (
+            params["sign"]
+            * params["mant"]
+            * params["scale_lv3"]
+            * params["scale_lv2"]
+            * params["scale_factor"]
+        )
+        if dense.numel() != math.prod(shape) or not bool(
+            torch.isfinite(dense.to(torch.float32)).all()
+        ):
+            raise ValueError("HiF4 dequantized result is invalid")
         prefix = shape[:-1]
         expected = {
             "scale_factor": prefix + (blocks, 1, 1, 1),

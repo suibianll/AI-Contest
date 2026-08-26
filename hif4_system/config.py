@@ -33,6 +33,8 @@ class EvaluationConfig:
     schema_version: int
     backends: tuple[str, ...]
     tiers: Mapping[str, TierConfig]
+    compute_dtypes: tuple[str, ...]
+    attention_causal_modes: tuple[bool, ...]
     thresholds: Mapping[str, float]
     timeouts: Mapping[str, int]
     device_tolerance: float
@@ -45,8 +47,14 @@ class EvaluationConfig:
             raise ConfigError(f"unknown tier: {name}") from error
 
     def validate(self) -> "EvaluationConfig":
-        if self.schema_version != 1:
-            raise ConfigError("schema_version must be 1")
+        if self.schema_version != 2:
+            raise ConfigError("schema_version must be 2")
+        if self.compute_dtypes != ("fp32",):
+            raise ConfigError("official scoring supports only FP32 output computation")
+        if not self.attention_causal_modes or len(set(self.attention_causal_modes)) != len(
+            self.attention_causal_modes
+        ):
+            raise ConfigError("attention_causal_modes must be non-empty and unique")
         if self.backends != ("torch",):
             raise ConfigError("evaluation system is Torch-only")
         if set(self.tiers) != {"smoke", "standard", "soak"}:
@@ -81,6 +89,8 @@ def load_config(path: Path | None) -> EvaluationConfig:
     config = EvaluationConfig(
         schema_version=int(raw["schema_version"]),
         backends=tuple(str(value) for value in raw["backends"]),
+        compute_dtypes=tuple(str(value) for value in raw["compute_dtypes"]),
+        attention_causal_modes=tuple(bool(value) for value in raw["attention_causal_modes"]),
         tiers={
             str(name): TierConfig(
                 calibration_samples=int(values["calibration_samples"]),

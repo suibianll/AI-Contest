@@ -15,7 +15,7 @@ from typing import Any, Mapping, Sequence
 
 import torch
 
-from .campaign import Campaign, HoldoutBudgetExhausted, SeedReservation
+from .campaign import Campaign, HoldoutBudgetExhausted, SeedReservation, evaluation_policy_fingerprint
 from .compliance import check_static
 from .config import ConfigError, EvaluationConfig, load_config
 from .models import CaseResult, TimingResult
@@ -59,10 +59,19 @@ def _atomic_json(path: Path, payload: Mapping[str, Any]) -> None:
     temporary.replace(path)
 
 
-def _campaign_for(root: Path) -> Campaign:
-    directory = root / "campaigns" / "default"
+def _campaign_for(root: Path, config: EvaluationConfig) -> Campaign:
+    campaigns = root / "campaigns"
+    directory = campaigns / "default"
     if (directory / "campaign.json").exists() or (directory / ".holdout_secret").exists():
-        return Campaign.open(directory)
+        current = Campaign.open(directory)
+        if current.matches_policy(config):
+            return current
+        directory = campaigns / f"policy-{evaluation_policy_fingerprint(config)[:12]}"
+        if (directory / "campaign.json").exists() or (directory / ".holdout_secret").exists():
+            selected = Campaign.open(directory)
+            if not selected.matches_policy(config):
+                raise ValueError("campaign policy fingerprint collision")
+            return selected
     return Campaign.create(directory)
 
 
@@ -198,6 +207,7 @@ def _track_payload(
             "environment": _environment(),
             "runner": track.metadata or {},
             "config_sha256": _config_hash(config_path),
+            "evaluation_policy_sha256": evaluation_policy_fingerprint(config),
         },
     }
 
@@ -212,8 +222,8 @@ def _run_track(
     config_path: Path | None = None,
 ) -> TrackReport:
     timeout = config.timeouts[tier]
-    dtypes = ("fp32",)
-    causal = (False, True)
+    dtypes = config.compute_dtypes
+    causal = config.attention_causal_modes
     if device == "cpu":
         return run_cpu_track(candidate, seeds, tier, dtypes, causal, timeout, config_path, split)
     if device == "cuda":
@@ -242,7 +252,7 @@ def _evaluate_once(
 ) -> tuple[int, Path | None, dict[str, Any], SeedReservation | None]:
     source = candidate.resolve()
     candidate_sha = sha256_file(source)
-    campaign = _campaign_for(root)
+    campaign = _campaign_for(root, config)
     reservation: SeedReservation | None = None
     report: dict[str, Any]
     status = "failed"
@@ -336,7 +346,7 @@ def _cmd_audit(args: argparse.Namespace) -> int:
     incumbent_source = Path(args.incumbent).resolve()
     candidate_sha = sha256_file(source)
     incumbent_sha = sha256_file(incumbent_source)
-    campaign = _campaign_for(root)
+    campaign = _campaign_for(root, config)
     reservation = campaign.reserve(args.split, args.tier, config)
     run_status = "failed"
     report_path: Path | None = None
@@ -489,7 +499,7 @@ def _cmd_validate(args: argparse.Namespace) -> int:
     registry = Registry(root / "registry")
     champion = registry.champion()
     candidate_sha = sha256_file(source)
-    campaign = _campaign_for(root)
+    campaign = _campaign_for(root, config)
     all_reports: dict[str, Any] = {}
     failures: list[str] = []
     gpu_track: TrackReport | None = None
@@ -601,6 +611,7 @@ def _cmd_validate(args: argparse.Namespace) -> int:
         "errors": failures,
         "environment": _environment(),
         "config_sha256": _config_hash(config_path),
+        "evaluation_policy_sha256": evaluation_policy_fingerprint(config),
     }
     path = _write_report(root, "validate", combined)
     if not failures:

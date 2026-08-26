@@ -27,7 +27,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             print("only the torch backend is supported", file=sys.stderr)
             return 2
         del values[index : index + 2]
-    if values and values[0] in {"init", "evaluate", "validate", "promote", "history", "rollback"}:
+    if values and values[0] in {"init", "evaluate", "audit", "validate", "promote", "history", "rollback"}:
         return lifecycle_main(values)
     parser = argparse.ArgumentParser(prog="hif4_generalization_eval.py")
     parser.add_argument("--candidate", "--solution", dest="solution", required=True)
@@ -39,11 +39,17 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--incumbent")
     parser.add_argument("--output")
     parser.add_argument("--include-cases", action="store_true")
-    parser.add_argument("--attention-mask", choices=("both", "causal", "noncausal"), default="both")
+    parser.add_argument("--attention-mask", choices=("both", "causal", "noncausal"), default="noncausal")
     parser.add_argument("--compute-dtypes", default="fp32")
     parser.add_argument("--max-holdout-uses", type=int, default=3)
     parser.add_argument("--config")
     args = parser.parse_args(values)
+    if args.attention_mask != "noncausal":
+        print("official proxy uses noncausal attention; use a versioned config for robustness experiments", file=sys.stderr)
+        return 2
+    if args.compute_dtypes != "fp32":
+        print("official scoring computes outputs in FP32", file=sys.stderr)
+        return 2
     return lifecycle_main(
         [
             "evaluate",

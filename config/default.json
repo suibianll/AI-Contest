@@ -1,6 +1,8 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "backends": ["torch"],
+  "compute_dtypes": ["fp32"],
+  "attention_causal_modes": [false],
   "tiers": {
     "smoke": {
       "calibration_samples": 1,
@@ -32,8 +34,8 @@
     "min_delta_ci_lower": 0.0
   },
   "timeouts": {
-    "smoke": 600,
-    "standard": 1800,
+    "smoke": 300,
+    "standard": 300,
     "soak": 7200
   },
   "device_tolerance": 0.005,

@@ -13,6 +13,9 @@ def test_default_config_is_torch_only() -> None:
     config = load_config(None)
 
     assert set(config.tiers) == {"smoke", "standard", "soak"}
+    assert config.compute_dtypes == ("fp32",)
+    assert config.attention_causal_modes == (False,)
+    assert config.timeouts["standard"] == 300
     assert config.backends == ("torch",)
     assert config.tier("smoke").calibration_samples == 1
 

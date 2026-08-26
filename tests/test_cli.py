@@ -43,9 +43,30 @@ def test_init_cli_rejects_wrong_hash_with_stable_code(tmp_path: Path) -> None:
         "--root",
         str(tmp_path),
     )
-
     assert result.returncode == 2
     assert "hash mismatch" in (result.stdout + result.stderr).lower()
+
+
+def test_legacy_wrapper_rejects_non_official_mask_instead_of_ignoring_it(
+    tmp_path: Path,
+) -> None:
+    result = subprocess.run(
+        [
+            sys.executable,
+            "hif4_generalization_eval.py",
+            "--candidate",
+            str(ROOT / "tests" / "fixtures" / "minimal_solution.py"),
+            "--attention-mask",
+            "both",
+            "--root",
+            str(tmp_path),
+        ],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
 
 
 def test_legacy_wrapper_rejects_non_torch_backend() -> None:
