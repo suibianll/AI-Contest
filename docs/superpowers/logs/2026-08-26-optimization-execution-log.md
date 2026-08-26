@@ -124,6 +124,25 @@ Linear 与 B0 完全一致。A3/L1 开启时的数值见各自步骤小节。
   CPU ratio ≤1.15；通过后才运行固定矩阵。
 - 状态：`planned`。
 
+### C8 开发结论
+
+- offset 0 Linear mean 相对 C5 约 `+0.090pp`；六项均正向，proj 最大
+  `+0.23pp`；Attention 精确不变。
+- CUDA algorithm-stage `23.55s`，高于 C5 开发运行 `20.81s`。
+- 状态：`local-accepted-not-promoted`。低于 `+0.2pp`，不运行固定矩阵；
+  C5 保持 Champion，v011 完成 8→16→64 尺度路线的归档闭环。
+
+## C9 预注册：16×16 second sweep
+
+- Candidate ID：`C9`
+- Parent：`C5`，SHA256
+  `A093940D46BE4B3C3CA88B30CD4456DD112CAD1C5DE632FCDB0207A12D197288`
+- 唯一变化：C5 的 16×16 coverage 保持 2%，坐标 sweep 从 1 提到 2；
+  8×8、caps、Attention 和动态路径全部不变。
+- 开发门：offset 0 Linear mean 相对 C5 `+0.2pp`，Attention 不变，CPU
+  ratio ≤1.15；不通过即停止二阶 sweep/coverage 扩展。
+- 状态：`planned`。
+
 ### C7 开发结论
 
 - offset 0 Linear mean 相对 C5 约 `+0.123pp`；q/k/v/o/fc/proj 六项均为

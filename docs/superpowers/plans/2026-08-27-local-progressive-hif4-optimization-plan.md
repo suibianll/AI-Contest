@@ -157,6 +157,12 @@ robust_attention_objective =
 
 只在 C5 上增加最高损失 0.5% 的完整 64 通道 block，cap 1024、单 sweep。该候选是 8→16→64 渐进路线的最后尺度检查，禁止全量 GPTQ；若开发增益不足 `+0.2pp`，结束 group-size 扩展并转向新的独立机制。
 
+执行结果：`local-accepted-not-promoted`，Linear mean `+0.090pp` 且校准成本上升；group-size 扩展结束，C5 保持 Champion。
+
+### C9：16×16 second sweep
+
+固定 C5 的 2% coverage，只把 16×16 坐标 sweep 从 1 提到 2，检验现有组选点是否尚未收敛。若开发增益不足 `+0.2pp`，停止二阶 sweep/coverage 调整并转向新的独立机制。
+
 ### 暂缓
 
 - A2 H64：聚合有增益但尾部和 GQA 安全轨不足，待 C2 稳定后重新立项；
