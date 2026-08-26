@@ -163,6 +163,12 @@ robust_attention_objective =
 
 固定 C5 的 2% coverage，只把 16×16 坐标 sweep 从 1 提到 2，检验现有组选点是否尚未收敛。若开发增益不足 `+0.2pp`，停止二阶 sweep/coverage 调整并转向新的独立机制。
 
+执行结果：`local-accepted-not-promoted`，Linear mean 仅 `+0.025pp`；二阶 weight sweep/coverage 调参路线关闭，C5 保持 Champion。
+
+### C10：wide activation quadratic
+
+从 C5 出发，只把 activation quadratic 的 feature 上限由 1024 提到 4096，使当前自动回退到 diagonal importance 的 3072-wide FFN down-projection 输入复用既有 4×4 `W^T W` Gram。该变化不增加状态节点数，只增大单个 CPU Gram tensor；开发裁决要求 proj 至少 `+0.5pp`、Linear mean 为正、其余分项与 Attention 不下降且 CUDA algorithm-stage ratio 不超过 1.15。通过后才运行固定回归矩阵和 CPU 计时。
+
 ### 暂缓
 
 - A2 H64：聚合有增益但尾部和 GQA 安全轨不足，待 C2 稳定后重新立项；

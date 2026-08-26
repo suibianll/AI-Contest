@@ -143,6 +143,26 @@ Linear 与 B0 完全一致。A3/L1 开启时的数值见各自步骤小节。
   ratio ≤1.15；不通过即停止二阶 sweep/coverage 扩展。
 - 状态：`planned`。
 
+### C9 开发结论
+
+- offset 0 Linear mean 相对 C5 约 `+0.025pp`；Attention 精确不变。
+- CUDA algorithm-stage `22.35s`，8 项 release tests 通过。
+- 状态：`local-accepted-not-promoted`。低于 `+0.2pp`，不运行固定矩阵；
+  C5 保持 Champion，停止继续调整 8×8/16×16 sweep 与 coverage。
+
+## C10 预注册：wide activation quadratic
+
+- Candidate ID：`C10`
+- Parent：`C5`，SHA256
+  `A093940D46BE4B3C3CA88B30CD4456DD112CAD1C5DE632FCDB0207A12D197288`
+- 唯一变化：将 `_ACTIVATION_QUADRATIC_MAX_FEATURES` 从 1024 提到 4096，
+  使 3072-wide FFN down-projection activation 使用既有 4×4 `W^T W` Gram；
+  权重量化、Attention、offset、coverage 和 sweep 全部不变。
+- 开发门：offset 0 proj 至少 `+0.5pp`、Linear mean 为正、其余五项及
+  Attention 不下降；状态合法且 CUDA algorithm-stage ratio ≤1.15。
+  通过后才运行固定矩阵和 CPU 计时。
+- 状态：`planned`。
+
 ### C7 开发结论
 
 - offset 0 Linear mean 相对 C5 约 `+0.123pp`；q/k/v/o/fc/proj 六项均为
