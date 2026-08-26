@@ -124,6 +124,28 @@ Linear 与 B0 完全一致。A3/L1 开启时的数值见各自步骤小节。
   CPU ratio ≤1.15；通过后才运行固定矩阵。
 - 状态：`planned`。
 
+### C5 固定矩阵结论
+
+- offset 0 Linear mean 相对 C3 `+0.23pp`，六项全部提升；最大增益为
+  proj `+0.45pp`、o `+0.35pp`。
+- amax6 offset 97/193/389：Linear mean 分别约
+  `+0.18/+0.46/+0.28pp`；amax4/pow2 分别 `+0.27/+0.27pp`。
+- 六组固定配置的 36 个 Linear 分项全部提升；所有 Attention 与 C3 一致。
+- CPU algorithm-stage `55.92s`，相对 C3 `54.29s` 比率 `1.030`；dynamic
+  时间不变。
+- 状态：`local-champion`，源码和结果归档为 v008。
+
+## C6 预注册：16×16 coverage 4%
+
+- Candidate ID：`C6`
+- Parent：`C5`，SHA256
+  `A093940D46BE4B3C3CA88B30CD4456DD112CAD1C5DE632FCDB0207A12D197288`
+- 唯一变化：16×16 top-loss coverage 从 2% 提到 4%；C3 的 8×8 5%、
+  sweeps、caps 和全部其他机制不变。
+- 开发门：offset 0 Linear mean 相对 C5 至少 `+0.2pp`，Attention 不变，
+  CPU ratio ≤1.15；不足则结束 16×16 coverage 扩展。
+- 状态：`planned`。
+
 ### C4 开发结论
 
 - offset 0 Linear mean 相对 C3 约 `+0.092pp`；q/k/v/o 分别

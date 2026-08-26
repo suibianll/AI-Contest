@@ -135,6 +135,16 @@ robust_attention_objective =
 
 只把 C3 的 top-loss coverage 从 5% 提高到 10%，验证收益是否仍随覆盖率增长；其余机制和 cap 不变。若边际收益不足 `+0.2pp`，保持 C3 并结束 coverage 扩展。组合后的时间精简顺延为后续独立候选。
 
+执行结果：`local-accepted-not-promoted`，Linear mean 仅 `+0.092pp`，确认 8×8 coverage 在 5% 后饱和。
+
+### C5：top-K 16×16 Linear 二阶
+
+状态：`local-champion`。在 C3 的 5% 8×8 基础上，对最高损失 2% 的连续 16 通道组做一轮 `H·e` 更新。固定矩阵相对 C3 提升 `+0.18pp` 至 `+0.46pp`，36 个 Linear 分项全部提升，Attention 不变，CPU ratio `1.030`。
+
+### C6：16×16 coverage 4%
+
+只把 C5 的 16×16 coverage 从 2% 提到 4%。若 offset 0 相对 C5 不足 `+0.2pp`，结束 16×16 coverage 扩展并保持 C5 Champion。
+
 ### 暂缓
 
 - A2 H64：聚合有增益但尾部和 GQA 安全轨不足，待 C2 稳定后重新立项；

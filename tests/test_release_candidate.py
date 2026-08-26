@@ -74,6 +74,7 @@ def test_release_flags_are_a1_only() -> None:
     assert solution._V_IMPORTANCE_CANDIDATES is False
     assert solution._L1_DATA_DRIVEN_SCALE is False
     assert solution._WEIGHT_QUADRATIC8 is True
+    assert solution._WEIGHT_QUADRATIC16 is True
 
 
 def test_submission_has_no_file_io_or_debug_output() -> None:
@@ -226,6 +227,34 @@ def test_weight_quadratic8_refinement_is_non_increasing() -> None:
     grams = gram8.unsqueeze(0).expand(4, -1, -1, -1).reshape(-1, 8, 8)
     before_error = (before - dense).reshape(-1, 8)
     after_error = (after - dense).reshape(-1, 8)
+    before_loss = torch.einsum(
+        "ni,nij,nj->", before_error, grams, before_error
+    )
+    after_loss = torch.einsum(
+        "ni,nij,nj->", after_error, grams, after_error
+    )
+    assert after_loss <= before_loss + 1.0e-5
+    validate_state(refined)
+
+
+def test_weight_quadratic16_refinement_is_non_increasing() -> None:
+    solution = load_module("weight_quadratic16", ROOT / "solution.py")
+    torch.manual_seed(1616)
+    dense = torch.randn(4, 64)
+    params = solution._dense_to_hif4(
+        dense,
+        search_offsets=(-1, 1),
+        max_refine_ratio=1.0,
+    )
+    factor = torch.randn(64, 64)
+    covariance = factor.T @ factor + 0.1 * torch.eye(64)
+    gram16 = solution._flat_group_gram16(covariance, 64)
+    before = solution._dequantize_hif4(params)
+    refined = solution._refine_weight_groups16(dense, params, gram16)
+    after = solution._dequantize_hif4(refined)
+    grams = gram16.unsqueeze(0).expand(4, -1, -1, -1).reshape(-1, 16, 16)
+    before_error = (before - dense).reshape(-1, 16)
+    after_error = (after - dense).reshape(-1, 16)
     before_loss = torch.einsum(
         "ni,nij,nj->", before_error, grams, before_error
     )
