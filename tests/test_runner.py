@@ -71,5 +71,5 @@ def test_custom_config_reaches_isolated_worker(tmp_path: Path) -> None:
     )
 
     assert report.status == "passed"
-    assert len(report.cases) == 48
-    assert report.metadata["seed-00"]["case_count"] == 24
+    assert len(report.cases) == 18
+    assert report.metadata["seed-00"]["case_count"] == 9

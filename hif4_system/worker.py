@@ -36,7 +36,13 @@ def _evaluate(request: Mapping[str, Any]) -> dict[str, Any]:
     tier_name = str(request["tier"])
     tier = config.tier(tier_name)
     device = torch.device(str(request["device"]))
-    suite = build_suite(int(request["seed"]), tier, device)
+    suite = build_suite(
+        int(request["seed"]),
+        tier,
+        device,
+        tier_name=tier_name,
+        split=str(request.get("split", "dev")),
+    )
     api = load_solution(Path(str(request["candidate"])))
     result = evaluate_solution(
         api,

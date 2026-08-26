@@ -60,3 +60,34 @@ def test_holdout_report_does_not_write_raw_seeds(tmp_path: Path) -> None:
     assert all("seeds" not in run and "holdout_seeds" not in run for run in campaign["runs"])
     report_text = " ".join(path.read_text(encoding="utf-8") for path in (tmp_path / "reports").glob("*.json"))
     assert "seed_commitment" in report_text
+    report = json.loads(sorted((tmp_path / "reports").glob("*.json"))[-1].read_text(encoding="utf-8"))
+    assert report["cases"] == []
+    assert report["cases_redacted"] is True
+
+
+
+def test_cpu_audit_pairs_candidate_and_incumbent(tmp_path: Path) -> None:
+    audited = _run_cli(
+        tmp_path,
+        "audit",
+        "--candidate",
+        str(ROOT / "solution_v9_champion.py"),
+        "--incumbent",
+        str(ROOT / "solution_v9_champion.py"),
+        "--tier",
+        "smoke",
+        "--split",
+        "dev",
+    )
+
+    assert audited.returncode == 5, audited.stderr
+    report = json.loads(
+        sorted((tmp_path / "reports").glob("*.json"))[-1].read_text(
+            encoding="utf-8"
+        )
+    )
+    assert report["status"] == "passed"
+    assert report["candidate_sha256"] == report["incumbent_sha256"]
+    assert report["comparison"]["paired_cases"] == 9
+    assert report["comparison"]["mean_score_delta"] == 0.0
+    assert report["cases_redacted"] is False

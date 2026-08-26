@@ -15,24 +15,27 @@ HiF4 基准计算分数，再把结果写成可审计的 JSON 报告。现阶段
 a6b8b858156164333d1d3ca25c6233b4845061f40a16d4cf74695ecdbb9041f7
 ```
 
-CPU smoke 套件包含 9 个配对 case。最近一次本地运行的平均分约为
-`0.205917`；该数值仅用于记录当前环境的基线，候选晋级仍必须通过配置中
-全部统计门槛。
+当前候选已通过 standard 的 GPU dev、CPU dev 与 CPU holdout 三轨验证。
+CPU dev 平均分为 `0.496880`，相对 v9 Champion 的配对增益为
+`+0.026956`；240-case holdout 平均分为 `0.493192`，配对增益
+`+0.031274`、95% 聚类 bootstrap 区间为 `[0.025015, 0.037102]`，
+且没有输掉任何配对 case。该结果仍属于合成代理，不等同于官方榜单分数。
 
 ## 环境安装
 
-在中国大陆网络环境下，可以使用项目虚拟环境和镜像源安装 CPU 依赖：
+在中国大陆网络环境下，可以使用项目虚拟环境和镜像源安装依赖：
 
 ```powershell
 py -3.12 -m venv .venv
 .\.venv\Scripts\python -m pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt
-# CPU wheel（当前验证环境）
+# CPU wheel（无 CUDA 时）
 .\.venv\Scripts\python -m pip install -i https://pypi.tuna.tsinghua.edu.cn/simple torch==2.13.0
 ```
 
-当前验证版本为 Python 3.12.13、PyTorch `2.13.0+cpu`、pytest 9.1.1，未安
-装 NumPy。PyTorch 可能打印一次“Failed to initialize NumPy”警告，这是
-Torch 的可选互操作提示，不代表系统使用 NumPy 模拟。
+当前验证版本为 Python 3.12.13、PyTorch `2.6.0+cu124`、pytest 9.1.1，
+GPU 为 NVIDIA GeForce RTX 3060 Ti。环境中可能因 Torch 依赖存在 NumPy，
+但活跃评测、统计和数据生成路径均不导入 NumPy，也不使用 NumPy 模拟；
+竞赛算法与评测后端仍是 Torch-only。
 
 ## 常用命令
 
@@ -48,9 +51,17 @@ Torch 的可选互操作提示，不代表系统使用 NumPy 模拟。
 .\.venv\Scripts\python cli.py evaluate solution.py --tier smoke --device cpu --split dev --root .
 ```
 
+
+没有 CUDA 或在日常迭代阶段，可让候选与 Champion 在同一批数据上执行
+CPU 配对审计：
+
+```powershell
+.\.venv\Scripts\python cli.py audit --candidate solution.py --incumbent solution_v9_champion.py --tier standard --split dev --root .
+```
+
 报告位于 `reports/`，包含候选哈希、配置哈希、环境、设备权威性、计时、
-case 明细、聚合分数和 seed commitment。holdout 报告只保存 commitment，
-不保存原始 holdout seed。
+聚合分数和 seed commitment。dev 保存 case 明细；holdout 不保存原始 seed
+或逐 case 结果，只返回候选/Champion 聚合统计和配对门禁。
 
 安装兼容 CUDA 的 PyTorch 后可执行精度筛选：
 

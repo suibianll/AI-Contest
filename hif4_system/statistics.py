@@ -31,6 +31,19 @@ def bootstrap_mean_ci(values: Sequence[float], rounds: int, seed: int) -> tuple[
     return float(interval[0]), float(interval[1])
 
 
+
+def _seed_means(cases: Sequence[CaseResult], values: Sequence[float]) -> list[float]:
+    if len(cases) != len(values):
+        raise ValueError("case/value lengths do not match")
+    grouped: dict[str, list[float]] = {}
+    for row, value in zip(cases, values):
+        grouped.setdefault(str(row.seed_id), []).append(float(value))
+    return [
+        sum(group) / float(len(group))
+        for _, group in sorted(grouped.items())
+    ]
+
+
 @dataclass(frozen=True)
 class Summary:
     case_count: int
@@ -117,7 +130,7 @@ def summarize(cases: Sequence[CaseResult], rounds: int, seed: int) -> Summary:
         sum(score < -0.10 for score in scores),
         sum(score < -0.10 for score in scores) / len(scores),
         sum(ratios) / len(ratios),
-        bootstrap_mean_ci(scores, rounds, seed),
+        bootstrap_mean_ci(_seed_means(cases, scores), rounds, seed),
     )
 
 
@@ -130,7 +143,9 @@ def compare(candidate: Sequence[CaseResult], champion: Sequence[CaseResult], rou
     right = {_key(row): row for row in champion}
     if set(left) != set(right) or len(left) != len(candidate) or len(right) != len(champion):
         raise ValueError("paired case keys do not match")
-    deltas = [left[key].score - right[key].score for key in sorted(left, key=str)]
+    ordered_keys = sorted(left, key=str)
+    deltas = [left[key].score - right[key].score for key in ordered_keys]
+    seed_deltas = _seed_means([left[key] for key in ordered_keys], deltas)
     wins = sum(delta > 1.0e-12 for delta in deltas)
     losses = sum(delta < -1.0e-12 for delta in deltas)
     return Comparison(
@@ -140,7 +155,7 @@ def compare(candidate: Sequence[CaseResult], champion: Sequence[CaseResult], rou
         _percentile(deltas, 0.05),
         min(deltas),
         (wins, len(deltas) - wins - losses, losses),
-        bootstrap_mean_ci(deltas, rounds, seed),
+        bootstrap_mean_ci(seed_deltas, rounds, seed),
     )
 
 
@@ -162,6 +177,7 @@ def decide(
     }
     if comparison is not None and incumbent is not None:
         checks["paired_delta"] = comparison.mean_score_delta >= float(thresholds["min_candidate_delta"])
+        checks["paired_ci_lower"] = comparison.bootstrap_delta_ci95[0] >= float(thresholds["min_delta_ci_lower"])
         checks["negative_rate_delta"] = candidate.negative_rate - incumbent.negative_rate <= float(thresholds["max_negative_rate_delta"])
     if incumbent_timing is not None and incumbent_timing.player_quant_seconds > 0.0:
         checks["runtime"] = candidate_timing.player_quant_seconds / incumbent_timing.player_quant_seconds <= float(thresholds["max_runtime_ratio"])

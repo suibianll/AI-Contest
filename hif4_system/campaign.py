@@ -27,12 +27,40 @@ class SeedReservation:
     seeds: tuple[int, ...]
     attempt: int | None
     commitment: str
+    reservation_id: str
 
 
 def _atomic_json(path: Path, value: Any) -> None:
     temporary = path.with_suffix(path.suffix + ".tmp")
     temporary.write_text(json.dumps(value, indent=2, ensure_ascii=False), encoding="utf-8")
     temporary.replace(path)
+
+
+
+def _evaluation_policy(config: EvaluationConfig) -> dict[str, Any]:
+    return {
+        "schema_version": config.schema_version,
+        "backends": list(config.backends),
+        "tiers": {
+            name: {
+                "calibration_samples": tier.calibration_samples,
+                "test_samples": tier.test_samples,
+                "dev_seeds": tier.dev_seeds,
+                "holdout_seeds": tier.holdout_seeds,
+            }
+            for name, tier in sorted(config.tiers.items())
+        },
+        "thresholds": {
+            name: float(value)
+            for name, value in sorted(config.thresholds.items())
+        },
+        "timeouts": {
+            name: int(value)
+            for name, value in sorted(config.timeouts.items())
+        },
+        "device_tolerance": float(config.device_tolerance),
+        "bootstrap_rounds": int(config.bootstrap_rounds),
+    }
 
 
 class Campaign:
@@ -80,7 +108,16 @@ class Campaign:
         tier: str,
         config: EvaluationConfig | None = None,
     ) -> SeedReservation:
-        tier_config = (config or load_config(None)).tier(tier)
+        active_config = config or load_config(None)
+        policy = _evaluation_policy(active_config)
+        if bool(self.manifest.get("thresholds_locked", False)):
+            locked_policy = self.manifest.get("locked_evaluation_policy")
+            if locked_policy != policy:
+                raise ValueError(
+                    "evaluation policy changed after the first holdout; "
+                    "start a new campaign"
+                )
+        tier_config = active_config.tier(tier)
         if split == "dev":
             stored = [int(seed) for seed in self.manifest.get("dev_seeds", [])]
             if len(stored) < tier_config.dev_seeds:
@@ -105,12 +142,23 @@ class Campaign:
             seeds = tuple(self._derive_seeds(attempt, tier_config.holdout_seeds))
             commitment = hmac.new(self.secret, json.dumps(list(seeds), separators=(",", ":")).encode("utf-8"), hashlib.sha256).hexdigest()
             self.manifest["holdout_uses"] = attempt
+            self.manifest["locked_evaluation_policy"] = policy
             self.manifest["thresholds_locked"] = True
         else:
             raise ValueError("split must be dev or holdout")
-        self.manifest["runs"].append({"split": split, "tier": tier, "attempt": attempt, "seed_commitment": commitment, "status": "reserved"})
+        reservation_id = secrets.token_hex(8)
+        self.manifest["runs"].append(
+            {
+                "reservation_id": reservation_id,
+                "split": split,
+                "tier": tier,
+                "attempt": attempt,
+                "seed_commitment": commitment,
+                "status": "reserved",
+            }
+        )
         self._save()
-        return SeedReservation(split, tier, seeds, attempt, commitment)
+        return SeedReservation(split, tier, seeds, attempt, commitment, reservation_id)
 
     def _derive_seeds(self, attempt: int, count: int) -> list[int]:
         values: list[int] = []
@@ -122,7 +170,7 @@ class Campaign:
 
     def finish(self, reservation: SeedReservation, status: str, report: str | None) -> None:
         for entry in reversed(self.manifest["runs"]):
-            if entry["seed_commitment"] == reservation.commitment:
+            if entry.get("reservation_id") == reservation.reservation_id:
                 entry["status"] = status
                 if report is not None:
                     entry["report"] = str(report)

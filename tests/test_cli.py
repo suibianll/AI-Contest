@@ -71,3 +71,25 @@ def test_device_consistency_gate_compares_paired_scores() -> None:
 
     assert _device_consistent(gpu, TrackReport("passed", "cpu", True, (close,), TimingResult(1.0, 1.0)), 0.005)
     assert not _device_consistent(gpu, TrackReport("passed", "cpu", True, (far,), TimingResult(1.0, 1.0)), 0.005)
+
+
+
+def test_device_consistency_allows_isolated_roundoff_amplification() -> None:
+    gpu_cases = tuple(
+        CaseResult(
+            "seed-00", "linear", "balanced", index, False, "fp32",
+            1.0, 0.5, 0.5,
+        )
+        for index in range(10)
+    )
+    cpu_cases = tuple(
+        CaseResult(
+            "seed-00", "linear", "balanced", index, False, "fp32",
+            1.0, 0.5, 0.513 if index == 0 else 0.5,
+        )
+        for index in range(10)
+    )
+    gpu = TrackReport("passed", "cuda", False, gpu_cases, TimingResult(1.0, 1.0))
+    cpu = TrackReport("passed", "cpu", True, cpu_cases, TimingResult(1.0, 1.0))
+
+    assert _device_consistent(gpu, cpu, 0.005)

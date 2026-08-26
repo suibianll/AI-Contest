@@ -12,6 +12,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
@@ -30,6 +31,7 @@ class WorkerRequest:
     device: str
     compute_dtypes: tuple[str, ...]
     causal_modes: tuple[bool, ...]
+    split: str = "dev"
     config_path: str | None = None
 
     def to_jsonable(self) -> dict[str, Any]:
@@ -40,6 +42,7 @@ class WorkerRequest:
             "device": self.device,
             "compute_dtypes": list(self.compute_dtypes),
             "causal_modes": list(self.causal_modes),
+            "split": self.split,
             "config_path": self.config_path,
         }
 
@@ -170,6 +173,7 @@ def _run_track(
     timeout_seconds: float,
     authoritative_timing: bool,
     config_path: Path | None = None,
+    split: str = "dev",
 ) -> TrackReport:
     torch_device = torch.device(device)
     all_cases: list[CaseResult] = []
@@ -177,7 +181,12 @@ def _run_track(
     player_seconds = 0.0
     wall_seconds = 0.0
     metadata: dict[str, Any] = {"candidate": str(candidate.resolve()), "seed_count": len(seeds)}
+    track_start = time.monotonic()
     for seed_index, seed in enumerate(seeds):
+        remaining = float(timeout_seconds) - (time.monotonic() - track_start)
+        if remaining <= 0.0:
+            errors.append(f"track timed out before seed {seed}")
+            break
         request = WorkerRequest(
             candidate=str(candidate.resolve()),
             seed=int(seed),
@@ -185,9 +194,10 @@ def _run_track(
             device=str(torch_device),
             compute_dtypes=tuple(compute_dtypes),
             causal_modes=tuple(bool(value) for value in causal_modes),
+            split=split,
             config_path=str(config_path.resolve()) if config_path is not None else None,
         )
-        response = run_isolated(request, timeout_seconds)
+        response = run_isolated(request, remaining)
         if response.status != "passed":
             errors.append(f"seed {seed}: {response.status}: {response.error}".strip())
             continue
@@ -217,9 +227,10 @@ def run_cpu_track(
     causal_modes: Sequence[bool],
     timeout_seconds: float,
     config_path: Path | None = None,
+    split: str = "dev",
 ) -> TrackReport:
     return _run_track(
-        Path(candidate), seeds, tier, "cpu", compute_dtypes, causal_modes, timeout_seconds, True, config_path
+        Path(candidate), seeds, tier, "cpu", compute_dtypes, causal_modes, timeout_seconds, True, config_path, split
     )
 
 
@@ -232,9 +243,10 @@ def run_accuracy_track(
     causal_modes: Sequence[bool],
     timeout_seconds: float,
     config_path: Path | None = None,
+    split: str = "dev",
 ) -> TrackReport:
     return _run_track(
-        Path(candidate), seeds, tier, device, compute_dtypes, causal_modes, timeout_seconds, False, config_path
+        Path(candidate), seeds, tier, device, compute_dtypes, causal_modes, timeout_seconds, False, config_path, split
     )
 
 
