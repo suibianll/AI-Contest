@@ -100,6 +100,30 @@ Linear 与 B0 完全一致。A3/L1 开启时的数值见各自步骤小节。
   量级，MHA causal 不允许再出现 C2 的上下文重置损失。
 - 状态：`in-progress`。
 
+### C3 固定矩阵结论
+
+- offset 0 amax6：Linear mean `0.5668→0.5779`（`+1.10pp`）；q/k/v/o/fc/proj
+  六项分别 `+0.58/+1.11/+0.24/+0.96/+0.49/+3.24pp`。
+- amax6 offset 97/193/389：Linear mean 分别约
+  `+1.10/+0.87/+0.83pp`；Attention 与 C1 一致。
+- amax4/pow2：Linear mean 分别约 `+1.23/+0.92pp`；36 个配置分项中
+  35 个提升，唯一负项为 pow2 proj `-0.17pp`，未超过非目标容差。
+- GQA offset 193 Attention 与 C1 完全一致（`0.4169/0.4928`）。
+- CPU algorithm-stage `54.29s`，相对 C1 `54.72s` 比率 `0.992`；新增机制
+  仅在 weight calibration，dynamic 时间不增加。
+- 状态：`local-champion`，源码与完整本地结果归档为 v006。
+
+## C4 预注册：8×8 coverage 10%
+
+- Candidate ID：`C4`
+- Parent：`C3`，SHA256
+  `413B1C8F4FEE342F2E2A2AD73DE80D4E55237828BB56D4D89E647B5C6DF59AA2`
+- 唯一变化：8×8 top-loss refinement coverage 从 5% 提到 10%，其余算法、
+  sweeps、cap、Attention 和动态路径不变。
+- 开发门：offset 0 Linear mean 相对 C3 至少 `+0.2pp`，Attention 不变，
+  CPU ratio ≤1.15；通过后才运行固定矩阵。
+- 状态：`planned`。
+
 ### C2a 开发结论
 
 - offset 0：MHA causal/non-causal 相对 C1 为 `-0.53pp/-0.52pp`；GQA

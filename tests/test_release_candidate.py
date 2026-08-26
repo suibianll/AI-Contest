@@ -70,10 +70,10 @@ def validate_state(value) -> tuple[int, int]:
 def test_release_flags_are_a1_only() -> None:
     solution = load_module("release_flags", ROOT / "solution.py")
     assert solution._ATTN_OUTPUT_SELECTOR is True
-    assert solution._ATTN_QUERY_SEGMENT_CVAR is True
     assert solution._ATTN_H64 is False
     assert solution._V_IMPORTANCE_CANDIDATES is False
     assert solution._L1_DATA_DRIVEN_SCALE is False
+    assert solution._WEIGHT_QUADRATIC8 is True
 
 
 def test_submission_has_no_file_io_or_debug_output() -> None:
@@ -208,22 +208,29 @@ def test_local_holdout_offsets_are_fixed_and_distinct() -> None:
     assert len({tuple(window.tolist()) for window in windows}) == len(windows)
 
 
-def test_segment_cvar_penalizes_tail_instability() -> None:
-    solution = load_module("segment_cvar", ROOT / "solution.py")
-    stable = solution._attention_robust_objective(
-        [0.90, 0.90, 0.90, 0.90], [0.90, 0.90, 0.90, 0.90]
+def test_weight_quadratic8_refinement_is_non_increasing() -> None:
+    solution = load_module("weight_quadratic8", ROOT / "solution.py")
+    torch.manual_seed(808)
+    dense = torch.randn(4, 64)
+    params = solution._dense_to_hif4(
+        dense,
+        search_offsets=(-1, 1),
+        max_refine_ratio=1.0,
     )
-    unstable = solution._attention_robust_objective(
-        [0.70, 0.70, 0.70, 1.40], [0.70, 0.70, 0.70, 1.40]
+    factor = torch.randn(64, 64)
+    covariance = factor.T @ factor + 0.1 * torch.eye(64)
+    gram8 = solution._flat_group_gram8(covariance, 64)
+    before = solution._dequantize_hif4(params)
+    refined = solution._refine_weight_groups8(dense, params, gram8)
+    after = solution._dequantize_hif4(refined)
+    grams = gram8.unsqueeze(0).expand(4, -1, -1, -1).reshape(-1, 8, 8)
+    before_error = (before - dense).reshape(-1, 8)
+    after_error = (after - dense).reshape(-1, 8)
+    before_loss = torch.einsum(
+        "ni,nij,nj->", before_error, grams, before_error
     )
-    assert sum([0.70, 0.70, 0.70, 1.40]) / 4 < 0.90
-    assert unstable > stable
-
-
-def test_query_segments_preserve_full_attention_context() -> None:
-    solution = load_module("query_segment_cvar", ROOT / "solution.py")
-    output = torch.arange(32, dtype=torch.float32).reshape(8, 4)
-    reference = output.clone()
-    reference[4:] += 2.0
-    cases = solution._attention_output_mse_cases(output, reference)
-    assert cases == [0.0, 0.0, 4.0, 4.0]
+    after_loss = torch.einsum(
+        "ni,nij,nj->", after_error, grams, after_error
+    )
+    assert after_loss <= before_loss + 1.0e-5
+    validate_state(refined)

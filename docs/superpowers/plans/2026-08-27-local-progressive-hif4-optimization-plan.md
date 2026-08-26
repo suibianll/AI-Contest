@@ -127,13 +127,13 @@ robust_attention_objective =
 
 ### C3：Linear top-K 8×8 二阶
 
-只有 C2 结论归档后开始。沿用现有 4×4 二阶，在高损失的少量 8 通道组上使用 `H·e` 增量更新；按 8×8→16×16 渐进，不直接进入全量 64×64 GPTQ。
+状态：`local-champion`。沿用现有 4×4 二阶，在最高损失 5% 的 8 通道组上使用 `H·e` 增量更新；固定矩阵 Linear mean 提升 `+0.83pp` 至 `+1.23pp`，Attention 不变，CPU time ratio `0.992`。
 
 目标：提升 `fc/proj/o`，Attention 相对 C2 不变，CPU 时间比不超过 1.15。
 
-### C4：组合后时间精简
+### C4：8×8 coverage 10%
 
-只对 C2/C3 已证明的机制做机械合并和时间精简；关闭 permutation bases 等时间候选必须独立配对，不能与新精度机制同时进入。
+只把 C3 的 top-loss coverage 从 5% 提高到 10%，验证收益是否仍随覆盖率增长；其余机制和 cap 不变。若边际收益不足 `+0.2pp`，保持 C3 并结束 coverage 扩展。组合后的时间精简顺延为后续独立候选。
 
 ### 暂缓
 
