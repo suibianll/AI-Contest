@@ -31,12 +31,18 @@ _ATTN_TRUE_TOKENS = 64
 _ATTN_FLAT_PRESSURE_SPAN = 0.75
 
 # E6M2 code offsets.  Offset +2 is roughly the E6M2 analogue of the
-# alternative 1.5x scale mode seen in microscaling scale search.
-_DYNAMIC_OFFSETS = (-1, 2)
-_WEIGHT_OFFSETS = (-1, 1, 2)
+# alternative 1.5x scale mode seen in microscaling scale search.  The
+# extended set is attempted first; when its calibrated true-metric gate
+# fails, the conservative set is the fallback stored per case.
+_DYNAMIC_OFFSETS = (-2, -1, 1, 2, 3)
+_DYNAMIC_OFFSET_SETS = ((-2, -1, 1, 2, 3), (-1, 2))
+# The batched candidate solve materializes [candidates, blocks, 8, 2, 4]
+# temporaries; beyond this element budget the sequential loop is used.
+_BATCH_SOLVE_MAX_CANDIDATES = 32_768
+_WEIGHT_OFFSETS = (-2, -1, 1, 2, 3)
 _DYNAMIC_TOP_RANKS = (2,)
-_LINEAR_DYNAMIC_OFFSETS = (-1, 1, 2, 3)
-_LINEAR_FAST_OFFSETS = (-1, 2)
+_LINEAR_DYNAMIC_OFFSETS = (-2, -1, 1, 2, 3)
+_LINEAR_FAST_OFFSETS = (-2, -1, 2)
 _LINEAR_DYNAMIC_TOP_RANKS: tuple[int, ...] = ()
 _WEIGHT_TOP_RANKS: tuple[int, ...] = ()
 _LINEAR_FULL_SEARCH_ELEMENTS = 262_144
@@ -288,19 +294,15 @@ def _center_attention_k(
 
 def _attention_heavy_tail_guard(
     calib_qkv_list: Sequence[dict[str, Any]],
-    head_dim: int,
 ) -> bool:
     """Detect a broad K tail before enabling midrange centering.
 
     Midrange centering can amplify block-scale error for long, heavy-tailed
     heads. The guard uses only calibration K magnitudes and no scenario name;
-    it is deliberately restricted to larger heads where the observed failure
-    is stable and the extra quantile cost is negligible relative to attention
-    calibration.
+    it relies only on the observed distribution, so the same guard generalizes
+    across head sizes instead of treating shape as a scenario label.
     """
 
-    if int(head_dim) < 128:
-        return False
     samples: list[torch.Tensor] = []
     for sample in calib_qkv_list:
         k = _dequantize_nvfp4_float32(*sample["k"])
@@ -430,6 +432,89 @@ def _solve_exact_hierarchy(
     scale_lv2 = 1.0 + e2.to(torch.float32)
     scale_lv3 = 1.0 + e3.to(torch.float32)
     return block_loss, scale_lv2, scale_lv3, mantissa
+
+
+def _solve_hierarchy_candidates_batched(
+    x_abs: torch.Tensor,
+    candidate_codes: list[torch.Tensor],
+    importance: Optional[torch.Tensor],
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    """Exactly solve lv2/lv3 for all candidate scales in one batched pass.
+
+    Numerically identical to evaluating ``_solve_exact_hierarchy`` once per
+    candidate and keeping the first strictly-better candidate (ties keep the
+    earliest candidate, matching the sequential update order).
+
+    Args:
+        x_abs: ``[num_blocks, 8, 2, 4]`` absolute values.
+        candidate_codes: list of ``[num_blocks]`` E6M2 codes.
+        importance: optional tensor with the same shape as ``x_abs``.
+
+    Returns:
+        (loss [num_blocks], scale [num_blocks], scale_lv2 [num_blocks, 8],
+         scale_lv3 [num_blocks, 8, 2], mantissa [num_blocks, 8, 2, 4]).
+    """
+
+    code_all = torch.stack(candidate_codes, dim=0)
+    scale_all = _e6m2_decode(code_all)
+    num_candidates = int(code_all.shape[0])
+    num_blocks = int(x_abs.shape[0])
+
+    losses: list[torch.Tensor] = []
+    for total_exponent in (0, 1, 2):
+        local_scale = (
+            scale_all[:, :, None, None, None] * float(1 << total_exponent)
+        )
+        mant_code = torch.round(
+            x_abs[None] * (4.0 / local_scale)
+        ).clamp_(0.0, 7.0)
+        mantissa = mant_code * 0.25
+        error = (x_abs[None] - mantissa * local_scale).square()
+        if importance is not None:
+            error = error * importance[None]
+        losses.append(error.sum(dim=-1))
+
+    loss_0, loss_1, loss_2 = losses
+    choose_01 = loss_1 < loss_0
+    choose_12 = loss_2 < loss_1
+    cost_e2_0 = torch.minimum(loss_0, loss_1).sum(dim=-1)
+    cost_e2_1 = torch.minimum(loss_1, loss_2).sum(dim=-1)
+    e2 = cost_e2_1 < cost_e2_0
+    e3 = torch.where(e2[..., None], choose_12, choose_01)
+    block_loss = torch.where(e2, cost_e2_1, cost_e2_0).sum(dim=-1)
+
+    candidate_min = block_loss.min(dim=0).values
+    is_min = block_loss == candidate_min[None, :]
+    order = torch.arange(
+        num_candidates, dtype=torch.int64, device=code_all.device
+    )
+    pick = torch.where(is_min, order[:, None], num_candidates)
+    candidate_index = pick.min(dim=0).values
+
+    flat_index = candidate_index[None]
+    scale_sel = scale_all.gather(0, flat_index.expand_as(scale_all))[0]
+    e2_sel = e2.gather(
+        0,
+        flat_index[..., None].expand(-1, -1, x_abs.shape[1]),
+    )[0]
+    e3_sel = e3.gather(
+        0,
+        flat_index[..., None, None].expand(
+            -1, -1, x_abs.shape[1], x_abs.shape[2]
+        ),
+    )[0]
+
+    scale_lv2 = 1.0 + e2_sel.to(torch.float32)
+    scale_lv3 = 1.0 + e3_sel.to(torch.float32)
+    denominator = (
+        scale_sel[:, None, None, None]
+        * scale_lv2[:, :, None, None]
+        * scale_lv3[:, :, :, None]
+    )
+    mantissa = (
+        torch.round(x_abs * (4.0 / denominator)).clamp_(0.0, 7.0) * 0.25
+    )
+    return candidate_min, scale_sel, scale_lv2, scale_lv3, mantissa
 
 
 def _pack_hif4_params(
@@ -632,20 +717,43 @@ def _dense_to_hif4(
                 _e6m2_encode_nearest(rank_scale).to(torch.int64)
             )
 
-    for candidate_code in candidate_codes:
-        candidate_scale = _e6m2_decode(candidate_code)
-        candidate_loss, candidate_lv2, candidate_lv3, candidate_mantissa = (
-            _solve_exact_hierarchy(x_hard, candidate_scale, importance_hard)
+    if candidate_codes and (
+        len(candidate_codes) * int(candidate_codes[0].numel())
+        <= _BATCH_SOLVE_MAX_CANDIDATES
+    ):
+        # Batched solve: one vectorized pass over all candidate scales with
+        # semantics identical to the sequential loop below (ties keep the
+        # earliest candidate, and the standard path always wins ties).
+        cand_loss, cand_scale, cand_lv2, cand_lv3, cand_mantissa = (
+            _solve_hierarchy_candidates_batched(
+                x_hard, candidate_codes, importance_hard
+            )
         )
-
-        improve = candidate_loss < best_loss
-        best_loss = torch.where(improve, candidate_loss, best_loss)
-        best_scale = torch.where(improve, candidate_scale, best_scale)
-        best_lv2 = torch.where(improve[:, None], candidate_lv2, best_lv2)
-        best_lv3 = torch.where(improve[:, None, None], candidate_lv3, best_lv3)
+        improve = cand_loss < best_loss
+        best_loss = torch.where(improve, cand_loss, best_loss)
+        best_scale = torch.where(improve, cand_scale, best_scale)
+        best_lv2 = torch.where(improve[:, None], cand_lv2, best_lv2)
+        best_lv3 = torch.where(improve[:, None, None], cand_lv3, best_lv3)
         best_mantissa = torch.where(
-            improve[:, None, None, None], candidate_mantissa, best_mantissa
+            improve[:, None, None, None], cand_mantissa, best_mantissa
         )
+    else:
+        for candidate_code in candidate_codes:
+            candidate_scale = _e6m2_decode(candidate_code)
+            candidate_loss, candidate_lv2, candidate_lv3, candidate_mantissa = (
+                _solve_exact_hierarchy(x_hard, candidate_scale, importance_hard)
+            )
+
+            improve = candidate_loss < best_loss
+            best_loss = torch.where(improve, candidate_loss, best_loss)
+            best_scale = torch.where(improve, candidate_scale, best_scale)
+            best_lv2 = torch.where(improve[:, None], candidate_lv2, best_lv2)
+            best_lv3 = torch.where(
+                improve[:, None, None], candidate_lv3, best_lv3
+            )
+            best_mantissa = torch.where(
+                improve[:, None, None, None], candidate_mantissa, best_mantissa
+            )
 
     margin = max(0.0, min(float(accept_margin), 0.99))
     accept = best_loss <= ((1.0 - margin) * standard_loss_hard)
@@ -1037,8 +1145,8 @@ def hif4_calibration_and_quantize_weight(
             _LINEAR_DYNAMIC_TOP_RANKS, dtype=torch.int8, device="cpu"
         ),
         "error_threshold": 1.0e-7,
-        "accept_margin": 0.02,
-        "max_refine_ratio": 0.20,
+        "accept_margin": 0.005,
+        "max_refine_ratio": 0.40,
         "max_refine_blocks": 32_768,
         "in_features": int(in_features),
         "version": 8,
@@ -1238,12 +1346,16 @@ def _attention_true_metrics(
     k_importance: Optional[torch.Tensor] = None,
     refine_mode: int = 0,
     refine_ratios: Optional[tuple[float, float, float]] = None,
+    search_offsets: Optional[tuple[int, ...]] = None,
 ) -> tuple[float, tuple[float, ...]]:
     """Evaluate real Attention MSE under causal and non-causal masks.
 
     refine_mode: 0 = standard transformed quantization, 1 = refine Q/K only,
     2 = refine Q/K/V. Every sample/mask pair is a separate risk case.
     """
+
+    if search_offsets is None:
+        search_offsets = _DYNAMIC_OFFSETS
 
     case_scores: list[float] = []
     if refine_ratios is None:
@@ -1270,7 +1382,7 @@ def _attention_true_metrics(
             q_params = _dense_to_hif4(
                 q_transformed,
                 importance=q_importance,
-                search_offsets=_DYNAMIC_OFFSETS,
+                search_offsets=search_offsets,
                 search_top_ranks=_DYNAMIC_TOP_RANKS,
                 error_threshold=1.0e-7,
                 accept_margin=0.03,
@@ -1283,7 +1395,7 @@ def _attention_true_metrics(
             k_params = _dense_to_hif4(
                 k_transformed,
                 importance=k_importance,
-                search_offsets=_DYNAMIC_OFFSETS,
+                search_offsets=search_offsets,
                 search_top_ranks=_DYNAMIC_TOP_RANKS,
                 error_threshold=1.0e-7,
                 accept_margin=0.03,
@@ -1295,7 +1407,7 @@ def _attention_true_metrics(
         if v_ratio > 0.0:
             v_params = _dense_to_hif4(
                 v,
-                search_offsets=_DYNAMIC_OFFSETS,
+                search_offsets=search_offsets,
                 search_top_ranks=_DYNAMIC_TOP_RANKS,
                 error_threshold=1.0e-7,
                 accept_margin=0.01,
@@ -1569,9 +1681,7 @@ def hif4_calibration_attention(
     flat_attention_profile = bool(
         float(attention_pressure_span) < _ATTN_FLAT_PRESSURE_SPAN
     )
-    heavy_tail_guard = _attention_heavy_tail_guard(
-        calib_qkv_list, head_dim
-    )
+    heavy_tail_guard = _attention_heavy_tail_guard(calib_qkv_list)
     identity_d = torch.ones(
         kv_num_heads,
         head_dim,
@@ -1845,33 +1955,42 @@ def hif4_calibration_attention(
     )
     best_refine_metrics = refine_baseline
     best_refine_mode = 0
-    for candidate_refine_mode in (1, 2):
-        candidate_refine_metrics = _attention_true_metrics(
-            q_true_samples,
-            k_true_samples,
-            v_true_samples,
-            best_d,
-            q_num_heads,
-            kv_num_heads,
-            head_dim,
-            best_q_perm,
-            best_k_perm,
-            best_center_mode,
-            q_importance=h_k_for_q,
-            k_importance=h_q_for_k,
-            refine_mode=candidate_refine_mode,
-        )
-        if (
-            candidate_refine_metrics[0] < best_refine_metrics[0]
-            and _candidate_is_safe(
-                candidate_refine_metrics,
-                refine_baseline,
-                min_mean_improvement=0.005,
-                worst_tolerance=0.005,
+    # Unvalidated offset sets must never leak into the runtime state: start
+    # from the conservative set and only keep an extended set that was
+    # actually accepted by the refinement gate below.
+    best_refine_offsets = _DYNAMIC_OFFSET_SETS[-1]
+    for candidate_offsets in _DYNAMIC_OFFSET_SETS:
+        if best_refine_mode > 0:
+            break
+        for candidate_refine_mode in (1, 2):
+            candidate_refine_metrics = _attention_true_metrics(
+                q_true_samples,
+                k_true_samples,
+                v_true_samples,
+                best_d,
+                q_num_heads,
+                kv_num_heads,
+                head_dim,
+                best_q_perm,
+                best_k_perm,
+                best_center_mode,
+                q_importance=h_k_for_q,
+                k_importance=h_q_for_k,
+                refine_mode=candidate_refine_mode,
+                search_offsets=candidate_offsets,
             )
-        ):
-            best_refine_metrics = candidate_refine_metrics
-            best_refine_mode = candidate_refine_mode
+            if (
+                candidate_refine_metrics[0] < best_refine_metrics[0]
+                and _candidate_is_safe(
+                    candidate_refine_metrics,
+                    refine_baseline,
+                    min_mean_improvement=0.005,
+                    worst_tolerance=0.005,
+                )
+            ):
+                best_refine_metrics = candidate_refine_metrics
+                best_refine_mode = candidate_refine_mode
+                best_refine_offsets = candidate_offsets
 
     best_refine_ratios = (
         0.08 if best_refine_mode >= 1 else 0.0,
@@ -1884,48 +2003,55 @@ def hif4_calibration_attention(
     # high-budget QKV candidate captures nearly all of the score gain of a
     # larger grid with one third of its extra calibration work.  It may replace
     # the fallback only when every case is non-worse, both mask domains improve,
-    # and the gain survives a small online-cost penalty.
+    # and the gain survives a small online-cost penalty.  Each ratio candidate
+    # is evaluated under every offset set: the extended set can degrade a
+    # candidate's per-case profile enough to fail the worst-case gate even
+    # when the conservative set would have passed, so the best gate-passing
+    # (ratios, offsets) combination wins on objective value.
     escalation_baseline = best_refine_metrics
     best_budget_objective = best_refine_metrics[0] + 0.001 * sum(
         best_refine_ratios
     )
-    for candidate_ratios in ((0.12, 0.16, 0.10),):
-        candidate_metrics = _attention_true_metrics(
-            q_true_samples,
-            k_true_samples,
-            v_true_samples,
-            best_d,
-            q_num_heads,
-            kv_num_heads,
-            head_dim,
-            best_q_perm,
-            best_k_perm,
-            best_center_mode,
-            q_importance=h_k_for_q,
-            k_importance=h_q_for_k,
-            refine_ratios=candidate_ratios,
-        )
-        candidate_objective = candidate_metrics[0] + 0.001 * sum(
-            candidate_ratios
-        )
-        if (
-            candidate_objective < best_budget_objective
-            and _candidate_is_safe(
-                candidate_metrics,
-                escalation_baseline,
-                min_mean_improvement=0.01,
-                worst_tolerance=0.0,
+    for candidate_ratios in ((0.12, 0.16, 0.10), (0.25, 0.30, 0.20)):
+        for candidate_offsets in _DYNAMIC_OFFSET_SETS:
+            candidate_metrics = _attention_true_metrics(
+                q_true_samples,
+                k_true_samples,
+                v_true_samples,
+                best_d,
+                q_num_heads,
+                kv_num_heads,
+                head_dim,
+                best_q_perm,
+                best_k_perm,
+                best_center_mode,
+                q_importance=h_k_for_q,
+                k_importance=h_q_for_k,
+                refine_ratios=candidate_ratios,
+                search_offsets=candidate_offsets,
             )
-            and _attention_mask_consensus(
-                candidate_metrics,
-                escalation_baseline,
-                min_improvement=0.002,
+            candidate_objective = candidate_metrics[0] + 0.001 * sum(
+                candidate_ratios
             )
-        ):
-            best_refine_metrics = candidate_metrics
-            best_refine_ratios = candidate_ratios
-            best_refine_mode = 3
-            best_budget_objective = candidate_objective
+            if (
+                candidate_objective < best_budget_objective
+                and _candidate_is_safe(
+                    candidate_metrics,
+                    escalation_baseline,
+                    min_mean_improvement=0.01,
+                    worst_tolerance=0.0,
+                )
+                and _attention_mask_consensus(
+                    candidate_metrics,
+                    escalation_baseline,
+                    min_improvement=0.002,
+                )
+            ):
+                best_refine_metrics = candidate_metrics
+                best_refine_ratios = candidate_ratios
+                best_refine_mode = 3
+                best_refine_offsets = candidate_offsets
+                best_budget_objective = candidate_objective
 
     q_refine_ratio, k_refine_ratio, v_refine_ratio = best_refine_ratios
     # Keep calibration-derived importance and smoothing, but avoid applying a
@@ -1936,7 +2062,9 @@ def hif4_calibration_attention(
         0 if heavy_tail_guard and best_center_mode == 2 else best_center_mode
     )
 
-    offsets = torch.tensor(_DYNAMIC_OFFSETS, dtype=torch.int8, device="cpu")
+    offsets = torch.tensor(
+        best_refine_offsets, dtype=torch.int8, device="cpu"
+    )
     top_ranks = torch.tensor(
         _DYNAMIC_TOP_RANKS, dtype=torch.int8, device="cpu"
     )
@@ -1970,7 +2098,7 @@ def hif4_calibration_attention(
         "head_dim": int(head_dim),
         "refine_mode": int(best_refine_mode),
         "flat_profile": bool(flat_attention_profile),
-        "version": 10,
+        "version": 11,
     }
     k_state = {
         "multiplier": k_multiplier_state,
@@ -1989,7 +2117,7 @@ def hif4_calibration_attention(
         "refine_mode": int(best_refine_mode),
         "flat_profile": bool(flat_attention_profile),
         "heavy_tail_guard": bool(heavy_tail_guard),
-        "version": 10,
+        "version": 11,
     }
     v_state = {
         "offsets": offsets.clone(),
@@ -2004,7 +2132,7 @@ def hif4_calibration_attention(
         "refine_mode": int(best_refine_mode),
         "flat_profile": bool(flat_attention_profile),
         "heavy_tail_guard": bool(heavy_tail_guard),
-        "version": 10,
+        "version": 11,
     }
     return {"q_state": q_state, "k_state": k_state, "v_state": v_state}
 
