@@ -145,6 +145,12 @@ robust_attention_objective =
 
 只把 C5 的 16×16 coverage 从 2% 提到 4%。若 offset 0 相对 C5 不足 `+0.2pp`，结束 16×16 coverage 扩展并保持 C5 Champion。
 
+执行结果：`local-accepted-not-promoted`，Linear mean 仅 `+0.063pp`；16×16 coverage 固定在 C5 的 2%。
+
+### C7：top-K 32×32 Linear 二阶
+
+在 C5 上只增加最高损失 1% 的连续 32 通道 `H·e` 更新，cap 2048、单 sweep。它验证新的相关性尺度，不扩大已饱和的 8×8/16×16 coverage；未达到 `+0.2pp` 即停止并归档。
+
 ### 暂缓
 
 - A2 H64：聚合有增益但尾部和 GQA 安全轨不足，待 C2 稳定后重新立项；
