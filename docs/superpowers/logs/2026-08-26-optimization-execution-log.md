@@ -124,6 +124,25 @@ Linear 与 B0 完全一致。A3/L1 开启时的数值见各自步骤小节。
   CPU ratio ≤1.15；通过后才运行固定矩阵。
 - 状态：`planned`。
 
+### C4 开发结论
+
+- offset 0 Linear mean 相对 C3 约 `+0.092pp`；q/k/v/o 分别
+  `+0.15/+0.15/+0.11/+0.14pp`，fc/proj 均为 `0.00pp`。
+- Attention 精确保持 C3，CUDA algorithm-stage `20.02s`。
+- 状态：`local-accepted-not-promoted`。正增益低于预注册 `+0.2pp` 门槛，
+  不运行固定回归矩阵；C3 保持 Champion，v007 记录覆盖率饱和证据。
+
+## C5 预注册：top-K 16×16 Linear 二阶
+
+- Candidate ID：`C5`
+- Parent：`C3`，SHA256
+  `413B1C8F4FEE342F2E2A2AD73DE80D4E55237828BB56D4D89E647B5C6DF59AA2`
+- 唯一机制：保留 C3 的 5% 8×8 refinement，再对最高损失 2% 的连续
+  16 通道组执行一轮 16×16 `H·e` 坐标更新；scale/lv2/lv3 固定。
+- 开发门：offset 0 Linear mean 相对 C3 至少 `+0.2pp`，Attention 不变，
+  CUDA/CPU ratio ≤1.15；通过后运行固定矩阵。
+- 状态：`planned`。
+
 ### C2a 开发结论
 
 - offset 0：MHA causal/non-causal 相对 C1 为 `-0.53pp/-0.52pp`；GQA
