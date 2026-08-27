@@ -690,6 +690,20 @@ Linear 与 B0 完全一致。A3/L1 开启时的数值见各自步骤小节。
 - 验证：`.venv` pytest 13/13 通过；静态合规测试
   （无 numpy / 文件 IO / 调试输出）通过。
 
+### C21-C §4.2 开发记录（2026-08-27）
+
+- 新建 `evaluator/reference_hif4.py`：从 C21 复制并冻结标准 HiF4
+  codec（amax/7 BF16 中间、E6M2、lv2/lv3 阈值、mantissa、canonical zero），
+  不含 offset/refinement，绝不调用候选 `_dense_to_hif4`。
+- `evaluator/real_data_eval.py` 的 `std_hif4` 改用冻结 reference codec
+  （标准分母与候选代码解耦；candidate 修改 `_dense_to_hif4` 不再可能
+  影响 standard 输出）。
+- 新建 `tests/test_reference_hif4.py`（5 用例）：与 solution 标准路径
+  逐位一致（含非有限值/极值/批量前缀形状）、确定性、非法形状拒绝、
+  canonical 零符号与冻结层级形状。
+- 验证：pytest 18/18 通过。后续 candidate 变更导致的 standard 输出
+  逐位不变由结构保证（§4.6 验收时再以固定回归分数复核）。
+
 ## C3 预注册：top-K 8×8 Linear 二阶
 
 - Candidate ID：`C3`

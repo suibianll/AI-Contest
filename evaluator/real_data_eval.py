@@ -14,6 +14,10 @@ import torch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from nvfp4_sim import nvfp4_encode  # noqa: E402
+from reference_hif4 import (  # noqa: E402
+    decode_standard_hif4,
+    encode_standard_hif4,
+)
 
 
 TEXT = (
@@ -79,8 +83,11 @@ def load_solution(path: Path) -> ModuleType:
 
 
 def std_hif4(solution: ModuleType, dense: torch.Tensor) -> torch.Tensor:
-    params = solution._dense_to_hif4(dense, search_offsets=())
-    return solution._dequantize_hif4(params).to(torch.float32)
+    # The standard denominator must come from the frozen reference codec,
+    # never from the candidate's `_dense_to_hif4` (26000 plan §4.2).
+    del solution  # unused; kept for call-site compatibility
+    params = encode_standard_hif4(dense)
+    return decode_standard_hif4(params).to(torch.float32)
 
 
 def causal_attention(
