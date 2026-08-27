@@ -252,6 +252,20 @@ _ACTIVATION_QUADRATIC8_GATE_MAX_FEATURES = 1024
 _ACTIVATION_QUADRATIC8_GATE_MIN_IMPROVEMENT = 5.0e-4
 _ACTIVATION_QUADRATIC8_GATE_WORST_TOLERANCE = 1.0e-3
 
+# C34: activation-side 16-channel quadratic refinement (2026-08-28).
+# The weight side got full-64 refinement but the dynamic activation path
+# only had 8-channel groups; cap-oracle showed the activation encoding is
+# one of the two dominant error sources.  A refiner over 16-channel groups
+# (adjacent 8-groups) closes part of that gap.  Restricted to narrow layers
+# (channels <= 1024) to bound the stored gram16 state on wide FFNs, and to
+# a low top-loss ratio to bound the per-sample dynamic cost.
+_ACTIVATION_QUADRATIC16 = False  # REJECTED 2026-08-28: -3.43pp real-data
+_ACTIVATION_QUADRATIC16_MAX_FEATURES = 1024
+_ACTIVATION_QUADRATIC16_MAX_RATIO = 0.10
+_ACTIVATION_QUADRATIC16_MAX_GROUPS = 4096
+_ACTIVATION_QUADRATIC16_SWEEPS = 1
+_ACTIVATION_QUADRATIC16_ACCEPT_MARGIN = 1.0e-5
+
 # Permutation search bases.  The initial hierarchy-aware ordering combines the
 # paired operands via max(log range); real-data diagnostics show the operand
 # with the larger quantization burden (usually the weight/K side) often yields
@@ -676,6 +690,129 @@ def _refine_weight_groups16(
     )
     improve = final_loss < initial_loss * (
         1.0 - _WEIGHT_QUADRATIC16_ACCEPT_MARGIN
+    )
+    improved_indices = candidates[improve]
+    if int(improved_indices.numel()) == 0:
+        return params
+    improved_q = q_selected[improve]
+    improved_denominator = denominator[improve]
+    improved_codes = torch.round(
+        improved_q / improved_denominator.clamp_min(_EPS) * 4.0
+    ).clamp(-7.0, 7.0)
+
+    refined = dict(params)
+    sign16 = params["sign"].clone().reshape(-1, 16)
+    mant16 = params["mant"].clone().reshape(-1, 16)
+    sign16.index_copy_(0, improved_indices, torch.sign(improved_codes))
+    mant16.index_copy_(0, improved_indices, improved_codes.abs() * 0.25)
+    refined["sign"] = sign16.reshape_as(params["sign"])
+    refined["mant"] = mant16.reshape_as(params["mant"])
+    return refined
+
+
+def _refine_activation_groups16(
+    dense: torch.Tensor,
+    params: dict[str, torch.Tensor],
+    group_gram16: torch.Tensor,
+) -> dict[str, torch.Tensor]:
+    """C34: coordinate-refine top-loss 16-channel activation groups.
+
+    Mirrors the weight-side 16-group refiner, driven by the activation
+    Hessian logits instead of the weight ones.  Activation refinement runs
+    in the per-sample dynamic path, so the ratio is kept low to bound the
+    dynamic cost; wide layers (channels > max_features) skip by design.
+    """
+
+    rows, channels = map(int, (dense.shape[0], dense.shape[1]))
+    if channels % _HIF4_BLOCK_SIZE != 0 or channels % 16 != 0:
+        return params
+    blocks = channels // _HIF4_BLOCK_SIZE
+    expected_grams = blocks * 4
+    if tuple(group_gram16.shape) != (expected_grams, 16, 16):
+        return params
+
+    dense16 = dense.reshape(rows, blocks, 4, 16).reshape(-1, 16)
+    quantized16 = _dequantize_hif4(params).to(torch.float32).reshape(
+        rows, blocks, 4, 16
+    ).reshape(-1, 16)
+    grams = group_gram16.unsqueeze(0).expand(rows, -1, -1, -1).reshape(
+        -1, 16, 16
+    )
+    error = quantized16 - dense16
+    losses = torch.einsum("ni,nij,nj->n", error, grams, error)
+    candidates = torch.nonzero(
+        torch.isfinite(losses) & (losses > _EPS), as_tuple=False
+    ).reshape(-1)
+    if int(candidates.numel()) == 0:
+        return params
+    cap = max(
+        1,
+        int(
+            math.ceil(
+                int(losses.numel()) * _ACTIVATION_QUADRATIC16_MAX_RATIO
+            )
+        ),
+    )
+    cap = min(
+        cap, _ACTIVATION_QUADRATIC16_MAX_GROUPS, int(candidates.numel())
+    )
+    if int(candidates.numel()) > cap:
+        order = torch.topk(
+            losses.index_select(0, candidates), k=cap, largest=True
+        ).indices
+        candidates = candidates.index_select(0, order)
+
+    x_selected = dense16.index_select(0, candidates)
+    q_selected = quantized16.index_select(0, candidates).clone()
+    gram_selected = grams.index_select(0, candidates)
+    error_selected = q_selected - x_selected
+    he = torch.einsum("nij,nj->ni", gram_selected, error_selected)
+    initial_loss = torch.einsum(
+        "ni,nij,nj->n", error_selected, gram_selected, error_selected
+    )
+
+    scale = params["scale_factor"].reshape(rows, blocks, 1).expand(
+        rows, blocks, 8
+    )
+    lv2 = params["scale_lv2"].reshape(rows, blocks, 8)
+    lv3 = params["scale_lv3"].reshape(rows, blocks, 8, 2)
+    denominator8 = (
+        scale[..., None]
+        * lv2[..., None]
+        * lv3.repeat_interleave(4, dim=-1)
+    )
+    denominator = denominator8.reshape(rows, blocks, 4, 16).reshape(
+        -1, 16
+    ).index_select(0, candidates)
+    signed_codes = torch.arange(
+        -7, 8, dtype=torch.float32, device=dense.device
+    ) * 0.25
+
+    for _ in range(_ACTIVATION_QUADRATIC16_SWEEPS):
+        for coordinate in range(16):
+            possible = denominator[:, coordinate, None] * signed_codes[None, :]
+            delta = possible - q_selected[:, coordinate, None]
+            diagonal = gram_selected[:, coordinate, coordinate].clamp_min(_EPS)
+            change = (
+                2.0 * delta * he[:, coordinate, None]
+                + delta.square() * diagonal[:, None]
+            )
+            best = change.argmin(dim=1)
+            row_ids = torch.arange(int(candidates.numel()), device=dense.device)
+            best_delta = delta[row_ids, best]
+            improve = change[row_ids, best] < -_EPS
+            best_delta = torch.where(
+                improve, best_delta, torch.zeros_like(best_delta)
+            )
+            q_selected[:, coordinate] += best_delta
+            error_selected[:, coordinate] += best_delta
+            he += best_delta[:, None] * gram_selected[:, :, coordinate]
+
+    final_loss = torch.einsum(
+        "ni,nij,nj->n", error_selected, gram_selected, error_selected
+    )
+    improve = final_loss < initial_loss * (
+        1.0 - _ACTIVATION_QUADRATIC16_ACCEPT_MARGIN
     )
     improved_indices = candidates[improve]
     if int(improved_indices.numel()) == 0:
@@ -2259,6 +2396,7 @@ def _nvfp4_to_hif4(
     importance: Optional[torch.Tensor] = None,
     group_gram: Optional[torch.Tensor] = None,
     group_gram8: Optional[torch.Tensor] = None,
+    group_gram16: Optional[torch.Tensor] = None,
     search_offsets: Optional[Union[Sequence[int], torch.Tensor]] = None,
     error_threshold: float = 0.0,
     accept_margin: float = 0.0,
@@ -2344,6 +2482,15 @@ def _nvfp4_to_hif4(
             sweeps=_ACTIVATION_QUADRATIC8_SWEEPS,
             accept_margin=_ACTIVATION_QUADRATIC8_ACCEPT_MARGIN,
         )
+    if (
+        _ACTIVATION_QUADRATIC16
+        and group_gram16 is not None
+        and channels <= _ACTIVATION_QUADRATIC16_MAX_FEATURES
+    ):
+        gram16 = group_gram16.detach().to(
+            device=dense.device, dtype=torch.float32
+        )
+        params = _refine_activation_groups16(dense, params, gram16)
     return params
 
 
@@ -3484,6 +3631,33 @@ def hif4_calibration_and_quantize_weight(
             if use_group8:
                 activation_gram8_state = _cpu_state_tensor(group_gram8)
 
+    activation_gram16_state = None
+    if (
+        _ACTIVATION_QUADRATIC16
+        and in_features <= _ACTIVATION_QUADRATIC16_MAX_FEATURES
+        and len(activation_samples) >= 1
+    ):
+        transformed_rows = torch.cat(
+            [
+                _linear_pair_transform(
+                    s.to(device=weight.device, dtype=torch.float32),
+                    best_d,
+                    best_perm,
+                    int(best_block_smooth_size),
+                    int(best_block_smooth_seed),
+                    weight_side=False,
+                )
+                for s in activation_samples
+            ],
+            dim=0,
+        )
+        h_a = (
+            transformed_rows.t() @ transformed_rows
+        ) / float(transformed_rows.shape[0])
+        activation_gram16_state = _cpu_state_tensor(
+            _flat_group_gram16(h_a, in_features)
+        )
+
     activation_state = {
         "smooth_inv": smooth_inv_state,
         "permutation": permutation_state,
@@ -3492,6 +3666,7 @@ def hif4_calibration_and_quantize_weight(
         "importance": _cpu_state_tensor(activation_importance),
         "gram": activation_gram_state,
         "gram8": activation_gram8_state,
+        "gram16": activation_gram16_state,
         "offsets": torch.tensor(_DYNAMIC_OFFSETS, dtype=torch.int8, device="cpu"),
         "error_threshold": _ACTIVATION_REFINE_ERROR_THRESHOLD,
         "accept_margin": _ACTIVATION_REFINE_ACCEPT_MARGIN,
@@ -3527,6 +3702,7 @@ def hif4_dynamic_quantize_activation(
         importance=activation_state["importance"],
         group_gram=activation_state.get("gram"),
         group_gram8=activation_state.get("gram8"),
+        group_gram16=activation_state.get("gram16"),
         search_offsets=activation_state["offsets"],
         error_threshold=float(activation_state["error_threshold"]),
         accept_margin=float(activation_state["accept_margin"]),
