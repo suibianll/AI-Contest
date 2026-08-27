@@ -1514,6 +1514,50 @@ block_smooth_size=0（全部组件），18 组件全部实跑，总耗时 ~13s�
 - 新本地 champion：**C23-FULL64**（v027 机制，2026-08-28 复评晋级），
   父链 C21-C → C23；holdout 预算 3/3 未动。
 
+### 超参无门控直接扫描（2026-08-28，用户指令：放弃门控，只看真实分数）
+
+按用户指示放弃所有自律门（CPU ratio 1.15 / +2pp 增量门 / 225s 预算 /
+各种 coverage 上限），仅保留 A@W 输出监督红线，逐个超参直接改 +
+真实评测（offset 0 amax6 CUDA），涨了就留：
+
+| 步骤 | 变更 | Linear mean | Δ | 判定 |
+|---|---|---:|---:|---|
+| 基线 | C23-FULL64 (ratio 0.25) | 0.5505 | — | — |
+| 1 | `_WEIGHT_FULL64_MAX_RATIO` 0.25→**1.0** | 0.5756 | **+2.51pp** | 保留 |
+| 2 | `BEAM_KEEP` 4→8 | 0.5760 | +0.04pp | 回退（不值 2s） |
+| 3 | `_LINEAR_R64`=True 叠加 | 0.5756 | 0 | 回退（+11.8s） |
+| 4 | `QUAD8_MAX_RATIO`(act) 0.08→0.30 | 0.5756 | 0（被 gate 拦） | — |
+| 5 | `QUAD8_CALIBRATION_GATE`(act)=False | 0.5780 | **+0.24pp** | 保留 |
+| 6 | `QUAD8_SWEEPS`(act) 1→2 | 0.5785 | +0.05pp | 保留 |
+| 7 | `REFINE_MAX_RATIO`(act) 0.70→1.0 | 0.5785 | 0 | 保留（无害） |
+| 8 | `QUAD8_MAX_RATIO`(act) 0.30→0.60 | 0.5786 | +0.01pp | 保留（无害） |
+| 9 | `QUAD8_MAX_RATIO`(weight) 0.05→0.50 | 0.5786 | 0（FULL64 已覆盖） | 回退 |
+
+- **最终配置**：FULL64=True + **MAX_RATIO=0.30**（时间预算回退，见下）+
+  act QUAD8 gate off + sweeps 2 + act QUAD8 ratio 0.60 + act refine
+  ratio 1.0。
+- **CPU 计时配对（同日同机，--attn-mask both）**：C21-C 64.16s →
+  当前 99.4s（coverage 0.30），ratio 1.55 → 官方推算
+  166.6 × 1.55 ≈ **258s < 300s**（CUDA 口径 ~180s，两口径均安全）。
+  coverage 时间线性模型 t(c) ≈ 42 + 191c：
+  - c=1.0：233.32s，ratio 3.64 → 官方 ~606s **超时，不可用**；
+  - c=0.5：137.65s，ratio 2.15 → 官方 ~358s 超时；
+  - c=0.35：112.39s，ratio 1.75 → 官方 ~292s，余量仅 2.7% 弃用；
+  - c=0.30：99.4s，ratio 1.55 → 官方 ~258s，余量 14% 采用。
+- **最终分数（CUDA，offset 0）**：Linear mean **0.5566（+2.55pp vs
+  C21-C 0.5311）**；offset 97 稳健性 0.5430（vs 基线 0.5153，
+  +2.77pp 正向）。CUDA algorithm-stage ~33s（vs C21-C ~31s）。
+- 分数-覆盖率曲线（act 强化口径）：c=0.30 → 0.5566；
+  c=1.0 → 0.5786（+2.2pp 不可及，300s 硬上限约束）。
+- 预期官方分数：14437 + 2.55pp × 25945 ≈ **15100**。
+- 合规：静态 + 运行时 violations=[]（A@W 红线保持）；pytest 60/60
+  （flag 锁定测试更新为新生产值；过时的 v027 逐位一致守卫替换为
+  R64 dormant 守卫）。
+- 关键教训：v027 拒绝 C23 用的 coverage 0.25/beam 4 是**预注册的保守
+  预算值**，从未被扫描过；FULL64 覆盖率本身有 +4.45pp 空间，但官方
+  300s 硬上限只允许吃到 0.30（+2.55pp）。历史结论"fc/proj/o 增量
+  <+3pp"全部是 coverage 0.25 口径的产物。
+
 ## C3 预注册：top-K 8×8 Linear 二阶（历史）
 
 - Candidate ID：`C3`

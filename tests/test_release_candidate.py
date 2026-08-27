@@ -85,10 +85,16 @@ def test_release_flags_are_a1_only() -> None:
     assert solution._ACTIVATION_QUADRATIC_MAX_FEATURES == 4096
     assert solution._ACTIVATION_QUADRATIC8 is True
     assert solution._ACTIVATION_QUADRATIC8_MIN_FEATURES == 64
-    assert solution._ACTIVATION_QUADRATIC8_MAX_RATIO == 0.08
-    assert solution._ACTIVATION_QUADRATIC8_SWEEPS == 1
-    assert solution._ACTIVATION_QUADRATIC8_CALIBRATION_GATE is True
+    assert solution._ACTIVATION_QUADRATIC8_MAX_RATIO == 0.60
+    assert solution._ACTIVATION_QUADRATIC8_SWEEPS == 2
+    assert solution._ACTIVATION_QUADRATIC8_CALIBRATION_GATE is False
     assert solution._ACTIVATION_QUADRATIC8_GATE_MAX_FEATURES == 1024
+    assert solution._ACTIVATION_REFINE_MAX_RATIO == 1.0
+    assert solution._WEIGHT_FULL64 is True
+    assert solution._WEIGHT_FULL64_MAX_RATIO == 0.30
+    assert solution._WEIGHT_FULL64_BEAM_KEEP == 4
+    assert solution._LINEAR_R64 is False
+    assert solution._HIERARCHY_PERMUTATION is False
     assert not hasattr(solution, "_ACTIVATION_QUADRATIC8_CROSS_TERM")
     assert not hasattr(solution, "_ACTIVATION_QUADRATIC8_CROSS_GAIN_SELECTION")
     assert not hasattr(solution, "_ACTIVATION_QUADRATIC8_CROSS_CALIBRATION_GATE")
@@ -505,25 +511,28 @@ def test_linear_r64_state_is_seed_only() -> None:
     walk(state)
 
 
-def test_linear_r64_disabled_matches_c23() -> None:
+def test_linear_r64_disabled_keeps_r64_path_dormant() -> None:
     solution = load_module("r64_disabled", ROOT / "solution.py")
-    # Production is the C23 configuration (FULL64 on, R64 off, promoted
-    # 2026-08-28): the calibration output must stay bit-identical to the
-    # archived v027 flag-on candidate.
-    parent = load_module(
-        "r64_c23_parent",
-        ROOT / "solutions"
-        / "20260827_v027_c23-full64-rejected_scoreNA_timeNA"
-        / "solution.py",
-    )
+    assert solution._LINEAR_R64 is False
     weight_pair, calib_pairs = _r64_calibration_inputs()
-    child = solution.hif4_calibration_and_quantize_weight(
+    result = solution.hif4_calibration_and_quantize_weight(
         *weight_pair, calib_pairs
     )
-    base = parent.hif4_calibration_and_quantize_weight(
-        *weight_pair, calib_pairs
-    )
-    assert_nested_equal(child, base)
+    # R64 is off: the returned dynamic state must stay seed-only (no
+    # 64x64 mixing matrix in the state tree).
+    state = result["activation_state"]
+
+    def walk(value) -> None:
+        if torch.is_tensor(value):
+            assert tuple(value.shape) != (64, 64)
+        elif isinstance(value, dict):
+            for child in value.values():
+                walk(child)
+        elif isinstance(value, (tuple, list)):
+            for child in value:
+                walk(child)
+
+    walk(state)
 
 
 def test_linear_r64_candidate_falls_back_on_regression() -> None:
