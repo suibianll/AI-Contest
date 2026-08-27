@@ -865,6 +865,57 @@ Linear 与 B0 完全一致。A3/L1 开启时的数值见各自步骤小节。
   任何 seed 搜索必须大间距；GPT-2 真实数据上 64 宽 Hadamard
   预混合对 HiF4 层级编码是净损伤（平滑/置换已处理离群通道）。
 
+## C23 预注册：Full-64 Weight Schur/GPTQ（2026-08-27）
+
+- 候选 ID：`C23`；父版本：`C21-C`（v025，SHA256
+  `83AB4864254F80D221BB491BDEF89F8C9AB8E83534FD62D4DD5E0C1C292FEA12`）。
+  C22 已 rejected，按 §6 前置条件从 C21-C 构建，只保留已通过合规
+  审计的 identity/R4/R8/R16 变换（R64 保持 `_LINEAR_R64=False`）。
+- 唯一机制（§6.1）：只替换 weight 的 full-64 refinement；dynamic
+  activation 仍使用父版本。
+- 数学目标（§6.2）：每个 transformed weight row 的 64 元素 block，
+  `H[64,64] = X_t^T X_t / N + damping·I`（完整 64×64，不截断），
+  `loss(q)=(q−w)^T H (q−w)`；`damping=0.01·mean(diag(H))`，Cholesky
+  失败依次 `0.03/0.1`，仍失败回退父版本。
+- scale beam（§6.3）：`standard_code + {-2,-1,0,1,2,3}`，exact
+  hierarchy proxy 排序保留 4 个；逐 block fallback（五字段合法 +
+  full-H loss finite 且 ≤ 父版本，否则该 block 回退父参数）；
+  固定回归必查 amax4/pow2 offset 0，任一 case Linear 相对指标
+  不得低于父版本 2pp；扩展 offset 的 Attention 教训不归因于 Weight
+  beam（§6.3 条 4）。
+- 求解流程（§6.4–6.6）：`_solve_exact_hierarchy` 初始化 →
+  Cholesky 逆因子 → `diag(H)` 降序 processing order → GPTQ
+  sequential mantissa init（§6.5 伪代码）→ full-H 64-coordinate
+  exact discrete descent（§6.6 状态 e/g 增量更新）→ 16 个 lv3
+  toggle → 8 个 lv2 toggle → 再次 descent → 四 beam 择优。
+- 代码结构（§6.7）：`_full64_hessian_blocks` /
+  `_cholesky_inverse_factor` / `_gptq_initialize64` /
+  `_coordinate_descent64` / `_hierarchy_toggle_refine64` /
+  `_refine_weight_blocks64`。内存：weight rows 128 rows/chunk、
+  禁止展开 [rows,blocks,beams,64,64]、H 每层共享、beam 顺序执行。
+- 向量化硬性要求（§6.7）：禁止逐 block Python 循环，row chunk 内
+  全部 blocks 合并为 [rows*blocks,64] 批量；descent 仅坐标维与
+  beam 维循环；toggle 用布尔掩码批量；交付前批量路径 vs 逐 block
+  参考实现数值一致（1e-6 探针）；micro-benchmark CPU/f32、
+  rows≥2000、channels {768,3072}、chunk 128、预热 3 测 10 取中位，
+  覆盖 `_refine_weight_blocks64` 生产调用与临时分配；≥10x 为诊断
+  目标而非独立门，端到端 CPU ratio>1.15 不得晋级。
+- 测试（§6.8）：`test_full64_hessian_extraction` /
+  `test_gptq64_initialization_returns_legal_codes` /
+  `test_coordinate_descent64_is_monotonic` /
+  `test_hierarchy_toggle64_is_monotonic` /
+  `test_weight64_final_loss_not_above_parent` /
+  `test_weight64_chunking_is_exact` /
+  `test_weight64_fallback_on_non_psd` /
+  `test_weight64_deterministic`。
+- 晋级门（§6.9）：Linear mean ≥ +2pp；fc/proj/o 平均 ≥ +3pp；
+  固定矩阵 Weight full-H normalized error 下降 ≥20%；6/6 配置
+  正向；CPU ratio ≤1.15；官方时间 <225s。若总 Linear 仍 <0.68，
+  记录 26000 风险检查点，不进入 C24，先分析 weight residual。
+- 评测矩阵与 holdout 纪律同 C22（开发集 cuda amax6 offset 0
+  both 起步，通过后固定矩阵 6 配置 + GQA + 576 合成 case + 合规
+  门禁；holdout 仅最终验收）。
+
 ## C3 预注册：top-K 8×8 Linear 二阶
 
 - Candidate ID：`C3`
