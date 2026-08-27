@@ -375,6 +375,29 @@ Linear 与 B0 完全一致。A3/L1 开启时的数值见各自步骤小节。
   不变、CUDA ratio ≤1.15；通过后运行固定矩阵和 CPU 配对。
 - 状态：`planned`。
 
+### C20 固定回归结论
+
+- offset 0 六分项全正，Linear mean `+0.413pp`；Attention 不变，CUDA
+  ratio `1.023`。
+- amax6 offset 97/193/389 与 amax4 的 Linear mean 分别
+  `+1.163/+0.433/+0.445/+0.503pp`。
+- 安全门失败：pow2 Linear mean `-0.490pp`，其中 proj
+  `0.4890→0.4303`（`-5.87pp`）；GQA Attention 仍不变。
+- 状态：`local-accepted-not-promoted`；CPU 不运行，C17 保持 Champion。
+
+## C21 预注册：all-width gated exact cross refinement
+
+- Candidate ID：`C21`
+- Parent：`C17`，SHA256
+  `C29E71C332E41E262B94FF68454CEB1F1589EE932FB4E1D55C5F221CFD060766`
+- 唯一机制：保留 C17 pure 8×8 作为逐层 fallback；exact discrete cross
+  refinement 仅在 calibration samples 的最终 output MSE 相对 pure 8×8
+  平均改善至少 0.05%、且任一样本不退化超过 0.1% 时启用。该 gate 对所有
+  宽度生效，包括 3072-wide proj。
+- 开发门：offset 0 Linear mean 至少 `+0.2pp`；固定矩阵六项均值为正、任一
+  Linear 分项不低于 C17 超过 `0.1pp`；Attention 不变；CUDA/CPU ratio ≤1.15。
+- 状态：`planned`。
+
 ### C7 开发结论
 
 - offset 0 Linear mean 相对 C5 约 `+0.123pp`；q/k/v/o/fc/proj 六项均为

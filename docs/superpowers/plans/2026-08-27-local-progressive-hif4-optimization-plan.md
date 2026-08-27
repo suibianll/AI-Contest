@@ -229,6 +229,12 @@ robust_attention_objective =
 
 从 C17 出发，在同一块局部交叉目标下，直接枚举当前 scale hierarchy 与 HiF4 码本上每组可实现的最佳单坐标 objective decrease，并以此排序 8% 候选；不再使用连续 Newton 上界。gate、coverage、单 sweep、cap 4096 不变。开发门为 Linear mean `+0.2pp`、六分项不下降、Attention 不变、CUDA ratio ≤1.15。
 
+执行结果：`local-accepted-not-promoted`。offset 0 `+0.413pp`，五个固定配置 `+0.41~+1.16pp`，但 pow2 proj `-5.87pp` 导致 Linear mean `-0.49pp`；C17 保持 Champion。
+
+### C21：all-width gated exact cross refinement
+
+从 C17 出发，pure 8×8 结果始终作为逐层 fallback；exact discrete cross refinement 只有在 calibration samples 的最终 output MSE 相对 pure 8×8 平均改善至少 0.05%、且任一样本不退化超过 0.1% 时启用。gate 覆盖所有宽度，包括 3072-wide proj。开发门为 Linear mean `+0.2pp`，固定矩阵均值全正、任一分项不低于 `-0.1pp`、Attention 不变、CUDA/CPU ratio ≤1.15。
+
 ### 暂缓
 
 - A2 H64：聚合有增益但尾部和 GQA 安全轨不足，待 C2 稳定后重新立项；
