@@ -645,6 +645,35 @@ Linear 与 B0 完全一致。A3/L1 开启时的数值见各自步骤小节。
 - 精度综合均值没有超过父 Champion，因此不运行固定回归 offset 或 CPU。
 - 状态：`local-rejected`，源码和结果归档为 v005；C1 继续作为 Champion。
 
+## C21-C 预注册：Phase 0 合规基线（删除 Linear 输出监督）
+
+- Candidate ID：`C21-C`（Compliance；对应 26000 计划 Phase 0，
+  `docs/superpowers/plans/2026-08-27-hif4-26000-algorithm-implementation-plan.md`）
+- Parent：`C21` / v024，SHA256
+  `40F4D17C12F976F83856B9641BE9A3951867BC8979992D773C60C0C1C3E8066A`
+  （HEAD `d5d74b5` 工作树 clean，SHA 已重新计算核实）
+- 唯一机制：删除 Linear 校准中的全部输出监督路径，不新增任何精度机制：
+  1. 删除 `_linear_output_candidate_metrics` 及其全部调用；Block-Smooth
+     候选评分改用既有 operand-local 的 `_linear_candidate_metrics`；
+  2. 删除 `_activation8_gate_decisions` 的 Linear 输出评分；8×8 gate 改为
+     activation-only 重构损失（base vs refined，均值改善 + 最差样本容差），
+     删除未使用的 `_activation_quadratic8_is_safe` / `_activation_cross8_is_safe`；
+  3. 删除 `group_cross8` / `cross8` state、`_ACTIVATION_QUADRATIC8_CROSS_*`
+     与 `_ACTIVATION_QUADRATIC8_EXACT_DISCRETE_SELECTION` 开关及
+     `_refine_weight_groups8` 的 cross 坐标更新（回到 C17 pure 8×8 形式）；
+  4. activation_state 不再输出 `cross8` 字段，版本号升为 4。
+- 评测矩阵（§4.6 验收）：pytest 全过；`real_data_eval.py` CUDA 开发评测；
+  §10.2 完整固定回归 6 配置 × offsets 0/97/193/389 逐配置 delta 记录
+  （作为后续所有候选 ROI 比较的强制基线）；§10.3 合成矩阵 576 case
+  逐 case 与 C21 一致（容差 1e-6）；Attention 与 C21 逐 case 不变。
+- 晋级门：不设分数门槛（预期低于 16043）；必须完整记录移除输出监督
+  造成的真实分数变化；合规门禁（静态+运行时）全过；通过后归档为
+  新的唯一合规 Champion，后续所有候选从 C21-C 派生。
+- 时间预算：无新增机制，预期 CUDA algorithm-stage 不高于 C21；CPU ratio
+  不设门（删除路径只会变快），如实记录。
+- Holdout 台账：`holdout_runs_used=0 / remaining=3`（Phase 0 不消耗）。
+- 状态：`planned`。
+
 ## C3 预注册：top-K 8×8 Linear 二阶
 
 - Candidate ID：`C3`
