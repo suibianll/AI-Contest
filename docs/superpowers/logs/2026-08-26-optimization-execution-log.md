@@ -952,10 +952,13 @@ Linear 与 B0 完全一致。A3/L1 开启时的数值见各自步骤小节。
   达标），替换率恰 25%；按组件 v 9.8% – k 37.7% 差异大。
 - 合规门禁（flag=True 归档版）：static+runtime 全过，`violations=[]`，
   210 contractions，无 review 项。
-- 时间：CUDA algorithm-stage `32.77s` vs C21-C `24.03s`，ratio `1.37`
-  （门 ≤1.15 未达）；推算官方时间 `~238s > 225s`（门未达）。
+- 时间（§10.4 规定口径，父子串行 CPU 同环境）：C21-C algorithm-stage
+  `61.32s` vs C23 `95.17s`，ratio `1.55`（门 ≤1.15 未达）；CUDA 口径
+  `24.03s → 32.77s`（ratio 1.37）为参考。推算官方时间 `~269s > 225s`
+  （逼近 270s 硬上限）。CPU 口径下父子 Attention mean/min/max 逐位
+  一致（0.4497 / 0.4944）。
 - 决策：`rejected` per §6.9（6 门中 3 未达：Linear mean 踩线未过、
-  fc/proj/o +1.64pp<3pp、CPU ratio 1.37>1.15；推算时间 238s>225s）。
+  fc/proj/o +1.64pp<3pp、CPU ratio 1.55>1.15；推算时间 ~269s>225s）。
   机制有效但绝对成本超预算。根目录 `_WEIGHT_FULL64 = False`（行为与
   C21-C 逐位一致，`test_weight_full64_disabled_matches_c21c` 验证）；
   归档 `solutions/20260827_v027_c23-full64-rejected_scoreNA_timeNA/`。

@@ -43,10 +43,14 @@
 - Linear mean 增量 +1.93pp 低于 `>=+2pp` 门（本日两次独立评测分别为
   +2.07pp / +1.93pp，CUDA 归约抖动约 ±0.2pp，按最新测量记为未达；即便
   计为踩线，仍不改变下面时间门的拒绝结论）。
-- Attention 逐位不变（causal `0.4497` / non-causal `0.4942`，weight-only
-  候选，结构上不触碰动态激活路径）。
-- Timing：CUDA algorithm-stage `32.77s` vs C21-C `24.03s`（ratio `1.37`，
-  门 `<=1.15` 未达）；按 `173.8s × 1.37` 推算官方时间约 `238s > 225s`。
+- Attention 逐位不变（causal `0.4497` / non-causal `0.4944`，weight-only
+  候选，结构上不触碰动态激活路径；CPU 串行对照中父子 Attention
+  mean/min/max 全部逐位一致）。
+- Timing（§10.4 规定口径：父子串行、同环境、CPU）：C21-C
+  algorithm-stage `61.32s` vs C23 `95.17s`（ratio `1.55`，门 `<=1.15`
+  未达）；CUDA 口径 `24.03s → 32.77s`（ratio `1.37`）作为参考。
+  按 `173.8s × 1.55` 推算官方时间约 `269s > 225s`，且已逼近 270s
+  硬上限（超限即无条件不得晋级）。
 
 ## 固定回归矩阵（§10.2，6/6 正向，但不足以晋级）
 
@@ -93,16 +97,17 @@ TOTAL full-H drop: 20.95%
 | fc/proj/o 均值 | >= +3pp | +1.64pp | 未达 |
 | full-H 降幅 | >= 20% | 20.95% | 达标 |
 | 固定矩阵 | 6/6 正向 | 6/6 | 达标 |
-| CPU ratio | <= 1.15 | 1.37 | 未达 |
-| 推算官方时间 | < 225s | ~238s | 未达 |
+| CPU ratio（§10.4） | <= 1.15 | 1.55 | 未达 |
+| 推算官方时间 | < 225s | ~269s | 未达（逼近 270s 硬上限） |
 
 ## Decision
 
 `rejected` per §6.9。机制本身有效（full-H 降幅达标、6/6 正向、合规全过），
 但绝对计算成本超预算：每层 64×64 Cholesky + 864 步/beam 批量求解使
-algorithm-stage 增加 8.7s（ratio 1.37），推算官方时间 ~238s 超出 <225s 门。
-分数增益（+1.9~2.0pp）不足以 justify 该成本，且 fc/proj/o 主目标分项
-（+1.64pp）远低于 +3pp 期望。根目录 solution.py 默认关闭
+CPU algorithm-stage 增加 33.9s（§10.4 串行口径 ratio 1.55），推算官方
+时间 ~269s 超出 <225s 门并逼近 270s 硬上限。分数增益（+1.9~2.0pp）
+不足以 justify 该成本，且 fc/proj/o 主目标分项（+1.64pp）远低于 +3pp
+期望。根目录 solution.py 默认关闭
 `_WEIGHT_FULL64`（行为与 C21-C 逐位一致，由
 `test_weight_full64_disabled_matches_c21c` 验证）；Champion 仍为 C21-C
 （v025）。
@@ -121,7 +126,8 @@ algorithm-stage 增加 8.7s（ratio 1.37），推算官方时间 ~238s 超出 <2
 - 真实数据 full-H 降幅按组件差异大（v 9.8% vs k 37.7%）：协方差谱越
   平滑的组件，full-64 相对 4/8/16 对角近似的增益越小。
 - CUDA 上 128 行 chunk 的 kernel launch 开销主导小 B 层成本（B=12 时
-  调度开销与覆盖率无关），CPU 上纯张量运算更均衡——跨设备的时间门
-  结论需分别测量。
+  调度开销与覆盖率无关）。§10.4 CPU 串行口径 ratio `1.55` 劣于 CUDA
+  `1.37`：CPU 上 Cholesky/求解的浮点吞吐更低，纯张量运算时间随覆盖率
+  实际增长，两口径均远超 1.15 门，拒绝结论跨设备一致。
 
 Holdout 台账：未消耗（`0/3`），seed_hash `96dd4ed7…` 不变。
