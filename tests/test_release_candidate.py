@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 from types import ModuleType
 
+import pytest
 import torch
 
 
@@ -91,6 +92,12 @@ def test_release_flags_are_a1_only() -> None:
     assert not hasattr(solution, "_ACTIVATION_QUADRATIC8_CROSS_TERM")
     assert not hasattr(solution, "_ACTIVATION_QUADRATIC8_CROSS_GAIN_SELECTION")
     assert not hasattr(solution, "_ACTIVATION_QUADRATIC8_CROSS_CALIBRATION_GATE")
+    assert solution._LINEAR_R64 is True
+    assert solution._LINEAR_R64_BLOCK == 64
+    assert solution._LINEAR_R64_STAGE1_SEEDS == tuple(range(32))
+    assert solution._LINEAR_R64_STAGE2_KEEP == 4
+    assert solution._LINEAR_R64_MIN_IMPROVEMENT == 0.005
+    assert solution._LINEAR_R64_WORST_TOLERANCE == 0.002
 
 
 def test_submission_has_no_file_io_or_debug_output() -> None:
@@ -395,3 +402,156 @@ def test_synthetic_case_generation_is_deterministic() -> None:
     for first_case, second_case in zip(first[1], second[1]):
         for first_side, second_side in zip(first_case, second_case):
             assert torch.equal(first_side, second_side)
+
+
+# ---------------------------------------------------------------------------
+# C22: Linear R64 incoherence transform (26000 plan §5.6)
+# ---------------------------------------------------------------------------
+
+_C21C_PARENT = (
+    ROOT
+    / "solutions"
+    / "20260827_v025_c21c-compliance-baseline"
+    / "solution.py"
+)
+
+
+def _r64_calibration_inputs(seed: int = 1234):
+    torch.manual_seed(seed)
+    weight = torch.randn(96, 128) * 0.05
+    activations = [torch.randn(128, 128) * 0.5 for _ in range(2)]
+    weight_pair = nvfp4_encode(weight, "amax6")
+    calib_pairs = [nvfp4_encode(a, "amax6") for a in activations]
+    return weight_pair, calib_pairs
+
+
+def _r64_inverse(solution: ModuleType, y: torch.Tensor, seed: int):
+    """Inverse of ``_apply_linear_r64``: FWHT then the same signs."""
+
+    channels = int(y.shape[-1])
+    signs = solution._linear_r64_signs(channels, seed, y.device, y.dtype)
+    blocks = y.reshape(*y.shape[:-1], channels // 64, 64)
+    z = solution._fwht_last_dim(blocks)
+    return (z * signs.reshape(channels // 64, 64)).reshape(*y.shape)
+
+
+def test_fwht64_matches_dense_hadamard() -> None:
+    solution = load_module("fwht64", ROOT / "solution.py")
+    torch.manual_seed(64)
+    x = torch.randn(3, 5, 64)
+    original = x.clone()
+    dense = solution._hadamard_matrix_unchecked(64, x.device, x.dtype)
+    reference = x @ dense
+    fast = solution._fwht_last_dim(x)
+    assert float((fast - reference).abs().max()) < 1.0e-5
+    # The input is never destroyed in place.
+    assert torch.equal(x, original)
+    # bfloat16 runs through the same deterministic op sequence.
+    bf16 = solution._fwht_last_dim(x.to(torch.bfloat16))
+    assert torch.isfinite(bf16.to(torch.float32)).all()
+
+
+def test_linear_r64_is_orthogonal() -> None:
+    solution = load_module("r64_orthogonal", ROOT / "solution.py")
+    eye = torch.eye(64)
+    for seed in (0, 7, 31):
+        r = solution._apply_linear_r64(eye, seed)
+        err = (r.T @ r - torch.eye(64)).abs().max()
+        assert float(err) < 1.0e-5
+
+
+def test_linear_r64_activation_roundtrip() -> None:
+    solution = load_module("r64_act_roundtrip", ROOT / "solution.py")
+    torch.manual_seed(6401)
+    x = torch.randn(16, 128)
+    for seed in (0, 5, 31):
+        y = solution._apply_linear_r64(x, seed)
+        x_back = _r64_inverse(solution, y, seed)
+        assert float((x_back - x).abs().max()) < 1.0e-5
+
+
+def test_linear_r64_weight_roundtrip() -> None:
+    solution = load_module("r64_w_roundtrip", ROOT / "solution.py")
+    torch.manual_seed(6402)
+    w = torch.randn(96, 128) * 0.05
+    for seed in (1, 19):
+        y = solution._apply_linear_r64(w, seed)
+        w_back = _r64_inverse(solution, y, seed)
+        assert float((w_back - w).abs().max()) < 1.0e-5
+
+
+def test_linear_r64_state_is_seed_only() -> None:
+    solution = load_module("r64_state", ROOT / "solution.py")
+    weight_pair, calib_pairs = _r64_calibration_inputs()
+    result = solution.hif4_calibration_and_quantize_weight(
+        *weight_pair, calib_pairs
+    )
+    state = result["activation_state"]
+    assert int(state["block_smooth_size"]) in (0, 4, 8, 16, 64)
+    assert isinstance(state["block_smooth_seed"], int)
+    validate_state(state)
+
+    def walk(value) -> None:
+        if torch.is_tensor(value):
+            assert tuple(value.shape) != (64, 64)
+        elif isinstance(value, dict):
+            for child in value.values():
+                walk(child)
+        elif isinstance(value, (tuple, list)):
+            for child in value:
+                walk(child)
+
+    walk(state)
+
+
+def test_linear_r64_disabled_matches_c21c() -> None:
+    solution = load_module("r64_disabled", ROOT / "solution.py")
+    parent = load_module("r64_c21c_parent", _C21C_PARENT)
+    solution._LINEAR_R64 = False
+    weight_pair, calib_pairs = _r64_calibration_inputs()
+    child = solution.hif4_calibration_and_quantize_weight(
+        *weight_pair, calib_pairs
+    )
+    base = parent.hif4_calibration_and_quantize_weight(
+        *weight_pair, calib_pairs
+    )
+    assert_nested_equal(child, base)
+
+
+def test_linear_r64_candidate_falls_back_on_regression() -> None:
+    solution = load_module("r64_fallback", ROOT / "solution.py")
+    torch.manual_seed(6403)
+    weight = torch.randn(64, 128) * 0.05
+    activations = [torch.randn(32, 128) * 0.5 for _ in range(2)]
+    d = torch.ones(128)
+    permutation = torch.arange(128)
+    second_moment = activations[0].square().mean(dim=0)
+    seed, metrics = solution._select_r64_candidate(
+        weight,
+        activations,
+        second_moment,
+        d,
+        permutation,
+        0,
+        0,
+        (0.0, (0.0, 0.0)),
+    )
+    # A perfect baseline cannot be improved: the selection must keep the
+    # parent transform (-1) instead of forcing an R64 seed.
+    assert seed == -1
+    assert metrics == (0.0, (0.0, 0.0))
+
+
+def test_linear_r64_is_deterministic_cpu_cuda() -> None:
+    solution = load_module("r64_determinism", ROOT / "solution.py")
+    torch.manual_seed(6404)
+    x = torch.randn(9, 128)
+    first = solution._apply_linear_r64(x, 11)
+    second = solution._apply_linear_r64(x, 11)
+    assert torch.equal(first, second)
+    if not torch.cuda.is_available():
+        pytest.skip("CUDA is not available on this host")
+    cuda_out = solution._apply_linear_r64(x.to("cuda"), 11)
+    assert float((cuda_out.cpu() - first).abs().max()) < 1.0e-5
+    cuda_again = solution._apply_linear_r64(x.to("cuda"), 11)
+    assert torch.equal(cuda_out, cuda_again)

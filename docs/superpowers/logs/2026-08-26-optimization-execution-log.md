@@ -804,6 +804,38 @@ Linear 与 B0 完全一致。A3/L1 开启时的数值见各自步骤小节。
 - 决策：C21-C 为唯一合规 Champion；后续候选（C22 起）全部从 C21-C
   派生并通过同一合规门禁。
 
+## C22 预注册：Linear R64 Incoherence Transform（2026-08-27）
+
+- 候选 ID：`C22`；父版本：`C21-C`（v025，SHA256
+  `83AB4864254F80D221BB491BDEF89F8C9AB8E83534FD62D4DD5E0C1C292FEA12`）。
+- 唯一机制（§5.1）：在 Linear transform candidate 中增加 64 维
+  signed Hadamard `R64(seed) = S(seed) · H64`（butterfly FWHT 实现，
+  动态路径禁止 dense [64,64] matmul）。不修改 Attention /
+  refinement / scale offset / gate / coverage / sweep。
+- 代码：仅 `solution.py`（新常量 `_LINEAR_R64*` 六项 + 新函数
+  `_fwht_last_dim` / `_linear_r64_signs` / `_apply_linear_r64` /
+  `_rank_r64_seeds` / `_select_r64_candidate`）与
+  `tests/test_release_candidate.py`（§5.6 八项测试）。
+- seed 选择两阶段（§5.4）：Stage A cheap rank（≤64 activation rows +
+  ≤128 weight rows，标准 HiF4，激活硬重构损失 + H_A 加权权重损失，
+  32 seeds 排序保留 top-4）；Stage B 部署验证（top-4 + identity，
+  两折双向验证 + robust metric
+  `max(ratio_A, ratio_W) + 0.10·max(0, tail−1)`，两个 fold
+  activation-only 均不劣于 identity 且 robust metric 优于 identity），
+  最终以全量数据 `_candidate_is_safe(0.005, 0.002)` 门控。
+  Stage B 语义解释：使用 C21-C 部署的 operand-local 指标体系
+  （与所有其他 transform 候选同一选择层），refinement 在胜出后
+  单次运行——不引入任何 Linear output 监督。
+- state（§5.5）：仅复用 `block_smooth_size=64` / `block_smooth_seed`，
+  不保存 dense R64。
+- 评测矩阵：开发集 cuda amax6 offset 0 both（对照 C21-C
+  Linear 0.5311）；固定回归 6 配置 + GQA；576 合成 case；合规门禁。
+- 晋级门（§5.7）：开发集 Linear mean ≥ +0.5pp、fc/proj/o 均值
+  ≥ +1.0pp、任一分项 ≥ −0.1pp、Attention 逐 case 一致；固定矩阵
+  6/6 为正、win rate ≥70%、tail mean ≥ −1pp、CPU stage ratio
+  ≤1.12、官方时间 <205s。未达开发门 → 归档 rejected，停止 seed
+  扩展，不直接实现双 Hadamard。
+
 ## C3 预注册：top-K 8×8 Linear 二阶
 
 - Candidate ID：`C3`

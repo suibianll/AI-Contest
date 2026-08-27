@@ -52,6 +52,18 @@ _BLOCK_SMOOTH_SEEDS = (0, 1, 2, 3)
 _BLOCK_SMOOTH_FORCE_SIZE = 0
 _BLOCK_SMOOTH_MIN_IMPROVEMENT = 0.005
 _BLOCK_SMOOTH_WORST_TOLERANCE = 0.005
+# C22: 64-dim incoherence transform (signed Hadamard, butterfly FWHT).
+# Seed selection is two-stage: a cheap operand-local rank over 32 seeds,
+# then a deployed two-fold validation of the top seeds against the parent
+# transform.  Dynamic state stores only the two integers above.
+_LINEAR_R64 = True
+_LINEAR_R64_BLOCK = 64
+_LINEAR_R64_STAGE1_SEEDS = tuple(range(32))
+_LINEAR_R64_STAGE2_KEEP = 4
+_LINEAR_R64_MIN_IMPROVEMENT = 0.005
+_LINEAR_R64_WORST_TOLERANCE = 0.002
+_LINEAR_R64_STAGE1_ROWS = 64
+_LINEAR_R64_STAGE1_WEIGHT_ROWS = 128
 _WEIGHT_REFINE_ERROR_THRESHOLD = 1.0e-7
 _WEIGHT_REFINE_ACCEPT_MARGIN = 0.005
 _WEIGHT_REFINE_MAX_RATIO_SMALL = 1.0
@@ -1669,6 +1681,71 @@ def _hadamard_matrix_unchecked(
     return h * (1.0 / math.sqrt(float(n)))
 
 
+def _fwht_last_dim(x: torch.Tensor) -> torch.Tensor:
+    """Butterfly fast Walsh-Hadamard transform along the last dimension.
+
+    Equivalent to ``x @ H_n`` for the normalized Sylvester Hadamard matrix
+    ``H_n`` (which is symmetric), but never materializes the dense matrix.
+    The input is never modified in place; float32/bfloat16 and CPU/CUDA all
+    run the same deterministic op sequence.
+    """
+
+    n = int(x.shape[-1])
+    if n < 1 or (n & (n - 1)) != 0:
+        raise ValueError(f"FWHT width must be a power of two, got {n}")
+    lead = tuple(x.shape[:-1])
+    y = x.reshape(-1, n).clone()
+    width = 1
+    while width < n:
+        y = y.reshape(-1, n // (2 * width), 2, width)
+        a = y[:, :, 0, :]
+        b = y[:, :, 1, :]
+        y = torch.stack((a + b, a - b), dim=2).reshape(-1, n)
+        width *= 2
+    y = y * (1.0 / math.sqrt(float(n)))
+    return y.reshape(*lead, n)
+
+
+def _linear_r64_signs(
+    channels: int,
+    seed: int,
+    device: torch.device,
+    dtype: torch.dtype = torch.float32,
+) -> torch.Tensor:
+    """Deterministic per-channel sign vector shared by both Linear sides."""
+
+    indices = torch.arange(int(channels), dtype=torch.int64, device=device)
+    bits = (
+        indices * 1_103_515_245 + int(seed) * 214_013 + 12_345
+    ).bitwise_and(1 << 30)
+    return torch.where(bits == 0, 1.0, -1.0).to(dtype=dtype)
+
+
+def _apply_linear_r64(x: torch.Tensor, seed: int) -> torch.Tensor:
+    """Apply the signed orthogonal R64 incoherence transform.
+
+    ``R64 = diag(signs) · H64`` applied on the last dimension via the
+    butterfly FWHT (no dense [64, 64] matrix is ever built).  The transform
+    is exactly orthogonal, so the inverse applies the FWHT and multiplies
+    the same signs back.
+    """
+
+    channels = int(x.shape[-1])
+    if channels % _LINEAR_R64_BLOCK != 0:
+        raise ValueError(
+            f"Feature width {channels} is not divisible by "
+            f"{_LINEAR_R64_BLOCK}"
+        )
+    signs = _linear_r64_signs(channels, seed, x.device, x.dtype)
+    grouped = x.reshape(
+        *x.shape[:-1], channels // _LINEAR_R64_BLOCK, _LINEAR_R64_BLOCK
+    )
+    grouped = grouped * signs.reshape(
+        channels // _LINEAR_R64_BLOCK, _LINEAR_R64_BLOCK
+    )
+    return _fwht_last_dim(grouped).reshape(*x.shape)
+
+
 def _block_hadamard_transform(
     dense: torch.Tensor,
     block_size: int,
@@ -1679,22 +1756,21 @@ def _block_hadamard_transform(
     The signs avoid concentrating positively correlated channels in the DC
     Hadamard coefficient.  They are derived from the absolute feature index,
     so calibration and dynamic quantization only share ``block_size`` and a
-    small integer ``seed``.
+    small integer ``seed``.  Size 64 routes through the butterfly FWHT; the
+    smaller sizes keep the dense matrix product.
     """
 
     size = int(block_size)
     if size == 0:
         return dense
+    if size == _LINEAR_R64_BLOCK:
+        return _apply_linear_r64(dense, int(seed))
     channels = int(dense.shape[-1])
     if channels % size != 0:
         raise ValueError(
             f"Feature width {channels} is not divisible by block size {size}"
         )
-    indices = torch.arange(channels, dtype=torch.int64, device=dense.device)
-    bits = (
-        indices * 1_103_515_245 + int(seed) * 214_013 + 12_345
-    ).bitwise_and(1 << 30)
-    signs = torch.where(bits == 0, 1.0, -1.0).to(dtype=dense.dtype)
+    signs = _linear_r64_signs(channels, seed, dense.device, dense.dtype)
     grouped = dense.reshape(*dense.shape[:-1], channels // size, size)
     grouped = grouped * signs.reshape(channels // size, size)
     h = _hadamard_matrix(size, dense.device, dense.dtype)
@@ -1883,6 +1959,237 @@ def _linear_candidate_metrics(
         case_scores.append(float(torch.nan_to_num(weight_score, nan=1.0e30)))
     mean_score = sum(case_scores) / float(len(case_scores))
     return mean_score, tuple(case_scores)
+
+
+def _r64_operand_losses(
+    weight_rows: torch.Tensor,
+    second_moment: torch.Tensor,
+    activation_samples: Sequence[torch.Tensor],
+    d: torch.Tensor,
+    permutation: torch.Tensor,
+    size: int,
+    seed: int,
+) -> tuple[float, tuple[float, ...]]:
+    """Operand-separated standard-HiF4 losses of one block transform.
+
+    The weight side reports the ``H_A``-weighted relative reconstruction
+    loss; the activation side reports the per-sample importance-weighted
+    reconstruction losses.  No Linear output is ever constructed.
+    """
+
+    channels = int(weight_rows.shape[1])
+    weight_smooth = _linear_pair_transform(
+        weight_rows,
+        d,
+        permutation,
+        int(size),
+        int(seed),
+        weight_side=True,
+    )
+    h_x = _transformed_second_moment(second_moment, d, permutation, size)
+    weight_hat = _dequantize_hif4(_dense_to_hif4(weight_smooth))
+    weight_loss = float(
+        torch.nan_to_num(
+            ((weight_smooth - weight_hat).square() * h_x.unsqueeze(0)).sum()
+            / (
+                (weight_smooth.square() * h_x.unsqueeze(0)).sum() + _EPS
+            ),
+            nan=1.0e30,
+            posinf=1.0e30,
+            neginf=1.0e30,
+        )
+    )
+    h_w = _normalize_importance(
+        weight_hat.square().sum(dim=0), channels
+    )
+    if h_w is None:
+        h_w = torch.ones(channels, dtype=torch.float32, device=weight_rows.device)
+
+    act_losses: list[float] = []
+    for sample in activation_samples:
+        smooth = _linear_pair_transform(
+            sample,
+            d,
+            permutation,
+            int(size),
+            int(seed),
+            weight_side=False,
+        )
+        recon = _dequantize_hif4(_dense_to_hif4(smooth))
+        error = ((smooth - recon).square() * h_w.unsqueeze(0)).sum()
+        energy = (smooth.square() * h_w.unsqueeze(0)).sum()
+        act_losses.append(
+            float(
+                torch.nan_to_num(
+                    error / (energy + _EPS),
+                    nan=1.0e30,
+                    posinf=1.0e30,
+                    neginf=1.0e30,
+                )
+            )
+        )
+    return weight_loss, tuple(act_losses)
+
+
+def _rank_r64_seeds(
+    weight_rows: torch.Tensor,
+    activation_rows: torch.Tensor,
+    second_moment: torch.Tensor,
+    d: torch.Tensor,
+    permutation: torch.Tensor,
+) -> list[int]:
+    """Stage A: cheap operand-local ranking of the R64 seeds.
+
+    Uses at most 64 activation rows and 128 weight rows with plain
+    standard HiF4 (no refinement), ranking each seed by the sum of the
+    activation hard reconstruction loss and the ``H_A``-weighted weight
+    loss.  Returns all seeds ordered best-first.
+    """
+
+    scores: list[tuple[float, int]] = []
+    for seed in _LINEAR_R64_STAGE1_SEEDS:
+        weight_loss, act_losses = _r64_operand_losses(
+            weight_rows,
+            second_moment,
+            (activation_rows,),
+            d,
+            permutation,
+            _LINEAR_R64_BLOCK,
+            int(seed),
+        )
+        act_loss = act_losses[0] if act_losses else 0.0
+        scores.append((weight_loss + act_loss, int(seed)))
+    scores.sort(key=lambda item: (item[0], item[1]))
+    return [seed for _score, seed in scores]
+
+
+def _r64_two_fold_check(
+    weight_rows: torch.Tensor,
+    activation_samples: Sequence[torch.Tensor],
+    d: torch.Tensor,
+    permutation: torch.Tensor,
+    parent_size: int,
+    parent_seed: int,
+    seed: int,
+) -> bool:
+    """Stage B two-fold validation of one R64 seed against the parent.
+
+    Fold ``i`` computes the fold statistics from batch ``i`` and scores on
+    every other batch.  The seed must keep the activation-only metric no
+    worse than the parent transform on both folds, and its operand-separated
+    robust metric ``max(ratio_A, ratio_W) + 0.10 * max(0, tail - 1)`` must
+    beat the parent (metric < 1).
+    """
+
+    fold_count = min(2, len(activation_samples))
+    for fold_index in range(fold_count):
+        stats_batch = activation_samples[fold_index]
+        fold_second = stats_batch.square().mean(dim=0)
+        eval_batches = [
+            batch
+            for index, batch in enumerate(activation_samples)
+            if index != fold_index
+        ]
+        if not eval_batches:
+            eval_batches = [stats_batch]
+        w_seed, act_seed = _r64_operand_losses(
+            weight_rows,
+            fold_second,
+            eval_batches,
+            d,
+            permutation,
+            _LINEAR_R64_BLOCK,
+            int(seed),
+        )
+        w_parent, act_parent = _r64_operand_losses(
+            weight_rows,
+            fold_second,
+            eval_batches,
+            d,
+            permutation,
+            int(parent_size),
+            int(parent_seed),
+        )
+        act_seed_mean = sum(act_seed) / float(len(act_seed))
+        act_parent_mean = sum(act_parent) / float(len(act_parent))
+        if act_seed_mean > act_parent_mean:
+            return False
+        ratio_a = act_seed_mean / max(act_parent_mean, 1.0e-12)
+        ratio_w = w_seed / max(w_parent, 1.0e-12)
+        tail_ratio = max(act_seed) / max(max(act_parent), 1.0e-12)
+        metric = max(ratio_a, ratio_w) + 0.10 * max(0.0, tail_ratio - 1.0)
+        if not math.isfinite(metric) or metric >= 1.0:
+            return False
+    return True
+
+
+def _select_r64_candidate(
+    weight_sample: torch.Tensor,
+    activation_samples: Sequence[torch.Tensor],
+    activation_second_moment: torch.Tensor,
+    d: torch.Tensor,
+    permutation: torch.Tensor,
+    parent_size: int,
+    parent_seed: int,
+    baseline_metrics: tuple[float, tuple[float, ...]],
+) -> tuple[int, tuple[float, tuple[float, ...]]]:
+    """Two-stage R64 seed selection on operand-local metrics only.
+
+    Stage A ranks all seeds on cheap sampled operands; Stage B validates the
+    top seeds with the two-fold check and the deployed full-data candidate
+    metric guarded by ``_candidate_is_safe``.  Returns ``(-1, baseline)``
+    when every seed regresses, keeping the parent transform.
+    """
+
+    if not _LINEAR_R64:
+        return -1, baseline_metrics
+    activation_rows = _sample_rows(
+        torch.cat(list(activation_samples), dim=0), _LINEAR_R64_STAGE1_ROWS
+    )
+    weight_rows = _sample_rows(
+        weight_sample, _LINEAR_R64_STAGE1_WEIGHT_ROWS
+    )
+    ranked = _rank_r64_seeds(
+        weight_rows,
+        activation_rows,
+        activation_second_moment,
+        d,
+        permutation,
+    )
+    best_seed = -1
+    best_metrics = baseline_metrics
+    for seed in ranked[: int(_LINEAR_R64_STAGE2_KEEP)]:
+        if not _r64_two_fold_check(
+            weight_sample,
+            activation_samples,
+            d,
+            permutation,
+            int(parent_size),
+            int(parent_seed),
+            seed,
+        ):
+            continue
+        metrics = _linear_candidate_metrics(
+            weight_sample,
+            activation_second_moment,
+            activation_samples,
+            d,
+            permutation,
+            _LINEAR_R64_BLOCK,
+            seed,
+        )
+        if (
+            metrics[0] < best_metrics[0]
+            and _candidate_is_safe(
+                metrics,
+                baseline_metrics,
+                min_mean_improvement=_LINEAR_R64_MIN_IMPROVEMENT,
+                worst_tolerance=_LINEAR_R64_WORST_TOLERANCE,
+            )
+        ):
+            best_metrics = metrics
+            best_seed = int(seed)
+    return best_seed, best_metrics
 
 
 def _activation8_refinement_is_safe(
@@ -2195,6 +2502,27 @@ def hif4_calibration_and_quantize_weight(
                     best_block_smooth_seed = seed
     if forced_choice is not None:
         _, best_block_smooth_size, best_block_smooth_seed = forced_choice
+    elif (
+        _LINEAR_R64
+        and in_features % _LINEAR_R64_BLOCK == 0
+        and best_block_smooth_size != _LINEAR_R64_BLOCK
+    ):
+        # C22: two-stage R64 incoherence-transform seed selection on
+        # operand-local metrics only; -1 keeps the parent transform.
+        r64_seed, r64_metrics = _select_r64_candidate(
+            weight_sample,
+            activation_samples,
+            activation_second_moment,
+            best_d,
+            best_perm,
+            best_block_smooth_size,
+            best_block_smooth_seed,
+            block_best_metrics,
+        )
+        if r64_seed >= 0:
+            best_block_smooth_size = _LINEAR_R64_BLOCK
+            best_block_smooth_seed = int(r64_seed)
+            block_best_metrics = r64_metrics
 
     weight_smooth = _linear_pair_transform(
         weight,
