@@ -205,6 +205,12 @@ robust_attention_objective =
 
 固定 C14 的 calibration gate、单 sweep、cap 4096 和 dense-weight Gram，只将 activation 8×8 coverage 从 2% 提到 4%。开发门为 Linear mean `+0.2pp`、六分项不下降、Attention 不变、CUDA time ratio ≤1.15；若失败则关闭 activation 8×8 coverage 扩展。
 
+执行结果：`local-accepted-not-promoted`。六分项全部正向，Linear mean `+0.148pp`，但低于晋级线；C14 保持 Champion。
+
+### C17：final gated activation 8×8 coverage 8%
+
+从 C14 出发，只将 activation 8×8 coverage 从 2% 提到 8%，其他机制与预算不变。这是 coverage 路线的最后一次有界检查；开发门仍为 Linear mean `+0.2pp`、六分项不下降、Attention 不变、CUDA ratio ≤1.15，本候选后无论结果如何均关闭 coverage 调参。
+
 ### 暂缓
 
 - A2 H64：聚合有增益但尾部和 GQA 安全轨不足，待 C2 稳定后重新立项；

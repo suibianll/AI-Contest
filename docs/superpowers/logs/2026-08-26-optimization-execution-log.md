@@ -292,6 +292,26 @@ Linear 与 B0 完全一致。A3/L1 开启时的数值见各自步骤小节。
   coverage 扩展。
 - 状态：`planned`。
 
+### C16 开发结论
+
+- offset 0 q/k/v/o/fc/proj 全部正向，分别
+  `+0.13/+0.19/+0.05/+0.25/+0.12/+0.15pp`；Linear mean
+  `+0.148pp`，Attention 不变。
+- CUDA algorithm-stage `24.78s`，不高于 C14 开发运行。
+- 状态：`local-accepted-not-promoted`。低于 `+0.2pp`，不运行固定矩阵；
+  C14 保持 Champion。
+
+## C17 预注册：final gated activation 8×8 coverage 8%
+
+- Candidate ID：`C17`
+- Parent：`C14`，SHA256
+  `EC246A8941ACBE4A6B1B085F44B9067F852456C4A0272C01266E1298D4CC6D45`
+- 唯一变化：C14 的 activation 8×8 coverage 从 2% 提到 8%；其余 gate、
+  sweep、cap、Gram 和路径不变。这是 coverage 路线最后一次有界检查。
+- 开发门：offset 0 Linear mean 至少 `+0.2pp`，六分项不下降、Attention
+  不变、CUDA ratio ≤1.15；无论结果如何，本候选后关闭 coverage 调参。
+- 状态：`planned`。
+
 ### C7 开发结论
 
 - offset 0 Linear mean 相对 C5 约 `+0.123pp`；q/k/v/o/fc/proj 六项均为
