@@ -85,6 +85,15 @@ _WEIGHT_FULL64_BEAM_OFFSETS = (-2, -1, 0, 1, 2, 3)
 _WEIGHT_FULL64_BEAM_KEEP = 4
 _WEIGHT_FULL64_CHUNK_ROWS = 1024
 _WEIGHT_FULL64_MAX_RATIO = 0.30
+# C35 (2026-08-28): per-width full-64 coverage.  Narrow layers (q/k/v/o,
+# <=1024 channels) have few 64-blocks and rows, so their refinement is cheap;
+# wide FFN projectors (fc/proj, 2048/3072) dominate the calibration time.
+# Giving narrow layers a fuller coverage and keeping wide layers conservative
+# extracts weight-side precision (cap-oracle: 21pp weight-side gap) without
+# breaching the official CPU-time envelope.
+_WEIGHT_FULL64_NARROW_CHANNELS = 1024
+_WEIGHT_FULL64_MAX_RATIO_NARROW = 0.38
+_WEIGHT_FULL64_MAX_RATIO_WIDE = 0.25
 _WEIGHT_FULL64_DAMPINGS = (0.01, 0.03, 0.1)
 _WEIGHT_FULL64_SIGNED_CODES = tuple(
     round(code * 0.25, 2) for code in range(-7, 8)
@@ -225,7 +234,7 @@ _WEIGHT_QUADRATIC8_MAX_GROUPS = 8192
 _WEIGHT_QUADRATIC8_SWEEPS = 2
 _WEIGHT_QUADRATIC8_ACCEPT_MARGIN = 1.0e-5
 _WEIGHT_QUADRATIC16 = True
-_WEIGHT_QUADRATIC16_MAX_RATIO = 0.10
+_WEIGHT_QUADRATIC16_MAX_RATIO = 0.02
 _WEIGHT_QUADRATIC16_MAX_GROUPS = 4096
 _WEIGHT_QUADRATIC16_SWEEPS = 1
 _WEIGHT_QUADRATIC16_ACCEPT_MARGIN = 1.0e-5
@@ -1081,10 +1090,11 @@ def _refine_weight_blocks64(
     dense: torch.Tensor,
     params: dict[str, torch.Tensor],
     cov: torch.Tensor,
+    max_ratio: float = _WEIGHT_FULL64_MAX_RATIO,
 ) -> dict[str, torch.Tensor]:
     """C23 full-64 weight refinement (plan section 6).
 
-    Per row chunk, the top ``_WEIGHT_FULL64_MAX_RATIO`` block columns by
+    Per row chunk, the top ``max_ratio`` block columns by
     parent full-H loss enter a ``_WEIGHT_FULL64_BEAM_KEEP``-way scale beam
     (codes ``standard_code + _WEIGHT_FULL64_BEAM_OFFSETS`` ranked by the
     exact-hierarchy initialization loss under the full damped Hessian).
@@ -1109,6 +1119,7 @@ def _refine_weight_blocks64(
     device = dense.device
 
     h_blocks = _full64_hessian_blocks(cov, channels)
+    max_ratio = float(max_ratio)
     w_all = dense.detach().to(torch.float32).reshape(rows, blocks, 64)
     q_parent = _dequantize_hif4(params).to(torch.float32).reshape(
         rows, blocks, 64
@@ -1138,7 +1149,7 @@ def _refine_weight_blocks64(
     chunk = max(1, int(_WEIGHT_FULL64_CHUNK_ROWS))
     cap_cols = min(
         blocks,
-        max(1, int(math.ceil(blocks * float(_WEIGHT_FULL64_MAX_RATIO)))),
+        max(1, int(math.ceil(blocks * max_ratio))),
     )
     offsets = torch.tensor(
         _WEIGHT_FULL64_BEAM_OFFSETS, dtype=torch.int64, device=device
@@ -3547,9 +3558,17 @@ def hif4_calibration_and_quantize_weight(
     # C23: full-64 weight refinement against the complete transformed
     # activation covariance (the same cov used for the group grams above).
     # Gate on use_quadratic so the Hessian is always available.
+    # C35: per-width coverage -- narrow layers (<=1024 channels, cheap
+    # 64-blocks) get a higher ratio; wide FFN projectors keep the global
+    # budget so the official CPU-time envelope is respected.
     if _WEIGHT_FULL64 and use_quadratic:
+        full64_ratio = (
+            _WEIGHT_FULL64_MAX_RATIO_NARROW
+            if in_features <= _WEIGHT_FULL64_NARROW_CHANNELS
+            else _WEIGHT_FULL64_MAX_RATIO_WIDE
+        )
         weight_params = _refine_weight_blocks64(
-            weight_smooth, weight_params, gram
+            weight_smooth, weight_params, gram, max_ratio=full64_ratio
         )
 
     weight_hat = _dequantize_hif4(weight_params)

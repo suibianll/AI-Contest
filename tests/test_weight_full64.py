@@ -226,7 +226,9 @@ def test_weight64_batched_matches_per_block() -> None:
     saved_ratio = SOLUTION._WEIGHT_FULL64_MAX_RATIO
     try:
         SOLUTION._WEIGHT_FULL64_MAX_RATIO = 1.0
-        batched = SOLUTION._refine_weight_blocks64(dense, params, cov)
+        batched = SOLUTION._refine_weight_blocks64(
+            dense, params, cov, max_ratio=1.0
+        )
         for b in range(blocks):
             dense_b = dense[:, b * 64 : (b + 1) * 64].contiguous()
             cov_b = cov[
@@ -237,7 +239,7 @@ def test_weight64_batched_matches_per_block() -> None:
                 for key, value in params.items()
             }
             per_block = SOLUTION._refine_weight_blocks64(
-                dense_b, params_b, cov_b
+                dense_b, params_b, cov_b, max_ratio=1.0
             )
             for key in batched:
                 got = batched[key].index_select(1, torch.tensor([b]))
