@@ -22,11 +22,12 @@
 | C15 / v018 | C14 | quantized-weight activation Gram | Linear ~0.000pp | 未运行 | accepted, not promoted | [v018](../../../solutions/20260827_v018_c15-quantized-weight-activation-gram-local_scoreNA_timeNA/result.md) | `e6ce6c0` |
 | C16 / v019 | C14 | gated activation 8×8 coverage 4% | Linear +0.148pp | 未运行 | accepted, not promoted | [v019](../../../solutions/20260827_v019_c16-gated-activation-8x8-coverage4-local_scoreNA_timeNA/result.md) | `c6b4edd` |
 | C17 / v020 | C14 | gated activation 8×8 coverage 8% | Linear +0.285pp | 6/6、36/36 分项改善 | Champion | [v020](../../../solutions/20260827_v020_c17-final-gated-activation-8x8-coverage8-local_scoreNA_timeNA/result.md) | `ff3b624` |
-| C18 / v021 | C17 | activation/weight-error cross term | Linear +0.077pp | 未运行 | accepted, not promoted | [v021](../../../solutions/20260827_v021_c18-activation-cross-term-local_scoreNA_timeNA/result.md) | 本次提交 |
+| C18 / v021 | C17 | activation/weight-error cross term | Linear +0.077pp | 未运行 | accepted, not promoted | [v021](../../../solutions/20260827_v021_c18-activation-cross-term-local_scoreNA_timeNA/result.md) | `f367c5d` |
+| C19 / v022 | C17 | cross-aware Newton gain selection | Linear +0.152pp | 未运行 | accepted, not promoted | [v022](../../../solutions/20260827_v022_c19-cross-aware-gain-selection-local_scoreNA_timeNA/result.md) | 本次提交 |
 
 ## 当前状态
 
 - 当前根 `solution.py`：C17 / v020，SHA256 `C29E71C332E41E262B94FF68454CEB1F1589EE932FB4E1D55C5F221CFD060766`。
 - 相对 C1 的累计主线：Attention 保留 `+7.12pp` causal 增益；Linear 从 C1 `0.5668` 提升到 C17 `0.5890`，约 `+2.22pp`。
 - 已关闭路线：segment CVaR、继续扩大 8×8/16×16 coverage、增加 16×16 sweep、继续扩大 weight quadratic group size。
-- 当前已预注册候选：C19 cross-aware gain selection；coverage 路线保持关闭。
+- 当前已预注册候选：C20 exact discrete cross-gain selection；coverage 路线保持关闭。

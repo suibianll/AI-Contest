@@ -355,6 +355,26 @@ Linear 与 B0 完全一致。A3/L1 开启时的数值见各自步骤小节。
   不变、CUDA ratio ≤1.15；通过后运行固定矩阵和 CPU 配对。
 - 状态：`planned`。
 
+### C19 开发结论
+
+- offset 0 六分项全部正向，Linear mean `+0.152pp`；约为 C18 增益的两倍，
+  Attention 不变。
+- CUDA algorithm-stage `25.25s`，相对 C17 ratio `1.025`；11 项测试通过。
+- 状态：`local-accepted-not-promoted`。低于 `+0.2pp`，不运行固定矩阵；
+  C17 保持 Champion。
+
+## C20 预注册：exact discrete cross-gain selection
+
+- Candidate ID：`C20`
+- Parent：`C17`，SHA256
+  `C29E71C332E41E262B94FF68454CEB1F1589EE932FB4E1D55C5F221CFD060766`
+- 唯一机制：activation 8×8 组选点按当前 scale hierarchy 与 HiF4 离散码本
+  直接枚举每组可实现的最佳单坐标 objective decrease；更新继续使用相同交叉
+  目标。C17 gate、8% coverage、单 sweep、cap 4096 不变。
+- 开发门：offset 0 Linear mean 至少 `+0.2pp`，六分项不下降、Attention
+  不变、CUDA ratio ≤1.15；通过后运行固定矩阵和 CPU 配对。
+- 状态：`planned`。
+
 ### C7 开发结论
 
 - offset 0 Linear mean 相对 C5 约 `+0.123pp`；q/k/v/o/fc/proj 六项均为

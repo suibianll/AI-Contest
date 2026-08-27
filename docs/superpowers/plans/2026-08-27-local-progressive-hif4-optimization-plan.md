@@ -223,6 +223,12 @@ robust_attention_objective =
 
 从 C17 出发，把 activation 8×8 的组选点与坐标更新统一到块局部交叉目标；候选排序使用 `max_i (H·e+b)_i²/H_ii` 的坐标收益上界，而不再沿用纯 `eᵀHe` 排序。C17 gate、8% coverage、单 sweep、cap 4096 不变。开发门为 Linear mean `+0.2pp`、六分项不下降、Attention 不变、CUDA ratio ≤1.15。
 
+执行结果：`local-accepted-not-promoted`。六分项全部正向，Linear mean `+0.152pp`，约为 C18 的两倍但仍低于晋级线；C17 保持 Champion。
+
+### C20：exact discrete cross-gain selection
+
+从 C17 出发，在同一块局部交叉目标下，直接枚举当前 scale hierarchy 与 HiF4 码本上每组可实现的最佳单坐标 objective decrease，并以此排序 8% 候选；不再使用连续 Newton 上界。gate、coverage、单 sweep、cap 4096 不变。开发门为 Linear mean `+0.2pp`、六分项不下降、Attention 不变、CUDA ratio ≤1.15。
+
 ### 暂缓
 
 - A2 H64：聚合有增益但尾部和 GQA 安全轨不足，待 C2 稳定后重新立项；
