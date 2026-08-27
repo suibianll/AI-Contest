@@ -1346,7 +1346,7 @@ edge(i,j)=|H_A[i,j]|·sqrt(r_i·r_j) 模式的 `linear_compliance_guard`
   `tests/test_linear_compliance_guard.py::test_runtime_guard_reviews_c30_edge_permutation`；
   全量 pytest 60/60 通过。
 
-### Level-0 机制上限探针（待实现，预注册门）
+### Level-0 机制上限探针（预注册门）
 
 - 问题：oracle 排列（对真实 H_A 与 r 直接做 §8.3 分层贪心）相对
   父排列的 operand-local 硬重构能量上限是多少。
@@ -1360,6 +1360,33 @@ edge(i,j)=|H_A[i,j]|·sqrt(r_i·r_j) 模式的 `linear_compliance_guard`
 - 实现要点（下个工作项）：两臂必须走同一探针 harness（直接调
   `_nvfp4_to_hif4`/`_dense_to_hif4`，仅排列参数不同）；需先确认
   权重路径是否接受排列参数及 importance/gram 的坐标系约定。
+
+### C30 Level-0 结果：PASS（2026-08-28）
+
+探针 `evaluator/c30_permutation_probe.py`，结果档案
+`evaluator/c30_permutation_probe_results.json`。矩阵：层 0/5/11 ×
+6 组件（q/k/v/o/fc/proj），amax6，seq=128，calib=2，
+block_smooth_size=0（全部组件），18 组件全部实跑，总耗时 ~13s。
+
+四臂（同一 harness，仅排列不同，全部在固定 parent 坐标系度量）：
+
+| 臂 | 权重改进 | 激活改进 | 组合 | 16 通道捕获率 |
+|---|---:|---:|---:|---:|
+| oracle_l0（edge=|H_A|·sqrt(r_i r_j)） | +22.78% | +31.96% | +54.75% | ×1.874 |
+| oracle_l1（edge−λ·幅值惩罚） | +5.29% | +24.92% | +30.21% | ×1.483 |
+| random（seed 1234） | −2.10% | −0.14% | −2.24% | ×0.969 |
+
+- 三道预注册否决门全部通过（组合 ≥10%、均值两侧为正、捕获率
+  ≥+20%）→ **PASS，进入 Level-1**。random 臂两侧均值 ≤0 证明
+  改进来自图结构而非排列扰动本身，数值健全。
+- 组件分布：16/18 组件两侧同时改进；例外 L0/v 两侧均劣于父
+  （−25%/−35%）、L0/proj 激活侧 −7.3%（权重侧 +0.5%）——
+  Level-1 的验收必须逐组件做 Pareto 检查（§8.3 第 8 条），
+  不允许均值掩盖局部退化。
+- **重要观察**：幅值不兼容惩罚臂（oracle_l1）把权重侧改进从
+  +22.78% 压到 +5.29%，激活侧也降 7pp——预注册的
+  `λ·|log scale_i − log scale_j|` 惩罚在真实 GPT-2 数据上是净损失。
+  Level-1 实现默认 λ=0（纯 edge），惩罚只作为消融臂保留。
 
 ## C3 预注册：top-K 8×8 Linear 二阶（历史）
 
