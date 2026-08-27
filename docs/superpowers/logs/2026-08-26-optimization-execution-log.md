@@ -1770,6 +1770,21 @@ flag `_ACTIVATION_SAMPLE_IMPORTANCE`：动态量化路径里用当前 sample
 - 现状：Linear mean **0.5695**（vs C21-C +3.84pp；本轮 +0.64pp），
   CPU ~99s / 官方 ~257s（余量 14%）。
 
+### 排除性实验批次（2026-08-28，均无实益回退）
+
+C38 后权重侧已收敛，逐个排除剩余可调项：
+
+| 实验 | 结果 | 判定 |
+|---|---|---|
+| QUAD16 ratio 0.02→0.10 | +0.02pp（噪音级，被 FULL64 全覆盖吸收） | 回退 |
+| WIDE 0.25→0.30（fc 宽层） | fc 逐位一致（top-12 块已含全部可改善块） | 回退 |
+| Q/K/V accept margin 放宽 | Linear 一致、Attention 0.4497→0.4490 | 回退 |
+
+- 结论：权重侧 FULL64 三维（coverage/beam/去冗余）已达最优；
+  fc 宽层覆盖边际尽；Q/K/V 阈值为精修次要门槛，放宽无益。
+- 剩余大方向：Attention headwise 级重构（A=0.3345 洼地、工程量大、
+  官方兑换弱存疑）；官方提交验证（需人工操作）。
+
 ## C3 预注册：top-K 8×8 Linear 二阶（历史）
 
 - Candidate ID：`C3`
