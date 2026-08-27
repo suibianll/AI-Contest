@@ -672,7 +672,7 @@ Linear 与 B0 完全一致。A3/L1 开启时的数值见各自步骤小节。
 - 时间预算：无新增机制，预期 CUDA algorithm-stage 不高于 C21；CPU ratio
   不设门（删除路径只会变快），如实记录。
 - Holdout 台账：`holdout_runs_used=0 / remaining=3`（Phase 0 不消耗）。
-- 状态：`in-progress`（§4.1 代码改造完成，pytest 13/13 通过；待 §4.6 验收）。
+- 状态：`local-champion`（Phase 0 验收全过，归档 v025；见 §4.6 验收记录）。
 
 ### C21-C §4.1 开发记录（2026-08-27）
 
@@ -767,6 +767,42 @@ Linear 与 B0 完全一致。A3/L1 开启时的数值见各自步骤小节。
   统一使用 `--basetemp=.tmp_pytest`（已加入 .gitignore）。
 - 验证：pytest 39/39 通过。Phase 0 不消耗 holdout
   （`holdout_runs_used=0/remaining=3`）。
+
+### C21-C §4.6 验收记录（2026-08-27，全部通过）
+
+- pytest：39/39（reference codec / error decomposition / compliance
+  guard / holdout ledger 全含）。
+- CUDA 开发评测（amax6 offset 0 both）：Linear mean `0.5311`
+  （q/k/v/o/fc/proj = 0.6008/0.5936/0.5940/0.5178/0.4749/0.4058）；
+  Attention causal `0.4497` / non-causal `0.4942` 与 C21 逐位一致；
+  algorithm-stage `24.03s` vs C21 `26.59s`（ratio 0.904，变快）。
+- 固定回归矩阵（C21 同日同评测器重跑，6 配置与 v024 台账逐位一致，
+  证明 reference codec 解耦不改变 standard 分母）：
+
+  | Case | C21 | C21-C | Delta |
+  |---|---:|---:|---:|
+  | amax6 offset 0 | 0.5930 | 0.5311 | −6.19pp |
+  | amax6 offset 97 | 0.5747 | 0.5148 | −5.99pp |
+  | amax6 offset 193 | 0.5928 | 0.5319 | −6.09pp |
+  | amax6 offset 389 | 0.5912 | 0.5235 | −6.77pp |
+  | amax4 offset 0 | 0.4973 | 0.4663 | −3.10pp |
+  | pow2 offset 0 | 0.5575 | 0.5454 | −1.21pp |
+
+  6/6 配置下降即移除输出监督的真实代价（k −11.9pp、proj −13.0pp 最大，
+  v 仅 −0.7pp）；该表为后续所有候选 ROI 的强制基线。各配置 Attention
+  全部与 C21 逐位一致；GQA kv6 offset 193 causal `0.4169` /
+  non-causal `0.4928` 逐位一致。
+- 合成安全矩阵：576/576 case 与 C21 逐位一致（max abs delta `0`，
+  容差 1e-6）；overall causal `0.282448` / non-causal `0.299711`；
+  worst heavy_tail pow2 seed2 `−0.939570/−1.075382`（inherited）；
+  两方案 `RESULT ok`。
+- 合规门禁：静态 + 运行时全过（`violations=[]`）。
+- 归档：`solutions/20260827_v025_c21c-compliance-baseline/`
+  （result.md 含 holdout 台账 `0/3`、seed_hash `96dd4ed7…`）。
+  源码 SHA256
+  `83AB4864254F80D221BB491BDEF89F8C9AB8E83534FD62D4DD5E0C1C292FEA12`。
+- 决策：C21-C 为唯一合规 Champion；后续候选（C22 起）全部从 C21-C
+  派生并通过同一合规门禁。
 
 ## C3 预注册：top-K 8×8 Linear 二阶
 
