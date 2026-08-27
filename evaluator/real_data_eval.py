@@ -142,6 +142,7 @@ def collect_real_data(
     test_samples: int,
     device: str = "cpu",
     token_offset: int = 0,
+    text: str | None = None,
 ):
     from transformers import GPT2LMHeadModel, GPT2Tokenizer
 
@@ -149,9 +150,12 @@ def collect_real_data(
     tokenizer = GPT2Tokenizer.from_pretrained(model_name_or_path)
     model.eval().to(device)
 
-    ids = tokenizer(TEXT, return_tensors="pt", truncation=True, max_length=4096)[
-        "input_ids"
-    ][0]
+    ids = tokenizer(
+        TEXT if text is None else text,
+        return_tensors="pt",
+        truncation=True,
+        max_length=4096,
+    )["input_ids"][0]
     if ids.numel() == 0:
         raise ValueError("evaluation text tokenized to an empty sequence")
     offset = int(token_offset) % int(ids.numel())

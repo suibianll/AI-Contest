@@ -740,6 +740,34 @@ Linear 与 B0 完全一致。A3/L1 开启时的数值见各自步骤小节。
 - 验证：pytest 32/32 通过（含真实 solution.py 静态+运行时全门禁）。
   当前 C21-C solution：`violations=[]`，contraction 全部合法。
 
+### C21-C §4.5 开发记录（2026-08-27）
+
+- 新建 `evaluator/holdout_eval.py`：冻结最终 holdout（26000 计划 §4.5）。
+  - 新固定文本 `HOLDOUT_TEXT`（约 30 句自然文本），与开发
+    `real_data_eval.TEXT` 逐句无交集，从未用于任何候选调参；
+  - 冻结配置 `HOLDOUT_CONFIG`：layers=12、seq=128、calib=2、
+    **test=4（≥4 个 token windows）**、amax6、causal、models/gpt2；
+  - `--freeze` 已执行：`evaluator/holdout_ledger.json` 记录
+    `seed_hash=96dd4ed70a0597a0060fe696557d3a330af22e3d273e6676a501d7bfb4b589fc`
+    （sha256(文本+冻结配置)）、budget=3、runs=[]；二次 freeze 幂等，
+    不同 seed 拒绝覆盖；运行前校验 ledger seed_hash 一致（holdout
+    冻结后不可修改）；
+  - 运行时强制：每个候选（solution.py 的 sha256）至多跑一次最终
+    holdout；总预算 3 次（`HOLDOUT_BUDGET`），超额/重复直接拒绝；
+    `--reason` 必填并记入台账（holdout 仅限最终验收，禁止用于
+    seed/threshold/coverage 搜索）；
+  - 输出仅聚合量：linear_mean、attention_mean、algorithm_stage_seconds
+    与台账余量，绝不打印逐层/逐组件数据。
+- `real_data_eval.collect_real_data` 增加 `text` 参数（默认开发
+  TEXT，行为不变），holdout 采集复用同一入口。
+- 新建 `tests/test_holdout_eval.py`（7 用例）：文本与开发集逐句不
+  交集、test≥4 windows、seed hash 确定性、freeze 幂等且不可覆盖、
+  每候选一次强制、总预算强制、篡改 seed_hash 拒绝。
+- 环境注记：系统 pytest 临时目录（`Temp/pytest-of-*`）ACL 受损，
+  统一使用 `--basetemp=.tmp_pytest`（已加入 .gitignore）。
+- 验证：pytest 39/39 通过。Phase 0 不消耗 holdout
+  （`holdout_runs_used=0/remaining=3`）。
+
 ## C3 预注册：top-K 8×8 Linear 二阶
 
 - Candidate ID：`C3`
