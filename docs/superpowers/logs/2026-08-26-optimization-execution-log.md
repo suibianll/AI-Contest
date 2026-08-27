@@ -273,6 +273,25 @@ Linear 与 B0 完全一致。A3/L1 开启时的数值见各自步骤小节。
   不变，CUDA algorithm-stage ratio ≤1.15；通过后运行固定矩阵和 CPU 配对。
 - 状态：`planned`。
 
+### C15 开发结论
+
+- offset 0 分项相对 C14 为 `-0.02/0.00/+0.01/+0.05/-0.01/-0.03pp`，
+  Linear mean 在显示精度下无净变化；Attention 不变。
+- CUDA algorithm-stage `25.62s`，高于 C14 `24.99s`。
+- 状态：`local-accepted-not-promoted`；不运行固定矩阵，C14 保持 Champion。
+
+## C16 预注册：gated activation 8×8 coverage 4%
+
+- Candidate ID：`C16`
+- Parent：`C14`，SHA256
+  `EC246A8941ACBE4A6B1B085F44B9067F852456C4A0272C01266E1298D4CC6D45`
+- 唯一变化：C14 的 activation 8×8 coverage 从 2% 提到 4%；calibration
+  gate、单 sweep、cap 4096、Gram 来源以及其他路径全部不变。
+- 开发门：offset 0 Linear mean 至少 `+0.2pp`，六分项不下降、Attention
+  不变、CUDA algorithm-stage ratio ≤1.15；不通过即结束 activation 8×8
+  coverage 扩展。
+- 状态：`planned`。
+
 ### C7 开发结论
 
 - offset 0 Linear mean 相对 C5 约 `+0.123pp`；q/k/v/o/fc/proj 六项均为

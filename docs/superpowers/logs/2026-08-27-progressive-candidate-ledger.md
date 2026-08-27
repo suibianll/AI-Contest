@@ -18,11 +18,12 @@
 | C11 / v014 | C10 | wide activation 8×8 residual | proj +0.31pp; Linear +0.052pp | 6/6 改善 | Champion | [v014](../../../solutions/20260827_v014_c11-wide-activation-8x8-local_scoreNA_timeNA/result.md) | `6cee2f0` |
 | C12 / v015 | C11 | wide activation 16×16 residual | proj +0.07pp; Linear +0.012pp | 未运行 | accepted, not promoted | [v015](../../../solutions/20260827_v015_c12-wide-activation-16x16-local_scoreNA_timeNA/result.md) | `37dde76` |
 | C13 / v016 | C11 | all-width activation 8×8 | Linear +0.463pp | aggregate 6/6; amax4 o -0.91pp | accepted, not promoted | [v016](../../../solutions/20260827_v016_c13-all-width-activation-8x8-local_scoreNA_timeNA/result.md) | `148029b` |
-| C14 / v017 | C11 | calibration-gated all-width activation 8×8 | Linear +0.450pp | 6/6、全分项安全 | Champion | [v017](../../../solutions/20260827_v017_c14-gated-all-width-activation-8x8-local_scoreNA_timeNA/result.md) | 本次提交 |
+| C14 / v017 | C11 | calibration-gated all-width activation 8×8 | Linear +0.450pp | 6/6、全分项安全 | Champion | [v017](../../../solutions/20260827_v017_c14-gated-all-width-activation-8x8-local_scoreNA_timeNA/result.md) | `9e10d33` |
+| C15 / v018 | C14 | quantized-weight activation Gram | Linear ~0.000pp | 未运行 | accepted, not promoted | [v018](../../../solutions/20260827_v018_c15-quantized-weight-activation-gram-local_scoreNA_timeNA/result.md) | 本次提交 |
 
 ## 当前状态
 
 - 当前根 `solution.py`：C14 / v017，SHA256 `EC246A8941ACBE4A6B1B085F44B9067F852456C4A0272C01266E1298D4CC6D45`。
 - 相对 C1 的累计主线：Attention 保留 `+7.12pp` causal 增益；Linear 从 C1 `0.5668` 提升到 C14 `0.5861`，约 `+1.93pp`。
 - 已关闭路线：segment CVaR、继续扩大 8×8/16×16 coverage、增加 16×16 sweep、继续扩大 weight quadratic group size。
-- 当前已预注册候选：C15 quantized-weight activation Gram；不得在开发结果出来前改变 gate 或预算。
+- 当前已预注册候选：C16 gated activation 8×8 coverage 4%；不得在开发结果出来前改变 gate 或预算。

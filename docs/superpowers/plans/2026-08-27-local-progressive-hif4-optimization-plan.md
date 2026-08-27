@@ -199,6 +199,12 @@ robust_attention_objective =
 
 从 C14 出发，只把 activation quadratic 的 Gram 来源由 `W_smooth^T W_smooth` 替换为最终部署算子的 `W_hat^T W_hat`，其余 gate、coverage、sweep 和路径不变。这使 activation error 的二次项与真实量化权重算子对齐。开发门为 Linear mean `+0.2pp`、六分项不下降、Attention 不变、CUDA time ratio ≤1.15。
 
+执行结果：`local-accepted-not-promoted`。offset 0 Linear mean 无净变化且 CUDA 时间上升；C14 保持 Champion。
+
+### C16：gated activation 8×8 coverage 4%
+
+固定 C14 的 calibration gate、单 sweep、cap 4096 和 dense-weight Gram，只将 activation 8×8 coverage 从 2% 提到 4%。开发门为 Linear mean `+0.2pp`、六分项不下降、Attention 不变、CUDA time ratio ≤1.15；若失败则关闭 activation 8×8 coverage 扩展。
+
 ### 暂缓
 
 - A2 H64：聚合有增益但尾部和 GQA 安全轨不足，待 C2 稳定后重新立项；
