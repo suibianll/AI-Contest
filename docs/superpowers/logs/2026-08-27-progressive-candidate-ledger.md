@@ -1,6 +1,6 @@
 # HiF4 Progressive Candidate Ledger
 
-本表是 2026-08-27 本地优化链的顺序索引。每个候选只改变一个主机制；完整配置、分项、时间与源码 SHA 以对应 archive 的 `result.md` 为准。B0 官方结果已闭环为 `15313 / 137s`；C10 / v013（提交 `a2e0ed3`）官方结果为 `15799 / 144s`，为当前官方最优；其余候选尚无官方结果，继续保留 `NA`，未来只追加、不覆盖本地证据。
+本表是 2026-08-27 本地优化链的顺序索引。每个候选只改变一个主机制；完整配置、分项、时间与源码 SHA 以对应 archive 的 `result.md` 为准。B0 官方 `15313 / 137s`、C10 / v013 官方 `15799 / 144s` 均已闭环；C21 / v024（提交 `23d1cf7`）官方 `16043 / 173.8s`，为当前官方最优；其余候选尚无官方结果，继续保留 `NA`，未来只追加、不覆盖本地证据。
 
 | Candidate | Parent | 唯一变化 | offset 0 主效应 | 固定回归 | 结论 | Archive | Git commit |
 |---|---|---|---:|---|---|---|---|
@@ -25,12 +25,13 @@
 | C18 / v021 | C17 | activation/weight-error cross term | Linear +0.077pp | 未运行 | accepted, not promoted | [v021](../../../solutions/20260827_v021_c18-activation-cross-term-local_scoreNA_timeNA/result.md) | `f367c5d` |
 | C19 / v022 | C17 | cross-aware Newton gain selection | Linear +0.152pp | 未运行 | accepted, not promoted | [v022](../../../solutions/20260827_v022_c19-cross-aware-gain-selection-local_scoreNA_timeNA/result.md) | `37acc42` |
 | C20 / v023 | C17 | exact discrete cross-gain selection | Linear +0.413pp | 5/6 positive; pow2 proj -5.87pp | accepted, not promoted | [v023](../../../solutions/20260827_v023_c20-exact-discrete-cross-gain-local_scoreNA_timeNA/result.md) | `8934745` |
-| C21 / v024 | C17 | calibration-gated exact cross selection | Linear +0.152pp | 6/6 改善; 修复 C20 pow2 | Champion | [v024](../../../solutions/20260827_v024_c21-gated-exact-cross-selection-local_scoreNA_timeNA/result.md) | 本次提交 |
+| C21 / v024 | C17 | calibration-gated exact cross selection | Linear +0.152pp | 6/6 改善; 修复 C20 pow2 | Champion; 官方 16043/173.8s（+244 vs v013） | [v024](../../../solutions/20260827_v024_c21-gated-exact-cross-selection_score16043_time174s/result.md) | `23d1cf7` |
 
 ## 当前状态
 
-- 官方最优：v013（C10，提交 `a2e0ed3`）`15799 / 144s`，较 B0 `15313 / 137s` 提升 `+486`。
-- 当前根 `solution.py`：C21 / v024，SHA256 `40F4D17C12F976F83856B9641BE9A3951867BC8979992D773C60C0C1C3E8066A`；本地 Linear mean `0.5930`（6/6 固定矩阵改善，pow2 安全门通过），高于 v013 的 `0.5811`，尚未官方评测。
+- 官方最优：v024（C21，提交 `23d1cf7`）`16043 / 173.8s`，较 v013 `15799 / 144s` 提升 `+244`，较 B0 `15313 / 137s` 提升 `+730`。
+- 当前根 `solution.py`：C21 / v024，blob `594d2c01`，SHA256 `40F4D17C12F976F83856B9641BE9A3951867BC8979992D773C60C0C1C3E8066A`；本地 Linear mean `0.5930`；官方评测即该字节，已是官方 champion。
+- HEAD 后续提交 `e2235a5`（synthetic attention safety evaluator）为评测基础设施扩展，不改变 `solution.py` 字节，不属于本次提交物。
 - 相对 C1 的累计主线：Attention 保留 `+7.12pp` causal 增益；Linear 从 C1 `0.5668` 提升到 C21 `0.5930`，约 `+2.62pp`。
 - 已关闭路线：segment CVaR、继续扩大 8×8/16×16 coverage、增加 16×16 sweep、继续扩大 weight quadratic group size。
-- 下一方向：以 C21 为主线的单机制实验；优先考虑将 C21 提交官方评测。
+- 下一方向：以 C21 为主线的单机制实验，从 HEAD（含 synthetic attention safety evaluator）继续。

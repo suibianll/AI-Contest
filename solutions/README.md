@@ -30,7 +30,7 @@ Root `solution.py` is the only active submission. Archived source files are immu
 | v021 | 2026-08-27 | C18 activation/weight-error cross term | 0.5897 | 0.4497 | CUDA stage 25.19s | NA | NA | local +0.0008 Linear | local-accepted-not-promoted | [archive](20260827_v021_c18-activation-cross-term-local_scoreNA_timeNA/) |
 | v022 | 2026-08-27 | C19 cross-aware gain selection | 0.5905 | 0.4497 | CUDA stage 25.25s | NA | NA | local +0.0015 Linear | local-accepted-not-promoted | [archive](20260827_v022_c19-cross-aware-gain-selection-local_scoreNA_timeNA/) |
 | v023 | 2026-08-27 | C20 exact discrete cross-gain selection | 0.5931 | 0.4497 | CUDA stage 25.19s | NA | NA | local +0.0041 Linear; pow2 proj -0.0587 | local-accepted-not-promoted | [archive](20260827_v023_c20-exact-discrete-cross-gain-local_scoreNA_timeNA/) |
-| v024 | 2026-08-27 | C21 gated exact cross selection | 0.5930 | 0.4497 | CUDA stage 25.87s | NA | NA | local +0.0040 Linear; 6/6; fixes C20 pow2 | local-champion | [archive](20260827_v024_c21-gated-exact-cross-selection-local_scoreNA_timeNA/) |
+| v024 | 2026-08-27 | C21 gated exact cross selection | 0.5930 | 0.4497 | CUDA stage 25.87s | 16043 | 173.8s | +244 vs v013 official | official-champion | [archive](20260827_v024_c21-gated-exact-cross-selection_score16043_time174s/) |
 
 `*` v002 的 Linear/Attention 数值最初来自远程仓库 `CHANGELOG.md` 的 GPT-2
 12 层、2 calib + 2 test 报告，之后已由 GPU-compatible B0 derivative 在本地
@@ -42,8 +42,12 @@ v003 起允许只有本地结果时立即归档。未提交候选的官方列保
 提交 SHA、分数和时间，不覆盖既有本地配对表或实验结论。
 
 用户于 2026-08-27 确认 v013（C10，提交 `a2e0ed3`）官方结果为 `15799 / 144s`，
-较 v002/B0 的 `15313 / 137s` 提升 `+486`，为当前官方最优（official-champion）；
-该提交的 `solution.py` 经 git blob 校验与 v013 归档字节一致。
+较 v002/B0 的 `15313 / 137s` 提升 `+486`；该提交的 `solution.py` 经 git blob 校验与
+v013 归档字节一致。
+
+用户于 2026-08-27 确认 v024（C21，提交 `23d1cf7`）官方结果为 `16043 / 173.8s`，
+较 v013 提升 `+244`，为当前官方最优（official-champion）；根 `solution.py`
+（blob `594d2c01`）经 git blob 校验与 v024 归档字节一致。
 
 ## Local-first workflow
 

@@ -7,7 +7,8 @@
 - Source SHA256: `40F4D17C12F976F83856B9641BE9A3951867BC8979992D773C60C0C1C3E8066A`
 - Parent SHA256: `C29E71C332E41E262B94FF68454CEB1F1589EE932FB4E1D55C5F221CFD060766`
 - Local status: `local-champion`
-- Official status: `unavailable`
+- Official status: `official-champion`
+- Official commit: promote commit `23d1cf7` (`feat: promote gated exact cross selection`); root `solution.py` bytes verified identical to this archive (blob `594d2c0145e3b24e589fcf3ee3538da6b43b2ce2`) at submission time.
 
 ## Development result
 
@@ -42,3 +43,13 @@ Offset 0, amax6, CUDA:
 `accepted as local Champion`. C21 delivers 6/6 improvement across the fixed matrix, keeps the C20 exact-selection upside while eliminating its pow2 safety failure through the calibration gate, preserves Attention exactly, and stays within the 1.15 timing limit. C17 lineage update: v024 becomes the local mainline head.
 
 Next direction: the calibration-gated exact cross selection is the new mainline; the next single-mechanism experiment should build on C21, with the pow2-safe gate retained as a mandatory parent mechanism. Official submission should be prioritized for C21 given the official-champion (v013, 15799) is already 0.5811-equivalent locally.
+
+## Official result (2026-08-27)
+
+- Official score: `16043`
+- Official runtime: `173.8` seconds
+- Submitted source: root `solution.py` bytes `594d2c0145e3b24e589fcf3ee3538da6b43b2ce2` (C21 / v024, promote commit `23d1cf7`), verified byte-identical to this archive.
+- Official score delta: `+244` versus the previous official record v013 (`15799 / 144s`).
+- Official runtime delta: `+29.8` seconds versus v013 (`144s`); the calibration-gated exact cross selection still fits the time budget.
+- Direction agreement: local fixed matrix showed 6/6 improvement over C17 (incl. the C20 pow2 safety fix); the official score confirms the exact cross selection direction on the real leaderboard.
+- Status: new official record; C21-chain later candidates (from the synthetic attention safety evaluator onward) are not part of this submission.
