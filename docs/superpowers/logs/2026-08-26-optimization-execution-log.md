@@ -717,6 +717,29 @@ Linear 与 B0 完全一致。A3/L1 开启时的数值见各自步骤小节。
   缩放）、输出形状只有标量/一维行向量、非法形状拒绝。
 - 验证：pytest 24/24 通过。
 
+### C21-C §4.4 开发记录（2026-08-27）
+
+- 新建 `evaluator/linear_compliance_guard.py`：双层合规门禁。
+  - 静态层（AST）：拒绝已知违规符号（`_linear_output_candidate_metrics`、
+    `cross8` 家族等）以标识符/字符串形式回归；拒绝违规 state key
+    （output/reference/residual/cross/target/label，仅限 dict 字面量键）；
+    启发式标记激活/权重混合命名的收缩（方法调用接收者纳入操作数）。
+  - 运行层（TorchDispatchMode 污点跟踪）：A/G/W/Wg/Ra/Rw 六种污点
+    通过 ATen 算子传播；记录全部收缩的形状与污点。硬失败：激活残差×
+    权重残差交叉收缩（改名 cross8）、tokens/out_features 维度泄漏进
+    收缩输出、activation_state 张量携带 token/out_features 维度。
+    `Wg`（weight-Gram 引导）标记区分权重数据与引导信号，避免把合法的
+    权重 Gram 激活精修误判为交叉残差；`[K]` 通道统计（SmoothQuant
+    scale）污点中和，落 review 人工确认而非 violations。
+- 新建 `tests/test_linear_compliance_guard.py`（8 用例）：静态接受
+  当前 solution / 拒绝违规符号与改名交叉收缩；运行时接受当前
+  solution（含 review 通道统计确认）、拒绝 Linear 输出监督与交叉
+  残差 state、放行合法 Hessian/Gram；`guard_solution_file` 全门禁。
+- 修复静态层漏报：`a.mm(b)` 方法调用接收者不在 `node.args` 中，
+  将其补入操作数后改名交叉收缩被正确标记。
+- 验证：pytest 32/32 通过（含真实 solution.py 静态+运行时全门禁）。
+  当前 C21-C solution：`violations=[]`，contraction 全部合法。
+
 ## C3 预注册：top-K 8×8 Linear 二阶
 
 - Candidate ID：`C3`
