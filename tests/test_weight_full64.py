@@ -329,13 +329,14 @@ def _assert_nested_equal(left, right) -> None:
         assert left == right
 
 
-def test_weight_full64_disabled_by_default() -> None:
-    assert SOLUTION._WEIGHT_FULL64 is False
+def test_weight_full64_enabled_in_production() -> None:
+    """C23 is promoted (2026-08-28): the flag is on in production."""
+    assert SOLUTION._WEIGHT_FULL64 is True
 
 
-def test_weight_full64_disabled_matches_c21c() -> None:
-    """Production default is disabled (C23 rejected in v027): the
-    calibration output must stay bit-identical to the C21-C champion."""
+def test_weight_full64_enabled_changes_output_vs_c21c() -> None:
+    """With the flag on (the promoted default), the calibration output
+    must differ from the C21-C parent: full-64 refinement is active."""
     parent = load_solution_at(_C21C_PARENT, "weight64_c21c_parent")
     weight_pair, calib_pairs = _full64_calibration_inputs()
     child = SOLUTION.hif4_calibration_and_quantize_weight(
@@ -344,4 +345,12 @@ def test_weight_full64_disabled_matches_c21c() -> None:
     base = parent.hif4_calibration_and_quantize_weight(
         *weight_pair, calib_pairs
     )
-    _assert_nested_equal(child, base)
+    child_params = child["weight_params"]
+    base_params = base["weight_params"]
+    assert set(child_params) == set(base_params)
+    differs = any(
+        torch.any(child_params[key] != base_params[key])
+        for key in child_params
+        if torch.is_tensor(child_params[key])
+    )
+    assert differs

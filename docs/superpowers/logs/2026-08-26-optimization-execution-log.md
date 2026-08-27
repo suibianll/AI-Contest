@@ -1490,6 +1490,30 @@ block_smooth_size=0（全部组件），18 组件全部实跑，总耗时 ~13s�
   （C23-lite 贡献拆分）是剩余的最后一个预注册方向；变换坐标系类
   机制（排列/缩放）在真实帧的探索至此全部关闭。
 
+### C23 复评晋级：FULL64 上调为生产默认（2026-08-28）
+
+按用户指示跳过自律门（+2pp 增量门 / CPU ratio 1.15 / 225s 预算），
+直接以官方硬约束（300s）为准绳复评 C23：
+
+- `_WEIGHT_FULL64 = True`（root solution.py 上调为生产默认）。
+- 真实评测复现（offset 0 amax6 CUDA）：Linear mean 0.5311 →
+  0.5505（+1.93pp，与 v027 归档逐位一致：offset 0 0.5504 /
+  offset 97 0.5372 两个点复现）；6/6 组件正向
+  （q +2.12 / k +3.61 / v +0.92 / o +2.11 / fc +1.87 / proj +0.95pp）。
+- 固定矩阵 6/6 正向（v027 归档：amax6 offset 97/193/389
+  +2.24/+2.19/+2.34pp，amax4 +2.66pp，pow2 +1.90pp）。
+- 合规：静态 + 运行时 violations=[]（42/42 含 guard 测试）。
+- 时间：CPU 串行 ratio 1.37（v027 归档口径），官方推算
+  166.6s × 1.37 ≈ 228s < 300s 硬上限；CUDA algorithm-stage
+  实测 31~32s（同日无负载环境）。
+- 预期官方分数：14437 + 1.93pp × 25945 ≈ **14938**（±0.2pp 抖动）。
+- 测试守卫更新：`test_weight_full64_disabled_*` →
+  `test_weight_full64_enabled_*`；`test_linear_r64_disabled_matches_c21c`
+  → `test_linear_r64_disabled_matches_c23`（root 必须与 v027
+  flag-on 副本逐位一致）。pytest 60/60。
+- 新本地 champion：**C23-FULL64**（v027 机制，2026-08-28 复评晋级），
+  父链 C21-C → C23；holdout 预算 3/3 未动。
+
 ## C3 预注册：top-K 8×8 Linear 二阶（历史）
 
 - Candidate ID：`C3`

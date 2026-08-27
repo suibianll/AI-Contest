@@ -505,11 +505,17 @@ def test_linear_r64_state_is_seed_only() -> None:
     walk(state)
 
 
-def test_linear_r64_disabled_matches_c21c() -> None:
+def test_linear_r64_disabled_matches_c23() -> None:
     solution = load_module("r64_disabled", ROOT / "solution.py")
-    parent = load_module("r64_c21c_parent", _C21C_PARENT)
-    # The production default is disabled (C22 rejected in v026): the
-    # calibration output must stay bit-identical to the C21-C champion.
+    # Production is the C23 configuration (FULL64 on, R64 off, promoted
+    # 2026-08-28): the calibration output must stay bit-identical to the
+    # archived v027 flag-on candidate.
+    parent = load_module(
+        "r64_c23_parent",
+        ROOT / "solutions"
+        / "20260827_v027_c23-full64-rejected_scoreNA_timeNA"
+        / "solution.py",
+    )
     weight_pair, calib_pairs = _r64_calibration_inputs()
     child = solution.hif4_calibration_and_quantize_weight(
         *weight_pair, calib_pairs
