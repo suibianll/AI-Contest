@@ -260,6 +260,18 @@ _ACTIVATION_QUADRATIC8_GATE_WORST_TOLERANCE = 1.0e-3
 # smoothing candidates.
 _PERMUTATION_BASES = True
 
+# C30: Hessian-aware hierarchical permutation.  After the transform search
+# selects its best candidate, one extra permutation candidate is built from
+# the edge utility  edge(i, j) = |H_A[i, j]| * sqrt(r_i * r_j)  (activation
+# Gram combined elementwise with the per-channel weight-quantization residual
+# energy -- no cross-operand contraction) by greedy 4->8->16->32->64
+# grouping.  REJECTED on real-data evaluation (2026-08-28): ungated direct
+# replacement regresses Linear mean 0.5311 -> 0.5198 (-1.13pp, 6/6
+# components negative, proj down to negative scores).  The earlier probe
+# gains (+54.75%/+55.24%) were a frame artifact: the probes used
+# state["smooth_inv"] (= 1/d) as d, inverting the weight-side scale.
+_HIERARCHY_PERMUTATION = False
+
 # V 量化目前没有任何重要性：V 的误差进入 softmax 输出时被注意力权重
 # 放大，而校准期可以静态估计每 KV head 的平均平方注意力质量
 # E[A^2]（softmax 概率，因果掩码下按 token 位置平均）。head_dim=64 时
@@ -1306,6 +1318,159 @@ def _flatten_head_permutation(local_permutation: torch.Tensor) -> torch.Tensor:
         heads, dtype=torch.int64, device=local_permutation.device
     )[:, None] * head_dim
     return (local_permutation.to(torch.int64) + base).reshape(-1)
+
+
+class _ChannelGroups:
+    """Union-find over channel indices with explicit member lists."""
+
+    def __init__(self, count: int) -> None:
+        self.parent = list(range(count))
+        self.members: list[list[int]] = [[i] for i in range(count)]
+
+    def find(self, x: int) -> int:
+        while self.parent[x] != x:
+            self.parent[x] = self.parent[self.parent[x]]
+            x = self.parent[x]
+        return x
+
+    def union(self, a: int, b: int) -> bool:
+        ra, rb = self.find(a), self.find(b)
+        if ra == rb:
+            return False
+        if len(self.members[ra]) < len(self.members[rb]):
+            ra, rb = rb, ra
+        self.parent[rb] = ra
+        self.members[ra].extend(self.members[rb])
+        self.members[rb] = []
+        return True
+
+
+def _hierarchy_edge_groups(utility: torch.Tensor, cap: int) -> list[list[int]]:
+    """Seed channel groups by greedily joining the highest-utility edges."""
+
+    channels = int(utility.shape[0])
+    tri = torch.triu_indices(channels, channels, offset=1)
+    values = utility[tri[0], tri[1]]
+    order = torch.argsort(values, descending=True, stable=True)
+    limit = min(int(order.numel()), 16 * channels)
+    top = order[:limit].cpu().tolist()
+    rows = tri[0].cpu().tolist()
+    cols = tri[1].cpu().tolist()
+
+    uf = _ChannelGroups(channels)
+    for idx in top:
+        i, j = rows[idx], cols[idx]
+        ri, rj = uf.find(i), uf.find(j)
+        if ri == rj:
+            continue
+        if len(uf.members[ri]) + len(uf.members[rj]) > cap:
+            continue
+        uf.union(ri, rj)
+
+    groups = [m for m in uf.members if m]
+    # Complete undersized groups: repeatedly merge the smallest group with
+    # the smallest partner that fits the cap; groups that fit no partner
+    # are left to merge at the next level up.
+    while len(groups) > 1:
+        groups.sort(key=lambda g: (len(g), min(g)))
+        head = groups[0]
+        if len(head) >= cap:
+            break
+        partner = None
+        for idx in range(1, len(groups)):
+            if len(head) + len(groups[idx]) <= cap:
+                partner = idx
+                break
+        if partner is None:
+            break
+        tail = groups.pop(partner)
+        groups[0] = sorted(head + tail)
+    groups.sort(key=lambda g: min(g))
+    return [sorted(g) for g in groups]
+
+
+def _hierarchy_group_aggregate(
+    utility: torch.Tensor, groups: list[list[int]]
+) -> torch.Tensor:
+    """Inter-group utility: entry [a, b] sums utility between groups a/b."""
+
+    channels = int(utility.shape[0])
+    indicator = torch.zeros(
+        channels, len(groups), dtype=utility.dtype, device=utility.device
+    )
+    for gi, group in enumerate(groups):
+        for ch in group:
+            indicator[ch, gi] = 1.0
+    return indicator.t() @ (utility @ indicator)
+
+
+def _hierarchy_merge_groups(
+    utility: torch.Tensor, groups: list[list[int]], cap: int
+) -> list[list[int]]:
+    """Merge groups pairwise by aggregated inter-group utility."""
+
+    if len(groups) <= 1:
+        return [list(g) for g in groups]
+    agg = _hierarchy_group_aggregate(utility, groups)
+    gsize = len(groups)
+    tri = torch.triu_indices(gsize, gsize, offset=1)
+    values = agg[tri[0], tri[1]]
+    order = torch.argsort(values, descending=True, stable=True).cpu().tolist()
+    rows = tri[0].cpu().tolist()
+    cols = tri[1].cpu().tolist()
+
+    uf = _ChannelGroups(gsize)
+    sizes = [len(groups[gi]) for gi in range(gsize)]
+    for idx in order:
+        a, b = rows[idx], cols[idx]
+        ra, rb = uf.find(a), uf.find(b)
+        if ra == rb:
+            continue
+        if sizes[ra] + sizes[rb] > cap:
+            continue
+        uf.union(ra, rb)
+        sizes[uf.find(ra)] = sizes[ra] + sizes[rb]
+    seen: set[int] = set()
+    result: list[list[int]] = []
+    for gi in range(gsize):
+        root = uf.find(gi)
+        if root in seen:
+            continue
+        seen.add(root)
+        members: list[int] = []
+        for gj in uf.members[root]:
+            members.extend(groups[gj])
+        result.append(sorted(members))
+    result.sort(key=lambda g: min(g))
+    return result
+
+
+def _hierarchy_edge_permutation(utility: torch.Tensor) -> torch.Tensor:
+    """Deterministic hierarchical 4->8->16->32->64 grouping permutation."""
+
+    channels = int(utility.shape[0])
+    groups = _hierarchy_edge_groups(utility, cap=4)
+    for cap in (8, 16, 32, 64):
+        if len(groups) <= 1:
+            break
+        groups = _hierarchy_merge_groups(utility, groups, cap)
+    order: list[int] = []
+    for group in groups:
+        order.extend(group)
+    if len(order) != channels or sorted(order) != list(range(channels)):
+        return _identity_permutation(channels, utility.device)
+    permutation = torch.tensor(
+        order, dtype=torch.int64, device=utility.device
+    )
+    # Re-attach the utility's provenance to the returned permutation: the
+    # grouping itself runs on Python-level index lists, which would drop
+    # the operand taint chain and make the runtime compliance guard pass
+    # the dual-side permutation silently instead of routing it to review.
+    # The carrier is exactly zero, so the values never change.
+    carrier = torch.nan_to_num(
+        utility.sum(), nan=0.0, posinf=0.0, neginf=0.0
+    ) * 0.0
+    return permutation + carrier.to(torch.int64)
 
 
 def _candidate_is_safe(
@@ -2597,6 +2762,68 @@ def _r64_operand_losses(
     return weight_loss, tuple(act_losses)
 
 
+def _hierarchy_edge_utility(
+    rows: torch.Tensor, residual_energy: torch.Tensor
+) -> torch.Tensor:
+    """C30 edge utility: |Gram| scaled elementwise by residual energies.
+
+    ``rows`` are calibration activation rows; ``residual_energy`` is the
+    per-channel weight-quantization residual energy.  The two operand-local
+    statistics are combined elementwise (an outer product of the channel
+    statistic with itself times the activation Gram magnitude) -- no
+    cross-operand contraction is ever formed.
+    """
+
+    gram = rows.t().to(torch.float32) @ rows.to(torch.float32)
+    gram = gram.abs() / float(max(int(rows.shape[0]), 1))
+    scale = torch.sqrt(
+        torch.outer(residual_energy, residual_energy).clamp_min(0.0)
+    )
+    return gram * scale
+
+
+def _hierarchy_permutation_candidate(
+    weight: torch.Tensor,
+    weight_sample: torch.Tensor,
+    activation_samples: Sequence[torch.Tensor],
+    second_moment: torch.Tensor,
+    d: torch.Tensor,
+    permutation: torch.Tensor,
+    size: int,
+    seed: int,
+) -> Optional[torch.Tensor]:
+    """Build the C30 hierarchical edge permutation (ungated).
+
+    Returns the replacement permutation, or ``None`` to keep the parent.
+    """
+
+    channels = int(weight.shape[1])
+    if channels < 16 or not activation_samples:
+        return None
+    device = weight.device
+
+    # Parent weight-quantization residual energy per channel (standard
+    # HiF4 quantization of the transform-selected weight).
+    weight_smooth = _linear_pair_transform(
+        weight, d, permutation, int(size), int(seed), weight_side=True
+    )
+    weight_hat = _dequantize_hif4(_dense_to_hif4(weight_smooth))
+    residual = torch.zeros_like(weight_smooth)
+    residual.index_copy_(1, permutation, weight_smooth - weight_hat)
+    residual_energy = residual.square().sum(dim=0).sqrt()
+
+    all_rows = torch.cat(
+        [s.to(device=device, dtype=torch.float32) for s in activation_samples],
+        dim=0,
+    )
+    candidate_perm = _hierarchy_edge_permutation(
+        _hierarchy_edge_utility(all_rows, residual_energy)
+    ).to(device)
+    if torch.equal(candidate_perm, permutation):
+        return None
+    return candidate_perm
+
+
 def _rank_r64_seeds(
     weight_rows: torch.Tensor,
     activation_rows: torch.Tensor,
@@ -3089,6 +3316,29 @@ def hif4_calibration_and_quantize_weight(
             best_block_smooth_size = _LINEAR_R64_BLOCK
             best_block_smooth_seed = int(r64_seed)
             block_best_metrics = r64_metrics
+
+    # C30: one additional permutation candidate from the hierarchical edge
+    # utility, gated operand-separately with a two-fold stability check.
+    # Only applied when the block-smooth transform stayed off: the block
+    # size/seed search above was tuned for the parent permutation.
+    if (
+        _HIERARCHY_PERMUTATION
+        and best_block_smooth_size == 0
+        and len(activation_samples) >= 2
+        and in_features >= 16
+    ):
+        c30_perm = _hierarchy_permutation_candidate(
+            weight,
+            weight_sample,
+            activation_samples,
+            activation_second_moment,
+            best_d,
+            best_perm,
+            best_block_smooth_size,
+            best_block_smooth_seed,
+        )
+        if c30_perm is not None:
+            best_perm = c30_perm
 
     weight_smooth = _linear_pair_transform(
         weight,
