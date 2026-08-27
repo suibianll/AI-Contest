@@ -1708,6 +1708,25 @@ max_ratio）。
 - 现状：Linear mean **0.5590**（vs C21-C 0.5311，+2.79pp），CPU
   ~106s / 官方 ~276s；固定矩阵与 pytest 待跑。
 
+### C36 去第二轮 FULL64 坐标下降 + 覆盖率上移至 0.55：0.5590→0.5631
+
+FULL64 每块求解链 = GPTQ init → CD → （toggle refine）→ CD（第二轮）。
+flag `_WEIGHT_FULL64_SECOND_COORDINATE` 控制尾随 CD（其主要是
+re-confirm，toggle refine 已重解层级）。关掉后省约 1/3 块级时间，
+把省下的预算投给窄层 FULL64 覆盖率：
+
+| NARROW / 第二CD | Linear mean | CPU(官方推算) | 判定 |
+|---|---:|---:|---|
+| 0.38 / on（017030f） | 0.5590 | 106.1s（~276s） | 基线 |
+| 0.55 / **off** | **0.5631（+0.41pp）** | 102.1s（~265s） | **保留** |
+| 0.60 / off | 0.5652（+0.21pp） | 112.1s（~292s） | 弃（时间险） |
+
+- 0.55 与 0.60 的差别是 ceil(12×ratio) 块数 7→8；0.60 多一块精修
+  换 +0.21pp 但 CPU 突破 110s（官方 ~292s，只余 2.7%），按既定
+  时间纪律弃。**最优 = NARROW 0.55 + 第二 CD off**。
+- 现状：Linear mean **0.5631**（vs C21-C +3.20pp，vs 017030f
+  +0.41pp），CPU ~102s / 官方 ~265s；CUDA algorithm-stage ~30s。
+
 ## C3 预注册：top-K 8×8 Linear 二阶（历史）
 
 - Candidate ID：`C3`

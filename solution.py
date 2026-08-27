@@ -92,12 +92,18 @@ _WEIGHT_FULL64_MAX_RATIO = 0.30
 # extracts weight-side precision (cap-oracle: 21pp weight-side gap) without
 # breaching the official CPU-time envelope.
 _WEIGHT_FULL64_NARROW_CHANNELS = 1024
-_WEIGHT_FULL64_MAX_RATIO_NARROW = 0.38
+_WEIGHT_FULL64_MAX_RATIO_NARROW = 0.55
 _WEIGHT_FULL64_MAX_RATIO_WIDE = 0.25
 _WEIGHT_FULL64_DAMPINGS = (0.01, 0.03, 0.1)
 _WEIGHT_FULL64_SIGNED_CODES = tuple(
     round(code * 0.25, 2) for code in range(-7, 8)
 )
+# C36 (2026-08-28): skip the second full-H coordinate descent after the
+# lv2/lv3 toggle refinement.  The toggle refine already re-solves the
+# hierarchy; the trailing sweep mostly re-confirms it.  Turning it off
+# cuts the per-block CPU cost by about a third, buying FULL64 coverage
+# inside the same official time envelope (A/B measured).
+_WEIGHT_FULL64_SECOND_COORDINATE = False
 _WEIGHT_REFINE_ERROR_THRESHOLD = 1.0e-7
 _WEIGHT_REFINE_ACCEPT_MARGIN = 0.005
 _WEIGHT_REFINE_MAX_RATIO_SMALL = 1.0
@@ -1290,7 +1296,10 @@ def _refine_weight_blocks64(
         q_pairs, lv2_p, lv3_p, denom_p = _hierarchy_toggle_refine64(
             q_pairs, w_pairs, h_damped, denom_p, lv2_p, lv3_p
         )
-        q_pairs = _coordinate_descent64(q_pairs, w_pairs, h_damped, denom_p)
+        if _WEIGHT_FULL64_SECOND_COORDINATE:
+            q_pairs = _coordinate_descent64(
+                q_pairs, w_pairs, h_damped, denom_p
+            )
 
         final_codes = torch.round(
             q_pairs * (4.0 / denom_p.clamp_min(_EPS))
