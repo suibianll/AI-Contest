@@ -1010,6 +1010,21 @@ evaluator 侧临时脚本，运行后已删除（§0.2：结果不回传 solutio
    ~50%+ 残差；C23 类单侧权重改进（+1.9pp）量级远不够，需要机制级
    突破或两侧联合候选（新 candidate ID 预注册）。
 
+### C21-C 最终 holdout 终验收（2026-08-27，第 1/3 次预算消耗）
+
+- 触发：Checkpoint B 暂停后，对 Champion v025（sha `83AB4864…`）做
+  官方提交前的最终验收；`--reason` 已记入台账。
+- 冻结配置（amax6 causal offset 0，12 层，4 test 窗口，CPU）下：
+  `linear_mean 0.523558`、`attention_mean 0.441898`、
+  `algorithm_stage 69.29s`（calibration 53.26s / dynamic 9.94s）。
+- 与开发集对照：Linear −0.75pp（0.5311→0.5236）、Attention causal
+  −0.78pp（0.4497→0.4419），未见文本降幅 <1pp，无过拟合信号。
+- 台账更新：`holdout_runs_used 1/3`，剩余 2 次；见
+  `evaluator/holdout_ledger.json` 与 v025 归档 `result.md`。
+- 含义：C21-C 获得提交就绪的完整证据链（合规门禁 + 固定矩阵 +
+  576 合成 case + holdout 终验收），可随时官方提交；C23 的 holdout
+  权利未消耗（v027 已 rejected，无需消耗）。
+
 ## C3 预注册：top-K 8×8 Linear 二阶
 
 - Candidate ID：`C3`

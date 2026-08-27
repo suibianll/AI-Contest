@@ -69,14 +69,24 @@
 ## Holdout 台账（项目约束：预算 3 次）
 
 ```text
-holdout_runs_used          0
-holdout_runs_remaining     3
+holdout_runs_used          1
+holdout_runs_remaining     2
 holdout_seed_hash          96dd4ed70a0597a0060fe696557d3a330af22e3d273e6676a501d7bfb4b589fc
 ```
 
-- Phase 0 不消耗 holdout；冻结 ledger 见
-  `evaluator/holdout_ledger.json`（每候选至多一次 + 总预算 3 次由
-  `evaluator/holdout_eval.py` 强制）。
+### 最终 holdout 终验收（2026-08-27，官方提交前）
+
+- 触发：Checkpoint B 暂停后，对 Champion 做官方提交前的最终验收
+  （`--reason` 已记入 ledger；solution sha `83AB4864…` 与本归档一致）。
+- 冻结配置：amax6 causal offset 0，12 层，4 test 窗口，CPU。
+- 结果（仅聚合，台账 `evaluator/holdout_ledger.json`）：
+  - `linear_mean 0.523558`
+  - `attention_mean 0.441898`
+  - `algorithm_stage_seconds 69.29s`（calibration 53.26s / dynamic 9.94s）
+- 与开发集对照：Linear `0.5311 → 0.5236`（−0.75pp）、Attention causal
+  `0.4497 → 0.4419`（−0.78pp）——未见文本上降幅 <1pp，无过拟合信号，
+  开发集结论（含固定矩阵）可信。
+- Phase 0 归档时未消耗 holdout（当时 0/3）；本次为第 1 次消耗。
 
 ## Decision
 
