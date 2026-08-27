@@ -21,7 +21,7 @@
 | C14 / v017 | C11 | calibration-gated all-width activation 8×8 | Linear +0.450pp | 6/6、全分项安全 | Champion | [v017](../../../solutions/20260827_v017_c14-gated-all-width-activation-8x8-local_scoreNA_timeNA/result.md) | `9e10d33` |
 | C15 / v018 | C14 | quantized-weight activation Gram | Linear ~0.000pp | 未运行 | accepted, not promoted | [v018](../../../solutions/20260827_v018_c15-quantized-weight-activation-gram-local_scoreNA_timeNA/result.md) | `e6ce6c0` |
 | C16 / v019 | C14 | gated activation 8×8 coverage 4% | Linear +0.148pp | 未运行 | accepted, not promoted | [v019](../../../solutions/20260827_v019_c16-gated-activation-8x8-coverage4-local_scoreNA_timeNA/result.md) | `c6b4edd` |
-| C17 / v020 | C14 | gated activation 8×8 coverage 8% | Linear +0.285pp | 6/6、36/36 分项改善 | Champion | [v020](../../../solutions/20260827_v020_c17-final-gated-activation-8x8-coverage8-local_scoreNA_timeNA/result.md) | 本次提交 |
+| C17 / v020 | C14 | gated activation 8×8 coverage 8% | Linear +0.285pp | 6/6、36/36 分项改善 | Champion | [v020](../../../solutions/20260827_v020_c17-final-gated-activation-8x8-coverage8-local_scoreNA_timeNA/result.md) | `ff3b624` |
 
 ## 当前状态
 
