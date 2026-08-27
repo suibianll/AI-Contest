@@ -20,6 +20,7 @@ B0 Git blob：`baf2270cefd8c052edec43c8195f931d58bac456`
 | 5 A3 V bias-aware | 完成（判定不晋级，默认关闭） | 2026-08-26 |
 | 6 L1 数据驱动 scale | 完成（判定不晋级，默认关闭） | 2026-08-26 |
 | 7 本地归档复核 | A1-only 按综合本地证据晋级；官方状态 unavailable | 2026-08-27 |
+| 8 E1 合成 Attention 安全评测器 | S0/S1/S2 完成：验收门 5/5 通过；heavy_tail 登记为 Attention 尾部债务；S3 待执行 | 2026-08-27 |
 
 ## 累计配对评测（CUDA）
 
@@ -397,6 +398,154 @@ Linear 与 B0 完全一致。A3/L1 开启时的数值见各自步骤小节。
 - 开发门：offset 0 Linear mean 至少 `+0.2pp`；固定矩阵六项均值为正、任一
   Linear 分项不低于 C17 超过 `0.1pp`；Attention 不变；CUDA/CPU ratio ≤1.15。
 - 状态：`planned`。
+
+## E1 预注册：合成 Attention 安全评测器（S0）
+
+- Candidate ID：`E1`（评测基础设施，非 solution 候选；不改 `solution.py`，
+  不改 `evaluator/real_data_eval.py` 既有评分路径，只 import 复用其
+  `causal_attention`/`score_attention` 与 `nvfp4_sim.nvfp4_encode`）。
+- Parent 基线（HEAD `23d1cf7`，工作树 clean）：
+  - `evaluator/real_data_eval.py` SHA256
+    `749CE2F8C91C923548693C25E7CEA6B021644CB5BF7661576A7035EBF0CC1D9C`；
+  - `evaluator/nvfp4_sim.py` SHA256
+    `8F4A4AF1D41D2BFE386DB958163DBAE7357189FCB2D87208EC8EF699044CB8DB`；
+  - `solution.py`（C21 本地 Champion）SHA256
+    `40F4D17C12F976F83856B9641BE9A3951867BC8979992D773C60C0C1C3E8066A`。
+- 唯一机制：新增独立评测器 `evaluator/synthetic_attention_eval.py`，
+  补齐官方合成 Attention 场景（saturated logits 等）的本地端到端精度
+  诊断。评分公式与现行口径逐字一致：reference=NVFP4 反量化，
+  standard=朴素 HiF4，candidate=solution 动态量化输出，
+  `score=(mse_std−mse_player)/mse_std`，causal/non-causal 双轨。
+- 动机：variantH 官方 `saturated_logits_h4_kv2_d64_s32`（seed 307）
+  退化为 0.0000 而本地无法提前暴露；官方提交机会稀缺，需提交前本地预筛。
+
+### 冻结的场景清单（8 类，生成参数在此固定）
+
+所有分布以 `torch.manual_seed(seed)` 的确定性采样实现，元素独立同分布
+`N(0,1)` 记为 `randn`：
+
+| 场景名 | q | k | v |
+|---|---|---|---|
+| `balanced` | randn | randn | randn |
+| `saturated_logits` | 4.0·randn | 4.0·randn | randn |
+| `near_uniform` | 0.05·randn | 0.05·randn | randn |
+| `v_outlier` | randn | randn | randn，通道 `j%20==7` 乘 50 |
+| `qk_dynamic_imbalance` | randn，通道 `j%2==1` 乘 64 | randn | randn |
+| `k_mean_shift` | randn | randn+5.0 | randn |
+| `heavy_tail` | randn·m，`m=10 若 u<0.1 否则 1`（u~U(0,1) 逐元素） | 同 q 独立采样 | randn |
+| `qk_correlated` | randn | 0.8·q[..., :k_dim]+0.6·randn | randn |
+
+### 冻结的维度网格与命名
+
+- 命名规则（对齐官方场景名）：`{scenario}_h{q_heads}_kv{kv_heads}_d{head_dim}_s{seq}`；
+- topology：MHA `h4_kv4`、GQA `h4_kv2`；
+- head_dim：64、128；seq：32、128；
+- mask：causal、non-causal（每 case 同时报告两轨）；
+- NVFP4 mode：`amax6`、`amax4`、`pow2`；
+- seed：固定 `0/1/2`，禁止任何 seed 搜索；
+- calib/test：各 2 batch，每 batch `[1, seq, D]`（mirror 真实评测器
+  calib 2 / test 2 默认）；
+- 总量：8×2×2×2×3=192 config × 3 seed = 576 case，每 case 输出
+  causal/non-causal 两分。
+
+### E1 验收门（S2 基线锚定，全部满足才验收）
+
+1. 确定性：同一命令重跑两次，576 case 分数逐项完全一致（CPU）；
+2. 全部分数 finite，无 NaN/Inf、无崩溃、无 state 非法（CPU、无梯度、
+   五字段 shape/dtype 合法）；
+3. 三方基线 B0（v002）/v013/C21 完整跑通；
+4. 强校验：v013 与 C21 的 Attention 路径同源（C11–C21 只改 Linear），
+   合成矩阵应逐 case 一致（容差 1e-6）；不一致即实现缺陷，先修复再验收；
+5. 基线合理性：B0 相对朴素 HiF4 在 `balanced` 场景均值为正；其他场景
+   若 B0 均值 ≤0 仅记录，不回调场景参数。
+
+### 硬失败条件
+
+- 任何 NaN/Inf、state/API 非法、崩溃；
+- 复跑不一致（非确定性）；
+- 评分公式偏离现行口径或引入 NumPy/file I/O；
+- 为让结果好看而修改场景参数、维度网格或 seed（一经冻结即禁止）。
+
+### 时间预算
+
+单方案全矩阵 CPU 目标 ≤60 分钟；超时分批运行（CLI 过滤参数），不删减
+场景。三方全矩阵一次会话硬上限 4 小时，超限拆批并记录。
+
+### 后续候选安全轨（S3 生效，S2 锚定方差后按此写入 plan 修订）
+
+- 含 Attention 改动的候选：合成全矩阵等权均值、`saturated_logits` 类
+  均值相对父 Champion 各不低于 `-0.1pp`；任一单 case 不低于 `-2pp`
+  （worst 完整记录，超限即硬失败）；
+- 只含 Linear 改动的候选：合成 Attention 分数应与父逐 case 一致
+  （容差 1e-6），否则视为回归信号须排查；
+- 阈值若因基线方差需调整，须书面登记修订且不得与任何候选结果相关。
+
+### 使用纪律
+
+- 场景参数、网格、seed 自本登记起冻结；不用于已归档候选的追溯评级；
+- 合成分数不外推官方绝对分数，只作追加安全轨，不替换现行晋级公式；
+- 该评测器为本地诊断工具，不作为比赛提交物。
+- 状态：`local-accepted`（S1 实现 + S2 锚定完成，验收门 5/5 通过）。
+
+### E1 执行结论（S1 + S2，2026-08-27）
+
+- S1：新增 `evaluator/synthetic_attention_eval.py`（约 380 行，torch-only，
+  复用 `real_data_eval.load_solution/score_attention` 与
+  `nvfp4_sim.nvfp4_encode`，评分口径与真实评测器逐字一致）。CLI 提供
+  `--solution/--cases/--modes/--seeds` 过滤；每 case 输出
+  `CASE {name} mode=… seed=… causal=… noncausal=… time=…`，结尾输出逐场景
+  汇总与 worst case。state 校验含 CPU/strided/连续/无梯度/有限/叶子类型；
+  动态路径额外校验五字段 `sign/mant/scale_lv3/scale_lv2/scale_factor`。
+- S2 四次全矩阵运行（576 case × 4），原始输出存
+  `artifacts/synthetic_attention/{c21_run1,c21_run2,b0_run,v013_run}.txt`
+  （CONFIG 行自带 solution SHA256）：
+
+  | 方案 | SHA256（文件内 CONFIG 行） | 用时 | 状态 |
+  |---|---|---:|---|
+  | B0=v002 归档 | `E126B23A7992E28FBB8E5973551B49AE40A930B76522265A6F36F641EB133A4B` | 73.7s | RESULT ok |
+  | v013 归档 | `DD8587257299626718A24EB89013447DA9105E8884F391104A6B350607399E44` | 146.4s | RESULT ok |
+  | C21=根 solution | `40F4D17C12F976F83856B9641BE9A3951867BC8979992D773C60C0C1C3E8066A` | 154.6s | RESULT ok |
+
+  B0 直接使用 v002 归档文件在 CPU 上运行，无需 GPU 兼容补丁。
+
+- 验收门核对（5/5 通过）：
+  1. 确定性：C21 双跑剥离 time 字段后 576 行逐行一致（diff=0）；
+  2. 全部分数 finite、无崩溃、state/五字段全部合法（4×RESULT ok）；
+  3. 三方基线完整跑通；
+  4. 强校验：v013 与 C21 的 576 个 CASE 分数行完全一致（0 diff，远严于
+     1e-6 容差），确认 C11–C21 未触碰 Attention 路径，同时交叉验证了
+     评测器实现正确性；
+  5. B0 `balanced` 场景均值为正（causal 0.2452 / non-causal 0.2544）。
+
+- B0 → C21 逐场景均值（72 case/场景，pp=百分点）：
+
+  | 场景 | causal Δ | non-causal Δ | 备注 |
+  |---|---:|---:|---|
+  | balanced | +1.01 | +0.92 | |
+  | saturated_logits | +2.92 | +2.93 | 官方踩坑场景，A1 为正增益 |
+  | near_uniform | 0.00 | 0.00 | 分数与 B0 完全一致 → A1 门回退 B0 选择 |
+  | v_outlier | +1.64 | +0.99 | |
+  | qk_dynamic_imbalance | +4.08 | +5.01 | |
+  | k_mean_shift | +43.41 | +42.91 | A1 主效应最大的合成场景 |
+  | heavy_tail | +16.84 | +13.19 | 仍为负值（见下） |
+  | qk_correlated | +0.25 | +0.09 | |
+  | **OVERALL** | **+8.77** | **+8.26** | 0.1948→0.2824 / 0.2172→0.2997 |
+
+- 关键发现：
+  - `heavy_tail` 是唯一 C21 均值仍为负的场景（causal `-0.0998`、
+    non-causal `-0.0444`，worst `-0.94/-1.08`，集中在 d128 + pow2/amax4）。
+    这是 B0 继承属性（B0 为 `-0.2682/-0.1762`），C1/A1 改善约
+    `+16.8/+13.2pp` 但未转正 → 登记为 Attention 尾部债务与下一候选目标。
+    该发现不阻塞 C21 提交（C21 相对 B0 全场景正向）。
+  - C21 的 worst non-causal case（`heavy_tail_h4_kv4_d128_s32` pow2 seed2，
+    `-1.075382`）与 B0 同 case 数值逐位一致 → A1 终验门在该困难 case 上
+    正确回退到 B0 选择。
+  - 时间：单方案全矩阵 74–155s（预算 60 分钟），三方合计 <7 分钟
+    （预算 4 小时）。
+
+- 后续：S3（安全轨入 plan 修订 + `tests/test_release_candidate.py` 合成
+  state 合法性测试）待执行；heavy_tail 尾部债务进入下一 Attention 候选
+  预注册时的问题定义。
 
 ### C7 开发结论
 
