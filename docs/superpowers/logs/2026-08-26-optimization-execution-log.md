@@ -704,6 +704,19 @@ Linear 与 B0 完全一致。A3/L1 开启时的数值见各自步骤小节。
 - 验证：pytest 18/18 通过。后续 candidate 变更导致的 standard 输出
   逐位不变由结构保证（§4.6 验收时再以固定回归分数复核）。
 
+### C21-C §4.3 开发记录（2026-08-27）
+
+- 新建 `evaluator/linear_error_decomposition.py`：operand-local 归因
+  报告 `activation_local_error` / `activation_tail_cvar` /
+  `weight_hessian_error`（`G=A^T A/N` 的 Hessian 形式，Q(W) 合法
+  消费量）/ `weight_plain_error` / `transform_orthogonality_error`，
+  外加 per-row activation error；工具绝不构造 reference Linear 输出、
+  cross residual 或任何 `[tokens, out_features]` 张量。
+- 新建 `tests/test_linear_error_decomposition.py`（6 用例）：零误差、
+  手工对拍（含 trace 形式 Hessian）、tail CVaR、正交性检测（含 2I
+  缩放）、输出形状只有标量/一维行向量、非法形状拒绝。
+- 验证：pytest 24/24 通过。
+
 ## C3 预注册：top-K 8×8 Linear 二阶
 
 - Candidate ID：`C3`
