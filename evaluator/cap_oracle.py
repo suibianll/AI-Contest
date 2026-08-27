@@ -58,12 +58,56 @@ def run_linear_arms(
     weight_standard = std_hif4(solution, weight_reference)
     weight_player = solution._dequantize_hif4(weight_params).to(torch.float32)
 
+    # Fixed-frame correction: player weights/activations live in the
+    # smooth/permutation frame (X_t . W_t == X . W exactly).  Mixing the
+    # untransformed NVFP4 reference with a transformed player operand is a
+    # coordinate-frame mismatch (that is what made arms B/C look like huge
+    # negative scores before).  Transform the reference through the same
+    # equivalent transform before substituting either side.
+    smooth_inv_raw = activation_state.get("smooth_inv")
+    if smooth_inv_raw is None:
+        d_w = torch.ones(
+            weight_reference.shape[1],
+            dtype=torch.float32,
+            device=weight_reference.device,
+        )
+    else:
+        d_w = smooth_inv_raw.to(
+            device=weight_reference.device, dtype=torch.float32
+        ).reciprocal().reshape(-1)
+    perm_raw = activation_state.get("permutation")
+    if perm_raw is None:
+        perm = torch.arange(
+            weight_reference.shape[1],
+            dtype=torch.int64,
+            device=weight_reference.device,
+        )
+    else:
+        perm = perm_raw.to(
+            device=weight_reference.device, dtype=torch.int64
+        ).reshape(-1)
+    bss = int(activation_state.get("block_smooth_size", 0))
+    bseed = int(activation_state.get("block_smooth_seed", 0))
+
+    def _w_frame(t: torch.Tensor) -> torch.Tensor:
+        return solution._linear_pair_transform(
+            t, d_w, perm, bss, bseed, weight_side=True
+        )
+
+    def _a_frame(t: torch.Tensor) -> torch.Tensor:
+        return solution._linear_pair_transform(
+            t, d_w, perm, bss, bseed, weight_side=False
+        )
+
     arms = {"A": [], "B": [], "C": [], "D": []}
     for activation_pair in test_pairs:
         activation_reference = solution._dequantize_nvfp4_float32(
             *activation_pair
         )
-        reference = activation_reference @ weight_reference.T
+        # Same coordinate frame for every operand.
+        w_ref_f = _w_frame(weight_reference)
+        a_ref_f = _a_frame(activation_reference)
+        reference = a_ref_f @ w_ref_f.T
         standard = std_hif4(solution, activation_reference) @ weight_standard.T
         player_activation = solution._dequantize_hif4(
             solution.hif4_dynamic_quantize_activation(
@@ -74,8 +118,8 @@ def run_linear_arms(
         mse_std = _mse(standard, reference)
         combos = {
             "A": player_activation @ weight_player.T,
-            "B": player_activation @ weight_reference.T,
-            "C": activation_reference @ weight_player.T,
+            "B": player_activation @ w_ref_f.T,
+            "C": a_ref_f @ weight_player.T,
             "D": reference,
         }
         for name, player in combos.items():
@@ -103,6 +147,38 @@ def run_attention_arms(
     states = solution.hif4_calibration_attention(
         qkv_calibration, q_heads, kv_heads, head_dim
     )
+    q_state = states["q_state"]
+    k_state = states["k_state"]
+
+    def _frame_q(t: torch.Tensor):
+        x = t.to(torch.float32)
+        m = q_state.get("multiplier")
+        if m is not None:
+            x = x * m.to(device=x.device, dtype=torch.float32).reshape(1, -1)
+        p = q_state.get("permutation")
+        if p is not None:
+            x = x.index_select(-1, p.to(device=x.device, dtype=torch.int64).reshape(-1))
+        r = q_state.get("rotation")
+        if r is not None:
+            x = solution._apply_attention_rotation(x, q_heads, head_dim, r)
+        return x
+
+    def _frame_k(t: torch.Tensor):
+        x = t.to(torch.float32)
+        cm = int(k_state.get("center_mode", 0))
+        if cm != 0:
+            x = solution._center_attention_k(x, kv_heads, head_dim, cm)
+        m = k_state.get("multiplier")
+        if m is not None:
+            x = x * m.to(device=x.device, dtype=torch.float32).reshape(1, -1)
+        p = k_state.get("permutation")
+        if p is not None:
+            x = x.index_select(-1, p.to(device=x.device, dtype=torch.int64).reshape(-1))
+        r = k_state.get("rotation")
+        if r is not None:
+            x = solution._apply_attention_rotation(x, kv_heads, head_dim, r)
+        return x
+
     arms = {"A": [], "B": [], "C": [], "D": []}
     for pair in qkv_pairs["test"]:
         q_ref = solution._dequantize_nvfp4_float32(*pair["q"])
@@ -127,6 +203,14 @@ def run_attention_arms(
             )
         ).to(torch.float32)
 
+        # Same-frame attention: push the NVFP4 references through the
+        # player's Q/K frame (center/multiplier/permutation/rotation).
+        # center/rotation are NOT output-equivalent transforms (softmax is
+        # nonlinear), so `qk_perfect` isolates the Q/K *encoding* loss in
+        # the player frame while the transform-side loss shows up in D.
+        q_ref_f = _frame_q(q_ref)
+        k_ref_f = _frame_k(k_ref)
+
         reference = causal_attention(
             q_ref[None], k_ref[None], v_ref[None], q_heads, kv_heads, head_dim, True
         )
@@ -140,14 +224,17 @@ def run_attention_arms(
             q_pl[None], k_pl[None], v_ref[None], q_heads, kv_heads, head_dim, True
         )
         qk_perfect = causal_attention(
-            q_ref[None], k_ref[None], v_pl[None], q_heads, kv_heads, head_dim, True
+            q_ref_f[None], k_ref_f[None], v_pl[None], q_heads, kv_heads, head_dim, True
+        )
+        both_ref_f = causal_attention(
+            q_ref_f[None], k_ref_f[None], v_ref[None], q_heads, kv_heads, head_dim, True
         )
         mse_std = _mse(standard, reference)
         combos = {
             "A": player,
             "B": perfect,
             "C": qk_perfect,
-            "D": reference,
+            "D": both_ref_f,
         }
         for name, out in combos.items():
             arms[name].append((mse_std - _mse(out, reference)) / mse_std)
