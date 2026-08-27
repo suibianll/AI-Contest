@@ -1083,6 +1083,53 @@ evaluator 侧临时脚本，运行后已删除（§0.2：结果不回传 solutio
    按 §10.4 串行口径 ≤1.15 控制。
 5. 诊断脚本为 evaluator 侧临时脚本，运行后已删除（§0.2）。
 
+## C28 预注册：激活侧层级 scale 码字逐块精修（Linear-only）
+
+- Candidate ID：`C28`
+- Parent：`C21-C`（v025，SHA256
+  `83AB4864254F80D221BB491BDEF89F8C9AB8E83534FD62D4DD5E0C1C292FEA12`）。
+  工作基线为当前根目录 `solution.py`（SHA256
+  `E94CD30A52B8361E99536BB9DD98EB604912946D4336E600DD9246305F466C35`，
+  C23 死代码 flag 关闭，行为与 v025 逐位一致，已经根目录就绪性验证）。
+- 依据：2026-08-27 激活侧残差结构诊断——player 激活误差 ≈ per-16
+  等效（vs per-16 oracle −6%~+9%），而格式层级粒度为 64→8→4，
+  per-4 自由 scale 下限距 player 还有 26~38% relRMSE；层级 scale
+  码字拟合质量（而非格式）是激活侧残差主因。Checkpoint B 归因：
+  激活侧占 Linear 残差 ~50%。
+- 唯一机制：在 `hif4_dynamic_quantize_activation` 的 Linear 路径上，
+  对每个 64 块做层级 scale 码字（`scale_factor` 指数、`scale_lv2`、
+  `scale_lv3` 的合法码字组合）的批量坐标下降/beam 精修，目标函数
+  仅为 A 自身的块重构误差（operand-local，规则零白名单明确允许
+  "A 自身的重构误差"）。不新增平滑/置换/旋转维度；不使用任何
+  Weight 统计或 Linear 输出。
+- 合规边界（关键设计约束）：`_nvfp4_to_hif4` 为 Linear 与 Q/K/V
+  动态路径共享，新机制必须仅经 `activation_state` 驱动的参数生效，
+  保证 `hif4_dynamic_quantize_q/k/v` 路径逐位不变（规则 8，
+  Attention 全矩阵容差 1e-6）。
+- Feature flag：`_ACT_SCALE_CODE_REFINE`，默认 False；关闭时与父
+  版本字段级、数值级等价（新增 disabled 等价测试）。
+- 向量化硬性要求：动态路径逐 token 运行，精修必须全批量张量化
+  （不逐块 Python 循环），并带 `max_refine_ratio` 式覆盖率上限，
+  先 micro-benchmark 后全量实现（吸取 C23 CPU 1.55 教训）。
+- 评测矩阵：开发集 cuda amax6 offset 0 both 起步 → 固定矩阵
+  6 配置（含 amax4/pow2 尾部检查）+ 合规门禁（static+runtime）+
+  Attention 逐位对照；holdout 仅最终验收（预算剩 2/3）。
+- 时间预算：§10.4 父子串行 CPU 同环境口径，总 algorithm-stage
+  ratio ≤1.15；动态段单独 ratio ≤2.0（C21-C CPU 动态段 9.94s，
+  仅占 stage ~14%）；推算官方时间 <225s。
+- 晋级门（全部满足才晋级）：
+  1. Linear mean ≥ +2pp（vs C21-C 0.5311）；
+  2. fc/proj/o 均值 ≥ +1.5pp；
+  3. 激活 relRMSE（变换坐标系）误差能量降幅 ≥15%（机制有效性，
+     来自 26~38% 理论余量）；
+  4. 固定矩阵 6/6 无退行，Attention 逐位不变（1e-6）；
+  5. §10.4 CPU 串行 ratio ≤1.15，动态段 ratio ≤2.0；
+  6. 合规门禁 violations=[]。
+- 实施前可行性探针（evaluator 侧临时脚本，完成后删除）：枚举合法
+  HiF4 码字组合的 code-constrained oracle 下限，校准"量化码字可达"
+  的真实空间（自由 per-4 oracle 不可达，需以受限码字界设定门 3 的
+  合理预期）。探针结果不改本预注册的门限。
+
 ## C3 预注册：top-K 8×8 Linear 二阶
 
 - Candidate ID：`C3`
