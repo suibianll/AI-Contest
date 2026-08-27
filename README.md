@@ -5,9 +5,9 @@
 计算格式合法的前提下，使反量化结果尽可能接近 NVFP4 参考结果。评测覆盖
 Linear 层和 Attention 投影两条路径，得分是相对标准 HiF4 转换的 MSE 改善。
 
-当前根目录的 `solution.py` 已切换为已知最高分的 `youxilee/hif4` v2.0
-方案（官方分数 15000+）。它来自提交
-`6abbf36e1208ac7afffd2ba3e2e4a8aa9a1f3757`，并与归档版本保持相同 SHA256。
+官方 B0 是 `youxilee/hif4` v2.0，用户于 2026-08-27 确认其官方结果为
+`15313 / 137s`，B0 已闭环。当前根目录的 `solution.py` 是在 B0 之上持续累积、
+经本地固定矩阵验证的后续候选；它尚无官方结果，不能把本地增益换算成官方分数。
 
 ## 项目结构
 
@@ -103,8 +103,8 @@ q/k/v/o/fc/proj 六项 Linear 分数、causal/non-causal Attention 分数和统�
 
 ## 本地评测与版本归档流程
 
-当前无法使用官方评测，因此版本晋级只依据可复现的本地配对结果，不再等待
-官方分数或用本地指标推测官方绝对分数：
+当前无法继续调用官方评测；已知 B0 官方结果只作为基线锚点。后续版本晋级
+依据可复现的本地配对结果，不等待新官方分数，也不用本地指标推测官方绝对分数：
 
 1. B0 与候选必须使用相同模型、设备、mask、mode、token offset 和样本数配对运行。
 2. offset `0` 是开发集；`97`、`193`、`389` 是锁定的本地回归窗口。它们已在
@@ -119,9 +119,9 @@ q/k/v/o/fc/proj 六项 Linear 分数、causal/non-causal Attention 分数和统�
 
 - v000：旧 v9 基线，约 9000+；
 - v001：原活跃基线，10250 分、127 秒；
-- v002：`youxilee/hif4` v2.0，历史 Champion 归档；
-- 根 `solution.py`：A1-only 本地 Champion。GQA non-causal 的已知单层尾部
-  退化作为下一候选的优化目标记录，不再因此整体回退 B0。
+- v002：`youxilee/hif4` v2.0，官方 B0，`15313 / 137s`，已闭环；
+- 根 `solution.py`：后续本地 Champion；具体候选编号、源码 SHA 和固定矩阵
+  以 `solutions/README.md` 与 progressive candidate ledger 的最新 Champion 为准。
 
 虚拟环境 `.venv/`、Python 缓存和其他本地产物已由 `.gitignore` 排除，
 不会进入算法归档或比赛提交。

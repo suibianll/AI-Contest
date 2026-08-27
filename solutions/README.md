@@ -8,7 +8,7 @@ Root `solution.py` is the only active submission. Archived source files are immu
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |
 | v000 | 2026-08-25 | v9 baseline | NA | NA | NA | ~9000+ | NA | NA | accepted | [archive](20260825_v000_v9-baseline_score9000plus_timeNA/) |
 | v001 | 2026-08-26 | current baseline | NA | NA | NA | 10250 | 127s | NA | accepted | [archive](20260826_v001_current-baseline_score10250_time127s/) |
-| v002 | 2026-08-26 | youxilee/hif4 v2.0 | 0.5668* | 0.3786* | NA | ~15000 | ~140s | NA | champion | [archive](20260826_v002_youxilee-hif4_score15000plus_timeNA/) |
+| v002 | 2026-08-26 | youxilee/hif4 v2.0 | 0.5668* | 0.3786* | NA | 15313 | 137s | NA | official-b0-closed | [archive](20260826_v002_youxilee-hif4_score15000plus_timeNA/) |
 | v003 | 2026-08-27 | C1 A1 real Attention selector | 0.5668 | 0.4497 | CPU stage 54.72s | NA | NA | local +0.0712 Attention | local-champion | [archive](20260827_v003_a1-real-attention-local_scoreNA_timeNA/) |
 | v004 | 2026-08-27 | C2 independent-segment CVaR | 0.5668 | 0.4155 | CUDA stage 26.68s | NA | NA | local -0.0342 causal | local-rejected | [archive](20260827_v004_c2-segment-cvar-local_scoreNA_timeNA/) |
 | v005 | 2026-08-27 | C2a query-segment CVaR | 0.5668 | 0.4444 | CUDA stage 19.65s | NA | NA | local -0.0053 causal | local-rejected | [archive](20260827_v005_c2a-query-segment-cvar-local_scoreNA_timeNA/) |
@@ -34,9 +34,10 @@ Root `solution.py` is the only active submission. Archived source files are immu
 `*` v002 的 Linear/Attention 数值最初来自远程仓库 `CHANGELOG.md` 的 GPT-2
 12 层、2 calib + 2 test 报告，之后已由 GPU-compatible B0 derivative 在本地
 复现。该 derivative 与 v002 归档行为等价但 SHA256 不同，因此表中 Local Time
-仍为 `NA`；官方总分和耗时仍是用户提供的近似值，尚未完成精确 SHA 绑定。
+仍为 `NA`。用户于 2026-08-27 确认 v002/B0 的官方结果为 `15313 / 137s`，
+B0 据此闭环；本地 derivative SHA 不作为官方上传文件 SHA。
 
-v003 起允许只有本地结果时立即归档。官方列保持 `NA`，未来结果返回时追加
+v003 起允许只有本地结果时立即归档。未提交候选的官方列保持 `NA`，未来结果返回时追加
 提交 SHA、分数和时间，不覆盖既有本地配对表或实验结论。
 
 ## Local-first workflow
