@@ -78,7 +78,7 @@ def test_release_flags_are_a1_only() -> None:
     assert solution._ACTIVATION_QUADRATIC_MAX_FEATURES == 4096
     assert solution._ACTIVATION_QUADRATIC8 is True
     assert solution._ACTIVATION_QUADRATIC8_MIN_FEATURES == 64
-    assert solution._ACTIVATION_QUADRATIC8_MAX_RATIO == 0.02
+    assert solution._ACTIVATION_QUADRATIC8_MAX_RATIO == 0.08
     assert solution._ACTIVATION_QUADRATIC8_SWEEPS == 1
     assert solution._ACTIVATION_QUADRATIC8_CALIBRATION_GATE is True
     assert solution._ACTIVATION_QUADRATIC8_GATE_MAX_FEATURES == 1024

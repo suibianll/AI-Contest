@@ -312,6 +312,28 @@ Linear 与 B0 完全一致。A3/L1 开启时的数值见各自步骤小节。
   不变、CUDA ratio ≤1.15；无论结果如何，本候选后关闭 coverage 调参。
 - 状态：`planned`。
 
+### C17 固定回归与晋级结论
+
+- offset 0 六分项全部正向，Linear mean `+0.285pp`；Attention 不变。
+- 固定矩阵六项全胜，Linear mean 增量 `+0.257~+0.302pp`；36 个记录的
+  Linear component means 全部改善。
+- GQA offset 193 Attention 精确保持 `0.4169/0.4928`。
+- 同环境 CPU 配对：C17 `63.96s`、C14 `62.40s`，ratio `1.025`。
+- 状态：`local-champion`；root 保留 C17。按预注册约定，固定 activation
+  8×8 coverage 调参关闭在 8%。
+
+## C18 预注册：block-local activation/weight-error cross term
+
+- Candidate ID：`C18`
+- Parent：`C17`，SHA256
+  `C29E71C332E41E262B94FF68454CEB1F1589EE932FB4E1D55C5F221CFD060766`
+- 唯一机制：为 activation 8×8 coordinate objective 增加由
+  `(W_hat-W_smooth)^T W_hat` 的 8×8 对角块产生的线性交叉项；C17 gate、
+  coverage、sweep、cap、weight 与 Attention 路径保持不变。
+- 开发门：offset 0 Linear mean 至少 `+0.2pp`，六分项不下降、Attention
+  不变、CUDA ratio ≤1.15；通过后运行固定矩阵和 CPU 配对。
+- 状态：`planned`。
+
 ### C7 开发结论
 
 - offset 0 Linear mean 相对 C5 约 `+0.123pp`；q/k/v/o/fc/proj 六项均为

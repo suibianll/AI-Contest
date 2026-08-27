@@ -211,6 +211,12 @@ robust_attention_objective =
 
 从 C14 出发，只将 activation 8×8 coverage 从 2% 提到 8%，其他机制与预算不变。这是 coverage 路线的最后一次有界检查；开发门仍为 Linear mean `+0.2pp`、六分项不下降、Attention 不变、CUDA ratio ≤1.15，本候选后无论结果如何均关闭 coverage 调参。
 
+执行结果：`local-champion`。offset 0 Linear mean `+0.285pp`，固定矩阵 6/6、全部 36 个记录分项正向，CPU ratio `1.025`。固定 activation 8×8 coverage 路线关闭在 8%。
+
+### C18：block-local activation/weight-error cross term
+
+在 C17 上为 activation 8×8 坐标目标增加块局部线性交叉项，来源为 `(W_hat-W_smooth)^T W_hat` 的 8×8 对角块；它近似补足纯 `e^T H e` 未表示的权重量化误差交叉项。C17 gate、coverage、sweep、cap 及其他路径保持不变。开发门为 Linear mean `+0.2pp`、六分项不下降、Attention 不变、CUDA ratio ≤1.15。
+
 ### 暂缓
 
 - A2 H64：聚合有增益但尾部和 GQA 安全轨不足，待 C2 稳定后重新立项；
