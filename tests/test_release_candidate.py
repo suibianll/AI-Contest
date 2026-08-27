@@ -77,9 +77,11 @@ def test_release_flags_are_a1_only() -> None:
     assert solution._WEIGHT_QUADRATIC16 is True
     assert solution._ACTIVATION_QUADRATIC_MAX_FEATURES == 4096
     assert solution._ACTIVATION_QUADRATIC8 is True
-    assert solution._ACTIVATION_QUADRATIC8_MIN_FEATURES == 1025
+    assert solution._ACTIVATION_QUADRATIC8_MIN_FEATURES == 64
     assert solution._ACTIVATION_QUADRATIC8_MAX_RATIO == 0.02
     assert solution._ACTIVATION_QUADRATIC8_SWEEPS == 1
+    assert solution._ACTIVATION_QUADRATIC8_CALIBRATION_GATE is True
+    assert solution._ACTIVATION_QUADRATIC8_GATE_MAX_FEATURES == 1024
 
 
 def test_submission_has_no_file_io_or_debug_output() -> None:
@@ -286,3 +288,29 @@ def test_wide_activation_grams_are_legal_state_tensors() -> None:
     tensor_count, elements = validate_state(state)
     assert tensor_count == 2
     assert elements == 36_864
+
+
+def test_activation_quadratic8_calibration_gate_returns_a_decision() -> None:
+    solution = load_module("activation8_gate", ROOT / "solution.py")
+    torch.manual_seed(414)
+    weight = torch.randn(8, 64)
+    weight_params = solution._dense_to_hif4(weight)
+    weight_hat = solution._dequantize_hif4(weight_params)
+    gram = weight.T @ weight
+    importance = solution._normalize_importance(
+        weight_hat.square().sum(dim=0), 64
+    )
+    decision = solution._activation_quadratic8_is_safe(
+        weight,
+        weight_hat,
+        [torch.randn(8, 64), torch.randn(8, 64)],
+        torch.ones(64),
+        torch.arange(64),
+        0,
+        0,
+        importance,
+        solution._flat_group_gram(gram, 64),
+        solution._flat_group_gram8(gram, 64),
+        1.0,
+    )
+    assert isinstance(decision, bool)

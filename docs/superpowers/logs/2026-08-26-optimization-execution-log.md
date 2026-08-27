@@ -250,6 +250,29 @@ Linear 与 B0 完全一致。A3/L1 开启时的数值见各自步骤小节。
   algorithm-stage ratio ≤1.15。
 - 状态：`planned`。
 
+### C14 固定回归与晋级结论
+
+- offset 0 Linear mean `+0.450pp`；q/k/v/o/fc 分别
+  `+0.56/+1.12/+0.06/+0.60/+0.36pp`，proj 与 Attention 不变。
+- 固定矩阵六项全胜，Linear mean 增量 `+0.420~+0.723pp`；所有记录分项
+  通过安全门。amax4 o 相对 C11 `+0.33pp`，C13 的 `-0.91pp` 已修复。
+- GQA offset 193 Attention 精确保持 `0.4169/0.4928`。
+- 同环境 CPU 配对：C14 `58.05s`、C11 `60.30s`，ratio `0.963`；按时间
+  持平处理。10 项 release tests 通过。
+- 状态：`local-champion`；root 保留 C14。
+
+## C15 预注册：quantized-weight activation Gram
+
+- Candidate ID：`C15`
+- Parent：`C14`，SHA256
+  `EC246A8941ACBE4A6B1B085F44B9067F852456C4A0272C01266E1298D4CC6D45`
+- 唯一变化：activation 的 4×4/8×8 quadratic Gram 从
+  `W_smooth^T W_smooth` 改为最终部署的 `W_hat^T W_hat`；C14 gate、coverage、
+  sweep、weight 与 Attention 路径全部不变。
+- 开发门：offset 0 Linear mean 至少 `+0.2pp`；六个分项不下降，Attention
+  不变，CUDA algorithm-stage ratio ≤1.15；通过后运行固定矩阵和 CPU 配对。
+- 状态：`planned`。
+
 ### C7 开发结论
 
 - offset 0 Linear mean 相对 C5 约 `+0.123pp`；q/k/v/o/fc/proj 六项均为

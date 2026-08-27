@@ -193,6 +193,12 @@ robust_attention_objective =
 
 保留 C13 的全宽收益方向，但将窄层 8×8 eligibility 改为逐层校准裁决：在 calibration samples 上比较 4×4 base 与 8×8 residual 的最终 output MSE，仅当平均至少改善 0.05% 且任一样本不退化超过 0.1% 时保存 gram8；3072-wide C11 路径仍无条件启用。开发门为 Linear mean `+0.2pp`，固定矩阵均值全正、任一分项相对 C11 不低于 `-0.1pp`，Attention 不变且 CUDA/CPU ratio ≤1.15。
 
+执行结果：`local-champion`。offset 0 Linear mean `+0.450pp`，固定矩阵增量 `+0.420~+0.723pp`，所有分项安全；amax4 o 相对 C11 由 C13 的 `-0.91pp` 修复为 `+0.33pp`，CPU ratio `0.963`。
+
+### C15：quantized-weight activation Gram
+
+从 C14 出发，只把 activation quadratic 的 Gram 来源由 `W_smooth^T W_smooth` 替换为最终部署算子的 `W_hat^T W_hat`，其余 gate、coverage、sweep 和路径不变。这使 activation error 的二次项与真实量化权重算子对齐。开发门为 Linear mean `+0.2pp`、六分项不下降、Attention 不变、CUDA time ratio ≤1.15。
+
 ### 暂缓
 
 - A2 H64：聚合有增益但尾部和 GQA 安全轨不足，待 C2 稳定后重新立项；
