@@ -181,6 +181,12 @@ robust_attention_objective =
 
 在 C11 后只为 wide activation 增加 16×16 `W^T W` Gram，对最高损失 1% 的完整 16-channel groups 做单 sweep，cap 2048。开发门为 proj `+0.2pp`、Linear mean 为正、非目标分项和 Attention 不下降、CUDA time ratio ≤1.15；该候选不重新打开已关闭的 weight quadratic 尺度调参。
 
+执行结果：`local-accepted-not-promoted`，offset 0 proj 仅 `+0.07pp`；activation group-size 扩展在 8×8 结束，C11 保持 Champion。
+
+### C13：all-width activation 8×8 residual
+
+从 C11 出发，只将 activation 8×8 eligibility 从 3072-wide 放宽到全部 64-aligned Linear activations，coverage 2%、单 sweep 和 cap 4096 保持不变。开发门恢复为全局 Linear mean `+0.2pp`，同时要求六个分项不下降、Attention 不变、CUDA time ratio ≤1.15。
+
 ### 暂缓
 
 - A2 H64：聚合有增益但尾部和 GQA 安全轨不足，待 C2 稳定后重新立项；

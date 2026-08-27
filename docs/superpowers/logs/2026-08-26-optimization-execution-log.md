@@ -209,6 +209,25 @@ Linear 与 B0 完全一致。A3/L1 开启时的数值见各自步骤小节。
   Attention 不下降、CUDA algorithm-stage ratio ≤1.15；通过后运行固定矩阵。
 - 状态：`planned`。
 
+### C12 开发结论
+
+- offset 0 proj 相对 C11 `+0.07pp`，Linear mean `+0.012pp`；其余分项与
+  Attention 不变。CUDA algorithm-stage `22.80s`，ratio `1.022`。
+- 状态：`local-accepted-not-promoted`。低于 proj `+0.2pp` 开发门，不运行
+  固定矩阵；C11 保持 Champion，activation group-size 扩展结束于 8×8。
+
+## C13 预注册：all-width activation 8×8 residual
+
+- Candidate ID：`C13`
+- Parent：`C11`，SHA256
+  `292023260BD386060509E65BA2688B9F06B2E0EB555C0C5DC9454027A66381E6`
+- 唯一变化：把 C11 的 activation 8×8 eligibility 从 `in_features>=1025`
+  放宽到所有 64-aligned Linear activations；coverage 2%、单 sweep、cap 4096
+  均不变，不增加 16×16 路径。
+- 开发门：offset 0 Linear mean 至少 `+0.2pp`，六个分项均不下降，Attention
+  不变，CUDA algorithm-stage ratio ≤1.15；通过后运行固定矩阵。
+- 状态：`planned`。
+
 ### C7 开发结论
 
 - offset 0 Linear mean 相对 C5 约 `+0.123pp`；q/k/v/o/fc/proj 六项均为
