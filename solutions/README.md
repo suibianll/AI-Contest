@@ -30,6 +30,7 @@ Root `solution.py` is the only active submission. Archived source files are immu
 | v021 | 2026-08-27 | C18 activation/weight-error cross term | 0.5897 | 0.4497 | CUDA stage 25.19s | NA | NA | local +0.0008 Linear | local-accepted-not-promoted | [archive](20260827_v021_c18-activation-cross-term-local_scoreNA_timeNA/) |
 | v022 | 2026-08-27 | C19 cross-aware gain selection | 0.5905 | 0.4497 | CUDA stage 25.25s | NA | NA | local +0.0015 Linear | local-accepted-not-promoted | [archive](20260827_v022_c19-cross-aware-gain-selection-local_scoreNA_timeNA/) |
 | v023 | 2026-08-27 | C20 exact discrete cross-gain selection | 0.5931 | 0.4497 | CUDA stage 25.19s | NA | NA | local +0.0041 Linear; pow2 proj -0.0587 | local-accepted-not-promoted | [archive](20260827_v023_c20-exact-discrete-cross-gain-local_scoreNA_timeNA/) |
+| v024 | 2026-08-27 | C21 gated exact cross selection | 0.5930 | 0.4497 | CUDA stage 25.87s | NA | NA | local +0.0040 Linear; 6/6; fixes C20 pow2 | local-champion | [archive](20260827_v024_c21-gated-exact-cross-selection-local_scoreNA_timeNA/) |
 
 `*` v002 的 Linear/Attention 数值最初来自远程仓库 `CHANGELOG.md` 的 GPT-2
 12 层、2 calib + 2 test 报告，之后已由 GPU-compatible B0 derivative 在本地

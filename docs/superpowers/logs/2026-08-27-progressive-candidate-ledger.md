@@ -24,13 +24,13 @@
 | C17 / v020 | C14 | gated activation 8×8 coverage 8% | Linear +0.285pp | 6/6、36/36 分项改善 | Champion | [v020](../../../solutions/20260827_v020_c17-final-gated-activation-8x8-coverage8-local_scoreNA_timeNA/result.md) | `ff3b624` |
 | C18 / v021 | C17 | activation/weight-error cross term | Linear +0.077pp | 未运行 | accepted, not promoted | [v021](../../../solutions/20260827_v021_c18-activation-cross-term-local_scoreNA_timeNA/result.md) | `f367c5d` |
 | C19 / v022 | C17 | cross-aware Newton gain selection | Linear +0.152pp | 未运行 | accepted, not promoted | [v022](../../../solutions/20260827_v022_c19-cross-aware-gain-selection-local_scoreNA_timeNA/result.md) | `37acc42` |
-| C20 / v023 | C17 | exact discrete cross-gain selection | Linear +0.413pp | 5/6 positive; pow2 proj -5.87pp | accepted, not promoted | [v023](../../../solutions/20260827_v023_c20-exact-discrete-cross-gain-local_scoreNA_timeNA/result.md) | 本次提交 |
+| C20 / v023 | C17 | exact discrete cross-gain selection | Linear +0.413pp | 5/6 positive; pow2 proj -5.87pp | accepted, not promoted | [v023](../../../solutions/20260827_v023_c20-exact-discrete-cross-gain-local_scoreNA_timeNA/result.md) | `8934745` |
+| C21 / v024 | C17 | calibration-gated exact cross selection | Linear +0.152pp | 6/6 改善; 修复 C20 pow2 | Champion | [v024](../../../solutions/20260827_v024_c21-gated-exact-cross-selection-local_scoreNA_timeNA/result.md) | 本次提交 |
 
 ## 当前状态
 
 - 官方最优：v013（C10，提交 `a2e0ed3`）`15799 / 144s`，较 B0 `15313 / 137s` 提升 `+486`。
-- 当前根 `solution.py`（HEAD `ff3b624`）：C17 / v020，SHA256 `C29E71C332E41E262B94FF68454CEB1F1589EE932FB4E1D55C5F221CFD060766`；本地 Linear mean `0.5890`，高于 v013 的 `0.5811`，尚未官方评测。
-- 工作区提示：`solution.py` 与 `tests/test_release_candidate.py` 存在未提交修改（超出 C17 约 +298 行，疑似 C21 预注册候选的开发中版本），尚未归档、尚未评测。
-- 相对 C1 的累计主线：Attention 保留 `+7.12pp` causal 增益；Linear 从 C1 `0.5668` 提升到 C17 `0.5890`，约 `+2.22pp`。
+- 当前根 `solution.py`：C21 / v024，SHA256 `40F4D17C12F976F83856B9641BE9A3951867BC8979992D773C60C0C1C3E8066A`；本地 Linear mean `0.5930`（6/6 固定矩阵改善，pow2 安全门通过），高于 v013 的 `0.5811`，尚未官方评测。
+- 相对 C1 的累计主线：Attention 保留 `+7.12pp` causal 增益；Linear 从 C1 `0.5668` 提升到 C21 `0.5930`，约 `+2.62pp`。
 - 已关闭路线：segment CVaR、继续扩大 8×8/16×16 coverage、增加 16×16 sweep、继续扩大 weight quadratic group size。
-- 当前已预注册候选：C21 all-width gated exact cross refinement；coverage 路线保持关闭。
+- 下一方向：以 C21 为主线的单机制实验；优先考虑将 C21 提交官方评测。
