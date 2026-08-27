@@ -1248,7 +1248,59 @@ C24 绝对门 0.78）与上述三类封顶互相印证：**22000~25000 主目标
 - 剩余动作状态：官方提交已完成（终局条目剩余动作 1 关闭）；
   动作 2（新机制类预注册）与动作 3（holdout 2/3 预算保留）维持。
 
-## C3 预注册：top-K 8×8 Linear 二阶
+## C29 预注册：Hierarchy-Aligned Equivalent Scaling（Level-0 探针）
+
+- 日期：2026-08-27；计划：`2026-08-27-hif4-post-c21c-next-optimization-plan.md` §4
+- Candidate ID：`C29`（HAES，层级对齐等价缩放）
+- 父版本：C21-C / v025（归档 SHA `83AB4864…`）；根目录 `solution.py`
+  SHA256 `E94CD30A52B8361E99536BB9DD98EB604912946D4336E600DD9246305F466C35`
+  （flag 全关，行为与 v025 逐位等价，见就绪性验证条目）；git HEAD `1a3f757`
+- 唯一机制：在 P 之后、R 之前插入层级对齐正对角缩放 S（组大小按
+  §4.3 绑定规则 = 组件实际 block_smooth_size，0→4），互逆折叠进 D。
+  flag `_HIERARCHY_ALIGNED_SCALE`（尚未引入；Level-0 不改 solution.py）。
+- 评测矩阵（Level-0 S 网格 oracle 微探针，计划 §4.6 第 0 级）：
+  - 真实 GPT-2，层 0/5/11 × 组件 q/k/v/o/fc/proj，amax6，seq=128，calib=2；
+  - oracle：per-4/绑定粒度组独立枚举 z ∈ {−4..4}\{0}（s=2^(z/8)），
+    每组取激活硬重构误差最小 z（单侧、无 Pareto/中心化），码字经
+    deployed 动态量化路径（`_nvfp4_to_hif4`，仅 multiplier 改为折叠后
+    smooth_inv）重适配；变体逐校准样本调用（refinement 排名为调用内
+    全局，不得 flatten 批量）；z 选择用样本 0（128 行），最终
+    simultaneous 度量用全部校准行；
+  - 对照臂 `s4`（S 恒 per-4，不绑定）量化 H8/H16 组件的对齐退化；
+  - 按组件 block_smooth_size 分桶报告。
+- **否决门（预注册）**：bound 臂全矩阵能量加权激活硬重构误差降幅
+  `1 − L_oracle_sim / L_parent < 5%` → C29 主机制失败，直接转 C30，
+  不实现坐标下降搜索。
+- 时间预算：探针 GPU 预计 ~35 分钟（离线，非提交路径）；Level-0
+  不触碰提交代码与时间预算。
+- 合规：探针为 evaluator 侧代码，仅用激活自身重构误差；不构造
+  Linear 输出；不读 holdout。
+
+### C29 Level-0 结果：rejected（2026-08-28）
+
+探针（`evaluator/hierarchy_scale_probe.py`，685.8s，CUDA）：
+
+- **全矩阵能量加权降幅 0.14% << 5% 预注册否决门 → C29 rejected**，
+  归档 `solutions/20260828_v029_c29-haes-rejected_scoreNA_timeNA/`。
+- 18/18 组件 block_smooth_size=0（C21-C 校准在这 3 层全部关闭
+  Hadamard）——S 全部处于最有利对齐情形，上限条件下的结论，
+  对 H8/H16 退化分析免疫。
+- 单组件：最好 +1.08%（layer 5 k），最差 −0.00%（layer 5 v）。
+- 机制解释：per-4 有效 scale = lv1(e6m2 连续)×lv2({1,2})×lv3({1,2})，
+  S 的 2^(z/8) 细网格与现有档位差集极小；4bit mantissa 误差由尾数
+  精度主导，scale 细分不改变舍入误差。与 C28（8.1% 码字空间上限）
+  互相印证：激活码字/scale 拟合类机制全部封顶。
+- **方法论教训（S 坐标度量陷阱）**：首版按计划 §4.5 的 L_A 定义
+  （S 坐标系绝对误差）度量得 49.92%（fc），几乎全是纯缩放作弊
+  （组缩放 α → S 坐标误差能量 ×α²，逆映射回 parent 坐标后抵消，
+  输出误差不变）；修正为 parent 坐标签（重构经 R^-1、S 逆映射后
+  比较）后同一配置 0.27%。教训入 project_memory：任何涉及坐标
+  缩放的候选，operand-local 指标必须在固定坐标系测量。
+- 零提交代码变更；根目录 solution.py 与父版本一致。
+
+下一步（计划 §13）：转 C30（Hessian 感知层级排列），先执行
+edge(i,j)=|H_A[i,j]|·sqrt(r_i·r_j) 模式的 `linear_compliance_guard`
+预裁定（计划 §8.2 强制前置步骤）。
 
 - Candidate ID：`C3`
 - Parent：`C1`，SHA256
