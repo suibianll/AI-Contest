@@ -78,9 +78,7 @@ _LINEAR_R64_STAGE1_WEIGHT_ROWS = 128
 # bounds the [chunk, blocks, 64] working tensors (memory-bounded chunking;
 # the plan's 128 default is dominated by dispatch overhead on small-B
 # layers, so production uses 1024 rows per ~3MB chunk).
-# C23 rejected (v027): kept off in production; flag retained so the
-# archived candidate can be re-enabled for diagnosis.
-_WEIGHT_FULL64 = False
+_WEIGHT_FULL64 = True
 _WEIGHT_FULL64_BEAM_OFFSETS = (-2, -1, 0, 1, 2, 3)
 _WEIGHT_FULL64_BEAM_KEEP = 4
 _WEIGHT_FULL64_CHUNK_ROWS = 1024

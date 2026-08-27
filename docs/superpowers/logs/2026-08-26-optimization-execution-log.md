@@ -900,6 +900,22 @@ Linear 与 B0 完全一致。A3/L1 开启时的数值见各自步骤小节。
   rows≥2000、channels {768,3072}、chunk 128、预热 3 测 10 取中位，
   覆盖 `_refine_weight_blocks64` 生产调用与临时分配；≥10x 为诊断
   目标而非独立门，端到端 CPU ratio>1.15 不得晋级。
+- 实施期修订（2026-08-27，任何 C23 评测运行之前登记；依据为
+  C21-C 本地 CPU algorithm-stage 实测预算，非评测结果）：全量
+  64-block 覆盖的 864 步/beam 批量求解在 CPU 上推算约 40s+，远超
+  `ratio<=1.15` 的 +8s 预算。因此实现加入两个预算常量，语义仍为
+  "逐 block fallback 到父参数"：
+  1. `_WEIGHT_FULL64_MAX_RATIO`（默认 `0.25`）：每个 row-chunk 内按
+     父版本 full-H loss 之和选取 top-`ceil(ratio*blocks)` 个 64 列
+     进入 beam solve；未选列保持父参数（与 fallback 语义一致）。
+     该 ranking key 只用 W 自身统计与 H（规则零白名单允许）。
+  2. `_WEIGHT_FULL64_CHUNK_ROWS`：计划默认 128；因小 B 层（B=12）在
+     128 行 chunk 下 Python/torch 调度开销主导（成本与覆盖率无关），
+     生产默认调整为 1024（[1024, blocks, 64] float32 ≈ 3MB，仍满足
+     "必须 chunk、不得全展开"的内存硬性要求）。micro-benchmark 按
+     §6.7 规格在 chunk=128 测量，同时报告生产 1024 配置。
+  两个常量在固定回归之前可依据 CPU ratio 门调整并在此登记；看过
+  固定回归结果后不得再改（若需收窄须换 candidate ID 重新预注册）。
 - 测试（§6.8）：`test_full64_hessian_extraction` /
   `test_gptq64_initialization_returns_legal_codes` /
   `test_coordinate_descent64_is_monotonic` /
@@ -915,6 +931,39 @@ Linear 与 B0 完全一致。A3/L1 开启时的数值见各自步骤小节。
 - 评测矩阵与 holdout 纪律同 C22（开发集 cuda amax6 offset 0
   both 起步，通过后固定矩阵 6 配置 + GQA + 576 合成 case + 合规
   门禁；holdout 仅最终验收）。
+
+### C23 实施与归档结果（2026-08-27，v027，rejected）
+
+- 实现（flag=True 归档 SHA256
+  `DD80CBBF43CD13D7AE6D5AD32399B91A64BB9EF49CA124DC4D526263F2766069`）：
+  §6.7 六函数全批量向量化（`_full64_hessian_blocks` /
+  `_cholesky_inverse_factor`（done 掩码 + 阶梯阻尼 0.01/0.03/0.1）/
+  `_gptq_initialize64` / `_coordinate_descent64` /
+  `_hierarchy_toggle_refine64` / `_refine_weight_blocks64`，全局列选择
+  保证 chunk 无关性）。§6.8 八项测试 + 批量 vs 逐 block 1e-6 探针 +
+  micro-benchmark（chunk 128，2048 行，768/3072 通道）全部通过，
+  见 `tests/test_weight_full64.py`。
+- 开发评测（cuda amax6 offset 0 both）：Linear mean `0.5311 → 0.5504`
+  （+1.93pp；早前一次 +2.07pp，CUDA 归约抖动 ±0.2pp）；fc/proj/o 均值
+  +1.64pp；Attention 逐位不变。
+- 固定回归矩阵 6/6 正向（+1.93/+2.24/+2.19/+2.34/+2.66/+1.90pp，
+  amax4/pow2 尾部检查通过）。
+- 机制诊断（真实数据 instrumented）：full-H 总降幅 `20.95%`（门 ≥20%
+  达标），替换率恰 25%；按组件 v 9.8% – k 37.7% 差异大。
+- 合规门禁（flag=True 归档版）：static+runtime 全过，`violations=[]`，
+  210 contractions，无 review 项。
+- 时间：CUDA algorithm-stage `32.77s` vs C21-C `24.03s`，ratio `1.37`
+  （门 ≤1.15 未达）；推算官方时间 `~238s > 225s`（门未达）。
+- 决策：`rejected` per §6.9（6 门中 3 未达：Linear mean 踩线未过、
+  fc/proj/o +1.64pp<3pp、CPU ratio 1.37>1.15；推算时间 238s>225s）。
+  机制有效但绝对成本超预算。根目录 `_WEIGHT_FULL64 = False`（行为与
+  C21-C 逐位一致，`test_weight_full64_disabled_matches_c21c` 验证）；
+  归档 `solutions/20260827_v027_c23-full64-rejected_scoreNA_timeNA/`。
+  Champion 仍为 C21-C（v025）。Holdout 未消耗（0/3）。
+- 战略后果：C24 前置「C23 晋级」未满足，C25 前置 C24——计划 §7–§9
+  链条全部受阻。后续任何推进必须换新 candidate ID 重新预注册（规则 3/4）。
+  候选方向：收窄覆盖率（top-25%→10%，q/k/o 的 drop 33–38% 远高于均值）、
+  分块协方差近似降 Cholesky 成本、或只对 fc/proj 宽层启用。
 
 ## C3 预注册：top-K 8×8 Linear 二阶
 
