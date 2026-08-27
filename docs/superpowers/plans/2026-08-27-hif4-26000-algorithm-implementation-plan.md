@@ -1,7 +1,8 @@
 # HiF4 26000 分算法实施计划
 
 日期：2026-08-27
-状态：已按官方 `A @ W` 禁令完成合规修订，待实施
+目标定位：主目标为官方 22000~25000；26000 为 stretch 目标（详见第 1 节目标分级）
+状态：已按官方 `A @ W` 禁令完成合规修订；2026-08-27 评审后补充目标分级、Q0 教训、向量化硬性要求与官方时间上限，待实施
 历史分数锚点：C21 / v024，官方 `16043 / 173.8s`；后续父版本必须先替换为 C21-C 合规基线
 当前源码 SHA256：`40F4D17C12F976F83856B9641BE9A3951867BC8979992D773C60C0C1C3E8066A`
 
@@ -46,6 +47,26 @@
 
 ## 1. 目标与量化约束
 
+### 1.0 目标分级与官方时间上限（评审修订）
+
+- **主目标：官方 22000~25000**，按当前四锚点近似对应 Linear mean `0.790~0.890`、相对标准 HiF4 残余 MSE约 `21%~11%`；按 Checkpoint C/D 的决策点逐步官方提交、建立锚点。
+- **stretch 目标：官方 26000**，对应 Linear mean `≈0.923`、残余 MSE `≈7.7%`。26000 不是本计划的承诺交付；任何情况下不得因 stretch 压力引入第 14 节禁止的捷径。
+
+只计算各候选的相对增量门，下限之和约为
+`0.593 + 0.5pp(C22) + 2pp(C23) + 4pp(C24) + 4pp(C25) + 2pp(C26a) + 1pp(C26b) ≈ 0.73`。
+但这不是“全部阶段通过”的真实下界，因为 C24 另有 Linear `>=0.78` 的绝对门。若 C24 恰好以
+`0.78` 通过、C25 走相对 `+4pp` 分支、C26a/C26b 分别踩线 `+2pp/+1pp`，最终下界约为
+`0.85`；若 C25 走绝对 `>=0.85` 分支，C26 后约为 `0.88`。因此全部阶段通过后仍距
+`0.923` 约 `4.3~7.3pp`，26000 只有在若干主机制显著超过晋级门时才可达。主交付区间为
+Linear `0.790~0.890`（约 22k~25k）；达到后应先官方提交确认兑换率，再决定是否继续冲 stretch。
+
+官方评测时间硬上限为 **300 秒**（已确认；项目归档用 `time300plus` 标记官方超时）。
+C21 当前官方时间 `173.8s`；本计划各候选的 CPU 推算目标 `<205s / <225s / <250s / <270s`
+均由 300s 上限反推，预留至少 30s 余量。任何候选推算官方时间超过 `270s` 一律不得晋级，
+无论分数多高。`173.8s → 270s` 允许相对 C21 最多增加约 `55.4%`；`270s` 占官方上限
+`90%`，并消耗 C21 原剩余时间余量的约 `76.2%`。各阶段时间目标可以逐级提高，但距
+300s 的剩余余量只减不增。
+
 ### 1.1 当前锚点
 
 | 版本 | Linear mean | Attention | 官方分数 | 官方时间 |
@@ -73,7 +94,7 @@ official_score ≈ -1783 + 29991 * linear_mean + 224 * attention
 | 0.900 | 25300 | 10.0% |
 | 0.923 | 26000 | 7.7% |
 
-26000 的本地工程目标不是“再增加几个百分点”，而是把当前残余 MSE 从 `40.7%` 压到约 `7.7%`。
+26000（stretch）的本地工程含义不是“再增加几个百分点”，而是把当前残余 MSE 从 `40.7%` 压到约 `7.7%`；主目标区间 22k~25k 对应残余 MSE 压到约 `21%~11%`。
 
 ### 1.2 当前误差归因
 
@@ -528,6 +549,20 @@ standard_code + {-2,-1,0,1,2,3}
 
 先使用现有 exact hierarchy proxy 排序，保留 loss 最低的 4 个 code。命中边缘时允许现有 edge extension，但最终 beam 不超过 4。
 
+C23 scale beam 安全要求：
+
+1. 固定回归必查对 scale 敏感的 Linear 配置（`amax4 offset 0`、`pow2 offset 0`）；任一
+   固定回归 case 的 Linear 相对指标不得低于父版本 `2pp`，防止扩展 beam 改善均值但
+   破坏尾部；
+2. beam 接受前逐 block 验证五字段合法、full-H loss finite 且不高于父版本；不满足时
+   该 block 回退父版本参数（逐 block fallback，不是逐层）；
+3. 若固定回归失败，当前候选立即归档为 rejected。需要把 beam 收窄为 `{-1,0,+1}` 时，
+   必须分配新的 candidate ID、重新预注册并从开发评测开始，不能在看过固定回归结果后
+   原地修改同一候选；
+4. variantH 的 `saturated_logits_h4_kv2_d64_s32`（seed 307）`0.0000` 是 Attention
+   calibration 的扩展 offset 未经验证进入运行时 state 所导致，不能作为 C23 Weight beam
+   的直接因果证据。该教训由第 10.3 节 Attention 合成安全门单独处理。
+
 ### 6.4 每个 beam 的求解流程
 
 对每个 candidate scale：
@@ -601,6 +636,23 @@ def _refine_weight_blocks64(...)
 - 不得展开 `[rows, blocks, beams, 64,64]`；
 - H 每层共享，不按 weight row 复制；
 - beam 按顺序执行，避免 4 倍峰值内存。
+
+向量化硬性要求（`CPU ratio <=1.15` 晋级门的先决条件）：
+
+- 禁止按 64-block 逐个执行 Python 循环求解；一个 row chunk 内的全部 blocks 必须
+  合并为批量张量运算，例如把 descent 状态组织为 `[rows*blocks, 64]`、loss 与
+  接受判定组织为 `[rows*blocks]` 向量；
+- coordinate descent 只允许在坐标维（64）与 beam 维上循环，rows/blocks 维度必须
+  保持批量；hierarchy toggle 的接受判定使用布尔掩码批量更新，不得逐 block 分支；
+- 交付前必须先通过向量化正确性探针：批量路径与逐 block 参考实现数值一致（容差
+  `1e-6`）；rows/blocks 维仍存在逐项 Python 循环时视为实现未完成，不得用“功能正确”
+  豁免；
+- micro-benchmark 固定在 CPU/float32，使用与正式评测相同的 Torch 线程数，测试
+  `rows>=2000`、`channels in {768,3072}`、chunk 128；预热 3 次、测量 10 次并报告中位数，
+  计时范围覆盖 `_refine_weight_blocks64` 的生产调用及其必要临时分配；
+- 批量路径相对逐 block 参考实现 `>=10x` 作为诊断目标而非独立晋级门。即使达到 10x，
+  端到端 `CPU ratio >1.15` 仍不得晋级；若未达到 10x 但端到端 ratio 合格，必须记录瓶颈
+  分析后才允许进入固定回归，不能隐藏或更换 benchmark 口径。
 
 ### 6.8 C23 测试
 
@@ -889,6 +941,15 @@ Linear-only candidate 的 Attention 必须与父版本逐 case 一致。
 
 Linear-only candidate 必须与父版本 576 case 一致，容差 `1e-6`。
 
+Attention 历史硬门：variantH 曾因扩展 dynamic offset 未经 calibration gate 验证就进入
+runtime state，使 `saturated_logits_h4_kv2_d64_s32`（seed 307）官方指标退化到 `0.0000`。
+因此任何未来 Attention 候选必须同时满足：
+
+1. extended 与 conservative offset set 分别接受 gate，只有实际通过的集合才能写入 state；
+2. 上述 saturated-logits case 必须不低于父版本，且合成矩阵不得出现新的 `<=0` case；
+3. Linear-only 候选不得触碰 Attention offset/state，576 case 必须按本节开头的逐 case 一致门执行；
+4. 失败候选归档后才能以新 candidate ID 修改 offset，不得依据同一次固定安全矩阵原地调参。
+
 ### 10.4 CPU 时间
 
 父子必须串行、同环境运行：
@@ -989,9 +1050,9 @@ compliance_guard_runtime_pass
 - 若 `0.85~0.90`：目标约 24k~25k，进入 C26；
 - 若 `>=0.90`：先提交官方确认兑换率，再决定是否冲 0.923。
 
-### Checkpoint E：26000 提交门
+### Checkpoint E：26000 stretch 提交门
 
-只有同时满足以下条件才把候选视为 26000 级：
+主目标轨道（22k~25k）的官方提交由 Checkpoint C/D 决定，不依赖本门。只有同时满足以下条件才把候选视为 26000 stretch 级：
 
 ```text
 local Linear mean >= 0.92
@@ -1003,6 +1064,9 @@ no component below parent by 0.1pp
 CPU projected official time <= 270s
 all compliance tests pass
 ```
+
+未达到本门不视为失败：只要候选优于当前官方锚点且全部合规测试通过，仍应按
+Checkpoint C/D 的节奏提交官方、建立新锚点；本门仅决定是否继续冲击 stretch。
 
 ## 14. 明确禁止的实现捷径
 
@@ -1048,7 +1112,9 @@ C26a     双 Hadamard离散旋转
   ↓
 C26b     HiF4 Adaptive Headroom
   ↓
-达到 local Linear >=0.92 后才进入 26000 官方提交门
+主目标轨道：按 Checkpoint C/D 在 22k~25k 区间逐步官方提交、建立锚点
+  ↓
+stretch 轨道：达到 local Linear >=0.92 后才进入 Checkpoint E（26000 stretch 提交门）
 ```
 
 该顺序必须保持。每个箭头都代表：预注册、实现、测试、开发评测、固定回归、CPU 计时、归档和 Champion 决策，不允许跨候选合并。
