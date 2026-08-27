@@ -1025,6 +1025,21 @@ evaluator 侧临时脚本，运行后已删除（§0.2：结果不回传 solutio
   576 合成 case + holdout 终验收），可随时官方提交；C23 的 holdout
   权利未消耗（v027 已 rejected，无需消耗）。
 
+### 根目录提交文件就绪性验证（2026-08-27）
+
+官方提交的实际文件是根目录 `solution.py`（含 C23 死代码、
+`_WEIGHT_FULL64=False`），此前所有评测均跑在归档副本上。补验：
+
+- 根目录 `solution.py` CUDA 开发评测（amax6 offset 0 both）：六个
+  Linear 分项、Attention causal/non-causal、Linear mean `0.5311`
+  与 v025 归档副本逐位一致；CUDA algorithm-stage `24.12s`（v025
+  同日 `24.03s`，计时噪声范围内，C23 死代码不影响运行时——flag
+  关闭时函数不被调用）。
+- 全量 pytest：`59 passed`（含根目录文件的静态/运行时合规门禁与
+  `test_weight_full64_disabled_matches_c21c` 等价性测试）。
+- 结论：根目录 `solution.py` 与 v025 归档副本行为等价，提交该文件
+  即提交 C21-C；仓库处于可提交状态。
+
 ## C3 预注册：top-K 8×8 Linear 二阶
 
 - Candidate ID：`C3`
