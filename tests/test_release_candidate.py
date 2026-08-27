@@ -76,6 +76,10 @@ def test_release_flags_are_a1_only() -> None:
     assert solution._WEIGHT_QUADRATIC8 is True
     assert solution._WEIGHT_QUADRATIC16 is True
     assert solution._ACTIVATION_QUADRATIC_MAX_FEATURES == 4096
+    assert solution._ACTIVATION_QUADRATIC8 is True
+    assert solution._ACTIVATION_QUADRATIC8_MIN_FEATURES == 1025
+    assert solution._ACTIVATION_QUADRATIC8_MAX_RATIO == 0.02
+    assert solution._ACTIVATION_QUADRATIC8_SWEEPS == 1
 
 
 def test_submission_has_no_file_io_or_debug_output() -> None:
@@ -266,12 +270,19 @@ def test_weight_quadratic16_refinement_is_non_increasing() -> None:
     validate_state(refined)
 
 
-def test_wide_activation_gram_is_one_legal_state_tensor() -> None:
+def test_wide_activation_grams_are_legal_state_tensors() -> None:
     solution = load_module("wide_activation_gram", ROOT / "solution.py")
     torch.manual_seed(4096)
     weight = torch.randn(4, 3072)
     gram = weight.T @ weight
-    state = solution._cpu_state_tensor(solution._flat_group_gram(gram, 3072))
+    state = {
+        "gram": solution._cpu_state_tensor(
+            solution._flat_group_gram(gram, 3072)
+        ),
+        "gram8": solution._cpu_state_tensor(
+            solution._flat_group_gram8(gram, 3072)
+        ),
+    }
     tensor_count, elements = validate_state(state)
-    assert tensor_count == 1
-    assert elements == 12_288
+    assert tensor_count == 2
+    assert elements == 36_864

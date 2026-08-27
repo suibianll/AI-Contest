@@ -187,6 +187,28 @@ Linear 与 B0 完全一致。A3/L1 开启时的数值见各自步骤小节。
   Attention 不下降，CUDA algorithm-stage ratio ≤1.15；通过后运行固定矩阵。
 - 状态：`planned`。
 
+### C11 固定回归与晋级结论
+
+- offset 0 `proj 0.5246→0.5277`（`+0.31pp`），Linear mean
+  `+0.052pp`；其余五项与 Attention 不变。
+- 固定矩阵六项全胜；offset 97/193/389、amax4、pow2 的 Linear mean
+  增量分别为 `+0.002/+0.375/+0.370/+0.035/+0.068pp`。
+- GQA offset 193 Attention 精确保持 `0.4169/0.4928`。
+- 同环境 CPU 配对：C11 `60.02s`、C10 `58.93s`，ratio `1.019`。
+- 状态：`local-champion`；root 保留 C11。
+
+## C12 预注册：wide activation 16×16 residual
+
+- Candidate ID：`C12`
+- Parent：`C11`，SHA256
+  `292023260BD386060509E65BA2688B9F06B2E0EB555C0C5DC9454027A66381E6`
+- 唯一变化：在 C11 后仅为 wide activation 增加 16×16 `W^T W` Gram，
+  对最高损失 1% 的完整 16-channel groups 做单 sweep，cap 2048；不改变
+  4×4/8×8、权重或 Attention 路径。
+- 开发门：offset 0 proj 至少 `+0.2pp`、Linear mean 为正、非目标分项和
+  Attention 不下降、CUDA algorithm-stage ratio ≤1.15；通过后运行固定矩阵。
+- 状态：`planned`。
+
 ### C7 开发结论
 
 - offset 0 Linear mean 相对 C5 约 `+0.123pp`；q/k/v/o/fc/proj 六项均为

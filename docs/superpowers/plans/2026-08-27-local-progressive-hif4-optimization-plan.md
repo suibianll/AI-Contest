@@ -175,6 +175,12 @@ robust_attention_objective =
 
 在 C10 上只为 `in_features > 1024` 保存 8×8 `W^T W` Gram，并在 4×4 activation 求解后，对最高损失 2% 的完整 8-channel groups 做单次 `H·e` 坐标更新，cap 4096。目标是验证 C10 暴露出的跨 4-channel activation 相关性；开发门为 proj `+0.3pp`、Linear mean 为正、非目标分项和 Attention 不下降、CUDA time ratio ≤1.15。
 
+执行结果：`local-champion`。offset 0 proj `+0.31pp`，固定矩阵 6/6 正向，Attention 不变；同环境 CPU ratio `1.019`。C11 成为新父版本。
+
+### C12：wide activation 16×16 residual
+
+在 C11 后只为 wide activation 增加 16×16 `W^T W` Gram，对最高损失 1% 的完整 16-channel groups 做单 sweep，cap 2048。开发门为 proj `+0.2pp`、Linear mean 为正、非目标分项和 Attention 不下降、CUDA time ratio ≤1.15；该候选不重新打开已关闭的 weight quadratic 尺度调参。
+
 ### 暂缓
 
 - A2 H64：聚合有增益但尾部和 GQA 安全轨不足，待 C2 稳定后重新立项；
