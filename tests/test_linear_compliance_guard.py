@@ -192,6 +192,50 @@ def test_runtime_guard_allows_legal_hessian_and_grams() -> None:
     assert report["contraction_count"] >= 2
 
 
+FAKE_C30_EDGE_SOURCE = """
+import torch
+
+
+def hif4_calibration_and_quantize_weight(weight_quant, weight_scale, pairs):
+    acts = [c * s.sum() for (c, s) in pairs]
+    a = torch.cat(acts, dim=0)
+    h_a = a.t() @ a / float(a.shape[0])            # activation gram
+    weight = weight_quant * weight_scale.sum()
+    weight_hat = torch.round(weight * 8.0) / 8.0
+    e_w = weight - weight_hat                      # weight residual
+    r = e_w.square().sum(dim=0).sqrt()             # channel energy
+    # C30 edge: elementwise combination, no contraction between the
+    # two operands' data (pre-ruled legal, evaluator/c30_edge_guard_probe.py).
+    edge = h_a.abs() * torch.sqrt(torch.outer(r, r))
+    perm = torch.argsort(edge.sum(dim=1), stable=True).to(torch.int64)
+    return {"weight_params": {}, "activation_state": {"permutation": perm}}
+"""
+
+
+def test_runtime_guard_reviews_c30_edge_permutation() -> None:
+    """C30 pre-ruling regression: elementwise edge pattern passes with an
+    explicit review entry for the dual-side permutation (never silent,
+    never a violation)."""
+
+    fake = make_fake_solution(FAKE_C30_EDGE_SOURCE)
+    torch.manual_seed(305)
+    tokens, out_features, channels = 53, 37, 64
+    weight = torch.randn(out_features, channels) * 0.1
+    activations = [torch.randn(tokens, channels) * 0.1 for _ in range(2)]
+    report = runtime_guard(
+        fake,
+        weight,
+        activations,
+        tokens=tokens,
+        out_features=out_features,
+    )
+    assert report["violations"] == []
+    # The permutation ([C] int64, {G, W} taints) lands in review.
+    assert len(report["review"]) >= 1
+    for message in report["review"]:
+        assert "combines activation and weight residuals" not in message
+
+
 def test_guard_solution_file_full_gate_passes() -> None:
     report = guard_solution_file(ROOT / "solution.py")
     assert report["violations"] == []

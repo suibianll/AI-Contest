@@ -1302,6 +1302,67 @@ C24 绝对门 0.78）与上述三类封顶互相印证：**22000~25000 主目标
 edge(i,j)=|H_A[i,j]|·sqrt(r_i·r_j) 模式的 `linear_compliance_guard`
 预裁定（计划 §8.2 强制前置步骤）。
 
+## C30 预注册：Hessian-Aware Hierarchical Permutation（含 §8.2 合规预裁定）
+
+- 日期：2026-08-28；计划：`2026-08-27-hif4-post-c21c-next-optimization-plan.md` §8
+- Candidate ID：`C30`
+- 父版本：C21-C / v025；根目录 `solution.py` SHA256
+  `E94CD30A52B8361E99536BB9DD98EB604912946D4336E600DD9246305F466C35`
+  （与 v029 快照同源，flag 全关）
+- 唯一机制：以 `edge(i,j)=|H_A[i,j]|·sqrt(r_i·r_j)`（激活 Gram ×
+  权重逐通道残差能量，逐元素组合，无跨操作数收缩）构造通道图，
+  分层贪心分组（4→8→16→64，幅值不兼容惩罚
+  `λ·|log scale_i − log scale_j|`），生成确定性排列折叠进现有
+  `permutation` 状态，动态成本零。flag：`_HIERARCHY_PERMUTATION`。
+- 评测矩阵：与 C29 探针同构（层 0/5/11 × 6 组件，amax6，seq=128，
+  calib=2）+ 随机排列对照臂；两折一致性在 Level-1 验证。
+
+### §8.2 合规预裁定结果（2026-08-28，PASS）
+
+探针 `evaluator/c30_edge_guard_probe.py`，三臂最小用例（裁定档案
+`evaluator/c30_edge_guard_ruling.json`）：
+
+| 臂 | 静态 | 运行时违规 | review |
+|---|---|---|---|
+| edge_pattern（C30 规范形式） | [] | [] | 排列条目（扩展后） |
+| gram_only（对照） | [] | [] | [] |
+| cross_contraction（同操作数收缩形式） | [] | 3 项（cross residual + 维度泄漏 + 残差组合态） | [] |
+
+- **裁定：PASS，附条件**（三条件写入裁定档案）：
+  1. edge 必须保持逐元素——任何把激活侧数据与权重残差数据做收缩
+     的形式都是违规（cross 臂证明 guard 拦截）；
+  2. [K,K] edge 矩阵本身不得进入 activation_state（拟合工件，
+     只有排列进入）；
+  3. r 必须是权重残差的逐通道统计量，原始残差张量不得进入 state。
+- 语义论证：edge(i,j) 是 trace(E_W H_A E_W^T) 耦合项的
+  Cauchy-Schwarz 上界——与白名单明示合法的 C23 Q(W) Hessian 损失
+  同一数学族；排列是共享通道变换，与 SmoothQuant D 同类
+  （D 同样由双侧统计构造且合法）；不构造 Linear 输出。
+- **guard 扩展**（按计划 §8.2 条款 2，配套回归测试）：Rule 3 的
+  双侧 review 触发从 `{A,W}` 扩展到 `{A|G|Wg, W}`——C30 排列
+  （{G,W} 污点）从静默通过变为显式 review 条目；C21-C 报告不变
+  （扩展前后均 violations=[]、review=[]，127 contractions，
+  5 state tensors）。回归测试
+  `tests/test_linear_compliance_guard.py::test_runtime_guard_reviews_c30_edge_permutation`；
+  全量 pytest 60/60 通过。
+
+### Level-0 机制上限探针（待实现，预注册门）
+
+- 问题：oracle 排列（对真实 H_A 与 r 直接做 §8.3 分层贪心）相对
+  父排列的 operand-local 硬重构能量上限是多少。
+- 度量（吸取 C29 教训）：激活侧与权重侧均在**固定 parent 坐标系**
+  度量；两侧分别报告；图指标按 §8.4（16 通道内边权捕获 +20%）。
+- **否决门（预注册）**：oracle 排列臂的两侧能量改进之和（激活% +
+  权重%）< 10%，或任一侧劣于父排列，或图指标不达 +20% → C30
+  rejected。10% 的换算依据：C23 实测 ~10.8% 权重侧能量 ≈ +1pp
+  Linear mean，§8.4 最终门 +1.5pp 需要 ~16% 组合能量，oracle 是
+  机制上限、实现只会更低，故上限 <10% 时最终门不可达。
+- 实现要点（下个工作项）：两臂必须走同一探针 harness（直接调
+  `_nvfp4_to_hif4`/`_dense_to_hif4`，仅排列参数不同）；需先确认
+  权重路径是否接受排列参数及 importance/gram 的坐标系约定。
+
+## C3 预注册：top-K 8×8 Linear 二阶（历史）
+
 - Candidate ID：`C3`
 - Parent：`C1`，SHA256
   `310570B265C705D6F09E3863CD56B1931EA9E971BCEE7E6D8E2DDC029A184B88`

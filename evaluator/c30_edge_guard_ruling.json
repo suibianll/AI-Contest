@@ -1,0 +1,48 @@
+{
+  "date": "2026-08-28",
+  "candidate": "C30",
+  "pattern": "edge(i,j) = |H_A[i,j]| * sqrt(r_i * r_j); perm into state",
+  "arms": [
+    {
+      "arm": "edge_pattern",
+      "static_violations": [],
+      "violations": [],
+      "review": [
+        "dual-taint activation state tensor with shape (64,) (channel-wise statistic; verify it is not a residual operator)"
+      ],
+      "contraction_count": 1
+    },
+    {
+      "arm": "gram_only",
+      "static_violations": [],
+      "violations": [],
+      "review": [],
+      "contraction_count": 1
+    },
+    {
+      "arm": "cross_contraction",
+      "static_violations": [],
+      "violations": [
+        "cross residual contraction bmm.default with operand shapes [(1, 106, 64), (1, 64, 37)] and taints ['A', 'Ra', 'Rw', 'W']",
+        "contraction bmm.default leaked the out_features dimension in output shape (1, 106, 37)",
+        "activation state tensor combines activation and weight residuals: shape (64,)"
+      ],
+      "review": [],
+      "contraction_count": 2
+    }
+  ],
+  "machine_verdict": {
+    "edge_pattern_passes": true,
+    "cross_contraction_caught": true,
+    "edge_pattern_review_entries": [
+      "dual-taint activation state tensor with shape (64,) (channel-wise statistic; verify it is not a residual operator)"
+    ]
+  },
+  "ruling": "PASS",
+  "conditions": [
+    "edge stays elementwise; no contraction mixing activation-derived with weight-residual-derived tensors (cross_contraction arm demonstrates the violating form)",
+    "the [K, K] edge matrix must not enter activation_state; only the permutation does",
+    "r must be channel-wise statistics of the weight residual; the raw residual tensor never enters activation_state"
+  ],
+  "semantics": "Whitelist combining clause: elementwise combination of operand-local statistics for candidate ranking is legal; edge(i,j) is a Cauchy-Schwarz bound on the coupling terms of trace(E_W H_A E_W^T), the same family as the whitelisted C23 Q(W) Hessian loss; the permutation is a shared channel transform in the same category as the SmoothQuant scale D. No Linear output is constructed."
+}

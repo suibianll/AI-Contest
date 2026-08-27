@@ -412,6 +412,11 @@ def runtime_guard(
     # Rule 3: activation state audit.  The weight params legitimately
     # carry the out_features dimension, so only activation_state is
     # audited here (26000 plan §4.6).
+    #
+    # Dual-side review covers every combination of an activation-side
+    # taint (A raw, G activation-Gram, Wg weight-guided) with the W
+    # taint: the C30 edge-pattern permutation ({G, W}) must land in
+    # review like the SmoothQuant scale ({A, W}), not pass silently.
     activation_state = (
         result.get("activation_state", {})
         if isinstance(result, dict)
@@ -422,7 +427,8 @@ def runtime_guard(
         taint = recorder.taint_of(tensor)
         shape = tuple(int(dim) for dim in tensor.shape)
         taints = set(taint)
-        if "A" in taints and "W" in taints:
+        activation_side = "A" in taints or "G" in taints or "Wg" in taints
+        if activation_side and "W" in taints:
             if "Ra" in taints and "Rw" in taints:
                 violations.append(
                     f"activation state tensor combines activation and "
