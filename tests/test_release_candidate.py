@@ -92,7 +92,10 @@ def test_release_flags_are_a1_only() -> None:
     assert solution._ACTIVATION_REFINE_MAX_RATIO == 1.0
     assert solution._WEIGHT_FULL64 is True
     assert solution._WEIGHT_FULL64_MAX_RATIO == 0.30
-    assert solution._WEIGHT_FULL64_BEAM_KEEP == 4
+    assert solution._WEIGHT_FULL64_BEAM_KEEP == 2
+    assert solution._WEIGHT_FULL64_MAX_RATIO_NARROW == 1.0
+    assert solution._WEIGHT_FULL64_MAX_RATIO_WIDE == 0.25
+    assert solution._WEIGHT_FULL64_SECOND_COORDINATE is False
     assert solution._LINEAR_R64 is False
     assert solution._HIERARCHY_PERMUTATION is False
     assert not hasattr(solution, "_ACTIVATION_QUADRATIC8_CROSS_TERM")

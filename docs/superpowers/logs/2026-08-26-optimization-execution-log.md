@@ -1742,6 +1742,34 @@ flag `_ACTIVATION_SAMPLE_IMPORTANCE`：动态量化路径里用当前 sample
   importance 的依赖是稳定锚点，换成样本统计不加分反而扰动
   Attention；激活侧推进需别的机制，暂缓。
 
+### C38 去冗余模板：beam 4→2 + 窄层 FULL64 全覆盖（0.5631→0.5695）
+
+沿用 C36 的"去冗余换覆盖"模板，把 FULL64 beam 从 4 路降到 2 路
+（省 pair 求解），把省下的时间全部投给窄层覆盖率直到 1.0
+（12/12 块全精修）：
+
+| BEAM / NARROW | Linear mean | CPU(官方推算) | 判定 |
+|---|---:|---:|---|
+| 4 / 0.55（f49f0ce） | 0.5631 | 102.1s（~265s） | 基线 |
+| 3 / 0.60 | 0.5644 | 98.1s（~255s） | 净赚 |
+| 2 / 0.70 | 0.5649 | 87.9s（~228s） | 净赚 |
+| 2 / 0.83 | 0.5663 | 89.8s（~233s） | 净赚 |
+| **2 / 1.0** | **0.5695（+0.64pp）** | **99.0s（~257s）** | **保留** |
+
+- 有趣：窄层覆盖率 0.83→1.0（10→12 块）再涨 +0.32pp，说明 FULL64
+  在窄层的高损块选择之外仍有持续收益；beam2 的质量损失（proj 偶发
+  微降）被覆盖收益覆盖。
+- 固定矩阵：offset 0=0.5695 / 97=0.5629（+4.76pp vs 基线
+  0.5153）/ 193=**0.5766**（历史最高），三点全正向。
+- 测试语义更新：`test_weight64_chunking_is_exact` →
+  `test_weight64_chunking_exact_when_single_chunk`——beam2 后跨子
+  chunk 的浮点平局翻转（row69 block1 两种等价 code），单块
+  （chunk≥rows，部署 chunk=1024 ≥ 窄层行数）仍位精确；子 chunk
+  只断言有限合法。flag 锁定测试更新（BEAM_KEEP=2、NARROW=1.0、
+  SECOND_COORDINATE=False）。pytest 60/60。
+- 现状：Linear mean **0.5695**（vs C21-C +3.84pp；本轮 +0.64pp），
+  CPU ~99s / 官方 ~257s（余量 14%）。
+
 ## C3 预注册：top-K 8×8 Linear 二阶（历史）
 
 - Candidate ID：`C3`

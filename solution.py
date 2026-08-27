@@ -82,7 +82,7 @@ _LINEAR_R64_STAGE1_WEIGHT_ROWS = 128
 # archived candidate can be re-enabled for diagnosis.
 _WEIGHT_FULL64 = True
 _WEIGHT_FULL64_BEAM_OFFSETS = (-2, -1, 0, 1, 2, 3)
-_WEIGHT_FULL64_BEAM_KEEP = 4
+_WEIGHT_FULL64_BEAM_KEEP = 2
 _WEIGHT_FULL64_CHUNK_ROWS = 1024
 _WEIGHT_FULL64_MAX_RATIO = 0.30
 # C35 (2026-08-28): per-width full-64 coverage.  Narrow layers (q/k/v/o,
@@ -92,7 +92,7 @@ _WEIGHT_FULL64_MAX_RATIO = 0.30
 # extracts weight-side precision (cap-oracle: 21pp weight-side gap) without
 # breaching the official CPU-time envelope.
 _WEIGHT_FULL64_NARROW_CHANNELS = 1024
-_WEIGHT_FULL64_MAX_RATIO_NARROW = 0.55
+_WEIGHT_FULL64_MAX_RATIO_NARROW = 1.0
 _WEIGHT_FULL64_MAX_RATIO_WIDE = 0.25
 _WEIGHT_FULL64_DAMPINGS = (0.01, 0.03, 0.1)
 _WEIGHT_FULL64_SIGNED_CODES = tuple(
