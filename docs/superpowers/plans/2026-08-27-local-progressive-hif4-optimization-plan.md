@@ -71,6 +71,23 @@ offset `97/193/389` 已被观察，不再声称是盲测 holdout；它们只作�
 - feature flag 关闭时与父 Champion 字段级等价；
 - 无 solution 侧 telemetry、文件 I/O、网络或调试输出。
 
+### 4.3 E1 合成 Attention 安全矩阵（冻结，2026-08-27）
+
+- 评测器：`evaluator/synthetic_attention_eval.py`，评分口径与真实评测器
+  逐字一致；场景配方、维度网格与 seed 以执行日志 E1 预注册为准，一经
+  冻结禁止按结果回调；
+- 矩阵：8 场景（balanced / saturated_logits / near_uniform / v_outlier /
+  qk_dynamic_imbalance / k_mean_shift / heavy_tail / qk_correlated）×
+  MHA `h4_kv4` + GQA `h4_kv2` × d64/128 × s32/128 × mode
+  `amax6/amax4/pow2` × seed `0/1/2` = 576 case，causal/non-causal 双轨；
+- S2 锚定（2026-08-27）：B0/v013/C21 三方完整跑通且确定性通过；v013 与
+  C21 逐 case 一致（C11–C21 为纯 Linear 链）；原始运行存
+  `artifacts/synthetic_attention/`；
+- 已登记尾部债务：`heavy_tail` 场景 C21 均值仍为负（causal `-0.0998` /
+  non-causal `-0.0444`；B0 为 `-0.2682/-0.1762`），为 B0 继承属性，
+  A1 已改善 `+16.8/+13.2pp`；作为下一 Attention 候选的问题定义，不触发
+  整体回退。
+
 ## 5. 本地综合晋级规则
 
 ### 5.1 指标
@@ -93,6 +110,10 @@ offset `97/193/389` 已被观察，不再声称是盲测 holdout；它们只作�
 - `win_rate >= 70%`；
 - `tail_mean_delta` 不低于 `-2pp`，或相对父 Champion 的既有尾部有明确改善；
 - CPU 单机制默认 `cpu_time_ratio <= 1.15`；
+- E1 合成安全轨（4.3）：含 Attention 改动的候选，合成全矩阵等权均值与
+  `saturated_logits` 类均值相对父 Champion 各不低于 `-0.1pp`，任一单
+  case 不低于 `-2pp`（worst 完整记录）；只含 Linear 改动的候选，合成
+  Attention 分数须与父逐 case 一致（容差 1e-6），不一致即排查；
 - 所有安全矩阵硬条件通过。
 
 `worst_case_delta` 必须完整记录，但不再用一个层覆盖全部平均增益。若尾部明显为负，它自动成为下一候选的优先优化目标。
@@ -103,6 +124,8 @@ offset `97/193/389` 已被观察，不再声称是盲测 holdout；它们只作�
 - API 不兼容或动态路径崩溃；
 - 目标综合均值下降；
 - 非目标均值超过门槛；
+- 含 Attention 改动的候选违反 E1 合成安全轨（单 case 低于 `-2pp` 或
+  均值/`saturated_logits` 类均值低于 `-0.1pp`）；
 - 超过时间门槛且没有预注册为时间换精度候选；
 - 缺少源码快照、SHA 或完整结果记录。
 

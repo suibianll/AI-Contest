@@ -14,6 +14,12 @@ sys.path.insert(0, str(ROOT / "evaluator"))
 
 from nvfp4_sim import nvfp4_encode  # noqa: E402
 from real_data_eval import TEXT, instrument_solution  # noqa: E402
+from synthetic_attention_eval import (  # noqa: E402
+    check_dynamic_params,
+    check_state_tree,
+    encode_case,
+    generate_case_data,
+)
 
 
 def load_module(name: str, path: Path) -> ModuleType:
@@ -385,3 +391,56 @@ def test_gated_exact_cross_selection_is_non_increasing() -> None:
         ).sum()
 
     assert objective(after) <= objective(before) + 1.0e-5
+
+
+# E1 冻结合成矩阵的代表子集：尾部债务场景（heavy_tail、官方踩坑场景
+# saturated_logits、v_outlier）+ balanced 基准。全矩阵由
+# evaluator/synthetic_attention_eval.py CLI 覆盖。
+SYNTHETIC_SMOKE_CASES = (
+    ("heavy_tail", 4, 2, 128, 128),
+    ("heavy_tail", 4, 4, 128, 32),
+    ("saturated_logits", 4, 2, 64, 32),
+    ("v_outlier", 4, 4, 64, 128),
+    ("balanced", 4, 4, 64, 32),
+)
+
+
+def test_synthetic_attention_states_and_params_are_legal() -> None:
+    solution = load_module("synthetic_states", ROOT / "solution.py")
+    for scenario, q_heads, kv_heads, head_dim, seq in SYNTHETIC_SMOKE_CASES:
+        label = f"{scenario}_h{q_heads}_kv{kv_heads}_d{head_dim}_s{seq}"
+        for mode in ("amax6", "amax4", "pow2"):
+            calib, tests = generate_case_data(
+                scenario, q_heads, kv_heads, head_dim, seq, 0
+            )
+            calib_pairs, test_pairs = encode_case(calib, tests, mode)
+            states = solution.hif4_calibration_attention(
+                calib_pairs, q_heads, kv_heads, head_dim
+            )
+            failures: list[str] = []
+            for side in ("q_state", "k_state", "v_state"):
+                tensors, _ = validate_state(states[side])
+                assert tensors > 0
+                check_state_tree(states[side], f"{label}/{side}", failures)
+            check_dynamic_params(
+                solution,
+                test_pairs,
+                states,
+                q_heads,
+                kv_heads,
+                head_dim,
+                f"{label}/mode={mode}",
+                failures,
+            )
+            assert failures == []
+
+
+def test_synthetic_case_generation_is_deterministic() -> None:
+    first = generate_case_data("heavy_tail", 4, 2, 128, 32, 2)
+    second = generate_case_data("heavy_tail", 4, 2, 128, 32, 2)
+    for first_batch, second_batch in zip(first[0], second[0]):
+        for side in ("q", "k", "v"):
+            assert torch.equal(first_batch[side], second_batch[side])
+    for first_case, second_case in zip(first[1], second[1]):
+        for first_side, second_side in zip(first_case, second_case):
+            assert torch.equal(first_side, second_side)

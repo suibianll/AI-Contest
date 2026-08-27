@@ -20,7 +20,7 @@ B0 Git blob：`baf2270cefd8c052edec43c8195f931d58bac456`
 | 5 A3 V bias-aware | 完成（判定不晋级，默认关闭） | 2026-08-26 |
 | 6 L1 数据驱动 scale | 完成（判定不晋级，默认关闭） | 2026-08-26 |
 | 7 本地归档复核 | A1-only 按综合本地证据晋级；官方状态 unavailable | 2026-08-27 |
-| 8 E1 合成 Attention 安全评测器 | S0/S1/S2 完成：验收门 5/5 通过；heavy_tail 登记为 Attention 尾部债务；S3 待执行 | 2026-08-27 |
+| 8 E1 合成 Attention 安全评测器 | S0–S3 全部完成并 closed：安全轨入 plan，测试 14/14 通过 | 2026-08-27 |
 
 ## 累计配对评测（CUDA）
 
@@ -485,7 +485,7 @@ Linear 与 B0 完全一致。A3/L1 开启时的数值见各自步骤小节。
 - 场景参数、网格、seed 自本登记起冻结；不用于已归档候选的追溯评级；
 - 合成分数不外推官方绝对分数，只作追加安全轨，不替换现行晋级公式；
 - 该评测器为本地诊断工具，不作为比赛提交物。
-- 状态：`local-accepted`（S1 实现 + S2 锚定完成，验收门 5/5 通过）。
+- 状态：`closed`（S0 预注册 → S1 实现 → S2 锚定 5/5 → S3 安全轨/测试）。
 
 ### E1 执行结论（S1 + S2，2026-08-27）
 
@@ -543,9 +543,20 @@ Linear 与 B0 完全一致。A3/L1 开启时的数值见各自步骤小节。
   - 时间：单方案全矩阵 74–155s（预算 60 分钟），三方合计 <7 分钟
     （预算 4 小时）。
 
-- 后续：S3（安全轨入 plan 修订 + `tests/test_release_candidate.py` 合成
-  state 合法性测试）待执行；heavy_tail 尾部债务进入下一 Attention 候选
-  预注册时的问题定义。
+- S3（2026-08-27 完成）：
+  - plan 修订：`2026-08-27-local-progressive-hif4-optimization-plan.md`
+    新增 4.3 节（E1 合成矩阵冻结与 S2 锚定证据、heavy_tail 尾部债务
+    登记）；5.2 晋级规则追加 E1 合成安全轨（Attention 改动候选：全矩阵
+    等权均值与 saturated_logits 类均值 ≥ `-0.1pp`、单 case ≥ `-2pp`；
+    Linear-only 候选：与父逐 case 一容差 1e-6）；5.3 硬失败追加越限条款；
+  - 测试：`tests/test_release_candidate.py` 新增
+    `test_synthetic_attention_states_and_params_are_legal`（E1 冻结矩阵
+    代表子集：heavy_tail×2 / saturated_logits / v_outlier / balanced ×
+    3 mode，校验 state 合法性与动态五字段）与
+    `test_synthetic_case_generation_is_deterministic`（生成器确定性）；
+    全套 14/14 通过（8.17s）。
+- E1 状态更新：`local-accepted` → `closed`（S0–S3 全部完成）。
+- heavy_tail 尾部债务进入下一 Attention 候选预注册时的问题定义。
 
 ### C7 开发结论
 
