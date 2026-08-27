@@ -56,10 +56,7 @@ _BLOCK_SMOOTH_WORST_TOLERANCE = 0.005
 # Seed selection is two-stage: a cheap operand-local rank over 32 seeds,
 # then a deployed two-fold validation of the top seeds against the parent
 # transform.  Dynamic state stores only the two integers above.
-# C22 was REJECTED on 2026-08-27 (v026): the R64 mixing regressed both
-# operands on real data (ratio_A up to 1.37) and cost 1.52x calibration
-# time, so the production default keeps the C21-C behavior.
-_LINEAR_R64 = False
+_LINEAR_R64 = True
 _LINEAR_R64_BLOCK = 64
 _LINEAR_R64_STAGE1_SEEDS = tuple(range(32))
 _LINEAR_R64_STAGE2_KEEP = 4

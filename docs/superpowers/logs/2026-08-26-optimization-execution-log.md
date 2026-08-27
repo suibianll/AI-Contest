@@ -836,6 +836,35 @@ Linear 与 B0 完全一致。A3/L1 开启时的数值见各自步骤小节。
   ≤1.12、官方时间 <205s。未达开发门 → 归档 rejected，停止 seed
   扩展，不直接实现双 Hadamard。
 
+## C22 归档：REJECTED（2026-08-27，v026）
+
+- 实现：按预注册完成（提交 e3bf1c6，SHA
+  `8BF16F042C0AD45A8726A4E855FBEBF4B9E95E4E42289009626F5AF03306BD97`）。
+  FWHT butterfly 与 dense H64 误差 <1e-5；§5.6 八项测试 + 合规门禁
+  全过（pytest 47/47）。
+- 开发评测（cuda amax6 offset 0 both）：Linear 六分项与 C21-C 逐位
+  相同（mean 0.5311，0.00pp）——72/72 组件的 seed 选择全部回退
+  parent（block_smooth_size=0）。Attention 逐位一致 ✓。时间
+  algorithm-stage 36.62s vs 24.03s（ratio 1.52，超 ≤1.12 门）。
+- 拒绝诊断（evaluator-side 临时脚本，已删除）：
+  1. 两折门 288/288 全拒（4 top seeds × 72 组件）；
+  2. L0 fc 逐折 ratio_A≈1.17–1.18、ratio_W≈1.05–1.06；
+  3. 发现 sign 哈希对连续 seed 近似不变（`i·1103515245 +
+     seed·214013 + 12345` 取 bit30，步进 214013 极少进位到 bit30，
+     range(32) 实际≈1 个符号模式，seeds 21–26 指标逐位相同）；
+  4. 分散 seed（`s·100003`）复测 9 个采样点（L0/L5/L11 × q/fc/proj）：
+     9/9 最优 seed 两折 `max(ratio_A, ratio_W) > 1`（ratio_A 1.04–1.37，
+     ratio_W 0.99–1.34）。拒绝是机制问题，非 seed 多样化不足。
+- 决策：`rejected` per §5.7。停止 seed 扩展，不实现双 Hadamard。
+  根目录 solution.py 默认 `_LINEAR_R64 = False`（行为与 C21-C 逐位
+  一致，`test_linear_r64_disabled_matches_c21c` 验证）；归档
+  `solutions/20260827_v026_c22-linear-r64-rejected_scoreNA_timeNA/`
+  保存 flag=True 候选。Champion 仍为 C21-C（v025）。C23 从 C21-C
+  构建。Holdout 未消耗（0/3）。
+- 教训（新增）：sign 哈希 seed 步进 214013 对 bit30 几乎无扰动，
+  任何 seed 搜索必须大间距；GPT-2 真实数据上 64 宽 Hadamard
+  预混合对 HiF4 层级编码是净损伤（平滑/置换已处理离群通道）。
+
 ## C3 预注册：top-K 8×8 Linear 二阶
 
 - Candidate ID：`C3`

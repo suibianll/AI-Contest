@@ -92,7 +92,7 @@ def test_release_flags_are_a1_only() -> None:
     assert not hasattr(solution, "_ACTIVATION_QUADRATIC8_CROSS_TERM")
     assert not hasattr(solution, "_ACTIVATION_QUADRATIC8_CROSS_GAIN_SELECTION")
     assert not hasattr(solution, "_ACTIVATION_QUADRATIC8_CROSS_CALIBRATION_GATE")
-    assert solution._LINEAR_R64 is True
+    assert solution._LINEAR_R64 is False
     assert solution._LINEAR_R64_BLOCK == 64
     assert solution._LINEAR_R64_STAGE1_SEEDS == tuple(range(32))
     assert solution._LINEAR_R64_STAGE2_KEEP == 4
@@ -482,6 +482,7 @@ def test_linear_r64_weight_roundtrip() -> None:
 
 def test_linear_r64_state_is_seed_only() -> None:
     solution = load_module("r64_state", ROOT / "solution.py")
+    solution._LINEAR_R64 = True
     weight_pair, calib_pairs = _r64_calibration_inputs()
     result = solution.hif4_calibration_and_quantize_weight(
         *weight_pair, calib_pairs
@@ -507,7 +508,8 @@ def test_linear_r64_state_is_seed_only() -> None:
 def test_linear_r64_disabled_matches_c21c() -> None:
     solution = load_module("r64_disabled", ROOT / "solution.py")
     parent = load_module("r64_c21c_parent", _C21C_PARENT)
-    solution._LINEAR_R64 = False
+    # The production default is disabled (C22 rejected in v026): the
+    # calibration output must stay bit-identical to the C21-C champion.
     weight_pair, calib_pairs = _r64_calibration_inputs()
     child = solution.hif4_calibration_and_quantize_weight(
         *weight_pair, calib_pairs
@@ -520,6 +522,7 @@ def test_linear_r64_disabled_matches_c21c() -> None:
 
 def test_linear_r64_candidate_falls_back_on_regression() -> None:
     solution = load_module("r64_fallback", ROOT / "solution.py")
+    solution._LINEAR_R64 = True
     torch.manual_seed(6403)
     weight = torch.randn(64, 128) * 0.05
     activations = [torch.randn(32, 128) * 0.5 for _ in range(2)]
