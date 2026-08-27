@@ -16,11 +16,12 @@
 | C9 / v012 | C5 | 16×16 sweep 1→2 | Linear +0.025pp | 未运行 | accepted, not promoted | [v012](../../../solutions/20260827_v012_c9-16x16-second-sweep-local_scoreNA_timeNA/result.md) | `375f778` |
 | C10 / v013 | C5 | activation quadratic 覆盖 3072-wide FFN | proj +0.54pp; Linear +0.090pp | 6/6 改善 | Champion | [v013](../../../solutions/20260827_v013_c10-wide-activation-quadratic-local_scoreNA_timeNA/result.md) | `a2e0ed3` |
 | C11 / v014 | C10 | wide activation 8×8 residual | proj +0.31pp; Linear +0.052pp | 6/6 改善 | Champion | [v014](../../../solutions/20260827_v014_c11-wide-activation-8x8-local_scoreNA_timeNA/result.md) | `6cee2f0` |
-| C12 / v015 | C11 | wide activation 16×16 residual | proj +0.07pp; Linear +0.012pp | 未运行 | accepted, not promoted | [v015](../../../solutions/20260827_v015_c12-wide-activation-16x16-local_scoreNA_timeNA/result.md) | 本次提交 |
+| C12 / v015 | C11 | wide activation 16×16 residual | proj +0.07pp; Linear +0.012pp | 未运行 | accepted, not promoted | [v015](../../../solutions/20260827_v015_c12-wide-activation-16x16-local_scoreNA_timeNA/result.md) | `37dde76` |
+| C13 / v016 | C11 | all-width activation 8×8 | Linear +0.463pp | aggregate 6/6; amax4 o -0.91pp | accepted, not promoted | [v016](../../../solutions/20260827_v016_c13-all-width-activation-8x8-local_scoreNA_timeNA/result.md) | 本次提交 |
 
 ## 当前状态
 
 - 当前根 `solution.py`：C11 / v014，SHA256 `292023260BD386060509E65BA2688B9F06B2E0EB555C0C5DC9454027A66381E6`。
 - 相对 C1 的累计主线：Attention 保留 `+7.12pp` causal 增益；Linear 从 C1 `0.5668` 提升到 C11 `0.5816`，约 `+1.48pp`。
 - 已关闭路线：segment CVaR、继续扩大 8×8/16×16 coverage、增加 16×16 sweep、继续扩大 weight quadratic group size。
-- 当前已预注册候选：C13 all-width activation 8×8 residual；不得在开发结果出来前改变 coverage、sweep 或 gate。
+- 当前已预注册候选：C14 calibration-gated all-width activation 8×8；不得在开发结果出来前改变 gate 或预算。

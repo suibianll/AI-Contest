@@ -228,6 +228,28 @@ Linear 与 B0 完全一致。A3/L1 开启时的数值见各自步骤小节。
   不变，CUDA algorithm-stage ratio ≤1.15；通过后运行固定矩阵。
 - 状态：`planned`。
 
+### C13 固定回归结论
+
+- offset 0 q/k/v/o/fc 分别 `+0.56/+1.12/+0.08/+0.66/+0.36pp`，
+  Linear mean `+0.463pp`，proj 与 Attention 不变。
+- 六个固定配置的 aggregate Linear mean 全胜，增量范围
+  `+0.412pp~+0.517pp`；GQA Attention 精确不变。
+- 安全门失败：amax4 offset 0 的 o `0.4208→0.4117`（`-0.91pp`）。
+- 状态：`local-accepted-not-promoted`；CPU 不运行，C11 保持 Champion。
+
+## C14 预注册：calibration-gated all-width activation 8×8
+
+- Candidate ID：`C14`
+- Parent：`C11`，SHA256
+  `292023260BD386060509E65BA2688B9F06B2E0EB555C0C5DC9454027A66381E6`
+- 唯一机制：对 `in_features<=1024` 的每层，在 calibration samples 上比较
+  4×4 base 与 8×8 residual 的最终 output MSE；仅当平均 MSE 至少改善 0.05%
+  且任一样本不退化超过 0.1% 时保存 gram8。wide C11 路径保持无条件启用。
+- 开发门：offset 0 Linear mean 至少 `+0.2pp`；固定矩阵六项均值为正，
+  任一 Linear 分项不低于 C11 超过 `0.1pp`；Attention 不变；CUDA/CPU
+  algorithm-stage ratio ≤1.15。
+- 状态：`planned`。
+
 ### C7 开发结论
 
 - offset 0 Linear mean 相对 C5 约 `+0.123pp`；q/k/v/o/fc/proj 六项均为

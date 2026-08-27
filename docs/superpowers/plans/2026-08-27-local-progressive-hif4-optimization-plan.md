@@ -187,6 +187,12 @@ robust_attention_objective =
 
 从 C11 出发，只将 activation 8×8 eligibility 从 3072-wide 放宽到全部 64-aligned Linear activations，coverage 2%、单 sweep 和 cap 4096 保持不变。开发门恢复为全局 Linear mean `+0.2pp`，同时要求六个分项不下降、Attention 不变、CUDA time ratio ≤1.15。
 
+执行结果：`local-accepted-not-promoted`。六个配置的 aggregate Linear mean 全部提升 `+0.41~+0.52pp`，但 amax4 o 下降 `0.91pp`，触发分项安全门；C11 保持 Champion。
+
+### C14：calibration-gated all-width activation 8×8
+
+保留 C13 的全宽收益方向，但将窄层 8×8 eligibility 改为逐层校准裁决：在 calibration samples 上比较 4×4 base 与 8×8 residual 的最终 output MSE，仅当平均至少改善 0.05% 且任一样本不退化超过 0.1% 时保存 gram8；3072-wide C11 路径仍无条件启用。开发门为 Linear mean `+0.2pp`，固定矩阵均值全正、任一分项相对 C11 不低于 `-0.1pp`，Attention 不变且 CUDA/CPU ratio ≤1.15。
+
 ### 暂缓
 
 - A2 H64：聚合有增益但尾部和 GQA 安全轨不足，待 C2 稳定后重新立项；
