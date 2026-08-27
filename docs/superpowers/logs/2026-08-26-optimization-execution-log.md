@@ -1621,6 +1621,26 @@ cap-oracle 后继续扫剩余超参（CUDA amax6 offset0 + CPU 计时配对）�
 - QUAD16 0.10 之外，格式内已无可行的正增量微调（其余全部逐位
   一致或时间不可行）。
 
+### 0.5578 配置固定矩阵复核（2026-08-28）
+
+QUAD16 0.10 配置（FULL64 ratio 0.30 + act QUAD8 gate off/sweeps2/
+ratio0.60 + act refine 1.0 + QUAD16 0.10）：
+
+| offset | Linear mean | vs C21-C 基线 |
+|---|---:|---:|
+| 0 | 0.5578 | +2.67pp |
+| 97 | 0.5440 | +2.87pp（基线 0.5153） |
+| 193 | 0.5612 | 正向 |
+
+- 三个主 offset 全部稳健正向；CUDA algorithm-stage ~32-42s；
+  CPU 106s（ratio 1.65 → 官方推算 ~275s < 300s）。
+- **待官方提交的状态**：Linear mean 0.5578 / Attention 0.4497，
+  预计官方分 ~15700。合规 violations=[]，pytest 60/60（最后验证
+  在 8c48bd7）。
+- Q/K/V refine ratio、DYNAMIC_OFFSETS、V importance candidates、
+  窄层 alphas 5 档全部实测无净增量或时间不可行（记录见上表），
+  HiF4 64 块格式内的正增量空间已榨干。
+
 ## C3 预注册：top-K 8×8 Linear 二阶（历史）
 
 - Candidate ID：`C3`
