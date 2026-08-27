@@ -281,6 +281,15 @@ _ACTIVATION_QUADRATIC16_MAX_GROUPS = 4096
 _ACTIVATION_QUADRATIC16_SWEEPS = 1
 _ACTIVATION_QUADRATIC16_ACCEPT_MARGIN = 1.0e-5
 
+# C37 (2026-08-28): sample-adaptive activation importance.  The static
+# calibration importance (weight-column energy) biases the offset/refine
+# selection toward the calibration centroid; for a test sample that differs
+# from that centroid the ranking is stale.  Using the current sample's own
+# per-channel RMS energy (an activation-only statistic, rule-zero legal)
+# adapts the refinement to the sample.  Only used inside the per-sample
+# dynamic path, so it cannot leak weight/token supervision.
+_ACTIVATION_SAMPLE_IMPORTANCE = False  # REJECTED 2026-08-28: Linear bit-identical, Attention -2.7pp
+
 # Permutation search bases.  The initial hierarchy-aware ordering combines the
 # paired operands via max(log range); real-data diagnostics show the operand
 # with the larger quantization burden (usually the weight/K side) often yields
@@ -2479,9 +2488,14 @@ def _nvfp4_to_hif4(
         gram = gram.reshape(blocks, 8, 2, 4, 4).unsqueeze(0).expand(
             int(dense.shape[0]), blocks, 8, 2, 4, 4
         )
+    refine_importance = importance
+    if _ACTIVATION_SAMPLE_IMPORTANCE and dense.ndim == 2:
+        refine_importance = torch.sqrt(
+            dense.square().mean(dim=0).clamp_min(_EPS)
+        )
     params = _dense_to_hif4(
         dense,
-        importance=importance,
+        importance=refine_importance,
         group_gram=gram,
         search_offsets=search_offsets,
         error_threshold=error_threshold,

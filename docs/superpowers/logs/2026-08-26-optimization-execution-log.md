@@ -1727,6 +1727,21 @@ re-confirm，toggle refine 已重解层级）。关掉后省约 1/3 块级时间
 - 现状：Linear mean **0.5631**（vs C21-C +3.20pp，vs 017030f
   +0.41pp），CPU ~102s / 官方 ~265s；CUDA algorithm-stage ~30s。
 
+### C37 样本自适应激活 importance：REJECTED（2026-08-28）
+
+flag `_ACTIVATION_SAMPLE_IMPORTANCE`：动态量化路径里用当前 sample
+自身的 per-channel RMS 能量替换校准静态 importance（纯激活统计，
+合规），意图让 offset/refine 选择适配 test sample。实测
+（CUDA amax6 offset0）：
+
+- Linear 六组件**逐位一致**（0.5631 不变）：归一化后重要性分布
+  形状与静态几乎等价，选择不变；
+- **Attention 0.4497 → 0.4228（-2.7pp）**：Q/K 的 head 级重要性
+  被 sample 统计扰动后选择退化。
+- 处置：flag=False（保留实现）。结论：激活精修选择对静态
+  importance 的依赖是稳定锚点，换成样本统计不加分反而扰动
+  Attention；激活侧推进需别的机制，暂缓。
+
 ## C3 预注册：top-K 8×8 Linear 二阶（历史）
 
 - Candidate ID：`C3`
