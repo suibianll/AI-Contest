@@ -54,11 +54,13 @@
 
 只计算各候选的相对增量门，下限之和约为
 `0.593 + 0.5pp(C22) + 2pp(C23) + 4pp(C24) + 4pp(C25) + 2pp(C26a) + 1pp(C26b) ≈ 0.73`。
-但这不是“全部阶段通过”的真实下界，因为 C24 另有 Linear `>=0.78` 的绝对门。若 C24 恰好以
-`0.78` 通过、C25 走相对 `+4pp` 分支、C26a/C26b 分别踩线 `+2pp/+1pp`，最终下界约为
-`0.85`；若 C25 走绝对 `>=0.85` 分支，C26 后约为 `0.88`。因此全部阶段通过后仍距
-`0.923` 约 `4.3~7.3pp`，26000 只有在若干主机制显著超过晋级门时才可达。主交付区间为
-Linear `0.790~0.890`（约 22k~25k）；达到后应先官方提交确认兑换率，再决定是否继续冲 stretch。
+但这不是“全部阶段通过”的真实下界，因为 C24 另有 Linear `>=0.78` 的绝对门，且 C25
+的相对 `+4pp` 分支（`0.78+4pp=0.82`）虽然满足 C25 自身晋级门，却触发第 9 节与
+Checkpoint D 的 `>=0.85` 前置条件而终止 C26。因此合法的踩线路径只有两种：
+C25 以绝对门 `0.85` 通过、C26a rejected、C26b 踩线 `+1pp`，终值约 `0.86`，距
+`0.923` 至少 `6.3pp`；或链条止于 C25 相对分支的 `0.82`，距 `10.3pp`。26000 只有在
+若干主机制显著超过晋级门时才可达。主交付区间为 Linear `0.790~0.890`（约 22k~25k）；
+达到后应先官方提交确认兑换率，再决定是否继续冲 stretch。
 
 官方评测时间硬上限为 **300 秒**（已确认；项目归档用 `time300plus` 标记官方超时）。
 C21 当前官方时间 `173.8s`；本计划各候选的 CPU 推算目标 `<205s / <225s / <250s / <270s`
@@ -282,7 +284,9 @@ Create: tests/test_reference_hif4.py
 1. 从 C21 中复制最小、冻结的标准 HiF4 编码/解码逻辑到 evaluator。
 2. 禁止调用候选 `_dense_to_hif4` 生成 standard。
 3. reference codec 只实现标准 amax/7、E6M2、lv2/lv3、mantissa，不包含 offset/refinement。
-4. 用 v000/v001/v002/v013/C21 重新评测，确认分数与当前记录在 `1e-6` 内一致。
+4. 用存在本地固定矩阵记录的版本（v002/v013/C21 等候选 ledger 中有逐 case 记录的版本）
+   重新评测，确认分数与既有本地记录在 `1e-6` 内一致。v000/v001 没有本地记录、官方
+   分数不可本地复现，不作为锚定对象。
 5. 在后续 candidate 修改 `_dense_to_hif4` 时，standard 输出必须保持逐位不变。
 
 ### 4.3 固化合规误差归因工具
@@ -343,8 +347,11 @@ Create: tests/test_linear_compliance_guard.py
 
 验收条件：
 
+- C21-C 必须运行第 10.2 节完整固定回归矩阵（6 配置 × 全部 offset），逐配置记录相对
+  C21 的 delta：删除输出监督的回退可能只体现在 tail 和个别配置上（offset 0 主效应
+  未必可见），该逐配置表是后续所有候选 ROI 比较的强制基线，必须写入 result.md；
 - C21-C 可能低于 16043；必须记录移除违规监督造成的真实分数变化，不得为保分保留灰色路径；
-- Attention 与 C21 逐 case 不变；
+- Attention 与 C21 逐 case 不变（含第 10.3 节 576 case 合成矩阵，容差 `1e-6`）；
 - reference standard 与候选实现完全解耦；
 - `linear_compliance_guard` 静态与运行时检查全部通过；
 - activation state 中不存在 Weight residual、Linear output 或其等价 cross operator；
@@ -1009,6 +1016,15 @@ CPU timing
 Official status
 Decision
 Next direction
+Holdout budget ledger
+```
+
+Holdout 预算跟踪（项目约束：holdout seed 预算仅 3 次）：
+
+```text
+holdout_runs_used          # 截至本候选累计消耗的最终 holdout 次数
+holdout_runs_remaining     # 剩余额度，耗尽后禁止再运行最终 holdout
+holdout_seed_hash          # 本次使用的固定文本 seed/hash（仅记录，不展示逐层数据）
 ```
 
 新增的关键指标：
