@@ -1,6 +1,6 @@
 # HiF4 Progressive Candidate Ledger
 
-本表是 2026-08-27 本地优化链的顺序索引。每个候选只改变一个主机制；完整配置、分项、时间与源码 SHA 以对应 archive 的 `result.md` 为准。B0 官方结果已闭环为 `15313 / 137s`；C1 及之后候选尚无官方结果，继续保留 `NA`，未来只追加、不覆盖本地证据。
+本表是 2026-08-27 本地优化链的顺序索引。每个候选只改变一个主机制；完整配置、分项、时间与源码 SHA 以对应 archive 的 `result.md` 为准。B0 官方结果已闭环为 `15313 / 137s`；C10 / v013（提交 `a2e0ed3`）官方结果为 `15799 / 144s`，为当前官方最优；其余候选尚无官方结果，继续保留 `NA`，未来只追加、不覆盖本地证据。
 
 | Candidate | Parent | 唯一变化 | offset 0 主效应 | 固定回归 | 结论 | Archive | Git commit |
 |---|---|---|---:|---|---|---|---|
@@ -14,7 +14,7 @@
 | C7 / v010 | C5 | top 1% 32×32 weight quadratic | Linear +0.123pp | 未运行 | accepted, not promoted | [v010](../../../solutions/20260827_v010_c7-topk-32x32-quadratic-local_scoreNA_timeNA/result.md) | `ce612c2` |
 | C8 / v011 | C5 | top 0.5% 64×64 weight quadratic | Linear +0.090pp | 未运行 | accepted, not promoted | [v011](../../../solutions/20260827_v011_c8-topk-64x64-quadratic-local_scoreNA_timeNA/result.md) | `040e9e6` |
 | C9 / v012 | C5 | 16×16 sweep 1→2 | Linear +0.025pp | 未运行 | accepted, not promoted | [v012](../../../solutions/20260827_v012_c9-16x16-second-sweep-local_scoreNA_timeNA/result.md) | `375f778` |
-| C10 / v013 | C5 | activation quadratic 覆盖 3072-wide FFN | proj +0.54pp; Linear +0.090pp | 6/6 改善 | Champion | [v013](../../../solutions/20260827_v013_c10-wide-activation-quadratic-local_scoreNA_timeNA/result.md) | `a2e0ed3` |
+| C10 / v013 | C5 | activation quadratic 覆盖 3072-wide FFN | proj +0.54pp; Linear +0.090pp | 6/6 改善 | Champion; 官方 15799/144s（+486 vs B0） | [v013](../../../solutions/20260827_v013_c10-wide-activation-quadratic_score15799_time144s/result.md) | `a2e0ed3` |
 | C11 / v014 | C10 | wide activation 8×8 residual | proj +0.31pp; Linear +0.052pp | 6/6 改善 | Champion | [v014](../../../solutions/20260827_v014_c11-wide-activation-8x8-local_scoreNA_timeNA/result.md) | `6cee2f0` |
 | C12 / v015 | C11 | wide activation 16×16 residual | proj +0.07pp; Linear +0.012pp | 未运行 | accepted, not promoted | [v015](../../../solutions/20260827_v015_c12-wide-activation-16x16-local_scoreNA_timeNA/result.md) | `37dde76` |
 | C13 / v016 | C11 | all-width activation 8×8 | Linear +0.463pp | aggregate 6/6; amax4 o -0.91pp | accepted, not promoted | [v016](../../../solutions/20260827_v016_c13-all-width-activation-8x8-local_scoreNA_timeNA/result.md) | `148029b` |
@@ -28,7 +28,9 @@
 
 ## 当前状态
 
-- 当前根 `solution.py`：C17 / v020，SHA256 `C29E71C332E41E262B94FF68454CEB1F1589EE932FB4E1D55C5F221CFD060766`。
+- 官方最优：v013（C10，提交 `a2e0ed3`）`15799 / 144s`，较 B0 `15313 / 137s` 提升 `+486`。
+- 当前根 `solution.py`（HEAD `ff3b624`）：C17 / v020，SHA256 `C29E71C332E41E262B94FF68454CEB1F1589EE932FB4E1D55C5F221CFD060766`；本地 Linear mean `0.5890`，高于 v013 的 `0.5811`，尚未官方评测。
+- 工作区提示：`solution.py` 与 `tests/test_release_candidate.py` 存在未提交修改（超出 C17 约 +298 行，疑似 C21 预注册候选的开发中版本），尚未归档、尚未评测。
 - 相对 C1 的累计主线：Attention 保留 `+7.12pp` causal 增益；Linear 从 C1 `0.5668` 提升到 C17 `0.5890`，约 `+2.22pp`。
 - 已关闭路线：segment CVaR、继续扩大 8×8/16×16 coverage、增加 16×16 sweep、继续扩大 weight quadratic group size。
 - 当前已预注册候选：C21 all-width gated exact cross refinement；coverage 路线保持关闭。

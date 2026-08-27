@@ -19,7 +19,7 @@ Root `solution.py` is the only active submission. Archived source files are immu
 | v010 | 2026-08-27 | C7 top-K 32×32 Linear quadratic | 0.5814 | 0.4497 | CUDA stage 21.99s | NA | NA | local +0.0012 Linear | local-accepted-not-promoted | [archive](20260827_v010_c7-topk-32x32-quadratic-local_scoreNA_timeNA/) |
 | v011 | 2026-08-27 | C8 bounded 64×64 Linear quadratic | 0.5811 | 0.4497 | CUDA stage 23.55s | NA | NA | local +0.0009 Linear | local-accepted-not-promoted | [archive](20260827_v011_c8-topk-64x64-quadratic-local_scoreNA_timeNA/) |
 | v012 | 2026-08-27 | C9 16×16 second sweep | 0.5804 | 0.4497 | CUDA stage 22.35s | NA | NA | local +0.0003 Linear | local-accepted-not-promoted | [archive](20260827_v012_c9-16x16-second-sweep-local_scoreNA_timeNA/) |
-| v013 | 2026-08-27 | C10 wide activation quadratic | 0.5811 | 0.4497 | CPU stage 50.99s | NA | NA | local +0.0054 proj | local-champion | [archive](20260827_v013_c10-wide-activation-quadratic-local_scoreNA_timeNA/) |
+| v013 | 2026-08-27 | C10 wide activation quadratic | 0.5811 | 0.4497 | CPU stage 50.99s | 15799 | 144s | +486 vs v002 official | official-champion | [archive](20260827_v013_c10-wide-activation-quadratic_score15799_time144s/) |
 | v014 | 2026-08-27 | C11 wide activation 8×8 residual | 0.5816 | 0.4497 | CPU stage 60.02s | NA | NA | local +0.0031 proj | local-champion | [archive](20260827_v014_c11-wide-activation-8x8-local_scoreNA_timeNA/) |
 | v015 | 2026-08-27 | C12 wide activation 16×16 residual | 0.5817 | 0.4497 | CUDA stage 22.80s | NA | NA | local +0.0007 proj | local-accepted-not-promoted | [archive](20260827_v015_c12-wide-activation-16x16-local_scoreNA_timeNA/) |
 | v016 | 2026-08-27 | C13 all-width activation 8×8 | 0.5862 | 0.4497 | CUDA stage 23.34s | NA | NA | local +0.0046 Linear; amax4 o -0.0091 | local-accepted-not-promoted | [archive](20260827_v016_c13-all-width-activation-8x8-local_scoreNA_timeNA/) |
@@ -39,6 +39,10 @@ B0 据此闭环；本地 derivative SHA 不作为官方上传文件 SHA。
 
 v003 起允许只有本地结果时立即归档。未提交候选的官方列保持 `NA`，未来结果返回时追加
 提交 SHA、分数和时间，不覆盖既有本地配对表或实验结论。
+
+用户于 2026-08-27 确认 v013（C10，提交 `a2e0ed3`）官方结果为 `15799 / 144s`，
+较 v002/B0 的 `15313 / 137s` 提升 `+486`，为当前官方最优（official-champion）；
+该提交的 `solution.py` 经 git blob 校验与 v013 归档字节一致。
 
 ## Local-first workflow
 

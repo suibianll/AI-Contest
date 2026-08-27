@@ -7,7 +7,8 @@
 - Source SHA256: `DD8587257299626718A24EB89013447DA9105E8884F391104A6B350607399E44`
 - Parent SHA256: `A093940D46BE4B3C3CA88B30CD4456DD112CAD1C5DE632FCDB0207A12D197288`
 - Local status: `local-champion`
-- Official status: `unavailable`
+- Official status: `official-champion`
+- Official commit: `a2e0ed3a4d9d5b487f0c96d4dd6568e31d88a004` (blob `58737ed371c92f9e7e36a618f50bea62323dc35f`, byte-identical to this archive)
 
 ## Development result
 
@@ -46,3 +47,14 @@ Attention remains exactly C5 (`0.4497/0.4942`). CUDA algorithm-stage was `21.97s
 `accepted as local Champion`. C10 clears its target-specific proj gate, improves every fixed configuration, preserves all unaffected paths and stays within the 1.15 timing limit.
 
 Next candidate: retain C10 and test a bounded 8×8 activation residual refinement only for wide activations. This follows the positive correlation signal without changing the weight or Attention mechanisms.
+
+## Official result (2026-08-27)
+
+- Official score: `15799`
+- Official runtime: `144` seconds
+- Submitted source: commit `a2e0ed3a4d9d5b487f0c96d4dd6568e31d88a004` (`feat: promote wide activation quadratic`), verified byte-identical to this archive via git blob `58737ed371c92f9e7e36a618f50bea62323dc35f`.
+- Official score delta: `+486` versus the previous official record v002/B0 (`15313 / 137s`).
+- Official runtime delta: `+7` seconds versus v002/B0 (`137s`).
+- Direction agreement: local fixed matrix showed 6/6 improvement including proj +0.54pp; the official score confirms the wide-activation quadratic direction on the real leaderboard.
+- Status: new official record; C1-chain local candidates (v003–v023) remain locally ahead of v013's local Linear mean and are not yet officially evaluated.
+
