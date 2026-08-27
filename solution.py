@@ -214,10 +214,6 @@ _ACTIVATION_QUADRATIC8_CALIBRATION_GATE = True
 _ACTIVATION_QUADRATIC8_GATE_MAX_FEATURES = 1024
 _ACTIVATION_QUADRATIC8_GATE_MIN_IMPROVEMENT = 5.0e-4
 _ACTIVATION_QUADRATIC8_GATE_WORST_TOLERANCE = 1.0e-3
-_ACTIVATION_QUADRATIC8_CROSS_TERM = True
-_ACTIVATION_QUADRATIC8_CROSS_GAIN_SELECTION = True
-_ACTIVATION_QUADRATIC8_EXACT_DISCRETE_SELECTION = True
-_ACTIVATION_QUADRATIC8_CROSS_CALIBRATION_GATE = True
 
 # Permutation search bases.  The initial hierarchy-aware ordering combines the
 # paired operands via max(log range); real-data diagnostics show the operand
@@ -419,7 +415,6 @@ def _refine_weight_groups8(
     params: dict[str, torch.Tensor],
     group_gram8: torch.Tensor,
     *,
-    group_cross8: Optional[torch.Tensor] = None,
     max_ratio: float = _WEIGHT_QUADRATIC8_MAX_RATIO,
     max_groups: int = _WEIGHT_QUADRATIC8_MAX_GROUPS,
     sweeps: int = _WEIGHT_QUADRATIC8_SWEEPS,
@@ -436,12 +431,6 @@ def _refine_weight_groups8(
     expected_grams = blocks * 8
     if tuple(group_gram8.shape) != (expected_grams, 8, 8):
         return params
-    if group_cross8 is not None and tuple(group_cross8.shape) != (
-        expected_grams,
-        8,
-        8,
-    ):
-        return params
 
     dense8 = dense.reshape(rows, blocks, 8, 8).reshape(-1, 8)
     quantized8 = _dequantize_hif4(params).to(torch.float32).reshape(
@@ -450,48 +439,9 @@ def _refine_weight_groups8(
     grams = group_gram8.unsqueeze(0).expand(rows, -1, -1, -1).reshape(
         -1, 8, 8
     )
-    crosses = None
-    if group_cross8 is not None:
-        crosses = group_cross8.unsqueeze(0).expand(
-            rows, -1, -1, -1
-        ).reshape(-1, 8, 8)
     error = quantized8 - dense8
     losses = torch.einsum("ni,nij,nj->n", error, grams, error)
-    ranking_scores = losses
-    linear_all = None
-    denominator_all = None
-    signed_codes = torch.arange(
-        -7, 8, dtype=torch.float32, device=dense.device
-    ) * 0.25
-    if (
-        crosses is not None
-        and _ACTIVATION_QUADRATIC8_CROSS_GAIN_SELECTION
-    ):
-        linear_all = torch.einsum("ni,nij->nj", dense8, crosses)
-        gradient = torch.einsum("nij,nj->ni", grams, error) + linear_all
-        diagonal = torch.diagonal(grams, dim1=-2, dim2=-1).clamp_min(_EPS)
-        if _ACTIVATION_QUADRATIC8_EXACT_DISCRETE_SELECTION:
-            scale_all = params["scale_factor"].reshape(
-                rows, blocks, 1
-            ).expand(rows, blocks, 8)
-            lv2_all = params["scale_lv2"].reshape(rows, blocks, 8)
-            lv3_all = params["scale_lv3"].reshape(rows, blocks, 8, 2)
-            denominator_all = (
-                scale_all[..., None]
-                * lv2_all[..., None]
-                * lv3_all.repeat_interleave(4, dim=-1)
-            ).reshape(-1, 8)
-            possible_all = denominator_all[..., None] * signed_codes
-            delta_all = possible_all - quantized8[..., None]
-            change_all = (
-                2.0 * delta_all * gradient[..., None]
-                + delta_all.square() * diagonal[..., None]
-            )
-            ranking_scores = (-change_all.amin(dim=(1, 2))).clamp_min(0.0)
-            del possible_all, delta_all, change_all
-        else:
-            ranking_scores = (gradient.square() / diagonal).amax(dim=1)
-    finite = torch.isfinite(ranking_scores) & (ranking_scores > _EPS)
+    finite = torch.isfinite(losses) & (losses > _EPS)
     candidates = torch.nonzero(finite, as_tuple=False).reshape(-1)
     if int(candidates.numel()) == 0:
         return params
@@ -506,44 +456,34 @@ def _refine_weight_groups8(
     cap = min(cap, int(max_groups), int(candidates.numel()))
     if int(candidates.numel()) > cap:
         order = torch.topk(
-            ranking_scores.index_select(0, candidates), k=cap, largest=True
+            losses.index_select(0, candidates), k=cap, largest=True
         ).indices
         candidates = candidates.index_select(0, order)
 
     x_selected = dense8.index_select(0, candidates)
     q_selected = quantized8.index_select(0, candidates).clone()
     gram_selected = grams.index_select(0, candidates)
-    cross_selected = (
-        None if crosses is None else crosses.index_select(0, candidates)
-    )
     error_selected = q_selected - x_selected
     he = torch.einsum("nij,nj->ni", gram_selected, error_selected)
     initial_loss = torch.einsum(
         "ni,nij,nj->n", error_selected, gram_selected, error_selected
     )
-    linear = None
-    if cross_selected is not None:
-        linear = (
-            linear_all.index_select(0, candidates)
-            if linear_all is not None
-            else torch.einsum("ni,nij->nj", x_selected, cross_selected)
-        )
-        initial_loss = initial_loss + 2.0 * (
-            error_selected * linear
-        ).sum(dim=1)
 
-    if denominator_all is None:
-        scale = params["scale_factor"].reshape(rows, blocks, 1).expand(
-            rows, blocks, 8
-        )
-        lv2 = params["scale_lv2"].reshape(rows, blocks, 8)
-        lv3 = params["scale_lv3"].reshape(rows, blocks, 8, 2)
-        denominator_all = (
+    scale = params["scale_factor"].reshape(rows, blocks, 1).expand(
+        rows, blocks, 8
+    )
+    lv2 = params["scale_lv2"].reshape(rows, blocks, 8)
+    lv3 = params["scale_lv3"].reshape(rows, blocks, 8, 2)
+    denominator = (
+        (
             scale[..., None]
             * lv2[..., None]
             * lv3.repeat_interleave(4, dim=-1)
         ).reshape(-1, 8)
-    denominator = denominator_all.index_select(0, candidates)
+    ).index_select(0, candidates)
+    signed_codes = torch.arange(
+        -7, 8, dtype=torch.float32, device=dense.device
+    ) * 0.25
 
     for _ in range(int(sweeps)):
         for coordinate in range(8):
@@ -551,14 +491,7 @@ def _refine_weight_groups8(
             delta = possible - q_selected[:, coordinate, None]
             diagonal = gram_selected[:, coordinate, coordinate].clamp_min(_EPS)
             change = (
-                2.0
-                * delta
-                * (
-                    he[:, coordinate, None]
-                    if linear is None
-                    else he[:, coordinate, None]
-                    + linear[:, coordinate, None]
-                )
+                2.0 * delta * he[:, coordinate, None]
                 + delta.square() * diagonal[:, None]
             )
             best = change.argmin(dim=1)
@@ -575,17 +508,9 @@ def _refine_weight_groups8(
     final_loss = torch.einsum(
         "ni,nij,nj->n", error_selected, gram_selected, error_selected
     )
-    if linear is not None:
-        final_loss = final_loss + 2.0 * (
-            error_selected * linear
-        ).sum(dim=1)
-        improve = final_loss < initial_loss - float(accept_margin) * (
-            initial_loss.abs().clamp_min(_EPS)
-        )
-    else:
-        improve = final_loss < initial_loss * (
-            1.0 - float(accept_margin)
-        )
+    improve = final_loss < initial_loss * (
+        1.0 - float(accept_margin)
+    )
     improved_indices = candidates[improve]
     if int(improved_indices.numel()) == 0:
         return params
@@ -1591,7 +1516,6 @@ def _nvfp4_to_hif4(
     importance: Optional[torch.Tensor] = None,
     group_gram: Optional[torch.Tensor] = None,
     group_gram8: Optional[torch.Tensor] = None,
-    group_cross8: Optional[torch.Tensor] = None,
     search_offsets: Optional[Union[Sequence[int], torch.Tensor]] = None,
     error_threshold: float = 0.0,
     accept_margin: float = 0.0,
@@ -1672,13 +1596,6 @@ def _nvfp4_to_hif4(
             dense,
             params,
             gram8,
-            group_cross8=(
-                None
-                if group_cross8 is None
-                else group_cross8.detach().to(
-                    device=dense.device, dtype=torch.float32
-                )
-            ),
             max_ratio=_ACTIVATION_QUADRATIC8_MAX_RATIO,
             max_groups=_ACTIVATION_QUADRATIC8_MAX_GROUPS,
             sweeps=_ACTIVATION_QUADRATIC8_SWEEPS,
@@ -1968,85 +1885,27 @@ def _linear_candidate_metrics(
     return mean_score, tuple(case_scores)
 
 
-def _linear_output_candidate_metrics(
-    weight: torch.Tensor,
-    activation_samples: Sequence[torch.Tensor],
-    d: torch.Tensor,
-    permutation: torch.Tensor,
-    block_smooth_size: int = 0,
-    block_smooth_seed: int = 0,
-) -> tuple[float, tuple[float, ...]]:
-    """Score a transform by the actual sampled Linear output error.
-
-    Operand-local reconstruction error is a useful cheap proxy for diagonal
-    smoothing, but it misses cancellation between activation and weight errors
-    after a non-diagonal transform.  Block-S candidates therefore use the
-    end-to-end sampled objective that the competition ultimately measures.
-    """
-
-    order = permutation.to(device=weight.device, dtype=torch.int64).reshape(-1)
-    weight_transformed = _linear_pair_transform(
-        weight,
-        d,
-        order,
-        block_smooth_size,
-        block_smooth_seed,
-        weight_side=True,
-    )
-    weight_hat = _dequantize_hif4(_dense_to_hif4(weight_transformed))
-    case_scores: list[float] = []
-    for sample in activation_samples:
-        activation_transformed = _linear_pair_transform(
-            sample,
-            d,
-            order,
-            block_smooth_size,
-            block_smooth_seed,
-            weight_side=False,
-        )
-        activation_hat = _dequantize_hif4(
-            _dense_to_hif4(activation_transformed)
-        )
-        reference = activation_transformed.mm(weight_transformed.t())
-        reconstructed = activation_hat.mm(weight_hat.t())
-        score = (reference - reconstructed).square().sum() / (
-            reference.square().sum() + _EPS
-        )
-        case_scores.append(
-            float(
-                torch.nan_to_num(
-                    score, nan=1.0e30, posinf=1.0e30, neginf=1.0e30
-                )
-            )
-        )
-    if not case_scores:
-        return 1.0e30, (1.0e30,)
-    return sum(case_scores) / float(len(case_scores)), tuple(case_scores)
-
-
-def _activation8_gate_decisions(
-    weight_smooth: torch.Tensor,
-    weight_hat: torch.Tensor,
+def _activation8_refinement_is_safe(
     activation_samples: Sequence[torch.Tensor],
     d: torch.Tensor,
     permutation: torch.Tensor,
     block_smooth_size: int,
     block_smooth_seed: int,
-    importance: torch.Tensor,
-    group_gram4: torch.Tensor,
+    importance: Optional[torch.Tensor],
+    group_gram4: Optional[torch.Tensor],
     group_gram8: torch.Tensor,
-    group_cross8: Optional[torch.Tensor],
     activation_ratio: float,
-    *,
-    gate_pure8: bool,
-) -> tuple[bool, bool]:
-    """Jointly gate pure and cross-aware 8x8 activation refinement."""
+) -> bool:
+    """Activation-only calibration gate for the 8x8 dynamic refinement.
 
-    channels = int(weight_smooth.shape[1])
-    blocks = channels // _HIF4_BLOCK_SIZE
+    Compares the activation-local reconstruction loss of the base encoder
+    output against the refined output on the transformed calibration
+    samples themselves.  The gate never reads the weight, weight state,
+    or any Linear output.
+    """
+
     base_losses: list[float] = []
-    fallback_losses: list[float] = []
-    cross_losses: list[float] = []
+    refined_losses: list[float] = []
     for sample in activation_samples:
         transformed = _linear_pair_transform(
             sample,
@@ -2056,9 +1915,17 @@ def _activation8_gate_decisions(
             block_smooth_seed,
             weight_side=False,
         )
-        gram4 = group_gram4.reshape(blocks, 8, 2, 4, 4).unsqueeze(0).expand(
-            int(transformed.shape[0]), blocks, 8, 2, 4, 4
-        )
+        channels = int(transformed.shape[-1])
+        blocks = channels // _HIF4_BLOCK_SIZE
+        gram4 = None
+        if group_gram4 is not None:
+            gram4 = (
+                group_gram4.detach()
+                .to(device=transformed.device, dtype=torch.float32)
+                .reshape(blocks, 8, 2, 4, 4)
+                .unsqueeze(0)
+                .expand(int(transformed.shape[0]), blocks, 8, 2, 4, 4)
+            )
         base_params = _dense_to_hif4(
             transformed,
             importance=importance,
@@ -2069,7 +1936,7 @@ def _activation8_gate_decisions(
             max_refine_ratio=float(activation_ratio),
             max_refine_blocks=_ACTIVATION_REFINE_MAX_BLOCKS,
         )
-        fallback_params = _refine_weight_groups8(
+        refined_params = _refine_weight_groups8(
             transformed,
             base_params,
             group_gram8,
@@ -2078,130 +1945,30 @@ def _activation8_gate_decisions(
             sweeps=_ACTIVATION_QUADRATIC8_SWEEPS,
             accept_margin=_ACTIVATION_QUADRATIC8_ACCEPT_MARGIN,
         )
-        reference = transformed.mm(weight_smooth.t())
-        base_output = _dequantize_hif4(base_params).mm(weight_hat.t())
-        fallback_output = _dequantize_hif4(fallback_params).mm(weight_hat.t())
-        denominator = reference.square().sum() + _EPS
+        base_output = _dequantize_hif4(base_params)
+        refined_output = _dequantize_hif4(refined_params)
+        denominator = transformed.square().sum() + _EPS
         base_losses.append(
-            float((reference - base_output).square().sum() / denominator)
+            float((transformed - base_output).square().sum() / denominator)
         )
-        fallback_losses.append(
-            float((reference - fallback_output).square().sum() / denominator)
+        refined_losses.append(
+            float((transformed - refined_output).square().sum() / denominator)
         )
-        if group_cross8 is not None:
-            cross_params = _refine_weight_groups8(
-                transformed,
-                base_params,
-                group_gram8,
-                group_cross8=group_cross8,
-                max_ratio=_ACTIVATION_QUADRATIC8_MAX_RATIO,
-                max_groups=_ACTIVATION_QUADRATIC8_MAX_GROUPS,
-                sweeps=_ACTIVATION_QUADRATIC8_SWEEPS,
-                accept_margin=_ACTIVATION_QUADRATIC8_ACCEPT_MARGIN,
-            )
-            cross_output = _dequantize_hif4(cross_params).mm(weight_hat.t())
-            cross_losses.append(
-                float((reference - cross_output).square().sum() / denominator)
-            )
 
-    def _is_safe(
-        baseline_losses: Sequence[float],
-        candidate_losses: Sequence[float],
-    ) -> bool:
-        if not baseline_losses or len(baseline_losses) != len(candidate_losses):
-            return False
-        baseline_mean = sum(baseline_losses) / float(len(baseline_losses))
-        candidate_mean = sum(candidate_losses) / float(len(candidate_losses))
-        mean_safe = candidate_mean <= baseline_mean * (
-            1.0 - _ACTIVATION_QUADRATIC8_GATE_MIN_IMPROVEMENT
-        )
-        worst_safe = all(
-            candidate <= baseline * (
-                1.0 + _ACTIVATION_QUADRATIC8_GATE_WORST_TOLERANCE
-            )
-            for baseline, candidate in zip(
-                baseline_losses, candidate_losses
-            )
-        )
-        return bool(mean_safe and worst_safe)
-
-    pure8_safe = (
-        _is_safe(base_losses, fallback_losses) if gate_pure8 else bool(base_losses)
+    if not base_losses or len(base_losses) != len(refined_losses):
+        return False
+    if not all(map(math.isfinite, base_losses + refined_losses)):
+        return False
+    base_mean = sum(base_losses) / float(len(base_losses))
+    refined_mean = sum(refined_losses) / float(len(refined_losses))
+    mean_safe = refined_mean <= base_mean * (
+        1.0 - _ACTIVATION_QUADRATIC8_GATE_MIN_IMPROVEMENT
     )
-    cross8_safe = bool(
-        pure8_safe
-        and group_cross8 is not None
-        and _is_safe(fallback_losses, cross_losses)
+    worst_safe = all(
+        refined <= base * (1.0 + _ACTIVATION_QUADRATIC8_GATE_WORST_TOLERANCE)
+        for base, refined in zip(base_losses, refined_losses)
     )
-    return pure8_safe, cross8_safe
-
-
-def _activation_quadratic8_is_safe(
-    weight_smooth: torch.Tensor,
-    weight_hat: torch.Tensor,
-    activation_samples: Sequence[torch.Tensor],
-    d: torch.Tensor,
-    permutation: torch.Tensor,
-    block_smooth_size: int,
-    block_smooth_seed: int,
-    importance: torch.Tensor,
-    group_gram4: torch.Tensor,
-    group_gram8: torch.Tensor,
-    group_cross8: Optional[torch.Tensor],
-    activation_ratio: float,
-) -> bool:
-    """Compatibility wrapper for the pure 8x8 calibration gate."""
-
-    pure8_safe, _ = _activation8_gate_decisions(
-        weight_smooth,
-        weight_hat,
-        activation_samples,
-        d,
-        permutation,
-        block_smooth_size,
-        block_smooth_seed,
-        importance,
-        group_gram4,
-        group_gram8,
-        group_cross8,
-        activation_ratio,
-        gate_pure8=True,
-    )
-    return pure8_safe
-
-
-def _activation_cross8_is_safe(
-    weight_smooth: torch.Tensor,
-    weight_hat: torch.Tensor,
-    activation_samples: Sequence[torch.Tensor],
-    d: torch.Tensor,
-    permutation: torch.Tensor,
-    block_smooth_size: int,
-    block_smooth_seed: int,
-    importance: torch.Tensor,
-    group_gram4: torch.Tensor,
-    group_gram8: torch.Tensor,
-    group_cross8: torch.Tensor,
-    activation_ratio: float,
-) -> bool:
-    """Compatibility wrapper for the exact-cross calibration gate."""
-
-    _, cross8_safe = _activation8_gate_decisions(
-        weight_smooth,
-        weight_hat,
-        activation_samples,
-        d,
-        permutation,
-        block_smooth_size,
-        block_smooth_seed,
-        importance,
-        group_gram4,
-        group_gram8,
-        group_cross8,
-        activation_ratio,
-        gate_pure8=False,
-    )
-    return cross8_safe
+    return bool(mean_safe and worst_safe)
 
 
 def _cpu_state_tensor(x: torch.Tensor) -> torch.Tensor:
@@ -2383,8 +2150,9 @@ def hif4_calibration_and_quantize_weight(
         (force_block_size,) if force_block_size else _BLOCK_SMOOTH_SIZES
     )
     forced_choice: Optional[tuple[tuple[float, tuple[float, ...]], int, int]] = None
-    block_baseline_metrics = _linear_output_candidate_metrics(
+    block_baseline_metrics = _linear_candidate_metrics(
         weight_sample,
+        activation_second_moment,
         activation_samples,
         best_d,
         best_perm,
@@ -2397,8 +2165,9 @@ def hif4_calibration_and_quantize_weight(
                 continue
             for candidate_seed in _BLOCK_SMOOTH_SEEDS:
                 seed = int(candidate_seed)
-                block_metrics = _linear_output_candidate_metrics(
+                block_metrics = _linear_candidate_metrics(
                     weight_sample,
+                    activation_second_moment,
                     activation_samples,
                     best_d,
                     best_perm,
@@ -2532,7 +2301,6 @@ def hif4_calibration_and_quantize_weight(
 
     activation_gram_state = None
     activation_gram8_state = None
-    activation_cross8_state = None
     if (
         _ACTIVATION_QUADRATIC
         and in_features <= _ACTIVATION_QUADRATIC_MAX_FEATURES
@@ -2546,24 +2314,12 @@ def hif4_calibration_and_quantize_weight(
             and in_features >= _ACTIVATION_QUADRATIC8_MIN_FEATURES
         ):
             group_gram8 = _flat_group_gram8(gram, in_features)
-            group_cross8 = None
-            if _ACTIVATION_QUADRATIC8_CROSS_TERM:
-                cross = (weight_hat - weight_smooth).t().mm(weight_hat)
-                group_cross8 = _flat_group_gram8(cross, in_features)
-            gate_pure8 = bool(
+            use_group8 = True
+            if (
                 _ACTIVATION_QUADRATIC8_CALIBRATION_GATE
                 and in_features <= _ACTIVATION_QUADRATIC8_GATE_MAX_FEATURES
-            )
-            gate_cross8 = bool(
-                group_cross8 is not None
-                and _ACTIVATION_QUADRATIC8_CROSS_CALIBRATION_GATE
-            )
-            use_group8 = True
-            use_cross8 = group_cross8 is not None
-            if gate_pure8 or gate_cross8:
-                pure8_safe, cross8_safe = _activation8_gate_decisions(
-                    weight_smooth,
-                    weight_hat,
+            ):
+                use_group8 = _activation8_refinement_is_safe(
                     activation_samples,
                     best_d,
                     best_perm,
@@ -2572,19 +2328,10 @@ def hif4_calibration_and_quantize_weight(
                     activation_importance,
                     activation_gram_state.to(weight.device),
                     group_gram8,
-                    group_cross8 if gate_cross8 else None,
                     activation_ratio,
-                    gate_pure8=gate_pure8,
                 )
-                if gate_pure8:
-                    use_group8 = pure8_safe
-                if gate_cross8:
-                    use_cross8 = cross8_safe
-            use_cross8 = bool(use_group8 and use_cross8)
             if use_group8:
                 activation_gram8_state = _cpu_state_tensor(group_gram8)
-                if use_cross8:
-                    activation_cross8_state = _cpu_state_tensor(group_cross8)
 
     activation_state = {
         "smooth_inv": smooth_inv_state,
@@ -2594,14 +2341,13 @@ def hif4_calibration_and_quantize_weight(
         "importance": _cpu_state_tensor(activation_importance),
         "gram": activation_gram_state,
         "gram8": activation_gram8_state,
-        "cross8": activation_cross8_state,
         "offsets": torch.tensor(_DYNAMIC_OFFSETS, dtype=torch.int8, device="cpu"),
         "error_threshold": _ACTIVATION_REFINE_ERROR_THRESHOLD,
         "accept_margin": _ACTIVATION_REFINE_ACCEPT_MARGIN,
         "max_refine_ratio": float(activation_ratio),
         "max_refine_blocks": _ACTIVATION_REFINE_MAX_BLOCKS,
         "in_features": int(in_features),
-        "version": 3,
+        "version": 4,
     }
     return {
         "weight_params": weight_params,
@@ -2630,7 +2376,6 @@ def hif4_dynamic_quantize_activation(
         importance=activation_state["importance"],
         group_gram=activation_state.get("gram"),
         group_gram8=activation_state.get("gram8"),
-        group_cross8=activation_state.get("cross8"),
         search_offsets=activation_state["offsets"],
         error_threshold=float(activation_state["error_threshold"]),
         accept_margin=float(activation_state["accept_margin"]),

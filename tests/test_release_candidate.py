@@ -88,10 +88,9 @@ def test_release_flags_are_a1_only() -> None:
     assert solution._ACTIVATION_QUADRATIC8_SWEEPS == 1
     assert solution._ACTIVATION_QUADRATIC8_CALIBRATION_GATE is True
     assert solution._ACTIVATION_QUADRATIC8_GATE_MAX_FEATURES == 1024
-    assert solution._ACTIVATION_QUADRATIC8_CROSS_TERM is True
-    assert solution._ACTIVATION_QUADRATIC8_CROSS_GAIN_SELECTION is True
-    assert solution._ACTIVATION_QUADRATIC8_EXACT_DISCRETE_SELECTION is True
-    assert solution._ACTIVATION_QUADRATIC8_CROSS_CALIBRATION_GATE is True
+    assert not hasattr(solution, "_ACTIVATION_QUADRATIC8_CROSS_TERM")
+    assert not hasattr(solution, "_ACTIVATION_QUADRATIC8_CROSS_GAIN_SELECTION")
+    assert not hasattr(solution, "_ACTIVATION_QUADRATIC8_CROSS_CALIBRATION_GATE")
 
 
 def test_submission_has_no_file_io_or_debug_output() -> None:
@@ -294,28 +293,21 @@ def test_wide_activation_grams_are_legal_state_tensors() -> None:
         "gram8": solution._cpu_state_tensor(
             solution._flat_group_gram8(gram, 3072)
         ),
-        "cross8": solution._cpu_state_tensor(
-            solution._flat_group_gram8(0.01 * gram, 3072)
-        ),
     }
     tensor_count, elements = validate_state(state)
-    assert tensor_count == 3
-    assert elements == 61_440
+    assert tensor_count == 2
+    assert elements == 36_864
 
 
-def test_activation_quadratic8_calibration_gate_returns_a_decision() -> None:
+def test_activation8_refinement_gate_returns_a_decision() -> None:
     solution = load_module("activation8_gate", ROOT / "solution.py")
     torch.manual_seed(414)
-    weight = torch.randn(8, 64)
-    weight_params = solution._dense_to_hif4(weight)
-    weight_hat = solution._dequantize_hif4(weight_params)
-    gram = weight.T @ weight
+    gram = torch.randn(64, 64)
+    gram = gram.T @ gram + 0.1 * torch.eye(64)
     importance = solution._normalize_importance(
-        weight_hat.square().sum(dim=0), 64
+        torch.rand(64) + 0.5, 64
     )
-    decision = solution._activation_quadratic8_is_safe(
-        weight,
-        weight_hat,
+    decision = solution._activation8_refinement_is_safe(
         [torch.randn(8, 64), torch.randn(8, 64)],
         torch.ones(64),
         torch.arange(64),
@@ -324,26 +316,22 @@ def test_activation_quadratic8_calibration_gate_returns_a_decision() -> None:
         importance,
         solution._flat_group_gram(gram, 64),
         solution._flat_group_gram8(gram, 64),
-        None,
         1.0,
     )
     assert isinstance(decision, bool)
 
 
-def test_exact_cross_calibration_gate_returns_a_decision() -> None:
-    solution = load_module("activation8_cross_gate", ROOT / "solution.py")
-    torch.manual_seed(421)
-    weight = torch.randn(8, 64)
-    weight_hat = solution._dequantize_hif4(solution._dense_to_hif4(weight))
-    gram = weight.T @ weight
-    cross = (weight_hat - weight).T @ weight_hat
+def test_activation8_refinement_gate_rejects_regression() -> None:
+    solution = load_module("activation8_gate_reject", ROOT / "solution.py")
+    torch.manual_seed(415)
+    # A degenerate gram8 (zero) makes the refinement a no-op, so the
+    # activation-local loss cannot improve and the gate must reject.
+    gram = 1.0e-12 * torch.eye(64)
     importance = solution._normalize_importance(
-        weight_hat.square().sum(dim=0), 64
+        torch.rand(64) + 0.5, 64
     )
-    decision = solution._activation_cross8_is_safe(
-        weight,
-        weight_hat,
-        [torch.randn(8, 64), torch.randn(8, 64)],
+    decision = solution._activation8_refinement_is_safe(
+        [torch.randn(8, 64)],
         torch.ones(64),
         torch.arange(64),
         0,
@@ -351,46 +339,9 @@ def test_exact_cross_calibration_gate_returns_a_decision() -> None:
         importance,
         solution._flat_group_gram(gram, 64),
         solution._flat_group_gram8(gram, 64),
-        solution._flat_group_gram8(cross, 64),
         1.0,
     )
-    assert isinstance(decision, bool)
-
-
-def test_gated_exact_cross_selection_is_non_increasing() -> None:
-    solution = load_module("activation8_gated_exact", ROOT / "solution.py")
-    torch.manual_seed(422)
-    dense = torch.randn(4, 64)
-    params = solution._dense_to_hif4(dense, max_refine_ratio=1.0)
-    factor = torch.randn(64, 64)
-    gram = factor.T @ factor + 0.1 * torch.eye(64)
-    cross = 0.01 * torch.randn(64, 64)
-    gram8 = solution._flat_group_gram8(gram, 64)
-    cross8 = solution._flat_group_gram8(cross, 64)
-    before = solution._dequantize_hif4(params)
-    refined = solution._refine_weight_groups8(
-        dense,
-        params,
-        gram8,
-        group_cross8=cross8,
-        max_ratio=1.0,
-        max_groups=4096,
-        sweeps=1,
-        accept_margin=1.0e-5,
-    )
-    after = solution._dequantize_hif4(refined)
-    grams = gram8.unsqueeze(0).expand(4, -1, -1, -1).reshape(-1, 8, 8)
-    crosses = cross8.unsqueeze(0).expand(4, -1, -1, -1).reshape(-1, 8, 8)
-    x8 = dense.reshape(-1, 8)
-    linear = torch.einsum("ni,nij->nj", x8, crosses)
-
-    def objective(value: torch.Tensor) -> torch.Tensor:
-        error = value.reshape(-1, 8) - x8
-        return torch.einsum("ni,nij,nj->", error, grams, error) + 2.0 * (
-            error * linear
-        ).sum()
-
-    assert objective(after) <= objective(before) + 1.0e-5
+    assert decision is False
 
 
 # E1 冻结合成矩阵的代表子集：尾部债务场景（heavy_tail、官方踩坑场景

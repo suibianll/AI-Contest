@@ -672,7 +672,23 @@ Linear 与 B0 完全一致。A3/L1 开启时的数值见各自步骤小节。
 - 时间预算：无新增机制，预期 CUDA algorithm-stage 不高于 C21；CPU ratio
   不设门（删除路径只会变快），如实记录。
 - Holdout 台账：`holdout_runs_used=0 / remaining=3`（Phase 0 不消耗）。
-- 状态：`planned`。
+- 状态：`in-progress`（§4.1 代码改造完成，pytest 13/13 通过；待 §4.6 验收）。
+
+### C21-C §4.1 开发记录（2026-08-27）
+
+- solution.py：删除 `_linear_output_candidate_metrics`、`group_cross8`/`cross8`
+  state、`_ACTIVATION_QUADRATIC8_CROSS_*` 与
+  `_ACTIVATION_QUADRATIC8_EXACT_DISCRETE_SELECTION` 开关及 cross 坐标更新；
+  Block-Smooth 候选评分改用 operand-local `_linear_candidate_metrics`；
+  8×8 gate 改为 activation-only 重构损失
+  （`_activation8_refinement_is_safe`，base vs refined）；
+  activation_state 版本号升为 4、不再输出 `cross8` 字段。
+- tests/test_release_candidate.py：`test_release_flags_are_a1_only` 改为断言
+  cross 开关已不存在；新增
+  `test_activation8_refinement_gate_returns_a_decision` /
+  `test_activation8_refinement_gate_rejects_regression`。
+- 验证：`.venv` pytest 13/13 通过；静态合规测试
+  （无 numpy / 文件 IO / 调试输出）通过。
 
 ## C3 预注册：top-K 8×8 Linear 二阶
 
