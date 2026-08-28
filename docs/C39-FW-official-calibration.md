@@ -45,13 +45,36 @@ Candidate source SHA256:
 
 `B8C9F2A4EB6553367DD17E73D30836AC8911DBEF33759FA8CF95E8C629317A71`
 
+## Official result
+
+The submitted C39-FW source received `14613` points in `159.2s`.
+
+| Candidate | Official score | Official time | Delta vs C21-C |
+|---|---:|---:|---:|
+| C21-C | 14437 | 166.6s | baseline |
+| C39-FW | 14613 | 159.2s | **+176 / -7.4s** |
+
+This is a positive transfer from local to official evaluation. At local offset
+0, the Linear gain was `+0.46pp`; the official gain is `+176` points. The
+single pair is not sufficient to replace the historical score model, but it
+confirms that the wide-only FULL64 mechanism is worth continuing.
+
+The result also isolates the C38 failure: C39-FW keeps C21-C activation
+settings and excludes narrow-layer FULL64, while C38 changed both at once and
+scored `14092`. Therefore C38's negative result must be attributed to its
+aggressive activation/narrow-layer combination or their interaction; it is not
+evidence against the C39-FW wide-layer mechanism.
+
+Decision: C39-FW is the current compliant official champion. Keep it frozen as
+the parent for the next experiment.
+
 ## Official calibration rule
 
-After the official result, compare against `14437`:
+The official result is now available. Compare future candidates against both
+the frozen C21-C anchor (`14437/166.6s`) and C39-FW (`14613/159.2s`):
 
-- Official improvement positive and roughly consistent with the local
-  `+0.46pp~+0.77pp`: full-64 on FFN layers is a viable direction; refine
-  coverage or solver quality next.
+- Official improvement positive, as in C39-FW: full-64 on FFN layers is a
+  viable direction. Test coverage or solver changes one at a time.
 - Official score near C21-C: local full-H improvement does not transfer;
   stop widening FULL64 and investigate official calibration-data/path
   differences.
