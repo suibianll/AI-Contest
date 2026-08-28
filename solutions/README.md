@@ -36,6 +36,7 @@ Root `solution.py` is the only active submission. Archived source files are immu
 | v027 | 2026-08-27 | C23 FULL64 Weight | 0.5504 | 0.4497 | local ratio 1.55 | NA | NA | local +1.93pp Linear | archived-rejected; mechanism later promoted | [archive](20260827_v027_c23-full64-rejected_scoreNA_timeNA/) |
 | v028 | 2026-08-27 | activation scale-code oracle | NA | NA | probe only | NA | NA | no submission source | diagnostic-only | [archive](20260827_v028_c28-scale-code-probe-rejected/) |
 | v029 | 2026-08-28 | C29 HAES probe | 0.5311 | 0.4497 | probe only | NA | NA | no active behavior change | local-rejected | [archive](20260828_v029_c29-haes-rejected_scoreNA_timeNA/) |
+| v030 | 2026-08-28 | C38 beam2 + narrow FULL64 full-coverage | 0.5695 | 0.4497 | CUDA stage ~30s | 14092 | 170.57s | official inversion vs local +3.84pp (pending A/B) | official-submitted, local-champion, not-promoted | [archive](20260828_v030_c38-beam2-fullcov-official14092_time170.6s/) |
 
 `*` v002 的 Linear/Attention 数值最初来自远程仓库 `CHANGELOG.md` 的 GPT-2
 12 层、2 calib + 2 test 报告，之后已由 GPU-compatible B0 derivative 在本地
