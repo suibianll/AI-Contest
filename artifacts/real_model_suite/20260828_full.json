@@ -1,0 +1,4045 @@
+{
+  "run": {
+    "started_at": "2026-08-28 16:06:32",
+    "mode": "amax6",
+    "sequence_length": 128,
+    "calibration_samples": 2,
+    "test_samples": 4,
+    "device": "cuda",
+    "algorithm_device": "cuda",
+    "data_dir": "D:\\工作内容\\AI竞赛\\data\\wikitext-2-raw-v1",
+    "models": [
+      "gpt2-small",
+      "gpt2-medium",
+      "opt-125m",
+      "pythia-160m",
+      "qwen2.5-0.5b"
+    ],
+    "candidates": [
+      "c21",
+      "c38",
+      "c39",
+      "c40"
+    ],
+    "official_runtime_limit_seconds": 300.0,
+    "finished_at": "2026-08-28 16:25:41",
+    "loaded_models": [
+      "gpt2-small",
+      "gpt2-medium",
+      "opt-125m",
+      "pythia-160m",
+      "qwen2.5-0.5b"
+    ],
+    "result_count": 20
+  },
+  "model_status": [
+    {
+      "model": "gpt2-small",
+      "status": "loaded",
+      "metadata": {
+        "model": "gpt2-small",
+        "family": "gpt2",
+        "source_revision": "openai-community/gpt2@main",
+        "local_path": "D:\\工作内容\\AI竞赛\\models\\gpt2",
+        "model_type": "gpt2",
+        "architecture": [
+          "GPT2LMHeadModel"
+        ],
+        "parameter_dtype": "torch.float16",
+        "device": "cuda",
+        "layers": 12,
+        "hidden_size": 768,
+        "q_heads": 12,
+        "kv_heads": 12,
+        "head_dim": 64,
+        "roles": [
+          "q",
+          "k",
+          "v",
+          "o",
+          "fc",
+          "proj"
+        ],
+        "role_groups": {
+          "q": "q",
+          "k": "k",
+          "v": "v",
+          "o": "o",
+          "fc": "fc",
+          "proj": "proj"
+        },
+        "data": {
+          "dataset": "Salesforce/wikitext",
+          "config": "wikitext-2-raw-v1",
+          "revision": "b08601e04326c79dfdd32d625aee71d232d685c3",
+          "files": {
+            "train": {
+              "path": "D:\\工作内容\\AI竞赛\\data\\wikitext-2-raw-v1\\train-00000-of-00001.parquet",
+              "sha256": "e83889baabc497075506f91975be5fac0d45c5290b6b20582c8cd1e853d0c9f7",
+              "bytes": 6357543,
+              "rows": 36718
+            },
+            "validation": {
+              "path": "D:\\工作内容\\AI竞赛\\data\\wikitext-2-raw-v1\\validation-00000-of-00001.parquet",
+              "sha256": "204929b7ff9d6184953f867dedb860e40aa69c078fc1e54b3baaa8fb28511c4c",
+              "bytes": 657209,
+              "rows": 3760
+            }
+          },
+          "calibration_documents": [
+            "train:1:= Valkyria Chronicles III =",
+            "train:7:= = Gameplay = ="
+          ],
+          "test_documents": [
+            "validation:15:= = Life cycle = =",
+            "validation:1:= Homarus gammarus =",
+            "validation:20:= = Distribution = =",
+            "validation:5:= = Description = ="
+          ],
+          "calibration_windows": [
+            {
+              "split": "train",
+              "document_id": "train:1:= Valkyria Chronicles III =",
+              "row_start": 1,
+              "row_end": 6,
+              "token_start": 0,
+              "token_end": 128,
+              "input_ids": null
+            },
+            {
+              "split": "train",
+              "document_id": "train:7:= = Gameplay = =",
+              "row_start": 7,
+              "row_end": 12,
+              "token_start": 0,
+              "token_end": 128,
+              "input_ids": null
+            }
+          ],
+          "test_windows": [
+            {
+              "split": "validation",
+              "document_id": "validation:1:= Homarus gammarus =",
+              "row_start": 1,
+              "row_end": 4,
+              "token_start": 0,
+              "token_end": 128,
+              "input_ids": null
+            },
+            {
+              "split": "validation",
+              "document_id": "validation:5:= = Description = =",
+              "row_start": 5,
+              "row_end": 14,
+              "token_start": 0,
+              "token_end": 128,
+              "input_ids": null
+            },
+            {
+              "split": "validation",
+              "document_id": "validation:15:= = Life cycle = =",
+              "row_start": 15,
+              "row_end": 19,
+              "token_start": 0,
+              "token_end": 128,
+              "input_ids": null
+            },
+            {
+              "split": "validation",
+              "document_id": "validation:20:= = Distribution = =",
+              "row_start": 20,
+              "row_end": 25,
+              "token_start": 0,
+              "token_end": 128,
+              "input_ids": null
+            }
+          ],
+          "no_source_document_overlap": true,
+          "no_token_window_overlap": true
+        }
+      }
+    },
+    {
+      "model": "gpt2-medium",
+      "status": "loaded",
+      "metadata": {
+        "model": "gpt2-medium",
+        "family": "gpt2",
+        "source_revision": "openai-community/gpt2-medium@main",
+        "local_path": "D:\\工作内容\\AI竞赛\\models\\gpt2-medium",
+        "model_type": "gpt2",
+        "architecture": [
+          "GPT2LMHeadModel"
+        ],
+        "parameter_dtype": "torch.float16",
+        "device": "cuda",
+        "layers": 24,
+        "hidden_size": 1024,
+        "q_heads": 16,
+        "kv_heads": 16,
+        "head_dim": 64,
+        "roles": [
+          "q",
+          "k",
+          "v",
+          "o",
+          "fc",
+          "proj"
+        ],
+        "role_groups": {
+          "q": "q",
+          "k": "k",
+          "v": "v",
+          "o": "o",
+          "fc": "fc",
+          "proj": "proj"
+        },
+        "data": {
+          "dataset": "Salesforce/wikitext",
+          "config": "wikitext-2-raw-v1",
+          "revision": "b08601e04326c79dfdd32d625aee71d232d685c3",
+          "files": {
+            "train": {
+              "path": "D:\\工作内容\\AI竞赛\\data\\wikitext-2-raw-v1\\train-00000-of-00001.parquet",
+              "sha256": "e83889baabc497075506f91975be5fac0d45c5290b6b20582c8cd1e853d0c9f7",
+              "bytes": 6357543,
+              "rows": 36718
+            },
+            "validation": {
+              "path": "D:\\工作内容\\AI竞赛\\data\\wikitext-2-raw-v1\\validation-00000-of-00001.parquet",
+              "sha256": "204929b7ff9d6184953f867dedb860e40aa69c078fc1e54b3baaa8fb28511c4c",
+              "bytes": 657209,
+              "rows": 3760
+            }
+          },
+          "calibration_documents": [
+            "train:1:= Valkyria Chronicles III =",
+            "train:7:= = Gameplay = ="
+          ],
+          "test_documents": [
+            "validation:15:= = Life cycle = =",
+            "validation:1:= Homarus gammarus =",
+            "validation:20:= = Distribution = =",
+            "validation:5:= = Description = ="
+          ],
+          "calibration_windows": [
+            {
+              "split": "train",
+              "document_id": "train:1:= Valkyria Chronicles III =",
+              "row_start": 1,
+              "row_end": 6,
+              "token_start": 0,
+              "token_end": 128,
+              "input_ids": null
+            },
+            {
+              "split": "train",
+              "document_id": "train:7:= = Gameplay = =",
+              "row_start": 7,
+              "row_end": 12,
+              "token_start": 0,
+              "token_end": 128,
+              "input_ids": null
+            }
+          ],
+          "test_windows": [
+            {
+              "split": "validation",
+              "document_id": "validation:1:= Homarus gammarus =",
+              "row_start": 1,
+              "row_end": 4,
+              "token_start": 0,
+              "token_end": 128,
+              "input_ids": null
+            },
+            {
+              "split": "validation",
+              "document_id": "validation:5:= = Description = =",
+              "row_start": 5,
+              "row_end": 14,
+              "token_start": 0,
+              "token_end": 128,
+              "input_ids": null
+            },
+            {
+              "split": "validation",
+              "document_id": "validation:15:= = Life cycle = =",
+              "row_start": 15,
+              "row_end": 19,
+              "token_start": 0,
+              "token_end": 128,
+              "input_ids": null
+            },
+            {
+              "split": "validation",
+              "document_id": "validation:20:= = Distribution = =",
+              "row_start": 20,
+              "row_end": 25,
+              "token_start": 0,
+              "token_end": 128,
+              "input_ids": null
+            }
+          ],
+          "no_source_document_overlap": true,
+          "no_token_window_overlap": true
+        }
+      }
+    },
+    {
+      "model": "opt-125m",
+      "status": "loaded",
+      "metadata": {
+        "model": "opt-125m",
+        "family": "opt",
+        "source_revision": "facebook/opt-125m@27dcfa74d334bc871f3234de431e71c6eeba5dd6",
+        "local_path": "D:\\工作内容\\AI竞赛\\models\\opt-125m",
+        "model_type": "opt",
+        "architecture": [
+          "OPTForCausalLM"
+        ],
+        "parameter_dtype": "torch.float16",
+        "device": "cuda",
+        "layers": 12,
+        "hidden_size": 768,
+        "q_heads": 12,
+        "kv_heads": 12,
+        "head_dim": 64,
+        "roles": [
+          "q",
+          "k",
+          "v",
+          "o",
+          "fc",
+          "proj"
+        ],
+        "role_groups": {
+          "q": "q",
+          "k": "k",
+          "v": "v",
+          "o": "o",
+          "fc": "fc",
+          "proj": "proj"
+        },
+        "data": {
+          "dataset": "Salesforce/wikitext",
+          "config": "wikitext-2-raw-v1",
+          "revision": "b08601e04326c79dfdd32d625aee71d232d685c3",
+          "files": {
+            "train": {
+              "path": "D:\\工作内容\\AI竞赛\\data\\wikitext-2-raw-v1\\train-00000-of-00001.parquet",
+              "sha256": "e83889baabc497075506f91975be5fac0d45c5290b6b20582c8cd1e853d0c9f7",
+              "bytes": 6357543,
+              "rows": 36718
+            },
+            "validation": {
+              "path": "D:\\工作内容\\AI竞赛\\data\\wikitext-2-raw-v1\\validation-00000-of-00001.parquet",
+              "sha256": "204929b7ff9d6184953f867dedb860e40aa69c078fc1e54b3baaa8fb28511c4c",
+              "bytes": 657209,
+              "rows": 3760
+            }
+          },
+          "calibration_documents": [
+            "train:1:= Valkyria Chronicles III =",
+            "train:7:= = Gameplay = ="
+          ],
+          "test_documents": [
+            "validation:15:= = Life cycle = =",
+            "validation:1:= Homarus gammarus =",
+            "validation:20:= = Distribution = =",
+            "validation:5:= = Description = ="
+          ],
+          "calibration_windows": [
+            {
+              "split": "train",
+              "document_id": "train:1:= Valkyria Chronicles III =",
+              "row_start": 1,
+              "row_end": 6,
+              "token_start": 0,
+              "token_end": 128,
+              "input_ids": null
+            },
+            {
+              "split": "train",
+              "document_id": "train:7:= = Gameplay = =",
+              "row_start": 7,
+              "row_end": 12,
+              "token_start": 0,
+              "token_end": 128,
+              "input_ids": null
+            }
+          ],
+          "test_windows": [
+            {
+              "split": "validation",
+              "document_id": "validation:1:= Homarus gammarus =",
+              "row_start": 1,
+              "row_end": 4,
+              "token_start": 0,
+              "token_end": 128,
+              "input_ids": null
+            },
+            {
+              "split": "validation",
+              "document_id": "validation:5:= = Description = =",
+              "row_start": 5,
+              "row_end": 14,
+              "token_start": 0,
+              "token_end": 128,
+              "input_ids": null
+            },
+            {
+              "split": "validation",
+              "document_id": "validation:15:= = Life cycle = =",
+              "row_start": 15,
+              "row_end": 19,
+              "token_start": 0,
+              "token_end": 128,
+              "input_ids": null
+            },
+            {
+              "split": "validation",
+              "document_id": "validation:20:= = Distribution = =",
+              "row_start": 20,
+              "row_end": 25,
+              "token_start": 0,
+              "token_end": 128,
+              "input_ids": null
+            }
+          ],
+          "no_source_document_overlap": true,
+          "no_token_window_overlap": true
+        }
+      }
+    },
+    {
+      "model": "pythia-160m",
+      "status": "loaded",
+      "metadata": {
+        "model": "pythia-160m",
+        "family": "gpt_neox",
+        "source_revision": "EleutherAI/pythia-160m@50f5173d932e8e61f858120bcb800b97af589f46",
+        "local_path": "D:\\工作内容\\AI竞赛\\models\\pythia-160m",
+        "model_type": "gpt_neox",
+        "architecture": [
+          "GPTNeoXForCausalLM"
+        ],
+        "parameter_dtype": "torch.float16",
+        "device": "cuda",
+        "layers": 12,
+        "hidden_size": 768,
+        "q_heads": 12,
+        "kv_heads": 12,
+        "head_dim": 64,
+        "roles": [
+          "q",
+          "k",
+          "v",
+          "o",
+          "fc",
+          "proj"
+        ],
+        "role_groups": {
+          "q": "q",
+          "k": "k",
+          "v": "v",
+          "o": "o",
+          "fc": "fc",
+          "proj": "proj"
+        },
+        "data": {
+          "dataset": "Salesforce/wikitext",
+          "config": "wikitext-2-raw-v1",
+          "revision": "b08601e04326c79dfdd32d625aee71d232d685c3",
+          "files": {
+            "train": {
+              "path": "D:\\工作内容\\AI竞赛\\data\\wikitext-2-raw-v1\\train-00000-of-00001.parquet",
+              "sha256": "e83889baabc497075506f91975be5fac0d45c5290b6b20582c8cd1e853d0c9f7",
+              "bytes": 6357543,
+              "rows": 36718
+            },
+            "validation": {
+              "path": "D:\\工作内容\\AI竞赛\\data\\wikitext-2-raw-v1\\validation-00000-of-00001.parquet",
+              "sha256": "204929b7ff9d6184953f867dedb860e40aa69c078fc1e54b3baaa8fb28511c4c",
+              "bytes": 657209,
+              "rows": 3760
+            }
+          },
+          "calibration_documents": [
+            "train:1:= Valkyria Chronicles III =",
+            "train:7:= = Gameplay = ="
+          ],
+          "test_documents": [
+            "validation:15:= = Life cycle = =",
+            "validation:1:= Homarus gammarus =",
+            "validation:20:= = Distribution = =",
+            "validation:5:= = Description = ="
+          ],
+          "calibration_windows": [
+            {
+              "split": "train",
+              "document_id": "train:1:= Valkyria Chronicles III =",
+              "row_start": 1,
+              "row_end": 6,
+              "token_start": 0,
+              "token_end": 128,
+              "input_ids": null
+            },
+            {
+              "split": "train",
+              "document_id": "train:7:= = Gameplay = =",
+              "row_start": 7,
+              "row_end": 12,
+              "token_start": 0,
+              "token_end": 128,
+              "input_ids": null
+            }
+          ],
+          "test_windows": [
+            {
+              "split": "validation",
+              "document_id": "validation:1:= Homarus gammarus =",
+              "row_start": 1,
+              "row_end": 4,
+              "token_start": 0,
+              "token_end": 128,
+              "input_ids": null
+            },
+            {
+              "split": "validation",
+              "document_id": "validation:5:= = Description = =",
+              "row_start": 5,
+              "row_end": 14,
+              "token_start": 0,
+              "token_end": 128,
+              "input_ids": null
+            },
+            {
+              "split": "validation",
+              "document_id": "validation:15:= = Life cycle = =",
+              "row_start": 15,
+              "row_end": 19,
+              "token_start": 0,
+              "token_end": 128,
+              "input_ids": null
+            },
+            {
+              "split": "validation",
+              "document_id": "validation:20:= = Distribution = =",
+              "row_start": 20,
+              "row_end": 25,
+              "token_start": 0,
+              "token_end": 128,
+              "input_ids": null
+            }
+          ],
+          "no_source_document_overlap": true,
+          "no_token_window_overlap": true
+        }
+      }
+    },
+    {
+      "model": "qwen2.5-0.5b",
+      "status": "loaded",
+      "metadata": {
+        "model": "qwen2.5-0.5b",
+        "family": "qwen2",
+        "source_revision": "Qwen/Qwen2.5-0.5B@060db6499f32faf8b98477b0a26969ef7d8b9987",
+        "local_path": "D:\\工作内容\\AI竞赛\\models\\qwen2.5-0.5b",
+        "model_type": "qwen2",
+        "architecture": [
+          "Qwen2ForCausalLM"
+        ],
+        "parameter_dtype": "torch.float16",
+        "device": "cuda",
+        "layers": 24,
+        "hidden_size": 896,
+        "q_heads": 14,
+        "kv_heads": 2,
+        "head_dim": 64,
+        "roles": [
+          "q",
+          "k",
+          "v",
+          "o",
+          "fc_gate",
+          "fc_up",
+          "proj"
+        ],
+        "role_groups": {
+          "q": "q",
+          "k": "k",
+          "v": "v",
+          "o": "o",
+          "fc_gate": "fc",
+          "fc_up": "fc",
+          "proj": "proj"
+        },
+        "data": {
+          "dataset": "Salesforce/wikitext",
+          "config": "wikitext-2-raw-v1",
+          "revision": "b08601e04326c79dfdd32d625aee71d232d685c3",
+          "files": {
+            "train": {
+              "path": "D:\\工作内容\\AI竞赛\\data\\wikitext-2-raw-v1\\train-00000-of-00001.parquet",
+              "sha256": "e83889baabc497075506f91975be5fac0d45c5290b6b20582c8cd1e853d0c9f7",
+              "bytes": 6357543,
+              "rows": 36718
+            },
+            "validation": {
+              "path": "D:\\工作内容\\AI竞赛\\data\\wikitext-2-raw-v1\\validation-00000-of-00001.parquet",
+              "sha256": "204929b7ff9d6184953f867dedb860e40aa69c078fc1e54b3baaa8fb28511c4c",
+              "bytes": 657209,
+              "rows": 3760
+            }
+          },
+          "calibration_documents": [
+            "train:1:= Valkyria Chronicles III =",
+            "train:7:= = Gameplay = ="
+          ],
+          "test_documents": [
+            "validation:15:= = Life cycle = =",
+            "validation:1:= Homarus gammarus =",
+            "validation:20:= = Distribution = =",
+            "validation:5:= = Description = ="
+          ],
+          "calibration_windows": [
+            {
+              "split": "train",
+              "document_id": "train:1:= Valkyria Chronicles III =",
+              "row_start": 1,
+              "row_end": 6,
+              "token_start": 0,
+              "token_end": 128,
+              "input_ids": null
+            },
+            {
+              "split": "train",
+              "document_id": "train:7:= = Gameplay = =",
+              "row_start": 7,
+              "row_end": 12,
+              "token_start": 0,
+              "token_end": 128,
+              "input_ids": null
+            }
+          ],
+          "test_windows": [
+            {
+              "split": "validation",
+              "document_id": "validation:1:= Homarus gammarus =",
+              "row_start": 1,
+              "row_end": 4,
+              "token_start": 0,
+              "token_end": 128,
+              "input_ids": null
+            },
+            {
+              "split": "validation",
+              "document_id": "validation:5:= = Description = =",
+              "row_start": 5,
+              "row_end": 14,
+              "token_start": 0,
+              "token_end": 128,
+              "input_ids": null
+            },
+            {
+              "split": "validation",
+              "document_id": "validation:15:= = Life cycle = =",
+              "row_start": 15,
+              "row_end": 19,
+              "token_start": 0,
+              "token_end": 128,
+              "input_ids": null
+            },
+            {
+              "split": "validation",
+              "document_id": "validation:20:= = Distribution = =",
+              "row_start": 20,
+              "row_end": 25,
+              "token_start": 0,
+              "token_end": 128,
+              "input_ids": null
+            }
+          ],
+          "no_source_document_overlap": true,
+          "no_token_window_overlap": true
+        }
+      }
+    }
+  ],
+  "results": [
+    {
+      "candidate": "c21",
+      "source": "D:\\工作内容\\AI竞赛\\solutions\\20260827_v025_c21c-compliance-baseline\\solution.py",
+      "source_sha256": "83ab4864254f80d221bb491bdef89f8c9ab8e83534fd62d4dd5e0c1c292fea12",
+      "official_score": 14437,
+      "official_time": 166.6,
+      "model": "gpt2-small",
+      "linear_by_role": {
+        "q": {
+          "macro_gain": 0.5544769983292124,
+          "global_gain": 0.6008495409922231,
+          "standard_sum": 140453.55688476562,
+          "player_sum": 56062.1016998291,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "k": {
+          "macro_gain": 0.5606641370390263,
+          "global_gain": 0.6200204395267399,
+          "standard_sum": 209590.02392578125,
+          "player_sum": 79639.92517089844,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "v": {
+          "macro_gain": 0.5575595226185638,
+          "global_gain": 0.5285277562947143,
+          "standard_sum": 78484.6085357666,
+          "player_sum": 37003.314482688904,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "o": {
+          "macro_gain": 0.3713054800920735,
+          "global_gain": 0.4826492733332857,
+          "standard_sum": 150326.0627746582,
+          "player_sum": 77771.29781341553,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "fc": {
+          "macro_gain": 0.42104520800121753,
+          "global_gain": 0.42013751529543664,
+          "standard_sum": 190289.57446289062,
+          "player_sum": 110341.78546142578,
+          "elements": 18874368,
+          "cases": 12
+        },
+        "proj": {
+          "macro_gain": 0.26739691286736167,
+          "global_gain": 0.2681937340115207,
+          "standard_sum": 263486.19442749023,
+          "player_sum": 192820.8480834961,
+          "elements": 4718592,
+          "cases": 12
+        }
+      },
+      "linear_by_group": {
+        "q": {
+          "macro_gain": 0.5544769983292124,
+          "global_gain": 0.6008495409922231,
+          "standard_sum": 140453.55688476562,
+          "player_sum": 56062.1016998291,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "k": {
+          "macro_gain": 0.5606641370390263,
+          "global_gain": 0.6200204395267399,
+          "standard_sum": 209590.02392578125,
+          "player_sum": 79639.92517089844,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "v": {
+          "macro_gain": 0.5575595226185638,
+          "global_gain": 0.5285277562947143,
+          "standard_sum": 78484.6085357666,
+          "player_sum": 37003.314482688904,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "o": {
+          "macro_gain": 0.3713054800920735,
+          "global_gain": 0.4826492733332857,
+          "standard_sum": 150326.0627746582,
+          "player_sum": 77771.29781341553,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "fc": {
+          "macro_gain": 0.42104520800121753,
+          "global_gain": 0.42013751529543664,
+          "standard_sum": 190289.57446289062,
+          "player_sum": 110341.78546142578,
+          "elements": 18874368,
+          "cases": 12
+        },
+        "proj": {
+          "macro_gain": 0.26739691286736167,
+          "global_gain": 0.2681937340115207,
+          "standard_sum": 263486.19442749023,
+          "player_sum": 192820.8480834961,
+          "elements": 4718592,
+          "cases": 12
+        }
+      },
+      "linear": {
+        "macro_gain": 0.4554080431579092,
+        "global_gain": 0.46385514516658893,
+        "standard_sum": 1032630.0210113525,
+        "player_sum": 553639.2727117538,
+        "elements": 42467328,
+        "cases": 72
+      },
+      "linear_component_macro_gain": 0.48672970990898673,
+      "attention_causal": {
+        "macro_gain": 0.4034377977224495,
+        "global_gain": 0.4444125752917926,
+        "standard_sum": 11804.59949541092,
+        "player_sum": 6558.487033367157,
+        "elements": 4718592,
+        "cases": 12
+      },
+      "timing": {
+        "wall_seconds": 27.805163400014862,
+        "algorithm_stage_seconds": 27.735080200014636,
+        "calibration_seconds": 21.431018400297035,
+        "dynamic_seconds": 4.796077299455646,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 72,
+          "hif4_calibration_attention": 12,
+          "hif4_dynamic_quantize_activation": 288,
+          "hif4_dynamic_quantize_q": 48,
+          "hif4_dynamic_quantize_k": 48,
+          "hif4_dynamic_quantize_v": 48
+        },
+        "nested_api_calls": {
+          "hif4_calibration_and_quantize_weight": 0,
+          "hif4_calibration_attention": 0,
+          "hif4_dynamic_quantize_activation": 0,
+          "hif4_dynamic_quantize_q": 40,
+          "hif4_dynamic_quantize_k": 40,
+          "hif4_dynamic_quantize_v": 20
+        },
+        "under_300_seconds": true
+      }
+    },
+    {
+      "candidate": "c38",
+      "source": "D:\\工作内容\\AI竞赛\\solutions\\20260828_v030_c38-beam2-fullcov-official14092_time170.6s\\solution.py",
+      "source_sha256": "648a27b3560ef7f5d939cd409301e445e5065047cbd5438c1a73a013730e467f",
+      "official_score": 14092,
+      "official_time": 170.57,
+      "model": "gpt2-small",
+      "linear_by_role": {
+        "q": {
+          "macro_gain": 0.5357869188580945,
+          "global_gain": 0.5863463672453422,
+          "standard_sum": 140453.55688476562,
+          "player_sum": 58099.12403869629,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "k": {
+          "macro_gain": 0.5629197064732349,
+          "global_gain": 0.6409897712521536,
+          "standard_sum": 209590.02392578125,
+          "player_sum": 75244.96243286133,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "v": {
+          "macro_gain": 0.5220190272677654,
+          "global_gain": 0.48180075367459396,
+          "standard_sum": 78484.6085357666,
+          "player_sum": 40670.664991378784,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "o": {
+          "macro_gain": 0.2647813911548824,
+          "global_gain": 0.5290512193655457,
+          "standard_sum": 150326.0627746582,
+          "player_sum": 70795.87596130371,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "fc": {
+          "macro_gain": 0.38119403500923243,
+          "global_gain": 0.3797064147763582,
+          "standard_sum": 190289.57446289062,
+          "player_sum": 118035.40237426758,
+          "elements": 18874368,
+          "cases": 12
+        },
+        "proj": {
+          "macro_gain": 0.2549131638900444,
+          "global_gain": 0.22600321848246221,
+          "standard_sum": 263486.19442749023,
+          "player_sum": 203937.46646118164,
+          "elements": 4718592,
+          "cases": 12
+        }
+      },
+      "linear_by_group": {
+        "q": {
+          "macro_gain": 0.5357869188580945,
+          "global_gain": 0.5863463672453422,
+          "standard_sum": 140453.55688476562,
+          "player_sum": 58099.12403869629,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "k": {
+          "macro_gain": 0.5629197064732349,
+          "global_gain": 0.6409897712521536,
+          "standard_sum": 209590.02392578125,
+          "player_sum": 75244.96243286133,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "v": {
+          "macro_gain": 0.5220190272677654,
+          "global_gain": 0.48180075367459396,
+          "standard_sum": 78484.6085357666,
+          "player_sum": 40670.664991378784,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "o": {
+          "macro_gain": 0.2647813911548824,
+          "global_gain": 0.5290512193655457,
+          "standard_sum": 150326.0627746582,
+          "player_sum": 70795.87596130371,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "fc": {
+          "macro_gain": 0.38119403500923243,
+          "global_gain": 0.3797064147763582,
+          "standard_sum": 190289.57446289062,
+          "player_sum": 118035.40237426758,
+          "elements": 18874368,
+          "cases": 12
+        },
+        "proj": {
+          "macro_gain": 0.2549131638900444,
+          "global_gain": 0.22600321848246221,
+          "standard_sum": 263486.19442749023,
+          "player_sum": 203937.46646118164,
+          "elements": 4718592,
+          "cases": 12
+        }
+      },
+      "linear": {
+        "macro_gain": 0.420269040442209,
+        "global_gain": 0.4511262652381688,
+        "standard_sum": 1032630.0210113525,
+        "player_sum": 566783.4962596893,
+        "elements": 42467328,
+        "cases": 72
+      },
+      "linear_component_macro_gain": 0.47398295746607594,
+      "attention_causal": {
+        "macro_gain": 0.4034377977224495,
+        "global_gain": 0.4444125752917926,
+        "standard_sum": 11804.59949541092,
+        "player_sum": 6558.487033367157,
+        "elements": 4718592,
+        "cases": 12
+      },
+      "timing": {
+        "wall_seconds": 36.74128820002079,
+        "algorithm_stage_seconds": 36.73591459996533,
+        "calibration_seconds": 27.461652999802027,
+        "dynamic_seconds": 7.588931799866259,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 72,
+          "hif4_calibration_attention": 12,
+          "hif4_dynamic_quantize_activation": 288,
+          "hif4_dynamic_quantize_q": 48,
+          "hif4_dynamic_quantize_k": 48,
+          "hif4_dynamic_quantize_v": 48
+        },
+        "nested_api_calls": {
+          "hif4_calibration_and_quantize_weight": 0,
+          "hif4_calibration_attention": 0,
+          "hif4_dynamic_quantize_activation": 0,
+          "hif4_dynamic_quantize_q": 40,
+          "hif4_dynamic_quantize_k": 40,
+          "hif4_dynamic_quantize_v": 20
+        },
+        "under_300_seconds": true
+      }
+    },
+    {
+      "candidate": "c39",
+      "source": "D:\\工作内容\\AI竞赛\\solutions\\20260828_v031_c39-fw-official14613_time159.2s\\solution.py",
+      "source_sha256": "b8c9f2a4eb6553367dd17e73d30836ac8911dbef33759fa8cf95e8c629317a71",
+      "official_score": 14613,
+      "official_time": 159.2,
+      "model": "gpt2-small",
+      "linear_by_role": {
+        "q": {
+          "macro_gain": 0.5544769983292124,
+          "global_gain": 0.6008495409922231,
+          "standard_sum": 140453.55688476562,
+          "player_sum": 56062.1016998291,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "k": {
+          "macro_gain": 0.5606641370390263,
+          "global_gain": 0.6200204395267399,
+          "standard_sum": 209590.02392578125,
+          "player_sum": 79639.92517089844,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "v": {
+          "macro_gain": 0.5575595226185638,
+          "global_gain": 0.5285277562947143,
+          "standard_sum": 78484.6085357666,
+          "player_sum": 37003.314482688904,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "o": {
+          "macro_gain": 0.3713054800920735,
+          "global_gain": 0.4826492733332857,
+          "standard_sum": 150326.0627746582,
+          "player_sum": 77771.29781341553,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "fc": {
+          "macro_gain": 0.4148343300478465,
+          "global_gain": 0.4135485514478482,
+          "standard_sum": 190289.57446289062,
+          "player_sum": 111595.59658813477,
+          "elements": 18874368,
+          "cases": 12
+        },
+        "proj": {
+          "macro_gain": 0.25778817332637943,
+          "global_gain": 0.22932867176078894,
+          "standard_sum": 263486.19442749023,
+          "player_sum": 203061.2554321289,
+          "elements": 4718592,
+          "cases": 12
+        }
+      },
+      "linear_by_group": {
+        "q": {
+          "macro_gain": 0.5544769983292124,
+          "global_gain": 0.6008495409922231,
+          "standard_sum": 140453.55688476562,
+          "player_sum": 56062.1016998291,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "k": {
+          "macro_gain": 0.5606641370390263,
+          "global_gain": 0.6200204395267399,
+          "standard_sum": 209590.02392578125,
+          "player_sum": 79639.92517089844,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "v": {
+          "macro_gain": 0.5575595226185638,
+          "global_gain": 0.5285277562947143,
+          "standard_sum": 78484.6085357666,
+          "player_sum": 37003.314482688904,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "o": {
+          "macro_gain": 0.3713054800920735,
+          "global_gain": 0.4826492733332857,
+          "standard_sum": 150326.0627746582,
+          "player_sum": 77771.29781341553,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "fc": {
+          "macro_gain": 0.4148343300478465,
+          "global_gain": 0.4135485514478482,
+          "standard_sum": 190289.57446289062,
+          "player_sum": 111595.59658813477,
+          "elements": 18874368,
+          "cases": 12
+        },
+        "proj": {
+          "macro_gain": 0.25778817332637943,
+          "global_gain": 0.22932867176078894,
+          "standard_sum": 263486.19442749023,
+          "player_sum": 203061.2554321289,
+          "elements": 4718592,
+          "cases": 12
+        }
+      },
+      "linear": {
+        "macro_gain": 0.45277144024218363,
+        "global_gain": 0.45272413188839233,
+        "standard_sum": 1032630.0210113525,
+        "player_sum": 565133.4911870956,
+        "elements": 42467328,
+        "cases": 72
+      },
+      "linear_component_macro_gain": 0.47915403889260005,
+      "attention_causal": {
+        "macro_gain": 0.4034377977224495,
+        "global_gain": 0.4444125752917926,
+        "standard_sum": 11804.59949541092,
+        "player_sum": 6558.487033367157,
+        "elements": 4718592,
+        "cases": 12
+      },
+      "timing": {
+        "wall_seconds": 30.491359999985434,
+        "algorithm_stage_seconds": 30.485552199999802,
+        "calibration_seconds": 24.211688299837988,
+        "dynamic_seconds": 4.733195999346208,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 72,
+          "hif4_calibration_attention": 12,
+          "hif4_dynamic_quantize_activation": 288,
+          "hif4_dynamic_quantize_q": 48,
+          "hif4_dynamic_quantize_k": 48,
+          "hif4_dynamic_quantize_v": 48
+        },
+        "nested_api_calls": {
+          "hif4_calibration_and_quantize_weight": 0,
+          "hif4_calibration_attention": 0,
+          "hif4_dynamic_quantize_activation": 0,
+          "hif4_dynamic_quantize_q": 40,
+          "hif4_dynamic_quantize_k": 40,
+          "hif4_dynamic_quantize_v": 20
+        },
+        "under_300_seconds": true
+      }
+    },
+    {
+      "candidate": "c40",
+      "source": "D:\\工作内容\\AI竞赛\\solutions\\20260828_v032_c40-robust-blockldlq_official-score14432_time216.667s\\solution.py",
+      "source_sha256": "d24bc94f513907cbe97b43865973d1498133d8b9264faf12661836ff65aab656",
+      "official_score": 14432,
+      "official_time": 216.667,
+      "model": "gpt2-small",
+      "linear_by_role": {
+        "q": {
+          "macro_gain": 0.5544769983292124,
+          "global_gain": 0.6008495409922231,
+          "standard_sum": 140453.55688476562,
+          "player_sum": 56062.1016998291,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "k": {
+          "macro_gain": 0.5606641370390263,
+          "global_gain": 0.6200204395267399,
+          "standard_sum": 209590.02392578125,
+          "player_sum": 79639.92517089844,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "v": {
+          "macro_gain": 0.5575595226185638,
+          "global_gain": 0.5285277562947143,
+          "standard_sum": 78484.6085357666,
+          "player_sum": 37003.314482688904,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "o": {
+          "macro_gain": 0.3713054800920735,
+          "global_gain": 0.4826492733332857,
+          "standard_sum": 150326.0627746582,
+          "player_sum": 77771.29781341553,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "fc": {
+          "macro_gain": 0.3835971389183393,
+          "global_gain": 0.38250971294460007,
+          "standard_sum": 190289.57446289062,
+          "player_sum": 117501.96395874023,
+          "elements": 18874368,
+          "cases": 12
+        },
+        "proj": {
+          "macro_gain": 0.24393668758902246,
+          "global_gain": 0.18530850839903257,
+          "standard_sum": 263486.19442749023,
+          "player_sum": 214659.96075439453,
+          "elements": 4718592,
+          "cases": 12
+        }
+      },
+      "linear_by_group": {
+        "q": {
+          "macro_gain": 0.5544769983292124,
+          "global_gain": 0.6008495409922231,
+          "standard_sum": 140453.55688476562,
+          "player_sum": 56062.1016998291,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "k": {
+          "macro_gain": 0.5606641370390263,
+          "global_gain": 0.6200204395267399,
+          "standard_sum": 209590.02392578125,
+          "player_sum": 79639.92517089844,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "v": {
+          "macro_gain": 0.5575595226185638,
+          "global_gain": 0.5285277562947143,
+          "standard_sum": 78484.6085357666,
+          "player_sum": 37003.314482688904,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "o": {
+          "macro_gain": 0.3713054800920735,
+          "global_gain": 0.4826492733332857,
+          "standard_sum": 150326.0627746582,
+          "player_sum": 77771.29781341553,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "fc": {
+          "macro_gain": 0.3835971389183393,
+          "global_gain": 0.38250971294460007,
+          "standard_sum": 190289.57446289062,
+          "player_sum": 117501.96395874023,
+          "elements": 18874368,
+          "cases": 12
+        },
+        "proj": {
+          "macro_gain": 0.24393668758902246,
+          "global_gain": 0.18530850839903257,
+          "standard_sum": 263486.19442749023,
+          "player_sum": 214659.96075439453,
+          "elements": 4718592,
+          "cases": 12
+        }
+      },
+      "linear": {
+        "macro_gain": 0.4452566607643729,
+        "global_gain": 0.4357722010548042,
+        "standard_sum": 1032630.0210113525,
+        "player_sum": 582638.5638799667,
+        "elements": 42467328,
+        "cases": 72
+      },
+      "linear_component_macro_gain": 0.4666442052484326,
+      "attention_causal": {
+        "macro_gain": 0.4034377977224495,
+        "global_gain": 0.4444125752917926,
+        "standard_sum": 11804.59949541092,
+        "player_sum": 6558.487033367157,
+        "elements": 4718592,
+        "cases": 12
+      },
+      "timing": {
+        "wall_seconds": 49.09926089999499,
+        "algorithm_stage_seconds": 49.09464209998259,
+        "calibration_seconds": 42.66604529984761,
+        "dynamic_seconds": 4.903079700481612,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 72,
+          "hif4_calibration_attention": 12,
+          "hif4_dynamic_quantize_activation": 288,
+          "hif4_dynamic_quantize_q": 48,
+          "hif4_dynamic_quantize_k": 48,
+          "hif4_dynamic_quantize_v": 48
+        },
+        "nested_api_calls": {
+          "hif4_calibration_and_quantize_weight": 0,
+          "hif4_calibration_attention": 0,
+          "hif4_dynamic_quantize_activation": 0,
+          "hif4_dynamic_quantize_q": 40,
+          "hif4_dynamic_quantize_k": 40,
+          "hif4_dynamic_quantize_v": 20
+        },
+        "under_300_seconds": true
+      }
+    },
+    {
+      "candidate": "c21",
+      "source": "D:\\工作内容\\AI竞赛\\solutions\\20260827_v025_c21c-compliance-baseline\\solution.py",
+      "source_sha256": "83ab4864254f80d221bb491bdef89f8c9ab8e83534fd62d4dd5e0c1c292fea12",
+      "official_score": 14437,
+      "official_time": 166.6,
+      "model": "gpt2-medium",
+      "linear_by_role": {
+        "q": {
+          "macro_gain": 0.5143142955683362,
+          "global_gain": 0.5401916509487888,
+          "standard_sum": 303459.4712982178,
+          "player_sum": 139533.1985015869,
+          "elements": 12582912,
+          "cases": 24
+        },
+        "k": {
+          "macro_gain": 0.5293561070800318,
+          "global_gain": 0.564283874468579,
+          "standard_sum": 448244.3471984863,
+          "player_sum": 195307.29025268555,
+          "elements": 12582912,
+          "cases": 24
+        },
+        "v": {
+          "macro_gain": 0.48557114240420507,
+          "global_gain": 0.45631598965097064,
+          "standard_sum": 194275.20018196106,
+          "player_sum": 105624.31994628906,
+          "elements": 12582912,
+          "cases": 24
+        },
+        "o": {
+          "macro_gain": 0.2624018649353079,
+          "global_gain": 0.44671462964950337,
+          "standard_sum": 244561.13403344154,
+          "player_sum": 135312.09761703014,
+          "elements": 12582912,
+          "cases": 24
+        },
+        "fc": {
+          "macro_gain": 0.37589503673421487,
+          "global_gain": 0.3735360905383508,
+          "standard_sum": 591642.5832519531,
+          "player_sum": 370642.7257080078,
+          "elements": 50331648,
+          "cases": 24
+        },
+        "proj": {
+          "macro_gain": 0.22072976828043736,
+          "global_gain": 0.21762644532488626,
+          "standard_sum": 626196.0693359375,
+          "player_sum": 489919.2446899414,
+          "elements": 12582912,
+          "cases": 24
+        }
+      },
+      "linear_by_group": {
+        "q": {
+          "macro_gain": 0.5143142955683362,
+          "global_gain": 0.5401916509487888,
+          "standard_sum": 303459.4712982178,
+          "player_sum": 139533.1985015869,
+          "elements": 12582912,
+          "cases": 24
+        },
+        "k": {
+          "macro_gain": 0.5293561070800318,
+          "global_gain": 0.564283874468579,
+          "standard_sum": 448244.3471984863,
+          "player_sum": 195307.29025268555,
+          "elements": 12582912,
+          "cases": 24
+        },
+        "v": {
+          "macro_gain": 0.48557114240420507,
+          "global_gain": 0.45631598965097064,
+          "standard_sum": 194275.20018196106,
+          "player_sum": 105624.31994628906,
+          "elements": 12582912,
+          "cases": 24
+        },
+        "o": {
+          "macro_gain": 0.2624018649353079,
+          "global_gain": 0.44671462964950337,
+          "standard_sum": 244561.13403344154,
+          "player_sum": 135312.09761703014,
+          "elements": 12582912,
+          "cases": 24
+        },
+        "fc": {
+          "macro_gain": 0.37589503673421487,
+          "global_gain": 0.3735360905383508,
+          "standard_sum": 591642.5832519531,
+          "player_sum": 370642.7257080078,
+          "elements": 50331648,
+          "cases": 24
+        },
+        "proj": {
+          "macro_gain": 0.22072976828043736,
+          "global_gain": 0.21762644532488626,
+          "standard_sum": 626196.0693359375,
+          "player_sum": 489919.2446899414,
+          "elements": 12582912,
+          "cases": 24
+        }
+      },
+      "linear": {
+        "macro_gain": 0.3980447025004222,
+        "global_gain": 0.403607574707657,
+        "standard_sum": 2408378.8052999973,
+        "player_sum": 1436338.876715541,
+        "elements": 113246208,
+        "cases": 144
+      },
+      "linear_component_macro_gain": 0.43311144676351315,
+      "attention_causal": {
+        "macro_gain": 0.3989480886915117,
+        "global_gain": 0.4236108389960971,
+        "standard_sum": 25864.399427503347,
+        "player_sum": 14907.959485888481,
+        "elements": 12582912,
+        "cases": 24
+      },
+      "timing": {
+        "wall_seconds": 62.899904200050514,
+        "algorithm_stage_seconds": 62.89374620001763,
+        "calibration_seconds": 48.81472099979874,
+        "dynamic_seconds": 10.802141400636174,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 144,
+          "hif4_calibration_attention": 24,
+          "hif4_dynamic_quantize_activation": 576,
+          "hif4_dynamic_quantize_q": 96,
+          "hif4_dynamic_quantize_k": 96,
+          "hif4_dynamic_quantize_v": 96
+        },
+        "nested_api_calls": {
+          "hif4_calibration_and_quantize_weight": 0,
+          "hif4_calibration_attention": 0,
+          "hif4_dynamic_quantize_activation": 0,
+          "hif4_dynamic_quantize_q": 84,
+          "hif4_dynamic_quantize_k": 84,
+          "hif4_dynamic_quantize_v": 42
+        },
+        "under_300_seconds": true
+      }
+    },
+    {
+      "candidate": "c38",
+      "source": "D:\\工作内容\\AI竞赛\\solutions\\20260828_v030_c38-beam2-fullcov-official14092_time170.6s\\solution.py",
+      "source_sha256": "648a27b3560ef7f5d939cd409301e445e5065047cbd5438c1a73a013730e467f",
+      "official_score": 14092,
+      "official_time": 170.57,
+      "model": "gpt2-medium",
+      "linear_by_role": {
+        "q": {
+          "macro_gain": 0.47872971560382127,
+          "global_gain": 0.5061096432357457,
+          "standard_sum": 303459.4712982178,
+          "player_sum": 149875.70654296875,
+          "elements": 12582912,
+          "cases": 24
+        },
+        "k": {
+          "macro_gain": 0.5279622501893235,
+          "global_gain": 0.5737953603673844,
+          "standard_sum": 448244.3471984863,
+          "player_sum": 191043.8204650879,
+          "elements": 12582912,
+          "cases": 24
+        },
+        "v": {
+          "macro_gain": 0.43323029886206177,
+          "global_gain": 0.3958730715935463,
+          "standard_sum": 194275.20018196106,
+          "player_sum": 117366.87995147705,
+          "elements": 12582912,
+          "cases": 24
+        },
+        "o": {
+          "macro_gain": 0.09372516561622009,
+          "global_gain": 0.3452293773004989,
+          "standard_sum": 244561.13403344154,
+          "player_sum": 160131.44601917267,
+          "elements": 12582912,
+          "cases": 24
+        },
+        "fc": {
+          "macro_gain": 0.324323126972436,
+          "global_gain": 0.3187347729715709,
+          "standard_sum": 591642.5832519531,
+          "player_sum": 403065.5187988281,
+          "elements": 50331648,
+          "cases": 24
+        },
+        "proj": {
+          "macro_gain": 0.225897670517598,
+          "global_gain": 0.1944863277467718,
+          "standard_sum": 626196.0693359375,
+          "player_sum": 504409.4953613281,
+          "elements": 12582912,
+          "cases": 24
+        }
+      },
+      "linear_by_group": {
+        "q": {
+          "macro_gain": 0.47872971560382127,
+          "global_gain": 0.5061096432357457,
+          "standard_sum": 303459.4712982178,
+          "player_sum": 149875.70654296875,
+          "elements": 12582912,
+          "cases": 24
+        },
+        "k": {
+          "macro_gain": 0.5279622501893235,
+          "global_gain": 0.5737953603673844,
+          "standard_sum": 448244.3471984863,
+          "player_sum": 191043.8204650879,
+          "elements": 12582912,
+          "cases": 24
+        },
+        "v": {
+          "macro_gain": 0.43323029886206177,
+          "global_gain": 0.3958730715935463,
+          "standard_sum": 194275.20018196106,
+          "player_sum": 117366.87995147705,
+          "elements": 12582912,
+          "cases": 24
+        },
+        "o": {
+          "macro_gain": 0.09372516561622009,
+          "global_gain": 0.3452293773004989,
+          "standard_sum": 244561.13403344154,
+          "player_sum": 160131.44601917267,
+          "elements": 12582912,
+          "cases": 24
+        },
+        "fc": {
+          "macro_gain": 0.324323126972436,
+          "global_gain": 0.3187347729715709,
+          "standard_sum": 591642.5832519531,
+          "player_sum": 403065.5187988281,
+          "elements": 50331648,
+          "cases": 24
+        },
+        "proj": {
+          "macro_gain": 0.225897670517598,
+          "global_gain": 0.1944863277467718,
+          "standard_sum": 626196.0693359375,
+          "player_sum": 504409.4953613281,
+          "elements": 12582912,
+          "cases": 24
+        }
+      },
+      "linear": {
+        "macro_gain": 0.34731137129357675,
+        "global_gain": 0.3664232288621261,
+        "standard_sum": 2408378.8052999973,
+        "player_sum": 1525892.8671388626,
+        "elements": 113246208,
+        "cases": 144
+      },
+      "linear_component_macro_gain": 0.3890380922025863,
+      "attention_causal": {
+        "macro_gain": 0.3989480886915117,
+        "global_gain": 0.4236108389960971,
+        "standard_sum": 25864.399427503347,
+        "player_sum": 14907.959485888481,
+        "elements": 12582912,
+        "cases": 24
+      },
+      "timing": {
+        "wall_seconds": 72.5036783000105,
+        "algorithm_stage_seconds": 72.49909639998805,
+        "calibration_seconds": 55.20788259955589,
+        "dynamic_seconds": 14.156646699877456,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 144,
+          "hif4_calibration_attention": 24,
+          "hif4_dynamic_quantize_activation": 576,
+          "hif4_dynamic_quantize_q": 96,
+          "hif4_dynamic_quantize_k": 96,
+          "hif4_dynamic_quantize_v": 96
+        },
+        "nested_api_calls": {
+          "hif4_calibration_and_quantize_weight": 0,
+          "hif4_calibration_attention": 0,
+          "hif4_dynamic_quantize_activation": 0,
+          "hif4_dynamic_quantize_q": 84,
+          "hif4_dynamic_quantize_k": 84,
+          "hif4_dynamic_quantize_v": 42
+        },
+        "under_300_seconds": true
+      }
+    },
+    {
+      "candidate": "c39",
+      "source": "D:\\工作内容\\AI竞赛\\solutions\\20260828_v031_c39-fw-official14613_time159.2s\\solution.py",
+      "source_sha256": "b8c9f2a4eb6553367dd17e73d30836ac8911dbef33759fa8cf95e8c629317a71",
+      "official_score": 14613,
+      "official_time": 159.2,
+      "model": "gpt2-medium",
+      "linear_by_role": {
+        "q": {
+          "macro_gain": 0.5143142955683362,
+          "global_gain": 0.5401916509487888,
+          "standard_sum": 303459.4712982178,
+          "player_sum": 139533.1985015869,
+          "elements": 12582912,
+          "cases": 24
+        },
+        "k": {
+          "macro_gain": 0.5293561070800318,
+          "global_gain": 0.564283874468579,
+          "standard_sum": 448244.3471984863,
+          "player_sum": 195307.29025268555,
+          "elements": 12582912,
+          "cases": 24
+        },
+        "v": {
+          "macro_gain": 0.48557114240420507,
+          "global_gain": 0.45631598965097064,
+          "standard_sum": 194275.20018196106,
+          "player_sum": 105624.31994628906,
+          "elements": 12582912,
+          "cases": 24
+        },
+        "o": {
+          "macro_gain": 0.2624018649353079,
+          "global_gain": 0.44671462964950337,
+          "standard_sum": 244561.13403344154,
+          "player_sum": 135312.09761703014,
+          "elements": 12582912,
+          "cases": 24
+        },
+        "fc": {
+          "macro_gain": 0.3672061211538083,
+          "global_gain": 0.3641870388038763,
+          "standard_sum": 591642.5832519531,
+          "player_sum": 376174.02282714844,
+          "elements": 50331648,
+          "cases": 24
+        },
+        "proj": {
+          "macro_gain": 0.22760681398662053,
+          "global_gain": 0.19645888000038675,
+          "standard_sum": 626196.0693359375,
+          "player_sum": 503174.2908935547,
+          "elements": 12582912,
+          "cases": 24
+        }
+      },
+      "linear_by_group": {
+        "q": {
+          "macro_gain": 0.5143142955683362,
+          "global_gain": 0.5401916509487888,
+          "standard_sum": 303459.4712982178,
+          "player_sum": 139533.1985015869,
+          "elements": 12582912,
+          "cases": 24
+        },
+        "k": {
+          "macro_gain": 0.5293561070800318,
+          "global_gain": 0.564283874468579,
+          "standard_sum": 448244.3471984863,
+          "player_sum": 195307.29025268555,
+          "elements": 12582912,
+          "cases": 24
+        },
+        "v": {
+          "macro_gain": 0.48557114240420507,
+          "global_gain": 0.45631598965097064,
+          "standard_sum": 194275.20018196106,
+          "player_sum": 105624.31994628906,
+          "elements": 12582912,
+          "cases": 24
+        },
+        "o": {
+          "macro_gain": 0.2624018649353079,
+          "global_gain": 0.44671462964950337,
+          "standard_sum": 244561.13403344154,
+          "player_sum": 135312.09761703014,
+          "elements": 12582912,
+          "cases": 24
+        },
+        "fc": {
+          "macro_gain": 0.3672061211538083,
+          "global_gain": 0.3641870388038763,
+          "standard_sum": 591642.5832519531,
+          "player_sum": 376174.02282714844,
+          "elements": 50331648,
+          "cases": 24
+        },
+        "proj": {
+          "macro_gain": 0.22760681398662053,
+          "global_gain": 0.19645888000038675,
+          "standard_sum": 626196.0693359375,
+          "player_sum": 503174.2908935547,
+          "elements": 12582912,
+          "cases": 24
+        }
+      },
+      "linear": {
+        "macro_gain": 0.3977427241880516,
+        "global_gain": 0.3958071642068621,
+        "standard_sum": 2408378.8052999973,
+        "player_sum": 1455125.2200382948,
+        "elements": 113246208,
+        "cases": 144
+      },
+      "linear_component_macro_gain": 0.4280253439203508,
+      "attention_causal": {
+        "macro_gain": 0.3989480886915117,
+        "global_gain": 0.4236108389960971,
+        "standard_sum": 25864.399427503347,
+        "player_sum": 14907.959485888481,
+        "elements": 12582912,
+        "cases": 24
+      },
+      "timing": {
+        "wall_seconds": 66.84391660004621,
+        "algorithm_stage_seconds": 66.8392778999987,
+        "calibration_seconds": 53.53628819977166,
+        "dynamic_seconds": 10.199543000548147,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 144,
+          "hif4_calibration_attention": 24,
+          "hif4_dynamic_quantize_activation": 576,
+          "hif4_dynamic_quantize_q": 96,
+          "hif4_dynamic_quantize_k": 96,
+          "hif4_dynamic_quantize_v": 96
+        },
+        "nested_api_calls": {
+          "hif4_calibration_and_quantize_weight": 0,
+          "hif4_calibration_attention": 0,
+          "hif4_dynamic_quantize_activation": 0,
+          "hif4_dynamic_quantize_q": 84,
+          "hif4_dynamic_quantize_k": 84,
+          "hif4_dynamic_quantize_v": 42
+        },
+        "under_300_seconds": true
+      }
+    },
+    {
+      "candidate": "c40",
+      "source": "D:\\工作内容\\AI竞赛\\solutions\\20260828_v032_c40-robust-blockldlq_official-score14432_time216.667s\\solution.py",
+      "source_sha256": "d24bc94f513907cbe97b43865973d1498133d8b9264faf12661836ff65aab656",
+      "official_score": 14432,
+      "official_time": 216.667,
+      "model": "gpt2-medium",
+      "linear_by_role": {
+        "q": {
+          "macro_gain": 0.5143142955683362,
+          "global_gain": 0.5401916509487888,
+          "standard_sum": 303459.4712982178,
+          "player_sum": 139533.1985015869,
+          "elements": 12582912,
+          "cases": 24
+        },
+        "k": {
+          "macro_gain": 0.5293561070800318,
+          "global_gain": 0.564283874468579,
+          "standard_sum": 448244.3471984863,
+          "player_sum": 195307.29025268555,
+          "elements": 12582912,
+          "cases": 24
+        },
+        "v": {
+          "macro_gain": 0.48557114240420507,
+          "global_gain": 0.45631598965097064,
+          "standard_sum": 194275.20018196106,
+          "player_sum": 105624.31994628906,
+          "elements": 12582912,
+          "cases": 24
+        },
+        "o": {
+          "macro_gain": 0.2624018649353079,
+          "global_gain": 0.44671462964950337,
+          "standard_sum": 244561.13403344154,
+          "player_sum": 135312.09761703014,
+          "elements": 12582912,
+          "cases": 24
+        },
+        "fc": {
+          "macro_gain": 0.34014358056039934,
+          "global_gain": 0.3361538994245893,
+          "standard_sum": 591642.5832519531,
+          "player_sum": 392759.6218261719,
+          "elements": 50331648,
+          "cases": 24
+        },
+        "proj": {
+          "macro_gain": 0.18530148767461166,
+          "global_gain": 0.13007464163015223,
+          "standard_sum": 626196.0693359375,
+          "player_sum": 544743.8400268555,
+          "elements": 12582912,
+          "cases": 24
+        }
+      },
+      "linear_by_group": {
+        "q": {
+          "macro_gain": 0.5143142955683362,
+          "global_gain": 0.5401916509487888,
+          "standard_sum": 303459.4712982178,
+          "player_sum": 139533.1985015869,
+          "elements": 12582912,
+          "cases": 24
+        },
+        "k": {
+          "macro_gain": 0.5293561070800318,
+          "global_gain": 0.564283874468579,
+          "standard_sum": 448244.3471984863,
+          "player_sum": 195307.29025268555,
+          "elements": 12582912,
+          "cases": 24
+        },
+        "v": {
+          "macro_gain": 0.48557114240420507,
+          "global_gain": 0.45631598965097064,
+          "standard_sum": 194275.20018196106,
+          "player_sum": 105624.31994628906,
+          "elements": 12582912,
+          "cases": 24
+        },
+        "o": {
+          "macro_gain": 0.2624018649353079,
+          "global_gain": 0.44671462964950337,
+          "standard_sum": 244561.13403344154,
+          "player_sum": 135312.09761703014,
+          "elements": 12582912,
+          "cases": 24
+        },
+        "fc": {
+          "macro_gain": 0.34014358056039934,
+          "global_gain": 0.3361538994245893,
+          "standard_sum": 591642.5832519531,
+          "player_sum": 392759.6218261719,
+          "elements": 50331648,
+          "cases": 24
+        },
+        "proj": {
+          "macro_gain": 0.18530148767461166,
+          "global_gain": 0.13007464163015223,
+          "standard_sum": 626196.0693359375,
+          "player_sum": 544743.8400268555,
+          "elements": 12582912,
+          "cases": 24
+        }
+      },
+      "linear": {
+        "macro_gain": 0.38618141303714865,
+        "global_gain": 0.37166015377629985,
+        "standard_sum": 2408378.8052999973,
+        "player_sum": 1513280.368170619,
+        "elements": 113246208,
+        "cases": 144
+      },
+      "linear_component_macro_gain": 0.4122891142954306,
+      "attention_causal": {
+        "macro_gain": 0.3989480886915117,
+        "global_gain": 0.4236108389960971,
+        "standard_sum": 25864.399427503347,
+        "player_sum": 14907.959485888481,
+        "elements": 12582912,
+        "cases": 24
+      },
+      "timing": {
+        "wall_seconds": 118.60647729999619,
+        "algorithm_stage_seconds": 118.60134120000293,
+        "calibration_seconds": 104.73782859998755,
+        "dynamic_seconds": 10.62070200080052,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 144,
+          "hif4_calibration_attention": 24,
+          "hif4_dynamic_quantize_activation": 576,
+          "hif4_dynamic_quantize_q": 96,
+          "hif4_dynamic_quantize_k": 96,
+          "hif4_dynamic_quantize_v": 96
+        },
+        "nested_api_calls": {
+          "hif4_calibration_and_quantize_weight": 0,
+          "hif4_calibration_attention": 0,
+          "hif4_dynamic_quantize_activation": 0,
+          "hif4_dynamic_quantize_q": 84,
+          "hif4_dynamic_quantize_k": 84,
+          "hif4_dynamic_quantize_v": 42
+        },
+        "under_300_seconds": true
+      }
+    },
+    {
+      "candidate": "c21",
+      "source": "D:\\工作内容\\AI竞赛\\solutions\\20260827_v025_c21c-compliance-baseline\\solution.py",
+      "source_sha256": "83ab4864254f80d221bb491bdef89f8c9ab8e83534fd62d4dd5e0c1c292fea12",
+      "official_score": 14437,
+      "official_time": 166.6,
+      "model": "opt-125m",
+      "linear_by_role": {
+        "q": {
+          "macro_gain": 0.49093869068568385,
+          "global_gain": 0.5303570017383624,
+          "standard_sum": 85763.07833862305,
+          "player_sum": 40278.02925109863,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "k": {
+          "macro_gain": 0.5155483023011851,
+          "global_gain": 0.5454181315221686,
+          "standard_sum": 96120.21844482422,
+          "player_sum": 43694.50849914551,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "v": {
+          "macro_gain": 0.5120373084541373,
+          "global_gain": 0.48950634234703216,
+          "standard_sum": 6732.982430934906,
+          "player_sum": 3437.144828081131,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "o": {
+          "macro_gain": 0.2844269770721389,
+          "global_gain": 0.14379501052812738,
+          "standard_sum": 153.41749090701342,
+          "player_sum": 131.35682118684053,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "fc": {
+          "macro_gain": 0.4495020259182791,
+          "global_gain": 0.44864640304504144,
+          "standard_sum": 21381.304527282715,
+          "player_sum": 11788.659158706665,
+          "elements": 18874368,
+          "cases": 12
+        },
+        "proj": {
+          "macro_gain": -1.0304417089598281,
+          "global_gain": 0.2996817352655943,
+          "standard_sum": 2180.8609258532524,
+          "player_sum": 1527.2967392206192,
+          "elements": 4718592,
+          "cases": 12
+        }
+      },
+      "linear_by_group": {
+        "q": {
+          "macro_gain": 0.49093869068568385,
+          "global_gain": 0.5303570017383624,
+          "standard_sum": 85763.07833862305,
+          "player_sum": 40278.02925109863,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "k": {
+          "macro_gain": 0.5155483023011851,
+          "global_gain": 0.5454181315221686,
+          "standard_sum": 96120.21844482422,
+          "player_sum": 43694.50849914551,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "v": {
+          "macro_gain": 0.5120373084541373,
+          "global_gain": 0.48950634234703216,
+          "standard_sum": 6732.982430934906,
+          "player_sum": 3437.144828081131,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "o": {
+          "macro_gain": 0.2844269770721389,
+          "global_gain": 0.14379501052812738,
+          "standard_sum": 153.41749090701342,
+          "player_sum": 131.35682118684053,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "fc": {
+          "macro_gain": 0.4495020259182791,
+          "global_gain": 0.44864640304504144,
+          "standard_sum": 21381.304527282715,
+          "player_sum": 11788.659158706665,
+          "elements": 18874368,
+          "cases": 12
+        },
+        "proj": {
+          "macro_gain": -1.0304417089598281,
+          "global_gain": 0.2996817352655943,
+          "standard_sum": 2180.8609258532524,
+          "player_sum": 1527.2967392206192,
+          "elements": 4718592,
+          "cases": 12
+        }
+      },
+      "linear": {
+        "macro_gain": 0.203668599245266,
+        "global_gain": 0.5250030105129115,
+        "standard_sum": 212331.86215842515,
+        "player_sum": 100856.9952974394,
+        "elements": 42467328,
+        "cases": 72
+      },
+      "linear_component_macro_gain": 0.409567437407721,
+      "attention_causal": {
+        "macro_gain": 0.4212616768641338,
+        "global_gain": 0.4179407678463836,
+        "standard_sum": 760.2046943306923,
+        "player_sum": 442.4841606616974,
+        "elements": 4718592,
+        "cases": 12
+      },
+      "timing": {
+        "wall_seconds": 26.76883130002534,
+        "algorithm_stage_seconds": 26.761257599981036,
+        "calibration_seconds": 20.708041299658362,
+        "dynamic_seconds": 4.598114299122244,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 72,
+          "hif4_calibration_attention": 12,
+          "hif4_dynamic_quantize_activation": 288,
+          "hif4_dynamic_quantize_q": 48,
+          "hif4_dynamic_quantize_k": 48,
+          "hif4_dynamic_quantize_v": 48
+        },
+        "nested_api_calls": {
+          "hif4_calibration_and_quantize_weight": 0,
+          "hif4_calibration_attention": 0,
+          "hif4_dynamic_quantize_activation": 0,
+          "hif4_dynamic_quantize_q": 40,
+          "hif4_dynamic_quantize_k": 40,
+          "hif4_dynamic_quantize_v": 20
+        },
+        "under_300_seconds": true
+      }
+    },
+    {
+      "candidate": "c38",
+      "source": "D:\\工作内容\\AI竞赛\\solutions\\20260828_v030_c38-beam2-fullcov-official14092_time170.6s\\solution.py",
+      "source_sha256": "648a27b3560ef7f5d939cd409301e445e5065047cbd5438c1a73a013730e467f",
+      "official_score": 14092,
+      "official_time": 170.57,
+      "model": "opt-125m",
+      "linear_by_role": {
+        "q": {
+          "macro_gain": 0.4690331686103826,
+          "global_gain": 0.5124529280273583,
+          "standard_sum": 85763.07833862305,
+          "player_sum": 41813.53772735596,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "k": {
+          "macro_gain": 0.5014234717534471,
+          "global_gain": 0.5329079793309142,
+          "standard_sum": 96120.21844482422,
+          "player_sum": 44896.987060546875,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "v": {
+          "macro_gain": 0.486092374801058,
+          "global_gain": 0.4552024825044904,
+          "standard_sum": 6732.982430934906,
+          "player_sum": 3668.112113714218,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "o": {
+          "macro_gain": 0.1363036114678249,
+          "global_gain": 0.013112527808291788,
+          "standard_sum": 153.41749090701342,
+          "player_sum": 151.40579979121685,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "fc": {
+          "macro_gain": 0.4460275544375793,
+          "global_gain": 0.43524541335378236,
+          "standard_sum": 21381.304527282715,
+          "player_sum": 12075.189800262451,
+          "elements": 18874368,
+          "cases": 12
+        },
+        "proj": {
+          "macro_gain": -1.0766863843651036,
+          "global_gain": 0.2643626269900983,
+          "standard_sum": 2180.8609258532524,
+          "player_sum": 1604.3228023946285,
+          "elements": 4718592,
+          "cases": 12
+        }
+      },
+      "linear_by_group": {
+        "q": {
+          "macro_gain": 0.4690331686103826,
+          "global_gain": 0.5124529280273583,
+          "standard_sum": 85763.07833862305,
+          "player_sum": 41813.53772735596,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "k": {
+          "macro_gain": 0.5014234717534471,
+          "global_gain": 0.5329079793309142,
+          "standard_sum": 96120.21844482422,
+          "player_sum": 44896.987060546875,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "v": {
+          "macro_gain": 0.486092374801058,
+          "global_gain": 0.4552024825044904,
+          "standard_sum": 6732.982430934906,
+          "player_sum": 3668.112113714218,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "o": {
+          "macro_gain": 0.1363036114678249,
+          "global_gain": 0.013112527808291788,
+          "standard_sum": 153.41749090701342,
+          "player_sum": 151.40579979121685,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "fc": {
+          "macro_gain": 0.4460275544375793,
+          "global_gain": 0.43524541335378236,
+          "standard_sum": 21381.304527282715,
+          "player_sum": 12075.189800262451,
+          "elements": 18874368,
+          "cases": 12
+        },
+        "proj": {
+          "macro_gain": -1.0766863843651036,
+          "global_gain": 0.2643626269900983,
+          "standard_sum": 2180.8609258532524,
+          "player_sum": 1604.3228023946285,
+          "elements": 4718592,
+          "cases": 12
+        }
+      },
+      "linear": {
+        "macro_gain": 0.16036563278419808,
+        "global_gain": 0.5092137645064665,
+        "standard_sum": 212331.86215842515,
+        "player_sum": 104209.55530406535,
+        "elements": 42467328,
+        "cases": 72
+      },
+      "linear_component_macro_gain": 0.3688806596691559,
+      "attention_causal": {
+        "macro_gain": 0.4212616768641338,
+        "global_gain": 0.4179407678463836,
+        "standard_sum": 760.2046943306923,
+        "player_sum": 442.4841606616974,
+        "elements": 4718592,
+        "cases": 12
+      },
+      "timing": {
+        "wall_seconds": 32.46712500002468,
+        "algorithm_stage_seconds": 32.46276999998372,
+        "calibration_seconds": 24.513579199905507,
+        "dynamic_seconds": 6.4960027997149155,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 72,
+          "hif4_calibration_attention": 12,
+          "hif4_dynamic_quantize_activation": 288,
+          "hif4_dynamic_quantize_q": 48,
+          "hif4_dynamic_quantize_k": 48,
+          "hif4_dynamic_quantize_v": 48
+        },
+        "nested_api_calls": {
+          "hif4_calibration_and_quantize_weight": 0,
+          "hif4_calibration_attention": 0,
+          "hif4_dynamic_quantize_activation": 0,
+          "hif4_dynamic_quantize_q": 40,
+          "hif4_dynamic_quantize_k": 40,
+          "hif4_dynamic_quantize_v": 20
+        },
+        "under_300_seconds": true
+      }
+    },
+    {
+      "candidate": "c39",
+      "source": "D:\\工作内容\\AI竞赛\\solutions\\20260828_v031_c39-fw-official14613_time159.2s\\solution.py",
+      "source_sha256": "b8c9f2a4eb6553367dd17e73d30836ac8911dbef33759fa8cf95e8c629317a71",
+      "official_score": 14613,
+      "official_time": 159.2,
+      "model": "opt-125m",
+      "linear_by_role": {
+        "q": {
+          "macro_gain": 0.49093869068568385,
+          "global_gain": 0.5303570017383624,
+          "standard_sum": 85763.07833862305,
+          "player_sum": 40278.02925109863,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "k": {
+          "macro_gain": 0.5155483023011851,
+          "global_gain": 0.5454181315221686,
+          "standard_sum": 96120.21844482422,
+          "player_sum": 43694.50849914551,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "v": {
+          "macro_gain": 0.5120373084541373,
+          "global_gain": 0.48950634234703216,
+          "standard_sum": 6732.982430934906,
+          "player_sum": 3437.144828081131,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "o": {
+          "macro_gain": 0.2844269770721389,
+          "global_gain": 0.14379501052812738,
+          "standard_sum": 153.41749090701342,
+          "player_sum": 131.35682118684053,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "fc": {
+          "macro_gain": 0.4532498336770312,
+          "global_gain": 0.4495061792446559,
+          "standard_sum": 21381.304527282715,
+          "player_sum": 11770.276021957397,
+          "elements": 18874368,
+          "cases": 12
+        },
+        "proj": {
+          "macro_gain": -1.0763303168375573,
+          "global_gain": 0.25657977020113243,
+          "standard_sum": 2180.8609258532524,
+          "player_sum": 1621.296130657196,
+          "elements": 4718592,
+          "cases": 12
+        }
+      },
+      "linear_by_group": {
+        "q": {
+          "macro_gain": 0.49093869068568385,
+          "global_gain": 0.5303570017383624,
+          "standard_sum": 85763.07833862305,
+          "player_sum": 40278.02925109863,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "k": {
+          "macro_gain": 0.5155483023011851,
+          "global_gain": 0.5454181315221686,
+          "standard_sum": 96120.21844482422,
+          "player_sum": 43694.50849914551,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "v": {
+          "macro_gain": 0.5120373084541373,
+          "global_gain": 0.48950634234703216,
+          "standard_sum": 6732.982430934906,
+          "player_sum": 3437.144828081131,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "o": {
+          "macro_gain": 0.2844269770721389,
+          "global_gain": 0.14379501052812738,
+          "standard_sum": 153.41749090701342,
+          "player_sum": 131.35682118684053,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "fc": {
+          "macro_gain": 0.4532498336770312,
+          "global_gain": 0.4495061792446559,
+          "standard_sum": 21381.304527282715,
+          "player_sum": 11770.276021957397,
+          "elements": 18874368,
+          "cases": 12
+        },
+        "proj": {
+          "macro_gain": -1.0763303168375573,
+          "global_gain": 0.25657977020113243,
+          "standard_sum": 2180.8609258532524,
+          "player_sum": 1621.296130657196,
+          "elements": 4718592,
+          "cases": 12
+        }
+      },
+      "linear": {
+        "macro_gain": 0.19664513255876984,
+        "global_gain": 0.5246468875367427,
+        "standard_sum": 212331.86215842515,
+        "player_sum": 100932.6115521267,
+        "elements": 42467328,
+        "cases": 72
+      },
+      "linear_component_macro_gain": 0.40252707259691317,
+      "attention_causal": {
+        "macro_gain": 0.4212616768641338,
+        "global_gain": 0.4179407678463836,
+        "standard_sum": 760.2046943306923,
+        "player_sum": 442.4841606616974,
+        "elements": 4718592,
+        "cases": 12
+      },
+      "timing": {
+        "wall_seconds": 29.64846540003782,
+        "algorithm_stage_seconds": 29.643870599975344,
+        "calibration_seconds": 23.561271099722944,
+        "dynamic_seconds": 4.585434400069062,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 72,
+          "hif4_calibration_attention": 12,
+          "hif4_dynamic_quantize_activation": 288,
+          "hif4_dynamic_quantize_q": 48,
+          "hif4_dynamic_quantize_k": 48,
+          "hif4_dynamic_quantize_v": 48
+        },
+        "nested_api_calls": {
+          "hif4_calibration_and_quantize_weight": 0,
+          "hif4_calibration_attention": 0,
+          "hif4_dynamic_quantize_activation": 0,
+          "hif4_dynamic_quantize_q": 40,
+          "hif4_dynamic_quantize_k": 40,
+          "hif4_dynamic_quantize_v": 20
+        },
+        "under_300_seconds": true
+      }
+    },
+    {
+      "candidate": "c40",
+      "source": "D:\\工作内容\\AI竞赛\\solutions\\20260828_v032_c40-robust-blockldlq_official-score14432_time216.667s\\solution.py",
+      "source_sha256": "d24bc94f513907cbe97b43865973d1498133d8b9264faf12661836ff65aab656",
+      "official_score": 14432,
+      "official_time": 216.667,
+      "model": "opt-125m",
+      "linear_by_role": {
+        "q": {
+          "macro_gain": 0.49093869068568385,
+          "global_gain": 0.5303570017383624,
+          "standard_sum": 85763.07833862305,
+          "player_sum": 40278.02925109863,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "k": {
+          "macro_gain": 0.5155483023011851,
+          "global_gain": 0.5454181315221686,
+          "standard_sum": 96120.21844482422,
+          "player_sum": 43694.50849914551,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "v": {
+          "macro_gain": 0.5120373084541373,
+          "global_gain": 0.48950634234703216,
+          "standard_sum": 6732.982430934906,
+          "player_sum": 3437.144828081131,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "o": {
+          "macro_gain": 0.2844269770721389,
+          "global_gain": 0.14379501052812738,
+          "standard_sum": 153.41749090701342,
+          "player_sum": 131.35682118684053,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "fc": {
+          "macro_gain": 0.4365281264103223,
+          "global_gain": 0.43053390997103763,
+          "standard_sum": 21381.304527282715,
+          "player_sum": 12175.92788887024,
+          "elements": 18874368,
+          "cases": 12
+        },
+        "proj": {
+          "macro_gain": -1.1472656052322554,
+          "global_gain": 0.19810107714336692,
+          "standard_sum": 2180.8609258532524,
+          "player_sum": 1748.8300273418427,
+          "elements": 4718592,
+          "cases": 12
+        }
+      },
+      "linear_by_group": {
+        "q": {
+          "macro_gain": 0.49093869068568385,
+          "global_gain": 0.5303570017383624,
+          "standard_sum": 85763.07833862305,
+          "player_sum": 40278.02925109863,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "k": {
+          "macro_gain": 0.5155483023011851,
+          "global_gain": 0.5454181315221686,
+          "standard_sum": 96120.21844482422,
+          "player_sum": 43694.50849914551,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "v": {
+          "macro_gain": 0.5120373084541373,
+          "global_gain": 0.48950634234703216,
+          "standard_sum": 6732.982430934906,
+          "player_sum": 3437.144828081131,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "o": {
+          "macro_gain": 0.2844269770721389,
+          "global_gain": 0.14379501052812738,
+          "standard_sum": 153.41749090701342,
+          "player_sum": 131.35682118684053,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "fc": {
+          "macro_gain": 0.4365281264103223,
+          "global_gain": 0.43053390997103763,
+          "standard_sum": 21381.304527282715,
+          "player_sum": 12175.92788887024,
+          "elements": 18874368,
+          "cases": 12
+        },
+        "proj": {
+          "macro_gain": -1.1472656052322554,
+          "global_gain": 0.19810107714336692,
+          "standard_sum": 2180.8609258532524,
+          "player_sum": 1748.8300273418427,
+          "elements": 4718592,
+          "cases": 12
+        }
+      },
+      "linear": {
+        "macro_gain": 0.18203563328186867,
+        "global_gain": 0.5221357911888962,
+        "standard_sum": 212331.86215842515,
+        "player_sum": 101465.7973157242,
+        "elements": 42467328,
+        "cases": 72
+      },
+      "linear_component_macro_gain": 0.3896185788750159,
+      "attention_causal": {
+        "macro_gain": 0.4212616768641338,
+        "global_gain": 0.4179407678463836,
+        "standard_sum": 760.2046943306923,
+        "player_sum": 442.4841606616974,
+        "elements": 4718592,
+        "cases": 12
+      },
+      "timing": {
+        "wall_seconds": 47.90314089995809,
+        "algorithm_stage_seconds": 47.899171600001864,
+        "calibration_seconds": 41.746243299974594,
+        "dynamic_seconds": 4.658418100327253,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 72,
+          "hif4_calibration_attention": 12,
+          "hif4_dynamic_quantize_activation": 288,
+          "hif4_dynamic_quantize_q": 48,
+          "hif4_dynamic_quantize_k": 48,
+          "hif4_dynamic_quantize_v": 48
+        },
+        "nested_api_calls": {
+          "hif4_calibration_and_quantize_weight": 0,
+          "hif4_calibration_attention": 0,
+          "hif4_dynamic_quantize_activation": 0,
+          "hif4_dynamic_quantize_q": 40,
+          "hif4_dynamic_quantize_k": 40,
+          "hif4_dynamic_quantize_v": 20
+        },
+        "under_300_seconds": true
+      }
+    },
+    {
+      "candidate": "c21",
+      "source": "D:\\工作内容\\AI竞赛\\solutions\\20260827_v025_c21c-compliance-baseline\\solution.py",
+      "source_sha256": "83ab4864254f80d221bb491bdef89f8c9ab8e83534fd62d4dd5e0c1c292fea12",
+      "official_score": 14437,
+      "official_time": 166.6,
+      "model": "pythia-160m",
+      "linear_by_role": {
+        "q": {
+          "macro_gain": 0.6739472143070393,
+          "global_gain": 0.8432937935215218,
+          "standard_sum": 42115945.734375,
+          "player_sum": 6599830.0882873535,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "k": {
+          "macro_gain": 0.5609180678032306,
+          "global_gain": 0.805736335472703,
+          "standard_sum": 439793.15634155273,
+          "player_sum": 85435.83018493652,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "v": {
+          "macro_gain": 0.6044973609019012,
+          "global_gain": 0.7447925068729166,
+          "standard_sum": 82572.74638366699,
+          "player_sum": 21073.18360519409,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "o": {
+          "macro_gain": 0.24628389452974353,
+          "global_gain": 0.2740152018934281,
+          "standard_sum": 1568.4459085464478,
+          "player_sum": 1138.6678862571716,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "fc": {
+          "macro_gain": 0.4142744809118512,
+          "global_gain": 0.4092635120045447,
+          "standard_sum": 183216.66009521484,
+          "player_sum": 108232.7663269043,
+          "elements": 18874368,
+          "cases": 12
+        },
+        "proj": {
+          "macro_gain": 0.37908045858372125,
+          "global_gain": 0.5629691260409836,
+          "standard_sum": 19025.622794151306,
+          "player_sum": 8314.78455734253,
+          "elements": 4718592,
+          "cases": 12
+        }
+      },
+      "linear_by_group": {
+        "q": {
+          "macro_gain": 0.6739472143070393,
+          "global_gain": 0.8432937935215218,
+          "standard_sum": 42115945.734375,
+          "player_sum": 6599830.0882873535,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "k": {
+          "macro_gain": 0.5609180678032306,
+          "global_gain": 0.805736335472703,
+          "standard_sum": 439793.15634155273,
+          "player_sum": 85435.83018493652,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "v": {
+          "macro_gain": 0.6044973609019012,
+          "global_gain": 0.7447925068729166,
+          "standard_sum": 82572.74638366699,
+          "player_sum": 21073.18360519409,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "o": {
+          "macro_gain": 0.24628389452974353,
+          "global_gain": 0.2740152018934281,
+          "standard_sum": 1568.4459085464478,
+          "player_sum": 1138.6678862571716,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "fc": {
+          "macro_gain": 0.4142744809118512,
+          "global_gain": 0.4092635120045447,
+          "standard_sum": 183216.66009521484,
+          "player_sum": 108232.7663269043,
+          "elements": 18874368,
+          "cases": 12
+        },
+        "proj": {
+          "macro_gain": 0.37908045858372125,
+          "global_gain": 0.5629691260409836,
+          "standard_sum": 19025.622794151306,
+          "player_sum": 8314.78455734253,
+          "elements": 4718592,
+          "cases": 12
+        }
+      },
+      "linear": {
+        "macro_gain": 0.4798335795062479,
+        "global_gain": 0.8407169172767258,
+        "standard_sum": 42842122.36589813,
+        "player_sum": 6824025.320847988,
+        "elements": 42467328,
+        "cases": 72
+      },
+      "linear_component_macro_gain": 0.6066784126343496,
+      "attention_causal": {
+        "macro_gain": 0.8366265371017706,
+        "global_gain": 0.8752912879026589,
+        "standard_sum": 746455.8286056519,
+        "player_sum": 93089.54502296448,
+        "elements": 4718592,
+        "cases": 12
+      },
+      "timing": {
+        "wall_seconds": 27.916240200051107,
+        "algorithm_stage_seconds": 27.90700059995288,
+        "calibration_seconds": 21.61554560024524,
+        "dynamic_seconds": 4.788848000520375,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 72,
+          "hif4_calibration_attention": 12,
+          "hif4_dynamic_quantize_activation": 288,
+          "hif4_dynamic_quantize_q": 48,
+          "hif4_dynamic_quantize_k": 48,
+          "hif4_dynamic_quantize_v": 48
+        },
+        "nested_api_calls": {
+          "hif4_calibration_and_quantize_weight": 0,
+          "hif4_calibration_attention": 0,
+          "hif4_dynamic_quantize_activation": 0,
+          "hif4_dynamic_quantize_q": 48,
+          "hif4_dynamic_quantize_k": 48,
+          "hif4_dynamic_quantize_v": 24
+        },
+        "under_300_seconds": true
+      }
+    },
+    {
+      "candidate": "c38",
+      "source": "D:\\工作内容\\AI竞赛\\solutions\\20260828_v030_c38-beam2-fullcov-official14092_time170.6s\\solution.py",
+      "source_sha256": "648a27b3560ef7f5d939cd409301e445e5065047cbd5438c1a73a013730e467f",
+      "official_score": 14092,
+      "official_time": 170.57,
+      "model": "pythia-160m",
+      "linear_by_role": {
+        "q": {
+          "macro_gain": 0.7075785736213204,
+          "global_gain": 0.8850314478415836,
+          "standard_sum": 42115945.734375,
+          "player_sum": 4842009.303863525,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "k": {
+          "macro_gain": 0.5575442337113926,
+          "global_gain": 0.815830861813232,
+          "standard_sum": 439793.15634155273,
+          "player_sum": 80996.3265838623,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "v": {
+          "macro_gain": 0.5920057021665635,
+          "global_gain": 0.7382546035322484,
+          "standard_sum": 82572.74638366699,
+          "player_sum": 21613.036239624023,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "o": {
+          "macro_gain": 0.07798241076545182,
+          "global_gain": 0.12596554532096083,
+          "standard_sum": 1568.4459085464478,
+          "player_sum": 1370.8757643699646,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "fc": {
+          "macro_gain": 0.38999965457079605,
+          "global_gain": 0.3853152046860088,
+          "standard_sum": 183216.66009521484,
+          "player_sum": 112620.49520874023,
+          "elements": 18874368,
+          "cases": 12
+        },
+        "proj": {
+          "macro_gain": 0.3579515004961346,
+          "global_gain": 0.543869997860637,
+          "standard_sum": 19025.622794151306,
+          "player_sum": 8678.15736579895,
+          "elements": 4718592,
+          "cases": 12
+        }
+      },
+      "linear_by_group": {
+        "q": {
+          "macro_gain": 0.7075785736213204,
+          "global_gain": 0.8850314478415836,
+          "standard_sum": 42115945.734375,
+          "player_sum": 4842009.303863525,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "k": {
+          "macro_gain": 0.5575442337113926,
+          "global_gain": 0.815830861813232,
+          "standard_sum": 439793.15634155273,
+          "player_sum": 80996.3265838623,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "v": {
+          "macro_gain": 0.5920057021665635,
+          "global_gain": 0.7382546035322484,
+          "standard_sum": 82572.74638366699,
+          "player_sum": 21613.036239624023,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "o": {
+          "macro_gain": 0.07798241076545182,
+          "global_gain": 0.12596554532096083,
+          "standard_sum": 1568.4459085464478,
+          "player_sum": 1370.8757643699646,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "fc": {
+          "macro_gain": 0.38999965457079605,
+          "global_gain": 0.3853152046860088,
+          "standard_sum": 183216.66009521484,
+          "player_sum": 112620.49520874023,
+          "elements": 18874368,
+          "cases": 12
+        },
+        "proj": {
+          "macro_gain": 0.3579515004961346,
+          "global_gain": 0.543869997860637,
+          "standard_sum": 19025.622794151306,
+          "player_sum": 8678.15736579895,
+          "elements": 4718592,
+          "cases": 12
+        }
+      },
+      "linear": {
+        "macro_gain": 0.4471770125552765,
+        "global_gain": 0.8817218215347,
+        "standard_sum": 42842122.36589813,
+        "player_sum": 5067288.195025921,
+        "elements": 42467328,
+        "cases": 72
+      },
+      "linear_component_macro_gain": 0.5823779435091118,
+      "attention_causal": {
+        "macro_gain": 0.8366265371017706,
+        "global_gain": 0.8752912879026589,
+        "standard_sum": 746455.8286056519,
+        "player_sum": 93089.54502296448,
+        "elements": 4718592,
+        "cases": 12
+      },
+      "timing": {
+        "wall_seconds": 32.96415670006536,
+        "algorithm_stage_seconds": 32.959519999916665,
+        "calibration_seconds": 24.823576899711043,
+        "dynamic_seconds": 6.67796480061952,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 72,
+          "hif4_calibration_attention": 12,
+          "hif4_dynamic_quantize_activation": 288,
+          "hif4_dynamic_quantize_q": 48,
+          "hif4_dynamic_quantize_k": 48,
+          "hif4_dynamic_quantize_v": 48
+        },
+        "nested_api_calls": {
+          "hif4_calibration_and_quantize_weight": 0,
+          "hif4_calibration_attention": 0,
+          "hif4_dynamic_quantize_activation": 0,
+          "hif4_dynamic_quantize_q": 48,
+          "hif4_dynamic_quantize_k": 48,
+          "hif4_dynamic_quantize_v": 24
+        },
+        "under_300_seconds": true
+      }
+    },
+    {
+      "candidate": "c39",
+      "source": "D:\\工作内容\\AI竞赛\\solutions\\20260828_v031_c39-fw-official14613_time159.2s\\solution.py",
+      "source_sha256": "b8c9f2a4eb6553367dd17e73d30836ac8911dbef33759fa8cf95e8c629317a71",
+      "official_score": 14613,
+      "official_time": 159.2,
+      "model": "pythia-160m",
+      "linear_by_role": {
+        "q": {
+          "macro_gain": 0.6739472143070393,
+          "global_gain": 0.8432937935215218,
+          "standard_sum": 42115945.734375,
+          "player_sum": 6599830.0882873535,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "k": {
+          "macro_gain": 0.5609180678032306,
+          "global_gain": 0.805736335472703,
+          "standard_sum": 439793.15634155273,
+          "player_sum": 85435.83018493652,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "v": {
+          "macro_gain": 0.6044973609019012,
+          "global_gain": 0.7447925068729166,
+          "standard_sum": 82572.74638366699,
+          "player_sum": 21073.18360519409,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "o": {
+          "macro_gain": 0.24628389452974353,
+          "global_gain": 0.2740152018934281,
+          "standard_sum": 1568.4459085464478,
+          "player_sum": 1138.6678862571716,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "fc": {
+          "macro_gain": 0.41084366692007257,
+          "global_gain": 0.4062689834409985,
+          "standard_sum": 183216.66009521484,
+          "player_sum": 108781.41384887695,
+          "elements": 18874368,
+          "cases": 12
+        },
+        "proj": {
+          "macro_gain": 0.3585783680115891,
+          "global_gain": 0.5442491614442174,
+          "standard_sum": 19025.622794151306,
+          "player_sum": 8670.943542480469,
+          "elements": 4718592,
+          "cases": 12
+        }
+      },
+      "linear_by_group": {
+        "q": {
+          "macro_gain": 0.6739472143070393,
+          "global_gain": 0.8432937935215218,
+          "standard_sum": 42115945.734375,
+          "player_sum": 6599830.0882873535,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "k": {
+          "macro_gain": 0.5609180678032306,
+          "global_gain": 0.805736335472703,
+          "standard_sum": 439793.15634155273,
+          "player_sum": 85435.83018493652,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "v": {
+          "macro_gain": 0.6044973609019012,
+          "global_gain": 0.7447925068729166,
+          "standard_sum": 82572.74638366699,
+          "player_sum": 21073.18360519409,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "o": {
+          "macro_gain": 0.24628389452974353,
+          "global_gain": 0.2740152018934281,
+          "standard_sum": 1568.4459085464478,
+          "player_sum": 1138.6678862571716,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "fc": {
+          "macro_gain": 0.41084366692007257,
+          "global_gain": 0.4062689834409985,
+          "standard_sum": 183216.66009521484,
+          "player_sum": 108781.41384887695,
+          "elements": 18874368,
+          "cases": 12
+        },
+        "proj": {
+          "macro_gain": 0.3585783680115891,
+          "global_gain": 0.5442491614442174,
+          "standard_sum": 19025.622794151306,
+          "player_sum": 8670.943542480469,
+          "elements": 4718592,
+          "cases": 12
+        }
+      },
+      "linear": {
+        "macro_gain": 0.47584476207892945,
+        "global_gain": 0.8406957977229516,
+        "standard_sum": 42842122.36589813,
+        "player_sum": 6824930.127355099,
+        "elements": 42467328,
+        "cases": 72
+      },
+      "linear_component_macro_gain": 0.6030593304409643,
+      "attention_causal": {
+        "macro_gain": 0.8366265371017706,
+        "global_gain": 0.8752912879026589,
+        "standard_sum": 746455.8286056519,
+        "player_sum": 93089.54502296448,
+        "elements": 4718592,
+        "cases": 12
+      },
+      "timing": {
+        "wall_seconds": 29.992722299997695,
+        "algorithm_stage_seconds": 29.9885792999994,
+        "calibration_seconds": 23.894312899326906,
+        "dynamic_seconds": 4.64192230196204,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 72,
+          "hif4_calibration_attention": 12,
+          "hif4_dynamic_quantize_activation": 288,
+          "hif4_dynamic_quantize_q": 48,
+          "hif4_dynamic_quantize_k": 48,
+          "hif4_dynamic_quantize_v": 48
+        },
+        "nested_api_calls": {
+          "hif4_calibration_and_quantize_weight": 0,
+          "hif4_calibration_attention": 0,
+          "hif4_dynamic_quantize_activation": 0,
+          "hif4_dynamic_quantize_q": 48,
+          "hif4_dynamic_quantize_k": 48,
+          "hif4_dynamic_quantize_v": 24
+        },
+        "under_300_seconds": true
+      }
+    },
+    {
+      "candidate": "c40",
+      "source": "D:\\工作内容\\AI竞赛\\solutions\\20260828_v032_c40-robust-blockldlq_official-score14432_time216.667s\\solution.py",
+      "source_sha256": "d24bc94f513907cbe97b43865973d1498133d8b9264faf12661836ff65aab656",
+      "official_score": 14432,
+      "official_time": 216.667,
+      "model": "pythia-160m",
+      "linear_by_role": {
+        "q": {
+          "macro_gain": 0.6739472143070393,
+          "global_gain": 0.8432937935215218,
+          "standard_sum": 42115945.734375,
+          "player_sum": 6599830.0882873535,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "k": {
+          "macro_gain": 0.5609180678032306,
+          "global_gain": 0.805736335472703,
+          "standard_sum": 439793.15634155273,
+          "player_sum": 85435.83018493652,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "v": {
+          "macro_gain": 0.6044973609019012,
+          "global_gain": 0.7447925068729166,
+          "standard_sum": 82572.74638366699,
+          "player_sum": 21073.18360519409,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "o": {
+          "macro_gain": 0.24628389452974353,
+          "global_gain": 0.2740152018934281,
+          "standard_sum": 1568.4459085464478,
+          "player_sum": 1138.6678862571716,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "fc": {
+          "macro_gain": 0.3891513274925083,
+          "global_gain": 0.3839669734034998,
+          "standard_sum": 183216.66009521484,
+          "player_sum": 112867.51364135742,
+          "elements": 18874368,
+          "cases": 12
+        },
+        "proj": {
+          "macro_gain": 0.3319903499799686,
+          "global_gain": 0.5222712573339541,
+          "standard_sum": 19025.622794151306,
+          "player_sum": 9089.086855888367,
+          "elements": 4718592,
+          "cases": 12
+        }
+      },
+      "linear_by_group": {
+        "q": {
+          "macro_gain": 0.6739472143070393,
+          "global_gain": 0.8432937935215218,
+          "standard_sum": 42115945.734375,
+          "player_sum": 6599830.0882873535,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "k": {
+          "macro_gain": 0.5609180678032306,
+          "global_gain": 0.805736335472703,
+          "standard_sum": 439793.15634155273,
+          "player_sum": 85435.83018493652,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "v": {
+          "macro_gain": 0.6044973609019012,
+          "global_gain": 0.7447925068729166,
+          "standard_sum": 82572.74638366699,
+          "player_sum": 21073.18360519409,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "o": {
+          "macro_gain": 0.24628389452974353,
+          "global_gain": 0.2740152018934281,
+          "standard_sum": 1568.4459085464478,
+          "player_sum": 1138.6678862571716,
+          "elements": 4718592,
+          "cases": 12
+        },
+        "fc": {
+          "macro_gain": 0.3891513274925083,
+          "global_gain": 0.3839669734034998,
+          "standard_sum": 183216.66009521484,
+          "player_sum": 112867.51364135742,
+          "elements": 18874368,
+          "cases": 12
+        },
+        "proj": {
+          "macro_gain": 0.3319903499799686,
+          "global_gain": 0.5222712573339541,
+          "standard_sum": 19025.622794151306,
+          "player_sum": 9089.086855888367,
+          "elements": 4718592,
+          "cases": 12
+        }
+      },
+      "linear": {
+        "macro_gain": 0.467798035835732,
+        "global_gain": 0.8405906618693302,
+        "standard_sum": 42842122.36589813,
+        "player_sum": 6829434.370460987,
+        "elements": 42467328,
+        "cases": 72
+      },
+      "linear_component_macro_gain": 0.5956793447496705,
+      "attention_causal": {
+        "macro_gain": 0.8366265371017706,
+        "global_gain": 0.8752912879026589,
+        "standard_sum": 746455.8286056519,
+        "player_sum": 93089.54502296448,
+        "elements": 4718592,
+        "cases": 12
+      },
+      "timing": {
+        "wall_seconds": 48.76363079994917,
+        "algorithm_stage_seconds": 48.76003090001177,
+        "calibration_seconds": 42.548291700775735,
+        "dynamic_seconds": 4.748318299651146,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 72,
+          "hif4_calibration_attention": 12,
+          "hif4_dynamic_quantize_activation": 288,
+          "hif4_dynamic_quantize_q": 48,
+          "hif4_dynamic_quantize_k": 48,
+          "hif4_dynamic_quantize_v": 48
+        },
+        "nested_api_calls": {
+          "hif4_calibration_and_quantize_weight": 0,
+          "hif4_calibration_attention": 0,
+          "hif4_dynamic_quantize_activation": 0,
+          "hif4_dynamic_quantize_q": 48,
+          "hif4_dynamic_quantize_k": 48,
+          "hif4_dynamic_quantize_v": 24
+        },
+        "under_300_seconds": true
+      }
+    },
+    {
+      "candidate": "c21",
+      "source": "D:\\工作内容\\AI竞赛\\solutions\\20260827_v025_c21c-compliance-baseline\\solution.py",
+      "source_sha256": "83ab4864254f80d221bb491bdef89f8c9ab8e83534fd62d4dd5e0c1c292fea12",
+      "official_score": 14437,
+      "official_time": 166.6,
+      "model": "qwen2.5-0.5b",
+      "linear_by_role": {
+        "q": {
+          "macro_gain": 0.5572239756654102,
+          "global_gain": 0.5705699899700746,
+          "standard_sum": 147206.5283985138,
+          "player_sum": 63214.90096664429,
+          "elements": 11010048,
+          "cases": 24
+        },
+        "k": {
+          "macro_gain": 0.5062112318458768,
+          "global_gain": 0.5068354993369126,
+          "standard_sum": 28453.021995544434,
+          "player_sum": 14032.020384788513,
+          "elements": 1572864,
+          "cases": 24
+        },
+        "v": {
+          "macro_gain": 0.5474701366453932,
+          "global_gain": 0.5120815184713959,
+          "standard_sum": 20074.932122260332,
+          "player_sum": 9794.930397883058,
+          "elements": 1572864,
+          "cases": 24
+        },
+        "o": {
+          "macro_gain": 0.3555699257012162,
+          "global_gain": 0.38347561440804917,
+          "standard_sum": 7638.461301242933,
+          "player_sum": 4709.297660616692,
+          "elements": 11010048,
+          "cases": 24
+        },
+        "fc_gate": {
+          "macro_gain": 0.4376316859823739,
+          "global_gain": 0.44189070561143584,
+          "standard_sum": 641385.6382446289,
+          "player_sum": 357963.2859916687,
+          "elements": 59768832,
+          "cases": 24
+        },
+        "fc_up": {
+          "macro_gain": 0.43724663560236143,
+          "global_gain": 0.4273932405096471,
+          "standard_sum": 444894.9437904358,
+          "player_sum": 254749.85207748413,
+          "elements": 59768832,
+          "cases": 24
+        },
+        "proj": {
+          "macro_gain": -0.013660461903315215,
+          "global_gain": -0.549123284757226,
+          "standard_sum": 48701.211228847504,
+          "player_sum": 75444.18031048775,
+          "elements": 11010048,
+          "cases": 24
+        }
+      },
+      "linear_by_group": {
+        "q": {
+          "macro_gain": 0.5572239756654102,
+          "global_gain": 0.5705699899700746,
+          "standard_sum": 147206.5283985138,
+          "player_sum": 63214.90096664429,
+          "elements": 11010048,
+          "cases": 24
+        },
+        "k": {
+          "macro_gain": 0.5062112318458768,
+          "global_gain": 0.5068354993369126,
+          "standard_sum": 28453.021995544434,
+          "player_sum": 14032.020384788513,
+          "elements": 1572864,
+          "cases": 24
+        },
+        "v": {
+          "macro_gain": 0.5474701366453932,
+          "global_gain": 0.5120815184713959,
+          "standard_sum": 20074.932122260332,
+          "player_sum": 9794.930397883058,
+          "elements": 1572864,
+          "cases": 24
+        },
+        "o": {
+          "macro_gain": 0.3555699257012162,
+          "global_gain": 0.38347561440804917,
+          "standard_sum": 7638.461301242933,
+          "player_sum": 4709.297660616692,
+          "elements": 11010048,
+          "cases": 24
+        },
+        "fc": {
+          "macro_gain": 0.4374391607923677,
+          "global_gain": 0.4359531522497797,
+          "standard_sum": 1086280.5820350647,
+          "player_sum": 612713.1380691528,
+          "elements": 119537664,
+          "cases": 48
+        },
+        "proj": {
+          "macro_gain": -0.013660461903315215,
+          "global_gain": -0.549123284757226,
+          "standard_sum": 48701.211228847504,
+          "player_sum": 75444.18031048775,
+          "elements": 11010048,
+          "cases": 24
+        }
+      },
+      "linear": {
+        "macro_gain": 0.40395616136275947,
+        "global_gain": 0.4172632664712604,
+        "standard_sum": 1338354.7370814737,
+        "player_sum": 779908.4677895731,
+        "elements": 155713536,
+        "cases": 168
+      },
+      "linear_component_macro_gain": 0.30996541494649765,
+      "attention_causal": {
+        "macro_gain": 0.6377944330685358,
+        "global_gain": 0.6614430468752772,
+        "standard_sum": 118700.81156682968,
+        "player_sum": 40186.9850974977,
+        "elements": 11010048,
+        "cases": 24
+      },
+      "timing": {
+        "wall_seconds": 65.1092552000191,
+        "algorithm_stage_seconds": 65.10403080005199,
+        "calibration_seconds": 51.98864540073555,
+        "dynamic_seconds": 9.552472001407295,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 168,
+          "hif4_calibration_attention": 24,
+          "hif4_dynamic_quantize_activation": 672,
+          "hif4_dynamic_quantize_q": 96,
+          "hif4_dynamic_quantize_k": 96,
+          "hif4_dynamic_quantize_v": 96
+        },
+        "nested_api_calls": {
+          "hif4_calibration_and_quantize_weight": 0,
+          "hif4_calibration_attention": 0,
+          "hif4_dynamic_quantize_activation": 0,
+          "hif4_dynamic_quantize_q": 84,
+          "hif4_dynamic_quantize_k": 84,
+          "hif4_dynamic_quantize_v": 42
+        },
+        "under_300_seconds": true
+      }
+    },
+    {
+      "candidate": "c38",
+      "source": "D:\\工作内容\\AI竞赛\\solutions\\20260828_v030_c38-beam2-fullcov-official14092_time170.6s\\solution.py",
+      "source_sha256": "648a27b3560ef7f5d939cd409301e445e5065047cbd5438c1a73a013730e467f",
+      "official_score": 14092,
+      "official_time": 170.57,
+      "model": "qwen2.5-0.5b",
+      "linear_by_role": {
+        "q": {
+          "macro_gain": 0.511953605411031,
+          "global_gain": 0.5209356869517098,
+          "standard_sum": 147206.5283985138,
+          "player_sum": 70521.39440345764,
+          "elements": 11010048,
+          "cases": 24
+        },
+        "k": {
+          "macro_gain": 0.4645391570041871,
+          "global_gain": 0.45912860313762155,
+          "standard_sum": 28453.021995544434,
+          "player_sum": 15389.425751686096,
+          "elements": 1572864,
+          "cases": 24
+        },
+        "v": {
+          "macro_gain": 0.48687370332728097,
+          "global_gain": 0.42492862039901086,
+          "standard_sum": 20074.932122260332,
+          "player_sum": 11544.518910944462,
+          "elements": 1572864,
+          "cases": 24
+        },
+        "o": {
+          "macro_gain": 0.203047172242896,
+          "global_gain": 0.25368036624808193,
+          "standard_sum": 7638.461301242933,
+          "player_sum": 5700.733640771825,
+          "elements": 11010048,
+          "cases": 24
+        },
+        "fc_gate": {
+          "macro_gain": 0.37957422966292365,
+          "global_gain": 0.37765300837073557,
+          "standard_sum": 641385.6382446289,
+          "player_sum": 399164.4224357605,
+          "elements": 59768832,
+          "cases": 24
+        },
+        "fc_up": {
+          "macro_gain": 0.3763835157928567,
+          "global_gain": 0.35689747264001714,
+          "standard_sum": 444894.9437904358,
+          "player_sum": 286113.06276130676,
+          "elements": 59768832,
+          "cases": 24
+        },
+        "proj": {
+          "macro_gain": -0.013660461903315215,
+          "global_gain": -0.549123284757226,
+          "standard_sum": 48701.211228847504,
+          "player_sum": 75444.18031048775,
+          "elements": 11010048,
+          "cases": 24
+        }
+      },
+      "linear_by_group": {
+        "q": {
+          "macro_gain": 0.511953605411031,
+          "global_gain": 0.5209356869517098,
+          "standard_sum": 147206.5283985138,
+          "player_sum": 70521.39440345764,
+          "elements": 11010048,
+          "cases": 24
+        },
+        "k": {
+          "macro_gain": 0.4645391570041871,
+          "global_gain": 0.45912860313762155,
+          "standard_sum": 28453.021995544434,
+          "player_sum": 15389.425751686096,
+          "elements": 1572864,
+          "cases": 24
+        },
+        "v": {
+          "macro_gain": 0.48687370332728097,
+          "global_gain": 0.42492862039901086,
+          "standard_sum": 20074.932122260332,
+          "player_sum": 11544.518910944462,
+          "elements": 1572864,
+          "cases": 24
+        },
+        "o": {
+          "macro_gain": 0.203047172242896,
+          "global_gain": 0.25368036624808193,
+          "standard_sum": 7638.461301242933,
+          "player_sum": 5700.733640771825,
+          "elements": 11010048,
+          "cases": 24
+        },
+        "fc": {
+          "macro_gain": 0.37797887272789016,
+          "global_gain": 0.36915241188123643,
+          "standard_sum": 1086280.5820350647,
+          "player_sum": 685277.4851970673,
+          "elements": 119537664,
+          "cases": 48
+        },
+        "proj": {
+          "macro_gain": -0.013660461903315215,
+          "global_gain": -0.549123284757226,
+          "standard_sum": 48701.211228847504,
+          "player_sum": 75444.18031048775,
+          "elements": 11010048,
+          "cases": 24
+        }
+      },
+      "linear": {
+        "macro_gain": 0.3441015602196943,
+        "global_gain": 0.354522598322282,
+        "standard_sum": 1338354.7370814737,
+        "player_sum": 863877.738214415,
+        "elements": 155713536,
+        "cases": 168
+      },
+      "linear_component_macro_gain": 0.24645040064340576,
+      "attention_causal": {
+        "macro_gain": 0.6377944330685358,
+        "global_gain": 0.6614430468752772,
+        "standard_sum": 118700.81156682968,
+        "player_sum": 40186.9850974977,
+        "elements": 11010048,
+        "cases": 24
+      },
+      "timing": {
+        "wall_seconds": 81.9348826999776,
+        "algorithm_stage_seconds": 81.93068250000942,
+        "calibration_seconds": 64.85888379928656,
+        "dynamic_seconds": 13.666294400114566,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 168,
+          "hif4_calibration_attention": 24,
+          "hif4_dynamic_quantize_activation": 672,
+          "hif4_dynamic_quantize_q": 96,
+          "hif4_dynamic_quantize_k": 96,
+          "hif4_dynamic_quantize_v": 96
+        },
+        "nested_api_calls": {
+          "hif4_calibration_and_quantize_weight": 0,
+          "hif4_calibration_attention": 0,
+          "hif4_dynamic_quantize_activation": 0,
+          "hif4_dynamic_quantize_q": 84,
+          "hif4_dynamic_quantize_k": 84,
+          "hif4_dynamic_quantize_v": 42
+        },
+        "under_300_seconds": true
+      }
+    },
+    {
+      "candidate": "c39",
+      "source": "D:\\工作内容\\AI竞赛\\solutions\\20260828_v031_c39-fw-official14613_time159.2s\\solution.py",
+      "source_sha256": "b8c9f2a4eb6553367dd17e73d30836ac8911dbef33759fa8cf95e8c629317a71",
+      "official_score": 14613,
+      "official_time": 159.2,
+      "model": "qwen2.5-0.5b",
+      "linear_by_role": {
+        "q": {
+          "macro_gain": 0.5572239756654102,
+          "global_gain": 0.5705699899700746,
+          "standard_sum": 147206.5283985138,
+          "player_sum": 63214.90096664429,
+          "elements": 11010048,
+          "cases": 24
+        },
+        "k": {
+          "macro_gain": 0.5062112318458768,
+          "global_gain": 0.5068354993369126,
+          "standard_sum": 28453.021995544434,
+          "player_sum": 14032.020384788513,
+          "elements": 1572864,
+          "cases": 24
+        },
+        "v": {
+          "macro_gain": 0.5474701366453932,
+          "global_gain": 0.5120815184713959,
+          "standard_sum": 20074.932122260332,
+          "player_sum": 9794.930397883058,
+          "elements": 1572864,
+          "cases": 24
+        },
+        "o": {
+          "macro_gain": 0.3555699257012162,
+          "global_gain": 0.38347561440804917,
+          "standard_sum": 7638.461301242933,
+          "player_sum": 4709.297660616692,
+          "elements": 11010048,
+          "cases": 24
+        },
+        "fc_gate": {
+          "macro_gain": 0.41955796719275823,
+          "global_gain": 0.4214370613733192,
+          "standard_sum": 641385.6382446289,
+          "player_sum": 371081.9596557617,
+          "elements": 59768832,
+          "cases": 24
+        },
+        "fc_up": {
+          "macro_gain": 0.41874741619562994,
+          "global_gain": 0.4068558208320842,
+          "standard_sum": 444894.9437904358,
+          "player_sum": 263886.84625053406,
+          "elements": 59768832,
+          "cases": 24
+        },
+        "proj": {
+          "macro_gain": -0.013660461903315215,
+          "global_gain": -0.549123284757226,
+          "standard_sum": 48701.211228847504,
+          "player_sum": 75444.18031048775,
+          "elements": 11010048,
+          "cases": 24
+        }
+      },
+      "linear_by_group": {
+        "q": {
+          "macro_gain": 0.5572239756654102,
+          "global_gain": 0.5705699899700746,
+          "standard_sum": 147206.5283985138,
+          "player_sum": 63214.90096664429,
+          "elements": 11010048,
+          "cases": 24
+        },
+        "k": {
+          "macro_gain": 0.5062112318458768,
+          "global_gain": 0.5068354993369126,
+          "standard_sum": 28453.021995544434,
+          "player_sum": 14032.020384788513,
+          "elements": 1572864,
+          "cases": 24
+        },
+        "v": {
+          "macro_gain": 0.5474701366453932,
+          "global_gain": 0.5120815184713959,
+          "standard_sum": 20074.932122260332,
+          "player_sum": 9794.930397883058,
+          "elements": 1572864,
+          "cases": 24
+        },
+        "o": {
+          "macro_gain": 0.3555699257012162,
+          "global_gain": 0.38347561440804917,
+          "standard_sum": 7638.461301242933,
+          "player_sum": 4709.297660616692,
+          "elements": 11010048,
+          "cases": 24
+        },
+        "fc": {
+          "macro_gain": 0.4191526916941941,
+          "global_gain": 0.415465197107059,
+          "standard_sum": 1086280.5820350647,
+          "player_sum": 634968.8059062958,
+          "elements": 119537664,
+          "cases": 48
+        },
+        "proj": {
+          "macro_gain": -0.013660461903315215,
+          "global_gain": -0.549123284757226,
+          "standard_sum": 48701.211228847504,
+          "player_sum": 75444.18031048775,
+          "elements": 11010048,
+          "cases": 24
+        }
+      },
+      "linear": {
+        "macro_gain": 0.39873145590613845,
+        "global_gain": 0.400634141755286,
+        "standard_sum": 1338354.7370814737,
+        "player_sum": 802164.1356267161,
+        "elements": 155713536,
+        "cases": 168
+      },
+      "linear_component_macro_gain": 0.30655075575604424,
+      "attention_causal": {
+        "macro_gain": 0.6377944330685358,
+        "global_gain": 0.6614430468752772,
+        "standard_sum": 118700.81156682968,
+        "player_sum": 40186.9850974977,
+        "elements": 11010048,
+        "cases": 24
+      },
+      "timing": {
+        "wall_seconds": 81.6067184000276,
+        "algorithm_stage_seconds": 81.60152719996404,
+        "calibration_seconds": 68.06432819948532,
+        "dynamic_seconds": 9.89555319887586,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 168,
+          "hif4_calibration_attention": 24,
+          "hif4_dynamic_quantize_activation": 672,
+          "hif4_dynamic_quantize_q": 96,
+          "hif4_dynamic_quantize_k": 96,
+          "hif4_dynamic_quantize_v": 96
+        },
+        "nested_api_calls": {
+          "hif4_calibration_and_quantize_weight": 0,
+          "hif4_calibration_attention": 0,
+          "hif4_dynamic_quantize_activation": 0,
+          "hif4_dynamic_quantize_q": 84,
+          "hif4_dynamic_quantize_k": 84,
+          "hif4_dynamic_quantize_v": 42
+        },
+        "under_300_seconds": true
+      }
+    },
+    {
+      "candidate": "c40",
+      "source": "D:\\工作内容\\AI竞赛\\solutions\\20260828_v032_c40-robust-blockldlq_official-score14432_time216.667s\\solution.py",
+      "source_sha256": "d24bc94f513907cbe97b43865973d1498133d8b9264faf12661836ff65aab656",
+      "official_score": 14432,
+      "official_time": 216.667,
+      "model": "qwen2.5-0.5b",
+      "linear_by_role": {
+        "q": {
+          "macro_gain": 0.5572239756654102,
+          "global_gain": 0.5705699899700746,
+          "standard_sum": 147206.5283985138,
+          "player_sum": 63214.90096664429,
+          "elements": 11010048,
+          "cases": 24
+        },
+        "k": {
+          "macro_gain": 0.5062112318458768,
+          "global_gain": 0.5068354993369126,
+          "standard_sum": 28453.021995544434,
+          "player_sum": 14032.020384788513,
+          "elements": 1572864,
+          "cases": 24
+        },
+        "v": {
+          "macro_gain": 0.5474701366453932,
+          "global_gain": 0.5120815184713959,
+          "standard_sum": 20074.932122260332,
+          "player_sum": 9794.930397883058,
+          "elements": 1572864,
+          "cases": 24
+        },
+        "o": {
+          "macro_gain": 0.3555699257012162,
+          "global_gain": 0.38347561440804917,
+          "standard_sum": 7638.461301242933,
+          "player_sum": 4709.297660616692,
+          "elements": 11010048,
+          "cases": 24
+        },
+        "fc_gate": {
+          "macro_gain": 0.3908670465039374,
+          "global_gain": 0.38994086332520056,
+          "standard_sum": 641385.6382446289,
+          "player_sum": 391283.16874313354,
+          "elements": 59768832,
+          "cases": 24
+        },
+        "fc_up": {
+          "macro_gain": 0.38768287682785285,
+          "global_gain": 0.3718157609587553,
+          "standard_sum": 444894.9437904358,
+          "player_sum": 279475.99171829224,
+          "elements": 59768832,
+          "cases": 24
+        },
+        "proj": {
+          "macro_gain": -0.013660461903315215,
+          "global_gain": -0.549123284757226,
+          "standard_sum": 48701.211228847504,
+          "player_sum": 75444.18031048775,
+          "elements": 11010048,
+          "cases": 24
+        }
+      },
+      "linear_by_group": {
+        "q": {
+          "macro_gain": 0.5572239756654102,
+          "global_gain": 0.5705699899700746,
+          "standard_sum": 147206.5283985138,
+          "player_sum": 63214.90096664429,
+          "elements": 11010048,
+          "cases": 24
+        },
+        "k": {
+          "macro_gain": 0.5062112318458768,
+          "global_gain": 0.5068354993369126,
+          "standard_sum": 28453.021995544434,
+          "player_sum": 14032.020384788513,
+          "elements": 1572864,
+          "cases": 24
+        },
+        "v": {
+          "macro_gain": 0.5474701366453932,
+          "global_gain": 0.5120815184713959,
+          "standard_sum": 20074.932122260332,
+          "player_sum": 9794.930397883058,
+          "elements": 1572864,
+          "cases": 24
+        },
+        "o": {
+          "macro_gain": 0.3555699257012162,
+          "global_gain": 0.38347561440804917,
+          "standard_sum": 7638.461301242933,
+          "player_sum": 4709.297660616692,
+          "elements": 11010048,
+          "cases": 24
+        },
+        "fc": {
+          "macro_gain": 0.3892749616658951,
+          "global_gain": 0.3825175819632078,
+          "standard_sum": 1086280.5820350647,
+          "player_sum": 670759.1604614258,
+          "elements": 119537664,
+          "cases": 48
+        },
+        "proj": {
+          "macro_gain": -0.013660461903315215,
+          "global_gain": -0.549123284757226,
+          "standard_sum": 48701.211228847504,
+          "player_sum": 75444.18031048775,
+          "elements": 11010048,
+          "cases": 24
+        }
+      },
+      "linear": {
+        "macro_gain": 0.39019496161233874,
+        "global_gain": 0.3738920878263124,
+        "standard_sum": 1338354.7370814737,
+        "player_sum": 837954.4901818461,
+        "elements": 155713536,
+        "cases": 168
+      },
+      "linear_component_macro_gain": 0.3010594865654023,
+      "attention_causal": {
+        "macro_gain": 0.6377944330685358,
+        "global_gain": 0.6614430468752772,
+        "standard_sum": 118700.81156682968,
+        "player_sum": 40186.9850974977,
+        "elements": 11010048,
+        "cases": 24
+      },
+      "timing": {
+        "wall_seconds": 141.98030409996863,
+        "algorithm_stage_seconds": 141.9747518999502,
+        "calibration_seconds": 128.4065052003134,
+        "dynamic_seconds": 9.880421999376267,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 168,
+          "hif4_calibration_attention": 24,
+          "hif4_dynamic_quantize_activation": 672,
+          "hif4_dynamic_quantize_q": 96,
+          "hif4_dynamic_quantize_k": 96,
+          "hif4_dynamic_quantize_v": 96
+        },
+        "nested_api_calls": {
+          "hif4_calibration_and_quantize_weight": 0,
+          "hif4_calibration_attention": 0,
+          "hif4_dynamic_quantize_activation": 0,
+          "hif4_dynamic_quantize_q": 84,
+          "hif4_dynamic_quantize_k": 84,
+          "hif4_dynamic_quantize_v": 42
+        },
+        "under_300_seconds": true
+      }
+    }
+  ],
+  "official_fit": {
+    "official_anchor_scores": {
+      "c21": 14437,
+      "c38": 14092,
+      "c39": 14613,
+      "c40": 14432
+    },
+    "model_features": {
+      "gpt2-small": {
+        "linear_global_gain": {
+          "c21": 0.46385514516658893,
+          "c38": 0.4511262652381688,
+          "c39": 0.45272413188839233,
+          "c40": 0.4357722010548042
+        },
+        "linear_macro_gain": {
+          "c21": 0.4554080431579092,
+          "c38": 0.420269040442209,
+          "c39": 0.45277144024218363,
+          "c40": 0.4452566607643729
+        },
+        "component_macro_gain": {
+          "c21": 0.48672970990898673,
+          "c38": 0.47398295746607594,
+          "c39": 0.47915403889260005,
+          "c40": 0.4666442052484326
+        },
+        "attention_causal_global_gain": {
+          "c21": 0.4444125752917926,
+          "c38": 0.4444125752917926,
+          "c39": 0.4444125752917926,
+          "c40": 0.4444125752917926
+        },
+        "attention_causal_macro_gain": {
+          "c21": 0.4034377977224495,
+          "c38": 0.4034377977224495,
+          "c39": 0.4034377977224495,
+          "c40": 0.4034377977224495
+        }
+      },
+      "gpt2-medium": {
+        "linear_global_gain": {
+          "c21": 0.403607574707657,
+          "c38": 0.3664232288621261,
+          "c39": 0.3958071642068621,
+          "c40": 0.37166015377629985
+        },
+        "linear_macro_gain": {
+          "c21": 0.3980447025004222,
+          "c38": 0.34731137129357675,
+          "c39": 0.3977427241880516,
+          "c40": 0.38618141303714865
+        },
+        "component_macro_gain": {
+          "c21": 0.43311144676351315,
+          "c38": 0.3890380922025863,
+          "c39": 0.4280253439203508,
+          "c40": 0.4122891142954306
+        },
+        "attention_causal_global_gain": {
+          "c21": 0.4236108389960971,
+          "c38": 0.4236108389960971,
+          "c39": 0.4236108389960971,
+          "c40": 0.4236108389960971
+        },
+        "attention_causal_macro_gain": {
+          "c21": 0.3989480886915117,
+          "c38": 0.3989480886915117,
+          "c39": 0.3989480886915117,
+          "c40": 0.3989480886915117
+        }
+      },
+      "opt-125m": {
+        "linear_global_gain": {
+          "c21": 0.5250030105129115,
+          "c38": 0.5092137645064665,
+          "c39": 0.5246468875367427,
+          "c40": 0.5221357911888962
+        },
+        "linear_macro_gain": {
+          "c21": 0.203668599245266,
+          "c38": 0.16036563278419808,
+          "c39": 0.19664513255876984,
+          "c40": 0.18203563328186867
+        },
+        "component_macro_gain": {
+          "c21": 0.409567437407721,
+          "c38": 0.3688806596691559,
+          "c39": 0.40252707259691317,
+          "c40": 0.3896185788750159
+        },
+        "attention_causal_global_gain": {
+          "c21": 0.4179407678463836,
+          "c38": 0.4179407678463836,
+          "c39": 0.4179407678463836,
+          "c40": 0.4179407678463836
+        },
+        "attention_causal_macro_gain": {
+          "c21": 0.4212616768641338,
+          "c38": 0.4212616768641338,
+          "c39": 0.4212616768641338,
+          "c40": 0.4212616768641338
+        }
+      },
+      "pythia-160m": {
+        "linear_global_gain": {
+          "c21": 0.8407169172767258,
+          "c38": 0.8817218215347,
+          "c39": 0.8406957977229516,
+          "c40": 0.8405906618693302
+        },
+        "linear_macro_gain": {
+          "c21": 0.4798335795062479,
+          "c38": 0.4471770125552765,
+          "c39": 0.47584476207892945,
+          "c40": 0.467798035835732
+        },
+        "component_macro_gain": {
+          "c21": 0.6066784126343496,
+          "c38": 0.5823779435091118,
+          "c39": 0.6030593304409643,
+          "c40": 0.5956793447496705
+        },
+        "attention_causal_global_gain": {
+          "c21": 0.8752912879026589,
+          "c38": 0.8752912879026589,
+          "c39": 0.8752912879026589,
+          "c40": 0.8752912879026589
+        },
+        "attention_causal_macro_gain": {
+          "c21": 0.8366265371017706,
+          "c38": 0.8366265371017706,
+          "c39": 0.8366265371017706,
+          "c40": 0.8366265371017706
+        }
+      },
+      "qwen2.5-0.5b": {
+        "linear_global_gain": {
+          "c21": 0.4172632664712604,
+          "c38": 0.354522598322282,
+          "c39": 0.400634141755286,
+          "c40": 0.3738920878263124
+        },
+        "linear_macro_gain": {
+          "c21": 0.40395616136275947,
+          "c38": 0.3441015602196943,
+          "c39": 0.39873145590613845,
+          "c40": 0.39019496161233874
+        },
+        "component_macro_gain": {
+          "c21": 0.30996541494649765,
+          "c38": 0.24645040064340576,
+          "c39": 0.30655075575604424,
+          "c40": 0.3010594865654023
+        },
+        "attention_causal_global_gain": {
+          "c21": 0.6614430468752772,
+          "c38": 0.6614430468752772,
+          "c39": 0.6614430468752772,
+          "c40": 0.6614430468752772
+        },
+        "attention_causal_macro_gain": {
+          "c21": 0.6377944330685358,
+          "c38": 0.6377944330685358,
+          "c39": 0.6377944330685358,
+          "c40": 0.6377944330685358
+        }
+      }
+    },
+    "aggregate_features": {
+      "linear_global_gain": {
+        "c21": 0.5300891828270287,
+        "c38": 0.5126015356927487,
+        "c39": 0.5229016246220469,
+        "c40": 0.5088101791431285
+      },
+      "linear_macro_gain": {
+        "c21": 0.38818221715452095,
+        "c38": 0.3438449234589909,
+        "c39": 0.38434710299481456,
+        "c40": 0.3742933409062922
+      },
+      "component_macro_gain": {
+        "c21": 0.4492104843322136,
+        "c38": 0.4121460106980671,
+        "c39": 0.44386330832137444,
+        "c40": 0.43305814594679043
+      },
+      "attention_causal_global_gain": {
+        "c21": 0.5645397033824419,
+        "c38": 0.5645397033824419,
+        "c39": 0.5645397033824419,
+        "c40": 0.5645397033824419
+      },
+      "attention_causal_macro_gain": {
+        "c21": 0.5396137066896802,
+        "c38": 0.5396137066896802,
+        "c39": 0.5396137066896802,
+        "c40": 0.5396137066896802
+      }
+    },
+    "fit": {
+      "linear_global_gain": {
+        "candidates": [
+          "c21",
+          "c38",
+          "c39",
+          "c40"
+        ],
+        "local_values": {
+          "c21": 0.5300891828270287,
+          "c38": 0.5126015356927487,
+          "c39": 0.5229016246220469,
+          "c40": 0.5088101791431285
+        },
+        "official_scores": {
+          "c21": 14437,
+          "c38": 14092,
+          "c39": 14613,
+          "c40": 14432
+        },
+        "pearson": 0.45343211156561375,
+        "spearman": 0.6,
+        "pairwise_rank_agreement": 0.6666666666666666,
+        "ols": {
+          "slope": 10185.38873285348,
+          "intercept": 9111.350980529001,
+          "r2": 0.20560067979885222
+        },
+        "leave_one_out_mae": 309.9474372983382
+      },
+      "linear_macro_gain": {
+        "candidates": [
+          "c21",
+          "c38",
+          "c39",
+          "c40"
+        ],
+        "local_values": {
+          "c21": 0.38818221715452095,
+          "c38": 0.3438449234589909,
+          "c39": 0.38434710299481456,
+          "c40": 0.3742933409062922
+        },
+        "official_scores": {
+          "c21": 14437,
+          "c38": 14092,
+          "c39": 14613,
+          "c40": 14432
+        },
+        "pearson": 0.9131379352488622,
+        "spearman": 0.8,
+        "pairwise_rank_agreement": 0.8333333333333334,
+        "ols": {
+          "slope": 9905.92863792173,
+          "intercept": 10701.888321233757,
+          "r2": 0.8338208887905552
+        },
+        "leave_one_out_mae": 160.89734441808832
+      },
+      "component_macro_gain": {
+        "candidates": [
+          "c21",
+          "c38",
+          "c39",
+          "c40"
+        ],
+        "local_values": {
+          "c21": 0.4492104843322136,
+          "c38": 0.4121460106980671,
+          "c39": 0.44386330832137444,
+          "c40": 0.43305814594679043
+        },
+        "official_scores": {
+          "c21": 14437,
+          "c38": 14092,
+          "c39": 14613,
+          "c40": 14432
+        },
+        "pearson": 0.8754067594241431,
+        "spearman": 0.8,
+        "pairwise_rank_agreement": 0.8333333333333334,
+        "ols": {
+          "slope": 11639.383568939713,
+          "intercept": 9335.379049671363,
+          "r2": 0.766336994445482
+        },
+        "leave_one_out_mae": 207.96516363713135
+      },
+      "attention_causal_global_gain": {
+        "candidates": [
+          "c21",
+          "c38",
+          "c39",
+          "c40"
+        ],
+        "local_values": {
+          "c21": 0.5645397033824419,
+          "c38": 0.5645397033824419,
+          "c39": 0.5645397033824419,
+          "c40": 0.5645397033824419
+        },
+        "official_scores": {
+          "c21": 14437,
+          "c38": 14092,
+          "c39": 14613,
+          "c40": 14432
+        },
+        "pearson": null,
+        "spearman": null,
+        "pairwise_rank_agreement": null,
+        "ols": {
+          "slope": 0.0,
+          "intercept": 14393.5,
+          "r2": 0.0
+        },
+        "leave_one_out_mae": 201.0
+      },
+      "attention_causal_macro_gain": {
+        "candidates": [
+          "c21",
+          "c38",
+          "c39",
+          "c40"
+        ],
+        "local_values": {
+          "c21": 0.5396137066896802,
+          "c38": 0.5396137066896802,
+          "c39": 0.5396137066896802,
+          "c40": 0.5396137066896802
+        },
+        "official_scores": {
+          "c21": 14437,
+          "c38": 14092,
+          "c39": 14613,
+          "c40": 14432
+        },
+        "pearson": null,
+        "spearman": null,
+        "pairwise_rank_agreement": null,
+        "ols": {
+          "slope": 0.0,
+          "intercept": 14393.5,
+          "r2": 0.0
+        },
+        "leave_one_out_mae": 201.0
+      }
+    },
+    "c39_vs_c40": {
+      "gpt2-small": {
+        "c39_linear_global_gain": 0.45272413188839233,
+        "c40_linear_global_gain": 0.4357722010548042,
+        "c39_above_c40": true
+      },
+      "gpt2-medium": {
+        "c39_linear_global_gain": 0.3958071642068621,
+        "c40_linear_global_gain": 0.37166015377629985,
+        "c39_above_c40": true
+      },
+      "opt-125m": {
+        "c39_linear_global_gain": 0.5246468875367427,
+        "c40_linear_global_gain": 0.5221357911888962,
+        "c39_above_c40": true
+      },
+      "pythia-160m": {
+        "c39_linear_global_gain": 0.8406957977229516,
+        "c40_linear_global_gain": 0.8405906618693302,
+        "c39_above_c40": true
+      },
+      "qwen2.5-0.5b": {
+        "c39_linear_global_gain": 0.400634141755286,
+        "c40_linear_global_gain": 0.3738920878263124,
+        "c39_above_c40": true
+      },
+      "aggregate": {
+        "c39_linear_global_gain": 0.5229016246220469,
+        "c40_linear_global_gain": 0.5088101791431285,
+        "c39_above_c40": true
+      }
+    },
+    "warning": "four official anchors are a diagnostic, not a validated score mapping"
+  }
+}
