@@ -124,6 +124,32 @@ class CandidateSpec:
 
 
 CANDIDATE_SPECS: dict[str, CandidateSpec] = {
+    "v001": CandidateSpec(
+        "v001",
+        ROOT / "solutions" / "20260826_v001_current-baseline_score10250_time127s" / "solution.py",
+        10250,
+        127.0,
+    ),
+    "v002": CandidateSpec(
+        "v002",
+        ROOT / "solutions" / "20260826_v002_youxilee-hif4_score15000plus_timeNA" / "solution.py",
+        15313,
+        137.0,
+    ),
+    "v013": CandidateSpec(
+        "v013",
+        ROOT / "solutions" / "20260827_v013_c10-wide-activation-quadratic_score15799_time144s" / "solution.py",
+        15799,
+        144.0,
+    ),
+    # v024 (C21) earned 16043 via a Linear output-supervision path that the
+    # compliance review later rejected; it is kept only as a historical anchor.
+    "v024": CandidateSpec(
+        "v024",
+        ROOT / "solutions" / "20260827_v024_c21-gated-exact-cross-selection_score16043_time174s" / "solution.py",
+        16043,
+        173.8,
+    ),
     "c21": CandidateSpec(
         "c21",
         ROOT / "solutions" / "20260827_v025_c21c-compliance-baseline" / "solution.py",
@@ -2323,7 +2349,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--report",
         type=Path,
-        default=ROOT / "docs" / "real-model-evaluator-calibration-2026-08-28.md",
+        required=True,
+        help=(
+            "markdown report path; required so a run can never silently "
+            "overwrite an archived evaluation report"
+        ),
     )
     return parser
 

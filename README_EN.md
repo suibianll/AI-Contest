@@ -23,7 +23,7 @@ Chinese version: [README.md](README.md)
 - The local evaluator is no longer considered reliable for ranking compliant
   candidates. Both dev and frozen holdout repeat text across calibration and
   test. See the
-  [C40 official-result evaluator diagnosis](docs/C40-official-evaluator-diagnosis.md).
+  [C40 official-result evaluator diagnosis](logs/candidates/C40-official-evaluator-diagnosis.md).
 
 Local time and scores are for paired candidate comparison only and are never
 reported as official results. Every official result must be archived together
@@ -91,20 +91,26 @@ Segment-CVaR, and non-beneficial V-importance candidates remain disabled.
 
 ```text
 solution.py                         only active submission file
-evaluator/real_data_eval.py         paired real-GPT evaluation
-evaluator/synthetic_attention_eval.py
-                                    576-case Attention safety matrix
-evaluator/real_model_suite.py       multi-model real-data evaluation and cache
+evaluator/real_model_suite.py       multi-model real-data evaluation, cache, and official-flow primary ranking
 evaluator/reference_hif4.py         independent official scoring protocol, baseline, and validation
-evaluator/cap_oracle.py             fixed-frame error-space diagnostics
+evaluator/nvfp4_sim.py              NVFP4 encoding simulation
+evaluator/real_data_eval.py         shared loading/timing/scoring tools and the legacy single-model entry point
+evaluator/synthetic_attention_eval.py
+                                    576-case Attention safety matrix (property diagnostics, not ranking)
 evaluator/linear_compliance_guard.py
                                     static/runtime Linear compliance checks
-evaluator/holdout_eval.py           budget-protected holdout evaluation
+evaluator/linear_error_decomposition.py
+                                    Linear error attribution diagnostics
 tests/                              release, format, compliance, algorithm tests
 solutions/                          immutable candidate archives
-artifacts/real_model_suite/cache/   local real-model snapshots, not committed
-docs/superpowers/logs/              execution and calibration records
+artifacts/real_model_suite/         evaluation JSON results; cache/ holds local model snapshots, not committed
+logs/evaluations/                   evaluation run reports (path must be given explicitly)
+logs/candidates/                    candidate official results and diagnosis reports
+logs/execution/                     execution logs and calibration records
+docs/real-model-evaluator.md        evaluator usage guide
+docs/research/                      literature survey
 docs/superpowers/plans/             currently active general workflows
+docs/superpowers/specs/             designs and specifications
 docs/superpowers/archive/plans/     superseded plans, historical only
 ```
 
@@ -117,18 +123,26 @@ python -m venv .venv
 .\.venv\Scripts\python -m pip install -r evaluator\requirements.txt
 ```
 
-Real-model evaluation:
+Single-model quick evaluation (gpt2-small, cache-first):
 
 ```powershell
-.\.venv\Scripts\python evaluator\real_data_eval.py `
-  --solution solution.py --model models/gpt2 --device cuda
+.\.venv\Scripts\python -u evaluator\real_model_suite.py `
+  --models gpt2-small --solution solution.py --candidate-name active `
+  --device cpu --algorithm-device cuda --cache-mode auto `
+  --seq 128 --calib 2 --test 4 `
+  --output artifacts\real_model_suite\quick-YYYYMMDD.json `
+  --report logs\evaluations\quick-YYYYMMDD.md
 ```
 
-GQA example:
+GQA example (Qwen2.5-0.5B ships 14Q/2KV heads with RoPE):
 
 ```powershell
-.\.venv\Scripts\python evaluator\real_data_eval.py `
-  --solution solution.py --model models/gpt2 --device cuda --kv-heads 6
+.\.venv\Scripts\python -u evaluator\real_model_suite.py `
+  --models qwen2.5-0.5b --solution solution.py --candidate-name active `
+  --device cpu --algorithm-device cuda --cache-mode auto `
+  --seq 128 --calib 2 --test 4 `
+  --output artifacts\real_model_suite\quick-qwen-YYYYMMDD.json `
+  --report logs\evaluations\quick-qwen-YYYYMMDD.md
 ```
 
 Synthetic Attention matrix:
@@ -154,26 +168,31 @@ historical sources under `solutions/`.
 
    ```powershell
    git diff --check
-   .\.venv\Scripts\python -m py_compile solution.py evaluator\real_data_eval.py evaluator\real_model_suite.py
+   .\.venv\Scripts\python -m py_compile solution.py evaluator\solution_runtime.py evaluator\real_model_suite.py
    .\.venv\Scripts\python -m pytest -q
    ```
 
 2. **Test the active root `solution.py`**
 
-   This uses a real GPT-2 forward pass and the deployed candidate API to check
-   output format, Linear, Attention, and local runtime:
+   This uses the cached real-model panel and the deployed candidate API to
+   check output format, Linear, Attention, and local runtime:
 
    ```powershell
-   .\.venv\Scripts\python -u evaluator\real_data_eval.py `
-     --solution solution.py --model models\gpt2 --device cuda `
-     --layers 12 --seq 128 --calib 2 --test 2 `
-     --mode amax6 --attn-mask non-causal
+   .\.venv\Scripts\python -u evaluator\real_model_suite.py `
+     --models gpt2-small --candidates c39 `
+     --solution solution.py --candidate-name active `
+     --device cpu --algorithm-device cuda --cache-mode read `
+     --seq 128 --calib 2 --test 4 `
+     --output artifacts\real_model_suite\active-YYYYMMDD.json `
+     --report logs\evaluations\active-YYYYMMDD.md
    ```
 
-   The primary ranking score is the sum of per-case relative MSE improvements:
-   `Linear sum + Attention sum`. Local scores are only for paired A/B ranking
-   and must not be entered as Official Score. Record the full command, both
-   case counts, total API time, and the source SHA256.
+   The primary ranking score follows the official flow: each test case first
+   computes `(MSE_STD-MSE_PLAYER)/MSE_STD`, then all Linear and Attention
+   case scores are summed into `official_flow_total`. Always pair with
+   `--candidates c39`; local scores are only for paired A/B ranking and must
+   not be entered as Official Score. Record the full command, both case
+   counts, total API time, and the source SHA256.
 
 3. **Capture real multi-model forward data once**
 
@@ -187,7 +206,7 @@ historical sources under `solutions/`.
      --device cuda --algorithm-device cuda --cache-mode write --capture-only `
      --seq 128 --calib 2 --test 4 `
      --output artifacts\real_model_suite\cache-capture-YYYYMMDD.json `
-     --report docs\real-model-evaluator-cache-capture-YYYYMMDD.md
+     --report logs\evaluations\cache-capture-YYYYMMDD.md
    ```
 
    Replace `YYYYMMDD` with the actual run date. Snapshots are stored in
@@ -206,7 +225,7 @@ historical sources under `solutions/`.
      --device cpu --algorithm-device cuda --cache-mode read `
      --seq 128 --calib 2 --test 4 `
      --output artifacts\real_model_suite\active-YYYYMMDD.json `
-     --report docs\real-model-evaluator-active-YYYYMMDD.md
+     --report logs\evaluations\active-YYYYMMDD.md
    ```
 
    In `read` mode, a missing cache, version/configuration mismatch, leaked
@@ -323,7 +342,7 @@ out. Do not keep only improvements. Before archiving, freeze the root
    .\.venv\Scripts\python -m pytest -q
    git add solution.py solutions\YYYYMMDD_vNNN_topic_scoreNA_timeNA\solution.py `
      solutions\YYYYMMDD_vNNN_topic_scoreNA_timeNA\result.md solutions\README.md `
-     docs\superpowers\logs\YYYYMMDD-experiment.md
+     logs\execution\YYYYMMDD-experiment.md
    git commit -m "archive vNNN candidate"
    git push origin master
    ```
@@ -338,7 +357,7 @@ out. Do not keep only improvements. Before archiving, freeze the root
 - Historical versions and decisions are indexed in
   [solutions/README.md](solutions/README.md).
 - The latest execution history is in
-  [2026-08-26-optimization-execution-log.md](docs/superpowers/logs/2026-08-26-optimization-execution-log.md).
+  [2026-08-26-optimization-execution-log.md](logs/execution/2026-08-26-optimization-execution-log.md).
 - Candidate archiving follows
   [2026-08-26-solution-archive-workflow.md](docs/superpowers/plans/2026-08-26-solution-archive-workflow.md).
 - Multi-model real data, cache modes, and compliance boundaries are documented

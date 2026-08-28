@@ -57,7 +57,7 @@
   --device cuda --algorithm-device cuda `
   --seq 128 --calib 2 --test 4 `
   --output artifacts/real_model_suite/latest.json `
-  --report docs/real-model-evaluator-official-flow-latest.md
+  --report logs/evaluations/official-flow-latest.md
 ```
 
 `--algorithm-device` 默认跟随 `--device`。前向捕获先落 CPU，候选阶段再按该参数回搬；这样既不长期占用模型显存，又不会把候选算法错误地切到 CPU。每完成一个候选，评估器都会写 `*.partial.json`，中断后至少保留已完成结果。
@@ -88,7 +88,7 @@
   --device cpu --algorithm-device cuda --cache-mode read `
   --seq 128 --calib 2 --test 4 `
   --output artifacts\real_model_suite\cache-read.json `
-  --report docs\real-model-evaluator-cache-read.md
+  --report logs\evaluations\cache-read.md
 ```
 
 `--cache-mode` 的语义如下：
@@ -114,7 +114,7 @@
   --solution solution.py --candidate-name active `
   --cache-mode read --device cpu --algorithm-device cuda `
   --output artifacts\real_model_suite\active.json `
-  --report docs\real-model-evaluator-active.md
+  --report logs\evaluations\active.md
 ```
 
 报告中的 `local_official_flow_order` 是唯一主排序。官方锚点只用于计算 Spearman 和 pairwise rank agreement，不用于回归、换算或预测官方绝对分数。旧的 OLS 校准器及冻结系数已经从活跃工程删除。
@@ -139,7 +139,7 @@ case_score = (MSE_STD - MSE_PLAYER) / MSE_STD
 
 ## 当前协议验证
 
-协议冒烟结果见 [real-model-evaluator-official-flow-smoke.md](real-model-evaluator-official-flow-smoke.md)：
+协议冒烟结果见 [2026-08-28-official-flow-smoke.md](../logs/evaluations/2026-08-28-official-flow-smoke.md)：
 
 - 独立 codec、合法性校验、六 API 接口、逐 case 求和和 non-causal Attention 已完整跑通。
 - GPT-2-small 上 C21-C total=`151.078193`，C39 total=`150.313301`，仍与官方 `C39>C21-C` 反序。

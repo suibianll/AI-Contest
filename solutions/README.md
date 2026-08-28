@@ -2,7 +2,7 @@
 
 Root `solution.py` is the only active submission. Archived source files are immutable.
 
-顺序实验索引见 [progressive candidate ledger](../docs/superpowers/logs/2026-08-27-progressive-candidate-ledger.md)。
+顺序实验索引见 [progressive candidate ledger](../logs/execution/2026-08-27-progressive-candidate-ledger.md)。
 
 | Version | Date | Topic | Local Linear | Local Attention | Local Time | Official Score | Official Time | Delta | Status | Directory |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |

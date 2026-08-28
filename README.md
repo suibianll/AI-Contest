@@ -17,9 +17,14 @@
   下降 181 分并增加 57.467 秒，因此已拒绝且不得作为后续父版本。
 - 当前源码 SHA256：
   `D24BC94F513907CBE97B43865973D1498133D8B9264FAF12661836FF65AAB656`。
-- 当前本地评测器已判定不能可靠排序合规候选；dev 与 frozen holdout 都存在
-  循环文本造成的 calibration/test 重叠。详见
-  [C40 官方结果与评测器诊断](docs/C40-official-evaluator-diagnosis.md)。
+- 旧版本地评测器（单模型 dev 与 frozen holdout）曾因 calibration/test
+  文本重叠不能可靠排序合规候选，相关代码（`real_data_eval.py`、
+  `holdout_eval.py`、`cap_oracle.py`）已于 2026-08-28 移除；诊断结论见
+  [C40 官方结果与评测器诊断](logs/candidates/C40-official-evaluator-diagnosis.md)，
+  历史代码可从 git 历史恢复。
+- 当前唯一活跃评测器为 `real_model_suite.py`（固定 WikiText 窗口、逐 case
+  求和、多模型面板）：gpt2-small 协议冒烟可逐位复现，且在 C39/C40 配对上
+  五模型方向与官方一致；但仍不能模拟官方隐藏数据分布，只用于 A/B 排序。
 
 本地时间和本地分数仅用于候选比较，不冒充官方结果。任何官方结果都应与
 实际提交 SHA、分数和时间一起归档。
@@ -73,20 +78,26 @@ MHA/GQA 对齐和真实 Attention 双 mask 安全选择。固定 H64、Segment-C
 
 ```text
 solution.py                         唯一活跃提交文件
-evaluator/real_data_eval.py         真实 GPT-2 配对评测
-evaluator/synthetic_attention_eval.py
-                                    576-case Attention 安全矩阵
-evaluator/real_model_suite.py       多模型真实语料评测与前向缓存
+evaluator/real_model_suite.py       多模型真实语料评测、前向缓存与官方流程主排序
 evaluator/reference_hif4.py         独立官方评分协议、标准基线与合法性校验
-evaluator/cap_oracle.py             固定坐标误差空间诊断
+evaluator/nvfp4_sim.py              NVFP4 编码模拟
+evaluator/real_data_eval.py         共享的候选加载/计时/评分工具与旧版单模型评测入口
+evaluator/synthetic_attention_eval.py
+                                    576-case Attention 安全矩阵（性质诊断，不参与排名）
 evaluator/linear_compliance_guard.py
                                     Linear 合规静态/运行时检查
-evaluator/holdout_eval.py           受预算保护的 holdout 评测
+evaluator/linear_error_decomposition.py
+                                    Linear 误差归因诊断
 tests/                              发布、格式、合规和算法测试
 solutions/                          不可变候选归档
-artifacts/real_model_suite/cache/   本地真实模型快照，不入库
-docs/superpowers/logs/              执行日志和校准记录
+artifacts/real_model_suite/         评测 JSON 结果；cache/ 为本地模型快照，不入库
+logs/evaluations/                   评测运行报告（每次运行显式指定路径）
+logs/candidates/                    候选官方结果与诊断报告
+logs/execution/                     执行日志与校准记录
+docs/real-model-evaluator.md        评估器使用说明
+docs/research/                      文献调研
 docs/superpowers/plans/             当前通用流程
+docs/superpowers/specs/             设计与规范
 docs/superpowers/archive/plans/     已失效优化计划，仅供历史查阅
 ```
 
@@ -99,18 +110,26 @@ python -m venv .venv
 .\.venv\Scripts\python -m pip install -r evaluator\requirements.txt
 ```
 
-真实模型评测：
+单模型快速评测（gpt2-small，优先读缓存）：
 
 ```powershell
-.\.venv\Scripts\python evaluator\real_data_eval.py `
-  --solution solution.py --model models/gpt2 --device cuda
+.\.venv\Scripts\python -u evaluator\real_model_suite.py `
+  --models gpt2-small --solution solution.py --candidate-name active `
+  --device cpu --algorithm-device cuda --cache-mode auto `
+  --seq 128 --calib 2 --test 4 `
+  --output artifacts\real_model_suite\quick-YYYYMMDD.json `
+  --report logs\evaluations\quick-YYYYMMDD.md
 ```
 
-GQA 示例：
+GQA 示例（Qwen2.5-0.5B 自带 14Q/2KV 与 RoPE 适配）：
 
 ```powershell
-.\.venv\Scripts\python evaluator\real_data_eval.py `
-  --solution solution.py --model models/gpt2 --device cuda --kv-heads 6
+.\.venv\Scripts\python -u evaluator\real_model_suite.py `
+  --models qwen2.5-0.5b --solution solution.py --candidate-name active `
+  --device cpu --algorithm-device cuda --cache-mode auto `
+  --seq 128 --calib 2 --test 4 `
+  --output artifacts\real_model_suite\quick-qwen-YYYYMMDD.json `
+  --report logs\evaluations\quick-qwen-YYYYMMDD.md
 ```
 
 Attention 合成矩阵：
@@ -134,22 +153,25 @@ Attention 合成矩阵：
 
    ```powershell
    git diff --check
-   .\.venv\Scripts\python -m py_compile solution.py evaluator\real_data_eval.py evaluator\real_model_suite.py
+   .\.venv\Scripts\python -m py_compile solution.py evaluator\solution_runtime.py evaluator\real_model_suite.py
    .\.venv\Scripts\python -m pytest -q
    ```
 
 2. **测试当前根 `solution.py`**
 
-   这一步走真实 GPT-2 前向和正式候选 API，确认输出格式、Linear、Attention 和本地时间：
+   这一步走真实模型缓存面板和正式候选 API，确认输出格式、Linear、Attention 和本地时间：
 
    ```powershell
-   .\.venv\Scripts\python -u evaluator\real_data_eval.py `
-     --solution solution.py --model models\gpt2 --device cuda `
-     --layers 12 --seq 128 --calib 2 --test 2 `
-     --mode amax6 --attn-mask non-causal
+   .\.venv\Scripts\python -u evaluator\real_model_suite.py `
+     --models gpt2-small --candidates c39 `
+     --solution solution.py --candidate-name active `
+     --device cpu --algorithm-device cuda --cache-mode read `
+     --seq 128 --calib 2 --test 4 `
+     --output artifacts\real_model_suite\active-YYYYMMDD.json `
+     --report logs\evaluations\active-YYYYMMDD.md
    ```
 
-   主排序分严格按每个测试 case 的相对 MSE 提升求和：`Linear sum + Attention sum`。本地分数只用于 A/B 排序，不填入 Official Score；同时记录完整命令、两类 case 数量、API 总时间和 source SHA256。
+   主排序分严格按官方流程计算：每个测试 case 先算 `(MSE_STD-MSE_PLAYER)/MSE_STD`，再把全部 Linear 与 Attention case 直接求和（`official_flow_total`）。推荐始终配对 `--candidates c39`；本地分数只用于 A/B 排序，不填入 Official Score；同时记录完整命令、两类 case 数量、API 总时间和 source SHA256。
 
 3. **一次性采集多模型真实前向数据**
 
@@ -160,7 +182,7 @@ Attention 合成矩阵：
      --device cuda --algorithm-device cuda --cache-mode write --capture-only `
      --seq 128 --calib 2 --test 4 `
      --output artifacts\real_model_suite\cache-capture-YYYYMMDD.json `
-     --report docs\real-model-evaluator-cache-capture-YYYYMMDD.md
+     --report logs\evaluations\cache-capture-YYYYMMDD.md
    ```
 
    命令中的 `YYYYMMDD` 应替换为实际运行日期。快照保存在 `artifacts/real_model_suite/cache/`，不提交到 Git；它包含真实模型权重、Linear 输入、真实 Q/K/V、token ids、模型/data revision 和窗口校验信息。
@@ -175,7 +197,7 @@ Attention 合成矩阵：
      --device cpu --algorithm-device cuda --cache-mode read `
      --seq 128 --calib 2 --test 4 `
      --output artifacts\real_model_suite\active-YYYYMMDD.json `
-     --report docs\real-model-evaluator-active-YYYYMMDD.md
+     --report logs\evaluations\active-YYYYMMDD.md
    ```
 
    `read` 模式遇到缺失、版本不一致、配置不一致、窗口泄漏或张量形状错误会直接失败，不会偷偷重新加载模型。`auto` 适合日常使用：有效缓存直接读取，缺失或过期时重新采集；`write` 强制刷新；`off` 不保存缓存。更换 seq、calib、test、层数、模型或固定数据集 revision 后，必须生成对应的新缓存。
@@ -250,7 +272,7 @@ Attention 合成矩阵：
    .\.venv\Scripts\python -m pytest -q
    git add solution.py solutions\YYYYMMDD_vNNN_topic_scoreNA_timeNA\solution.py `
      solutions\YYYYMMDD_vNNN_topic_scoreNA_timeNA\result.md solutions\README.md `
-     docs\superpowers\logs\YYYYMMDD-experiment.md
+     logs\execution\YYYYMMDD-experiment.md
    git commit -m "archive vNNN candidate"
    git push origin master
    ```
@@ -262,7 +284,7 @@ Attention 合成矩阵：
 - 当前优化事实以根 `solution.py`、最新执行日志和可复现评测输出为准。
 - 历史版本及其结论见 [solutions/README.md](solutions/README.md)。
 - 最新执行记录见
-  [2026-08-26-optimization-execution-log.md](docs/superpowers/logs/2026-08-26-optimization-execution-log.md)。
+  [2026-08-26-optimization-execution-log.md](logs/execution/2026-08-26-optimization-execution-log.md)。
 - 候选归档流程见
   [2026-08-26-solution-archive-workflow.md](docs/superpowers/plans/2026-08-26-solution-archive-workflow.md)。
 - 多模型真实语料、缓存模式和合规边界见
