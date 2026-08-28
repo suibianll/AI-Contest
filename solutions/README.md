@@ -39,6 +39,7 @@ Root `solution.py` is the only active submission. Archived source files are immu
 | v030 | 2026-08-28 | C38 beam2 + narrow FULL64 full-coverage | 0.5695 | 0.4497 | CUDA stage ~30s | 14092 | 170.57s | official inversion vs local +3.84pp (pending A/B) | official-submitted, local-champion, not-promoted | [archive](20260828_v030_c38-beam2-fullcov-official14092_time170.6s/) |
 | v031 | 2026-08-28 | C39-FW wide-layer FULL64 calibration candidate | 0.5357 | 0.4497 | CUDA stage 27.47s | **14613** | **159.2s** | **+176 vs v025** | **official-compliant-champion** | [archive](20260828_v031_c39-fw-official14613_time159.2s/) |
 | v032 | 2026-08-28 | C40 robust Block-LDLQ 128 | 0.5393 | 0.4497 | CUDA stage 45.32s; CPU 100.05s | **14432** | **216.667s** | **-181 vs v031; local/official inversion** | official-rejected | [archive](20260828_v032_c40-robust-blockldlq_official-score14432_time216.667s/) |
+| v033 | 2026-08-29 | C41 scale-aware K 公共平移（Attention） | 0.5357（Linear 逐位不变） | MHA +0.72% / +0.75%；GQA −0.88% | API 最慢 74.48s | NA | NA | 总分 −0.074；MHA 正向、GQA 负向 | local-rejected | [archive](20260829_v033_c41-scale-aware-k-center_scoreNA_timeNA/) |
 
 `*` v002 的 Linear/Attention 数值最初来自远程仓库 `CHANGELOG.md` 的 GPT-2
 12 层、2 calib + 2 test 报告，之后已由 GPU-compatible B0 derivative 在本地

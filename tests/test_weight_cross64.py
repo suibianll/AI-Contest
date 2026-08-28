@@ -5,6 +5,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import pytest
 import torch
 
 
@@ -112,6 +113,10 @@ def test_cross64_fold_objective_is_monotonic() -> None:
         sol._WEIGHT_CROSS64 = old_flag
 
 
+@pytest.mark.skipif(
+    not hasattr(sol, "_cross64_fold_pair_covariances"),
+    reason="cross64 weight mechanism belongs to the C40 line; absent in C39-FW",
+)
 def test_cross64_fold_covariance_matches_direct_activation_gram() -> None:
     torch.manual_seed(246)
     samples = [torch.randn(24, 256), torch.randn(17, 256)]

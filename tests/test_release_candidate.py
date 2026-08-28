@@ -131,6 +131,7 @@ def test_feature_off_is_field_for_field_b0_equivalent() -> None:
     current._ATTN_H64 = False
     current._V_IMPORTANCE_CANDIDATES = False
     current._L1_DATA_DRIVEN_SCALE = False
+    current._ATTN_SCALE_AWARE_CENTER = False
 
     torch.manual_seed(901)
     q_heads, kv_heads, head_dim = 4, 2, 64
