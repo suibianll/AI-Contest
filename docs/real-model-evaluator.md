@@ -60,6 +60,46 @@
 
 调试适配器时可以使用 `--layers 1 --calib 1 --test 1`，但这个配置只能做接口冒烟，不能用于候选排名或官方拟合。
 
+## 持久化真实模型数据
+
+模型前向本身是评估中最慢、也最依赖本地模型文件的一步。评估器支持把一次真实前向产生的完整输入快照保存到 `artifacts/real_model_suite/cache/`，后续候选评测直接从快照读取，不再加载 tokenizer/model，不执行模型 forward，也不访问网络。快照包含：
+
+- 固定 WikiText 窗口及 token ids；
+- 每层各 Linear 的真实权重和真实输入激活；
+- Attention 评分所需的真实 Q/K/V（包含 NeoX/Qwen 实际 RoPE 处理和 GQA 形状）；
+- 模型结构、源 revision、数据集 revision、parquet SHA256、层数和样本配置。
+
+首次采集建议单独执行，候选列表可以为空，因为 `--capture-only` 会在采集完成后停止：
+
+```powershell
+.\.venv\Scripts\python.exe -u evaluator\real_model_suite.py `
+  --device cuda --cache-mode write --capture-only `
+  --seq 128 --calib 2 --test 4
+```
+
+后续只读缓存评测：
+
+```powershell
+.\.venv\Scripts\python.exe -u evaluator\real_model_suite.py `
+  --device cpu --algorithm-device cuda --cache-mode read `
+  --seq 128 --calib 2 --test 4 `
+  --output artifacts\real_model_suite\cache-read.json `
+  --report docs\real-model-evaluator-cache-read.md
+```
+
+`--cache-mode` 的语义如下：
+
+| 模式 | 行为 |
+|---|---|
+| `auto`（默认） | 有效快照直接读取；缺失或过期时执行一次模型前向并写入快照 |
+| `read` | 只读快照；缺失、schema/版本/配置/形状校验失败时立即报错，绝不回退到模型加载 |
+| `write` | 始终执行模型前向并刷新对应快照 |
+| `off` | 不读取、不写入快照，保持一次性评测行为 |
+
+缓存文件名编码了模型、序列长度、calibration/test 数量、层数和 schema 版本。读取前会校验这些字段、固定数据集 revision、模型 family/source revision、窗口防泄漏约束、CPU 张量结构以及 NaN/Inf；因此不能把不同语料、不同层数或不同模型的快照误当成同一评测。缓存属于本地生成资产，已加入 `.gitignore`，不会提交到仓库；需要刷新时显式使用 `--cache-mode write`。
+
+缓存只改变数据供给方式，不改变合规边界：候选仍只收到原有 NVFP4 权重/激活和正式 API 参数。缓存中的 Q/K/V 只供 evaluator 在候选返回量化状态后计算 reference attention 误差；任何候选都不能计算 `A @ W` 并利用该输出拟合或选择 `Q(A)`。
+
 ## 指标口径
 
 - `linear.global_gain`：所有 Linear 输出元素按 evaluator reference MSE 加权的相对改善。

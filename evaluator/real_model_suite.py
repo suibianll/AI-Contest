@@ -20,6 +20,11 @@ Typical run (from the repository root)::
 
     python evaluator/real_model_suite.py --device cuda
 
+Capture once, then score candidates offline from the snapshots::
+
+    python evaluator/real_model_suite.py --device cuda --cache-mode write --capture-only
+    python evaluator/real_model_suite.py --device cpu --algorithm-device cuda --cache-mode read
+
 Model weights and WikiText parquet files are local, ignored assets.  The
 manifest pins the public Hugging Face revisions used to obtain them; the
 download itself is intentionally performed outside this script so an
@@ -62,6 +67,8 @@ WIKITEXT_FILES = {
     "validation": "validation-00000-of-00001.parquet",
     "test": "test-00000-of-00001.parquet",
 }
+CACHE_SCHEMA_VERSION = 1
+DEFAULT_CACHE_DIR = ROOT / "artifacts" / "real_model_suite" / "cache"
 
 
 @dataclasses.dataclass(frozen=True)
@@ -166,6 +173,380 @@ class ModelData:
     calibration_windows: list[Window]
     test_windows: list[Window]
     metadata: dict[str, Any]
+
+
+class CacheValidationError(RuntimeError):
+    """Raised when a persisted model snapshot is absent, stale, or malformed."""
+
+
+def model_cache_path(
+    spec: ModelSpec,
+    cache_dir: Path,
+    sequence_length: int,
+    calibration_samples: int,
+    test_samples: int,
+    requested_layers: int | None,
+) -> Path:
+    """Return the deterministic path for one model/data capture configuration."""
+
+    layer_tag = "all" if requested_layers is None else str(requested_layers)
+    filename = (
+        f"{spec.name}__seq{sequence_length}__calib{calibration_samples}"
+        f"__test{test_samples}__layers{layer_tag}__schema{CACHE_SCHEMA_VERSION}.pt"
+    )
+    return cache_dir / filename
+
+
+def _cache_capture_config(data: ModelData, requested_layers: int | None) -> dict[str, Any]:
+    data_metadata = data.metadata.get("data", {})
+    return {
+        "model": data.spec.name,
+        "family": data.spec.family,
+        "source_revision": data.spec.source_revision,
+        "dataset": data_metadata.get("dataset"),
+        "dataset_config": data_metadata.get("config"),
+        "dataset_revision": data_metadata.get("revision"),
+        "sequence_length": len(data.calibration_windows[0].input_ids),
+        "calibration_samples": len(data.calibration_windows),
+        "test_samples": len(data.test_windows),
+        "requested_layers": requested_layers,
+        "layers": data.layers,
+    }
+
+
+def _window_to_cache_payload(window: Window) -> dict[str, Any]:
+    payload = dataclasses.asdict(window)
+    payload["input_ids"] = list(window.input_ids)
+    return payload
+
+
+def _window_from_cache_payload(payload: Any, label: str) -> Window:
+    if not isinstance(payload, dict):
+        raise CacheValidationError(f"{label} is not a serialized window mapping")
+    try:
+        input_ids = tuple(int(token) for token in payload["input_ids"])
+        return Window(
+            split=str(payload["split"]),
+            document_id=str(payload["document_id"]),
+            row_start=int(payload["row_start"]),
+            row_end=int(payload["row_end"]),
+            token_start=int(payload["token_start"]),
+            token_end=int(payload["token_end"]),
+            input_ids=input_ids,
+        )
+    except (KeyError, TypeError, ValueError) as exc:
+        raise CacheValidationError(f"malformed {label}") from exc
+
+
+def _validate_cached_tensor(value: Any, label: str) -> torch.Tensor:
+    if not isinstance(value, torch.Tensor):
+        raise CacheValidationError(f"{label} is not a tensor")
+    if value.device.type != "cpu":
+        raise CacheValidationError(f"{label} is not stored on CPU")
+    if value.numel() == 0:
+        raise CacheValidationError(f"{label} is empty")
+    if value.is_floating_point() and not bool(torch.isfinite(value).all()):
+        raise CacheValidationError(f"{label} contains NaN or infinity")
+    return value
+
+
+def _validate_activation_store(
+    store: Any,
+    roles: Sequence[str],
+    sample_count: int,
+    layer_count: int,
+    hidden_size: int,
+    label: str,
+) -> None:
+    if not isinstance(store, dict):
+        raise CacheValidationError(f"{label} is not a role mapping")
+    if set(store) != set(roles):
+        raise CacheValidationError(f"{label} roles do not match the cached model")
+    for role in roles:
+        batches = store[role]
+        if not isinstance(batches, list) or len(batches) != sample_count:
+            raise CacheValidationError(
+                f"{label}[{role}] has {len(batches) if isinstance(batches, list) else 'invalid'} samples"
+            )
+        for batch_index, per_layer in enumerate(batches):
+            if not isinstance(per_layer, list) or len(per_layer) != layer_count:
+                raise CacheValidationError(
+                    f"{label}[{role}][{batch_index}] has the wrong layer count"
+                )
+            for layer_index, value in enumerate(per_layer):
+                tensor = _validate_cached_tensor(
+                    value, f"{label}[{role}][{batch_index}][{layer_index}]"
+                )
+                if tensor.ndim != 2 or tensor.shape[0] <= 0 or tensor.shape[1] <= 0:
+                    raise CacheValidationError(
+                        f"{label}[{role}][{batch_index}][{layer_index}] has invalid shape {tuple(tensor.shape)}"
+                    )
+                if role in {"q", "k", "v", "o"} and tensor.shape[1] != hidden_size:
+                    raise CacheValidationError(
+                        f"{label}[{role}][{batch_index}][{layer_index}] has input width "
+                        f"{tensor.shape[1]}, expected {hidden_size}"
+                    )
+
+
+def _validate_qkv_store(
+    store: Any,
+    sample_count: int,
+    layer_count: int,
+    q_width: int,
+    kv_width: int,
+    label: str,
+) -> None:
+    if not isinstance(store, list) or len(store) != sample_count:
+        raise CacheValidationError(f"{label} has the wrong sample count")
+    for batch_index, per_layer in enumerate(store):
+        if not isinstance(per_layer, list) or len(per_layer) != layer_count:
+            raise CacheValidationError(f"{label}[{batch_index}] has the wrong layer count")
+        for layer_index, qkv in enumerate(per_layer):
+            if not isinstance(qkv, (tuple, list)) or len(qkv) != 3:
+                raise CacheValidationError(f"{label}[{batch_index}][{layer_index}] is not Q/K/V")
+            for name, value, width in zip(("q", "k", "v"), qkv, (q_width, kv_width, kv_width)):
+                tensor = _validate_cached_tensor(
+                    value, f"{label}[{batch_index}][{layer_index}].{name}"
+                )
+                if tensor.ndim != 2 or tensor.shape[1] != width:
+                    raise CacheValidationError(
+                        f"{label}[{batch_index}][{layer_index}].{name} has shape {tuple(tensor.shape)}, "
+                        f"expected [tokens, {width}]"
+                    )
+
+
+def _validate_cached_model_payload(
+    payload: Any,
+    spec: ModelSpec,
+    sequence_length: int,
+    calibration_samples: int,
+    test_samples: int,
+    requested_layers: int | None,
+) -> ModelData:
+    if not isinstance(payload, dict):
+        raise CacheValidationError("cache root is not a mapping")
+    if payload.get("schema_version") != CACHE_SCHEMA_VERSION:
+        raise CacheValidationError(
+            f"unsupported cache schema {payload.get('schema_version')!r}; "
+            f"expected {CACHE_SCHEMA_VERSION}"
+        )
+
+    capture_config = payload.get("capture_config")
+    expected_config = {
+        "model": spec.name,
+        "family": spec.family,
+        "source_revision": spec.source_revision,
+        "dataset": "Salesforce/wikitext",
+        "dataset_config": WIKITEXT_CONFIG,
+        "dataset_revision": WIKITEXT_REVISION,
+        "sequence_length": sequence_length,
+        "calibration_samples": calibration_samples,
+        "test_samples": test_samples,
+        "requested_layers": requested_layers,
+    }
+    if not isinstance(capture_config, dict):
+        raise CacheValidationError("cache has no capture_config")
+    mismatches = {
+        key: (capture_config.get(key), expected)
+        for key, expected in expected_config.items()
+        if capture_config.get(key) != expected
+    }
+    if mismatches:
+        raise CacheValidationError(f"cache configuration mismatch: {mismatches}")
+
+    metadata = payload.get("metadata")
+    if not isinstance(metadata, dict):
+        raise CacheValidationError("cache has no model metadata")
+    data_metadata = metadata.get("data")
+    if not isinstance(data_metadata, dict):
+        raise CacheValidationError("cache has no dataset metadata")
+    for key, expected in (
+        ("model", spec.name),
+        ("family", spec.family),
+        ("source_revision", spec.source_revision),
+    ):
+        if metadata.get(key) != expected:
+            raise CacheValidationError(
+                f"cache metadata {key}={metadata.get(key)!r} does not match {expected!r}"
+            )
+    for key, expected in (
+        ("dataset", "Salesforce/wikitext"),
+        ("config", WIKITEXT_CONFIG),
+        ("revision", WIKITEXT_REVISION),
+    ):
+        if data_metadata.get(key) != expected:
+            raise CacheValidationError(
+                f"cache data metadata {key}={data_metadata.get(key)!r} does not match {expected!r}"
+            )
+
+    try:
+        layers = int(payload["layers"])
+        hidden_size = int(payload["hidden_size"])
+        q_heads = int(payload["q_heads"])
+        kv_heads = int(payload["kv_heads"])
+        head_dim = int(payload["head_dim"])
+        roles = tuple(str(role) for role in payload["roles"])
+        role_groups = {str(key): str(value) for key, value in payload["role_groups"].items()}
+        tokenizer_name = str(payload["tokenizer_name"])
+    except (KeyError, TypeError, ValueError, AttributeError) as exc:
+        raise CacheValidationError("cache model description is malformed") from exc
+    if layers <= 0 or hidden_size <= 0 or q_heads <= 0 or kv_heads <= 0 or head_dim <= 0:
+        raise CacheValidationError("cache model dimensions must be positive")
+    if q_heads % kv_heads or q_heads * head_dim != hidden_size:
+        raise CacheValidationError("cache attention dimensions are inconsistent")
+    if not roles or set(role_groups) != set(roles):
+        raise CacheValidationError("cache roles and role_groups are inconsistent")
+
+    calibration_windows_payload = payload.get("calibration_windows")
+    test_windows_payload = payload.get("test_windows")
+    if not isinstance(calibration_windows_payload, list) or not isinstance(test_windows_payload, list):
+        raise CacheValidationError("cache windows are missing")
+    calibration_windows = [
+        _window_from_cache_payload(item, f"calibration_windows[{index}]")
+        for index, item in enumerate(calibration_windows_payload)
+    ]
+    test_windows = [
+        _window_from_cache_payload(item, f"test_windows[{index}]")
+        for index, item in enumerate(test_windows_payload)
+    ]
+    if len(calibration_windows) != calibration_samples or len(test_windows) != test_samples:
+        raise CacheValidationError("cache windows do not match the requested sample counts")
+    if any(window.split != "train" for window in calibration_windows):
+        raise CacheValidationError("calibration cache windows must come from train")
+    if any(window.split != "validation" for window in test_windows):
+        raise CacheValidationError("test cache windows must come from validation")
+    try:
+        validate_window_split(calibration_windows, test_windows, sequence_length)
+    except ValueError as exc:
+        raise CacheValidationError(f"cache window validation failed: {exc}") from exc
+
+    weights = payload.get("weights")
+    if not isinstance(weights, list) or len(weights) != layers:
+        raise CacheValidationError("cache weights have the wrong layer count")
+    for layer_index, per_role in enumerate(weights):
+        if not isinstance(per_role, dict) or set(per_role) != set(roles):
+            raise CacheValidationError(f"weights[{layer_index}] roles do not match")
+        for role in roles:
+            tensor = _validate_cached_tensor(per_role[role], f"weights[{layer_index}][{role}]")
+            if tensor.ndim != 2 or tensor.shape[0] <= 0 or tensor.shape[1] <= 0:
+                raise CacheValidationError(
+                    f"weights[{layer_index}][{role}] has shape {tuple(tensor.shape)}"
+                )
+
+    calibration_activations = payload.get("calibration_activations")
+    test_activations = payload.get("test_activations")
+    _validate_activation_store(
+        calibration_activations, roles, calibration_samples, layers, hidden_size, "calibration_activations"
+    )
+    _validate_activation_store(
+        test_activations, roles, test_samples, layers, hidden_size, "test_activations"
+    )
+    for layer_index, per_role in enumerate(weights):
+        for role in roles:
+            expected_input_width = calibration_activations[role][0][layer_index].shape[1]
+            if per_role[role].shape[1] != expected_input_width:
+                raise CacheValidationError(
+                    f"weights[{layer_index}][{role}] input width {per_role[role].shape[1]} "
+                    f"does not match activation width {expected_input_width}"
+                )
+    q_width = q_heads * head_dim
+    kv_width = kv_heads * head_dim
+    calibration_qkv = payload.get("calibration_qkv")
+    test_qkv = payload.get("test_qkv")
+    _validate_qkv_store(
+        calibration_qkv, calibration_samples, layers, q_width, kv_width, "calibration_qkv"
+    )
+    _validate_qkv_store(test_qkv, test_samples, layers, q_width, kv_width, "test_qkv")
+
+    restored_metadata = dict(metadata)
+    return ModelData(
+        spec=spec,
+        tokenizer_name=tokenizer_name,
+        layers=layers,
+        hidden_size=hidden_size,
+        q_heads=q_heads,
+        kv_heads=kv_heads,
+        head_dim=head_dim,
+        roles=roles,
+        role_groups=role_groups,
+        weights=weights,
+        calibration_activations=calibration_activations,
+        test_activations=test_activations,
+        calibration_qkv=calibration_qkv,
+        test_qkv=test_qkv,
+        calibration_windows=calibration_windows,
+        test_windows=test_windows,
+        metadata=restored_metadata,
+    )
+
+
+def save_model_cache(data: ModelData, path: Path, requested_layers: int | None) -> None:
+    """Persist a CPU-only model snapshot atomically for later offline scoring."""
+
+    payload = {
+        "schema_version": CACHE_SCHEMA_VERSION,
+        "capture_config": _cache_capture_config(data, requested_layers),
+        "tokenizer_name": data.tokenizer_name,
+        "layers": data.layers,
+        "hidden_size": data.hidden_size,
+        "q_heads": data.q_heads,
+        "kv_heads": data.kv_heads,
+        "head_dim": data.head_dim,
+        "roles": list(data.roles),
+        "role_groups": dict(data.role_groups),
+        "weights": data.weights,
+        "calibration_activations": data.calibration_activations,
+        "test_activations": data.test_activations,
+        "calibration_qkv": data.calibration_qkv,
+        "test_qkv": data.test_qkv,
+        "calibration_windows": [
+            _window_to_cache_payload(window) for window in data.calibration_windows
+        ],
+        "test_windows": [_window_to_cache_payload(window) for window in data.test_windows],
+        "metadata": data.metadata,
+    }
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary_path = path.with_name(path.name + ".tmp")
+    try:
+        torch.save(payload, temporary_path)
+        temporary_path.replace(path)
+    finally:
+        if temporary_path.exists():
+            temporary_path.unlink()
+
+
+def load_model_cache(
+    path: Path,
+    spec: ModelSpec,
+    sequence_length: int,
+    calibration_samples: int,
+    test_samples: int,
+    requested_layers: int | None,
+) -> ModelData:
+    """Load and validate a snapshot without importing transformers or loading a model."""
+
+    if not path.is_file():
+        raise FileNotFoundError(f"model cache does not exist: {path}")
+    try:
+        try:
+            payload = torch.load(path, map_location="cpu", weights_only=True)
+        except TypeError:  # compatibility with older torch releases
+            payload = torch.load(path, map_location="cpu")
+    except Exception as exc:
+        raise CacheValidationError(f"cannot read model cache {path}: {exc}") from exc
+    data = _validate_cached_model_payload(
+        payload,
+        spec,
+        sequence_length,
+        calibration_samples,
+        test_samples,
+        requested_layers,
+    )
+    data.metadata = dict(data.metadata)
+    data.metadata["cache_path"] = str(path)
+    data.metadata["cache_schema_version"] = CACHE_SCHEMA_VERSION
+    data.metadata["loaded_from_cache"] = True
+    return data
 
 
 _TITLE_RE = re.compile(r"^\s*=+\s+.*?\s+=+\s*$")
@@ -918,8 +1299,17 @@ def collect_model_data(
             "head_dim": adapter.head_dim,
             "roles": list(adapter.roles),
             "role_groups": adapter.role_groups,
+            "requested_layers": layers,
             "data": data_metadata,
         }
+        metadata["data"] = dict(data_metadata)
+        metadata["data"].update(
+            {
+                "sequence_length": sequence_length,
+                "calibration_samples": calibration_samples,
+                "test_samples": test_samples,
+            }
+        )
         return ModelData(
             spec=spec,
             tokenizer_name=type(tokenizer).__name__,
@@ -943,6 +1333,71 @@ def collect_model_data(
         del model
         if device.type == "cuda":
             torch.cuda.empty_cache()
+
+
+def load_or_collect_model_data(
+    spec: ModelSpec,
+    data_dir: Path,
+    cache_dir: Path,
+    sequence_length: int,
+    calibration_samples: int,
+    test_samples: int,
+    device_name: str,
+    requested_layers: int | None,
+    cache_mode: str,
+) -> tuple[ModelData, str, Path]:
+    """Load a validated snapshot or capture the model according to ``cache_mode``.
+
+    ``read`` is intentionally fail-closed: a missing or stale cache never falls
+    back to a model load.  ``auto`` may create a missing/stale cache; ``write``
+    always refreshes it; ``off`` keeps the historical one-shot behavior.
+    """
+
+    if cache_mode not in {"auto", "read", "write", "off"}:
+        raise ValueError(f"unknown cache mode: {cache_mode}")
+    path = model_cache_path(
+        spec,
+        cache_dir,
+        sequence_length,
+        calibration_samples,
+        test_samples,
+        requested_layers,
+    )
+    if cache_mode in {"auto", "read"} and path.is_file():
+        try:
+            return (
+                load_model_cache(
+                    path,
+                    spec,
+                    sequence_length,
+                    calibration_samples,
+                    test_samples,
+                    requested_layers,
+                ),
+                "cache",
+                path,
+            )
+        except Exception as exc:
+            if cache_mode == "read":
+                raise CacheValidationError(
+                    f"cache-only mode refused invalid cache {path}: {exc}"
+                ) from exc
+            print(f"{spec.name}: cache invalid, recapturing ({exc})", flush=True)
+    elif cache_mode == "read":
+        raise FileNotFoundError(f"cache-only mode requires an existing cache: {path}")
+
+    data = collect_model_data(
+        spec,
+        data_dir,
+        sequence_length,
+        calibration_samples,
+        test_samples,
+        device_name,
+        requested_layers,
+    )
+    if cache_mode in {"auto", "write"}:
+        save_model_cache(data, path, requested_layers)
+    return data, "model_forward", path
 
 
 def _linear_detail(
@@ -1389,7 +1844,7 @@ def write_report(
     lines = [
         "# 多模型真实语料评估校准报告",
         "",
-        f"运行时间：{run_metadata['started_at']}（配置 mode={run_metadata['mode']}，seq={run_metadata['sequence_length']}，calib={run_metadata['calibration_samples']}，test={run_metadata['test_samples']}）",
+        f"运行时间：{run_metadata['started_at']}（配置 mode={run_metadata['mode']}，seq={run_metadata['sequence_length']}，calib={run_metadata['calibration_samples']}，test={run_metadata['test_samples']}，cache_mode={run_metadata['cache_mode']}）",
         "",
         "本报告只用于检查本地评估器是否能复现已有官方候选的相对方向。官方分数没有进入候选校准状态，也没有传给 `solution.py`。评估器内部的输出矩阵乘法只在候选返回量化结果之后，用作固定参考误差。",
         "",
@@ -1399,18 +1854,18 @@ def write_report(
         "- calibration 来自 train，test 来自 validation；每个窗口来自一个文档，禁止环形重复、窗口重叠和跨 split 文档复用。",
         "- 模型状态：",
         "",
-        "| 模型 | 状态 | 层数 | hidden | heads / kv-heads | 说明 |",
-        "|---|---|---:|---:|---:|---|",
+            "| 模型 | 状态 | 层数 | hidden | heads / kv-heads | 数据来源 | 说明 |",
+            "|---|---|---:|---:|---:|---|---|",
     ]
     for status in model_status:
         if status.get("status") == "loaded":
             metadata = status["metadata"]
             lines.append(
-                f"| {status['model']} | loaded | {metadata['layers']} | {metadata['hidden_size']} | {metadata['q_heads']} / {metadata['kv_heads']} | {metadata['family']} |"
+                f"| {status['model']} | loaded | {metadata['layers']} | {metadata['hidden_size']} | {metadata['q_heads']} / {metadata['kv_heads']} | {status.get('source', 'model_forward')} | {metadata['family']} |"
             )
         else:
             lines.append(
-                f"| {status['model']} | skipped | - | - | - | {status.get('error', 'unknown error')} |"
+                f"| {status['model']} | skipped | - | - | - | - | {status.get('error', 'unknown error')} |"
             )
 
     lines.extend(
@@ -1459,7 +1914,8 @@ def write_report(
             "1. 只有当多个模型、多个特征同时保持方向，并且至少复现 C39 高于 C40 的已知官方排序时，才把本地分数当作候选筛选信号。",
             "2. 如果某个特征只在 GPT-2-small 上有效，或 C38/C40 的排序反转，应优先检查数据分割、架构适配和聚合口径，不应继续调候选阈值。",
             "3. `synthetic_attention_eval.py` 不由本套件调用；它只能做接口/性质测试，不能用于候选排名。",
-            "4. algorithm-stage 是候选 API 的开发计时，官方端到端计时仍以赛事评测为准；报告中的 `<300s` 只是本地硬约束预筛。",
+            "4. `cache_mode=read` 时本次结果只来自已保存的模型前向快照，不加载 tokenizer/model，也不读取网络；`cache_mode=write` 才会刷新快照。",
+            "5. algorithm-stage 是候选 API 的开发计时，官方端到端计时仍以赛事评测为准；报告中的 `<300s` 只是本地硬约束预筛。",
         ]
     )
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -1478,6 +1934,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         raise ValueError(f"unknown candidates: {unknown_candidates}")
     if args.layers is not None and args.layers <= 0:
         raise ValueError("--layers must be positive")
+    if args.capture_only and args.cache_mode == "off":
+        raise ValueError("--capture-only requires --cache-mode auto, read, or write")
 
     run_metadata: dict[str, Any] = {
         "started_at": started_at,
@@ -1488,6 +1946,9 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "device": args.device,
         "algorithm_device": args.algorithm_device or args.device,
         "data_dir": str(args.data_dir),
+        "cache_dir": str(args.cache_dir),
+        "cache_mode": args.cache_mode,
+        "capture_only": args.capture_only,
         "models": selected_models,
         "candidates": selected_candidates,
         "official_runtime_limit_seconds": 300.0,
@@ -1514,22 +1975,41 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     for model_name in selected_models:
         spec = MODEL_SPECS[model_name]
         try:
-            data = collect_model_data(
+            data, data_source, cache_path = load_or_collect_model_data(
                 spec,
                 args.data_dir,
+                args.cache_dir,
                 args.seq,
                 args.calib,
                 args.test,
                 args.device,
                 args.layers,
+                args.cache_mode,
             )
-            model_status.append({"model": model_name, "status": "loaded", "metadata": data.metadata})
+            model_status.append(
+                {
+                    "model": model_name,
+                    "status": "loaded",
+                    "source": data_source,
+                    "cache_path": str(cache_path),
+                    "metadata": data.metadata,
+                }
+            )
+            print(
+                f"{model_name}: data_source={data_source} cache={cache_path}",
+                flush=True,
+            )
         except Exception as exc:
             status = {"model": model_name, "status": "skipped", "error": f"{type(exc).__name__}: {exc}"}
             model_status.append(status)
             persist_partial()
-            if args.strict_models:
+            if args.strict_models or args.cache_mode == "read":
                 raise
+            continue
+        if args.capture_only:
+            persist_partial()
+            print(f"{model_name}: capture-only complete", flush=True)
+            del data
             continue
         for candidate_name in selected_candidates:
             candidate = CANDIDATE_SPECS[candidate_name]
@@ -1613,6 +2093,23 @@ def build_parser() -> argparse.ArgumentParser:
         "--algorithm-device",
         default=None,
         help="device for candidate calibration/scoring (default: same as --device)",
+    )
+    parser.add_argument(
+        "--cache-dir",
+        type=Path,
+        default=DEFAULT_CACHE_DIR,
+        help="directory for CPU model-forward snapshots",
+    )
+    parser.add_argument(
+        "--cache-mode",
+        choices=("auto", "read", "write", "off"),
+        default="auto",
+        help="auto=read or create; read=cache-only; write=refresh; off=do not persist",
+    )
+    parser.add_argument(
+        "--capture-only",
+        action="store_true",
+        help="capture/validate model data and stop before invoking candidate algorithms",
     )
     parser.add_argument("--strict-models", action="store_true", help="fail instead of skipping a missing/broken model")
     parser.add_argument(
