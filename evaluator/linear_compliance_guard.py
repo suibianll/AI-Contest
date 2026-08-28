@@ -1,6 +1,14 @@
 """Linear compliance guard: static AST checks + runtime taint checks.
 
-Enforces the official Linear calibration boundary for ``solution.py``:
+Enforces the official Linear calibration boundary for ``solution.py``.  The
+important distinction is between *where* a contraction is used and whether it
+feeds the online activation quantizer:
+
+* Offline Linear calibration may form ``A @ W`` (and related output losses) to
+  optimize the offline weight quantizer ``Q(W)``.
+* The resulting output or residual must not flow into ``activation_state`` or
+  otherwise be used to fit, select, or infer the online activation quantizer
+  ``Q(A)``.
 
 Static layer (AST, module-wide):
 - rejects the reappearance of known forbidden symbols such as
@@ -9,9 +17,11 @@ Static layer (AST, module-wide):
   identifiers and as string literals (state keys);
 - rejects suspicious state keys (output / reference / residual /
   cross / target) in returned calibration dicts;
-- flags matmul-style contractions whose two operands mix
-  activation-derived and weight-derived names (heuristic for renamed
-  equivalents; the runtime layer is authoritative).
+- permits activation/weight contractions in the call graph rooted at the
+  official offline weight calibration function, but flags them outside that
+  call graph and flags the simple data-flow case where their result is
+  returned as ``activation_state``; the runtime layer is authoritative for
+  tensor provenance.
 
 Runtime layer (TorchDispatchMode taint tracking):
 - seeds the weight input pair with a ``W`` taint and every calibration
@@ -21,10 +31,13 @@ Runtime layer (TorchDispatchMode taint tracking):
 - records every contraction (mm / matmul / bmm / einsum family) with
   operand shapes, output shape and combined taints;
 - hard failures: contractions combining an activation residual with a
-  weight residual (the removed cross8 mechanism in any renamed form),
-  contractions leaking the token or out_features dimension into their
-  output shape, and activation-state tensors combining both residual
-  taints or carrying token/out_features dimensions;
+  weight residual (the removed cross8 mechanism in any renamed form), a
+  tensor derived from an ``A @ W``-like contraction reaching
+  ``activation_state``, and activation-state tensors carrying token or
+  out_features dimensions;
+- records offline ``A @ W``-like contractions as review items rather than
+  rejecting them solely because their output shape is ``[tokens,
+  out_features]``;
 - review entries: dual-taint activation-state tensors that are not
   residual-derived (e.g. the SmoothQuant channel scale) must be
   manually confirmed to be channel-wise statistics.
@@ -106,14 +119,19 @@ class _TaintRecorder(TorchDispatchMode):  # type: ignore[misc]
       activation-tainted operands);
     - ``Rw`` — weight-residual suspect (subtraction involving
       weight-tainted operands).
+    - ``O``  — Linear-output provenance (a contraction combining raw
+      activation and weight provenance).  ``O`` is legal when it remains in
+      the offline weight objective, but is forbidden in ``activation_state``.
 
     Legal contractions include ``A.T @ A`` Grams,
     weight-side Grams (``W.T @ W``), the Q(W) Hessian loss
     (weight residual x activation Gram) and the activation refinement
     quadratic form (activation residual x weight Gram).
     Illegal: any contraction combining an activation residual with a
-    weight residual (the removed ``cross8`` mechanism), and any
-    contraction producing a ``[tokens, out_features]`` output.
+    weight residual (the removed ``cross8`` mechanism), or any ``O``-tainted
+    tensor returned through ``activation_state``.  An ``O``-tainted
+    ``[tokens, out_features]`` tensor is otherwise allowed during offline
+    weight calibration.
     """
 
     _SUB_TOKENS = ("sub", "subtract", "rsub")
@@ -125,6 +143,7 @@ class _TaintRecorder(TorchDispatchMode):  # type: ignore[misc]
         self._keepalive: list[Any] = []
         self.contractions: list[dict[str, Any]] = []
         self.cross_residuals: list[dict[str, Any]] = []
+        self.linear_output_contractions: list[dict[str, Any]] = []
         self.op_count = 0
 
     def seed(self, tensor: torch.Tensor, taint: str) -> None:
@@ -162,6 +181,9 @@ class _TaintRecorder(TorchDispatchMode):  # type: ignore[misc]
                 "operand_shapes": [tuple(t.shape) for t in tensors],
                 "taints": sorted(combined),
                 "output_shape": None,
+                "linear_output": (
+                    "A" in combined and "W" in combined
+                ),
                 "cross_residual": (
                     "A" in combined
                     and "W" in combined
@@ -171,6 +193,8 @@ class _TaintRecorder(TorchDispatchMode):  # type: ignore[misc]
             }
             if entry["cross_residual"]:
                 self.cross_residuals.append(entry)
+            if entry["linear_output"]:
+                self.linear_output_contractions.append(entry)
             self.contractions.append(entry)
 
         output = func(*args, **kwargs)
@@ -180,25 +204,37 @@ class _TaintRecorder(TorchDispatchMode):  # type: ignore[misc]
         if combined:
             out_taint: set[str] = set(combined)
             if is_contraction:
-                activation_side = "A" in combined or "Ra" in combined
-                if "W" in combined and activation_side:
-                    # Weight-guided activation-side contraction (the
-                    # legal activation refinement under a weight Gram):
-                    # a weaker flag that never counts as weight data.
-                    out_taint = {"Wg"} | (
-                        {"Ra"} if "Ra" in combined else set()
-                    )
-                elif "W" in combined:
-                    # Pure weight-side contraction (weight Gram, Q(W)
-                    # Hessian loss): keep weight residual suspects.
-                    out_taint = {"W"} | (
-                        {"Rw"} if "Rw" in combined else set()
-                    )
+                if "A" in combined and "W" in combined:
+                    # Officially permitted only for an offline objective that
+                    # optimizes Q(W).  Keep explicit output provenance so a
+                    # later state audit can reject scalar/pooled derivatives
+                    # even when the original [N, M] output is gone.
+                    # Do not retain the raw A/W labels after the contraction:
+                    # otherwise an ordinary output loss would be mistaken
+                    # for a later activation-residual x weight-residual
+                    # cross term.  O is the sufficient provenance for the
+                    # only forbidden sink (activation_state).
+                    out_taint = {"O"}
                 else:
-                    # A-only contraction: an activation Gram.
-                    out_taint = {"G"} | (
-                        {"Ra"} if "Ra" in combined else set()
-                    )
+                    activation_side = "A" in combined or "Ra" in combined
+                    if "W" in combined and activation_side:
+                        # Weight-guided activation-side contraction (the
+                        # legal activation refinement under a weight Gram):
+                        # a weaker flag that never counts as weight data.
+                        out_taint = {"Wg"} | (
+                            {"Ra"} if "Ra" in combined else set()
+                        )
+                    elif "W" in combined:
+                        # Pure weight-side contraction (weight Gram, Q(W)
+                        # Hessian loss): keep weight residual suspects.
+                        out_taint = {"W"} | (
+                            {"Rw"} if "Rw" in combined else set()
+                        )
+                    else:
+                        # A-only contraction: an activation Gram.
+                        out_taint = {"G"} | (
+                            {"Ra"} if "Ra" in combined else set()
+                        )
             elif (
                 len(tensors) >= 2
                 and any(token in op_name for token in self._SUB_TOKENS)
@@ -216,13 +252,13 @@ class _TaintRecorder(TorchDispatchMode):  # type: ignore[misc]
                 torch.is_tensor(output)
                 and output.ndim == 1
                 and int(output.shape[0]) == self.in_features
-                and not (out_taint & {"Ra", "Rw"})
+                and not (out_taint & {"Ra", "Rw", "O"})
             ):
-                # A [K] channel vector without residual flags is a
-                # channel statistic (amax / rms / smooth scale): it
-                # cannot carry token or out_features information, and
-                # its A/W mixing is the legal SmoothQuant pattern, so
-                # it is taint-neutralized.
+                # A [K] channel vector without residual or output
+                # provenance is a channel statistic (amax / rms / smooth
+                # scale): it cannot carry token or out_features information,
+                # and its A/W mixing is the legal SmoothQuant pattern, so it
+                # is taint-neutralized.
                 out_taint = set()
             self._register(output, out_taint)
         return output
@@ -267,6 +303,146 @@ def _mm_call_nodes(tree: ast.AST):
                 yield node, operands
 
 
+_OFFLINE_WEIGHT_CALIBRATION = "hif4_calibration_and_quantize_weight"
+
+
+def _parent_map(tree: ast.AST) -> dict[ast.AST, ast.AST]:
+    parents: dict[ast.AST, ast.AST] = {}
+    for parent in ast.walk(tree):
+        for child in ast.iter_child_nodes(parent):
+            parents[child] = parent
+    return parents
+
+
+def _enclosing_function(
+    node: ast.AST, parents: dict[ast.AST, ast.AST]
+) -> ast.FunctionDef | ast.AsyncFunctionDef | None:
+    current = parents.get(node)
+    while current is not None:
+        if isinstance(current, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            return current
+        current = parents.get(current)
+    return None
+
+
+def _is_mixed_contraction(node: ast.AST, operands: list[ast.AST]) -> bool:
+    left = _operand_provenance(operands[0]) if operands else set()
+    right = (
+        _operand_provenance(operands[1]) if len(operands) > 1 else set()
+    )
+    return ("activation" in left and "weight" in right) or (
+        "weight" in left and "activation" in right
+    )
+
+
+def _assignment_targets(node: ast.AST) -> list[str]:
+    if isinstance(node, ast.Name):
+        return [node.id]
+    if isinstance(node, (ast.Tuple, ast.List)):
+        names: list[str] = []
+        for child in node.elts:
+            names.extend(_assignment_targets(child))
+        return names
+    return []
+
+
+def _assignment_map(
+    function: ast.FunctionDef | ast.AsyncFunctionDef,
+) -> dict[str, ast.AST]:
+    assignments: dict[str, ast.AST] = {}
+    for node in ast.walk(function):
+        if isinstance(node, ast.Assign):
+            for target in node.targets:
+                for name in _assignment_targets(target):
+                    assignments[name] = node.value
+        elif isinstance(node, ast.AnnAssign) and node.value is not None:
+            for name in _assignment_targets(node.target):
+                assignments[name] = node.value
+        elif isinstance(node, ast.NamedExpr):
+            for name in _assignment_targets(node.target):
+                assignments[name] = node.value
+    return assignments
+
+
+def _depends_on_mixed_output(
+    node: ast.AST,
+    mixed_names: set[str],
+    assignments: dict[str, ast.AST],
+    seen: set[str] | None = None,
+) -> bool:
+    """Conservative local AST data-flow check for output -> state."""
+
+    seen = set() if seen is None else seen
+    if isinstance(node, ast.Name):
+        if node.id in mixed_names:
+            return True
+        if node.id in assignments and node.id not in seen:
+            return _depends_on_mixed_output(
+                assignments[node.id],
+                mixed_names,
+                assignments,
+                seen | {node.id},
+            )
+        return False
+    return any(
+        _depends_on_mixed_output(child, mixed_names, assignments, seen)
+        for child in ast.iter_child_nodes(node)
+    )
+
+
+def _mixed_assignment_names(
+    function: ast.FunctionDef | ast.AsyncFunctionDef,
+) -> tuple[set[str], dict[str, ast.AST]]:
+    assignments = _assignment_map(function)
+    mixed_names: set[str] = set()
+    changed = True
+    while changed:
+        changed = False
+        for name, value in assignments.items():
+            if name in mixed_names:
+                continue
+            has_direct_contraction = any(
+                _is_mixed_contraction(node, operands)
+                for node, operands in _mm_call_nodes(value)
+            )
+            if has_direct_contraction or _depends_on_mixed_output(
+                value, mixed_names, assignments
+            ):
+                mixed_names.add(name)
+                changed = True
+    return mixed_names, assignments
+
+
+def _offline_calibration_call_graph(
+    tree: ast.AST,
+) -> set[ast.FunctionDef | ast.AsyncFunctionDef]:
+    """Return functions statically reachable from the offline weight API."""
+
+    functions: dict[str, list[ast.FunctionDef | ast.AsyncFunctionDef]] = {}
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            functions.setdefault(node.name, []).append(node)
+    roots = functions.get(_OFFLINE_WEIGHT_CALIBRATION, [])
+    reachable: set[ast.FunctionDef | ast.AsyncFunctionDef] = set(roots)
+    pending = list(roots)
+    while pending:
+        function = pending.pop()
+        for node in ast.walk(function):
+            if not isinstance(node, ast.Call):
+                continue
+            if isinstance(node.func, ast.Name):
+                name = node.func.id
+            elif isinstance(node.func, ast.Attribute):
+                name = node.func.attr
+            else:
+                continue
+            for candidate in functions.get(name, []):
+                if candidate not in reachable:
+                    reachable.add(candidate)
+                    pending.append(candidate)
+    return reachable
+
+
 def static_guard(source: str) -> list[str]:
     """Run the static AST compliance checks on solution.py source."""
 
@@ -300,18 +476,45 @@ def static_guard(source: str) -> list[str]:
             ):
                 violations.append(f"forbidden state key: {key.value!r}")
 
+    parents = _parent_map(tree)
+    offline_reachable = _offline_calibration_call_graph(tree)
+    offline_functions: list[
+        tuple[ast.FunctionDef | ast.AsyncFunctionDef, set[str], dict[str, ast.AST]]
+    ] = []
     for node, operands in _mm_call_nodes(tree):
-        left = _operand_provenance(operands[0]) if operands else set()
-        right = (
-            _operand_provenance(operands[1]) if len(operands) > 1 else set()
-        )
-        if ("activation" in left and "weight" in right) or (
-            "weight" in left and "activation" in right
-        ):
+        if not _is_mixed_contraction(node, operands):
+            continue
+        function = _enclosing_function(node, parents)
+        if function is None or function not in offline_reachable:
             violations.append(
-                "suspected activation/weight cross contraction at line "
+                "activation/weight contraction outside the offline weight "
+                "calibration call graph at line "
                 f"{getattr(node, 'lineno', '?')}"
             )
+        elif not any(item[0] is function for item in offline_functions):
+            mixed_names, assignments = _mixed_assignment_names(function)
+            offline_functions.append((function, mixed_names, assignments))
+
+    # An offline output objective is allowed, but a simple output -> returned
+    # activation_state data flow is precisely the prohibited Q(A) shortcut.
+    for function, mixed_names, assignments in offline_functions:
+        if not mixed_names:
+            continue
+        for node in ast.walk(function):
+            if not isinstance(node, ast.Dict):
+                continue
+            for key, value in zip(node.keys, node.values):
+                if (
+                    isinstance(key, ast.Constant)
+                    and key.value == "activation_state"
+                    and _depends_on_mixed_output(
+                        value, mixed_names, assignments
+                    )
+                ):
+                    violations.append(
+                        "A@W-derived value reaches activation_state at line "
+                        f"{getattr(node, 'lineno', '?')}"
+                    )
     return violations
 
 
@@ -389,25 +592,18 @@ def runtime_guard(
             f"shapes {entry['operand_shapes']} and taints {entry['taints']}"
         )
 
-    # Rule 2: Linear-output-shaped contractions.  tokens/out_features are
-    # chosen as primes that never collide with structural dims; a
-    # dual-taint (activation x weight) contraction whose output contains
-    # either dimension implies output supervision.  Weight-only
-    # contractions may legitimately carry out_features (per-row losses).
+    # Rule 2: offline A@W is permitted for the weight objective.  Its
+    # [tokens, out_features] output is recorded for review, not rejected by
+    # shape alone.  The state audit below rejects the only prohibited use:
+    # letting that output or any pooled derivative reach activation_state.
     for entry in recorder.contractions:
-        output_shape = entry.get("output_shape")
-        if output_shape is None:
-            continue
-        entry_taints = set(entry["taints"])
-        if not ("A" in entry_taints and "W" in entry_taints):
-            continue
-        dims = set(int(dim) for dim in output_shape)
-        for probe, label in ((tokens, "token"), (out_features, "out_features")):
-            if probe in dims and dims != {probe} and probe > 1:
-                violations.append(
-                    f"contraction {entry['op']} leaked the {label} "
-                    f"dimension in output shape {tuple(output_shape)}"
-                )
+        if entry.get("linear_output"):
+            output_shape = tuple(entry.get("output_shape") or ())
+            review.append(
+                "offline A@W-like contraction observed with output shape "
+                f"{output_shape}; verify it only optimizes Q(W) and never "
+                "feeds activation_state"
+            )
 
     # Rule 3: activation state audit.  The weight params legitimately
     # carry the out_features dimension, so only activation_state is
@@ -428,6 +624,12 @@ def runtime_guard(
         taint = recorder.taint_of(tensor)
         shape = tuple(int(dim) for dim in tensor.shape)
         taints = set(taint)
+        if "O" in taints:
+            violations.append(
+                "A@W-derived tensor reached activation_state; offline "
+                "output objectives may optimize Q(W) but may not fit or "
+                "select Q(A)"
+            )
         activation_side = "A" in taints or "G" in taints or "Wg" in taints
         if activation_side and "W" in taints:
             if "Ra" in taints and "Rw" in taints:
@@ -458,6 +660,9 @@ def runtime_guard(
         "review": review,
         "contraction_count": len(recorder.contractions),
         "contractions": recorder.contractions,
+        "linear_output_contraction_count": len(
+            recorder.linear_output_contractions
+        ),
         "aten_op_count": recorder.op_count,
         "state_tensor_count": len(state_tensors),
     }

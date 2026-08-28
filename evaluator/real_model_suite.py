@@ -12,9 +12,10 @@ three deliberate properties:
   returned its quantization state.  The candidate receives weights and
   activations, never an evaluator output, residual, or fitted official score.
 
-The candidate-side rule is therefore unchanged: a solution must not form
-``A @ W`` to select or infer ``Q(A)``.  The output products in this file are
-evaluator-side scoring references only.
+Offline Linear calibration may form ``A @ W`` to optimize the offline weight
+quantizer ``Q(W)``.  A solution must not route that output or residual into
+``activation_state`` or use it to select or infer the online ``Q(A)``.  The
+output products in this file are evaluator-side scoring references only.
 
 Typical run (from the repository root)::
 
@@ -58,6 +59,11 @@ from real_data_eval import (  # noqa: E402
     load_solution,
     std_hif4,
 )
+from reference_hif4 import (  # noqa: E402
+    dequantize_hif4,
+    dequantize_nvfp4,
+    validate_state,
+)
 
 
 WIKITEXT_REVISION = "b08601e04326c79dfdd32d625aee71d232d685c3"
@@ -68,7 +74,9 @@ WIKITEXT_FILES = {
     "test": "test-00000-of-00001.parquet",
 }
 CACHE_SCHEMA_VERSION = 1
+SCORING_PROTOCOL_VERSION = 2
 DEFAULT_CACHE_DIR = ROOT / "artifacts" / "real_model_suite" / "cache"
+STANDARD_CODEC_PATH = EVALUATOR_DIR / "reference_hif4.py"
 
 
 @dataclasses.dataclass(frozen=True)
@@ -1406,34 +1414,40 @@ def _linear_detail(
     activation_pairs: Sequence[tuple[torch.Tensor, torch.Tensor]],
     activation_state: Any,
     weight_params: Any,
-) -> dict[str, float]:
+) -> dict[str, Any]:
     """Score a Linear case against the frozen evaluator-side reference."""
 
-    weight_reference = solution._dequantize_nvfp4_float32(*weight_pair)
+    weight_reference = dequantize_nvfp4(*weight_pair).to(torch.float32)
     weight_standard = std_hif4(solution, weight_reference)
-    weight_player = solution._dequantize_hif4(weight_params).to(torch.float32)
+    weight_player = dequantize_hif4(weight_params, weight_reference.shape)
     standard_sum = 0.0
     player_sum = 0.0
     relative: list[float] = []
     elements = 0
     for activation_pair in activation_pairs:
-        activation_reference = solution._dequantize_nvfp4_float32(*activation_pair)
+        activation_reference = dequantize_nvfp4(*activation_pair).to(torch.float32)
         reference = activation_reference @ weight_reference.T
         standard = std_hif4(solution, activation_reference) @ weight_standard.T
-        player_activation = solution._dequantize_hif4(
-            solution.hif4_dynamic_quantize_activation(
-                *activation_pair, activation_state
-            )
-        ).to(torch.float32)
+        player_params = solution.hif4_dynamic_quantize_activation(
+            *activation_pair, activation_state
+        )
+        player_activation = dequantize_hif4(
+            player_params, activation_reference.shape
+        )
         player = player_activation @ weight_player.T
         standard_mse = float((standard - reference).square().mean())
         player_mse = float((player - reference).square().mean())
         standard_sum += standard_mse * reference.numel()
         player_sum += player_mse * reference.numel()
         elements += int(reference.numel())
-        relative.append((standard_mse - player_mse) / max(standard_mse, 1.0e-30))
+        if standard_mse <= 0.0:
+            raise ZeroDivisionError("official case has non-positive MSE_STD")
+        relative.append((standard_mse - player_mse) / standard_mse)
     return {
         "gain": sum(relative) / len(relative),
+        "score_sum": sum(relative),
+        "case_count": len(relative),
+        "case_scores": relative,
         "standard_sum": standard_sum,
         "player_sum": player_sum,
         "elements": elements,
@@ -1455,59 +1469,79 @@ def _attention_detail(
     q_heads: int,
     kv_heads: int,
     head_dim: int,
-) -> dict[str, float]:
+) -> dict[str, Any]:
     relative: list[float] = []
     standard_sum = 0.0
     player_sum = 0.0
     elements = 0
     for q_pair, k_pair, v_pair in qkv_pairs:
-        q_reference = solution._dequantize_nvfp4_float32(*q_pair)
-        k_reference = solution._dequantize_nvfp4_float32(*k_pair)
-        v_reference = solution._dequantize_nvfp4_float32(*v_pair)
+        q_reference = dequantize_nvfp4(*q_pair).to(torch.float32)
+        k_reference = dequantize_nvfp4(*k_pair).to(torch.float32)
+        v_reference = dequantize_nvfp4(*v_pair).to(torch.float32)
         q_standard = std_hif4(solution, q_reference)
         k_standard = std_hif4(solution, k_reference)
         v_standard = std_hif4(solution, v_reference)
-        q_player = solution._dequantize_hif4(
-            solution.hif4_dynamic_quantize_q(*q_pair, q_heads, head_dim, q_state)
-        ).to(torch.float32)
-        k_player = solution._dequantize_hif4(
-            solution.hif4_dynamic_quantize_k(*k_pair, kv_heads, head_dim, k_state)
-        ).to(torch.float32)
-        v_player = solution._dequantize_hif4(
-            solution.hif4_dynamic_quantize_v(*v_pair, kv_heads, head_dim, v_state)
-        ).to(torch.float32)
+        q_params = solution.hif4_dynamic_quantize_q(
+            *q_pair, q_heads, head_dim, q_state
+        )
+        k_params = solution.hif4_dynamic_quantize_k(
+            *k_pair, kv_heads, head_dim, k_state
+        )
+        v_params = solution.hif4_dynamic_quantize_v(
+            *v_pair, kv_heads, head_dim, v_state
+        )
+        q_player = dequantize_hif4(q_params, q_reference.shape)
+        k_player = dequantize_hif4(k_params, k_reference.shape)
+        v_player = dequantize_hif4(v_params, v_reference.shape)
         reference = causal_attention(
             q_reference[None], k_reference[None], v_reference[None],
-            q_heads, kv_heads, head_dim, True
+            q_heads, kv_heads, head_dim, False
         )
         standard = causal_attention(
             q_standard[None], k_standard[None], v_standard[None],
-            q_heads, kv_heads, head_dim, True
+            q_heads, kv_heads, head_dim, False
         )
         player = causal_attention(
             q_player[None], k_player[None], v_player[None],
-            q_heads, kv_heads, head_dim, True
+            q_heads, kv_heads, head_dim, False
         )
         standard_mse = float((standard - reference).square().mean())
         player_mse = float((player - reference).square().mean())
         standard_sum += standard_mse * reference.numel()
         player_sum += player_mse * reference.numel()
         elements += int(reference.numel())
-        relative.append((standard_mse - player_mse) / max(standard_mse, 1.0e-30))
+        if standard_mse <= 0.0:
+            raise ZeroDivisionError("official case has non-positive MSE_STD")
+        relative.append((standard_mse - player_mse) / standard_mse)
     return {
         "gain": sum(relative) / len(relative),
+        "score_sum": sum(relative),
+        "case_count": len(relative),
+        "case_scores": relative,
         "standard_sum": standard_sum,
         "player_sum": player_sum,
         "elements": elements,
     }
 
 
-def _aggregate_details(details: Sequence[dict[str, float]]) -> dict[str, float]:
+def _aggregate_details(details: Sequence[dict[str, Any]]) -> dict[str, float]:
     if not details:
-        return {"macro_gain": float("nan"), "global_gain": float("nan"), "cases": 0}
+        return {
+            "official_score_sum": 0.0,
+            "official_score_mean": float("nan"),
+            "official_case_count": 0,
+            "macro_gain": float("nan"),
+            "global_gain": float("nan"),
+            "cases": 0,
+        }
     standard = sum(item["standard_sum"] for item in details)
     player = sum(item["player_sum"] for item in details)
+    official_score_sum = sum(item["score_sum"] for item in details)
+    official_case_count = sum(int(item["case_count"]) for item in details)
     return {
+        "official_score_sum": official_score_sum,
+        "official_score_mean": official_score_sum / official_case_count,
+        "official_case_count": official_case_count,
         "macro_gain": sum(item["gain"] for item in details) / len(details),
         "global_gain": (standard - player) / max(standard, 1.0e-30),
         "standard_sum": standard,
@@ -1550,6 +1584,15 @@ def evaluate_candidate(
             calibrated = solution.hif4_calibration_and_quantize_weight(
                 *weight_pair, calibration_pairs
             )
+            if not isinstance(calibrated, dict) or not {
+                "weight_params",
+                "activation_state",
+            }.issubset(calibrated):
+                raise ValueError(
+                    "hif4_calibration_and_quantize_weight must return "
+                    "weight_params and activation_state"
+                )
+            validate_state(calibrated["activation_state"])
             test_pairs = [
                 nvfp4_encode(
                     data.test_activations[role][batch][layer_index].to(
@@ -1582,6 +1625,17 @@ def evaluate_candidate(
         states = solution.hif4_calibration_attention(
             calibration_qkv, data.q_heads, data.kv_heads, data.head_dim
         )
+        if not isinstance(states, dict) or not {
+            "q_state",
+            "k_state",
+            "v_state",
+        }.issubset(states):
+            raise ValueError(
+                "hif4_calibration_attention must return q_state, k_state, and v_state"
+            )
+        validate_state(states["q_state"])
+        validate_state(states["k_state"])
+        validate_state(states["v_state"])
         test_qkv = []
         for batch in range(len(data.test_windows)):
             q, k, v = data.test_qkv[batch][layer_index]
@@ -1622,6 +1676,19 @@ def evaluate_candidate(
     )
     component_macro = sum(item["global_gain"] for item in linear_groups.values()) / len(linear_groups)
     attention = _aggregate_details(attention_cases)
+    official_score = {
+        "linear": linear_all["official_score_sum"],
+        "attention": attention["official_score_sum"],
+        "total": (
+            linear_all["official_score_sum"] + attention["official_score_sum"]
+        ),
+        "linear_cases": linear_all["official_case_count"],
+        "attention_cases": attention["official_case_count"],
+        "total_cases": (
+            linear_all["official_case_count"] + attention["official_case_count"]
+        ),
+    }
+    api_total = stats["calibration"] + stats["dynamic"]
     return {
         "candidate": candidate.name,
         "source": str(candidate.path),
@@ -1633,7 +1700,8 @@ def evaluate_candidate(
         "linear_by_group": linear_groups,
         "linear": linear_all,
         "linear_component_macro_gain": component_macro,
-        "attention_causal": attention,
+        "attention": attention,
+        "official_flow_score": official_score,
         "timing": {
             "wall_seconds": elapsed,
             "algorithm_stage_seconds": (
@@ -1643,11 +1711,11 @@ def evaluate_candidate(
             ),
             "calibration_seconds": stats["calibration"],
             "dynamic_seconds": stats["dynamic"],
+            "official_api_total_seconds": api_total,
             "api_calls": stats["calls"],
             "nested_api_calls": stats["nested_calls"],
             "under_300_seconds": (
-                stats["first_start"] is None
-                or stats["last_end"] - stats["first_start"] < 300.0
+                api_total < 300.0
             ),
         },
     }
@@ -1689,23 +1757,6 @@ def spearman(xs: Sequence[float], ys: Sequence[float]) -> float:
     return pearson(_average_ranks(xs), _average_ranks(ys))
 
 
-def _ols(xs: Sequence[float], ys: Sequence[float]) -> dict[str, float]:
-    if len(xs) < 2:
-        return {"slope": float("nan"), "intercept": float("nan"), "r2": float("nan")}
-    x_mean = _mean(xs)
-    y_mean = _mean(ys)
-    denom = sum((x - x_mean) ** 2 for x in xs)
-    slope = sum((x - x_mean) * (y - y_mean) for x, y in zip(xs, ys)) / denom if denom else 0.0
-    intercept = y_mean - slope * x_mean
-    residual = sum((y - (intercept + slope * x)) ** 2 for x, y in zip(xs, ys))
-    total = sum((y - y_mean) ** 2 for y in ys)
-    return {
-        "slope": slope,
-        "intercept": intercept,
-        "r2": 1.0 - residual / total if total else float("nan"),
-    }
-
-
 def _pairwise_rank_agreement(xs: Sequence[float], ys: Sequence[float]) -> float:
     if len(xs) < 2:
         return float("nan")
@@ -1723,10 +1774,11 @@ def _pairwise_rank_agreement(xs: Sequence[float], ys: Sequence[float]) -> float:
     return agreed / total if total else float("nan")
 
 
-def fit_official_anchors(
+def audit_official_ranking(
     results: Sequence[dict[str, Any]],
     requested_candidates: Sequence[str],
     candidate_specs: dict[str, CandidateSpec] | None = None,
+    expected_models: Sequence[str] | None = None,
 ) -> dict[str, Any]:
     candidate_specs = candidate_specs or CANDIDATE_SPECS
     by_model: dict[str, dict[str, dict[str, Any]]] = {}
@@ -1741,83 +1793,138 @@ def fit_official_anchors(
     for model_name, candidate_results in by_model.items():
         model_features[model_name] = {}
         for feature_name, getter in (
+            ("official_flow_total", lambda item: item["official_flow_score"]["total"]),
+            ("official_flow_linear", lambda item: item["official_flow_score"]["linear"]),
+            ("official_flow_attention", lambda item: item["official_flow_score"]["attention"]),
             ("linear_global_gain", lambda item: item["linear"]["global_gain"]),
             ("linear_macro_gain", lambda item: item["linear"]["macro_gain"]),
             ("component_macro_gain", lambda item: item["linear_component_macro_gain"]),
-            ("attention_causal_global_gain", lambda item: item["attention_causal"]["global_gain"]),
-            ("attention_causal_macro_gain", lambda item: item["attention_causal"]["macro_gain"]),
+            ("attention_global_gain", lambda item: item["attention"]["global_gain"]),
+            ("attention_macro_gain", lambda item: item["attention"]["macro_gain"]),
         ):
             model_features[model_name][feature_name] = {
                 candidate: float(getter(candidate_results[candidate]))
                 for candidate in requested_candidates
                 if candidate in candidate_results
+                and "error" not in candidate_results[candidate]
             }
 
     aggregate_features: dict[str, dict[str, float]] = {}
+    summed_features = {
+        "official_flow_total",
+        "official_flow_linear",
+        "official_flow_attention",
+    }
+    def aggregate_feature(feature_name: str, candidate: str) -> float:
+        values = [
+            model_features[model_name][feature_name][candidate]
+            for model_name in model_features
+            if candidate in model_features[model_name].get(feature_name, {})
+        ]
+        if not values:
+            return float("nan")
+        return sum(values) if feature_name in summed_features else _mean(values)
+
     for feature_name in next(iter(model_features.values()), {}):
         aggregate_features[feature_name] = {
-            candidate: _mean(
-                model_features[model_name][feature_name][candidate]
-                for model_name in model_features
-                if candidate in model_features[model_name].get(feature_name, {})
-            )
+            candidate: aggregate_feature(feature_name, candidate)
             for candidate in requested_candidates
         }
 
-    fit: dict[str, Any] = {}
+    model_names = list(expected_models) if expected_models is not None else list(by_model)
+    expected_model_count = len(model_names)
+    candidate_status = {}
+    for candidate in requested_candidates:
+        candidate_results = [
+            by_model[model_name][candidate]
+            for model_name in model_names
+            if model_name in by_model
+            if candidate in by_model[model_name]
+            and "error" not in by_model[model_name][candidate]
+        ]
+        candidate_errors = [
+            by_model[model_name][candidate]["error"]
+            for model_name in model_names
+            if model_name in by_model
+            if candidate in by_model[model_name]
+            and "error" in by_model[model_name][candidate]
+        ]
+        api_times = [
+            float(item["timing"]["official_api_total_seconds"])
+            for item in candidate_results
+        ]
+        complete = (
+            len(candidate_results) == expected_model_count
+            and expected_model_count > 0
+        )
+        all_under_300 = bool(api_times) and all(value < 300.0 for value in api_times)
+        candidate_status[candidate] = {
+            "evaluated_models": len(candidate_results),
+            "expected_models": expected_model_count,
+            "complete": complete,
+            "errors": candidate_errors,
+            "official_api_total_seconds": max(api_times) if api_times else float("nan"),
+            "proxy_api_seconds_sum": sum(api_times),
+            "under_300_seconds": complete and all_under_300,
+            "valid_submission": complete and all_under_300,
+        }
+
+    ranking_audit: dict[str, Any] = {}
     for feature_name, values in aggregate_features.items():
         names = [candidate for candidate in requested_candidates if candidate in official and math.isfinite(values[candidate])]
         if len(names) < 2:
             continue
         xs = [values[name] for name in names]
         ys = [float(official[name]) for name in names]
-        ols = _ols(xs, ys)
-        loo_errors: list[float] = []
-        if len(names) >= 3:
-            for held_out in range(len(names)):
-                train_x = xs[:held_out] + xs[held_out + 1 :]
-                train_y = ys[:held_out] + ys[held_out + 1 :]
-                params = _ols(train_x, train_y)
-                prediction = params["intercept"] + params["slope"] * xs[held_out]
-                loo_errors.append(abs(prediction - ys[held_out]))
-        fit[feature_name] = {
+        ranking_audit[feature_name] = {
             "candidates": names,
             "local_values": {name: values[name] for name in names},
             "official_scores": {name: official[name] for name in names},
             "pearson": pearson(xs, ys),
             "spearman": spearman(xs, ys),
             "pairwise_rank_agreement": _pairwise_rank_agreement(xs, ys),
-            "ols": ols,
-            "leave_one_out_mae": _mean(loo_errors) if loo_errors else float("nan"),
         }
 
     ordering = {}
     if {"c39", "c40"}.issubset(requested_candidates):
         for model_name, values in model_features.items():
-            c39 = values.get("linear_global_gain", {}).get("c39", float("nan"))
-            c40 = values.get("linear_global_gain", {}).get("c40", float("nan"))
+            c39 = values.get("official_flow_total", {}).get("c39", float("nan"))
+            c40 = values.get("official_flow_total", {}).get("c40", float("nan"))
             ordering[model_name] = {
-                "c39_linear_global_gain": c39,
-                "c40_linear_global_gain": c40,
+                "c39_official_flow_total": c39,
+                "c40_official_flow_total": c40,
                 "c39_above_c40": bool(math.isfinite(c39) and math.isfinite(c40) and c39 > c40),
             }
-        aggregate_order = aggregate_features.get("linear_global_gain", {})
+        aggregate_order = aggregate_features.get("official_flow_total", {})
         ordering["aggregate"] = {
-            "c39_linear_global_gain": aggregate_order.get("c39", float("nan")),
-            "c40_linear_global_gain": aggregate_order.get("c40", float("nan")),
+            "c39_official_flow_total": aggregate_order.get("c39", float("nan")),
+            "c40_official_flow_total": aggregate_order.get("c40", float("nan")),
             "c39_above_c40": bool(
                 math.isfinite(aggregate_order.get("c39", float("nan")))
                 and math.isfinite(aggregate_order.get("c40", float("nan")))
                 and aggregate_order["c39"] > aggregate_order["c40"]
             ),
         }
+    official_flow_values = aggregate_features.get("official_flow_total", {})
+    local_order = sorted(
+        (
+            {"candidate": candidate, "score": official_flow_values[candidate]}
+            for candidate in requested_candidates
+            if candidate in official_flow_values
+            and candidate_status.get(candidate, {}).get("valid_submission", False)
+        ),
+        key=lambda item: item["score"],
+        reverse=True,
+    )
     return {
         "official_anchor_scores": official,
         "model_features": model_features,
         "aggregate_features": aggregate_features,
-        "fit": fit,
+        "candidate_status": candidate_status,
+        "local_official_flow_order": local_order,
+        "ranking_audit": ranking_audit,
         "c39_vs_c40": ordering,
-        "warning": "official anchors calibrate the evaluator only; they are never candidate inputs",
+        "warning": "official anchors audit ranking only; they are never candidate inputs or regression targets",
     }
 
 
@@ -1847,15 +1954,16 @@ def write_report(
     fit: dict[str, Any],
 ) -> None:
     lines = [
-        "# 多模型真实语料评估校准报告",
+        "# 多模型官方流程排序评估报告",
         "",
         f"运行时间：{run_metadata['started_at']}（配置 mode={run_metadata['mode']}，seq={run_metadata['sequence_length']}，calib={run_metadata['calibration_samples']}，test={run_metadata['test_samples']}，cache_mode={run_metadata['cache_mode']}）",
         "",
-        "本报告只用于检查本地评估器是否能复现已有官方候选的相对方向。官方分数没有进入候选校准状态，也没有传给 `solution.py`。评估器内部的输出矩阵乘法只在候选返回量化结果之后，用作固定参考误差。",
+        "本报告只用于检查本地评估器是否能复现已有官方候选的相对方向。官方分数没有进入候选校准状态，也没有传给 `solution.py`。评估器内部的输出矩阵乘法只在候选返回量化结果之后，用作固定参考误差；候选离线校准可以自行用 `A@W` 优化 `Q(W)`，但不得将其用于 `Q(A)` 或写入 `activation_state`。",
         "",
         "## 数据与模型完整性",
         "",
         f"- 数据集：`Salesforce/wikitext` / `{WIKITEXT_CONFIG}` / revision `{WIKITEXT_REVISION}`。",
+        f"- 评分协议：v{run_metadata['scoring_protocol']['version']}；标准 codec SHA256 `{run_metadata['scoring_protocol']['standard_codec_sha256']}`。",
         "- calibration 来自 train，test 来自 validation；每个窗口来自一个文档，禁止环形重复、窗口重叠和跨 split 文档复用。",
         "- 模型状态：",
         "",
@@ -1878,16 +1986,17 @@ def write_report(
             "",
             "## 候选在各模型上的结果",
             "",
-            "`linear-global` 按 evaluator reference MSE 的元素数加权；`component-macro` 先按 q/k/v/o/fc/proj 聚合再平均，避免 Qwen 的 gate/up 两个投影重复放大 FFN；`attention-causal` 使用真实模型的 Q/K/V（含模型自身 RoPE/GQA 适配）。",
+            "主排序分严格按官方流程计算：每个测试 case 先计算 `(MSE_STD-MSE_PLAYER)/MSE_STD`，再将全部 Linear 与 Attention case 直接求和。global-MSE 和组件均值只保留为诊断，不参与排序。",
             "",
-            "| 模型 | 候选 | linear-global | component-macro | attention-causal | algorithm-stage(s) | <300s |",
-            "|---|---|---:|---:|---:|---:|---|",
+            "| 模型 | 候选 | Linear sum | Linear cases | Attention sum | Attention cases | Total | API time(s) |",
+            "|---|---|---:|---:|---:|---:|---:|---:|",
         ]
     )
     for result in results:
         timing = result["timing"]
+        score = result["official_flow_score"]
         lines.append(
-            f"| {result['model']} | {result['candidate']} | {result['linear']['global_gain']:.6f} | {result['linear_component_macro_gain']:.6f} | {result['attention_causal']['global_gain']:.6f} | {timing['algorithm_stage_seconds']:.3f} | {timing['under_300_seconds']} |"
+            f"| {result['model']} | {result['candidate']} | {score['linear']:.6f} | {score['linear_cases']} | {score['attention']:.6f} | {score['attention_cases']} | {score['total']:.6f} | {timing['official_api_total_seconds']:.3f} |"
         )
 
     official_scores = fit.get("official_anchor_scores", {})
@@ -1896,46 +2005,72 @@ def write_report(
             f"{name.upper()}={score}" for name, score in official_scores.items()
         )
         fit_description = (
-            f"官方锚点：{anchor_description}。下表先对已加载模型取均值，再与官方分数计算相关性；"
-            "锚点较少时不能据此承诺可靠的绝对分数。"
+            f"官方锚点：{anchor_description}。下表只审计候选排列是否一致，不拟合或预测官方绝对分数。"
         )
     else:
         fit_description = (
             "本次运行评测的是自定义候选，没有把官方分数传入候选或当次拟合；"
-            "如需官方分数估计，请使用冻结的 official-score calibration 文件。"
+            "本报告只输出官方流程代理总分，不执行官方绝对分数回归。"
         )
-    lines.extend(["", "## 与官方锚点的拟合诊断", "", fit_description])
-    fitted_features = fit.get("fit", {})
+    lines.extend(["", "## 与官方锚点的排序审计", "", fit_description])
+    fitted_features = fit.get("ranking_audit", {})
     if fitted_features:
         lines.extend(
             [
                 "",
-                "| 本地特征 | Pearson | Spearman | pairwise rank agreement | OLS R² | leave-one-out MAE |",
-                "|---|---:|---:|---:|---:|---:|",
+                "| 本地特征 | Spearman | pairwise rank agreement | Pearson（诊断） |",
+                "|---|---:|---:|---:|",
             ]
         )
     for feature_name, item in fitted_features.items():
-        ols = item["ols"]
         lines.append(
-            f"| {feature_name} | {item['pearson']:.4f} | {item['spearman']:.4f} | {item['pairwise_rank_agreement']:.4f} | {ols['r2']:.4f} | {item['leave_one_out_mae']:.2f} |"
+            f"| {feature_name} | {item['spearman']:.4f} | {item['pairwise_rank_agreement']:.4f} | {item['pearson']:.4f} |"
+        )
+    candidate_status = fit.get("candidate_status", {})
+    if candidate_status:
+        lines.extend(
+            [
+                "",
+                "### 官方总时间与有效性预筛",
+                "",
+                "| 候选 | 已评模型 | 最慢模型 API 时间(s) | 每个模型均 <300s | 本地提交有效 |",
+                "|---|---:|---:|---|---|",
+            ]
+        )
+        for candidate, item in candidate_status.items():
+            lines.append(
+                f"| {candidate} | {item['evaluated_models']}/{item['expected_models']} | {item['official_api_total_seconds']:.3f} | {item['under_300_seconds']} | {item['valid_submission']} |"
+            )
+    local_order = fit.get("local_official_flow_order", [])
+    if local_order:
+        lines.extend(
+            [
+                "",
+                "### 本地主排序",
+                "",
+                " > ".join(
+                    f"{item['candidate']} ({item['score']:.6f})"
+                    for item in local_order
+                ),
+            ]
         )
     ordering = fit.get("c39_vs_c40", {})
     if ordering:
         lines.extend(["", "### C39 / C40 排序", ""])
     for model_name, item in ordering.items():
         lines.append(
-            f"- `{model_name}`：C39 linear-global={item['c39_linear_global_gain']:.6f}，C40={item['c40_linear_global_gain']:.6f}，C39>C40：`{item['c39_above_c40']}`。"
+            f"- `{model_name}`：C39 official-flow total={item['c39_official_flow_total']:.6f}，C40={item['c40_official_flow_total']:.6f}，C39>C40：`{item['c39_above_c40']}`。"
         )
     lines.extend(
         [
             "",
             "## 解释与使用边界",
             "",
-            "1. 只有当多个模型、多个特征同时保持方向，并且至少复现 C39 高于 C40 的已知官方排序时，才把本地分数当作候选筛选信号。",
-            "2. 如果某个特征只在 GPT-2-small 上有效，或 C38/C40 的排序反转，应优先检查数据分割、架构适配和聚合口径，不应继续调候选阈值。",
+            "1. 候选晋级只看 `official_flow_total` 的配对方向；global-MSE、component-macro 和绝对分回归不得改变主排序。",
+            "2. 本地数据不是官方隐藏数据，因此主分只能用于相对排序；官方锚点只用于事后审计排序一致率。",
             "3. `synthetic_attention_eval.py` 不由本套件调用；它只能做接口/性质测试，不能用于候选排名。",
             "4. `cache_mode=read` 时本次结果只来自已保存的模型前向快照，不加载 tokenizer/model，也不读取网络；`cache_mode=write` 才会刷新快照。",
-            "5. algorithm-stage 是候选 API 的开发计时，官方端到端计时仍以赛事评测为准；报告中的 `<300s` 只是本地硬约束预筛。",
+            "5. 本地时间按每个模型代理的六个正式 API 调用累计；每个代理必须严格小于 300 秒，多模型代理时间不相加。",
         ]
     )
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -1947,8 +2082,6 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     selected_models = args.models or list(MODEL_SPECS)
     candidate_specs = dict(CANDIDATE_SPECS)
     if args.solution is not None:
-        if args.candidates is not None:
-            raise ValueError("--solution cannot be combined with --candidates")
         if not re.fullmatch(r"[A-Za-z0-9_.-]+", args.candidate_name):
             raise ValueError("--candidate-name may contain only letters, digits, '.', '_' and '-'")
         if args.candidate_name in candidate_specs:
@@ -1961,7 +2094,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             None,
             None,
         )
-        selected_candidates = [args.candidate_name]
+        selected_candidates = list(args.candidates or []) + [args.candidate_name]
     else:
         selected_candidates = args.candidates or list(CANDIDATE_SPECS)
     unknown_models = [name for name in selected_models if name not in MODEL_SPECS]
@@ -1994,16 +2127,26 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             name: str(candidate_specs[name].path) for name in selected_candidates
         },
         "official_runtime_limit_seconds": 300.0,
+        "scoring_protocol": {
+            "version": SCORING_PROTOCOL_VERSION,
+            "case_formula": "(MSE_STD-MSE_PLAYER)/MSE_STD",
+            "aggregation": "sum_all_linear_and_attention_cases",
+            "attention_causal": False,
+            "candidate_private_helpers_used_for_scoring": False,
+            "standard_codec_source": str(STANDARD_CODEC_PATH),
+            "standard_codec_sha256": sha256_file(STANDARD_CODEC_PATH),
+        },
     }
     model_status: list[dict[str, Any]] = []
     results: list[dict[str, Any]] = []
     partial_path = args.output.with_suffix(".partial.json")
 
     def persist_partial() -> None:
-        partial_fit = fit_official_anchors(
-            [item for item in results if "error" not in item],
+        partial_fit = audit_official_ranking(
+            results,
             selected_candidates,
             candidate_specs,
+            selected_models,
         )
         _write_json(
             partial_path,
@@ -2011,7 +2154,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 "run": run_metadata,
                 "model_status": model_status,
                 "results": results,
-                "official_fit": partial_fit,
+                "official_ranking_audit": partial_fit,
                 "partial": True,
             },
         )
@@ -2065,10 +2208,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 persist_partial()
                 print(
                     f"{model_name:14s} {candidate_name:4s} "
-                    f"linear={result['linear']['global_gain']:.6f} "
-                    f"component={result['linear_component_macro_gain']:.6f} "
-                    f"attention={result['attention_causal']['global_gain']:.6f} "
-                    f"stage={result['timing']['algorithm_stage_seconds']:.2f}s",
+                    f"official-total={result['official_flow_score']['total']:.6f} "
+                    f"linear={result['official_flow_score']['linear']:.6f} "
+                    f"attention={result['official_flow_score']['attention']:.6f} "
+                    f"api={result['timing']['official_api_total_seconds']:.2f}s",
                     flush=True,
                 )
             except Exception as exc:
@@ -2088,15 +2231,20 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         del data
 
     valid_results = [item for item in results if "error" not in item]
-    fit = fit_official_anchors(valid_results, selected_candidates, candidate_specs)
+    fit = audit_official_ranking(
+        results, selected_candidates, candidate_specs, selected_models
+    )
     run_metadata["finished_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
     run_metadata["loaded_models"] = [item["model"] for item in model_status if item["status"] == "loaded"]
     run_metadata["result_count"] = len(valid_results)
+    run_metadata["official_flow_valid"] = bool(fit.get("candidate_status")) and all(
+        item["valid_submission"] for item in fit["candidate_status"].values()
+    )
     output = {
         "run": run_metadata,
         "model_status": model_status,
         "results": results,
-        "official_fit": fit,
+        "official_ranking_audit": fit,
     }
     output_path = args.output
     _write_json(output_path, output)
@@ -2120,13 +2268,13 @@ def build_parser() -> argparse.ArgumentParser:
         nargs="+",
         choices=tuple(CANDIDATE_SPECS),
         default=None,
-        help="official-anchor candidates (default: c21 c38 c39 c40)",
+        help="registered anchors; may be combined with --solution for paired ranking",
     )
     parser.add_argument(
         "--solution",
         type=Path,
         default=None,
-        help="evaluate an arbitrary solution.py instead of registered official anchors",
+        help="evaluate an arbitrary solution.py, optionally beside --candidates anchors",
     )
     parser.add_argument(
         "--candidate-name",
@@ -2184,7 +2332,9 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if min(args.seq, args.calib, args.test) <= 0:
         raise SystemExit("--seq, --calib, and --test must be positive")
-    run(args)
+    output = run(args)
+    if args.solution is not None and not output["run"]["official_flow_valid"]:
+        return 2
     return 0
 
 

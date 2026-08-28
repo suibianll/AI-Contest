@@ -15,8 +15,11 @@ import torch
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from nvfp4_sim import nvfp4_encode  # noqa: E402
 from reference_hif4 import (  # noqa: E402
+    dequantize_hif4,
+    dequantize_nvfp4,
     decode_standard_hif4,
     encode_standard_hif4,
+    validate_state,
 )
 
 
@@ -54,9 +57,6 @@ TEXT = (
 )
 
 REQUIRED_FUNCTIONS = (
-    "_dequantize_nvfp4_float32",
-    "_dense_to_hif4",
-    "_dequantize_hif4",
     "hif4_calibration_and_quantize_weight",
     "hif4_dynamic_quantize_activation",
     "hif4_calibration_attention",
@@ -266,18 +266,19 @@ def score_linear(
     solution, weight_pair, activation_pairs, activation_state, weight_params
 ):
     scores = []
-    weight_reference = solution._dequantize_nvfp4_float32(*weight_pair)
+    weight_reference = dequantize_nvfp4(*weight_pair).to(torch.float32)
     weight_standard = std_hif4(solution, weight_reference)
-    weight_player = solution._dequantize_hif4(weight_params).to(torch.float32)
+    weight_player = dequantize_hif4(weight_params, weight_reference.shape)
     for activation_pair in activation_pairs:
-        activation_reference = solution._dequantize_nvfp4_float32(*activation_pair)
+        activation_reference = dequantize_nvfp4(*activation_pair).to(torch.float32)
         reference = activation_reference @ weight_reference.T
         standard = std_hif4(solution, activation_reference) @ weight_standard.T
-        player_activation = solution._dequantize_hif4(
-            solution.hif4_dynamic_quantize_activation(
-                *activation_pair, activation_state
-            )
-        ).to(torch.float32)
+        player_params = solution.hif4_dynamic_quantize_activation(
+            *activation_pair, activation_state
+        )
+        player_activation = dequantize_hif4(
+            player_params, activation_reference.shape
+        )
         player = player_activation @ weight_player.T
         mse_standard = float((standard - reference).square().mean())
         mse_player = float((player - reference).square().mean())
@@ -294,31 +295,28 @@ def score_attention(
     q_heads,
     kv_heads,
     head_dim,
-    masks=("causal",),
+    masks=("non-causal",),
 ):
     scores = {mask: [] for mask in masks}
     for q_pair, k_pair, v_pair in qkv_pairs:
-        q_reference = solution._dequantize_nvfp4_float32(*q_pair)
-        k_reference = solution._dequantize_nvfp4_float32(*k_pair)
-        v_reference = solution._dequantize_nvfp4_float32(*v_pair)
+        q_reference = dequantize_nvfp4(*q_pair).to(torch.float32)
+        k_reference = dequantize_nvfp4(*k_pair).to(torch.float32)
+        v_reference = dequantize_nvfp4(*v_pair).to(torch.float32)
         q_standard = std_hif4(solution, q_reference)
         k_standard = std_hif4(solution, k_reference)
         v_standard = std_hif4(solution, v_reference)
-        q_player = solution._dequantize_hif4(
-            solution.hif4_dynamic_quantize_q(
-                *q_pair, q_heads, head_dim, q_state
-            )
-        ).to(torch.float32)
-        k_player = solution._dequantize_hif4(
-            solution.hif4_dynamic_quantize_k(
-                *k_pair, kv_heads, head_dim, k_state
-            )
-        ).to(torch.float32)
-        v_player = solution._dequantize_hif4(
-            solution.hif4_dynamic_quantize_v(
-                *v_pair, kv_heads, head_dim, v_state
-            )
-        ).to(torch.float32)
+        q_params = solution.hif4_dynamic_quantize_q(
+            *q_pair, q_heads, head_dim, q_state
+        )
+        k_params = solution.hif4_dynamic_quantize_k(
+            *k_pair, kv_heads, head_dim, k_state
+        )
+        v_params = solution.hif4_dynamic_quantize_v(
+            *v_pair, kv_heads, head_dim, v_state
+        )
+        q_player = dequantize_hif4(q_params, q_reference.shape)
+        k_player = dequantize_hif4(k_params, k_reference.shape)
+        v_player = dequantize_hif4(v_params, v_reference.shape)
         for mask in masks:
             causal = mask == "causal"
             reference = causal_attention(
@@ -457,6 +455,15 @@ def evaluate(args: argparse.Namespace) -> None:
             calibrated = solution.hif4_calibration_and_quantize_weight(
                 *weight_pair, calibration_pairs
             )
+            if not isinstance(calibrated, dict) or not {
+                "weight_params",
+                "activation_state",
+            }.issubset(calibrated):
+                raise ValueError(
+                    "hif4_calibration_and_quantize_weight must return "
+                    "weight_params and activation_state"
+                )
+            validate_state(calibrated["activation_state"])
             test_pairs = [
                 nvfp4_encode(
                     tests["act"][name][batch * layer_count + layer_index],
@@ -493,6 +500,17 @@ def evaluate(args: argparse.Namespace) -> None:
         states = solution.hif4_calibration_attention(
             qkv_calibration, q_heads, kv_heads, head_dim
         )
+        if not isinstance(states, dict) or not {
+            "q_state",
+            "k_state",
+            "v_state",
+        }.issubset(states):
+            raise ValueError(
+                "hif4_calibration_attention must return q_state, k_state, and v_state"
+            )
+        validate_state(states["q_state"])
+        validate_state(states["k_state"])
+        validate_state(states["v_state"])
         if args.verbose:
             # Telemetry (§12.1): derive per-layer selection rates from the
             # read-only state fields; never touches the solution itself.
@@ -563,6 +581,18 @@ def evaluate(args: argparse.Namespace) -> None:
             f"Attention[{mask}] mean={sum(values) / len(values):.4f} "
             f"min={min(values):.4f} max={max(values):.4f}"
         )
+    linear_official_sum = sum(
+        score * args.test for values in linear_scores.values() for score in values
+    )
+    attention_official_sum = sum(
+        score * args.test for values in attention_scores.values() for score in values
+    )
+    print(
+        "Official-flow score sum: "
+        f"linear={linear_official_sum:.6f} "
+        f"attention={attention_official_sum:.6f} "
+        f"total={linear_official_sum + attention_official_sum:.6f}"
+    )
     if args.verbose:
         print("Per-layer attention scores:")
         for mask, values in attention_scores.items():
@@ -599,6 +629,10 @@ def evaluate(args: argparse.Namespace) -> None:
             f"calibration={stats['calibration']:.2f}s "
             f"dynamic={stats['dynamic']:.2f}s api-total={api_total:.2f}s"
         )
+        if api_total >= 300.0:
+            raise TimeoutError(
+                f"official API total {api_total:.3f}s is not strictly below 300s"
+            )
         nested_total = sum(stats["nested_calls"].values())
         if nested_total:
             nested = " ".join(
@@ -632,9 +666,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--attn-mask",
-        default="causal",
+        default="non-causal",
         choices=("causal", "non-causal", "both"),
-        help="attention mask used for scoring (causal is the primary local track)",
+        help="attention mask used for scoring (official-flow default: non-causal)",
     )
     parser.add_argument(
         "--token-offset",

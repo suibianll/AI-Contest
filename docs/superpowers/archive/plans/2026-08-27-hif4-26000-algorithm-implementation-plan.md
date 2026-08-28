@@ -2,7 +2,8 @@
 
 日期：2026-08-27
 目标定位：主目标为官方 22000~25000；26000 为 stretch 目标（详见第 1 节目标分级）
-状态：已按官方 `A @ W` 禁令完成合规修订；2026-08-27 评审后补充目标分级、Q0 教训、向量化硬性要求与官方时间上限，待实施
+状态：历史计划；其中“禁止所有 calibration 阶段 `A @ W`”是旧的过宽解读，
+已由 2026-08-28 官方边界修正。当前只禁止输出信息流入 `Q(A)`。
 历史分数锚点：C21 / v024，官方 `16043 / 173.8s`；后续父版本必须先替换为 C21-C 合规基线
 当前源码 SHA256：`40F4D17C12F976F83856B9641BE9A3951867BC8979992D773C60C0C1C3E8066A`
 
@@ -10,7 +11,7 @@
 
 本计划用于指导后续 AI 在现有仓库中实现新算法。实施时必须遵守以下规则：
 
-1. **规则零：Linear 校准、参数搜索、gate、fallback 和动态激活量化中，不得显式或隐式计算 `A @ W`，也不得用与 `A @ W` 数学等价的监督信号拟合、选择或倒推出 `Q(A)`。合规优先于分数、速度和历史 Champion。**
+1. **规则零：离线 Linear 校准可以显式或隐式计算 `A @ W` 来优化离线量化器，尤其是 `Q(W)`；但不得用 `A @ W`、其量化输出或输出残差拟合、选择或倒推出 `Q(A)`，也不得写入 `activation_state`。** 合规优先于分数、速度和历史 Champion。
 2. 根目录 `solution.py` 始终是唯一可提交算法文件，不得依赖本地模块、文件、网络或 NumPy。
 3. 每个候选只引入一个主要机制；候选失败时回退该候选，不回退合规 Champion。
 4. 任何改动前先在执行日志预注册 candidate ID、父 SHA、唯一机制、评测矩阵、时间预算和晋级门。
@@ -24,7 +25,7 @@
 
 ### 0.1 规则零的不可规避解释
 
-以下做法全部按违规处理，即使没有在内存中生成名为 `A @ W` 的 Tensor：
+以下做法按违规处理，即使没有在内存中生成名为 `A @ W` 的 Tensor：
 
 - 计算 `A @ W.T`、`Q(A) @ Q(W).T` 或两者残差，并据此选择 activation scale、mantissa、rotation、seed、coverage、gate 或 fallback；
 - 用 trace 展开、分块乘法、低秩分解、采样行、缓存输出、teacher label 等形式恢复同一 Linear 输出监督；
@@ -32,10 +33,15 @@
 - 在校准阶段先用输出指标选出 activation 候选，再声称动态路径本身没有矩阵乘法；
 - 由评测器把参考 Linear 输出、输出残差或其梯度回传给 `solution.py` 或写入 activation state。
 
+上述第一、二项的禁止对象是影响 `Q(A)` 的输出监督；如果完整输出目标
+只留在离线 `Q(W)` 优化和 `weight_params` 路径，则不属于该禁令。
+
 无条件允许且作为本计划默认白名单的统计只有：
 
 - 为拟合 `Q(A)` 使用 `A` 自身的 amax、分位数、均值、方差、`A^T A`、块内协方差和重构误差；
 - 为拟合 `Q(W)` 使用 `W` 自身统计，以及由 activation calibration 构造的 `H_A=A^T A/N+lambda I`；这里优化对象是 `Q(W)`，不生成 Linear 输出；
+- 在离线权重量化中使用 `A@W`、`A@Q(W)` 或其残差优化 `Q(W)`；输出及其损失
+  不得流入 `activation_state`；
 - 对 Weight 与 Activation 分别计算 operand-local HiF4 误差，再以预注册规则组合候选排名；组合过程中不得出现两操作数的收缩乘积；
 - Attention API 内按赛题允许的 Q/K/V Attention 目标工作；该路径不得被复用于 Linear activation 拟合。
 
@@ -138,7 +144,7 @@ _flat_group_gram16  -> 16x16 block diagonal
 
 当前允许 block transform size 为 `4/8/16`，每个 size 仅少量 sign seed。实际 q/k/fc/proj 多数层已经选择 8 或 16，说明变换有效且搜索空间触顶。
 
-### 2.4 当前实现使用了不合规的联合输出监督
+### 2.4 当前实现使用了不合规的、流入 `Q(A)` 的联合输出监督
 
 当前流程不仅先量化 Weight，还在三个位置让 Linear 输出监督影响 `Q(A)`：
 
@@ -146,7 +152,9 @@ _flat_group_gram16  -> 16x16 block diagonal
 - `_activation8_gate_decisions` 显式生成参考输出，并用输出误差决定 activation refinement 是否启用；
 - `group_cross8` 由精确 Weight 与量化 Weight 的残差构造，再与 activation 相乘影响离散更新。
 
-这些路径在严格官方口径下不能保留。问题不是 C21 的 8x8 近似“不够完整”，而是这类目标无论近似还是 full-64 都不应被用于拟合 `Q(A)`。
+这些路径在当前官方口径下仍不能保留，因为它们把输出监督用于拟合或选择
+`Q(A)`。问题不是 C21 的 8x8 近似“不够完整”；相同的输出目标若只用于
+离线 `Q(W)`，则属于允许的另一条数据流。
 
 ### 2.5 calibration 泛化能力不足
 
@@ -195,7 +203,7 @@ W_t = W * D    * P * R
 X_t * W_t^T = X * W^T
 ```
 
-优化必须拆成互不使用 Linear 输出监督的两个目标：
+优化必须把输出监督限制在 `Q(W)`，并将 `Q(A)` 保持为独立目标：
 
 ```text
 L_A = sum_i rho_i * robust_error(X_t[i], Qx(X_t)[i])
@@ -208,9 +216,10 @@ H_A = X_t^T X_t / N + damping * I
 其中：
 
 - `L_A` 只允许使用 activation 本身；`rho` 必须由 activation-only calibration 冻结；
-- `L_W` 可以使用 `H_A`，因为它只拟合 `Q(W)`；
+- `L_W` 可以使用 `H_A`，也可以在离线阶段使用 `A@W` 输出目标，因为它只拟合 `Q(W)`；
 - 变换候选用预注册的 operand-separated metric 排序，例如 `max(L_A/L_A_base, L_W/L_W_base)`；
-- 禁止构造 joint output objective，也禁止用 trace/cross 形式间接恢复它。
+- 禁止构造 joint output objective 去拟合 `Q(A)`，也禁止用 trace/cross 形式
+  间接恢复同一条 `Q(A)` 输出监督。
 
 严格等价变换的作用只通过代数结构保证，不通过在 `solution.py` 中计算变换前后的 `XW^T` 来验证。实现测试检查 `R^T R=I`、变换 round-trip 和 shape/state，不计算 Linear 输出。
 
@@ -322,11 +331,16 @@ Create: tests/test_linear_compliance_guard.py
 静态检查至少拒绝：
 
 - `_linear_output_candidate_metrics`、`group_cross8`、`cross8` 等已知违规符号重新出现；
-- Linear calibration 函数内 activation-derived `[N,K]` 与 weight-derived `[M,K]` 的收缩乘法；
+- 离线权重校准之外的 activation/weight 收缩；在离线权重校准内只要输出
+  数据流进入 `activation_state`，也必须拒绝；
 - 把 evaluator 输出、reference output 或 output residual 写入 state；
 - 名称变化后的等价实现，因此不能只做字符串黑名单，还要做运行时 shape/taint 测试。
 
-运行时测试构造带 provenance 的 activation/weight，记录 Linear calibration 内的 contraction。允许 `A.T @ A`；允许仅用于 `Q(W)` 的 Hessian loss；拒绝任何产生 `[tokens,out_features]` 的 contraction，以及任何由精确 Weight 残差和 activation 共同生成并流入 activation state 的 Tensor。
+运行时测试构造带 provenance 的 activation/weight，记录 Linear calibration 内的
+contraction。允许 `A.T @ A`，也允许仅用于 `Q(W)` 的 `A@W` 输出目标；拒绝
+任何 `A@W` 派生 Tensor 流入 `activation_state`，以及任何由精确 Weight 残差和
+activation 共同生成并流入 activation state 的 Tensor。`[tokens,out_features]`
+输出形状本身不再是违规理由。
 
 ### 4.5 新增真正冻结的 holdout
 

@@ -22,7 +22,10 @@ Parent official anchor: C21-C, Linear `0.5311`, Attention `0.4497`, score
   importance, and hierarchy permutation disabled.
 
 The full-64 objective uses the activation covariance `A^T A` with the weight
-residual. It never constructs `A @ W` or a Linear output residual.
+residual. This candidate intentionally never constructs `A @ W` or a Linear
+output residual. That is an implementation choice, not a blanket competition
+rule: offline `A @ W` may optimize `Q(W)`, but output information may not fit
+or select `Q(A)` or enter `activation_state`.
 
 ## Local result
 

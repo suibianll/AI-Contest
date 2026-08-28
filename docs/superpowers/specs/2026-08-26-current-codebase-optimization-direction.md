@@ -194,8 +194,9 @@ V 保持原坐标系，不旋转、不置换、不 centering。最终候选必�
 - 优先在 `fc` 和 `proj` 上评估；
 - 每层只保存一个最终 block size 和 seed；
 - tie 时选择较小 block；
-- 规则允许真实 Linear 输出门控时复用现有门控；
-- 若官方禁止 calibration 阶段的 Activation×Weight，则改用合法完整块 Hessian 代理。
+- 离线校准阶段允许用真实 Linear 输出目标优化 `Q(W)`；
+- 该输出目标不得用于 `Q(A)` 的 gate、拟合或 state；若目标是激活侧，必须
+  使用 activation-only 统计或重构误差。
 
 ### 6.3 L3：逐级扩大 Weight 二阶块
 
@@ -324,13 +325,18 @@ offset `0` 是唯一开发窗口。offset `97`、`193`、`389` 已锁定并在 A
 
 ### 11.1 Linear 合规口径
 
-当前 `_linear_output_candidate_metrics` 会计算 sampled Activation 与 sampled Weight 的矩阵乘积。早期设计又声明 Linear calibration 不得计算 `A @ W`。两者冲突。
+当前 `_linear_output_candidate_metrics` 会计算 sampled Activation 与 sampled
+Weight 的矩阵乘积。早期设计又声明 Linear calibration 不得计算 `A @ W`，这
+两者冲突源于旧的过宽规则解读；当前应按数据流区分离线 `Q(W)` 目标和在线
+`Q(A)` 状态。
 
 开始 L2/L3 前必须确认官方规则：
 
-- 若 sampled output 计算合法，保留现有真实输出门控；
-- 若不合法，必须把当前 block transform 选择器也替换为 `AᵀA`/Weight residual 构成的合法二阶代理；
-- 不能同时声明“当前 v2 永远回退”和“生产调用图绝不计算 Activation×Weight”。
+- 若 sampled output 只优化离线 `Q(W)`，可以保留该目标；
+- 若 sampled output 影响 `Q(A)` 或 `activation_state`，必须移除并替换为
+  `AᵀA`、activation-only 重构误差或其他不依赖输出的目标；
+- 不能同时声明“所有 calibration 都禁止 Activation×Weight”和“官方允许
+  离线 `Q(W)` 输出目标”。
 
 ### 11.2 Attention mask 口径
 

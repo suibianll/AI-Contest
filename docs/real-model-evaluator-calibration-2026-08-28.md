@@ -1,4 +1,6 @@
-# 多模型真实语料评估校准报告
+# 历史多模型评估报告（旧评分协议，禁止用于候选排序）
+
+> 本报告由 2026-08-28 的旧协议生成，使用候选私有反量化、causal Attention、global/component 聚合和绝对分拟合诊断，不符合当前官方逐 case 求和流程。仅保留为历史记录；当前排序请使用 `real_model_suite.py` 生成的 `official_flow_total`。
 
 运行时间：2026-08-28 16:06:32（配置 mode=amax6，seq=128，calib=2，test=4）
 

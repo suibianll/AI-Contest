@@ -14,8 +14,9 @@ This tool reports compliance-legal operand diagnostics:
 - ``transform_orthogonality_error`` — Frobenius deviation ``T^T T - I``
   of the composed calibration transform.
 
-The tool never forms the reference Linear output ``A @ W^T``, never
-forms the cross residual, and never returns anything with the shape
+The tool intentionally never forms the reference Linear output ``A @ W^T``
+or the cross residual, even though official offline calibration may use an
+output objective for ``Q(W)``.  It never returns anything with the shape
 ``[tokens, out_features]``; outputs are scalars or per-row/per-channel
 1-D tensors only, so nothing here can be fed back into ``Q(A)``.
 """

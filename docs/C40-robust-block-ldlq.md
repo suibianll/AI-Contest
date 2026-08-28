@@ -91,8 +91,10 @@ C40 的 CPU 全模型 algorithm-stage 为 `100.05s`。以 C39 官方 `159.2s` �
 
 ## 官方规则合规性
 
-C40 不计算任何形式的 `A@W`，不构造 `[tokens, out_features]` 的 Linear 参考输出，
-不计算输出 residual，也不利用此类信息拟合或倒推 `Q(A)`。
+C40 的实现不计算任何形式的 `A@W`，不构造 `[tokens, out_features]` 的 Linear
+参考输出，也不计算输出 residual。这是该候选的 operand-local 设计选择；官方
+允许离线校准用 `A@W` 优化 `Q(W)`，但仍禁止用输出信息拟合或倒推 `Q(A)`，或
+将其写入 `activation_state`。
 
 允许的数据流只有：
 

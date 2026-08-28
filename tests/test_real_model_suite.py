@@ -19,12 +19,88 @@ from real_model_suite import (  # noqa: E402
     WIKITEXT_CONFIG,
     WIKITEXT_REVISION,
     Window,
+    _aggregate_details,
+    audit_official_ranking,
     load_real_windows,
     load_model_cache,
     model_cache_path,
     save_model_cache,
     validate_window_split,
 )
+from real_data_eval import load_solution  # noqa: E402
+
+
+def test_solution_loader_requires_only_the_six_official_apis(tmp_path: Path) -> None:
+    source = tmp_path / "six_api_solution.py"
+    source.write_text(
+        "\n".join(
+            [
+                "def hif4_calibration_and_quantize_weight(*args): pass",
+                "def hif4_dynamic_quantize_activation(*args): pass",
+                "def hif4_calibration_attention(*args): pass",
+                "def hif4_dynamic_quantize_q(*args): pass",
+                "def hif4_dynamic_quantize_k(*args): pass",
+                "def hif4_dynamic_quantize_v(*args): pass",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    loaded = load_solution(source)
+    assert not hasattr(loaded, "_dequantize_hif4")
+
+
+def test_official_aggregation_sums_per_case_relative_scores() -> None:
+    details = [
+        {
+            "gain": 0.25,
+            "score_sum": 0.5,
+            "case_count": 2,
+            "standard_sum": 100.0,
+            "player_sum": 80.0,
+            "elements": 8,
+        },
+        {
+            "gain": -0.5,
+            "score_sum": -0.5,
+            "case_count": 1,
+            "standard_sum": 1.0,
+            "player_sum": 2.0,
+            "elements": 4,
+        },
+    ]
+    aggregate = _aggregate_details(details)
+    assert aggregate["official_score_sum"] == 0.0
+    assert aggregate["official_case_count"] == 3
+    assert aggregate["official_score_mean"] == 0.0
+    assert aggregate["global_gain"] != aggregate["official_score_mean"]
+
+
+def test_official_ranking_audit_uses_summed_linear_and_attention_score() -> None:
+    def result(candidate: str, model: str, linear: float, attention: float) -> dict:
+        return {
+            "candidate": candidate,
+            "model": model,
+            "official_flow_score": {
+                "linear": linear,
+                "attention": attention,
+                "total": linear + attention,
+            },
+            "linear": {"global_gain": 0.0, "macro_gain": 0.0},
+            "linear_component_macro_gain": 0.0,
+            "attention": {"global_gain": 0.0, "macro_gain": 0.0},
+            "timing": {"official_api_total_seconds": 10.0},
+        }
+
+    rows = [
+        result("a", "m1", 3.0, -1.0),
+        result("a", "m2", 2.0, 0.0),
+        result("b", "m1", 1.0, 2.0),
+        result("b", "m2", 0.0, 2.0),
+    ]
+    audit = audit_official_ranking(rows, ["a", "b"], {})
+    totals = audit["aggregate_features"]["official_flow_total"]
+    assert totals == {"a": 4.0, "b": 5.0}
+    assert audit["candidate_status"]["a"]["valid_submission"] is True
 
 
 def test_manifest_covers_distinct_model_families() -> None:

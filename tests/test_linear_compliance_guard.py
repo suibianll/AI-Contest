@@ -34,19 +34,56 @@ def make_fake_solution(source: str) -> ModuleType:
     return module
 
 
-FAKE_SUPERVISED_SOURCE = """
+FAKE_ACTIVATION_STATE_FROM_OUTPUT_SOURCE = """
 import torch
 
 
 def hif4_calibration_and_quantize_weight(weight_quant, weight_scale, pairs):
     weight = weight_quant * weight_scale.sum()
     activation = pairs[0][0]
-    # Forbidden: Linear output supervision on calibration data.
+    # Forbidden: the offline output objective is routed into Q(A) state.
     supervised = activation @ weight.t()
-    score = supervised.square().mean()
     return {
         "weight_params": {"scale_factor": weight.sum(dim=-1, keepdim=True)},
-        "activation_state": {"importance": weight.sum(dim=0)},
+        "activation_state": {"scale": supervised.square().mean()},
+    }
+"""
+
+
+FAKE_OFFLINE_WEIGHT_OBJECTIVE_SOURCE = """
+import torch
+
+
+def hif4_calibration_and_quantize_weight(weight_quant, weight_scale, pairs):
+    weight = weight_quant * weight_scale.sum()
+    activation = pairs[0][0]
+    # Allowed: output supervision remains entirely inside offline Q(W)
+    # optimization and is not returned through activation_state.
+    reference = activation @ weight.t()
+    weight_hat = weight * 0.5
+    candidate = activation @ weight_hat.t()
+    loss = (reference - candidate).square().mean()
+    return {
+        "weight_params": {"objective": loss},
+        "activation_state": {},
+    }
+"""
+
+
+FAKE_OFFLINE_HELPER_SOURCE = """
+import torch
+
+
+def offline_output(activation, weight):
+    return activation @ weight.t()
+
+
+def hif4_calibration_and_quantize_weight(weight_quant, weight_scale, pairs):
+    weight = weight_quant * weight_scale.sum()
+    reference = offline_output(pairs[0][0], weight)
+    return {
+        "weight_params": {"objective": reference.square().mean()},
+        "activation_state": {},
     }
 """
 
@@ -115,7 +152,24 @@ def calibrate(activation_stream, weight_dense):
 """
     violations = static_guard(source)
     assert any(
-        "cross contraction" in message for message in violations
+        "outside the offline weight calibration call graph" in message
+        for message in violations
+    )
+
+
+def test_static_guard_allows_offline_weight_output_objective() -> None:
+    assert static_guard(FAKE_OFFLINE_WEIGHT_OBJECTIVE_SOURCE) == []
+
+
+def test_static_guard_allows_offline_weight_helper_call_graph() -> None:
+    assert static_guard(FAKE_OFFLINE_HELPER_SOURCE) == []
+
+
+def test_static_guard_rejects_output_state_dataflow() -> None:
+    violations = static_guard(FAKE_ACTIVATION_STATE_FROM_OUTPUT_SOURCE)
+    assert any(
+        "A@W-derived value reaches activation_state" in message
+        for message in violations
     )
 
 
@@ -140,8 +194,8 @@ def test_runtime_guard_accepts_current_solution() -> None:
         assert "residual" not in message
 
 
-def test_runtime_guard_rejects_linear_output_supervision() -> None:
-    fake = make_fake_solution(FAKE_SUPERVISED_SOURCE)
+def test_runtime_guard_allows_offline_weight_output_objective() -> None:
+    fake = make_fake_solution(FAKE_OFFLINE_WEIGHT_OBJECTIVE_SOURCE)
     torch.manual_seed(302)
     tokens, out_features, channels = 53, 37, 64
     weight = torch.randn(out_features, channels) * 0.1
@@ -153,7 +207,28 @@ def test_runtime_guard_rejects_linear_output_supervision() -> None:
         tokens=tokens,
         out_features=out_features,
     )
-    assert any("leaked" in message for message in report["violations"])
+    assert report["violations"] == []
+    assert report["linear_output_contraction_count"] == 2
+    assert any("only optimizes Q(W)" in message for message in report["review"])
+
+
+def test_runtime_guard_rejects_output_used_for_activation_state() -> None:
+    fake = make_fake_solution(FAKE_ACTIVATION_STATE_FROM_OUTPUT_SOURCE)
+    torch.manual_seed(306)
+    tokens, out_features, channels = 53, 37, 64
+    weight = torch.randn(out_features, channels) * 0.1
+    activations = [torch.randn(tokens, channels) * 0.1]
+    report = runtime_guard(
+        fake,
+        weight,
+        activations,
+        tokens=tokens,
+        out_features=out_features,
+    )
+    assert any(
+        "A@W-derived tensor reached activation_state" in message
+        for message in report["violations"]
+    )
 
 
 def test_runtime_guard_rejects_cross_residual_state() -> None:

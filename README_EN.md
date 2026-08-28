@@ -10,9 +10,10 @@ Chinese version: [README.md](README.md)
 
 - Latest compliant official champion: v031 / C39-FW, `14613 / 159.2s`.
   v025 / C21-C (`14437 / 166.6s`) remains a secondary anchor.
-- Historical v024 scored `16043 / 173.8s`, but it contains Linear output-
-  supervision paths disallowed by the later official clarification and is not
-  a compliant parent for new work.
+- Historical v024 scored `16043 / 173.8s`, but its Linear output-supervision
+  path used output information for activation-side selection. That
+  `A@W -> Q(A)` use remains non-compliant, so it is not a compliant parent for
+  new work.
 - The current root `solution.py` is the frozen C40 robust Block-LDLQ candidate:
   local Linear `0.5393`, causal Attention `0.4497`, and official
   `14432 / 216.667s`. It lost 181 points and added 57.467 seconds versus C39,
@@ -30,8 +31,12 @@ with the exact submitted SHA, score, and runtime.
 
 ## Hard competition constraints
 
-1. Never compute `A@W`, directly or indirectly, and use its output to fit,
-   select, or infer `Q(A)`.
+1. **Offline calibration may use `A@W` to optimize an offline quantizer,
+   especially `Q(W)`.** It must not use `A@W`, its quantized output, or an
+   output residual to fit, select, or infer the online activation quantizer
+   `Q(A)`, nor store that information in `activation_state`. The prohibited
+   behavior is output supervision of `Q(A)`, not every offline weight objective
+   that happens to form `A@W`.
 2. Produce legal HiF4 fields and keep the API, state, shape, dtype, and device
    behavior valid.
 3. Keep the final official evaluation strictly below `300s`.
@@ -90,8 +95,7 @@ evaluator/real_data_eval.py         paired real-GPT evaluation
 evaluator/synthetic_attention_eval.py
                                     576-case Attention safety matrix
 evaluator/real_model_suite.py       multi-model real-data evaluation and cache
-evaluator/official_score_calibration.py
-                                    frozen official-score fitting and prediction
+evaluator/reference_hif4.py         independent official scoring protocol, baseline, and validation
 evaluator/cap_oracle.py             fixed-frame error-space diagnostics
 evaluator/linear_compliance_guard.py
                                     static/runtime Linear compliance checks
@@ -163,12 +167,13 @@ historical sources under `solutions/`.
    .\.venv\Scripts\python -u evaluator\real_data_eval.py `
      --solution solution.py --model models\gpt2 --device cuda `
      --layers 12 --seq 128 --calib 2 --test 2 `
-     --mode amax6 --attn-mask causal
+     --mode amax6 --attn-mask non-causal
    ```
 
-   Local scores are for paired A/B comparison only and must not be entered as
-   Official Score. Record the full command, every Linear component, causal
-   Attention, runtime, and the source SHA256.
+   The primary ranking score is the sum of per-case relative MSE improvements:
+   `Linear sum + Attention sum`. Local scores are only for paired A/B ranking
+   and must not be entered as Official Score. Record the full command, both
+   case counts, total API time, and the source SHA256.
 
 3. **Capture real multi-model forward data once**
 
@@ -197,7 +202,7 @@ historical sources under `solutions/`.
 
    ```powershell
    .\.venv\Scripts\python -u evaluator\real_model_suite.py `
-     --solution solution.py --candidate-name active `
+     --candidates c39 --solution solution.py --candidate-name active `
      --device cpu --algorithm-device cuda --cache-mode read `
      --seq 128 --calib 2 --test 4 `
      --output artifacts\real_model_suite\active-YYYYMMDD.json `
@@ -211,35 +216,45 @@ historical sources under `solutions/`.
    reads nor writes. Changing sequence length, calibration/test counts, layer
    cap, model, or the pinned dataset revision requires a new cache.
 
-5. **Predict the official score with a frozen calibration**
+5. **Check whether local ordering reproduces official ordering**
 
-   First generate a versioned calibration from the fixed official-anchor
-   matrix. Do not refit when the existing v0 is applicable:
+   Official anchors are used only for Spearman and pairwise ranking audits;
+   the evaluator does not fit absolute official scores. Candidate promotion
+   compares `official_flow_total` on the same frozen case panel. `global_gain`,
+   component means, and Pearson are diagnostics and cannot override the
+   primary ordering. Always use `--candidates c39` to run active beside the
+   current official Champion.
 
-   ```powershell
-   .\.venv\Scripts\python -u evaluator\official_score_calibration.py fit `
-     --input artifacts\real_model_suite\20260828_full.json `
-     --output artifacts\real_model_suite\official_score_calibration_v0.json `
-     --feature linear_macro_gain
+   The official-flow proxy is:
 
-   .\.venv\Scripts\python -u evaluator\official_score_calibration.py predict `
-     --calibration artifacts\real_model_suite\official_score_calibration_v0.json `
-     --input artifacts\real_model_suite\active-YYYYMMDD.json `
-     --output artifacts\real_model_suite\active-YYYYMMDD.official-prediction.json
+   ```text
+   score(case) = (MSE_STD - MSE_PLAYER) / MSE_STD
+   official_flow_total = sum(all Linear case scores) + sum(all Attention case scores)
    ```
 
-   The current v0 has four official anchors and status `diagnostic`. Archive
-   every prediction together with leave-one-out MAE, extrapolation status, and
-   all five per-model values. Never enter a prediction as Official Score. See
-   [official-score-calibration.md](docs/official-score-calibration.md) for the
-   complete contract and interpretation.
+   Standard NVFP4/HiF4 dequantization, HiF4 parameter validation, and state
+   validation are evaluator-owned. A candidate only needs the six official
+   APIs. Evaluator-side `A@W` is formed only after the candidate has returned
+   its quantized result and is never passed back as calibration data. A
+   candidate may form its own `A@W` inside offline
+   `hif4_calibration_and_quantize_weight` for `Q(W)` optimization, but it must
+   not route that result into `activation_state` or online `Q(A)` selection.
+
+   The task document does not include the source of the official "standard
+   HiF4 quantizer." The current independent codec is the historically audited
+   implementation and its SHA256 is recorded in every report. Replace it
+   bit-for-bit and bump the protocol version when the official function is
+   available.
 
 6. **Check the runtime constraint**
 
-   `algorithm_stage_seconds` must be strictly below the official hard limit of
-   `300s`. Cache reads remove model-forward time only; they cannot hide a slow
-   candidate algorithm. Confirm the final end-to-end time with the official
-   evaluator.
+   Each complete six-API run on a model proxy must have
+   `official_api_total_seconds` strictly below the official `300s` limit;
+   exactly 300 seconds fails. The multi-model suite uses the maximum proxy
+   time for this check and does not add independent proxy runtimes to pretend
+   they are one official submission. Cache reads remove model-forward time
+   only and cannot hide a slow candidate. Confirm final end-to-end time with
+   the official evaluator.
 
 ### Candidate archiving steps
 
@@ -283,9 +298,10 @@ out. Do not keep only improvements. Before archiving, freeze the root
    - Hypothesis: why this change may improve accuracy
    - Test command: `full command`
    - Test config: model/data/cache/mode/layers/algorithm-device
-   - Local Linear q/k/v/o/fc/proj: ...
-   - Local Attention causal: ...
-   - Local runtime: ...
+   - Local official-flow Linear sum / cases: ...
+   - Local official-flow Attention sum / cases: ...
+   - Local official-flow total and paired ordering: ...
+   - Local official API total runtime: ...
    - Cache: filename, schema, dataset revision, model revision
    - Source SHA256: `...`
    - Official score: NA
@@ -327,7 +343,7 @@ out. Do not keep only improvements. Before archiving, freeze the root
   [2026-08-26-solution-archive-workflow.md](docs/superpowers/plans/2026-08-26-solution-archive-workflow.md).
 - Multi-model real data, cache modes, and compliance boundaries are documented
   in [real-model-evaluator.md](docs/real-model-evaluator.md).
-- Frozen fitting and prediction from local metrics to official scores are
-  documented in [official-score-calibration.md](docs/official-score-calibration.md).
+- Official per-case summation, independent codec/validation, and ranking audit
+  are documented in [real-model-evaluator.md](docs/real-model-evaluator.md).
 - Superseded optimization plans were moved to
   `docs/superpowers/archive/plans/` and are not active instructions.

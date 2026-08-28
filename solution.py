@@ -1581,9 +1581,10 @@ def _cross64_fold_pair_covariances(
 
     Each calibration item remains a separate fold.  Only activation rows are
     transformed and contracted with themselves, so this computes ``A^T A``
-    blocks and never constructs a Linear output or an activation/weight
-    product.  Direct pairwise contraction avoids materializing another full
-    feature covariance.
+    blocks and intentionally does not use the optional offline ``A @ W``
+    weight objective.  That objective is legal for ``Q(W)`` but cannot feed
+    ``activation_state`` or online ``Q(A)`` selection.  Direct pairwise
+    contraction avoids materializing another full feature covariance.
     """
 
     if not fold_samples:
@@ -1640,8 +1641,10 @@ def _refine_weight_blocks_cross64(
     candidate is committed only when both the pooled complete-superblock loss
     and the soft mean/worst-fold loss decrease.  This is block-LDLQ error
     feedback rather than a coverage or score gate.  The routine uses only
-    activation covariance for the static weight objective and never
-    constructs a Linear output or any output residual.  The final HiF4
+    activation covariance for the static weight objective and intentionally
+    does not use the optional offline ``A @ W`` objective.  Such an objective
+    is permitted for optimizing ``Q(W)``, but its output or residual must never
+    enter ``activation_state`` or online ``Q(A)`` selection.  The final HiF4
     representation remains unchanged.
     """
 

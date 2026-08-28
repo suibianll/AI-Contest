@@ -29,7 +29,7 @@ Root `solution.py` is the only active submission. Archived source files are immu
 | v020 | 2026-08-27 | C17 final gated activation 8×8 coverage 8% | 0.5890 | 0.4497 | CPU stage 63.96s | NA | NA | local +0.0029 Linear | local-champion | [archive](20260827_v020_c17-final-gated-activation-8x8-coverage8-local_scoreNA_timeNA/) |
 | v021 | 2026-08-27 | C18 activation/weight-error cross term | 0.5897 | 0.4497 | CUDA stage 25.19s | NA | NA | local +0.0008 Linear | local-accepted-not-promoted | [archive](20260827_v021_c18-activation-cross-term-local_scoreNA_timeNA/) |
 | v022 | 2026-08-27 | C19 cross-aware gain selection | 0.5905 | 0.4497 | CUDA stage 25.25s | NA | NA | local +0.0015 Linear | local-accepted-not-promoted | [archive](20260827_v022_c19-cross-aware-gain-selection-local_scoreNA_timeNA/) |
-| v023 | 2026-08-27 | C20 exact discrete cross-gain selection | 0.5931 | 0.4497 | CUDA stage 25.19s | 16081 | 152s | historical non-compliant anchor (output-supervision path, later banned) | official-submitted-non-compliant | [archive](20260827_v023_c20-exact-discrete-cross-gain-local_scoreNA_timeNA/) |
+| v023 | 2026-08-27 | C20 exact discrete cross-gain selection | 0.5931 | 0.4497 | CUDA stage 25.19s | 16081 | 152s | historical non-compliant anchor (output supervision fed Q(A)) | official-submitted-non-compliant | [archive](20260827_v023_c20-exact-discrete-cross-gain-local_scoreNA_timeNA/) |
 | v024 | 2026-08-27 | C21 gated exact cross selection | 0.5930 | 0.4497 | CUDA stage 25.87s | 16043 | 173.8s | +244 vs v013 official | official-champion | [archive](20260827_v024_c21-gated-exact-cross-selection_score16043_time174s/) |
 | v025 | 2026-08-27 | C21-C compliant baseline | 0.5311 | 0.4497 | CPU stage ~61.3s | 14437 | 166.6s | compliant official anchor | official-compliant-anchor | [archive](20260827_v025_c21c-compliance-baseline/) |
 | v026 | 2026-08-27 | C22 Linear R64 | 0.5311 | 0.4497 | local ratio 1.52 | NA | NA | all components fell back | local-rejected | [archive](20260827_v026_c22-linear-r64-rejected_scoreNA_timeNA/) |
@@ -54,8 +54,9 @@ v003 起允许只有本地结果时立即归档。未提交候选的官方列保
 v013 归档字节一致。
 
 用户于 2026-08-27 确认 v024（C21，提交 `23d1cf7`）官方结果为
-`16043 / 173.8s`。该版本包含官方后来明确禁止的 Linear 输出监督路径，
-因此只保留为历史官方记录。v025 / C21-C 是最新合规官方锚点：
+`16043 / 173.8s`。该版本的 Linear 输出监督把 `A@W` 信息用于激活侧选择，
+因此在当前规则下不合规，只保留为历史官方记录。离线校准中用 `A@W`
+优化 `Q(W)` 本身是允许的。v025 / C21-C 是最新合规官方锚点：
 `14437 / 166.6s`。
 
 当前根 `solution.py` 仍是已冻结的 C40 robust Block-LDLQ，SHA256
