@@ -78,13 +78,16 @@ _LINEAR_R64_STAGE1_WEIGHT_ROWS = 128
 # bounds the [chunk, blocks, 64] working tensors (memory-bounded chunking;
 # the plan's 128 default is dominated by dispatch overhead on small-B
 # layers, so production uses 1024 rows per ~3MB chunk).
-# C23 rejected (v027): kept off in production; flag retained so the
-# archived candidate can be re-enabled for diagnosis.
+# C39-FW: re-test the C23 full-64 weight solver on FFN-width Linear layers
+# only.  This is intentionally a single-mechanism candidate derived from
+# C21-C: q/k/v/o keep the exact C21-C path, while fc/proj are the diagnostic
+# arm for separating the C38 FULL64 effect from its unrelated activation
+# changes.  The official result is needed to calibrate this local proxy.
 _WEIGHT_FULL64 = True
 _WEIGHT_FULL64_BEAM_OFFSETS = (-2, -1, 0, 1, 2, 3)
-_WEIGHT_FULL64_BEAM_KEEP = 2
+_WEIGHT_FULL64_BEAM_KEEP = 4
 _WEIGHT_FULL64_CHUNK_ROWS = 1024
-_WEIGHT_FULL64_MAX_RATIO = 0.30
+_WEIGHT_FULL64_MAX_RATIO = 0.25
 # C35 (2026-08-28): per-width full-64 coverage.  Narrow layers (q/k/v/o,
 # <=1024 channels) have few 64-blocks and rows, so their refinement is cheap;
 # wide FFN projectors (fc/proj, 2048/3072) dominate the calibration time.
@@ -94,6 +97,7 @@ _WEIGHT_FULL64_MAX_RATIO = 0.30
 _WEIGHT_FULL64_NARROW_CHANNELS = 1024
 _WEIGHT_FULL64_MAX_RATIO_NARROW = 1.0
 _WEIGHT_FULL64_MAX_RATIO_WIDE = 0.25
+_WEIGHT_FULL64_WIDE_ONLY = True
 _WEIGHT_FULL64_DAMPINGS = (0.01, 0.03, 0.1)
 _WEIGHT_FULL64_SIGNED_CODES = tuple(
     round(code * 0.25, 2) for code in range(-7, 8)
@@ -104,6 +108,35 @@ _WEIGHT_FULL64_SIGNED_CODES = tuple(
 # cuts the per-block CPU cost by about a third, buying FULL64 coverage
 # inside the same official time envelope (A/B measured).
 _WEIGHT_FULL64_SECOND_COORDINATE = False
+# C39: cross-block conditional refinement.  C38's FULL64 solver optimizes
+# each 64-channel diagonal Hessian block independently.  This stage couples
+# adjacent 64-channel blocks through the off-diagonal Hessian terms and is
+# deliberately separate from the existing solver so it can be ablated and
+# audited in isolation.  The final state remains the ordinary HiF4 five-field
+# weight representation; no activation/output product is constructed.
+# Real-GPT2 screening (2026-08-28) showed that the single pooled calibration
+# Hessian improves its own EHE^T proxy but regresses the deployed Linear
+# score.  Keep the implementation available for the upcoming multi-fold
+# robust variant, but do not ship the unrobust candidate by default.
+_WEIGHT_CROSS64 = False
+_WEIGHT_CROSS64_SUPERBLOCK = 128
+_WEIGHT_CROSS64_SWEEPS = 1
+_WEIGHT_CROSS64_MAX_RATIO_NARROW = 1.0
+_WEIGHT_CROSS64_MAX_RATIO_WIDE = 0.25
+_WEIGHT_CROSS64_NARROW_CHANNELS = 1024
+_WEIGHT_CROSS64_DAMPING = 0.03
+_WEIGHT_CROSS64_ACCEPT_EPS = 1.0e-9
+_WEIGHT_CROSS64_STATS_TOKENS = 1024
+# Soft robustness against calibration-window shift.  A value of 0 uses the
+# mean fold loss; 0.5 blends the mean and worst calibration fold without
+# imposing a hard per-fold rejection rule.
+_WEIGHT_CROSS64_ROBUST_MAX_MIX = 0.5
+# The activation-side importance in the existing pipeline is derived from
+# the pre-C39 weight reconstruction.  Keep that proxy frozen while testing
+# the new weight-only stage; otherwise an improved weight Hessian solution
+# changes the activation state in the same pass and hides the isolated
+# cross-block effect behind a second mechanism.
+_WEIGHT_CROSS64_PRESERVE_ACTIVATION_IMPORTANCE = True
 _WEIGHT_REFINE_ERROR_THRESHOLD = 1.0e-7
 _WEIGHT_REFINE_ACCEPT_MARGIN = 0.005
 _WEIGHT_REFINE_MAX_RATIO_SMALL = 1.0
@@ -112,7 +145,7 @@ _WEIGHT_REFINE_MAX_BLOCKS = 65_536
 
 _ACTIVATION_REFINE_ERROR_THRESHOLD = 1.0e-7
 _ACTIVATION_REFINE_ACCEPT_MARGIN = 0.02
-_ACTIVATION_REFINE_MAX_RATIO = 1.0
+_ACTIVATION_REFINE_MAX_RATIO = 0.70
 _ACTIVATION_REFINE_MAX_BLOCKS = 32_768
 
 _QK_SMOOTH_ALPHAS = (0.25, 0.50)
@@ -258,11 +291,11 @@ _ACTIVATION_QUADRATIC = True
 _ACTIVATION_QUADRATIC_MAX_FEATURES = 4096
 _ACTIVATION_QUADRATIC8 = True
 _ACTIVATION_QUADRATIC8_MIN_FEATURES = 64
-_ACTIVATION_QUADRATIC8_MAX_RATIO = 0.60
+_ACTIVATION_QUADRATIC8_MAX_RATIO = 0.08
 _ACTIVATION_QUADRATIC8_MAX_GROUPS = 4096
-_ACTIVATION_QUADRATIC8_SWEEPS = 2
+_ACTIVATION_QUADRATIC8_SWEEPS = 1
 _ACTIVATION_QUADRATIC8_ACCEPT_MARGIN = 1.0e-5
-_ACTIVATION_QUADRATIC8_CALIBRATION_GATE = False
+_ACTIVATION_QUADRATIC8_CALIBRATION_GATE = True
 _ACTIVATION_QUADRATIC8_GATE_MAX_FEATURES = 1024
 _ACTIVATION_QUADRATIC8_GATE_MIN_IMPROVEMENT = 5.0e-4
 _ACTIVATION_QUADRATIC8_GATE_WORST_TOLERANCE = 1.0e-3
@@ -1401,6 +1434,373 @@ def _refine_weight_blocks64(
     refined["sign"] = out_sign.reshape(rows, blocks, 8, 2, 4)
     refined["mant"] = out_mant.reshape(rows, blocks, 8, 2, 4)
     return refined
+
+
+def _slice_hif4_weight_params(
+    params: dict[str, torch.Tensor], block_start: int, block_count: int
+) -> dict[str, torch.Tensor]:
+    """Slice a contiguous group of 64-channel weight blocks."""
+
+    start = int(block_start)
+    end = start + int(block_count)
+    sliced: dict[str, torch.Tensor] = {}
+    for key, value in params.items():
+        if torch.is_tensor(value) and value.ndim >= 2:
+            sliced[key] = value[:, start:end].clone()
+        else:
+            sliced[key] = value
+    return sliced
+
+
+def _replace_hif4_weight_params(
+    params: dict[str, torch.Tensor],
+    replacement: dict[str, torch.Tensor],
+    block_start: int,
+    block_count: int,
+) -> dict[str, torch.Tensor]:
+    """Return ``params`` with a contiguous block slice replaced."""
+
+    start = int(block_start)
+    end = start + int(block_count)
+    merged: dict[str, torch.Tensor] = {}
+    for key, value in params.items():
+        if torch.is_tensor(value):
+            merged[key] = value.clone()
+            if key in replacement and value.ndim >= 2:
+                merged[key][:, start:end] = replacement[key].to(
+                    device=value.device, dtype=value.dtype
+                )
+        else:
+            merged[key] = value
+    return merged
+
+
+def _damped_hessian_inverse(
+    hessian: torch.Tensor,
+) -> Optional[torch.Tensor]:
+    """Build a numerically safe inverse for one 64x64 Hessian block."""
+
+    if hessian.ndim != 2 or tuple(hessian.shape) != (64, 64):
+        return None
+    h = hessian.detach().to(torch.float32)
+    if not bool(torch.isfinite(h).all()):
+        return None
+    h = 0.5 * (h + h.t())
+    diagonal = torch.diagonal(h)
+    mean_diagonal = diagonal.mean().clamp_min(_EPS)
+    eye = torch.eye(64, dtype=h.dtype, device=h.device)
+    for damping in (
+        float(_WEIGHT_CROSS64_DAMPING),
+        0.1,
+        0.3,
+    ):
+        damped = h + (damping * mean_diagonal) * eye
+        chol, info = torch.linalg.cholesky_ex(damped)
+        if int(info.item()) == 0 and bool(torch.isfinite(chol).all()):
+            inverse = torch.cholesky_inverse(chol)
+            if bool(torch.isfinite(inverse).all()):
+                return inverse
+    return None
+
+
+def _hif4_weight_block_denominator(
+    params: dict[str, torch.Tensor], block_index: int
+) -> Optional[torch.Tensor]:
+    """Return the current legal 64-channel grid for one weight block."""
+
+    required = ("scale_factor", "scale_lv2", "scale_lv3")
+    if any(key not in params or not torch.is_tensor(params[key]) for key in required):
+        return None
+    scale = params["scale_factor"][:, int(block_index)].reshape(-1, 1)
+    lv2 = params["scale_lv2"][:, int(block_index)].reshape(-1, 8)
+    lv3 = params["scale_lv3"][:, int(block_index)].reshape(-1, 8, 2)
+    denominator = (
+        scale[:, :, None, None]
+        * lv2[:, :, None, None]
+        * lv3[:, :, :, None]
+    ).repeat_interleave(4, dim=-1)
+    return denominator.reshape(-1, 1, 64).to(torch.float32)
+
+
+def _cross64_quadratic_loss(
+    quantized: torch.Tensor,
+    dense: torch.Tensor,
+    hessian: torch.Tensor,
+) -> torch.Tensor:
+    """Return the complete Hessian loss for a block or superblock."""
+
+    error = quantized.to(torch.float32) - dense.to(torch.float32)
+    h = hessian.to(device=error.device, dtype=torch.float32)
+    return torch.einsum("ri,ij,rj->", error, h, error)
+
+
+def _validate_cross64_fold_covariances(
+    fold_pair_covariances: Optional[torch.Tensor],
+    blocks: int,
+    channels: int,
+) -> Optional[torch.Tensor]:
+    """Validate optional per-fold 128-channel covariance blocks."""
+
+    if fold_pair_covariances is None:
+        return None
+    if not torch.is_tensor(fold_pair_covariances):
+        return None
+    expected_pairs = int(channels) // (2 * _HIF4_BLOCK_SIZE)
+    if fold_pair_covariances.ndim != 4:
+        return None
+    if tuple(fold_pair_covariances.shape[1:]) != (
+        expected_pairs,
+        2 * _HIF4_BLOCK_SIZE,
+        2 * _HIF4_BLOCK_SIZE,
+    ):
+        return None
+    if int(blocks) != int(channels) // _HIF4_BLOCK_SIZE:
+        return None
+    if int(fold_pair_covariances.shape[0]) <= 0:
+        return None
+    if not bool(torch.isfinite(fold_pair_covariances).all()):
+        return None
+    return fold_pair_covariances.to(dtype=torch.float32)
+
+
+def _cross64_fold_losses(
+    quantized: torch.Tensor,
+    dense: torch.Tensor,
+    fold_h: Optional[torch.Tensor],
+    pooled_h: torch.Tensor,
+) -> torch.Tensor:
+    """Evaluate a superblock under pooled or per-fold Hessians."""
+
+    error = quantized.to(torch.float32) - dense.to(torch.float32)
+    if fold_h is None:
+        return torch.einsum("ri,ij,rj->", error, pooled_h, error).reshape(1)
+    return torch.einsum(
+        "ri,fij,rj->f", error, fold_h.to(error.device), error
+    )
+
+
+def _cross64_robust_loss(fold_losses: torch.Tensor) -> torch.Tensor:
+    """Use a soft mean/worst-fold objective, never a hard fold gate."""
+
+    losses = fold_losses.to(torch.float32).reshape(-1)
+    if int(losses.numel()) == 0:
+        return torch.tensor(float("inf"), dtype=torch.float32)
+    mean_loss = losses.mean()
+    worst_loss = losses.max()
+    mix = max(0.0, min(float(_WEIGHT_CROSS64_ROBUST_MAX_MIX), 1.0))
+    return mean_loss + mix * (worst_loss - mean_loss)
+
+
+@torch.no_grad()
+def _refine_weight_blocks_cross64(
+    dense: torch.Tensor,
+    params: dict[str, torch.Tensor],
+    cov: torch.Tensor,
+    fold_pair_covariances: Optional[torch.Tensor] = None,
+) -> dict[str, torch.Tensor]:
+    """C39 cross-block conditional refinement for static Linear weights.
+
+    The existing FULL64 stage solves each 64-channel block independently.
+    This stage performs block-coordinate minimization of the complete
+    quadratic objective over adjacent 64-channel blocks.  For a current block
+    ``b`` and fixed errors in the other blocks, the cross term is completed
+    into a shifted local target:
+
+        target_b = W_b - (sum_j E_j H_jb) H_bb^{-1}
+
+    A fixed-hierarchy legal-grid coordinate solver then quantizes that target.
+    A candidate is committed only when the original complete superblock loss
+    decreases.  Keeping the hierarchy fixed in this first pass avoids
+    repeating the expensive beam/GPTQ search for every conditional update;
+    DHSS can later provide a separate scale candidate stage.  The routine
+    uses only the activation covariance for the static weight objective and
+    never constructs ``A @ W`` or any output residual.  It deliberately keeps
+    the final representation unchanged.
+    """
+
+    if not _WEIGHT_CROSS64:
+        return params
+    if dense.ndim != 2 or cov.ndim != 2:
+        return params
+    rows, channels = map(int, dense.shape)
+    if rows <= 0 or channels < 128 or channels % _HIF4_BLOCK_SIZE != 0:
+        return params
+    if tuple(cov.shape) != (channels, channels):
+        return params
+    if not bool(torch.isfinite(dense).all()) or not bool(torch.isfinite(cov).all()):
+        return params
+
+    blocks = channels // _HIF4_BLOCK_SIZE
+    superblock = int(_WEIGHT_CROSS64_SUPERBLOCK)
+    if superblock < 2 * _HIF4_BLOCK_SIZE or superblock % _HIF4_BLOCK_SIZE != 0:
+        return params
+    blocks_per_super = superblock // _HIF4_BLOCK_SIZE
+    if blocks_per_super != 2:
+        # The first implementation intentionally has a small, exactly
+        # auditable conditional problem.  Larger groups can be added later
+        # with the same complete-loss acceptance rule.
+        return params
+    fold_pair_covariances = _validate_cross64_fold_covariances(
+        fold_pair_covariances,
+        blocks,
+        channels,
+    )
+
+    current_params = {
+        key: value.clone() if torch.is_tensor(value) else value
+        for key, value in params.items()
+    }
+    current_quantized = _dequantize_hif4(current_params).to(torch.float32)
+
+    pair_starts = list(range(0, blocks - 1, 2))
+    if not pair_starts:
+        return params
+
+    # Prioritize pairs whose currently discarded cross term is largest.  The
+    # ratio controls compute on wide layers, while all narrow-layer pairs are
+    # considered.  This is a deterministic budget allocation, not a score
+    # gate; every selected pair still has a mathematical full-loss fallback.
+    pair_scores: list[tuple[float, int]] = []
+    for block_start in pair_starts:
+        channel_start = block_start * _HIF4_BLOCK_SIZE
+        channel_end = channel_start + 2 * _HIF4_BLOCK_SIZE
+        h_pair = cov[channel_start:channel_end, channel_start:channel_end]
+        e_pair = current_quantized[:, channel_start:channel_end] - dense[
+            :, channel_start:channel_end
+        ]
+        e0 = e_pair[:, :_HIF4_BLOCK_SIZE]
+        e1 = e_pair[:, _HIF4_BLOCK_SIZE:]
+        h01 = h_pair[:_HIF4_BLOCK_SIZE, _HIF4_BLOCK_SIZE:]
+        cross = 2.0 * torch.einsum("ri,ij,rj->", e0, h01, e1)
+        score = abs(float(torch.nan_to_num(cross, nan=0.0).item()))
+        pair_scores.append((score, block_start))
+    max_ratio = (
+        _WEIGHT_CROSS64_MAX_RATIO_NARROW
+        if channels <= _WEIGHT_CROSS64_NARROW_CHANNELS
+        else _WEIGHT_CROSS64_MAX_RATIO_WIDE
+    )
+    max_pairs = min(
+        len(pair_starts),
+        max(1, int(math.ceil(len(pair_starts) * float(max_ratio)))),
+    )
+    pair_scores.sort(key=lambda item: (-item[0], item[1]))
+    selected_starts = {
+        start for _score, start in pair_scores[:max_pairs]
+    }
+
+    for block_start in sorted(selected_starts):
+        channel_start = block_start * _HIF4_BLOCK_SIZE
+        channel_end = channel_start + 2 * _HIF4_BLOCK_SIZE
+        pair_dense = dense[:, channel_start:channel_end]
+        pair_h = 0.5 * cov[channel_start:channel_end, channel_start:channel_end] + (
+            0.5 * cov[channel_start:channel_end, channel_start:channel_end].t()
+        )
+        pair_index = block_start // 2
+        fold_h = None
+        if fold_pair_covariances is not None:
+            fold_h = fold_pair_covariances[:, pair_index]
+            pair_h = fold_h.mean(dim=0)
+            pair_h = 0.5 * (pair_h + pair_h.t())
+        pair_quantized = current_quantized[:, channel_start:channel_end].clone()
+        pair_fold_losses = _cross64_fold_losses(
+            pair_quantized, pair_dense, fold_h, pair_h
+        )
+        pair_loss = _cross64_robust_loss(pair_fold_losses)
+        if not bool(torch.isfinite(pair_loss)):
+            continue
+
+        local_inverses: list[Optional[torch.Tensor]] = []
+        for local_block in range(2):
+            lo = local_block * _HIF4_BLOCK_SIZE
+            hi = lo + _HIF4_BLOCK_SIZE
+            local_inverses.append(
+                _damped_hessian_inverse(pair_h[lo:hi, lo:hi])
+            )
+        if any(inverse is None for inverse in local_inverses):
+            continue
+
+        for _ in range(max(1, int(_WEIGHT_CROSS64_SWEEPS))):
+            changed = False
+            for local_block in range(2):
+                lo = local_block * _HIF4_BLOCK_SIZE
+                hi = lo + _HIF4_BLOCK_SIZE
+                other = 1 - local_block
+                olo = other * _HIF4_BLOCK_SIZE
+                ohi = olo + _HIF4_BLOCK_SIZE
+                hbb = pair_h[lo:hi, lo:hi]
+                h_other_b = pair_h[olo:ohi, lo:hi]
+                other_error = pair_quantized[:, olo:ohi] - pair_dense[:, olo:ohi]
+                cross = other_error @ h_other_b
+                shift = cross @ local_inverses[local_block]
+                target = pair_dense[:, lo:hi] - shift
+
+                global_block = block_start + local_block
+                denominator = _hif4_weight_block_denominator(
+                    current_params, global_block
+                )
+                if denominator is None or not bool(
+                    torch.isfinite(denominator).all()
+                ):
+                    continue
+                target_3d = target.unsqueeze(1)
+                candidate_init = (
+                    torch.round(
+                        target_3d * (4.0 / denominator.clamp_min(_EPS))
+                    ).clamp_(-7.0, 7.0)
+                    * 0.25
+                    * denominator
+                )
+                candidate_3d = _coordinate_descent64(
+                    candidate_init,
+                    target_3d,
+                    hbb.unsqueeze(0),
+                    denominator,
+                )
+                candidate_quantized = candidate_3d[:, 0, :].to(torch.float32)
+                trial_quantized = pair_quantized.clone()
+                trial_quantized[:, lo:hi] = candidate_quantized
+                trial_loss = _cross64_quadratic_loss(
+                    trial_quantized, pair_dense, pair_h
+                )
+                trial_fold_losses = _cross64_fold_losses(
+                    trial_quantized, pair_dense, fold_h, pair_h
+                )
+                trial_robust_loss = _cross64_robust_loss(trial_fold_losses)
+                if not bool(torch.isfinite(trial_loss)) or not bool(
+                    torch.isfinite(trial_robust_loss)
+                ):
+                    continue
+                if float(trial_robust_loss.item()) >= float(pair_loss.item()) - float(_WEIGHT_CROSS64_ACCEPT_EPS):
+                    continue
+
+                candidate_block = _slice_hif4_weight_params(
+                    current_params, global_block, 1
+                )
+                candidate_codes = torch.round(
+                    candidate_quantized * (4.0 / denominator[:, 0, :].clamp_min(_EPS))
+                ).clamp_(-7.0, 7.0)
+                candidate_block["sign"] = torch.sign(candidate_codes).reshape(
+                    candidate_block["sign"].shape
+                )
+                candidate_block["mant"] = (
+                    candidate_codes.abs() * 0.25
+                ).reshape(candidate_block["mant"].shape)
+                current_params = _replace_hif4_weight_params(
+                    current_params,
+                    candidate_block,
+                    global_block,
+                    1,
+                )
+                pair_quantized = trial_quantized
+                pair_fold_losses = trial_fold_losses
+                pair_loss = trial_robust_loss
+                changed = True
+
+            if not changed:
+                break
+        current_quantized[:, channel_start:channel_end] = pair_quantized
+
+    return current_params
 
 
 def _identity_permutation(length: int, device: torch.device) -> torch.Tensor:
@@ -3584,19 +3984,48 @@ def hif4_calibration_and_quantize_weight(
     # C35: per-width coverage -- narrow layers (<=1024 channels, cheap
     # 64-blocks) get a higher ratio; wide FFN projectors keep the global
     # budget so the official CPU-time envelope is respected.
-    if _WEIGHT_FULL64 and use_quadratic:
+    is_wide_layer = (
+        in_features >= _WIDE_LAYER_MIN_DIM
+        or out_features >= _WIDE_LAYER_MIN_DIM
+    )
+    full64_scope_enabled = (
+        _WEIGHT_FULL64
+        and use_quadratic
+        and (
+            not _WEIGHT_FULL64_WIDE_ONLY
+            or is_wide_layer
+        )
+    )
+    if full64_scope_enabled:
         full64_ratio = (
-            _WEIGHT_FULL64_MAX_RATIO_NARROW
-            if in_features <= _WEIGHT_FULL64_NARROW_CHANNELS
-            else _WEIGHT_FULL64_MAX_RATIO_WIDE
+            _WEIGHT_FULL64_MAX_RATIO_WIDE
+            if is_wide_layer
+            else _WEIGHT_FULL64_MAX_RATIO_NARROW
         )
         weight_params = _refine_weight_blocks64(
             weight_smooth, weight_params, gram, max_ratio=full64_ratio
         )
+    # The cross-block prototype is retained as a dormant research hook, but
+    # it must not add a second dequantization or alter the released candidate
+    # while its flag is off.
+    weight_hat_for_activation = None
+    if _WEIGHT_CROSS64 and use_quadratic:
+        weight_hat_for_activation = _dequantize_hif4(weight_params)
+        weight_params = _refine_weight_blocks_cross64(
+            weight_smooth, weight_params, gram
+        )
 
     weight_hat = _dequantize_hif4(weight_params)
+    if (
+        _WEIGHT_CROSS64
+        and _WEIGHT_CROSS64_PRESERVE_ACTIVATION_IMPORTANCE
+        and weight_hat_for_activation is not None
+    ):
+        activation_weight_hat = weight_hat_for_activation
+    else:
+        activation_weight_hat = weight_hat
     activation_importance = _normalize_importance(
-        weight_hat.square().sum(dim=0), in_features
+        activation_weight_hat.square().sum(dim=0), in_features
     )
     if activation_importance is None:
         activation_importance = torch.ones_like(best_d)

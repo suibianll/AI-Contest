@@ -1,4 +1,4 @@
-"""C23 full-64 weight refinement tests (plan 6.8 + consistency probe)."""
+"""C39-FW full-64 refinement tests and consistency probes."""
 
 from __future__ import annotations
 
@@ -319,7 +319,10 @@ _C21C_PARENT = (
 
 def _full64_calibration_inputs(seed: int = 1234):
     torch.manual_seed(seed)
-    weight = torch.randn(96, 128) * 0.05
+    # Production scope is deliberately limited to a wide Linear layer.  The
+    # 2048 output rows make this an FFN-width case while keeping the Hessian
+    # width small enough for a fast regression test.
+    weight = torch.randn(2048, 128) * 0.05
     activations = [torch.randn(128, 128) * 0.5 for _ in range(2)]
     weight_pair = nvfp4_encode(weight, "amax6")
     calib_pairs = [nvfp4_encode(a, "amax6") for a in activations]
@@ -343,13 +346,13 @@ def _assert_nested_equal(left, right) -> None:
 
 
 def test_weight_full64_enabled_in_production() -> None:
-    """C23 is promoted (2026-08-28): the flag is on in production."""
+    """C39-FW enables FULL64 only for wide FFN-shaped layers."""
     assert SOLUTION._WEIGHT_FULL64 is True
+    assert SOLUTION._WEIGHT_FULL64_WIDE_ONLY is True
 
 
 def test_weight_full64_enabled_changes_output_vs_c21c() -> None:
-    """With the flag on (the promoted default), the calibration output
-    must differ from the C21-C parent: full-64 refinement is active."""
+    """The wide-only production path differs from the C21-C parent."""
     parent = load_solution_at(_C21C_PARENT, "weight64_c21c_parent")
     weight_pair, calib_pairs = _full64_calibration_inputs()
     child = SOLUTION.hif4_calibration_and_quantize_weight(
@@ -367,3 +370,28 @@ def test_weight_full64_enabled_changes_output_vs_c21c() -> None:
         if torch.is_tensor(child_params[key])
     )
     assert differs
+
+
+def test_weight_full64_wide_only_keeps_narrow_path_equal_to_c21c() -> None:
+    """q/k/v/o-shaped layers remain an exact C21-C control arm."""
+    torch.manual_seed(1235)
+    weight = torch.randn(96, 128) * 0.05
+    activations = [torch.randn(128, 128) * 0.5 for _ in range(2)]
+    weight_pair = nvfp4_encode(weight, "amax6")
+    calib_pairs = [nvfp4_encode(a, "amax6") for a in activations]
+    parent = load_solution_at(_C21C_PARENT, "weight64_narrow_parent")
+    child = SOLUTION.hif4_calibration_and_quantize_weight(
+        *weight_pair, calib_pairs
+    )
+    base = parent.hif4_calibration_and_quantize_weight(
+        *weight_pair, calib_pairs
+    )
+    assert params_equal(child["weight_params"], base["weight_params"])
+    # The active values are identical; the candidate may expose an extra
+    # dormant optional field for a rejected research path.
+    for key, expected in base["activation_state"].items():
+        actual = child["activation_state"][key]
+        if torch.is_tensor(expected):
+            assert torch.equal(actual, expected), key
+        else:
+            assert actual == expected, key

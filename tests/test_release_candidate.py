@@ -74,7 +74,7 @@ def validate_state(value) -> tuple[int, int]:
     return tensors, elements
 
 
-def test_release_flags_are_a1_only() -> None:
+def test_release_flags_are_c39_fw_single_mechanism() -> None:
     solution = load_module("release_flags", ROOT / "solution.py")
     assert solution._ATTN_OUTPUT_SELECTOR is True
     assert solution._ATTN_H64 is False
@@ -85,16 +85,17 @@ def test_release_flags_are_a1_only() -> None:
     assert solution._ACTIVATION_QUADRATIC_MAX_FEATURES == 4096
     assert solution._ACTIVATION_QUADRATIC8 is True
     assert solution._ACTIVATION_QUADRATIC8_MIN_FEATURES == 64
-    assert solution._ACTIVATION_QUADRATIC8_MAX_RATIO == 0.60
-    assert solution._ACTIVATION_QUADRATIC8_SWEEPS == 2
-    assert solution._ACTIVATION_QUADRATIC8_CALIBRATION_GATE is False
+    assert solution._ACTIVATION_QUADRATIC8_MAX_RATIO == 0.08
+    assert solution._ACTIVATION_QUADRATIC8_SWEEPS == 1
+    assert solution._ACTIVATION_QUADRATIC8_CALIBRATION_GATE is True
     assert solution._ACTIVATION_QUADRATIC8_GATE_MAX_FEATURES == 1024
-    assert solution._ACTIVATION_REFINE_MAX_RATIO == 1.0
+    assert solution._ACTIVATION_REFINE_MAX_RATIO == 0.70
     assert solution._WEIGHT_FULL64 is True
-    assert solution._WEIGHT_FULL64_MAX_RATIO == 0.30
-    assert solution._WEIGHT_FULL64_BEAM_KEEP == 2
+    assert solution._WEIGHT_FULL64_MAX_RATIO == 0.25
+    assert solution._WEIGHT_FULL64_BEAM_KEEP == 4
     assert solution._WEIGHT_FULL64_MAX_RATIO_NARROW == 1.0
     assert solution._WEIGHT_FULL64_MAX_RATIO_WIDE == 0.25
+    assert solution._WEIGHT_FULL64_WIDE_ONLY is True
     assert solution._WEIGHT_FULL64_SECOND_COORDINATE is False
     assert solution._LINEAR_R64 is False
     assert solution._HIERARCHY_PERMUTATION is False
