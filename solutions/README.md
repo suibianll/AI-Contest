@@ -38,6 +38,7 @@ Root `solution.py` is the only active submission. Archived source files are immu
 | v029 | 2026-08-28 | C29 HAES probe | 0.5311 | 0.4497 | probe only | NA | NA | no active behavior change | local-rejected | [archive](20260828_v029_c29-haes-rejected_scoreNA_timeNA/) |
 | v030 | 2026-08-28 | C38 beam2 + narrow FULL64 full-coverage | 0.5695 | 0.4497 | CUDA stage ~30s | 14092 | 170.57s | official inversion vs local +3.84pp (pending A/B) | official-submitted, local-champion, not-promoted | [archive](20260828_v030_c38-beam2-fullcov-official14092_time170.6s/) |
 | v031 | 2026-08-28 | C39-FW wide-layer FULL64 calibration candidate | 0.5357 | 0.4497 | CUDA stage 27.47s | **14613** | **159.2s** | **+176 vs v025** | **official-compliant-champion** | [archive](20260828_v031_c39-fw-official14613_time159.2s/) |
+| v032 | 2026-08-28 | C40 robust Block-LDLQ 128 | **0.5393** | 0.4497 | CUDA stage 45.32s; CPU 100.05s | NA | NA | +0.36pp vs v031; 6/6 matrix positive | official-calibration-candidate | [archive](20260828_v032_c40-robust-blockldlq-local_scoreNA_timeNA/) |
 
 `*` v002 的 Linear/Attention 数值最初来自远程仓库 `CHANGELOG.md` 的 GPT-2
 12 层、2 calib + 2 test 报告，之后已由 GPU-compatible B0 derivative 在本地
@@ -57,11 +58,12 @@ v013 归档字节一致。
 因此只保留为历史官方记录。v025 / C21-C 是最新合规官方锚点：
 `14437 / 166.6s`。
 
-当前根 `solution.py` 是 C39-FW：本地 Linear `0.5357`、Attention
-`0.4497`、CUDA algorithm-stage `27.47s`，官方 `14613 / 159.2s`，提交
-commit `e3ca4db`，SHA256
-`B8C9F2A4EB6553367DD17E73D30836AC8911DBEF33759FA8CF95E8C629317A71`。
-C38 保留为失败诊断版本，不作为后续候选父版本。
+当前根 `solution.py` 是 C40 robust Block-LDLQ：本地 Linear `0.5393`、
+Attention `0.4497`、CUDA algorithm-stage `45.32s`、CPU algorithm-stage
+`100.05s`，SHA256
+`D24BC94F513907CBE97B43865973D1498133D8B9264FAF12661836FF65AAB656`。
+它以官方冠军 C39-FW 为父版本，在相同层范围和 25% 预算下实现跨 64 维块条件重求解；
+C39-FW 保持冻结，可在官方校准失败时直接回退。
 
 ## Local-first workflow
 
