@@ -1839,6 +1839,23 @@ C38 后 cap-oracle 复跑（CUDA amax6 offset0）：
   校准应加大数据量（calib≥4、多窗口）以防过拟合偏差，且时间
   预算按 CUDA×~5.7 而非 CPU×2.6 模型。
 
+### 官方回填 C20 / v023 = 16081 / 152s（2026-08-28 整理）
+
+用户回填 C20（v023 exact-discrete-cross-gain）官方结果：
+**16081 分 / 152s**。已整理：
+- `solutions/20260827_v023_c20-exact-discrete-cross-gain-local_scoreNA_timeNA/result.md`
+  新增"官方提交结果"段（对照 C21/v024 16043/173.8s）。
+- `solutions/README.md` v023 行更新（Official 16081/152s，
+  status `official-submitted-non-compliant`）。
+- **合规警示已标注**：C20 属 Linear 输出监督路径家族（cross-gain，
+  官方后已禁止），此分数为**历史非合规锚点**，不构成合规先例、
+  不作为后续父版本或分数基数。
+- 注：后续进展（并发会话）已将主 README 推进到 C39-FW（官方
+  14613/159.2s，合规冠军）与 C40（拒绝，14432/216.667s）；并记录
+  本地评测器因循环文本导致 calibration/test 重叠、不能可靠排序
+  合规候选（见 `docs/C40-official-evaluator-diagnosis.md`）。本条目
+  的 v023 整理与上述进展兼容。
+
 ## C3 预注册：top-K 8×8 Linear 二阶（历史）
 
 - Candidate ID：`C3`
