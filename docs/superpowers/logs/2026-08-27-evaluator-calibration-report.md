@@ -1,5 +1,12 @@
 # 本地评测器 × 官方分数校准报告
 
+> **已于 2026-08-28 判定失效。** 本报告的旧锚点与旧机制区间不能继续用于
+> 合规 C21-C/C38/C39/C40 的候选排序或官方分数兑换。四个当前合规锚点上，
+> GPT-2-small Linear mean 与官方分数的 Pearson 相关系数为 `-0.902`；
+> C21-C/C39/C40 三点仅为 `0.046`。此外 dev 与 frozen holdout 都存在循环文本
+> 导致的 calibration/test 重叠。保留本文仅用于历史溯源，当前诊断见
+> [C40 官方结果与本地评测器诊断](../../C40-official-evaluator-diagnosis.md)。
+
 日期：2026-08-27
 环境：`.venv`（Python 3.12.13 / torch 2.6.0+cu124），GPT-2 12 层、seq 128、
 calib 2 + test 2、mode amax6、causal mask、本地 `models/gpt2` 权重。

@@ -8,16 +8,21 @@ Chinese version: [README.md](README.md)
 
 ## Current status
 
-- Latest compliant official anchor: v025 / C21-C, `14437 / 166.6s`.
+- Latest compliant official champion: v031 / C39-FW, `14613 / 159.2s`.
+  v025 / C21-C (`14437 / 166.6s`) remains a secondary anchor.
 - Historical v024 scored `16043 / 173.8s`, but it contains Linear output-
   supervision paths disallowed by the later official clarification and is not
   a compliant parent for new work.
-- Current root `solution.py`: C38, local Linear `0.5695`, causal Attention
-  `0.4497`, and about `99s` CPU algorithm-stage time; official result pending.
+- The current root `solution.py` is the frozen C40 robust Block-LDLQ candidate:
+  local Linear `0.5393`, causal Attention `0.4497`, and official
+  `14432 / 216.667s`. It lost 181 points and added 57.467 seconds versus C39,
+  so it is rejected and must not be used as the next parent.
 - Current source SHA256:
-  `648A27B3560EF7F5D939CD409301E445E5065047CBD5438C1A73A013730E467F`.
-- C38 fixed-matrix Linear results at offsets 0/97/193 are
-  `0.5695 / 0.5629 / 0.5766`.
+  `D24BC94F513907CBE97B43865973D1498133D8B9264FAF12661836FF65AAB656`.
+- The local evaluator is no longer considered reliable for ranking compliant
+  candidates. Both dev and frozen holdout repeat text across calibration and
+  test. See the
+  [C40 official-result evaluator diagnosis](docs/C40-official-evaluator-diagnosis.md).
 
 Local time and scores are for paired candidate comparison only and are never
 reported as official results. Every official result must be archived together
@@ -46,13 +51,15 @@ and implementation to fit the final runtime limit.
    4/8/16-dimensional orthogonal transforms.
 3. Build standard HiF4 parameters and apply 4/8/16-group quadratic refinement.
 4. Weight FULL64 uses the legal activation Hessian:
-   - retain two scale-beam candidates;
-   - cover every 64-block for matrices with input width `<=1024`;
-   - use `0.25` coverage for wide matrices;
+   - retain four scale-beam candidates;
+   - process only wide FFN `fc/proj` layers at `0.25` coverage;
    - run GPTQ initialization, one 64-dimensional coordinate sweep, and
      hierarchy toggles;
    - omit the redundant second coordinate sweep.
-5. The dynamic Activation path uses sample-local HiF4 encoding and the current
+5. The current root also enables C40 adjacent-128 Block-LDLQ conditional
+   re-solving. Its official result failed, so it is retained only for archived
+   reproduction and does not represent the champion algorithm.
+6. The dynamic Activation path uses sample-local HiF4 encoding and the current
    validated 4/8-group refinements.
 
 ### Attention
