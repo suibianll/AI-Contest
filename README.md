@@ -73,12 +73,14 @@ solution.py                         唯一活跃提交文件
 evaluator/real_data_eval.py         真实 GPT-2 配对评测
 evaluator/synthetic_attention_eval.py
                                     576-case Attention 安全矩阵
+evaluator/real_model_suite.py       多模型真实语料评测与前向缓存
 evaluator/cap_oracle.py             固定坐标误差空间诊断
 evaluator/linear_compliance_guard.py
                                     Linear 合规静态/运行时检查
 evaluator/holdout_eval.py           受预算保护的 holdout 评测
 tests/                              发布、格式、合规和算法测试
 solutions/                          不可变候选归档
+artifacts/real_model_suite/cache/   本地真实模型快照，不入库
 docs/superpowers/logs/              执行日志和校准记录
 docs/superpowers/plans/             当前通用流程
 docs/superpowers/archive/plans/     已失效优化计划，仅供历史查阅
@@ -120,6 +122,120 @@ Attention 合成矩阵：
 .\.venv\Scripts\python -m pytest -q
 ```
 
+### 候选测试顺序与结果保存
+
+每次实验只修改根目录 `solution.py`。先完成语法、合规和单模型真实路径测试，再进行多模型比较；不要直接修改 `solutions/` 中的历史源码。
+
+1. **提交前的快速检查**
+
+   ```powershell
+   git diff --check
+   .\.venv\Scripts\python -m py_compile solution.py evaluator\real_data_eval.py evaluator\real_model_suite.py
+   .\.venv\Scripts\python -m pytest -q
+   ```
+
+2. **测试当前根 `solution.py`**
+
+   这一步走真实 GPT-2 前向和正式候选 API，确认输出格式、Linear、Attention 和本地时间：
+
+   ```powershell
+   .\.venv\Scripts\python -u evaluator\real_data_eval.py `
+     --solution solution.py --model models\gpt2 --device cuda `
+     --layers 12 --seq 128 --calib 2 --test 2 `
+     --mode amax6 --attn-mask causal
+   ```
+
+   输出中的本地分数只用于 A/B 比较，不填入 Official Score；同时记录完整命令、各 Linear 组件、Attention causal、运行时间和 source SHA256。
+
+3. **一次性采集多模型真实前向数据**
+
+   `real_model_suite.py` 默认覆盖 GPT-2 small/medium、OPT-125M、Pythia-160M、Qwen2.5-0.5B，并对已登记的 C21/C38/C39/C40 锚点进行比较。先采集模型数据，避免每个候选重复执行模型前向：
+
+   ```powershell
+   .\.venv\Scripts\python -u evaluator\real_model_suite.py `
+     --device cuda --algorithm-device cuda --cache-mode write --capture-only `
+     --seq 128 --calib 2 --test 4 `
+     --output artifacts\real_model_suite\cache-capture-YYYYMMDD.json `
+     --report docs\real-model-evaluator-cache-capture-YYYYMMDD.md
+   ```
+
+   命令中的 `YYYYMMDD` 应替换为实际运行日期。快照保存在 `artifacts/real_model_suite/cache/`，不提交到 Git；它包含真实模型权重、Linear 输入、真实 Q/K/V、token ids、模型/data revision 和窗口校验信息。
+
+4. **只从缓存评测**
+
+   缓存生成后，候选测试不再加载 tokenizer/model、不执行模型 forward，也不访问网络：
+
+   ```powershell
+   .\.venv\Scripts\python -u evaluator\real_model_suite.py `
+     --device cpu --algorithm-device cuda --cache-mode read `
+     --seq 128 --calib 2 --test 4 `
+     --output artifacts\real_model_suite\cache-read-YYYYMMDD.json `
+     --report docs\real-model-evaluator-cache-read-YYYYMMDD.md
+   ```
+
+   `read` 模式遇到缺失、版本不一致、配置不一致、窗口泄漏或张量形状错误会直接失败，不会偷偷重新加载模型。`auto` 适合日常使用：有效缓存直接读取，缺失或过期时重新采集；`write` 强制刷新；`off` 不保存缓存。更换 seq、calib、test、层数、模型或固定数据集 revision 后，必须生成对应的新缓存。
+
+5. **确认时间约束**
+
+   候选 API 的 `algorithm_stage_seconds` 必须小于官方硬限制 `300s`。缓存读取只省去模型前向时间，不能掩盖候选算法自身的超时；最终仍需以官方端到端评测确认。
+
+### 候选归档步骤
+
+一次实验无论成功、失败、未提交或官方超时都要归档，不能只保留“提升”的版本。归档前先固定根 `solution.py` 的字节和测试结果：
+
+1. 分配下一个版本号，目录格式为 `solutions/YYYYMMDD_vNNN_topic_scoreSCORE_timeTIME/`。不知道官方结果时使用 `scoreNA_timeNA`；不要把本地分数或本地时间写进 Official Score/Time，也不要事后覆盖原始记录。
+2. 将根文件复制为归档快照，根文件继续作为唯一活跃提交文件：
+
+   ```powershell
+   New-Item -ItemType Directory -Path solutions\YYYYMMDD_vNNN_topic_scoreNA_timeNA
+   Copy-Item -LiteralPath solution.py `
+     -Destination solutions\YYYYMMDD_vNNN_topic_scoreNA_timeNA\solution.py
+   Get-FileHash -Algorithm SHA256 solution.py
+   Get-FileHash -Algorithm SHA256 solutions\YYYYMMDD_vNNN_topic_scoreNA_timeNA\solution.py
+   ```
+
+   两个 SHA256 必须完全相同；归档后的 `solution.py` 不再修改。
+3. 在同一目录创建 `result.md`，至少记录：日期、版本/父版本、唯一算法变化、假设、完整测试命令和配置、各 Linear/Attention/时间结果、缓存文件名与 dataset/model revision、active source SHA256、官方分数/时间、delta、状态、结论和下一步。缓存未入库时，`result.md` 还要注明“缓存需按 README 重新采集”。
+
+   推荐使用以下最小模板，并把 `NA` 保留为未知值：
+
+   ```markdown
+   # vNNN — topic
+
+   - Date: YYYY-MM-DD
+   - Parent: vNNN / commit
+   - Change: one primary algorithm change
+   - Hypothesis: why this change may improve accuracy
+   - Test command: `完整命令`
+   - Test config: model/data/cache/mode/layers/algorithm-device
+   - Local Linear q/k/v/o/fc/proj: ...
+   - Local Attention causal: ...
+   - Local runtime: ...
+   - Cache: filename, schema, dataset revision, model revision
+   - Source SHA256: `...`
+   - Official score: NA
+   - Official runtime: NA
+   - Status: `local-rejected` / `local-accepted` / `official-compliant-champion`
+   - Conclusion: evidence-based decision
+   - Next direction: next falsifiable experiment
+   ```
+
+4. 更新 `solutions/README.md` 的比较表和必要的执行日志；官方结果返回后只追加官方 SHA、分数、时间和日期，不覆盖已有本地证据。官方提交文件必须与归档 SHA256 一致。
+5. 检查归档和测试后提交：
+
+   ```powershell
+   git diff --check
+   .\.venv\Scripts\python -m py_compile solutions\YYYYMMDD_vNNN_topic_scoreNA_timeNA\solution.py
+   .\.venv\Scripts\python -m pytest -q
+   git add solution.py solutions\YYYYMMDD_vNNN_topic_scoreNA_timeNA\solution.py `
+     solutions\YYYYMMDD_vNNN_topic_scoreNA_timeNA\result.md solutions\README.md `
+     docs\superpowers\logs\YYYYMMDD-experiment.md
+   git commit -m "archive vNNN candidate"
+   git push origin master
+   ```
+
+   若本次只更新评测器或文档，也要在提交说明中明确“不改变 active `solution.py`”。
+
 ## 记录位置
 
 - 当前优化事实以根 `solution.py`、最新执行日志和可复现评测输出为准。
@@ -128,4 +244,6 @@ Attention 合成矩阵：
   [2026-08-26-optimization-execution-log.md](docs/superpowers/logs/2026-08-26-optimization-execution-log.md)。
 - 候选归档流程见
   [2026-08-26-solution-archive-workflow.md](docs/superpowers/plans/2026-08-26-solution-archive-workflow.md)。
+- 多模型真实语料、缓存模式和合规边界见
+  [real-model-evaluator.md](docs/real-model-evaluator.md)。
 - 旧优化计划已移入 `docs/superpowers/archive/plans/`，不再作为后续执行依据。

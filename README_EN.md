@@ -89,12 +89,14 @@ solution.py                         only active submission file
 evaluator/real_data_eval.py         paired real-GPT evaluation
 evaluator/synthetic_attention_eval.py
                                     576-case Attention safety matrix
+evaluator/real_model_suite.py       multi-model real-data evaluation and cache
 evaluator/cap_oracle.py             fixed-frame error-space diagnostics
 evaluator/linear_compliance_guard.py
                                     static/runtime Linear compliance checks
 evaluator/holdout_eval.py           budget-protected holdout evaluation
 tests/                              release, format, compliance, algorithm tests
 solutions/                          immutable candidate archives
+artifacts/real_model_suite/cache/   local real-model snapshots, not committed
 docs/superpowers/logs/              execution and calibration records
 docs/superpowers/plans/             currently active general workflows
 docs/superpowers/archive/plans/     superseded plans, historical only
@@ -136,6 +138,157 @@ Full test suite:
 .\.venv\Scripts\python -m pytest -q
 ```
 
+### Candidate testing order and result capture
+
+Modify only the root `solution.py` for each experiment. Run syntax, compliance,
+and single-model real-path checks before multi-model comparison. Do not edit
+historical sources under `solutions/`.
+
+1. **Fast pre-commit checks**
+
+   ```powershell
+   git diff --check
+   .\.venv\Scripts\python -m py_compile solution.py evaluator\real_data_eval.py evaluator\real_model_suite.py
+   .\.venv\Scripts\python -m pytest -q
+   ```
+
+2. **Test the active root `solution.py`**
+
+   This uses a real GPT-2 forward pass and the deployed candidate API to check
+   output format, Linear, Attention, and local runtime:
+
+   ```powershell
+   .\.venv\Scripts\python -u evaluator\real_data_eval.py `
+     --solution solution.py --model models\gpt2 --device cuda `
+     --layers 12 --seq 128 --calib 2 --test 2 `
+     --mode amax6 --attn-mask causal
+   ```
+
+   Local scores are for paired A/B comparison only and must not be entered as
+   Official Score. Record the full command, every Linear component, causal
+   Attention, runtime, and the source SHA256.
+
+3. **Capture real multi-model forward data once**
+
+   `real_model_suite.py` covers GPT-2 small/medium, OPT-125M, Pythia-160M,
+   and Qwen2.5-0.5B by default, and compares the registered C21/C38/C39/C40
+   anchors. Capture model data first so each candidate does not repeat model
+   forward execution:
+
+   ```powershell
+   .\.venv\Scripts\python -u evaluator\real_model_suite.py `
+     --device cuda --algorithm-device cuda --cache-mode write --capture-only `
+     --seq 128 --calib 2 --test 4 `
+     --output artifacts\real_model_suite\cache-capture-YYYYMMDD.json `
+     --report docs\real-model-evaluator-cache-capture-YYYYMMDD.md
+   ```
+
+   Replace `YYYYMMDD` with the actual run date. Snapshots are stored in
+   `artifacts/real_model_suite/cache/` and are not committed to Git. They
+   contain real model weights, Linear inputs, real Q/K/V, token ids, model/data
+   revisions, and window-validation metadata.
+
+4. **Evaluate from cache only**
+
+   After capture, candidate tests do not load a tokenizer/model, execute model
+   forward, or access the network:
+
+   ```powershell
+   .\.venv\Scripts\python -u evaluator\real_model_suite.py `
+     --device cpu --algorithm-device cuda --cache-mode read `
+     --seq 128 --calib 2 --test 4 `
+     --output artifacts\real_model_suite\cache-read-YYYYMMDD.json `
+     --report docs\real-model-evaluator-cache-read-YYYYMMDD.md
+   ```
+
+   In `read` mode, a missing cache, version/configuration mismatch, leaked
+   window, or invalid tensor shape fails immediately; it never silently loads
+   a model. `auto` is convenient for daily use: it reads a valid cache and
+   recaptures a missing or stale one. `write` always refreshes; `off` neither
+   reads nor writes. Changing sequence length, calibration/test counts, layer
+   cap, model, or the pinned dataset revision requires a new cache.
+
+5. **Check the runtime constraint**
+
+   `algorithm_stage_seconds` must be strictly below the official hard limit of
+   `300s`. Cache reads remove model-forward time only; they cannot hide a slow
+   candidate algorithm. Confirm the final end-to-end time with the official
+   evaluator.
+
+### Candidate archiving steps
+
+Archive every experiment—successful, failed, unsubmitted, or officially timed
+out. Do not keep only improvements. Before archiving, freeze the root
+`solution.py` bytes and the test evidence:
+
+1. Allocate the next version number using
+   `solutions/YYYYMMDD_vNNN_topic_scoreSCORE_timeTIME/`. If the official result
+   is unknown, use `scoreNA_timeNA`; never put local score/runtime in the
+   Official Score/Time fields or overwrite an original record later.
+2. Copy the root source into the archive; the root file remains the only active
+   submission file:
+
+   ```powershell
+   New-Item -ItemType Directory -Path solutions\YYYYMMDD_vNNN_topic_scoreNA_timeNA
+   Copy-Item -LiteralPath solution.py `
+     -Destination solutions\YYYYMMDD_vNNN_topic_scoreNA_timeNA\solution.py
+   Get-FileHash -Algorithm SHA256 solution.py
+   Get-FileHash -Algorithm SHA256 solutions\YYYYMMDD_vNNN_topic_scoreNA_timeNA\solution.py
+   ```
+
+   The two SHA256 values must match exactly. Never edit the archived source
+   afterward.
+3. Create `result.md` in the same directory. At minimum record the date,
+   version/parent, the single algorithm change, hypothesis, complete test
+   command and configuration, every Linear/Attention/runtime result, cache
+   filename and dataset/model revisions, active source SHA256, official
+   score/runtime, delta, status, conclusion, and next direction. When the
+   cache is not committed, state that it must be recaptured according to this
+   README.
+
+   Use this minimum template and keep `NA` for unknown values:
+
+   ```markdown
+   # vNNN — topic
+
+   - Date: YYYY-MM-DD
+   - Parent: vNNN / commit
+   - Change: one primary algorithm change
+   - Hypothesis: why this change may improve accuracy
+   - Test command: `full command`
+   - Test config: model/data/cache/mode/layers/algorithm-device
+   - Local Linear q/k/v/o/fc/proj: ...
+   - Local Attention causal: ...
+   - Local runtime: ...
+   - Cache: filename, schema, dataset revision, model revision
+   - Source SHA256: `...`
+   - Official score: NA
+   - Official runtime: NA
+   - Status: `local-rejected` / `local-accepted` / `official-compliant-champion`
+   - Conclusion: evidence-based decision
+   - Next direction: next falsifiable experiment
+   ```
+
+4. Update the comparison table in `solutions/README.md` and the relevant
+   execution log. When the official result arrives, append the submitted SHA,
+   score, runtime, and date without replacing local evidence. The submitted
+   file must have the same SHA256 as the archive.
+5. Check the archive and tests, then commit:
+
+   ```powershell
+   git diff --check
+   .\.venv\Scripts\python -m py_compile solutions\YYYYMMDD_vNNN_topic_scoreNA_timeNA\solution.py
+   .\.venv\Scripts\python -m pytest -q
+   git add solution.py solutions\YYYYMMDD_vNNN_topic_scoreNA_timeNA\solution.py `
+     solutions\YYYYMMDD_vNNN_topic_scoreNA_timeNA\result.md solutions\README.md `
+     docs\superpowers\logs\YYYYMMDD-experiment.md
+   git commit -m "archive vNNN candidate"
+   git push origin master
+   ```
+
+   If the change only updates the evaluator or documentation, state clearly in
+   the commit that active `solution.py` was unchanged.
+
 ## Records
 
 - Current facts come from root `solution.py`, the latest execution log, and
@@ -146,5 +299,7 @@ Full test suite:
   [2026-08-26-optimization-execution-log.md](docs/superpowers/logs/2026-08-26-optimization-execution-log.md).
 - Candidate archiving follows
   [2026-08-26-solution-archive-workflow.md](docs/superpowers/plans/2026-08-26-solution-archive-workflow.md).
+- Multi-model real data, cache modes, and compliance boundaries are documented
+  in [real-model-evaluator.md](docs/real-model-evaluator.md).
 - Superseded optimization plans were moved to
   `docs/superpowers/archive/plans/` and are not active instructions.
