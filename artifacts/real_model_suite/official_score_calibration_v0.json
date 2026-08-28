@@ -1,0 +1,128 @@
+{
+  "schema_version": 1,
+  "kind": "official_score_calibration",
+  "created_at": "2026-08-28 18:47:01",
+  "status": "diagnostic",
+  "feature": "linear_macro_gain",
+  "aggregation": "arithmetic_mean_across_exact_model_panel",
+  "model": {
+    "type": "ordinary_least_squares_1d",
+    "intercept": 10701.888321233757,
+    "slope": 9905.92863792173,
+    "training_feature_min": 0.3438449234589909,
+    "training_feature_max": 0.38818221715452095
+  },
+  "diagnostics": {
+    "anchor_count": 4,
+    "pearson": 0.9131379352488622,
+    "spearman": 0.8,
+    "pairwise_rank_agreement": 0.8333333333333334,
+    "r2": 0.8338208887905552,
+    "residual_rmse_points": 76.93077675021206,
+    "leave_one_anchor_out_mae_points": 160.89734441808832,
+    "leave_one_anchor_out_max_error_points": 250.84154076039158
+  },
+  "evaluator_contract": {
+    "mode": "amax6",
+    "sequence_length": 128,
+    "calibration_samples": 2,
+    "test_samples": 4,
+    "layers": null,
+    "models": [
+      "gpt2-small",
+      "gpt2-medium",
+      "opt-125m",
+      "pythia-160m",
+      "qwen2.5-0.5b"
+    ],
+    "model_revisions": {
+      "gpt2-small": "openai-community/gpt2@main",
+      "gpt2-medium": "openai-community/gpt2-medium@main",
+      "opt-125m": "facebook/opt-125m@27dcfa74d334bc871f3234de431e71c6eeba5dd6",
+      "pythia-160m": "EleutherAI/pythia-160m@50f5173d932e8e61f858120bcb800b97af589f46",
+      "qwen2.5-0.5b": "Qwen/Qwen2.5-0.5B@060db6499f32faf8b98477b0a26969ef7d8b9987"
+    },
+    "dataset": "Salesforce/wikitext",
+    "dataset_config": "wikitext-2-raw-v1",
+    "dataset_revision": "b08601e04326c79dfdd32d625aee71d232d685c3"
+  },
+  "training_source": {
+    "path": "artifacts\\real_model_suite\\20260828_full.json",
+    "sha256": "9c02fe35ffb5b818028e53094006058b74457ab1bb82bf1047a7bc930a72e8c8"
+  },
+  "anchors": [
+    {
+      "candidate": "c21",
+      "source_sha256": "83ab4864254f80d221bb491bdef89f8c9ab8e83534fd62d4dd5e0c1c292fea12",
+      "local_feature": 0.38818221715452095,
+      "model_values": {
+        "gpt2-small": 0.4554080431579092,
+        "gpt2-medium": 0.3980447025004222,
+        "opt-125m": 0.203668599245266,
+        "pythia-160m": 0.4798335795062479,
+        "qwen2.5-0.5b": 0.40395616136275947
+      },
+      "official_score": 14437,
+      "official_time": 166.6,
+      "fitted_score": 14547.193662876678,
+      "residual": -110.19366287667799,
+      "leave_one_out_prediction": 14636.93901390005,
+      "leave_one_out_absolute_error": 199.93901390004976
+    },
+    {
+      "candidate": "c38",
+      "source_sha256": "648a27b3560ef7f5d939cd409301e445e5065047cbd5438c1a73a013730e467f",
+      "local_feature": 0.3438449234589909,
+      "model_values": {
+        "gpt2-small": 0.420269040442209,
+        "gpt2-medium": 0.34731137129357675,
+        "opt-125m": 0.16036563278419808,
+        "pythia-160m": 0.4471770125552765,
+        "qwen2.5-0.5b": 0.3441015602196943
+      },
+      "official_score": 14092,
+      "official_time": 170.57,
+      "fitted_score": 14107.99159553018,
+      "residual": -15.991595530180348,
+      "leave_one_out_prediction": 14342.841540760392,
+      "leave_one_out_absolute_error": 250.84154076039158
+    },
+    {
+      "candidate": "c39",
+      "source_sha256": "b8c9f2a4eb6553367dd17e73d30836ac8911dbef33759fa8cf95e8c629317a71",
+      "local_feature": 0.38434710299481456,
+      "model_values": {
+        "gpt2-small": 0.45277144024218363,
+        "gpt2-medium": 0.3977427241880516,
+        "opt-125m": 0.19664513255876984,
+        "pythia-160m": 0.47584476207892945,
+        "qwen2.5-0.5b": 0.39873145590613845
+      },
+      "official_score": 14613,
+      "official_time": 159.2,
+      "fitted_score": 14509.203295692343,
+      "residual": 103.79670430765691,
+      "leave_one_out_prediction": 14450.129815945958,
+      "leave_one_out_absolute_error": 162.8701840540416
+    },
+    {
+      "candidate": "c40",
+      "source_sha256": "d24bc94f513907cbe97b43865973d1498133d8b9264faf12661836ff65aab656",
+      "local_feature": 0.3742933409062922,
+      "model_values": {
+        "gpt2-small": 0.4452566607643729,
+        "gpt2-medium": 0.38618141303714865,
+        "opt-125m": 0.18203563328186867,
+        "pythia-160m": 0.467798035835732,
+        "qwen2.5-0.5b": 0.39019496161233874
+      },
+      "official_score": 14432,
+      "official_time": 216.667,
+      "fitted_score": 14409.611445900799,
+      "residual": 22.38855409920143,
+      "leave_one_out_prediction": 14402.06136104213,
+      "leave_one_out_absolute_error": 29.938638957870353
+    }
+  ],
+  "warning": "This maps evaluator metrics to historical official scores. It is not an official evaluator replica or a confidence guarantee, and it must never be passed into solution.py or used to infer Q(A) from A@W."
+}

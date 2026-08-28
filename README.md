@@ -74,6 +74,8 @@ evaluator/real_data_eval.py         真实 GPT-2 配对评测
 evaluator/synthetic_attention_eval.py
                                     576-case Attention 安全矩阵
 evaluator/real_model_suite.py       多模型真实语料评测与前向缓存
+evaluator/official_score_calibration.py
+                                    冻结的官方分数拟合与预测
 evaluator/cap_oracle.py             固定坐标误差空间诊断
 evaluator/linear_compliance_guard.py
                                     Linear 合规静态/运行时检查
@@ -167,15 +169,34 @@ Attention 合成矩阵：
 
    ```powershell
    .\.venv\Scripts\python -u evaluator\real_model_suite.py `
+     --solution solution.py --candidate-name active `
      --device cpu --algorithm-device cuda --cache-mode read `
      --seq 128 --calib 2 --test 4 `
-     --output artifacts\real_model_suite\cache-read-YYYYMMDD.json `
-     --report docs\real-model-evaluator-cache-read-YYYYMMDD.md
+     --output artifacts\real_model_suite\active-YYYYMMDD.json `
+     --report docs\real-model-evaluator-active-YYYYMMDD.md
    ```
 
    `read` 模式遇到缺失、版本不一致、配置不一致、窗口泄漏或张量形状错误会直接失败，不会偷偷重新加载模型。`auto` 适合日常使用：有效缓存直接读取，缺失或过期时重新采集；`write` 强制刷新；`off` 不保存缓存。更换 seq、calib、test、层数、模型或固定数据集 revision 后，必须生成对应的新缓存。
 
-5. **确认时间约束**
+5. **使用冻结校准预测官方分数**
+
+   先用固定官方锚点矩阵生成版本化校准文件；已有 v0 时无需重复拟合：
+
+   ```powershell
+   .\.venv\Scripts\python -u evaluator\official_score_calibration.py fit `
+     --input artifacts\real_model_suite\20260828_full.json `
+     --output artifacts\real_model_suite\official_score_calibration_v0.json `
+     --feature linear_macro_gain
+
+   .\.venv\Scripts\python -u evaluator\official_score_calibration.py predict `
+     --calibration artifacts\real_model_suite\official_score_calibration_v0.json `
+     --input artifacts\real_model_suite\active-YYYYMMDD.json `
+     --output artifacts\real_model_suite\active-YYYYMMDD.official-prediction.json
+   ```
+
+   当前 v0 使用四个官方锚点，状态为 `diagnostic`。预测输出必须与留一 MAE、外推标记、5 模型逐项结果一起归档，不能把预测值写成 Official Score。完整说明见 [official-score-calibration.md](docs/official-score-calibration.md)。
+
+6. **确认时间约束**
 
    候选 API 的 `algorithm_stage_seconds` 必须小于官方硬限制 `300s`。缓存读取只省去模型前向时间，不能掩盖候选算法自身的超时；最终仍需以官方端到端评测确认。
 
@@ -246,4 +267,6 @@ Attention 合成矩阵：
   [2026-08-26-solution-archive-workflow.md](docs/superpowers/plans/2026-08-26-solution-archive-workflow.md)。
 - 多模型真实语料、缓存模式和合规边界见
   [real-model-evaluator.md](docs/real-model-evaluator.md)。
+- 本地指标到官方分数的冻结拟合与预测见
+  [official-score-calibration.md](docs/official-score-calibration.md)。
 - 旧优化计划已移入 `docs/superpowers/archive/plans/`，不再作为后续执行依据。

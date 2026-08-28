@@ -90,6 +90,8 @@ evaluator/real_data_eval.py         paired real-GPT evaluation
 evaluator/synthetic_attention_eval.py
                                     576-case Attention safety matrix
 evaluator/real_model_suite.py       multi-model real-data evaluation and cache
+evaluator/official_score_calibration.py
+                                    frozen official-score fitting and prediction
 evaluator/cap_oracle.py             fixed-frame error-space diagnostics
 evaluator/linear_compliance_guard.py
                                     static/runtime Linear compliance checks
@@ -195,10 +197,11 @@ historical sources under `solutions/`.
 
    ```powershell
    .\.venv\Scripts\python -u evaluator\real_model_suite.py `
+     --solution solution.py --candidate-name active `
      --device cpu --algorithm-device cuda --cache-mode read `
      --seq 128 --calib 2 --test 4 `
-     --output artifacts\real_model_suite\cache-read-YYYYMMDD.json `
-     --report docs\real-model-evaluator-cache-read-YYYYMMDD.md
+     --output artifacts\real_model_suite\active-YYYYMMDD.json `
+     --report docs\real-model-evaluator-active-YYYYMMDD.md
    ```
 
    In `read` mode, a missing cache, version/configuration mismatch, leaked
@@ -208,7 +211,30 @@ historical sources under `solutions/`.
    reads nor writes. Changing sequence length, calibration/test counts, layer
    cap, model, or the pinned dataset revision requires a new cache.
 
-5. **Check the runtime constraint**
+5. **Predict the official score with a frozen calibration**
+
+   First generate a versioned calibration from the fixed official-anchor
+   matrix. Do not refit when the existing v0 is applicable:
+
+   ```powershell
+   .\.venv\Scripts\python -u evaluator\official_score_calibration.py fit `
+     --input artifacts\real_model_suite\20260828_full.json `
+     --output artifacts\real_model_suite\official_score_calibration_v0.json `
+     --feature linear_macro_gain
+
+   .\.venv\Scripts\python -u evaluator\official_score_calibration.py predict `
+     --calibration artifacts\real_model_suite\official_score_calibration_v0.json `
+     --input artifacts\real_model_suite\active-YYYYMMDD.json `
+     --output artifacts\real_model_suite\active-YYYYMMDD.official-prediction.json
+   ```
+
+   The current v0 has four official anchors and status `diagnostic`. Archive
+   every prediction together with leave-one-out MAE, extrapolation status, and
+   all five per-model values. Never enter a prediction as Official Score. See
+   [official-score-calibration.md](docs/official-score-calibration.md) for the
+   complete contract and interpretation.
+
+6. **Check the runtime constraint**
 
    `algorithm_stage_seconds` must be strictly below the official hard limit of
    `300s`. Cache reads remove model-forward time only; they cannot hide a slow
@@ -301,5 +327,7 @@ out. Do not keep only improvements. Before archiving, freeze the root
   [2026-08-26-solution-archive-workflow.md](docs/superpowers/plans/2026-08-26-solution-archive-workflow.md).
 - Multi-model real data, cache modes, and compliance boundaries are documented
   in [real-model-evaluator.md](docs/real-model-evaluator.md).
+- Frozen fitting and prediction from local metrics to official scores are
+  documented in [official-score-calibration.md](docs/official-score-calibration.md).
 - Superseded optimization plans were moved to
   `docs/superpowers/archive/plans/` and are not active instructions.

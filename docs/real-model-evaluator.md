@@ -100,6 +100,29 @@
 
 缓存只改变数据供给方式，不改变合规边界：候选仍只收到原有 NVFP4 权重/激活和正式 API 参数。缓存中的 Q/K/V 只供 evaluator 在候选返回量化状态后计算 reference attention 误差；任何候选都不能计算 `A @ W` 并利用该输出拟合或选择 `Q(A)`。
 
+## 自定义候选与官方分数校准
+
+根 `solution.py` 可以直接使用同一缓存模型面板评测：
+
+```powershell
+.\.venv\Scripts\python.exe -u evaluator\real_model_suite.py `
+  --solution solution.py --candidate-name active `
+  --cache-mode read --device cpu --algorithm-device cuda `
+  --output artifacts\real_model_suite\active.json `
+  --report docs\real-model-evaluator-active.md
+```
+
+评测完成后，使用冻结的官方分数校准文件生成估计值：
+
+```powershell
+.\.venv\Scripts\python.exe -u evaluator\official_score_calibration.py predict `
+  --calibration artifacts\real_model_suite\official_score_calibration_v0.json `
+  --input artifacts\real_model_suite\active.json `
+  --output artifacts\real_model_suite\active.official-prediction.json
+```
+
+校准器会严格校验模型面板、模型 revision、数据 revision、mode、seq、calib/test 和层数。当前 v0 只有 4 个官方锚点，属于 diagnostic 拟合；公式、误差解释、重新拟合命令及版本管理见 [official-score-calibration.md](official-score-calibration.md)。
+
 ## 指标口径
 
 - `linear.global_gain`：所有 Linear 输出元素按 evaluator reference MSE 加权的相对改善。

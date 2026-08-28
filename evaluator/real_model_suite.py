@@ -111,8 +111,8 @@ MODEL_SPECS: dict[str, ModelSpec] = {
 class CandidateSpec:
     name: str
     path: Path
-    official_score: int
-    official_time: float
+    official_score: int | None
+    official_time: float | None
 
 
 CANDIDATE_SPECS: dict[str, CandidateSpec] = {
@@ -1726,14 +1726,16 @@ def _pairwise_rank_agreement(xs: Sequence[float], ys: Sequence[float]) -> float:
 def fit_official_anchors(
     results: Sequence[dict[str, Any]],
     requested_candidates: Sequence[str],
+    candidate_specs: dict[str, CandidateSpec] | None = None,
 ) -> dict[str, Any]:
+    candidate_specs = candidate_specs or CANDIDATE_SPECS
     by_model: dict[str, dict[str, dict[str, Any]]] = {}
     for result in results:
         by_model.setdefault(result["model"], {})[result["candidate"]] = result
     official = {
-        name: CANDIDATE_SPECS[name].official_score
+        name: candidate_specs[name].official_score
         for name in requested_candidates
-        if name in CANDIDATE_SPECS
+        if name in candidate_specs and candidate_specs[name].official_score is not None
     }
     model_features: dict[str, dict[str, dict[str, float]]] = {}
     for model_name, candidate_results in by_model.items():
@@ -1765,6 +1767,8 @@ def fit_official_anchors(
     fit: dict[str, Any] = {}
     for feature_name, values in aggregate_features.items():
         names = [candidate for candidate in requested_candidates if candidate in official and math.isfinite(values[candidate])]
+        if len(names) < 2:
+            continue
         xs = [values[name] for name in names]
         ys = [float(official[name]) for name in names]
         ols = _ols(xs, ys)
@@ -1788,31 +1792,32 @@ def fit_official_anchors(
         }
 
     ordering = {}
-    for model_name, values in model_features.items():
-        c39 = values.get("linear_global_gain", {}).get("c39", float("nan"))
-        c40 = values.get("linear_global_gain", {}).get("c40", float("nan"))
-        ordering[model_name] = {
-            "c39_linear_global_gain": c39,
-            "c40_linear_global_gain": c40,
-            "c39_above_c40": bool(math.isfinite(c39) and math.isfinite(c40) and c39 > c40),
+    if {"c39", "c40"}.issubset(requested_candidates):
+        for model_name, values in model_features.items():
+            c39 = values.get("linear_global_gain", {}).get("c39", float("nan"))
+            c40 = values.get("linear_global_gain", {}).get("c40", float("nan"))
+            ordering[model_name] = {
+                "c39_linear_global_gain": c39,
+                "c40_linear_global_gain": c40,
+                "c39_above_c40": bool(math.isfinite(c39) and math.isfinite(c40) and c39 > c40),
+            }
+        aggregate_order = aggregate_features.get("linear_global_gain", {})
+        ordering["aggregate"] = {
+            "c39_linear_global_gain": aggregate_order.get("c39", float("nan")),
+            "c40_linear_global_gain": aggregate_order.get("c40", float("nan")),
+            "c39_above_c40": bool(
+                math.isfinite(aggregate_order.get("c39", float("nan")))
+                and math.isfinite(aggregate_order.get("c40", float("nan")))
+                and aggregate_order["c39"] > aggregate_order["c40"]
+            ),
         }
-    aggregate_order = aggregate_features.get("linear_global_gain", {})
-    ordering["aggregate"] = {
-        "c39_linear_global_gain": aggregate_order.get("c39", float("nan")),
-        "c40_linear_global_gain": aggregate_order.get("c40", float("nan")),
-        "c39_above_c40": bool(
-            math.isfinite(aggregate_order.get("c39", float("nan")))
-            and math.isfinite(aggregate_order.get("c40", float("nan")))
-            and aggregate_order["c39"] > aggregate_order["c40"]
-        ),
-    }
     return {
         "official_anchor_scores": official,
         "model_features": model_features,
         "aggregate_features": aggregate_features,
         "fit": fit,
         "c39_vs_c40": ordering,
-        "warning": "four official anchors are a diagnostic, not a validated score mapping",
+        "warning": "official anchors calibrate the evaluator only; they are never candidate inputs",
     }
 
 
@@ -1885,24 +1890,39 @@ def write_report(
             f"| {result['model']} | {result['candidate']} | {result['linear']['global_gain']:.6f} | {result['linear_component_macro_gain']:.6f} | {result['attention_causal']['global_gain']:.6f} | {timing['algorithm_stage_seconds']:.3f} | {timing['under_300_seconds']} |"
         )
 
-    lines.extend(
-        [
-            "",
-            "## 与官方锚点的拟合诊断",
-            "",
-            "官方锚点：C21=14437、C38=14092、C39=14613、C40=14432。下表先对已加载模型取均值，再与四个官方分数计算相关性；样本只有四个，不能据此拟合可靠的绝对分数换算公式。",
-            "",
-            "| 本地特征 | Pearson | Spearman | pairwise rank agreement | OLS R² | leave-one-out MAE |",
-            "|---|---:|---:|---:|---:|---:|",
-        ]
-    )
-    for feature_name, item in fit.get("fit", {}).items():
+    official_scores = fit.get("official_anchor_scores", {})
+    if official_scores:
+        anchor_description = "、".join(
+            f"{name.upper()}={score}" for name, score in official_scores.items()
+        )
+        fit_description = (
+            f"官方锚点：{anchor_description}。下表先对已加载模型取均值，再与官方分数计算相关性；"
+            "锚点较少时不能据此承诺可靠的绝对分数。"
+        )
+    else:
+        fit_description = (
+            "本次运行评测的是自定义候选，没有把官方分数传入候选或当次拟合；"
+            "如需官方分数估计，请使用冻结的 official-score calibration 文件。"
+        )
+    lines.extend(["", "## 与官方锚点的拟合诊断", "", fit_description])
+    fitted_features = fit.get("fit", {})
+    if fitted_features:
+        lines.extend(
+            [
+                "",
+                "| 本地特征 | Pearson | Spearman | pairwise rank agreement | OLS R² | leave-one-out MAE |",
+                "|---|---:|---:|---:|---:|---:|",
+            ]
+        )
+    for feature_name, item in fitted_features.items():
         ols = item["ols"]
         lines.append(
             f"| {feature_name} | {item['pearson']:.4f} | {item['spearman']:.4f} | {item['pairwise_rank_agreement']:.4f} | {ols['r2']:.4f} | {item['leave_one_out_mae']:.2f} |"
         )
-    lines.extend(["", "### C39 / C40 排序", ""])
-    for model_name, item in fit.get("c39_vs_c40", {}).items():
+    ordering = fit.get("c39_vs_c40", {})
+    if ordering:
+        lines.extend(["", "### C39 / C40 排序", ""])
+    for model_name, item in ordering.items():
         lines.append(
             f"- `{model_name}`：C39 linear-global={item['c39_linear_global_gain']:.6f}，C40={item['c40_linear_global_gain']:.6f}，C39>C40：`{item['c39_above_c40']}`。"
         )
@@ -1925,9 +1945,27 @@ def write_report(
 def run(args: argparse.Namespace) -> dict[str, Any]:
     started_at = time.strftime("%Y-%m-%d %H:%M:%S")
     selected_models = args.models or list(MODEL_SPECS)
-    selected_candidates = args.candidates or list(CANDIDATE_SPECS)
+    candidate_specs = dict(CANDIDATE_SPECS)
+    if args.solution is not None:
+        if args.candidates is not None:
+            raise ValueError("--solution cannot be combined with --candidates")
+        if not re.fullmatch(r"[A-Za-z0-9_.-]+", args.candidate_name):
+            raise ValueError("--candidate-name may contain only letters, digits, '.', '_' and '-'")
+        if args.candidate_name in candidate_specs:
+            raise ValueError(
+                f"--candidate-name {args.candidate_name!r} conflicts with an official anchor"
+            )
+        candidate_specs[args.candidate_name] = CandidateSpec(
+            args.candidate_name,
+            args.solution.resolve(),
+            None,
+            None,
+        )
+        selected_candidates = [args.candidate_name]
+    else:
+        selected_candidates = args.candidates or list(CANDIDATE_SPECS)
     unknown_models = [name for name in selected_models if name not in MODEL_SPECS]
-    unknown_candidates = [name for name in selected_candidates if name not in CANDIDATE_SPECS]
+    unknown_candidates = [name for name in selected_candidates if name not in candidate_specs]
     if unknown_models:
         raise ValueError(f"unknown models: {unknown_models}")
     if unknown_candidates:
@@ -1949,8 +1987,12 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "cache_dir": str(args.cache_dir),
         "cache_mode": args.cache_mode,
         "capture_only": args.capture_only,
+        "layers": args.layers,
         "models": selected_models,
         "candidates": selected_candidates,
+        "candidate_sources": {
+            name: str(candidate_specs[name].path) for name in selected_candidates
+        },
         "official_runtime_limit_seconds": 300.0,
     }
     model_status: list[dict[str, Any]] = []
@@ -1959,7 +2001,9 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
 
     def persist_partial() -> None:
         partial_fit = fit_official_anchors(
-            [item for item in results if "error" not in item], selected_candidates
+            [item for item in results if "error" not in item],
+            selected_candidates,
+            candidate_specs,
         )
         _write_json(
             partial_path,
@@ -2012,7 +2056,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             del data
             continue
         for candidate_name in selected_candidates:
-            candidate = CANDIDATE_SPECS[candidate_name]
+            candidate = candidate_specs[candidate_name]
             try:
                 result = evaluate_candidate(
                     candidate, data, args.mode, args.algorithm_device or args.device
@@ -2044,7 +2088,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         del data
 
     valid_results = [item for item in results if "error" not in item]
-    fit = fit_official_anchors(valid_results, selected_candidates)
+    fit = fit_official_anchors(valid_results, selected_candidates, candidate_specs)
     run_metadata["finished_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
     run_metadata["loaded_models"] = [item["model"] for item in model_status if item["status"] == "loaded"]
     run_metadata["result_count"] = len(valid_results)
@@ -2077,6 +2121,17 @@ def build_parser() -> argparse.ArgumentParser:
         choices=tuple(CANDIDATE_SPECS),
         default=None,
         help="official-anchor candidates (default: c21 c38 c39 c40)",
+    )
+    parser.add_argument(
+        "--solution",
+        type=Path,
+        default=None,
+        help="evaluate an arbitrary solution.py instead of registered official anchors",
+    )
+    parser.add_argument(
+        "--candidate-name",
+        default="active",
+        help="label used with --solution (default: active)",
     )
     parser.add_argument(
         "--data-dir",
