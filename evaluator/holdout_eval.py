@@ -1,4 +1,4 @@
-"""Frozen final holdout for the 26000 plan §4.5.
+"""Frozen final holdout evaluator with a persistent usage ledger.
 
 Rules (frozen, evaluator-side only):
 1. The holdout text below has never been used by any development candidate
@@ -68,7 +68,7 @@ HOLDOUT_CONFIG: dict = {
     "layers": 12,
     "seq": 128,
     "calib": 2,
-    "test": 4,  # >= 4 token windows (plan §4.5)
+    "test": 4,  # keep at least four token windows
     "mode": "amax6",
     "attn_mask": "causal",
     "token_offset": 0,

@@ -1,6 +1,6 @@
 """Linear compliance guard: static AST checks + runtime taint checks.
 
-Enforces rule-zero of the 26000 plan §4.4 for ``solution.py``:
+Enforces the official Linear calibration boundary for ``solution.py``:
 
 Static layer (AST, module-wide):
 - rejects the reappearance of known forbidden symbols such as
@@ -107,7 +107,7 @@ class _TaintRecorder(TorchDispatchMode):  # type: ignore[misc]
     - ``Rw`` — weight-residual suspect (subtraction involving
       weight-tainted operands).
 
-    Legal contractions (per the 26000 plan §4.4): ``A.T @ A`` Grams,
+    Legal contractions include ``A.T @ A`` Grams,
     weight-side Grams (``W.T @ W``), the Q(W) Hessian loss
     (weight residual x activation Gram) and the activation refinement
     quadratic form (activation residual x weight Gram).
@@ -411,12 +411,13 @@ def runtime_guard(
 
     # Rule 3: activation state audit.  The weight params legitimately
     # carry the out_features dimension, so only activation_state is
-    # audited here (26000 plan §4.6).
+    # audited here.
     #
     # Dual-side review covers every combination of an activation-side
     # taint (A raw, G activation-Gram, Wg weight-guided) with the W
-    # taint: the C30 edge-pattern permutation ({G, W}) must land in
-    # review like the SmoothQuant scale ({A, W}), not pass silently.
+    # taint. Any channel-wise statistic derived from both sides must land
+    # in review rather than pass silently, even when it is not a forbidden
+    # contraction.
     activation_state = (
         result.get("activation_state", {})
         if isinstance(result, dict)

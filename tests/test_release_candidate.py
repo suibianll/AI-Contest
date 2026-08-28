@@ -414,7 +414,7 @@ def test_synthetic_case_generation_is_deterministic() -> None:
 
 
 # ---------------------------------------------------------------------------
-# C22: Linear R64 incoherence transform (26000 plan §5.6)
+# Dormant Linear R64 incoherence-transform regression coverage.
 # ---------------------------------------------------------------------------
 
 _C21C_PARENT = (

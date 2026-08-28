@@ -192,7 +192,7 @@ def test_runtime_guard_allows_legal_hessian_and_grams() -> None:
     assert report["contraction_count"] >= 2
 
 
-FAKE_C30_EDGE_SOURCE = """
+FAKE_DUAL_STAT_EDGE_SOURCE = """
 import torch
 
 
@@ -204,20 +204,19 @@ def hif4_calibration_and_quantize_weight(weight_quant, weight_scale, pairs):
     weight_hat = torch.round(weight * 8.0) / 8.0
     e_w = weight - weight_hat                      # weight residual
     r = e_w.square().sum(dim=0).sqrt()             # channel energy
-    # C30 edge: elementwise combination, no contraction between the
-    # two operands' data (pre-ruled legal, evaluator/c30_edge_guard_probe.py).
+    # Elementwise combination without a contraction between the two
+    # operands. The guard must surface it for review rather than silently
+    # approving it.
     edge = h_a.abs() * torch.sqrt(torch.outer(r, r))
     perm = torch.argsort(edge.sum(dim=1), stable=True).to(torch.int64)
     return {"weight_params": {}, "activation_state": {"permutation": perm}}
 """
 
 
-def test_runtime_guard_reviews_c30_edge_permutation() -> None:
-    """C30 pre-ruling regression: elementwise edge pattern passes with an
-    explicit review entry for the dual-side permutation (never silent,
-    never a violation)."""
+def test_runtime_guard_reviews_dual_stat_permutation() -> None:
+    """A dual-side elementwise statistic gets an explicit review entry."""
 
-    fake = make_fake_solution(FAKE_C30_EDGE_SOURCE)
+    fake = make_fake_solution(FAKE_DUAL_STAT_EDGE_SOURCE)
     torch.manual_seed(305)
     tokens, out_features, channels = 53, 37, 64
     weight = torch.randn(out_features, channels) * 0.1

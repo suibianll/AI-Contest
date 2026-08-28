@@ -1945,3 +1945,24 @@ C38 后 cap-oracle 复跑（CUDA amax6 offset0）：
 - 下一步：① 归档 C1 本地源码与结果；② 预注册 C2；③ 实现并评测
   Segment-CVaR；④ 归档 C2 结论；⑤ 在最新本地 Champion 上进入 C3
   top-K 8×8 Linear 二阶。
+
+## 2026-08-28：旧优化计划退役与探索流程重置
+
+- `docs/superpowers/plans/` 中已完成、失败或被事实推翻的优化计划全部
+  移入 `docs/superpowers/archive/plans/`。归档计划只保留为历史记录，
+  其中的候选顺序、最低增益、coverage、beam、ratio、软时间预算和停止
+  条件均不再约束后续探索。
+- C29/C30 专用前置探针及生成 JSON 已从活跃 `evaluator/` 删除；历史
+  数值保留在本日志和 v029 solution archive。通用真实评测、合规 guard、
+  holdout、误差分解、cap-oracle 和 Attention 安全矩阵继续保留。
+- 后续只有四类硬约束：禁止以 `A@W` 拟合/反推 `Q(A)`、输出/API/state
+  合法、最终官方时间严格小于 300 秒、不得使用 holdout/官方反馈调参。
+- oracle 与局部 proxy 只用于诊断；不能替代真实部署路径评测，也不能凭
+  任意百分比阈值在实现前否决候选。
+- 允许把删除冗余计算和重新分配计算预算作为一个完整机制实现，再通过
+  消融说明贡献；不再强制每个实验只能改变一个孤立常量。
+- 当前活跃状态仍为 C38：Linear `0.5695`、Attention `0.4497`、CPU
+  algorithm-stage 约 `99s`，源码 SHA256
+  `648A27B3560EF7F5D939CD409301E445E5065047CBD5438C1A73A013730E467F`，
+  官方结果待回填。此前日志中的“下一步”和“不可达/已榨干”表述均为
+  当时判断，不是当前执行指令或数学结论。

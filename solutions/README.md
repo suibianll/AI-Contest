@@ -31,6 +31,11 @@ Root `solution.py` is the only active submission. Archived source files are immu
 | v022 | 2026-08-27 | C19 cross-aware gain selection | 0.5905 | 0.4497 | CUDA stage 25.25s | NA | NA | local +0.0015 Linear | local-accepted-not-promoted | [archive](20260827_v022_c19-cross-aware-gain-selection-local_scoreNA_timeNA/) |
 | v023 | 2026-08-27 | C20 exact discrete cross-gain selection | 0.5931 | 0.4497 | CUDA stage 25.19s | NA | NA | local +0.0041 Linear; pow2 proj -0.0587 | local-accepted-not-promoted | [archive](20260827_v023_c20-exact-discrete-cross-gain-local_scoreNA_timeNA/) |
 | v024 | 2026-08-27 | C21 gated exact cross selection | 0.5930 | 0.4497 | CUDA stage 25.87s | 16043 | 173.8s | +244 vs v013 official | official-champion | [archive](20260827_v024_c21-gated-exact-cross-selection_score16043_time174s/) |
+| v025 | 2026-08-27 | C21-C compliant baseline | 0.5311 | 0.4497 | CPU stage ~61.3s | 14437 | 166.6s | compliant official anchor | official-compliant-anchor | [archive](20260827_v025_c21c-compliance-baseline/) |
+| v026 | 2026-08-27 | C22 Linear R64 | 0.5311 | 0.4497 | local ratio 1.52 | NA | NA | all components fell back | local-rejected | [archive](20260827_v026_c22-linear-r64-rejected_scoreNA_timeNA/) |
+| v027 | 2026-08-27 | C23 FULL64 Weight | 0.5504 | 0.4497 | local ratio 1.55 | NA | NA | local +1.93pp Linear | archived-rejected; mechanism later promoted | [archive](20260827_v027_c23-full64-rejected_scoreNA_timeNA/) |
+| v028 | 2026-08-27 | activation scale-code oracle | NA | NA | probe only | NA | NA | no submission source | diagnostic-only | [archive](20260827_v028_c28-scale-code-probe-rejected/) |
+| v029 | 2026-08-28 | C29 HAES probe | 0.5311 | 0.4497 | probe only | NA | NA | no active behavior change | local-rejected | [archive](20260828_v029_c29-haes-rejected_scoreNA_timeNA/) |
 
 `*` v002 的 Linear/Attention 数值最初来自远程仓库 `CHANGELOG.md` 的 GPT-2
 12 层、2 calib + 2 test 报告，之后已由 GPU-compatible B0 derivative 在本地
@@ -45,26 +50,31 @@ v003 起允许只有本地结果时立即归档。未提交候选的官方列保
 较 v002/B0 的 `15313 / 137s` 提升 `+486`；该提交的 `solution.py` 经 git blob 校验与
 v013 归档字节一致。
 
-用户于 2026-08-27 确认 v024（C21，提交 `23d1cf7`）官方结果为 `16043 / 173.8s`，
-较 v013 提升 `+244`，为当前官方最优（official-champion）；根 `solution.py`
-（blob `594d2c01`）经 git blob 校验与 v024 归档字节一致。
+用户于 2026-08-27 确认 v024（C21，提交 `23d1cf7`）官方结果为
+`16043 / 173.8s`。该版本包含官方后来明确禁止的 Linear 输出监督路径，
+因此只保留为历史官方记录。v025 / C21-C 是最新合规官方锚点：
+`14437 / 166.6s`。
+
+当前根 `solution.py` 是尚未归档、待官方验证的 C38：本地 Linear
+`0.5695`、Attention `0.4497`、CPU algorithm-stage 约 `99s`，SHA256
+`648A27B3560EF7F5D939CD409301E445E5065047CBD5438C1A73A013730E467F`。
 
 ## Local-first workflow
 
-1. Modify only the root `solution.py`, with one primary mechanism change per iteration.
+1. Modify only the root `solution.py`; archived sources remain immutable.
 2. Run the real-GPT evaluator:
 
    ```powershell
    .\.venv\Scripts\python evaluator\real_data_eval.py --solution solution.py --model gpt2
    ```
 
-3. Record the six Linear components, full Attention matrix, tails, evaluator parameters and paired local runtime.
-4. Immediately create the next immutable `vNNN` directory, even when only local results exist or the candidate regresses.
-5. Use `scoreNA_timeNA` while official evaluation is unavailable; copy the exact evaluated source and verify SHA256 equality.
-6. Add `result.md` with parent/candidate IDs, local breakdown, single change, hypothesis, conclusion and next direction.
-7. Append one row to this table and mark `local-champion`, `local-accepted` or `local-rejected`.
-8. Build the next single-mechanism candidate from the latest local Champion; a rejected branch does not roll the Champion back to an older baseline.
-9. If official results later become available, append the submitted SHA, score, runtime and date to the same archive record and update this table.
-10. Never overwrite the local evidence when recording later official feedback.
+3. Record the six Linear components, Attention results, evaluator parameters, and paired local runtime.
+4. Coherent compute reallocation may change several coupled knobs together; record the ablations afterward.
+5. Preserve useful checkpoints and rejected mechanisms in the next immutable `vNNN` directory.
+6. Use `scoreNA_timeNA` while official evaluation is unavailable; copy the exact evaluated source and verify SHA256 equality.
+7. Do not require a fixed minimum gain for exploration; map the accuracy-runtime Pareto and keep stable improvements.
+8. Treat oracle/proxy results as diagnostics, not as substitutes for deployed-path evaluation.
+9. Before submission, enforce compliance, legal state/API behavior, and the official `<300s` runtime limit.
+10. If official results later become available, append the submitted SHA, score, runtime and date without overwriting local evidence.
 
 Use `NA`, `score9000plus`, or `time300plus` when a historical value is unavailable, approximate, or timed out. Never replace an unknown official value with a local estimate.

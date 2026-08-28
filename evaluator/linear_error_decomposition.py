@@ -1,7 +1,6 @@
 """Operand-local Linear error decomposition (evaluator-side, read-only).
 
-This tool reports the compliance-legal diagnostics required by the
-26000 plan §4.3:
+This tool reports compliance-legal operand diagnostics:
 
 - ``activation_local_error``  — mean squared error of the quantized
   activation operand (never the Linear output);

@@ -84,7 +84,7 @@ def load_solution(path: Path) -> ModuleType:
 
 def std_hif4(solution: ModuleType, dense: torch.Tensor) -> torch.Tensor:
     # The standard denominator must come from the frozen reference codec,
-    # never from the candidate's `_dense_to_hif4` (26000 plan §4.2).
+    # never from the candidate's `_dense_to_hif4`.
     del solution  # unused; kept for call-site compatibility
     params = encode_standard_hif4(dense)
     return decode_standard_hif4(params).to(torch.float32)

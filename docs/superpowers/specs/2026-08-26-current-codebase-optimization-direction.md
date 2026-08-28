@@ -1,7 +1,8 @@
 # 基于当前 v2.0 代码仓的 HiF4 优化方向
 
 日期：2026-08-26
-状态：技术方向保留；执行与晋级规则由 `docs/superpowers/plans/2026-08-27-local-progressive-hif4-optimization-plan.md` 接管
+状态：历史技术记录；不再作为执行或晋级规则。旧执行计划已归档至
+`docs/superpowers/archive/plans/2026-08-27-local-progressive-hif4-optimization-plan.md`。
 适用基线：`solution_b0_tmp.py` 为精确 B0；当前根 `solution.py` 为 A1-only 本地 Champion
 替代关系：本文替代以官方 10250 分、127 秒版本为基线的早期优化方向
 
