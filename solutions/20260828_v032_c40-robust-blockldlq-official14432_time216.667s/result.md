@@ -1,10 +1,17 @@
-# v032 / C40 robust Block-LDLQ
+# v032 / C40 robust Block-LDLQ — official 14432 / 216.667s
+
+> **Official status: REJECTED.** C40 scored **14432** in **216.667s** and is
+> not an optimization parent. C39-FW remains the compliant official champion.
+
+## Official evaluation
+
+| Candidate | Official score | Official time | Delta vs C39-FW | Status |
+|---|---:|---:|---:|---|
+| C40 | **14432** | **216.667s** | **-181 / +57.467s** | **rejected** |
 
 - Date: 2026-08-28
 - Parent: v031 / C39-FW (`14613 / 159.2s` official)
 - Source SHA256: `D24BC94F513907CBE97B43865973D1498133D8B9264FAF12661836FF65AAB656`
-- Official score: **14432**
-- Official time: **216.667s**
 - Delta vs C39-FW: **-181 points / +57.467s**
 - Delta vs C21-C: **-5 points / +50.067s**
 - Compliance: activation-only Hessians; no `A@W` or output-residual fitting
