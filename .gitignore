@@ -11,6 +11,16 @@ data/
 # 多模型真实前向快照（可能数 GB，仅作为本地离线评测缓存）
 artifacts/real_model_suite/cache/
 
+# 评测运行生成的 JSON/partial 输出（保留在本地，不入库）
+/artifacts/real_model_suite/
+
+# 校准与合成测试生成的文本输出（脚本仍可入库）
+/artifacts/calibration/*.txt
+/artifacts/synthetic_attention/*.txt
+
+# 多模型评测报告（由运行结果生成，结论归档在 solutions/ 与 logs/execution/）
+/logs/evaluations/
+
 # WorkBuddy 项目数据（会话记忆等本地工作数据）
 .workbuddy/
 .mimosa/
