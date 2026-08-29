@@ -114,3 +114,52 @@ python -m pytest -q tests/test_jdrq.py tests/test_release_candidate.py \
 v073 is archived under `solutions/20260829_v073_c75-source-aware-gram64_scoreNA_timeNA/`.
 The next measurement is C75.3 transform-candidate successive halving; no
 official-score claim is inferred from the local native/panel values.
+
+## C75.3--C75.6 rowwise JDRQ and wide gram64 (v074)
+
+### Active mechanisms
+
+- Rowwise JDRQ hierarchy gives each output row its own top-2 64-block budget
+  when the channel width is at most 4096; Qwen's 4864-wide projection keeps the
+  global hierarchy path. A 0.35 soft validation-window mix ranks rowwise and
+  global candidates without a hard per-fold veto.
+- Wide activation gram64 is enabled only for shape-derived down-projections up
+  to 8192 channels. It stores static 64x64 slices of `W.T@W`, applies a
+  full-H E6M2/lv2/lv3 beam with offsets `-4..4`, then one signed-mantissa
+  sweep. No product output or residual enters activation state.
+- H32/H64 remain optional operand-local block-Hadamard candidates. An offline
+  output-product reranker was tested but disabled in the release path after the
+  compliance runtime audit identified provenance-tainted intermediate products;
+  this does not disable JDRQ's legal offline `A@W` static-weight objective.
+- The four NVFP4 source E4M3 scales remain a proposal-only input to the online
+  activation quantizer. Whenever that state changes, the frozen-Q(A) JDRQ
+  search is rerun and the old Q(W) is never reused.
+
+### Real-model observations
+
+| model | native total | panel total | Linear | Attention | API time |
+|---|---:|---:|---:|---:|---:|
+| GPT-2 small (rowwise2) | 158.550907 | 207.911984 | 137.244671 | 21.306236 | 68.96s |
+| OPT-125M (rowwise2) | 85.736733 | 139.234046 | 66.089132 | 19.647602 | 69.03s |
+| Pythia-160M (rowwise2) | 179.446007 | 289.850650 | 138.798128 | 40.647879 | 67.30s |
+| Qwen2.5-0.5B (wide gram64/hierarchy) | 361.503707 | 242.505358 | 298.383991 | 63.119717 | 179.27s |
+
+The H32/H64 output-reranking experiment produced the same Qwen score as the
+wide hierarchy parent (`361.503707`) before it was disabled for compliance.
+The native/panel values above are local relative measurements, not official
+score conversions; every API time is below the 420-second limit.
+
+### Verification and archive
+
+```text
+python -m py_compile solution.py evaluator/jdrq_diagnostics.py tests/test_jdrq.py
+python -m pytest -q tests/test_jdrq.py tests/test_linear_compliance_guard.py \
+    tests/test_reference_hif4.py tests/test_release_candidate.py \
+    -k "not local_holdout_offsets"       # 48 passed, 1 deselected
+```
+
+The current root and `solutions/20260829_v074_c75-rowwise-jdrq_scoreNA_timeNA/`
+are byte-identical after the final copy; the SHA256 is recorded in the v074
+archive result. The next experiment starts from this immutable v074 parent and
+targets C76 Attention Q/K structure rather than reopening rejected cross-term
+or output-reranker paths.

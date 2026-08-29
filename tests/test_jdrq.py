@@ -198,3 +198,43 @@ def test_activation_gram64_refine_is_non_worsening() -> None:
     assert set(refined) == set(params)
     for key, value in refined.items():
         assert torch.isfinite(value).all(), key
+
+
+def test_activation_gram64_hierarchy_is_non_worsening() -> None:
+    """C75.5 scale/lv2/lv3 beam keeps the full-H parent fallback."""
+
+    torch.manual_seed(31)
+    dense = torch.randn(8, 128) * 0.3
+    params = solution._dense_to_hif4(
+        dense,
+        search_offsets=(-1, 1, 2, 3),
+        max_refine_ratio=1.0,
+        max_refine_blocks=10_000,
+    )
+    gram64 = torch.stack(
+        [
+            dense[:, lo : lo + 64].t().mm(dense[:, lo : lo + 64])
+            / float(dense.shape[0])
+            + 0.05 * torch.eye(64)
+            for lo in (0, 64)
+        ],
+        dim=0,
+    )
+    refined = solution._refine_activation_hierarchy64(
+        dense,
+        params,
+        gram64,
+        max_ratio=1.0,
+        max_blocks=2,
+        offsets=solution._ACTIVATION_GRAM64_HIERARCHY_OFFSETS,
+        accept_margin=0.0,
+    )
+    reference = dense.reshape(dense.shape[0], 2, 64)
+    parent_error = solution._dequantize_hif4(params).reshape_as(reference) - reference
+    refined_error = solution._dequantize_hif4(refined).reshape_as(reference) - reference
+    parent_loss = torch.einsum("rbi,bij,rbj->", parent_error, gram64, parent_error)
+    refined_loss = torch.einsum("rbi,bij,rbj->", refined_error, gram64, refined_error)
+    assert refined_loss <= parent_loss + 1.0e-6
+    assert set(refined) == set(params)
+    for key, value in refined.items():
+        assert torch.isfinite(value).all(), key

@@ -18,13 +18,13 @@
 | 项目 | 当前事实 |
 |---|---|
 | 官方本地冠军 | C66：`22557 / 217.2s` |
-| 当前根版本 | C69，本地实验版本，无新官方分 |
+| 当前根版本 | C75.5/C75.6，本地实验版本，无新官方分 |
 | 外部参考 | `youxilee/hif4`：用户提供 `24153 / 239s` |
 | 官方榜上限信号 | 用户确认已有超过 `36000` |
 | 官方面板 | 250 Linear + 200 Attention |
 | 最终时间上限 | `<420s` |
-| 已完成归档 | v073 / C75 source-aware + project-only gram64 |
-| 下一可用归档号 | v074 / C75.3 起 |
+| 已完成归档 | v074 / C75 rowwise + wide gram64 hierarchy |
+| 下一可用归档号 | v075 / C76 Attention |
 
 若面板每 case 以百分制累加，`22557 -> 36000` 需要把当前剩余 MSE 再降低约 60%。因此本计划不把 offset、coverage、固定 headroom 等千分位微调作为主线。
 
@@ -990,12 +990,53 @@ GPT-2 project-only gram64 实测 native total `158.561896`、API
 对应单元/发布测试：`25 passed, 1 deselected`。当前活动根及 v073
 归档 SHA256 为 `A0DCE5D79DA931D5B67FACCBA47226B6C8FCE9FC9551200ED86A3693A1E464DA`。
 
+### C75.3/C75.4/C75.5/C75.6 增量状态（v074）
+
+在 v073 的 source-aware + project-only gram64 基础上，本轮完成并归档了四项
+结构级改动：
+
+1. **rowwise JDRQ hierarchy**：每个输出行独立选择高杠杆 64-block，默认
+   两块预算；`channels <= 4096` 才启用，4864-wide 层继续用 global 版本，
+   这是宽度派生的预算而不是模型名门控。选择器将全窗口 robust loss 与留出
+   calibration window 做软混合，避免单折记忆。
+2. **wide gram64**：将 gram64 上限提升到 8192，只对
+   `out_features < in_features` 的 down-projection 构造静态 `W.T@W` 64×64
+   block，并先做 hierarchy scale/lv2/lv3 beam，再做一次 mantissa sweep；
+   state 仍只保存合法 CPU gram64 张量。
+3. **H32/H64 candidate pool**：H32/H64 仅进入 operand-local 的廉价候选池，
+   不强制替换父 transform。曾尝试输出乘积 reranker，但运行时 provenance
+   审计会将其中间张量误判为残差交叉项，故发布路径关闭该 reranker；这不是
+   放弃 A@W 离线校准，JDRQ 的合法静态 `Q(W)` 目标仍然启用。
+4. **source-aware + hierarchy interaction**：NVFP4 的四个 E4M3 source
+   scale 继续只作为动态激活候选 proposal，之后每次 state 变化都会重新
+   运行固定 `Q(A)` 下的 JDRQ，禁止复用旧 `Q(W)`。
+
+四模型本地 evaluator（CUDA、`amax6/seq128/calib2/test4`）的最佳已部署路径
+观察为：GPT-2 `158.550907`、OPT `85.736733`、Pythia `179.446007`、
+Qwen `361.503707` native total；Qwen panel proxy `242.505358`，API
+`179.27s`，均低于官方 `<420s`。这些值是相对回归证据，不是官方分数换算。
+
+对应测试：
+
+```text
+python -m py_compile solution.py evaluator/jdrq_diagnostics.py tests/test_jdrq.py
+python -m pytest -q tests/test_jdrq.py tests/test_linear_compliance_guard.py \
+    tests/test_reference_hif4.py tests/test_release_candidate.py \
+    -k "not local_holdout_offsets"       # 48 passed, 1 deselected
+```
+
+当前发布旋钮：source proposal=on、project-only wide gram64=on、wide hierarchy
+offsets=`-4..4`、static JDRQ offsets=`(-2,-1,1,2,3)`、rowwise max-blocks=2、
+rowwise width cap=4096、H32/H64 output reranker=off。`solutions/v074` 已保存
+与根文件相同的源码和 SHA256。
+
 ### 下一轮唯一优先级
 
-1. 归档并复核 project-only gate 下四模型的真实终验，补充每层 gram64
-   state 命中率和 Linear/Attention 分量消融；
-2. 进入 C75.3 变换候选：identity/Smooth/CAT/H32/H64，在固定 state 后
-   重新生成 `Z`，先测 D0 continuous ceiling，再进入 C74；
-3. 对 source-aware 与 gram64 做单机制消融，并按 successive halving
-   控制预算；若 ceiling 仍高而离散兑现率低，优先扩展 C74 求解器，
-   不增加模型名或硬 per-fold veto。
+1. 以 v074 为不可变父版本进入 C76：真实 Attention 输出下的两阶段结构化
+   Q/K 搜索，先做等价 head 内变换，再做固定 `Q/K` 的 V/Fisher 加权细化；
+2. 保持 `A@W` 只服务静态 `Q(W)`，任何候选变换改变后都重建 `Z` 并重跑
+   JDRQ，不将输出或 pooled derivative 写入 `activation_state`；
+3. 每个机制至少保留一个可回退开关、单测、局部消融和不可变 `vNNN` 快照，
+   不以单一模型或单一 fold 的轻微回退停止结构方向；
+4. 继续使用 `scoreNA_timeNA` 记录无官方评测的候选，提交前只宣称已实测
+   的本地指标和通过的合规/时间门槛。
