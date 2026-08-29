@@ -10,6 +10,9 @@ This directory contains only reusable process documents that remain active.
 
 - `2026-08-26-solution-archive-workflow.md`: immutable candidate archive and
   result-recording workflow.
+- `2026-08-29-hif4-linear-22000-optimization-plan.md`: active Linear-first
+  algorithm plan for CAT-64, HiF4 MR-GPTQ, adaptive headroom/LWC, and learned
+  CAT refinement toward the 22000+ official-score target.
 
 Past optimization plans have been moved to `../archive/plans/`. They are
 historical records, not instructions for future exploration. New optimization
