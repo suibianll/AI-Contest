@@ -53,6 +53,7 @@ Root `solution.py` is the only active submission. Archived source files are immu
 | v044 | 2026-08-29 | C46a CAT β `{0.125,0.25,0.375}` | GPT-2 small `133.601982`; medium `229.271482`; Qwen `286.499658`; OPT `-846.212506` | 对应 `21.120464` / `43.767156` / `62.862350` / `19.581565` | 63.88–166.17s（partial） | NA | NA | OPT 结构性回退 `-826.630941`，β 网格 rejected | **archived-rejected** | [archive](20260829_v044_c46a-cat-beta-grid-rejected_scoreNA_timeNA/) |
 | v045 | 2026-08-29 | C45g 放开 Qwen 4864-wide headroom | Qwen `286.174039` | `62.862350` | 120.87s | NA | NA | 分数与 C45f 相同，仅增加校准开销 | **archived-rejected** | [archive](20260829_v045_c45g-headroom-qwenwide-rejected_scoreNA_timeNA/) |
 | v046 | 2026-08-29 | C46b CAT β 窄 refinement `{0.20,0.25,0.30}` | OPT `31.214825` | `19.581565` | 67.81s | NA | NA | OPT Total `50.796390`，较 C45f `-12.064192` | **archived-rejected** | [archive](20260829_v046_c46b-cat-beta-narrow-rejected_scoreNA_timeNA/) |
+| v047 | 2026-08-29 | C45h 全宽多折 A@W 产品选择，预算 8192 | Qwen `285.702496` | `62.862350` | 131.03s | NA | NA | Qwen Total `348.564846`，较 C45f `-0.471543`；4864-row FFN 回退 | **archived-rejected** | [archive](20260829_v047_c45h-product-allfolds-qwen-rejected_scoreNA_timeNA/) |
 
 `*` v002 的 Linear/Attention 数值最初来自远程仓库 `CHANGELOG.md` 的 GPT-2
 12 层、2 calib + 2 test 报告，之后已由 GPU-compatible B0 derivative 在本地
