@@ -283,3 +283,26 @@ solver experiment.  The current root and immutable archive are byte-identical
 with SHA256
 `A8A4427DBA95723570FBDEBCDA1E4EDDBF152A3693CC851E30A87368A02CA284`:
 `solutions/20260830_v084_c84-gram64-sweep5_scoreNA_timeNA/`.
+
+## C85 second JDRQ pass and Q(W)-metric audit (2026-08-30)
+
+Two targeted experiments were run from the v084 parent and committed before
+evaluation. First, `ff8861f` added a second deterministic Gauss--Seidel pass
+over the legal hierarchy residual blocks. It kept the online activation state
+frozen and retained pass-1/pass-2 candidates for robust product selection. On
+the Qwen primary full run it reached native `391.982508`, panel `267.262237`,
+Linear `321.021989`, Attention `70.960519`, API `313.57s`; this is below v084
+panel `267.289567` and costs more time, so `4e9861e` reverts the feature in the
+active root while preserving the experiment in history.
+
+The same audit also tested whether replacing the activation Gram with a
+quantized-weight Gram could close the product gap. Although the direct
+`Q(W)^T Q(W)` candidate improved the local Qwen/heterogeneous proxy, the
+runtime provenance guard correctly identified the `R_A R_W` cross-residual in
+the activation path. It is therefore non-compliant and remains rejected.
+Static W-only Gram and dense/proxy blends passed the guard but all fell below
+v084 on the Qwen panel. No C85 candidate is promoted.
+
+The active root is again the v084 behavior; the latest commits are
+`ff8861f` (experiment) and `4e9861e` (revert). Focused release/compliance
+tests remain `48 passed, 1 deselected`.
