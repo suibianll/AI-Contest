@@ -47,6 +47,7 @@ Root `solution.py` is the only active submission. Archived source files are immu
 | v038 | 2026-08-29 | C43c CAT-64 full-H selector | GPT-2 `131.349623`; OPT `-158.429511`; Qwen `258.554132` | unchanged | 39–109s | NA | NA | full-H proxy unstable and model-sensitive | **archived-rejected** | [archive](20260829_v038_c43c-fullh-rejected_scoreNA_timeNA/) |
 | v039 | 2026-08-29 | C45b fixed-Q(A) A@W static Q(W) selector | GPT-2 `129.712444`; OPT `29.862380`; Qwen `269.025229` | `21.120464` / `19.581565` / `62.862350` | 45.76–122.64s | NA | NA | 三模型均低于 C43b，固定 Q(A) 产品目标过拟合 | **archived-rejected** | [archive](20260829_v039_c45b-fixed-qactivation-rejected_scoreNA_timeNA/) |
 | v040 | 2026-08-29 | C45c 原始 A@W 静态 Q(W) + max-dim 4096 | GPT-2 `131.769809`; OPT `31.602006`; Qwen `286.174039` | `21.120464` / `19.581565` / `62.862350` | 45.70–103.99s | NA | NA | 三模型合计较 C43b `+0.542193`；Qwen 宽层回退得到控制 | **local-accepted** | [archive](20260829_v040_c45c-raw-sizecapped_scoreNA_timeNA/) |
+| v041 | 2026-08-29 | C44 MR-GPTQ parent full-H 覆盖 97% | GPT-2 `126.219696` | `21.120464` | 39.72s（partial） | NA | NA | GPT-2 较 C43b `-4.719525`；扩大 coverage 扩散误差 | **archived-rejected** | [archive](20260829_v041_c44-mr-gptq-coverage97-rejected_scoreNA_timeNA/) |
 
 `*` v002 的 Linear/Attention 数值最初来自远程仓库 `CHANGELOG.md` 的 GPT-2
 12 层、2 calib + 2 test 报告，之后已由 GPU-compatible B0 derivative 在本地
