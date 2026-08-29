@@ -141,14 +141,6 @@ _JDRQ_PROJ_ONLY = True
 # shipping the lower-variance hierarchy residual arm as the default.
 _JDRQ_DUAL_ENABLED = False
 _JDRQ_HIERARCHY_ENABLED = True
-# C85: revisit the same residual blocks after the first legal hierarchy
-# projection.  A single pass computes the block leverage from the parent
-# carrier; a second Gauss--Seidel pass recomputes it from the updated carrier
-# and can recover a residual direction that only becomes visible after the
-# first discrete change.  Each pass remains a static Q(W) update with frozen
-# online Q(A); the selector below still compares every pass-count candidate
-# against the parent product loss.
-_JDRQ_HIERARCHY_PASSES = 2
 _JDRQ_HIERARCHY_MAX_BLOCKS = 4
 _JDRQ_HIERARCHY_RATIO = 0.25
 _JDRQ_HIERARCHY_OFFSETS = (-2, -1, 1, 2, 3)
@@ -6420,41 +6412,32 @@ def _jdrq_select_weight_candidate(
     best_params = parent_params
     if _JDRQ_HIERARCHY_ENABLED:
         hierarchy_candidates: list[dict[str, torch.Tensor]] = []
-        hierarchy_passes = max(1, int(_JDRQ_HIERARCHY_PASSES))
-        # Keep every prefix of the deterministic Gauss--Seidel sequence in
-        # the candidate pool.  The prefix-1 candidate preserves the previous
-        # C74/C75 behaviour exactly; prefix-2 is allowed to exploit the
-        # residual exposed by prefix-1 and is accepted only when its robust
-        # product score (including the held-out window below) is better.
-        global_hierarchy = parent_params
-        for _ in range(hierarchy_passes):
-            global_hierarchy = _jdrq_refine_hierarchy_offsets(
-                frozen_activation,
-                teacher,
-                weight_smooth,
-                global_hierarchy,
-                max_ratio=_JDRQ_HIERARCHY_RATIO,
-                max_blocks=_JDRQ_HIERARCHY_MAX_BLOCKS,
-                offsets=_JDRQ_HIERARCHY_OFFSETS,
-            )
-            hierarchy_candidates.append(global_hierarchy)
+        global_hierarchy = _jdrq_refine_hierarchy_offsets(
+            frozen_activation,
+            teacher,
+            weight_smooth,
+            parent_params,
+            max_ratio=_JDRQ_HIERARCHY_RATIO,
+            max_blocks=_JDRQ_HIERARCHY_MAX_BLOCKS,
+            offsets=_JDRQ_HIERARCHY_OFFSETS,
+        )
+        hierarchy_candidates.append(global_hierarchy)
         use_rowwise_hierarchy = (
             _JDRQ_ROWWISE_HIERARCHY
             and channels <= int(_JDRQ_ROWWISE_MAX_CHANNELS)
         )
         if use_rowwise_hierarchy:
-            rowwise_hierarchy = parent_params
-            for _ in range(hierarchy_passes):
-                rowwise_hierarchy = _jdrq_refine_rowwise_hierarchy(
+            hierarchy_candidates.append(
+                _jdrq_refine_rowwise_hierarchy(
                     frozen_activation,
                     teacher,
                     weight_smooth,
-                    rowwise_hierarchy,
+                    parent_params,
                     max_ratio=_JDRQ_ROWWISE_RATIO,
                     max_blocks=_JDRQ_ROWWISE_MAX_BLOCKS,
                     offsets=_JDRQ_HIERARCHY_OFFSETS,
                 )
-                hierarchy_candidates.append(rowwise_hierarchy)
+            )
         parent_validation_loss = _jdrq_product_loss(
             validation_activation, validation_teacher, parent_params
         )
