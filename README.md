@@ -20,10 +20,11 @@
   还存在外部代码的设备混用问题。C66 与官方外部结果相差 `1596` 分、`21.8s`。
 - 历史 v024 得分为 `16043 / 173.8s`，但其 Linear 输出监督路径把输出信息
   用于激活侧选择；这类 `A@W -> Q(A)` 用法仍不合规，因此不作为后续合规父版本。
-- 当前根 `solution.py` 为 C69 激活二次项 Gram-8 覆盖上限 `12%` 的本地候选；
-  五模型 proxy 合计 `1044.706838`。
+- 当前根 `solution.py` 为 v076/C77 all-shape gram64 + C76.4 GQA rotation；
+  Qwen 本地 native `372.623675`、panel `260.060290`，四模型结果与实现
+  细节见 [`solutions/README.md`](solutions/README.md)。
 - 当前根源码 SHA256：
-  `1F71CA11FA9707EB9720438EC6D780CC6F520FBA80437B3215398608D5866CA1`。
+  `C87B61C8A4A9F869A43EFDEECF7734A0A810EA0E5621D51826EC5E56A31ED0E4`。
 - 旧版本地评测器（单模型 dev 与 frozen holdout）曾因 calibration/test
   文本重叠不能可靠排序合规候选，相关代码（`real_data_eval.py`、
   `holdout_eval.py`、`cap_oracle.py`）已于 2026-08-28 移除；诊断结论见

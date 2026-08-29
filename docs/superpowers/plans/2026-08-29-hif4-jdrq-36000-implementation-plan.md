@@ -976,8 +976,10 @@ down-proj 的 parent/continuous/legal/hierarchy 相对损失为
    生成 median/q75/max 三类合法 E6M2 候选，保留旧 amax/offset 候选；
 2. gram64 从静态变换权重构造每个 64-group 的 `W.T@W`，动态激活只对
    高损失 block 做一次精确 signed-mantissa 格点下降；
-3. gram64 默认按形状启用在 `out_features < in_features` 的
-   down-projection，避免 q/k/v/o 方阵路径的迁移噪声，未使用模型名门控；
+3. v073 当时的 gram64 默认按形状启用在 `out_features < in_features` 的
+   down-projection，避免 q/k/v/o 方阵路径的迁移噪声，未使用模型名门控；该
+   project-only 策略已由 v076 的 all-shape 复测结果 supersede，下面保留作
+   历史对照；
 4. 激活 state 完成后重新运行 C72--C74，禁止复用旧 Q(W)。
 
 GPT-2 project-only gram64 实测 native total `158.561896`、API
@@ -999,9 +1001,9 @@ GPT-2 project-only gram64 实测 native total `158.561896`、API
    两块预算；`channels <= 4096` 才启用，4864-wide 层继续用 global 版本，
    这是宽度派生的预算而不是模型名门控。选择器将全窗口 robust loss 与留出
    calibration window 做软混合，避免单折记忆。
-2. **wide gram64**：将 gram64 上限提升到 8192，只对
+2. **wide gram64**：将 gram64 上限提升到 8192；v074 曾只对
    `out_features < in_features` 的 down-projection 构造静态 `W.T@W` 64×64
-   block，并先做 hierarchy scale/lv2/lv3 beam，再做一次 mantissa sweep；
+   block。v076 已完成 all-shape 复测并启用同一合法 hierarchy/mantissa 求解，
    state 仍只保存合法 CPU gram64 张量。
 3. **H32/H64 candidate pool**：H32/H64 仅进入 operand-local 的廉价候选池，
    不强制替换父 transform。曾尝试输出乘积 reranker，但运行时 provenance
@@ -1025,9 +1027,10 @@ python -m pytest -q tests/test_jdrq.py tests/test_linear_compliance_guard.py \
     -k "not local_holdout_offsets"       # 48 passed, 1 deselected
 ```
 
-当前发布旋钮：source proposal=on、project-only wide gram64=on、wide hierarchy
-offsets=`-4..4`、static JDRQ offsets=`(-2,-1,1,2,3)`、rowwise max-blocks=2、
-rowwise width cap=4096、H32/H64 output reranker=off。`solutions/v074` 已保存
+v074 历史发布旋钮为 project-only wide gram64；当前 v076 旋钮改为
+source proposal=on、all-shape gram64=on、wide hierarchy offsets=`-4..4`、
+static JDRQ offsets=`(-2,-1,1,2,3)`、rowwise max-blocks=2、rowwise width
+cap=4096、H32/H64 output reranker=off。`solutions/v074` 已保存
 与根文件相同的源码和 SHA256。
 
 ### C76.4 增量状态（v075）
@@ -1049,9 +1052,27 @@ reciprocal temperature 已完成消融但在 Qwen test fold 回退，保留为�
 对应单元/发布测试仍为 `48 passed, 1 deselected`，v075 根与归档 SHA256 为
 `DCA23116D76033A7EB5A04C5CC7EF003A52995905261699B2D06883D4C0BE4A4`。
 
+### C77 all-shape gram64 增量状态（v076）
+
+在 v075 的 GQA rotation 父版本上重新评估了 `gram64` 形状门。关闭
+`_ACTIVATION_GRAM64_PROJ_ONLY` 后，所有满足宽度上限的 Linear 都能用静态
+`W.T @ W` 64-block metric 驱动动态激活 refinement；没有将 `A@W`、residual
+或测试输出写入 state。Qwen native 从 `369.344509` 升至 `372.623675`，panel
+从 `258.840363` 升至 `260.060290`，Linear 从 `298.383991` 升至
+`301.663157`，Attention 保持 `70.960519`。GPT-2、OPT、Pythia 也分别达到
+`159.774232`、`87.248114`、`182.160394`，均高于 v075，API 时间最高
+`207.72s`，低于 420s。
+
+叠加 full-width JDRQ 的 C78 交互实验为 Qwen panel `260.050784`，略低于
+v076，因此当前继续保留 projection-only JDRQ；GQA group reciprocal scale
+和 non-causal A1 重排也已测为回退，均不启用。
+
+根/v076 归档 SHA256：
+`C87B61C8A4A9F869A43EFDEECF7734A0A810EA0E5621D51826EC5E56A31ED0E4`。
+
 ### 下一轮唯一优先级
 
-1. 以 v075 为不可变父版本，分别测 C76.2 Fisher/V importance 的
+1. 以 v076 为不可变父版本，继续测 C76.2 Fisher/V importance 的
    validation-fold 选择和 C76.4 rotation 的 block/seed 单机制消融；只在
    真实 Attention 输出的跨窗口收益稳定时晋级更多结构；
 2. 保持 `A@W` 只服务静态 `Q(W)`，任何候选变换改变后都重建 `Z` 并重跑

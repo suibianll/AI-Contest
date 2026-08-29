@@ -24,10 +24,12 @@ Chinese version: [README.md](README.md)
   path used output information for activation-side selection. That
   `A@W -> Q(A)` use remains non-compliant, so it is not a compliant parent for
   new work.
-- The current root `solution.py` is C69's activation quadratic Gram-8 candidate;
-  its five-model proxy total is `1044.706838`.
+- The current root `solution.py` is v076/C77 all-shape gram64 plus C76.4
+  GQA rotation. Qwen's local native total is `372.623675` and its panel score
+  is `260.060290`; see [`solutions/README.md`](solutions/README.md) for the
+  paired four-model measurements and mechanism details.
 - Current source SHA256:
-  `1F71CA11FA9707EB9720438EC6D780CC6F520FBA80437B3215398608D5866CA1`.
+  `C87B61C8A4A9F869A43EFDEECF7734A0A810EA0E5621D51826EC5E56A31ED0E4`.
 - The active local evaluator is Qwen-first: it projects frozen-corpus Linear
   and Attention means onto a fixed 250/200 panel, while other models remain
   soft guardrails. The raw `official_flow_total` is retained for compatibility

@@ -210,3 +210,31 @@ python -m pytest -q tests/test_jdrq.py tests/test_linear_compliance_guard.py \
 The active root and `solutions/20260830_v075_c76-gqa-rotation_scoreNA_timeNA/`
 are byte-identical with SHA256
 `DCA23116D76033A7EB5A04C5CC7EF003A52995905261699B2D06883D4C0BE4A4`.
+
+## C77 all-shape gram64 activation refinement (v076)
+
+The earlier project-only gate for activation `gram64` was removed.  The
+calibration path now builds static block-diagonal `W.T @ W` slices for every
+Linear shape within the existing width caps; the state still contains only a
+CPU tensor and the standard dynamic HiF4 fields.  C76.4 GQA rotation remains
+unchanged.  This is a shape policy change, not a model-name or role lookup.
+
+| model | native total | panel total | Linear | Attention | API time |
+|---|---:|---:|---:|---:|---:|
+| Qwen2.5-0.5B | 372.623675 | 260.060290 | 301.663157 | 70.960519 | 207.72s |
+| GPT-2 small | 159.774232 | 208.973897 | 138.467995 | 21.306236 | 78.68s |
+| OPT-125M | 87.248114 | 140.546008 | 67.600512 | 19.647602 | 76.37s |
+| Pythia-160M | 182.160394 | 292.206888 | 141.512514 | 40.647879 | 81.30s |
+
+Against v075, Qwen gains `+3.279166` native points and all three MHA models
+also improve.  Attention is unchanged; the gain is Linear-only.  The root and
+v076 archive SHA256 is
+`C87B61C8A4A9F869A43EFDEECF7734A0A810EA0E5621D51826EC5E56A31ED0E4`.
+
+### C78 interaction checks (not enabled)
+
+Two follow-up arms were measured from the v076 root: full-width JDRQ and
+all-shape gram64 together produced Qwen native `372.598123` / panel
+`260.050784`, slightly below v076; group-level GQA reciprocal scaling produced
+`369.071722` / `258.272056` from v075; both are rejected.  The active root
+therefore keeps all-shape gram64 with projection-only JDRQ.

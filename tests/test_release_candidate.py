@@ -91,6 +91,9 @@ def test_release_flags_are_c39_fw_single_mechanism() -> None:
     assert solution._ACTIVATION_QUADRATIC8_SWEEPS == 1
     assert solution._ACTIVATION_QUADRATIC8_CALIBRATION_GATE is True
     assert solution._ACTIVATION_QUADRATIC8_GATE_MAX_FEATURES == 1024
+    assert solution._ACTIVATION_GRAM64 is True
+    assert solution._ACTIVATION_GRAM64_PROJ_ONLY is False
+    assert solution._ACTIVATION_GRAM64_MAX_FEATURES == 8192
     assert solution._ACTIVATION_REFINE_MAX_RATIO == 0.70
     assert solution._WEIGHT_FULL64 is True
     assert solution._WEIGHT_FULL64_MAX_RATIO == 0.25
