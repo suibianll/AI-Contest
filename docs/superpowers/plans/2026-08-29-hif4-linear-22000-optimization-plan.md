@@ -54,9 +54,10 @@ C41b 合规父版本
 `22451 / 234s`，但仍比外部 [`youxilee/hif4`](https://github.com/youxilee/hif4)
 的用户提供结果 `24153 / 239s` 低 `1596` 分。外部最新公开实现的最大结构差距是
 v2.6 的 64-channel X/W 联合残差补偿（校准期只更新静态 `Q(W)`，Gauss--Seidel
-最多 3 轮）；它比继续增加 offset、coverage 或 Gram-8 比例更值得优先验证。
+最多 3 轮）；C70 的直接移植在 GPT-2 small 上显著提升，但在 OPT/Qwen 代理回退，
+说明它必须和父版本、跨 fold 软选择一起验证，不能直接全量打开。
 官方新增的两个用例呈现千问 30B 特征，故后续压力测试必须覆盖宽 FFN down-proj
-与 GQA，而不能只用 Qwen2.5-0.5B 代理。完整审计见
+与 GQA，而不能只用 Qwen2.5-0.5B 代理。完整审计及 C70/C71 的失败消融见
 [`2026-08-29-external-hif4-gap-analysis.md`](../../../logs/candidates/2026-08-29-external-hif4-gap-analysis.md)。
 
 ## 1. 当前基线、证据与问题定义

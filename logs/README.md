@@ -54,6 +54,9 @@ v034/C41b `21864 / 159.4s`、v051/C47b `22451 / 234s`、v066/C66
 - `candidates/C39-FW-official-calibration.md`：新版官方锚点 `21864 / 161.3s`（旧口径为 `14613 / 159.2s`）。
 - `candidates/2026-08-29-external-hif4-gap-analysis.md`：v066/C66 与外部
   `youxilee/hif4` 的逐项算法差距、Qwen-30B 特征用例假设与 C70 实验路线。
+- `solutions/20260829_v070_c70-joint-refine-rejected_scoreNA_timeNA/` 与
+  `solutions/20260829_v071_c71-proj-final-quantizer-rejected_scoreNA_timeNA/`：
+  外部联合补偿、proj H32/H64 的真实代理消融，均已拒绝并恢复 C69。
 - `candidates/C40-robust-block-ldlq.md`：C40 机制说明（官方 `14432 / 216.667s`，已拒绝）。
 - `candidates/C40-official-evaluator-diagnosis.md`：本地评测器失效诊断，旧代理排序不可信的依据。
 - `execution/`：2026-08-26 起的执行日志、顺序实验索引与环境记录。
