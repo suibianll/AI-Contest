@@ -7177,8 +7177,12 @@ def hif4_calibration_and_quantize_weight(
         _ACTIVATION_QUADRATIC
         and in_features <= _ACTIVATION_QUADRATIC_MAX_FEATURES
     ):
+        use_quantized_metric = (
+            _ACTIVATION_GRAM64_USE_QUANTIZED_WEIGHT
+            and in_features < _WIDE_LAYER_MIN_DIM
+        )
         activation_metric_weight = (
-            weight_hat if _ACTIVATION_GRAM64_USE_QUANTIZED_WEIGHT else weight_smooth
+            weight_hat if use_quantized_metric else weight_smooth
         )
         gram = activation_metric_weight.t().mm(activation_metric_weight)
         activation_gram_state = _cpu_state_tensor(
@@ -7250,9 +7254,9 @@ def hif4_calibration_and_quantize_weight(
         )
         and in_features % _HIF4_BLOCK_SIZE == 0
     ):
-        activation_metric_weight = (
-            weight_hat if _ACTIVATION_GRAM64_USE_QUANTIZED_WEIGHT else weight_smooth
-        )
+        # This branch is necessarily wide (>4096) and therefore keeps the
+        # dense W^T W metric; the shape split above handles narrow layers.
+        activation_metric_weight = weight_smooth
         wide_weight_gram = activation_metric_weight.t().mm(activation_metric_weight)
         wide_gram64 = _full64_hessian_blocks(wide_weight_gram, in_features)
         if _activation_gram64_is_safe(
