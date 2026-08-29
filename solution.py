@@ -66,11 +66,6 @@ _CAT64_BETAS = (0.25,)
 _CAT64_MIN_IMPROVEMENT = 1.0e-3
 _CAT64_WORST_TOLERANCE = 0.03
 _CAT64_MAX_CALIB_ROWS = 256
-# Optional C49 selector refinement.  The analytic CAT construction is
-# unchanged; when enabled, its operand-local weight term uses the existing
-# 64x64 calibration-Hessian blocks instead of only their diagonal.  This
-# remains a calibration-only signal and never enters activation_state.
-_CAT64_BLOCK_HESSIAN_METRIC = False
 # C45: calibration-product selector for the *static* weight quantizer.
 #
 # A@W is used here only as an offline objective for Q(W).  The online
@@ -3634,7 +3629,6 @@ def _cat64_operand_metrics(
     block_smooth_size: int,
     block_smooth_seed: int,
     cat_transform: Optional[torch.Tensor],
-    base_covariance: Optional[torch.Tensor] = None,
 ) -> tuple[float, tuple[float, ...], float]:
     """Return CAT operand losses and a diagonal alignment score.
 
@@ -3665,32 +3659,10 @@ def _cat64_operand_metrics(
     )
     weight_params = _dense_to_hif4(weight_smooth)
     weight_hat = _dequantize_hif4(weight_params)
-    block_hessian = None
-    if base_covariance is not None:
-        block_hessian = _cat64_block_hessian(
-            base_covariance, cat_transform
-        )
-    if block_hessian is None:
-        weight_energy = (weight_smooth.square() * h_x.unsqueeze(0)).sum()
-        weight_numerator = (
-            (weight_smooth - weight_hat).square() * h_x.unsqueeze(0)
-        ).sum()
-    else:
-        smooth_blocks = weight_smooth.reshape(
-            int(weight_smooth.shape[0]), -1, _CAT64_BLOCK_SIZE
-        )
-        hat_blocks = weight_hat.reshape_as(smooth_blocks)
-        weight_energy = torch.einsum(
-            "obi,bij,obj->", smooth_blocks, block_hessian, smooth_blocks
-        )
-        weight_numerator = torch.einsum(
-            "obi,bij,obj->",
-            smooth_blocks - hat_blocks,
-            block_hessian,
-            smooth_blocks - hat_blocks,
-        )
+    weight_energy = (weight_smooth.square() * h_x.unsqueeze(0)).sum()
     weight_loss = torch.nan_to_num(
-        weight_numerator / (weight_energy + _EPS),
+        ((weight_smooth - weight_hat).square() * h_x.unsqueeze(0)).sum()
+        / (weight_energy + _EPS),
         nan=1.0e30,
         posinf=1.0e30,
         neginf=1.0e30,
@@ -3768,44 +3740,6 @@ def _cat64_robust_objective(
     return float(robust), tuple(float(v) for v in folds)
 
 
-def _cat64_block_hessian(
-    covariance: torch.Tensor,
-    transforms: Optional[torch.Tensor],
-) -> torch.Tensor:
-    """Return transformed diagonal 64x64 Hessian blocks for CAT scoring.
-
-    ``covariance`` is already in the parent smooth/permutation/Hadamard
-    coordinates.  CAT is block diagonal, so the selector can score the
-    corresponding Hessian blocks without materializing a second full dense
-    covariance for every candidate.
-    """
-
-    value = covariance.detach().to(dtype=torch.float32)
-    if value.ndim != 2 or int(value.shape[0]) != int(value.shape[1]):
-        raise ValueError("CAT block Hessian expects a square covariance")
-    channels = int(value.shape[0])
-    block = int(_CAT64_BLOCK_SIZE)
-    if channels % block != 0:
-        raise ValueError("CAT block Hessian width is not 64-aligned")
-    indices = torch.arange(channels, device=value.device).reshape(-1, block)
-    blocks = value[indices[:, :, None], indices[:, None, :]]
-    if transforms is not None:
-        matrix = transforms.detach().to(
-            device=value.device, dtype=torch.float32
-        )
-        expected = (channels // block, block, block)
-        if tuple(matrix.shape) != expected:
-            raise ValueError("CAT block Hessian transform shape mismatch")
-        blocks = matrix.matmul(blocks).matmul(matrix.transpose(-1, -2))
-    blocks = 0.5 * (blocks + blocks.transpose(-1, -2))
-    return torch.nan_to_num(
-        blocks,
-        nan=0.0,
-        posinf=0.0,
-        neginf=0.0,
-    )
-
-
 def _select_cat64_transform(
     weight_rows: torch.Tensor,
     activation_second_moment: torch.Tensor,
@@ -3814,7 +3748,6 @@ def _select_cat64_transform(
     permutation: torch.Tensor,
     block_smooth_size: int,
     block_smooth_seed: int,
-    activation_covariance: Optional[torch.Tensor] = None,
 ) -> tuple[Optional[torch.Tensor], float, tuple[float, ...]]:
     """Select a determinant-normalized CAT-64 transform from local losses."""
 
@@ -3864,27 +3797,6 @@ def _select_cat64_transform(
         "obi,obj->bij", w_grouped, w_grouped
     ) / count_w
 
-    # Keep only the parent-coordinate covariance needed by the block-local
-    # CAT metric.  Cross-block terms are intentionally ignored here because
-    # the transform and the candidate solver are both block diagonal; the
-    # full covariance remains available to the downstream GPTQ pass.
-    base_covariance = None
-    if (
-        _CAT64_BLOCK_HESSIAN_METRIC
-        and activation_covariance is not None
-    ):
-        try:
-            base_covariance = _transformed_covariance(
-                activation_covariance,
-                d,
-                permutation,
-                block_smooth_size,
-                block_smooth_seed,
-                None,
-            )
-        except (RuntimeError, ValueError):
-            base_covariance = None
-
     baseline = _cat64_operand_metrics(
         weight_rows,
         activation_second_moment,
@@ -3894,7 +3806,6 @@ def _select_cat64_transform(
         block_smooth_size,
         block_smooth_seed,
         None,
-        base_covariance,
     )
     best_objective, best_folds = _cat64_robust_objective(baseline, baseline)
     best_transform: Optional[torch.Tensor] = None
@@ -3913,7 +3824,6 @@ def _select_cat64_transform(
             block_smooth_size,
             block_smooth_seed,
             transforms,
-            base_covariance,
         )
         objective, folds = _cat64_robust_objective(baseline, candidate)
         if (
@@ -4886,11 +4796,6 @@ def hif4_calibration_and_quantize_weight(
             best_perm,
             best_block_smooth_size,
             best_block_smooth_seed,
-            (
-                cov_sum / float(max(token_count, 1))
-                if _CAT64_BLOCK_HESSIAN_METRIC and use_quadratic
-                else None
-            ),
         )
         if c30_perm is not None:
             best_perm = c30_perm
