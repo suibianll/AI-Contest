@@ -65,6 +65,10 @@ REQUIRED_FUNCTIONS = (
     "hif4_dynamic_quantize_v",
 )
 
+# Revised official panel limit (2026-08-29).  Historical reports may still
+# mention the former 300-second limit, but active timing checks use 420s.
+OFFICIAL_RUNTIME_LIMIT_SECONDS = 420.0
+
 
 def load_solution(path: Path) -> ModuleType:
     source = path.resolve()
@@ -629,9 +633,10 @@ def evaluate(args: argparse.Namespace) -> None:
             f"calibration={stats['calibration']:.2f}s "
             f"dynamic={stats['dynamic']:.2f}s api-total={api_total:.2f}s"
         )
-        if api_total >= 300.0:
+        if api_total >= OFFICIAL_RUNTIME_LIMIT_SECONDS:
             raise TimeoutError(
-                f"official API total {api_total:.3f}s is not strictly below 300s"
+                f"official API total {api_total:.3f}s is not strictly below "
+                f"{OFFICIAL_RUNTIME_LIMIT_SECONDS:.0f}s"
             )
         nested_total = sum(stats["nested_calls"].values())
         if nested_total:

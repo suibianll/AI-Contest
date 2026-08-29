@@ -17,4 +17,5 @@ This directory contains only reusable process documents that remain active.
 Past optimization plans have been moved to `../archive/plans/`. They are
 historical records, not instructions for future exploration. New optimization
 work should start from the current `solution.py`, current measurements, the
-official compliance rules, and the 300-second official runtime limit.
+official compliance rules, and the revised 420-second (7 minute) official
+runtime limit.

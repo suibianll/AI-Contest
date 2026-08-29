@@ -75,6 +75,7 @@ WIKITEXT_FILES = {
 }
 CACHE_SCHEMA_VERSION = 1
 SCORING_PROTOCOL_VERSION = 2
+OFFICIAL_RUNTIME_LIMIT_SECONDS = 420.0
 DEFAULT_CACHE_DIR = ROOT / "artifacts" / "real_model_suite" / "cache"
 STANDARD_CODEC_PATH = EVALUATOR_DIR / "reference_hif4.py"
 
@@ -1740,9 +1741,12 @@ def evaluate_candidate(
             "official_api_total_seconds": api_total,
             "api_calls": stats["calls"],
             "nested_api_calls": stats["nested_calls"],
-            "under_300_seconds": (
-                api_total < 300.0
+            "under_official_runtime_limit": (
+                api_total < OFFICIAL_RUNTIME_LIMIT_SECONDS
             ),
+            # Kept only as a compatibility diagnostic for pre-revision JSON;
+            # it must not decide current submission validity.
+            "under_300_seconds": api_total < 300.0,
         },
     }
 
@@ -1883,7 +1887,9 @@ def audit_official_ranking(
             len(candidate_results) == expected_model_count
             and expected_model_count > 0
         )
-        all_under_300 = bool(api_times) and all(value < 300.0 for value in api_times)
+        all_under_official = bool(api_times) and all(
+            value < OFFICIAL_RUNTIME_LIMIT_SECONDS for value in api_times
+        )
         candidate_status[candidate] = {
             "evaluated_models": len(candidate_results),
             "expected_models": expected_model_count,
@@ -1891,8 +1897,12 @@ def audit_official_ranking(
             "errors": candidate_errors,
             "official_api_total_seconds": max(api_times) if api_times else float("nan"),
             "proxy_api_seconds_sum": sum(api_times),
-            "under_300_seconds": complete and all_under_300,
-            "valid_submission": complete and all_under_300,
+            "under_official_runtime_limit": complete and all_under_official,
+            # Compatibility diagnostic; validity follows the revised limit.
+            "under_300_seconds": complete and all(
+                value < 300.0 for value in api_times
+            ),
+            "valid_submission": complete and all_under_official,
         }
 
     ranking_audit: dict[str, Any] = {}
@@ -2059,13 +2069,13 @@ def write_report(
                 "",
                 "### 官方总时间与有效性预筛",
                 "",
-                "| 候选 | 已评模型 | 最慢模型 API 时间(s) | 每个模型均 <300s | 本地提交有效 |",
+                "| 候选 | 已评模型 | 最慢模型 API 时间(s) | 每个模型均 <420s | 本地提交有效 |",
                 "|---|---:|---:|---|---|",
             ]
         )
         for candidate, item in candidate_status.items():
             lines.append(
-                f"| {candidate} | {item['evaluated_models']}/{item['expected_models']} | {item['official_api_total_seconds']:.3f} | {item['under_300_seconds']} | {item['valid_submission']} |"
+                f"| {candidate} | {item['evaluated_models']}/{item['expected_models']} | {item['official_api_total_seconds']:.3f} | {item['under_official_runtime_limit']} | {item['valid_submission']} |"
             )
     local_order = fit.get("local_official_flow_order", [])
     if local_order:
@@ -2096,7 +2106,7 @@ def write_report(
             "2. 本地数据不是官方隐藏数据，因此主分只能用于相对排序；官方锚点只用于事后审计排序一致率。",
             "3. `synthetic_attention_eval.py` 不由本套件调用；它只能做接口/性质测试，不能用于候选排名。",
             "4. `cache_mode=read` 时本次结果只来自已保存的模型前向快照，不加载 tokenizer/model，也不读取网络；`cache_mode=write` 才会刷新快照。",
-            "5. 本地时间按每个模型代理的六个正式 API 调用累计；每个代理必须严格小于 300 秒，多模型代理时间不相加。",
+            "5. 本地时间按每个模型代理的六个正式 API 调用累计；每个代理必须严格小于 420 秒，多模型代理时间不相加。",
         ]
     )
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -2152,7 +2162,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "candidate_sources": {
             name: str(candidate_specs[name].path) for name in selected_candidates
         },
-        "official_runtime_limit_seconds": 300.0,
+        "official_runtime_limit_seconds": OFFICIAL_RUNTIME_LIMIT_SECONDS,
         "scoring_protocol": {
             "version": SCORING_PROTOCOL_VERSION,
             "case_formula": "(MSE_STD-MSE_PLAYER)/MSE_STD",
