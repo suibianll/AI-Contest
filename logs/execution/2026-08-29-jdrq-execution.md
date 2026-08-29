@@ -258,3 +258,28 @@ blocks.
 The full-coverage parent is archived as
 `solutions/20260830_v080_c80-gram64-full-coverage_scoreNA_timeNA/` with
 SHA256 `62EC3DB74933986886D01751E5307E58DDC8F4007E56D9A484C239F74AE69813`.
+
+## C84 full gram64 coordinate sweep (v084 current root)
+
+After v080 reached full activation Gram-64 coverage, the next experiment kept
+the legal `ratio=1.0` / `max_blocks=128` selection unchanged and increased only
+the deterministic coordinate-sweep count per 64-dimensional block.  This tests
+whether the earlier coverage gains were limited by the discrete solver budget,
+without changing the online activation state or using output supervision.
+
+| sweep | Qwen native | Qwen panel | Qwen Linear | Qwen Attention | API time |
+|---:|---:|---:|---:|---:|---:|
+| 1 (v080) | 386.903134 | 265.372589 | 315.942615 | 70.960519 | 208.70s |
+| 2 | 390.780409 | 266.815028 | 319.819890 | 70.960519 | 238.30s |
+| 3 | 391.684115 | 267.151228 | 320.723597 | 70.960519 | 256.34s |
+| 4 | 391.956412 | 267.252529 | 320.995893 | 70.960519 | 285.40s |
+| 5 (v084) | **392.055970** | **267.289567** | **321.095451** | 70.960519 | **309.09s** |
+
+The sweep=5 guardrail native totals were GPT-2 `167.049503`, OPT `92.848854`,
+and Pythia `190.277968`; all three were positive versus sweep4.  Qwen remains
+about `110.91s` below the official `420s` limit.  Marginal gains are now small,
+so sweep6 is deferred in favor of a structural V/QK or output-level discrete
+solver experiment.  The current root and immutable archive are byte-identical
+with SHA256
+`A8A4427DBA95723570FBDEBCDA1E4EDDBF152A3693CC851E30A87368A02CA284`:
+`solutions/20260830_v084_c84-gram64-sweep5_scoreNA_timeNA/`.

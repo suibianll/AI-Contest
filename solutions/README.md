@@ -91,6 +91,7 @@ v034、v051、v066 官方列更新为新版结果；其余历史官方列保留�
 | v075 | 2026-08-30 | C76.4 GQA head-local signed Hadamard H16/H32/H64 rotation | Qwen `298.383991`; MHA unchanged from v074 | `21.306236` / `70.960519` (Qwen) | 188.06s CUDA (Qwen) | NA | NA | Qwen native total `369.344509`、panel proxy `258.840363`；Attention `70.960519` vs v074 `63.119717`；GQA-only structural gate | **active-candidate** | [archive](20260830_v075_c76-gqa-rotation_scoreNA_timeNA/) |
 | v076 | 2026-08-30 | C77 all-shape gram64 activation refinement + C76.4 GQA rotation | Qwen `301.663157`; GPT-2 `138.467995`; OPT `67.600512`; Pythia `141.512514` | `70.960519` (Qwen) / `21.306236` (MHA) | 207.72s CUDA (Qwen) | NA | NA | Qwen native `372.623675`, panel `260.060290`；四模型均高于 v075；all-shape `WᵀW` 仅保留合法 CPU gram64 state | **active-candidate** | [archive](20260830_v076_c77-gram64-all-shape_scoreNA_timeNA/) |
 | v080 | 2026-08-30 | C80 full gram64 coverage (ratio 1.0, max 128) + C76.4 GQA rotation | Qwen `315.942615`; GPT-2 `142.914968`; OPT `71.957801`; Pythia `148.047600` | `70.960519` (Qwen) / `21.306236` (MHA) | 208.70s CUDA (Qwen) | NA | NA | Qwen native `386.903134`, panel `265.372589`；相对 v076 native `+5.558080`；四模型均正向；中间 16/32/64 覆盖分别由 `877db7d`/`07cf5f6`/`50782a8` 提交 | **active-candidate** | [archive](20260830_v080_c80-gram64-full-coverage_scoreNA_timeNA/) |
+| v084 | 2026-08-30 | C84 full gram64 coverage + 5 coordinate sweeps (`ratio=1.0`, `max_blocks=128`) + C76.4 GQA rotation | Qwen `321.095451`; GPT-2 `145.743266`; OPT `73.201252`; Pythia `149.630088` | `70.960519` (Qwen) / `21.306236` (MHA) | 309.09s CUDA (Qwen) | NA | NA | Qwen native `392.055970`, panel `267.289567`；相对 v080 native `+5.152836`、panel `+1.916978`；sweep2/3/4/5 逐级正向，四模型均正向；Qwen 距 420s 余量约 110.91s | **active-candidate** | [archive](20260830_v084_c84-gram64-sweep5_scoreNA_timeNA/) |
 | v047 | 2026-08-29 | C45h 全宽多折 A@W 产品选择，预算 8192 | Qwen `285.702496` | `62.862350` | 131.03s | NA | NA | Qwen Total `348.564846`，较 C45f `-0.471543`；4864-row FFN 回退 | **archived-rejected** | [archive](20260829_v047_c45h-product-allfolds-qwen-rejected_scoreNA_timeNA/) |
 
 ## 外部参考（不纳入本地版本号）
@@ -130,8 +131,8 @@ v013 归档字节一致。
 `22451 / 234s`，v066/C66 为 `22557 / 217.2s`；这些数值覆盖对应条目的
 旧版 `Official Score/Time`，旧值仍可在各自提交历史中追溯。
 
-当前根 `solution.py` 为 C69 本地候选；C69 归档源码的 SHA256 为
-`1F71CA11FA9707EB9720438EC6D780CC6F520FBA80437B3215398608D5866CA1`。
+当前根 `solution.py` 为 v084/C84 本地候选；根与 v084 归档源码的 SHA256 为
+`A8A4427DBA95723570FBDEBCDA1E4EDDBF152A3693CC851E30A87368A02CA284`。
 新版面板下 v066/C66（官方 `22557 / 217.2s`）是本地归档冠军，较此前
 v051/C47b 提升 `106` 分并减少 `16.8s`；v031/C39-FW 与 v034/C41b 均为
 `21864`。外部 [`youxilee/hif4`](https://github.com/youxilee/hif4) 的

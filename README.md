@@ -20,11 +20,11 @@
   还存在外部代码的设备混用问题。C66 与官方外部结果相差 `1596` 分、`21.8s`。
 - 历史 v024 得分为 `16043 / 173.8s`，但其 Linear 输出监督路径把输出信息
   用于激活侧选择；这类 `A@W -> Q(A)` 用法仍不合规，因此不作为后续合规父版本。
-- 当前根 `solution.py` 为 v080/C80 full gram64 + C76.4 GQA rotation；
-  Qwen 本地 native `386.903134`、panel `265.372589`，四模型结果与实现
+- 当前根 `solution.py` 为 v084/C84 full gram64 五轮坐标扫描 + C76.4 GQA
+  rotation；Qwen 本地 native `392.055970`、panel `267.289567`，四模型结果与实现
   细节见 [`solutions/README.md`](solutions/README.md)。
 - 当前根源码 SHA256：
-  `62EC3DB74933986886D01751E5307E58DDC8F4007E56D9A484C239F74AE69813`。
+  `A8A4427DBA95723570FBDEBCDA1E4EDDBF152A3693CC851E30A87368A02CA284`。
 - 旧版本地评测器（单模型 dev 与 frozen holdout）曾因 calibration/test
   文本重叠不能可靠排序合规候选，相关代码（`real_data_eval.py`、
   `holdout_eval.py`、`cap_oracle.py`）已于 2026-08-28 移除；诊断结论见
@@ -87,15 +87,15 @@
 
 ## 当前算法
 
-当前根版本为 v080/C80，评测和优化优先级如下：
+当前根版本为 v084/C84，评测和优化优先级如下：
 
 | 优先级 | 组件 | 当前机制 | 作用/状态 |
 | --- | --- | --- | --- |
 | 1 | Linear | SmoothQuant、通道排列、4/8/16 组二阶精修 | 主收益来源，优先用 Qwen panel 比较 |
 | 2 | Linear | wide FFN `fc/proj` 的 FULL64 Hessian/GPTQ | 覆盖率 `0.25`，只更新离线 `Q(W)` |
-| 3 | Linear | 动态激活 Gram-8 + all-shape Gram-64 | C80 full coverage (`ratio=1.0`, `max_blocks=128`)，只保留静态 CPU `WᵀW` state |
+| 3 | Linear | 动态激活 Gram-8 + all-shape Gram-64 | C84 full coverage (`ratio=1.0`, `max_blocks=128`, `sweeps=5`)，只保留静态 CPU `WᵀW` state |
 | 4 | Attention | Smooth-QK、K 居中、head permutation、GQA H16/H32/H64 rotation | C76.4 GQA-only；MHA 保持稳定路径 |
-| 5 | 研究候选 | V importance、Q/K policy alternating、压缩覆盖预算 | 以 v080 为父版本，先测输出级上限再压入 420s |
+| 5 | 研究候选 | V importance、Q/K policy alternating、压缩覆盖预算 | 以 v084 为父版本，先测输出级上限再压入 420s |
 
 优化决策只看同一冻结缓存上的相对增量：Qwen `primary_panel_score_total` 是主
 指标，其他模型用于发现结构性回退。不得用官方分数反向调参，也不设置固定的
@@ -114,9 +114,9 @@
    - 已删除无收益的第二轮坐标下降。
 5. C40 相邻 128 维 Block-LDLQ 仅保留在历史归档中；当前根不启用该已被官方
    否定的路径。
-6. 当前根 C80 将动态 activation Gram-64 的合法 refinement 覆盖设为
-   `ratio=1.0/max_blocks=128`，并保留 Gram-8、source-aware proposal、
-   sample-local HiF4 编码和已验证的 4/8 组精修。
+6. 当前根 C84 将动态 activation Gram-64 的合法 refinement 覆盖设为
+   `ratio=1.0/max_blocks=128`，每个 block 做 `5` 轮确定性坐标扫描，并保留
+   Gram-8、source-aware proposal、sample-local HiF4 编码和已验证的 4/8 组精修。
 
 ### Attention
 
@@ -252,7 +252,7 @@ Attention 合成矩阵：
 ```
 
 完整套件还包含真实语料窗口和历史算法回归；若本机未安装 `transformers`，或
-旧断言与当前 C69 实验开关不一致，相关测试会单独报告环境/历史债务。评测器发布
+旧断言与当前 C84 实验开关不一致，相关测试会单独报告环境/历史债务。评测器发布
 前至少执行上面的语法检查和下面的评测器回归（使用仓库内被忽略的临时目录），
 再按本机环境补齐依赖并运行完整套件：
 

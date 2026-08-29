@@ -18,13 +18,13 @@
 | 项目 | 当前事实 |
 |---|---|
 | 官方本地冠军 | C66：`22557 / 217.2s` |
-| 当前根版本 | v080 / C80 full gram64 coverage + C76.4 GQA rotation，本地实验版本，无新官方分 |
+| 当前根版本 | v084 / C84 full gram64 五轮坐标扫描 + C76.4 GQA rotation，本地实验版本，无新官方分 |
 | 外部参考 | `youxilee/hif4`：用户提供 `24153 / 239s` |
 | 官方榜上限信号 | 用户确认已有超过 `36000` |
 | 官方面板 | 250 Linear + 200 Attention |
 | 最终时间上限 | `<420s` |
-| 已完成归档 | v080 / C80 full gram64 coverage |
-| 下一可用归档号 | v081 / C77 Attention policy or C81 precision-time compression |
+| 已完成归档 | v084 / C84 full gram64 五轮坐标扫描 |
+| 下一可用归档号 | v085 / C77 Attention policy or C85 precision-time compression |
 
 若面板每 case 以百分制累加，`22557 -> 36000` 需要把当前剩余 MSE 再降低约 60%。因此本计划不把 offset、coverage、固定 headroom 等千分位微调作为主线。
 
@@ -1027,10 +1027,11 @@ python -m pytest -q tests/test_jdrq.py tests/test_linear_compliance_guard.py \
     -k "not local_holdout_offsets"       # 48 passed, 1 deselected
 ```
 
-v074 历史发布旋钮为 project-only wide gram64；当前 v076 旋钮改为
-source proposal=on、all-shape gram64=on、wide hierarchy offsets=`-4..4`、
-static JDRQ offsets=`(-2,-1,1,2,3)`、rowwise max-blocks=2、rowwise width
-cap=4096、H32/H64 output reranker=off。`solutions/v074` 已保存
+v074 历史发布旋钮为 project-only wide gram64；当前 v084 旋钮为
+source proposal=on、all-shape gram64=on、Gram-64 `ratio=1.0`/
+`max_blocks=128`/`sweeps=5`、wide hierarchy offsets=`-4..4`、static JDRQ
+offsets=`(-2,-1,1,2,3)`、rowwise max-blocks=2、rowwise width cap=4096、
+H32/H64 output reranker=off。`solutions/v074` 已保存
 与根文件相同的源码和 SHA256。
 
 ### C76.4 增量状态（v075）
@@ -1070,7 +1071,7 @@ v076，因此当前继续保留 projection-only JDRQ；GQA group reciprocal scal
 v076 根/归档 SHA256：
 `C87B61C8A4A9F869A43EFDEECF7734A0A810EA0E5621D51826EC5E56A31ED0E4`。
 
-### C80 full gram64 coverage 增量状态（当前根）
+### C80 full gram64 coverage 增量状态（v080 历史基线）
 
 在 v076 all-shape gram64 的基础上，连续扩大动态 64-block refinement 覆盖
 预算：`0.08/8 -> 0.16/16 -> 0.32/32 -> 0.64/64 -> 1.0/128`。每一级
@@ -1088,9 +1089,33 @@ HiF4 字段，未引入在线 `A@W` 或测试输出。
 v080 根/归档 SHA256：
 `62EC3DB74933986886D01751E5307E58DDC8F4007E56D9A484C239F74AE69813`。
 
+### C84 full gram64 coordinate sweep 增量状态（v084 当前根）
+
+在 v080 的 full-coverage 配置上，保持 `ratio=1.0/max_blocks=128` 不变，
+只增加每个 64 维 block 的确定性坐标扫描轮数。sweep=2、3、4、5 依次由
+`b702c93`、`6b8925e`、`7e9464a`、`e5fd172` 提交；Qwen 主模型的结果如下：
+
+| sweep | native total | panel total | Linear | Attention | API time |
+|---:|---:|---:|---:|---:|---:|
+| 1 (v080) | 386.903134 | 265.372589 | 315.942615 | 70.960519 | 208.70s |
+| 2 | 390.780409 | 266.815028 | 319.819890 | 70.960519 | 238.30s |
+| 3 | 391.684115 | 267.151228 | 320.723597 | 70.960519 | 256.34s |
+| 4 | 391.956412 | 267.252529 | 320.995893 | 70.960519 | 285.40s |
+| 5 (v084) | **392.055970** | **267.289567** | **321.095451** | 70.960519 | **309.09s** |
+
+GPT-2、OPT、Pythia 在 sweep5 的 native total 分别为 `167.049503`、
+`92.848854`、`190.277968`，相应 Linear 分别为 `145.743266`、`73.201252`、
+`149.630088`；四模型均比 sweep4 正向。Qwen API 时间距官方 `420s` 仍有
+约 `110.91s`，但单轮增益已明显递减，所以当前先停在 sweep5，把剩余时间预算
+留给新的 V/QK 策略或输出级离散求解，而不是盲目增加 sweep6。
+
+state 仍只包含静态 CPU Gram-64 统计和合法 HiF4 字段；所有 sweep 都不把
+`A@W`、输出残差或测试输出写入在线 activation state。v084 根/归档 SHA256：
+`A8A4427DBA95723570FBDEBCDA1E4EDDBF152A3693CC851E30A87368A02CA284`。
+
 ### 下一轮唯一优先级
 
-1. 以 v080 为不可变父版本，继续测 C76.2 Fisher/V importance 的
+1. 以 v084 为不可变父版本，继续测 C76.2 Fisher/V importance 的
    validation-fold 选择和 C76.4 rotation 的 block/seed 单机制消融；只在
    真实 Attention 输出的跨窗口收益稳定时晋级更多结构；
 2. 保持 `A@W` 只服务静态 `Q(W)`，任何候选变换改变后都重建 `Z` 并重跑

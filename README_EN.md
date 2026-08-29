@@ -24,12 +24,13 @@ Chinese version: [README.md](README.md)
   path used output information for activation-side selection. That
   `A@W -> Q(A)` use remains non-compliant, so it is not a compliant parent for
   new work.
-- The current root `solution.py` is v080/C80 full gram64 coverage plus C76.4
-  GQA rotation. Qwen's local native total is `386.903134` and its panel score
-  is `260.060290`; see [`solutions/README.md`](solutions/README.md) for the
-  paired four-model measurements and mechanism details.
+- The current root `solution.py` is v084/C84 full gram64 coverage with five
+  coordinate sweeps plus C76.4 GQA rotation. Qwen's local native total is
+  `392.055970` and its panel score is `267.289567`; see
+  [`solutions/README.md`](solutions/README.md) for the paired four-model
+  measurements and mechanism details.
 - Current source SHA256:
-  `62EC3DB74933986886D01751E5307E58DDC8F4007E56D9A484C239F74AE69813`.
+  `A8A4427DBA95723570FBDEBCDA1E4EDDBF152A3693CC851E30A87368A02CA284`.
 - The active local evaluator is Qwen-first: it projects frozen-corpus Linear
   and Attention means onto a fixed 250/200 panel, while other models remain
   soft guardrails. The raw `official_flow_total` is retained for compatibility
@@ -104,9 +105,10 @@ and implementation to fit the final runtime limit.
    - omit the redundant second coordinate sweep.
 5. C40 adjacent-128 Block-LDLQ conditional re-solving is retained only in the
    historical archive; the current root does not enable this rejected path.
-6. Current C69 sets the dynamic activation quadratic Gram-8 coverage cap to
-   `12%`, while retaining sample-local HiF4 encoding and the validated 4/8-group
-   refinements.
+6. Current C84 enables all-shape dynamic activation Gram-64 refinement at
+   `ratio=1.0`, `max_blocks=128`, and five deterministic coordinate sweeps,
+   while retaining Gram-8, sample-local HiF4 encoding, and the validated
+   4/8-group refinements.
 
 ### Attention
 
