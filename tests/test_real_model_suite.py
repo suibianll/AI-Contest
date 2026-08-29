@@ -12,6 +12,7 @@ sys.path.insert(0, str(ROOT / "evaluator"))
 from real_model_suite import (  # noqa: E402
     CACHE_SCHEMA_VERSION,
     CacheValidationError,
+    CANDIDATE_SPECS,
     ModelData,
     ModelSpec,
     MODEL_SPECS,
@@ -21,6 +22,7 @@ from real_model_suite import (  # noqa: E402
     Window,
     _aggregate_details,
     audit_official_ranking,
+    build_panel_score,
     load_real_windows,
     load_model_cache,
     model_cache_path,
@@ -73,6 +75,84 @@ def test_official_aggregation_sums_per_case_relative_scores() -> None:
     assert aggregate["official_case_count"] == 3
     assert aggregate["official_score_mean"] == 0.0
     assert aggregate["global_gain"] != aggregate["official_score_mean"]
+
+
+def test_qwen_panel_is_mean_preserving_and_fixed_to_250_200() -> None:
+    panel = build_panel_score(
+        {
+            "linear": 3.0,
+            "attention": 4.0,
+            "total": 7.0,
+            "linear_cases": 6,
+            "attention_cases": 2,
+            "total_cases": 8,
+        }
+    )
+    assert panel["profile"] == "qwen-official"
+    assert panel["linear_cases"] == 250
+    assert panel["attention_cases"] == 200
+    assert panel["linear"] == 125.0
+    assert panel["attention"] == 400.0
+    assert panel["total"] == 525.0
+    assert panel["source_linear_cases"] == 6
+    assert panel["source_attention_cases"] == 2
+    assert panel["aggregation"] == "source_component_mean_times_fixed_panel_count"
+
+
+def test_qwen_is_primary_and_other_models_are_soft_guardrails() -> None:
+    def result(candidate: str, model: str, linear: float, attention: float) -> dict:
+        return {
+            "candidate": candidate,
+            "model": model,
+            "official_flow_score": {
+                "linear": linear,
+                "attention": attention,
+                "total": linear + attention,
+                "linear_cases": 1,
+                "attention_cases": 1,
+            },
+            "linear": {"global_gain": 0.0, "macro_gain": 0.0},
+            "linear_component_macro_gain": 0.0,
+            "attention": {"global_gain": 0.0, "macro_gain": 0.0},
+            "timing": {"official_api_total_seconds": 10.0},
+        }
+
+    rows = [
+        result("a", "qwen2.5-0.5b", 1.0, 1.0),
+        result("b", "qwen2.5-0.5b", 2.0, 2.0),
+        result("a", "gpt2-small", 9.0, 9.0),
+        result("b", "gpt2-small", 8.0, 8.0),
+    ]
+    audit = audit_official_ranking(
+        rows,
+        ["a", "b"],
+        {},
+        ["qwen2.5-0.5b", "gpt2-small"],
+    )
+    assert audit["primary_model"] == "qwen2.5-0.5b"
+    assert audit["guardrail_models"] == ["gpt2-small"]
+    assert [item["candidate"] for item in audit["local_primary_panel_order"]] == [
+        "b",
+        "a",
+    ]
+    assert audit["candidate_status"]["a"]["valid_submission"] is True
+
+
+def test_revised_official_anchor_manifest_is_current_panel_only() -> None:
+    assert {
+        name: (CANDIDATE_SPECS[name].official_score, CANDIDATE_SPECS[name].official_time)
+        for name in ("c39", "c41b", "c47b", "c66")
+    } == {
+        "c39": (21864, 161.3),
+        "c41b": (21864, 159.4),
+        "c47b": (22451, 234.0),
+        "c66": (22557, 217.2),
+    }
+    assert all(
+        CANDIDATE_SPECS[name].official_panel_revision == "2026-08-29"
+        for name in ("c39", "c41b", "c47b", "c66")
+    )
+    assert CANDIDATE_SPECS["c40"].official_panel_revision is None
 
 
 def test_official_ranking_audit_uses_summed_linear_and_attention_score() -> None:

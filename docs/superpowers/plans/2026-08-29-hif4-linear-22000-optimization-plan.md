@@ -6,6 +6,11 @@
 主攻方向：Linear；Attention 只保留已验证的 C41b 增益，不在本计划中继续扩张  
 官方硬约束：六个 API 不变、HiF4 五字段合法、总时间严格 `<420s`（7 分钟）
 
+本地评测重构：默认以 Qwen2.5-0.5B（GQA/RoPE/SwiGLU）为主模型，将冻结语料
+的 Linear/Attention 平均 case gain 投影到 **250/200 固定面板**；GPT-2、OPT、
+Pythia 只作软 guardrail。原始 `official_flow_total` 仍保留作回溯，不再因模型
+层数和本地窗口数直接累加主排序。
+
 > **官方口径更新（2026-08-29）**：评测集扩大为 250 个 Linear case 与 200 个
 > Attention case，分数和时间均会高于旧口径。用户确认 v031/C39-FW 为
 > `21864 / 161.3s`、v034/C41b 为 `21864 / 159.4s`、v051/C47b 为
@@ -278,7 +283,8 @@ Unique mechanism: HiF4-aligned analytic CAT-64
 Attention behavior: bit-identical to C41b
 Output-supervision use: none for transform selection
 Expected API time: <220s
-Primary metric: five-model official_flow_linear sum
+Primary metric: Qwen `primary_panel_score_total` on the fixed 250/200 panel;
+guardrail model means are diagnostic only
 ```
 
 ## 5. C43：HiF4-aligned CAT-64
@@ -602,10 +608,10 @@ test_c45_feature_off_matches_c44
 
 ### 8.1 启动条件
 
-只有满足以下任一条件才启动 C46：
+以下信号用于安排 C46 优先级，不作为硬门：
 
-- C45 的旧口径 Linear mean 已达到 `0.63+`；
-- 五模型 official-flow Linear 相对 C41b 总增量达到 `8%+`；
+- C45 的 Qwen shaped-panel Linear mean 出现稳定提升；
+- guardrail 模型未出现重复的结构性回退；
 - CAT alignment 提升明显，但 quantized operand loss 仍有大空间。
 
 若 CAT 本身没有结构级信号，不得靠长时间优化掩盖问题。
@@ -695,6 +701,7 @@ Hadamard size 必须作为独立候选；不默认 H64。FP4 论文和 AMD 实�
   --candidates c39 `
   --solution solution.py `
   --candidate-name <candidate> `
+  --panel-profile qwen-official --primary-model gpt2-small `
   --device cpu --algorithm-device cuda --cache-mode read `
   --output <json> --report <report>
 ```
@@ -703,15 +710,15 @@ Hadamard size 必须作为独立候选；不默认 H64。FP4 论文和 AMD 实�
 
 ### 10.2 高风险筛查
 
-必须立即运行：
+建议立即运行：
 
 ```text
 gpt2-medium
 qwen2.5-0.5b
 ```
 
-这是 C42 暴露过拟合的两个最敏感模型。高风险筛查允许一个模型轻微负向，不采用“两个都
-必须正”的硬门。
+这是 C42 暴露过拟合的两个敏感模型。它们只用于发现结构性回退，允许轻微负向，
+不采用“两个都必须正”的硬门，也不覆盖 Qwen 主排序。
 
 ### 10.3 五模型正式开发矩阵
 
@@ -726,28 +733,28 @@ qwen2.5-0.5b
 主指标：
 
 ```text
-sum(official_flow_linear over all models)
+Qwen primary_panel_score_total
+  = 250 * mean(Linear case scores) + 200 * mean(Attention case scores)
 ```
 
 次指标：
 
 ```text
-median(model linear delta)
+guardrail model panel mean / per-model delta
 proj/o/fc family aggregate
 global Linear MSE gain
 API time by model
 ```
 
-不把 component macro、global-MSE 或旧 Linear mean 覆盖主排序。
+不把 component macro、global-MSE、native case sum 或 guardrail 回退覆盖主排序。
 
 ### 10.4 不过度防御的晋级规则
 
 除硬合法性外，采用以下软规则：
 
-- 五模型 Linear 总和为正是第一条件；
-- 模型增量中位数非负作为稳定性证据；
-- 允许一个模型轻微负向；
-- 单模型总 Linear 退化超过约 `2%` 才视为结构性风险；
+- Qwen 主面板增量是第一条件；
+- guardrail 模型增量只作为稳定性证据，不设正向或百分比硬门；
+- 允许 guardrail 轻微负向，只有重复且明显的结构性回退才提升人工复核优先级；
 - 不因一个 layer、一个 role 或一个 fold 小幅退化否决总候选；
 - 候选总增量很小但理论正确时可作为可叠加机制保留；
 - 官方提交前 API 时间以 `<420s`（7 分钟）为唯一硬门，不使用更严的一票否决；
@@ -834,14 +841,14 @@ decision and next checkpoint
 
 ### Checkpoint A：C43 CAT-64
 
-- 若 alignment 显著改善且五模型 Linear 总和为正：进入 C44；
+- 若 alignment 显著改善且 Qwen 主面板为正：进入 C44；guardrail 仅作复核信号；
 - 若 alignment 改善但 quantized loss 不变：先测试 C47 grouping，不直接增加训练；
 - 若 alignment 和 concentration 都无改善：CAT block 公式/方向实现可能错误，停止后续；
 - 若只有 GPT-2 small 正向、medium/Qwen 大负向：判定 calibration 选择过拟合，不晋级。
 
 ### Checkpoint B：C44 MR-GPTQ
 
-- 若 Weight full-H error 下降且 Linear 总和正：进入 C45；
+- 若 Weight full-H error 下降且 Qwen 主面板为正：进入 C45；
 - 若局部 Weight loss 下降但真实 Linear 反向：停止扩大 coverage，检查 CAT 坐标下的 act-order；
 - 若 API 时间接近 420s：先减少 loss coverage，不缩小 CAT 表达能力。
 
@@ -911,4 +918,5 @@ Checkpoint D / 官方提交验证 22000+
 ```
 
 每个箭头都代表：预注册、单机制实现、单元测试、合规测试、GPT-2 small 快筛、
-medium/Qwen 高风险筛查、五模型全量、时间评测、归档、决策。不得跨候选一次性合并实现。
+medium/Qwen 敏感筛查、Qwen 主面板评测、其余模型软 guardrail、时间评测、归档、
+决策。不得跨候选一次性合并实现。

@@ -1,7 +1,7 @@
 """Evaluate compliant HiF4 candidates on several real language models.
 
 This is a development evaluator, not an official-score replacement.  It has
-three deliberate properties:
+four deliberate properties:
 
 * calibration windows come from WikiText-2 train and test windows come from
   WikiText-2 validation; windows never wrap, repeat, or share a source
@@ -11,6 +11,9 @@ three deliberate properties:
 * the evaluator computes the reference outputs only after a candidate has
   returned its quantization state.  The candidate receives weights and
   activations, never an evaluator output, residual, or fitted official score.
+* the default local ranking uses a Qwen-shaped, mean-preserving panel with
+  250 Linear and 200 Attention slots.  Other model families remain soft
+  guardrails instead of being summed by layer count.
 
 Offline Linear calibration may form ``A @ W`` to optimize the offline weight
 quantizer ``Q(W)``.  A solution must not route that output or residual into
@@ -74,8 +77,32 @@ WIKITEXT_FILES = {
     "test": "test-00000-of-00001.parquet",
 }
 CACHE_SCHEMA_VERSION = 1
-SCORING_PROTOCOL_VERSION = 2
+SCORING_PROTOCOL_VERSION = 3
 OFFICIAL_RUNTIME_LIMIT_SECONDS = 420.0
+OFFICIAL_PANEL_REVISION = "2026-08-29"
+REFERENCE_PANEL_LINEAR_CASES = 250
+REFERENCE_PANEL_ATTENTION_CASES = 200
+REFERENCE_PANEL_TOTAL_CASES = (
+    REFERENCE_PANEL_LINEAR_CASES + REFERENCE_PANEL_ATTENTION_CASES
+)
+DEFAULT_PANEL_PROFILE = "qwen-official"
+PANEL_PROFILES = ("qwen-official", "native")
+DEFAULT_PRIMARY_MODEL = "qwen2.5-0.5b"
+EXTERNAL_OFFICIAL_REFERENCES = (
+    {
+        "name": "youxilee/hif4",
+        "score": 24153,
+        "time_seconds": 239.0,
+        "url": "https://github.com/youxilee/hif4",
+        "imported_as_candidate": False,
+    },
+)
+OFFICIAL_EXTRA_CASE_REFERENCE = {
+    "count": 2,
+    "architecture_hint": "Qwen 30B-like",
+    "local_inputs_available": False,
+    "use": "diagnostic shape guidance only; never a score-fitting target",
+}
 DEFAULT_CACHE_DIR = ROOT / "artifacts" / "real_model_suite" / "cache"
 STANDARD_CODEC_PATH = EVALUATOR_DIR / "reference_hif4.py"
 
@@ -122,6 +149,9 @@ class CandidateSpec:
     path: Path
     official_score: int | None
     official_time: float | None
+    # Historical scores are intentionally retained for provenance, but only
+    # anchors carrying the current panel revision participate in audit metrics.
+    official_panel_revision: str | None = None
 
 
 CANDIDATE_SPECS: dict[str, CandidateSpec] = {
@@ -166,14 +196,36 @@ CANDIDATE_SPECS: dict[str, CandidateSpec] = {
     "c39": CandidateSpec(
         "c39",
         ROOT / "solutions" / "20260828_v031_c39-fw-official14613_time159.2s" / "solution.py",
-        14613,
-        159.2,
+        21864,
+        161.3,
+        OFFICIAL_PANEL_REVISION,
     ),
     "c40": CandidateSpec(
         "c40",
         ROOT / "solutions" / "20260828_v032_c40-robust-blockldlq_official-score14432_time216.667s" / "solution.py",
         14432,
         216.667,
+    ),
+    "c41b": CandidateSpec(
+        "c41b",
+        ROOT / "solutions" / "20260829_v034_c41b-mha-k-center_scoreNA_timeNA" / "solution.py",
+        21864,
+        159.4,
+        OFFICIAL_PANEL_REVISION,
+    ),
+    "c47b": CandidateSpec(
+        "c47b",
+        ROOT / "solutions" / "20260829_v051_c47b-grouping-threshold005_scoreNA_timeNA" / "solution.py",
+        22451,
+        234.0,
+        OFFICIAL_PANEL_REVISION,
+    ),
+    "c66": CandidateSpec(
+        "c66",
+        ROOT / "solutions" / "20260829_v066_c66-activation-ratio100_scoreNA_timeNA" / "solution.py",
+        22557,
+        217.2,
+        OFFICIAL_PANEL_REVISION,
     ),
 }
 
@@ -1578,11 +1630,103 @@ def _aggregate_details(details: Sequence[dict[str, Any]]) -> dict[str, float]:
     }
 
 
+def build_panel_score(
+    official_flow_score: dict[str, Any],
+    panel_profile: str = DEFAULT_PANEL_PROFILE,
+) -> dict[str, Any]:
+    """Project native case means onto a fixed reference panel.
+
+    The local capture cannot reproduce the hidden official 250/200 examples,
+    and the available Qwen snapshot has a different number of layer/role
+    cases.  Repeating cases would make the score artificially optimistic, so
+    the shaped panel preserves each component's native mean and only applies
+    the official component counts.  ``native`` remains available for
+    backwards-compatible diagnostics.
+    """
+
+    if panel_profile not in PANEL_PROFILES:
+        raise ValueError(
+            f"unknown panel profile {panel_profile!r}; choose from {PANEL_PROFILES}"
+        )
+    linear = float(official_flow_score.get("linear", 0.0))
+    attention = float(official_flow_score.get("attention", 0.0))
+    # Very old hand-built ranking fixtures omitted case counts.  Treat a
+    # present component as one aggregate case solely for backwards-compatible
+    # diagnostics; real evaluator results always persist explicit counts.
+    linear_cases_inferred = "linear_cases" not in official_flow_score
+    attention_cases_inferred = "attention_cases" not in official_flow_score
+    linear_cases = int(
+        official_flow_score.get("linear_cases", 1 if "linear" in official_flow_score else 0)
+    )
+    attention_cases = int(
+        official_flow_score.get(
+            "attention_cases", 1 if "attention" in official_flow_score else 0
+        )
+    )
+    total_cases = linear_cases + attention_cases
+    if panel_profile == "native":
+        return {
+            "profile": "native",
+            "revision": None,
+            "linear": linear,
+            "attention": attention,
+            "total": linear + attention,
+            "linear_cases": linear_cases,
+            "attention_cases": attention_cases,
+            "total_cases": total_cases,
+            "source_linear_cases": linear_cases,
+            "source_attention_cases": attention_cases,
+            "source_case_counts_inferred": (
+                linear_cases_inferred or attention_cases_inferred
+            ),
+            "linear_mean": linear / linear_cases if linear_cases else float("nan"),
+            "attention_mean": (
+                attention / attention_cases if attention_cases else float("nan")
+            ),
+            "aggregation": "native_sum",
+        }
+
+    linear_mean = linear / linear_cases if linear_cases else float("nan")
+    attention_mean = attention / attention_cases if attention_cases else float("nan")
+    shaped_linear = REFERENCE_PANEL_LINEAR_CASES * linear_mean
+    shaped_attention = REFERENCE_PANEL_ATTENTION_CASES * attention_mean
+    return {
+        "profile": "qwen-official",
+        "revision": OFFICIAL_PANEL_REVISION,
+        "linear": shaped_linear,
+        "attention": shaped_attention,
+        "total": shaped_linear + shaped_attention,
+        "linear_cases": REFERENCE_PANEL_LINEAR_CASES,
+        "attention_cases": REFERENCE_PANEL_ATTENTION_CASES,
+        "total_cases": REFERENCE_PANEL_TOTAL_CASES,
+        "source_linear_cases": linear_cases,
+        "source_attention_cases": attention_cases,
+        "source_case_counts_inferred": (
+            linear_cases_inferred or attention_cases_inferred
+        ),
+        "linear_mean": linear_mean,
+        "attention_mean": attention_mean,
+        "aggregation": "source_component_mean_times_fixed_panel_count",
+    }
+
+
+def _result_panel_score(
+    result: dict[str, Any], panel_profile: str
+) -> dict[str, Any]:
+    """Read a persisted panel score or derive it for old result JSON."""
+
+    panel = result.get("panel_score")
+    if isinstance(panel, dict) and panel.get("profile") == panel_profile:
+        return panel
+    return build_panel_score(result["official_flow_score"], panel_profile)
+
+
 def evaluate_candidate(
     candidate: CandidateSpec,
     data: ModelData,
     mode: str,
     algorithm_device_name: str,
+    panel_profile: str = DEFAULT_PANEL_PROFILE,
 ) -> dict[str, Any]:
     if not candidate.path.is_file():
         raise FileNotFoundError(f"candidate source does not exist: {candidate.path}")
@@ -1715,6 +1859,7 @@ def evaluate_candidate(
             linear_all["official_case_count"] + attention["official_case_count"]
         ),
     }
+    panel_score = build_panel_score(official_score, panel_profile)
     api_total = stats["calibration"] + stats["dynamic"]
     return {
         "candidate": candidate.name,
@@ -1729,6 +1874,7 @@ def evaluate_candidate(
         "linear_component_macro_gain": component_macro,
         "attention": attention,
         "official_flow_score": official_score,
+        "panel_score": panel_score,
         "timing": {
             "wall_seconds": elapsed,
             "algorithm_stage_seconds": (
@@ -1809,8 +1955,15 @@ def audit_official_ranking(
     requested_candidates: Sequence[str],
     candidate_specs: dict[str, CandidateSpec] | None = None,
     expected_models: Sequence[str] | None = None,
+    panel_profile: str = DEFAULT_PANEL_PROFILE,
+    primary_model: str = DEFAULT_PRIMARY_MODEL,
+    guardrail_models: Sequence[str] | None = None,
 ) -> dict[str, Any]:
-    candidate_specs = candidate_specs or CANDIDATE_SPECS
+    if panel_profile not in PANEL_PROFILES:
+        raise ValueError(
+            f"unknown panel profile {panel_profile!r}; choose from {PANEL_PROFILES}"
+        )
+    candidate_specs = CANDIDATE_SPECS if candidate_specs is None else candidate_specs
     by_model: dict[str, dict[str, dict[str, Any]]] = {}
     for result in results:
         by_model.setdefault(result["model"], {})[result["candidate"]] = result
@@ -1818,6 +1971,7 @@ def audit_official_ranking(
         name: candidate_specs[name].official_score
         for name in requested_candidates
         if name in candidate_specs and candidate_specs[name].official_score is not None
+        and candidate_specs[name].official_panel_revision == OFFICIAL_PANEL_REVISION
     }
     model_features: dict[str, dict[str, dict[str, float]]] = {}
     for model_name, candidate_results in by_model.items():
@@ -1831,6 +1985,18 @@ def audit_official_ranking(
             ("component_macro_gain", lambda item: item["linear_component_macro_gain"]),
             ("attention_global_gain", lambda item: item["attention"]["global_gain"]),
             ("attention_macro_gain", lambda item: item["attention"]["macro_gain"]),
+            (
+                "panel_score_linear",
+                lambda item: _result_panel_score(item, panel_profile)["linear"],
+            ),
+            (
+                "panel_score_attention",
+                lambda item: _result_panel_score(item, panel_profile)["attention"],
+            ),
+            (
+                "panel_score_total",
+                lambda item: _result_panel_score(item, panel_profile)["total"],
+            ),
         ):
             model_features[model_name][feature_name] = {
                 candidate: float(getter(candidate_results[candidate]))
@@ -1838,6 +2004,29 @@ def audit_official_ranking(
                 if candidate in candidate_results
                 and "error" not in candidate_results[candidate]
             }
+
+    model_names = list(expected_models) if expected_models is not None else list(by_model)
+    feature_model_names = [name for name in model_names if name in model_features]
+    feature_model_names.extend(
+        name for name in model_features if name not in feature_model_names
+    )
+    if primary_model in model_features:
+        effective_primary_model = primary_model
+    else:
+        effective_primary_model = next(iter(feature_model_names), None)
+    primary_model_fallback = bool(
+        effective_primary_model is not None and effective_primary_model != primary_model
+    )
+    if guardrail_models is None:
+        selected_guardrails = [
+            name for name in feature_model_names if name != effective_primary_model
+        ]
+    else:
+        selected_guardrails = [
+            name
+            for name in guardrail_models
+            if name in model_features and name != effective_primary_model
+        ]
 
     aggregate_features: dict[str, dict[str, float]] = {}
     summed_features = {
@@ -1861,7 +2050,59 @@ def audit_official_ranking(
             for candidate in requested_candidates
         }
 
-    model_names = list(expected_models) if expected_models is not None else list(by_model)
+    panel_features = {
+        "panel_score_linear",
+        "panel_score_attention",
+        "panel_score_total",
+    }
+    for feature_name in panel_features:
+        if feature_name not in aggregate_features:
+            aggregate_features[feature_name] = {
+                candidate: aggregate_feature(feature_name, candidate)
+                for candidate in requested_candidates
+            }
+
+    def model_feature_value(
+        model_name: str | None, feature_name: str, candidate: str
+    ) -> float:
+        if model_name is None:
+            return float("nan")
+        return model_features.get(model_name, {}).get(feature_name, {}).get(
+            candidate, float("nan")
+        )
+
+    def mean_model_feature(
+        model_list: Sequence[str], feature_name: str, candidate: str
+    ) -> float:
+        values = [
+            model_features[model_name][feature_name][candidate]
+            for model_name in model_list
+            if candidate in model_features.get(model_name, {}).get(feature_name, {})
+            and math.isfinite(model_features[model_name][feature_name][candidate])
+        ]
+        return _mean(values)
+
+    for component in ("linear", "attention", "total"):
+        feature_name = f"panel_score_{component}"
+        aggregate_features[f"primary_panel_score_{component}"] = {
+            candidate: model_feature_value(
+                effective_primary_model, feature_name, candidate
+            )
+            for candidate in requested_candidates
+        }
+        aggregate_features[f"guardrail_panel_mean_{component}"] = {
+            candidate: mean_model_feature(
+                selected_guardrails, feature_name, candidate
+            )
+            for candidate in requested_candidates
+        }
+        aggregate_features[f"all_model_panel_mean_{component}"] = {
+            candidate: mean_model_feature(
+                feature_model_names, feature_name, candidate
+            )
+            for candidate in requested_candidates
+        }
+
     expected_model_count = len(model_names)
     candidate_status = {}
     for candidate in requested_candidates:
@@ -1890,6 +2131,37 @@ def audit_official_ranking(
         all_under_official = bool(api_times) and all(
             value < OFFICIAL_RUNTIME_LIMIT_SECONDS for value in api_times
         )
+        primary_result = (
+            by_model.get(effective_primary_model, {}).get(candidate)
+            if effective_primary_model is not None
+            else None
+        )
+        primary_evaluated = bool(
+            primary_result is not None and "error" not in primary_result
+        )
+        primary_api_time = (
+            float(primary_result["timing"]["official_api_total_seconds"])
+            if primary_evaluated
+            else float("nan")
+        )
+        primary_panel_total = (
+            _result_panel_score(primary_result, panel_profile)["total"]
+            if primary_evaluated
+            else float("nan")
+        )
+        primary_panel_finite = math.isfinite(float(primary_panel_total))
+        primary_panel_valid = bool(
+            primary_evaluated
+            and primary_api_time < OFFICIAL_RUNTIME_LIMIT_SECONDS
+            and primary_panel_finite
+        )
+        # The shaped panel is intentionally Qwen-first: missing/slow soft
+        # guardrails do not veto a candidate that passes the primary model.
+        valid_submission = (
+            primary_panel_valid
+            if panel_profile != "native"
+            else complete and all_under_official
+        )
         candidate_status[candidate] = {
             "evaluated_models": len(candidate_results),
             "expected_models": expected_model_count,
@@ -1898,11 +2170,18 @@ def audit_official_ranking(
             "official_api_total_seconds": max(api_times) if api_times else float("nan"),
             "proxy_api_seconds_sum": sum(api_times),
             "under_official_runtime_limit": complete and all_under_official,
+            "primary_model": effective_primary_model,
+            "primary_model_requested": primary_model,
+            "primary_model_fallback": primary_model_fallback,
+            "primary_evaluated": primary_evaluated,
+            "primary_api_total_seconds": primary_api_time,
+            "primary_panel_score": primary_panel_total,
+            "primary_panel_valid": primary_panel_valid,
             # Compatibility diagnostic; validity follows the revised limit.
             "under_300_seconds": complete and all(
                 value < 300.0 for value in api_times
             ),
-            "valid_submission": complete and all_under_official,
+            "valid_submission": valid_submission,
         }
 
     ranking_audit: dict[str, Any] = {}
@@ -1952,15 +2231,46 @@ def audit_official_ranking(
         key=lambda item: item["score"],
         reverse=True,
     )
+    primary_panel_values = aggregate_features.get("primary_panel_score_total", {})
+    primary_panel_order = sorted(
+        (
+            {"candidate": candidate, "score": primary_panel_values[candidate]}
+            for candidate in requested_candidates
+            if candidate in primary_panel_values
+            and math.isfinite(primary_panel_values[candidate])
+            and candidate_status.get(candidate, {}).get("valid_submission", False)
+        ),
+        key=lambda item: item["score"],
+        reverse=True,
+    )
     return {
+        "panel_profile": panel_profile,
+        "panel_revision": (
+            OFFICIAL_PANEL_REVISION if panel_profile == "qwen-official" else None
+        ),
+        "reference_panel": {
+            "linear_cases": REFERENCE_PANEL_LINEAR_CASES,
+            "attention_cases": REFERENCE_PANEL_ATTENTION_CASES,
+            "total_cases": REFERENCE_PANEL_TOTAL_CASES,
+        },
+        "primary_model": effective_primary_model,
+        "primary_model_requested": primary_model,
+        "primary_model_fallback": primary_model_fallback,
+        "guardrail_models": selected_guardrails,
         "official_anchor_scores": official,
         "model_features": model_features,
         "aggregate_features": aggregate_features,
         "candidate_status": candidate_status,
         "local_official_flow_order": local_order,
+        "local_primary_panel_order": primary_panel_order,
+        "local_panel_order": primary_panel_order,
         "ranking_audit": ranking_audit,
         "c39_vs_c40": ordering,
-        "warning": "official anchors audit ranking only; they are never candidate inputs or regression targets",
+        "warning": (
+            "official anchors audit ranking only; they are never candidate inputs "
+            "or regression targets. qwen-official is a mean-preserving local shape, "
+            "not an absolute official-score conversion"
+        ),
     }
 
 
@@ -1989,23 +2299,36 @@ def write_report(
     results: Sequence[dict[str, Any]],
     fit: dict[str, Any],
 ) -> None:
+    reference_panel = run_metadata.get("reference_panel", {})
+    panel_profile = run_metadata.get(
+        "panel_profile", fit.get("panel_profile", DEFAULT_PANEL_PROFILE)
+    )
+    primary_model = run_metadata.get(
+        "primary_model", fit.get("primary_model", DEFAULT_PRIMARY_MODEL)
+    )
+    primary_warning = run_metadata.get("primary_model_selection_warning")
     lines = [
-        "# 多模型官方流程排序评估报告",
+        "# Qwen 主模型本地评测报告",
         "",
         f"运行时间：{run_metadata['started_at']}（配置 mode={run_metadata['mode']}，seq={run_metadata['sequence_length']}，calib={run_metadata['calibration_samples']}，test={run_metadata['test_samples']}，cache_mode={run_metadata['cache_mode']}）",
         "",
-        "本报告只用于检查本地评估器是否能复现已有官方候选的相对方向。官方分数没有进入候选校准状态，也没有传给 `solution.py`。评估器内部的输出矩阵乘法只在候选返回量化结果之后，用作固定参考误差；候选离线校准可以自行用 `A@W` 优化 `Q(W)`，但不得将其用于 `Q(A)` 或写入 `activation_state`。",
+        f"主评测配置：`{panel_profile}`，主模型 `{primary_model}`，参考形状为 {reference_panel.get('linear_cases', REFERENCE_PANEL_LINEAR_CASES)} Linear + {reference_panel.get('attention_cases', REFERENCE_PANEL_ATTENTION_CASES)} Attention。",
+        "本地 shaped panel 只把冻结语料上每个组件的平均 case gain 投影到官方样例数量，不复制 case、不拟合官方绝对分数。官方分数没有进入候选校准状态，也没有传给 `solution.py`。评估器内部的输出矩阵乘法只在候选返回量化结果之后，用作固定参考误差；候选离线校准可以自行用 `A@W` 优化 `Q(W)`，但不得将其用于 `Q(A)` 或写入 `activation_state`。",
+        "官方上下文：外部 `youxilee/hif4` 用户提供结果为 24153/239s，仅作不可导入的参考；新增 2 个用例呈 Qwen 30B-like 特征，但完整输入尚未公开。",
         "",
         "## 数据与模型完整性",
         "",
         f"- 数据集：`Salesforce/wikitext` / `{WIKITEXT_CONFIG}` / revision `{WIKITEXT_REVISION}`。",
         f"- 评分协议：v{run_metadata['scoring_protocol']['version']}；标准 codec SHA256 `{run_metadata['scoring_protocol']['standard_codec_sha256']}`。",
         "- calibration 来自 train，test 来自 validation；每个窗口来自一个文档，禁止环形重复、窗口重叠和跨 split 文档复用。",
+        "- Qwen2.5-0.5B（GQA、RoPE、SwiGLU）承担主排序；其他模型只作为软 guardrail，缺失或轻微回退不会覆盖 Qwen 主分。",
         "- 模型状态：",
         "",
             "| 模型 | 状态 | 层数 | hidden | heads / kv-heads | 数据来源 | 说明 |",
             "|---|---|---:|---:|---:|---|---|",
     ]
+    if primary_warning:
+        lines.insert(4, f"- 主模型选择提示：{primary_warning}。")
     for status in model_status:
         if status.get("status") == "loaded":
             metadata = status["metadata"]
@@ -2022,17 +2345,18 @@ def write_report(
             "",
             "## 候选在各模型上的结果",
             "",
-            "主排序分严格按官方流程计算：每个测试 case 先计算 `(MSE_STD-MSE_PLAYER)/MSE_STD`，再将全部 Linear 与 Attention case 直接求和。global-MSE 和组件均值只保留为诊断，不参与排序。",
+            "每个 native case 先计算 `(MSE_STD-MSE_PLAYER)/MSE_STD`。`official_flow_total` 保留原始 case 求和；主排序使用 `panel_score.total = 250*Linear_mean + 200*Attention_mean`，因此不会因模型层数或本地窗口数不同而放大。global-MSE 和组件均值只保留为诊断。",
             "",
-            "| 模型 | 候选 | Linear sum | Linear cases | Attention sum | Attention cases | Total | API time(s) |",
+            "| 模型 | 候选 | Native total | Panel total | Panel Linear | Panel Attention | Source cases (L/A) | API time(s) |",
             "|---|---|---:|---:|---:|---:|---:|---:|",
         ]
     )
     for result in results:
         timing = result["timing"]
         score = result["official_flow_score"]
+        panel = _result_panel_score(result, panel_profile)
         lines.append(
-            f"| {result['model']} | {result['candidate']} | {score['linear']:.6f} | {score['linear_cases']} | {score['attention']:.6f} | {score['attention_cases']} | {score['total']:.6f} | {timing['official_api_total_seconds']:.3f} |"
+            f"| {result['model']} | {result['candidate']} | {score['total']:.6f} | {panel['total']:.6f} | {panel['linear']:.6f} | {panel['attention']:.6f} | {panel['source_linear_cases']}/{panel['source_attention_cases']} | {timing['official_api_total_seconds']:.3f} |"
         )
 
     official_scores = fit.get("official_anchor_scores", {})
@@ -2067,26 +2391,39 @@ def write_report(
         lines.extend(
             [
                 "",
-                "### 官方总时间与有效性预筛",
+                "### 时间与有效性预筛",
                 "",
-                "| 候选 | 已评模型 | 最慢模型 API 时间(s) | 每个模型均 <420s | 本地提交有效 |",
-                "|---|---:|---:|---|---|",
+                "| 候选 | 已评模型 | 主模型 API 时间(s) | 主模型 <420s | 软 guardrail 完整 | 本地提交有效 |",
+                "|---|---:|---:|---|---|---|",
             ]
         )
         for candidate, item in candidate_status.items():
             lines.append(
-                f"| {candidate} | {item['evaluated_models']}/{item['expected_models']} | {item['official_api_total_seconds']:.3f} | {item['under_official_runtime_limit']} | {item['valid_submission']} |"
+                f"| {candidate} | {item['evaluated_models']}/{item['expected_models']} | {item['primary_api_total_seconds']:.3f} | {item['primary_panel_valid']} | {item['complete']} | {item['valid_submission']} |"
             )
-    local_order = fit.get("local_official_flow_order", [])
+    local_order = fit.get("local_primary_panel_order", fit.get("local_panel_order", []))
     if local_order:
         lines.extend(
             [
                 "",
-                "### 本地主排序",
+                "### Qwen 主模型 shaped-panel 排序",
                 "",
                 " > ".join(
                     f"{item['candidate']} ({item['score']:.6f})"
                     for item in local_order
+                ),
+            ]
+        )
+    native_order = fit.get("local_official_flow_order", [])
+    if native_order:
+        lines.extend(
+            [
+                "",
+                "### Native 原始分（仅诊断）",
+                "",
+                " > ".join(
+                    f"{item['candidate']} ({item['score']:.6f})"
+                    for item in native_order
                 ),
             ]
         )
@@ -2102,11 +2439,12 @@ def write_report(
             "",
             "## 解释与使用边界",
             "",
-            "1. 候选晋级只看 `official_flow_total` 的配对方向；global-MSE、component-macro 和绝对分回归不得改变主排序。",
-            "2. 本地数据不是官方隐藏数据，因此主分只能用于相对排序；官方锚点只用于事后审计排序一致率。",
-            "3. `synthetic_attention_eval.py` 不由本套件调用；它只能做接口/性质测试，不能用于候选排名。",
-            "4. `cache_mode=read` 时本次结果只来自已保存的模型前向快照，不加载 tokenizer/model，也不读取网络；`cache_mode=write` 才会刷新快照。",
-            "5. 本地时间按每个模型代理的六个正式 API 调用累计；每个代理必须严格小于 420 秒，多模型代理时间不相加。",
+            "1. 默认候选晋级看 Qwen 主模型的 `primary_panel_score_total`；Linear/Attention 目标权重固定为 250/200。其他模型的 panel 均值只作软 guardrail 和回归诊断。",
+            "2. `official_flow_total` 仍完整保留，便于和旧报告逐位对比，但不再因模型层数或本地窗口数量差异直接主导排序。",
+            "3. 本地数据不是官方隐藏数据，因此 shaped panel 只能用于相对排序；官方锚点只用于事后审计排序一致率，不能把 panel 分数线性换算成 Official Score。",
+            "4. `synthetic_attention_eval.py` 不由本套件调用；它只能做接口/性质测试，不能用于候选排名。",
+            "5. `cache_mode=read` 时本次结果只来自已保存的模型前向快照，不加载 tokenizer/model，也不读取网络；`cache_mode=write` 才会刷新快照。",
+            "6. 本地时间按每个模型代理的六个正式 API 调用累计；主模型必须严格小于 420 秒，多模型代理时间不相加。",
         ]
     )
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -2116,6 +2454,17 @@ def write_report(
 def run(args: argparse.Namespace) -> dict[str, Any]:
     started_at = time.strftime("%Y-%m-%d %H:%M:%S")
     selected_models = args.models or list(MODEL_SPECS)
+    primary_model = args.primary_model
+    primary_model_selection_warning = None
+    if primary_model not in selected_models:
+        # Keep single-model diagnostics convenient while making the fallback
+        # explicit in JSON/report output.  The default full panel always
+        # contains Qwen, so this does not silently replace the normal primary.
+        primary_model_selection_warning = (
+            f"requested primary model {primary_model!r} is not in --models; "
+            f"using {selected_models[0]!r} as the local primary"
+        )
+        primary_model = selected_models[0]
     candidate_specs = dict(CANDIDATE_SPECS)
     if args.solution is not None:
         if not re.fullmatch(r"[A-Za-z0-9_.-]+", args.candidate_name):
@@ -2158,6 +2507,25 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "capture_only": args.capture_only,
         "layers": args.layers,
         "models": selected_models,
+        "panel_profile": args.panel_profile,
+        "primary_model": primary_model,
+        "primary_model_requested": args.primary_model,
+        "primary_model_selection_warning": primary_model_selection_warning,
+        "reference_panel": {
+            "revision": OFFICIAL_PANEL_REVISION,
+            "linear_cases": REFERENCE_PANEL_LINEAR_CASES,
+            "attention_cases": REFERENCE_PANEL_ATTENTION_CASES,
+            "total_cases": REFERENCE_PANEL_TOTAL_CASES,
+            "case_projection": (
+                "component_mean_preserving; no local case duplication or official "
+                "absolute-score conversion"
+            ),
+        },
+        "official_reference_context": {
+            "revised_anchors": OFFICIAL_PANEL_REVISION,
+            "external": list(EXTERNAL_OFFICIAL_REFERENCES),
+            "extra_cases": dict(OFFICIAL_EXTRA_CASE_REFERENCE),
+        },
         "candidates": selected_candidates,
         "candidate_sources": {
             name: str(candidate_specs[name].path) for name in selected_candidates
@@ -2166,7 +2534,13 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "scoring_protocol": {
             "version": SCORING_PROTOCOL_VERSION,
             "case_formula": "(MSE_STD-MSE_PLAYER)/MSE_STD",
-            "aggregation": "sum_all_linear_and_attention_cases",
+            "aggregation": (
+                "qwen-primary fixed panel: 250*Linear_mean + "
+                "200*Attention_mean"
+                if args.panel_profile == "qwen-official"
+                else "sum_all_native_linear_and_attention_cases"
+            ),
+            "native_aggregation": "sum_all_linear_and_attention_cases",
             "attention_causal": False,
             "candidate_private_helpers_used_for_scoring": False,
             "standard_codec_source": str(STANDARD_CODEC_PATH),
@@ -2183,6 +2557,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             selected_candidates,
             candidate_specs,
             selected_models,
+            args.panel_profile,
+            primary_model,
         )
         _write_json(
             partial_path,
@@ -2238,13 +2614,18 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             candidate = candidate_specs[candidate_name]
             try:
                 result = evaluate_candidate(
-                    candidate, data, args.mode, args.algorithm_device or args.device
+                    candidate,
+                    data,
+                    args.mode,
+                    args.algorithm_device or args.device,
+                    args.panel_profile,
                 )
                 results.append(result)
                 persist_partial()
                 print(
                     f"{model_name:14s} {candidate_name:4s} "
                     f"official-total={result['official_flow_score']['total']:.6f} "
+                    f"panel-total={result['panel_score']['total']:.6f} "
                     f"linear={result['official_flow_score']['linear']:.6f} "
                     f"attention={result['official_flow_score']['attention']:.6f} "
                     f"api={result['timing']['official_api_total_seconds']:.2f}s",
@@ -2268,7 +2649,12 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
 
     valid_results = [item for item in results if "error" not in item]
     fit = audit_official_ranking(
-        results, selected_candidates, candidate_specs, selected_models
+        results,
+        selected_candidates,
+        candidate_specs,
+        selected_models,
+        args.panel_profile,
+        primary_model,
     )
     run_metadata["finished_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
     run_metadata["loaded_models"] = [item["model"] for item in model_status if item["status"] == "loaded"]
@@ -2276,6 +2662,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     run_metadata["official_flow_valid"] = bool(fit.get("candidate_status")) and all(
         item["valid_submission"] for item in fit["candidate_status"].values()
     )
+    run_metadata["panel_valid"] = run_metadata["official_flow_valid"]
     output = {
         "run": run_metadata,
         "model_status": model_status,
@@ -2297,7 +2684,28 @@ def build_parser() -> argparse.ArgumentParser:
         nargs="+",
         choices=tuple(MODEL_SPECS),
         default=None,
-        help="models to evaluate (default: every manifest model that is available locally)",
+        help=(
+            "models to evaluate (default: every manifest model that is available "
+            "locally); Qwen is the primary panel model"
+        ),
+    )
+    parser.add_argument(
+        "--panel-profile",
+        choices=PANEL_PROFILES,
+        default=DEFAULT_PANEL_PROFILE,
+        help=(
+            "local aggregation profile; qwen-official preserves component means "
+            "at 250 Linear/200 Attention, native keeps raw case sums"
+        ),
+    )
+    parser.add_argument(
+        "--primary-model",
+        choices=tuple(MODEL_SPECS),
+        default=DEFAULT_PRIMARY_MODEL,
+        help=(
+            "model driving the shaped-panel ranking (default: Qwen2.5-0.5B); "
+            "when omitted from --models, the first selected model is used"
+        ),
     )
     parser.add_argument(
         "--candidates",

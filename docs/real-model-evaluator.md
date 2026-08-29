@@ -5,9 +5,12 @@
 `evaluator/real_model_suite.py` 是开发阶段的评估器，用于回答两个问题：
 
 1. 候选算法在不同模型结构和真实语言模型激活上是否仍然有效；
-2. 按官方逐 case 求和流程得到的本地排列能否复现已有官方排列。
+2. 以 Qwen 为主、按官方 250 Linear + 200 Attention 形状归一化后，本地排列
+   是否能复现已有官方排列。
 
-它不是官方分数的替代品，也不把官方分数回灌到候选算法中。
+它不是官方分数的替代品，也不把官方分数回灌到候选算法中。原始逐 case
+`official_flow_total` 仍保留，专门用于兼容回溯；默认晋级指标是
+`primary_panel_score_total`。
 
 ## 合规边界
 
@@ -34,6 +37,12 @@
 分数按全部 case 的 `case_score` 直接求和，样例数增加会同时抬高分数总量和
 端到端耗时；因此本地 `--calib 2 --test 4` 多模型 proxy 只能做方向排序，
 不能与新版官方绝对分数直接换算。当前官方时间限制为 **420s（7 分钟）**。
+
+本地默认采用 `--panel-profile qwen-official`：不复制或重复本地 case，而是
+对冻结语料的 Linear/Attention case score 分别取均值，再计算
+`250 * Linear_mean + 200 * Attention_mean`。Qwen2.5-0.5B 是主模型；GPT-2、
+OPT、Pythia 等只作软 guardrail，用于识别结构性回退，不按层数直接加入主分。
+这使模型层数、角色数和 `--test` 窗口数不会改变同一候选的权重。
 
 已确认的新版锚点：v031/C39-FW `21864 / 161.3s`、v034/C41b
 `21864 / 159.4s`、v051/C47b `22451 / 234s`、v066/C66
@@ -68,11 +77,12 @@
 .\.venv\Scripts\python.exe -m pip install -r evaluator\requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 ```
 
-完整矩阵（默认所有本地模型和 C21/C38/C39/C40 锚点）：
+完整矩阵（默认所有本地模型和当前修订面板锚点 C39/C41b/C47b/C66）：
 
 ```powershell
 .\.venv\Scripts\python.exe -u evaluator\real_model_suite.py `
   --device cuda --algorithm-device cuda `
+  --panel-profile qwen-official --primary-model qwen2.5-0.5b `
   --seq 128 --calib 2 --test 4 `
   --output artifacts/real_model_suite/latest.json `
   --report logs/evaluations/official-flow-latest.md
@@ -80,7 +90,7 @@
 
 `--algorithm-device` 默认跟随 `--device`。前向捕获先落 CPU，候选阶段再按该参数回搬；这样既不长期占用模型显存，又不会把候选算法错误地切到 CPU。每完成一个候选，评估器都会写 `*.partial.json`，中断后至少保留已完成结果。
 
-调试适配器时可以使用 `--layers 1 --calib 1 --test 1`，但这个配置只能做接口冒烟，不能用于候选排名或官方拟合。
+调试适配器时可以使用 `--layers 1 --calib 1 --test 1`，但这个配置只能做接口冒烟，不能用于候选排名或官方拟合。若只评估 GPT-2 等单模型，应显式设置 `--primary-model gpt2-small`；评测器会在 JSON 中记录主模型回退提示。
 
 ## 持久化真实模型数据
 
@@ -130,12 +140,16 @@
 .\.venv\Scripts\python.exe -u evaluator\real_model_suite.py `
   --candidates c39 `
   --solution solution.py --candidate-name active `
+  --panel-profile qwen-official --primary-model qwen2.5-0.5b `
   --cache-mode read --device cpu --algorithm-device cuda `
   --output artifacts\real_model_suite\active.json `
   --report logs\evaluations\active.md
 ```
 
-报告中的 `local_official_flow_order` 是唯一主排序。官方锚点只用于计算 Spearman 和 pairwise rank agreement，不用于回归、换算或预测官方绝对分数。旧的 OLS 校准器及冻结系数已经从活跃工程删除。
+报告中的 `local_primary_panel_order`（别名 `local_panel_order`）是默认主排序；
+`local_official_flow_order` 仅为旧协议诊断。官方锚点只用于计算 Spearman 和
+pairwise rank agreement，不用于回归、换算或预测官方绝对分数。旧的 OLS 校准器
+及冻结系数已经从活跃工程删除。
 
 ## 官方流程评分口径
 
@@ -147,9 +161,16 @@ case_score = (MSE_STD - MSE_PLAYER) / MSE_STD
 
 - `official_flow_score.linear`：所有 Linear 测试 case 的 `case_score` 直接求和。
 - `official_flow_score.attention`：所有 Attention 测试 case 的 `case_score` 直接求和；当前按任务书未注明 causal mask 的 `Attn(Q,K,V)` 使用 non-causal 路径。
-- `official_flow_score.total`：Linear sum 与 Attention sum 之和，是唯一主排序分。
-- `official_api_total_seconds`：单个模型代理的一次完整六 API 调用耗时；每个代理都必须严格 `<420s`（7 分钟）。多模型代理是独立诊断运行，不能把它们的时间相加冒充一次官方提交。
-- 任一 state/HiF4 参数非法、API 异常、结果缺失或面板不完整，`valid_submission=false`。
+- `official_flow_score.total`：Linear sum 与 Attention sum 之和，作为兼容诊断分，
+  不覆盖默认 Qwen shaped-panel 主分。
+- `panel_score.linear` / `panel_score.attention`：在 `qwen-official` 配置下，
+  分别为 native component mean 乘以 250 / 200；`panel_score.total` 是默认主分。
+- `panel_score.source_*_cases` 记录均值的真实来源 case 数；目标 250/200 是固定
+  权重，不是假造的隐藏样例。没有官方用例文件时不做逐 case 复制。
+- `official_api_total_seconds`：单个模型代理的一次完整六 API 调用耗时；主模型
+  必须严格 `<420s`（7 分钟），其他模型时间只作诊断记录。多模型代理是独立
+  诊断运行，不能把它们的时间相加冒充一次官方提交。
+- 主模型 state/HiF4 参数非法、API 异常、结果缺失、非 finite 或超时，`valid_submission=false`；软 guardrail 缺失不会否决 Qwen 主排序。
 
 赛事说明只写明判题器会加载“标准 HiF4 量化函数”，没有附上该函数源码。当前 `reference_hif4.py` 使用工程历史中独立实现的 amax/7 E6M2 与八种合法 lv2/lv3 配置最小 MSE 解；每次报告记录其 SHA256。收到官方标准函数后必须逐位替换并提升评分协议版本，旧协议结果不得与新协议绝对混算。
 

@@ -30,9 +30,11 @@
   `holdout_eval.py`、`cap_oracle.py`）已于 2026-08-28 移除；诊断结论见
   [C40 官方结果与评测器诊断](logs/candidates/C40-official-evaluator-diagnosis.md)，
   历史代码可从 git 历史恢复。
-- 当前唯一活跃评测器为 `real_model_suite.py`（固定 WikiText 窗口、逐 case
-  求和、多模型面板）：gpt2-small 协议冒烟可逐位复现，且在 C39/C40 配对上
-  五模型方向与官方一致；但仍不能模拟官方隐藏数据分布，只用于 A/B 排序。
+- 当前唯一活跃评测器为 `real_model_suite.py`：默认用 Qwen2.5-0.5B 作主模型，
+  将冻结语料上的 Linear/Attention 平均 case gain 投影到官方的 250/200 面板；
+  其他模型只作软 guardrail。`official_flow_total` 原始逐 case 求和仍保留作诊断，
+  但不再按模型层数直接累加主排序。评测仍不能模拟官方隐藏数据分布，只用于
+  A/B 排序。
 
 本地时间和本地分数仅用于候选比较，不冒充官方结果。任何官方结果都应与
 实际提交 SHA、分数和时间一起归档。
@@ -140,6 +142,7 @@ python -m venv .venv
 ```powershell
 .\.venv\Scripts\python -u evaluator\real_model_suite.py `
   --models gpt2-small --solution solution.py --candidate-name active `
+  --panel-profile qwen-official --primary-model gpt2-small `
   --device cpu --algorithm-device cuda --cache-mode auto `
   --seq 128 --calib 2 --test 4 `
   --output artifacts\real_model_suite\quick-YYYYMMDD.json `
@@ -151,6 +154,7 @@ GQA 示例（Qwen2.5-0.5B 自带 14Q/2KV 与 RoPE 适配）：
 ```powershell
 .\.venv\Scripts\python -u evaluator\real_model_suite.py `
   --models qwen2.5-0.5b --solution solution.py --candidate-name active `
+  --panel-profile qwen-official --primary-model qwen2.5-0.5b `
   --device cpu --algorithm-device cuda --cache-mode auto `
   --seq 128 --calib 2 --test 4 `
   --output artifacts\real_model_suite\quick-qwen-YYYYMMDD.json `
@@ -190,17 +194,18 @@ Attention 合成矩阵：
    .\.venv\Scripts\python -u evaluator\real_model_suite.py `
      --models gpt2-small --candidates c39 `
      --solution solution.py --candidate-name active `
+     --panel-profile qwen-official --primary-model gpt2-small `
      --device cpu --algorithm-device cuda --cache-mode read `
      --seq 128 --calib 2 --test 4 `
      --output artifacts\real_model_suite\active-YYYYMMDD.json `
      --report logs\evaluations\active-YYYYMMDD.md
    ```
 
-   主排序分严格按官方流程计算：每个测试 case 先算 `(MSE_STD-MSE_PLAYER)/MSE_STD`，再把全部 Linear 与 Attention case 直接求和（`official_flow_total`）。推荐始终配对 `--candidates c39`；本地分数只用于 A/B 排序，不填入 Official Score；同时记录完整命令、两类 case 数量、API 总时间和 source SHA256。
+   默认主排序使用 Qwen shaped panel：`panel_score.total = 250 * Linear_mean + 200 * Attention_mean`。推荐始终配对 `--candidates c39 c41b c47b c66`；本地分数只用于 A/B 排序，不填入 Official Score；同时记录完整命令、源 case 数量、目标 250/200 面板、API 总时间和 source SHA256。`official_flow_total` 仍写入 JSON，便于与旧报告回溯。
 
 3. **一次性采集多模型真实前向数据**
 
-   `real_model_suite.py` 默认覆盖 GPT-2 small/medium、OPT-125M、Pythia-160M、Qwen2.5-0.5B，并对已登记的 C21/C38/C39/C40 锚点进行比较。先采集模型数据，避免每个候选重复执行模型前向：
+   `real_model_suite.py` 默认覆盖 GPT-2 small/medium、OPT-125M、Pythia-160M、Qwen2.5-0.5B，并对已登记的当前修订面板锚点 C39/C41b/C47b/C66 进行比较。Qwen 是主模型，其余模型用于软 guardrail；先采集模型数据，避免每个候选重复执行模型前向：
 
    ```powershell
    .\.venv\Scripts\python -u evaluator\real_model_suite.py `
@@ -218,7 +223,8 @@ Attention 合成矩阵：
 
    ```powershell
    .\.venv\Scripts\python -u evaluator\real_model_suite.py `
-     --candidates c39 --solution solution.py --candidate-name active `
+     --candidates c39 c41b c47b c66 --solution solution.py --candidate-name active `
+     --panel-profile qwen-official --primary-model qwen2.5-0.5b `
      --device cpu --algorithm-device cuda --cache-mode read `
      --seq 128 --calib 2 --test 4 `
      --output artifacts\real_model_suite\active-YYYYMMDD.json `
@@ -229,13 +235,14 @@ Attention 合成矩阵：
 
 5. **检查本地排列是否复现官方排列**
 
-   评测器只用官方锚点做 Spearman 和 pairwise 排序审计，不拟合官方绝对分数。候选晋级只比较同一冻结 case 面板上的 `official_flow_total`；`global_gain`、组件均值和 Pearson 仅作诊断，不能覆盖主排序。推荐始终用 `--candidates c39` 将 active 与当前官方 Champion 配对运行。
+   评测器只用官方锚点做 Spearman 和 pairwise 排序审计，不拟合官方绝对分数。默认候选晋级比较同一冻结语料上的 Qwen `primary_panel_score_total`；其他模型的 panel 均值只用于发现结构性回退，不能覆盖主排序。`official_flow_total` 是兼容诊断字段。推荐用 `--candidates c39 c41b c47b c66` 与当前修订官方锚点配对运行。
 
    官方流程代理分为：
 
    ```text
    score(case) = (MSE_STD - MSE_PLAYER) / MSE_STD
-   official_flow_total = sum(all Linear case scores) + sum(all Attention case scores)
+   native official_flow_total = sum(all native Linear case scores) + sum(all native Attention case scores)
+   qwen panel_score.total = 250 * mean(Linear case scores) + 200 * mean(Attention case scores)
    ```
 
    标准 NVFP4/HiF4 反量化、HiF4 参数校验和 state 校验全部由评测器独立完成；候选只需实现赛事规定的六个 API。评分器中的 `A@W` 只在候选返回量化结果后用于计算参考误差，不会作为输出传回候选；候选在离线 `hif4_calibration_and_quantize_weight` 中可以自行使用 `A@W` 优化 `Q(W)`，但不能让它进入 `activation_state` 或在线 `Q(A)` 选择。
@@ -244,7 +251,7 @@ Attention 合成矩阵：
 
 6. **确认时间约束**
 
-   每个模型代理的一次完整六 API 评测，其 `official_api_total_seconds` 必须严格小于官方硬限制 `420s`；等于 420 秒也判失败。多模型套件的时间只用于检查每个代理是否超时，不把多个代理的时间相加冒充一次官方提交。缓存读取只省去模型前向时间，不能掩盖候选算法自身的超时；最终仍需以官方端到端评测确认。
+   主模型代理的一次完整六 API 评测，其 `official_api_total_seconds` 必须严格小于官方硬限制 `420s`；等于 420 秒也判失败。多模型套件的时间只用于检查各代理，不把多个代理的时间相加冒充一次官方提交；软 guardrail 缺失不会否决 Qwen 主排序。缓存读取只省去模型前向时间，不能掩盖候选算法自身的超时；最终仍需以官方端到端评测确认。
 
 ### 候选归档步骤
 

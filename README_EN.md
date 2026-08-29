@@ -28,10 +28,10 @@ Chinese version: [README.md](README.md)
   its five-model proxy total is `1044.706838`.
 - Current source SHA256:
   `1F71CA11FA9707EB9720438EC6D780CC6F520FBA80437B3215398608D5866CA1`.
-- The local evaluator is no longer considered reliable for ranking compliant
-  candidates. Both dev and frozen holdout repeat text across calibration and
-  test. See the
-  [C40 official-result evaluator diagnosis](logs/candidates/C40-official-evaluator-diagnosis.md).
+- The active local evaluator is Qwen-first: it projects frozen-corpus Linear
+  and Attention means onto a fixed 250/200 panel, while other models remain
+  soft guardrails. The raw `official_flow_total` is retained for compatibility
+  diagnostics, but model layer counts no longer determine the primary ranking.
 
 Local time and scores are for paired candidate comparison only and are never
 reported as official results. Every official result must be archived together
@@ -112,7 +112,7 @@ Segment-CVaR, and non-beneficial V-importance candidates remain disabled.
 
 ```text
 solution.py                         only active submission file
-evaluator/real_model_suite.py       multi-model real-data evaluation, cache, and official-flow primary ranking
+evaluator/real_model_suite.py       Qwen-first real-data evaluation, fixed-panel ranking, and cache
 evaluator/reference_hif4.py         independent official scoring protocol, baseline, and validation
 evaluator/nvfp4_sim.py              NVFP4 encoding simulation
 evaluator/real_data_eval.py         shared loading/timing/scoring tools and the legacy single-model entry point
@@ -149,6 +149,7 @@ Single-model quick evaluation (gpt2-small, cache-first):
 ```powershell
 .\.venv\Scripts\python -u evaluator\real_model_suite.py `
   --models gpt2-small --solution solution.py --candidate-name active `
+  --panel-profile qwen-official --primary-model gpt2-small `
   --device cpu --algorithm-device cuda --cache-mode auto `
   --seq 128 --calib 2 --test 4 `
   --output artifacts\real_model_suite\quick-YYYYMMDD.json `
@@ -160,6 +161,7 @@ GQA example (Qwen2.5-0.5B ships 14Q/2KV heads with RoPE):
 ```powershell
 .\.venv\Scripts\python -u evaluator\real_model_suite.py `
   --models qwen2.5-0.5b --solution solution.py --candidate-name active `
+  --panel-profile qwen-official --primary-model qwen2.5-0.5b `
   --device cpu --algorithm-device cuda --cache-mode auto `
   --seq 128 --calib 2 --test 4 `
   --output artifacts\real_model_suite\quick-qwen-YYYYMMDD.json `
@@ -202,25 +204,27 @@ historical sources under `solutions/`.
    .\.venv\Scripts\python -u evaluator\real_model_suite.py `
      --models gpt2-small --candidates c39 `
      --solution solution.py --candidate-name active `
+     --panel-profile qwen-official --primary-model gpt2-small `
      --device cpu --algorithm-device cuda --cache-mode read `
      --seq 128 --calib 2 --test 4 `
      --output artifacts\real_model_suite\active-YYYYMMDD.json `
      --report logs\evaluations\active-YYYYMMDD.md
    ```
 
-   The primary ranking score follows the official flow: each test case first
-   computes `(MSE_STD-MSE_PLAYER)/MSE_STD`, then all Linear and Attention
-   case scores are summed into `official_flow_total`. Always pair with
-   `--candidates c39`; local scores are only for paired A/B ranking and must
-   not be entered as Official Score. Record the full command, both case
-   counts, total API time, and the source SHA256.
+   The default primary score is `250 * Linear_mean + 200 * Attention_mean` on
+   the Qwen-shaped panel. Pair with `--candidates c39 c41b c47b c66`; local
+   scores are only for paired A/B ranking and must not be entered as Official
+   Score. Record the full command, source/target case counts, total API time,
+   and the source SHA256. `official_flow_total` remains in JSON for rollback
+   comparisons.
 
 3. **Capture real multi-model forward data once**
 
    `real_model_suite.py` covers GPT-2 small/medium, OPT-125M, Pythia-160M,
-   and Qwen2.5-0.5B by default, and compares the registered C21/C38/C39/C40
-   anchors. Capture model data first so each candidate does not repeat model
-   forward execution:
+   and Qwen2.5-0.5B by default, and compares the revised C39/C41b/C47b/C66
+   anchors. Qwen drives the primary score; other models are soft guardrails.
+   Capture model data first so each candidate does not repeat model forward
+   execution:
 
    ```powershell
    .\.venv\Scripts\python -u evaluator\real_model_suite.py `
@@ -242,7 +246,8 @@ historical sources under `solutions/`.
 
    ```powershell
    .\.venv\Scripts\python -u evaluator\real_model_suite.py `
-     --candidates c39 --solution solution.py --candidate-name active `
+     --candidates c39 c41b c47b c66 --solution solution.py --candidate-name active `
+     --panel-profile qwen-official --primary-model qwen2.5-0.5b `
      --device cpu --algorithm-device cuda --cache-mode read `
      --seq 128 --calib 2 --test 4 `
      --output artifacts\real_model_suite\active-YYYYMMDD.json `
@@ -260,16 +265,17 @@ historical sources under `solutions/`.
 
    Official anchors are used only for Spearman and pairwise ranking audits;
    the evaluator does not fit absolute official scores. Candidate promotion
-   compares `official_flow_total` on the same frozen case panel. `global_gain`,
-   component means, and Pearson are diagnostics and cannot override the
-   primary ordering. Always use `--candidates c39` to run active beside the
-   current official Champion.
+   compares Qwen's `primary_panel_score_total` on the same frozen corpus;
+   guardrail means, native sums, and Pearson are diagnostics and cannot
+   override the primary ordering. Use `--candidates c39 c41b c47b c66` beside
+   the revised official anchors.
 
    The official-flow proxy is:
 
    ```text
    score(case) = (MSE_STD - MSE_PLAYER) / MSE_STD
-   official_flow_total = sum(all Linear case scores) + sum(all Attention case scores)
+   native official_flow_total = sum(all native Linear case scores) + sum(all native Attention case scores)
+   qwen panel_score.total = 250 * mean(Linear case scores) + 200 * mean(Attention case scores)
    ```
 
    Standard NVFP4/HiF4 dequantization, HiF4 parameter validation, and state
@@ -288,11 +294,10 @@ historical sources under `solutions/`.
 
 6. **Check the runtime constraint**
 
-   Each complete six-API run on a model proxy must have
+   The primary model's complete six-API run must have
    `official_api_total_seconds` strictly below the official `420s` limit;
-   exactly 420 seconds fails. The multi-model suite uses the maximum proxy
-   time for this check and does not add independent proxy runtimes to pretend
-   they are one official submission. Cache reads remove model-forward time
+   exactly 420 seconds fails. Other model proxies are soft guardrails and are
+   not added to the submission runtime. Cache reads remove model-forward time
    only and cannot hide a slow candidate. Confirm final end-to-end time with
    the official evaluator.
 

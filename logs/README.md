@@ -36,6 +36,7 @@ v034/C41b `21864 / 159.4s`、v051/C47b `22451 / 234s`、v066/C66
 .\.venv\Scripts\python -u evaluator\real_model_suite.py `
   --models gpt2-small --candidates c39 `
   --solution solution.py --candidate-name active `
+  --panel-profile qwen-official --primary-model gpt2-small `
   --device cpu --algorithm-device cuda --cache-mode read `
   --seq 128 --calib 2 --test 4 `
   --output artifacts\real_model_suite\baseline-YYYYMMDD.json `
@@ -44,6 +45,10 @@ v034/C41b `21864 / 159.4s`、v051/C47b `22451 / 234s`、v066/C66
 
 `--output`（JSON）保留默认值 `artifacts/real_model_suite/latest.json`；
 需要长期留存时改用带日期的文件名。
+
+默认 `qwen-official` 面板的主分为 `250 * Linear_mean + 200 * Attention_mean`；
+Qwen2.5-0.5B 驱动主排序，其他模型只作软 guardrail。`official_flow_total`
+原始逐 case 求和仍记录，但不用于跨模型主排序，也不能换算成官方绝对分数。
 
 ## 现有归档
 
