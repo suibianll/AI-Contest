@@ -298,6 +298,13 @@ _ATTN_BLOCK_SMOOTH_SIZES = (4, 8, 16)
 _ATTN_BLOCK_SMOOTH_SEEDS = (0,)
 _ATTN_BLOCK_SMOOTH_MIN_GAIN = 1.0e-3
 _ATTN_BLOCK_SMOOTH_WORST_TOLERANCE = 0.01
+# Use the deployed offset/refinement lattice when ranking the block candidates
+# themselves.  The parent A1 pool keeps its inexpensive proxy quantizer; this
+# targeted final-quantizer pass removes the objective mismatch for the new
+# structural arm without multiplying the entire attention search cost.
+_ATTN_BLOCK_SMOOTH_FINAL_QUANTIZER = True
+_ATTN_BLOCK_SMOOTH_REFINE_RATIO = 0.50
+_ATTN_BLOCK_SMOOTH_REFINE_BLOCKS = 24_576
 # C41: quantization-aware K center (mode 4), solved by fixed-point iteration.
 # Flagging this off restores the parent behaviour exactly.
 _ATTN_SCALE_AWARE_CENTER = True
@@ -7480,6 +7487,7 @@ def _attention_candidate_metrics(
     center_value: Optional[torch.Tensor] = None,
     block_smooth_size: int = 0,
     block_smooth_seed: int = 0,
+    use_final_quantizer: bool = False,
 ) -> tuple[float, tuple[float, ...]]:
     """Q/K quantization proxy with GQA-aligned equivalent transforms.
 
@@ -7505,6 +7513,36 @@ def _attention_candidate_metrics(
         causal_scores: list[float] = []
         safety_scores: list[float] = []
         identity_cases = a1_context["identity"]
+        final_q_importance = None
+        final_k_importance = None
+        if use_final_quantizer:
+            q_second_kv = q_second_moment.reshape(
+                kv_num_heads, group_size, head_dim
+            ).mean(dim=1)
+            h_k = k_effective_second_moment * d_k.square()
+            h_q = q_second_kv * d_kv.square()
+            final_q_importance = _normalize_importance(
+                h_k.repeat_interleave(group_size, dim=0)
+                .reshape(-1)
+                .index_select(0, q_order),
+                q_num_heads * head_dim,
+            )
+            final_k_importance = _normalize_importance(
+                h_q.reshape(-1).index_select(0, k_order),
+                kv_num_heads * head_dim,
+            )
+            if (
+                final_q_importance is None
+                or final_k_importance is None
+            ):
+                return 1.0e30, (1.0e30,)
+            if int(block_smooth_size) != 0:
+                final_q_importance = _block_average(
+                    final_q_importance, int(block_smooth_size)
+                )
+                final_k_importance = _block_average(
+                    final_k_importance, int(block_smooth_size)
+                )
         for index, (q_full, k_full, v_hat, (ref_c, ref_n)) in enumerate(
             zip(
                 a1_context["q_full"],
@@ -7535,8 +7573,30 @@ def _attention_candidate_metrics(
                     block_signs,
                     int(block_smooth_size),
                 )
-            q_hat = _dequantize_hif4(_dense_to_hif4(q_smooth))
-            k_hat = _dequantize_hif4(_dense_to_hif4(k_smooth))
+            if use_final_quantizer:
+                q_params = _dense_to_hif4(
+                    q_smooth,
+                    importance=final_q_importance,
+                    search_offsets=_DYNAMIC_OFFSETS,
+                    error_threshold=_ATTN_REFINE_ERROR_THRESHOLD,
+                    accept_margin=_Q_REFINE_ACCEPT_MARGIN,
+                    max_refine_ratio=_ATTN_BLOCK_SMOOTH_REFINE_RATIO,
+                    max_refine_blocks=_ATTN_BLOCK_SMOOTH_REFINE_BLOCKS,
+                )
+                k_params = _dense_to_hif4(
+                    k_smooth,
+                    importance=final_k_importance,
+                    search_offsets=_DYNAMIC_OFFSETS,
+                    error_threshold=_ATTN_REFINE_ERROR_THRESHOLD,
+                    accept_margin=_K_REFINE_ACCEPT_MARGIN,
+                    max_refine_ratio=_ATTN_BLOCK_SMOOTH_REFINE_RATIO,
+                    max_refine_blocks=_ATTN_BLOCK_SMOOTH_REFINE_BLOCKS,
+                )
+            else:
+                q_params = _dense_to_hif4(q_smooth)
+                k_params = _dense_to_hif4(k_smooth)
+            q_hat = _dequantize_hif4(q_params)
+            k_hat = _dequantize_hif4(k_params)
             out_c = _attention_forward(
                 q_hat, k_hat, v_hat, q_num_heads, kv_num_heads, head_dim, True
             )
@@ -8214,6 +8274,7 @@ def hif4_calibration_attention(
                         sac_center if best_center_mode == 4 else None,
                         block,
                         seed,
+                        _ATTN_BLOCK_SMOOTH_FINAL_QUANTIZER,
                     )
                     if (
                         block_metrics[0] < best_metrics[0]
