@@ -45,6 +45,7 @@ Root `solution.py` is the only active submission. Archived source files are immu
 | v036 | 2026-08-29 | C43 analytic CAT-64 | `128.441940` | `21.120464` | 67.115s | NA | NA | Linear `-0.901369` vs C41b；Attention 逐位相同 | **archived-rejected** | [archive](20260829_v036_c43-cat64-rejected_scoreNA_timeNA/) |
 | v037 | 2026-08-29 | C43b CAT-64 β=0.25 | `130.939221` | `21.120464` | 39.740s | NA | NA | Linear `+1.595912` vs C41b；GPT-2 small positive | **local-accepted** | [archive](20260829_v037_c43b-cat64-beta025_scoreNA_timeNA/) |
 | v038 | 2026-08-29 | C43c CAT-64 full-H selector | GPT-2 `131.349623`; OPT `-158.429511`; Qwen `258.554132` | unchanged | 39–109s | NA | NA | full-H proxy unstable and model-sensitive | **archived-rejected** | [archive](20260829_v038_c43c-fullh-rejected_scoreNA_timeNA/) |
+| v039 | 2026-08-29 | C45b fixed-Q(A) A@W static Q(W) selector | GPT-2 `129.712444`; OPT `29.862380`; Qwen `269.025229` | `21.120464` / `19.581565` / `62.862350` | 45.76–122.64s | NA | NA | 三模型均低于 C43b，固定 Q(A) 产品目标过拟合 | **archived-rejected** | [archive](20260829_v039_c45b-fixed-qactivation-rejected_scoreNA_timeNA/) |
 
 `*` v002 的 Linear/Attention 数值最初来自远程仓库 `CHANGELOG.md` 的 GPT-2
 12 层、2 calib + 2 test 报告，之后已由 GPU-compatible B0 derivative 在本地
