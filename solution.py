@@ -516,7 +516,7 @@ _ACTIVATION_GRAM64_GATE_MIN_GAIN = 1.0e-4
 # metric can migrate poorly, without introducing a model-name gate.  The
 # 8192 cap admits Qwen's 4864-wide down-projection; only block-diagonal slices
 # are retained in state.
-_ACTIVATION_GRAM64_PROJ_ONLY = True
+_ACTIVATION_GRAM64_PROJ_ONLY = False
 # C75.5: wide gram64 hard blocks also get a legal hierarchy-scale beam before
 # the signed-mantissa sweep.  It is initially restricted to the >4096-width
 # path because the wide projection is where the remaining discrete gap is
