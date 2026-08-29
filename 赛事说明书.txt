@@ -1,0 +1,373 @@
+我现在有一个赛题，替我进行解析：# 2026年华为算法大赛 任务书
+
+## 高精度4Bit数值转换算法
+
+| | | |
+|---|---|---|
+| 拟制 | 2026华为算法大赛赛题组 | |
+| 日期 | 2026-07-15 | |
+
+**华为技术有限公司**
+
+---
+
+## 1 背景信息
+
+### 1.1 高精度4Bit数值转换算法背景
+
+随着ChatGPT、GPT4等大模型的发布与应用，生成式语言大模型（LLM: Large Language Model），已成为业界聚焦的技术热点。然而大模型推理面临高昂的部署成本，容易限制其应用推广。
+
+量化是当前业界实现大模型推理加速的关键技术。短序列场景下（如2K以下），LLM推理表现为访存密集型，权重搬运开销是性能热点，通过对Linear层进行权重量化或权重激活量化，可有效提升推理性能；长序列场景下LLM的KV cache内存开销与整网计算量急剧上升，此时需要对Linear层、KV cache进行量化推理加速，以缓解所面临的计算与内存问题。
+
+近年来，低精度计算成为提升训练效率和降低显存占用的关键路径。从 FP16 → FP8 → FP4 的演进趋势明显，4bit 已成为下一代大模型训练和推理的核心精度选择。各家算力产商对于4bit数值的定义存在差异，为了提升昇腾未来对于4bit推理生态的兼容性，更好的支持4bit模型的推理，需要完成其他4bit格式数据往昇腾HiF4进行转换，满足客户在使用昇腾或者昇腾、GPU混部时的4bit推理需求。
+
+### 1.2 高精度4Bit数值转换算法定义
+
+给定矩阵乘输入 **A** 和 **B**（格式 *S*），经4bit转换算法 $f_{S \to T}$ 转为格式 *T*，均反量化为 FP32 后做矩阵乘。要求转换前后 MatMul 结果的 MSE 足够小：
+
+$$\min_{f_{S \to T}} MSE(\mathbf{A}_{FP32} \times \mathbf{B}_{FP32}^T, \hat{\mathbf{A}}_T \times \hat{\mathbf{B}}_T^T)$$
+
+其中：
+
+$$X_{FP32} = Dequant_{FP32}(X_S)$$
+
+$$\hat{X}_T = Dequant_{FP32}(f_{S \to T}(X_T))$$
+
+给定Attention 计算中的 **Q**、**K**、**V**（格式 *S*），经4bit转换算法 $f_{S \to T}$ 转为格式 *T*，均反量化为 FP32 后做 Attention，要求转换前后 Attention 结果的 MSE 足够小：
+
+$$\min_{f_{S \to T}} MSE(Attn(\mathbf{Q}_{FP32}, \mathbf{K}_{FP32}, \mathbf{V}_{FP32}), Attn(\hat{\mathbf{Q}}_T, \hat{\mathbf{K}}_T, \hat{\mathbf{V}}_T))$$
+
+其中：*S* = **NVFP4**，*T* = **HiF4**
+
+### 1.3 高精度4Bit数值格式
+
+**Fig 1: HIF4 Block Format Structure**
+
+HiF4 采用三级共享层级结构，每个 Group 包含 64 个标量元素，平均存储开销为 4.5 bits/value：
+
+```
+Level-1: Shared FP8-Scale  ──── E6M2
+            │
+            ├── Level-2: Shared 8 × 1-bit Micro-Exp  ──── E1_8 (8组)
+            │       │
+            │       ├── Level-3: Shared 16 × 1-bit Micro-Exp  ──── E1_16 (16组)
+            │       │       │
+            │       │       └── S1P2 × 64 Scalar Elements
+            │       │
+            │       └── ...
+            │
+            └── ...
+
+HiF4: 0.5 + 4 = 4.5 bits/value
+```
+
+**Fig 2: Calculation method for HiF4**
+
+- If $E6M2 = \text{NaN}$, then $V_i = \text{NaN}$ for all $i \in [1, 64]$
+- Otherwise:
+
+$$V_i = E6M2 \times 2^{\{E1\_8\}_{\lceil i/8 \rceil} + \{E1\_16\}_{\lceil i/4 \rceil}} \times \{S1P2\}_i$$
+
+**Fig 3: Typical Values and Characteristics of HiF4**
+
+| 参数 | 值 |
+|---|---|
+| Storage Overhead | 4.5 bits/value |
+| Group Size | 64 |
+| Special Values | NaN and ±0 |
+| 4-bit Element | S1P2 (E1M2) |
+| Significand Precision | 3 bits |
+| Global Base Scale | E6M2 |
+| Max Positive Value | $2^{18} \times 1.3125$ |
+| Min Positive Value | $2^{-50}$ |
+| Global Dynamic Range | [-50, 18]: 69 binades |
+| Local Dynamic Range | 4.81 binades |
+
+### 1.4 高精度4Bit数值转换算法挑战
+
+- **Scale 层级断裂：** 不同4bit数据格式的量化层级不一样，其他4bit量化scale无法直接映射到 HiF4 的 E6M2+E1_8+E1_16 三级层级，需完全重构统计域与缩放逻辑
+- **值集空间错位：** 不同4bit的量化后数值的离散值集分布不同（如 4→6 间隔 vs 0.25 步长），反量化-再重量化引入二次截断误差
+- **Outlier 敏感度跃升：** block size 16→64 使单个异常值稀释整组精度，需重新设计峰值隔离与层级补偿机制
+
+### 1.5 高精度4Bit数值转换算法参考资料
+
+- HiFloat4 Format for Language Model Inference
+- Pretraining Large Language Models with NVFP4
+
+---
+
+## 2 题目定义
+
+### 2.1 赛题流程
+
+**上传代码：** 参赛选手上传算法代码，代码需包含solution.py文件，函数实现需要遵循2.4节接口定义：
+
+- **hif4_calibration_and_quantize_weight：** 接收 NVFP4 格式的权重数据及校准激活数据，完成权重量化，并返回 HiF4 权重量化参数及供在线激活量化使用的状态参数
+- **hif4_dynamic_quantize_activation：** 接收 NVFP4 格式的在线激活数据及校准阶段生成的状态参数，动态生成 HiF4 激活量化参数
+- **hif4_calibration_attention：** 接收校准阶段的 NVFP4 格式 Q、K、V 数据，生成后续 Q、K、V 在线量化所需的状态参数
+- **hif4_dynamic_quantize_q、hif4_dynamic_quantize_k、hif4_dynamic_quantize_v：** 分别接收 NVFP4 格式的在线 Q、K、V 数据及对应状态参数，动态生成各自的 HiF4 量化参数
+
+选手需将solution.py文件直接打包成solution.zip压缩包并提交。
+
+**执行代码：** 比赛平台执行参赛选手上传的算法代码，并记录以下关键指标，详细的指标定义请参考2.2节：
+
+- **量化参数合法性校验：** 判题脚本对选手输出的HiF4参数进行严格校验，包括scale_factor的E6M2格式约束、scale_lv2∈{1,2}、scale_lv3∈{1,2}、sign∈{-1,0,1}、mant∈{0, 0.25, ..., 1.75}
+- **量化函数执行时间校验：** 本赛题将使用选手给出量化函数对所有数据进行量化验证，计算总时间，超过指定时间将会判定选手提交失败
+- **大模型输出的score：** 本赛题采用业界通用的量化评测指标。使用选手给出的量化函数对数据进行量化。
+  - 问题1：$min_{f_{S \to T}}~MSE(\mathbf{A}_{FP32} \times \mathbf{B}_{FP32}^T, \hat{\mathbf{A}}_T \times \hat{\mathbf{B}}_T^T)$
+  - 问题2：$MSE(Attn(\mathbf{Q}_{FP32}, \mathbf{K}_{FP32}, \mathbf{V}_{FP32}), Attn(\hat{\mathbf{Q}}_T, \hat{\mathbf{K}}_T, \hat{\mathbf{V}}_T))$
+  - $X_{FP32}=Dequant_{FP32}(X_S)$
+  - $\hat{X}_T = Dequant_{FP32}(f_{S \to T}(X_T))$
+  - $S=NVFP4,T=HiF4$
+
+**计算得分：** 本赛题使用选手给出量化函数得出的MSE score和标准HiF4量化函数得出的MSE score进行比较，将score提升百分比的总分作为选手得分；执行时间长，复杂度高的算法，可能会被判超时，导致不计分；得分越高的选手，排名越靠前，详细的评分标准请参考2.2节（以最终上线版本为准）：
+
+- 最终得分是所有用例的MSE score提升百分比的总和
+- 在任意case中，当量化给出的参数不符合参数定义范围，本次提交无效，建议选手提交前，使用附录中的self_check.py 检查算法输出是否符合要求
+- 对于测试集中任意测试用例，当选手提交的算法的结果劣于标准HiF4量化函数的MSE，得分为负，会根据劣化程度进行扣分，差距越远，负分越多
+
+**返回结果：** 判题器将选手得分返回给平台网页前端，可视化后呈现给参赛选手。
+
+**4bit低精度量化流程示意：**
+
+业务背景：4bit低精度量化，主要为了降低在线推理阶段的内存占用，提升在线推理速度。
+
+```
+离线量化及校准                                    在线推理
+──────────────                                  ──────────
+采用少量真实业务校准数据集，                          业务数据实时推理，只保留量化后的
+离线量化得到Q(W)，以及选择性生成                     Q(W)和激活量化辅助参数activation_state，
+在线激活量化辅助参数activation_state。               A实现在线量化，并实时计算推理结果。
+
+  ┌─────────┐      ┌──────────────────────────────┐      ┌─────────────────────────────┐      ┌──────────────────┐
+  │    W    │ ───▶ │ hif4_calibration_and_         │ ───▶ │ hif4_dynamic_quantize_      │ ───▶ │ HiF4低精度推理测试 │
+  │(NVFP4)  │      │ quantize_weight               │      │ activation                  │      │  Q(A) × Q(W).T   │
+  └─────────┘      │                               │      │                             │      └──────────────────┘
+  ┌─────────┐      │  输入: W, A(校准集)             │      │  输入: A(测试集),            │
+  │ A(校准集)│ ───▶ │  输出: Q(W), activation_state │ ───▶ │        activation_state(可选) │
+  └─────────┘      └──────────────────────────────┘      │  输出: Q(A)                  │
+                                                     └─────────────────────────────┘
+
+activation_state: 可参考SmoothQuant、Qurot等算法，可以是对A的旋转矩阵、缩放系数、排序矩阵等信息。
+在线推理阶段：真实业务推理时，业务数据实时生成(A)，进行在线量化并实时得到推理结果，
+内存受限，时延要求高，因此原始权重W在该阶段不会保留。
+```
+
+### 2.2 优化目标
+
+**给定：**
+
+题目1：Linear场景：
+
+- 校准与权重量化：
+  - NVFP4格式的权重矩阵及其量化参数
+  - 与该权重对应的若干组NVFP4校准激活数据
+- 在线激活量化：
+  - NVFP4格式的在线激活矩阵及其量化参数
+
+题目2：Attention场景：
+
+- 校准：
+  - 若干组NVFP4格式的校准Q、K、V数据
+- 在线Attn量化：
+  - NVFP4格式的在线Q、K、V矩阵及其量化参数
+
+**目标：**
+
+分别针对 Linear 和 Attention 场景开发 NVFP4 到 HiF4 的量化算法。算法可利用校准数据预先确定量化相关状态或参数，并在在线阶段对激活及Q、K、V进行动态量化。
+
+- **Linear场景：** 对权重进行离线HiF4量化，并结合校准信息对在线激活进行动态HiF4量化，使量化后的 Linear 输出 $X_{HIF4} @ W_{HIF4}^T$ 与原始NVFP4数据反量化后计算得到的 $X_{NVFP4} @ W_{NVFP4}^T$ 之间的MSE尽可能低
+- **Attention场景：** 利用校准Q、K、V数据生成在线量化所需状态，并分别对在线Q、K、V进行动态HiF4量化，使量化后的 $Attention(Q_{HIF4}, K_{HIF4}^T, V_{HIF4})$ 与原始NVFP4数据反量化后计算得到的 $Attention(Q_{NVFP4}, K_{NVFP4}^T, V_{NVFP4})$ 之间的MSE尽可能低
+
+### 2.3 判题流程
+
+1. 选手上传算法代码包。代码包必须包含solution.py 文件，并按照接口定义实现以下6个函数：hif4_calibration_and_quantize_weight、hif4_dynamic_quantize_activation、hif4_calibration_attention、hif4_dynamic_quantize_q、hif4_dynamic_quantize_k、hif4_dynamic_quantize_v。选手可在代码包中包含其他辅助代码文件。
+2. 加载测试数据集和标准HiF4量化函数。测试数据分为 Linear 和 Attention 两类，每类数据均包含校准数据和测试数据。
+3. Linear校准与权重量化。对于每组 Linear 数据，调用选手的 hif4_calibration_and_quantize_weight 函数，输入NVFP4格式的权重及对应的校准激活数据，得到：
+   - HiF4格式的权重量化参数
+   - 后续在线激活量化使用的 activation_state
+4. activation_state 状态参数要求。hif4_calibration_and_quantize_weight 可根据权重及校准激活数据生成 activation_state，用于后续在线激活量化。activation_state 可保存量化算法所需的校准信息、缩放参数等，但需满足以下格式要求：
+   - 状态仅允许由 None、布尔值、整数、有限浮点数、字符串、CPU Tensor、list、tuple 和以字符串为 key 的 dict 组成。Tensor 支持bool/int8/int16/int32/int64/float16/bfloat16/float32，不得包含 NaN、Inf、复数或梯度信息；状态最大嵌套深度为8，总节点数不超过4096。
+   - 不允许以任何形式计算出A@W，并利用A@W进行拟合反推出Q(A)，违背比赛初衷。工作组会对选手提交的代码进行审核，出现该行为视为弃赛。
+5. Attention校准。对于每组 Attention 数据，调用选手的 hif4_calibration_attention 函数，输入若干组NVFP4格式的校准Q、K、V数据以及Head相关参数，得到后续在线量化使用的 q_state、k_state 和 v_state。上述三个参数要求参考activation_state。
+6. activation_state会作为传参传入选手提供的hif4_dynamic_quantize_activation，q_state、k_state 和 v_state会传入选手提供的hif4_dynamic_quantize_q/k/v，选手可自定义传参内容以及传参处理方式，如无需要传参，可将相关冗余参数设为None。
+7. Linear在线测试。对于每个测试激活数据，将校准阶段生成的 activation_state 与当前NVFP4激活数据一起传入 hif4_dynamic_quantize_activation，得到对应的HiF4激活量化参数。
+8. Attention在线测试。对于每组测试Q、K、V数据，分别调用 hif4_dynamic_quantize_q、hif4_dynamic_quantize_k 和 hif4_dynamic_quantize_v，并传入对应校准状态，得到Q、K、V的HiF4量化参数。
+9. 计算选手Linear输出。将选手生成的HiF4权重和激活参数反量化，并计算 $X_{HIF4} @ W_{HIF4}^T$。
+10. 计算选手Attention输出。将选手生成的HiF4 Q、K、V参数反量化，并计算 $Attention(Q_{HIF4}, K_{HIF4}^T, V_{HIF4})$。
+11. 计算标准HiF4基线。使用标准HiF4量化函数对相同测试数据进行量化，并分别计算标准Linear输出和标准Attention输出。
+12. 计算每个测试用例的MSE及得分。分别计算标准HiF4输出和选手HiF4输出相对于原始NVFP4参考输出的 $MSE_{STD}$ 和 $MSE_{PLAYER}$，并计算得分：
+
+$$Score = \frac{MSE_{STD} - MSE_{PLAYER}}{MSE_{STD}}$$
+
+13. 汇总所有测试用例得分。分别统计Linear和Attention各测试用例得分，并汇总得到最终综合评分。校准数据仅用于生成离线量化结果和在线量化所需状态，不直接参与最终得分计算。
+14. 结果合法性与异常处理。选手返回的Weight、Activation、Q、K、V量化参数必须符合HiF4格式要求；校准状态必须符合接口允许的数据格式。若单个测试用例出现超时、运行异常、缺失结果或返回非法HiF4参数，则该次提交失败。
+
+### 2.4 API定义
+
+注：除了本节明确定义的文件和函数之外，不允许选手在代码中进行文件读写操作，对其他数据结构和函数接口及实现不作限制。比赛使用鲲鹏920B部署判题器，只提供python接口，判题环境的第三方库列表详见编译运行环境说明。
+
+#### 2.4.1 Python API定义
+
+**文件名：** solution.py
+
+**NVFP4反量化函数：**
+
+```python
+def dequantize_nvfp4(quant_float, scale_float, blk_size=16):
+    C = quant_float.shape[-1]
+    assert C % blk_size == 0, f"Last dim {C} not divisible by NVFP4 block size {blk_size}"
+    x = quant_float.unflatten(-1, (-1, blk_size))
+    sf = scale_float.unsqueeze(-1)
+    result = x * sf
+    result = result.flatten(-2, -1)
+    return result.to(torch.bfloat16)
+```
+
+**权重量化与校准函数：**
+
+```python
+def hif4_calibration_and_quantize_weight(
+    weight_quant: torch.Tensor,
+    weight_scale: torch.Tensor,
+    calib_activation_list: list,
+) -> dict[str, Any]:
+    """
+    Args:
+        weight_quant: NVFP4 格式的权重 value carrier
+        weight_scale: NVFP4 格式的权重 block scale
+        calib_activation_list: 校准激活数据列表
+
+    Returns:
+        必须返回：
+        {
+            "weight_params": HiF4Params,
+            "activation_state": state,
+        }
+    """
+```
+
+**动态激活量化函数：**
+
+```python
+def hif4_dynamic_quantize_activation(
+    activation_quant: torch.Tensor,
+    activation_scale: torch.Tensor,
+    activation_state: Any,
+) -> dict[str, torch.Tensor]:
+    """
+    Args:
+        activation_quant: NVFP4 格式的激活 value carrier
+        activation_scale: NVFP4 格式的激活 block scale
+        activation_state: 校准阶段生成的状态参数
+
+    Returns:
+        当前 Activation 对应的 HiF4Params。
+        输出参数的逻辑 Tensor shape 必须与当前 Activation 一致。
+    """
+```
+
+**Attention校准函数：**
+
+```python
+def hif4_calibration_attention(
+    calib_qkv_list: list,
+    q_num_heads: int,
+    kv_num_heads: int,
+    head_dim: int,
+) -> dict[str, Any]:
+    """
+    Args:
+        calib_qkv_list: 校准 Q、K、V 数据列表
+        q_num_heads: Query head 数
+        kv_num_heads: Key/Value head 数
+        head_dim: 每个 head 的维度
+
+    Returns:
+        必须返回：
+        {
+            "q_state": q_state,
+            "k_state": k_state,
+            "v_state": v_state,
+        }
+    """
+```
+
+**动态Q量化函数：**
+
+```python
+def hif4_dynamic_quantize_q(
+    q_quant: torch.Tensor,
+    q_scale: torch.Tensor,
+    q_num_heads: int,
+    head_dim: int,
+    q_state: Any,
+) -> dict[str, torch.Tensor]:
+    """对当前 Query Tensor 动态生成 HiF4 参数。
+
+    Args:
+        q_quant:
+            Q 的 NVFP4 value carrier，shape 为
+            ``[seq_len, q_num_heads * head_dim]``。
+
+        q_scale:
+            Q 的 NVFP4 block scale，shape 为
+            ``[seq_len, q_num_heads * head_dim // 16]``。
+
+        q_num_heads:
+            Query head 数。
+
+        head_dim:
+            每个 Query head 的维度。
+
+        q_state:
+            ``hif4_calibration_attention`` 返回的 Q calibration state。
+
+    Returns:
+        当前 Q 对应的 HiF4Params。
+    """
+    raise NotImplementedError("Implement hif4_dynamic_quantize_q in your solution.py")
+```
+
+**动态K/V量化函数：** 接口与 `hif4_dynamic_quantize_q` 类似，分别接收对应的 K/V 数据和状态参数：
+
+```python
+def hif4_dynamic_quantize_k(
+    k_quant: torch.Tensor,
+    k_scale: torch.Tensor,
+    kv_num_heads: int,
+    head_dim: int,
+    k_state: Any,
+) -> dict[str, torch.Tensor]
+
+def hif4_dynamic_quantize_v(
+    v_quant: torch.Tensor,
+    v_scale: torch.Tensor,
+    kv_num_heads: int,
+    head_dim: int,
+    v_state: Any,
+) -> dict[str, torch.Tensor]
+```
+
+---
+
+## 3 评分规则
+
+赛题提供Linear数据和Atten数据，其中Linear共N组数据，每组数据分为1份权重+校准集+测试集；Atten共N组数据，每组分为q,k,v三组数据，每组数据包含校准集+测试集。
+
+- **评分方式：** 比赛使用测试集进行评分，校准集均不参与评分
+- **运行时间：** 单次提交总运行时间限制五分钟，不对单一用例运行做时间限制
+- **评分排名：** 分数更高者排名靠前，若得分相同，则先提交代码的队伍排名靠前。提示，决赛阶段会增加性能打分，请大家提前选用高效的算法方案
+- **提交次数：** 本次比赛限制每日最大提交次数，每次正常提交后会扣除一次，超过最大次数后当日不可继续提交，在次日零点恢复提交次数。正常提交是指代码提交到比赛服务器运行，包括程序运行超时、编译/运行出错或者输出了不合法的解，都会扣除一次提交次数。初赛阶段的每日最大提交次数为30次，决赛阶段的最大提交次数会在决赛提交开放前公布
+
+---
+
+## 4 违规行为
+
+### 4.1 禁止的方法
+
+不允许以任何形式计算出A@W，并利用A@W进行拟合反推出Q(A)，违背比赛初衷。工作组会对选手提交的代码进行审核，出现该行为视为弃赛。
+
+### 4.2 提示
+
+在线推理速度是关键的业务目标，初赛第二阶段会增加测试用例集，另外在决赛阶段会增加性能打分，请大家提前选用高效的算法方案，避免影响最后排名。
