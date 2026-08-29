@@ -28,6 +28,18 @@
 
 数据文件放在 `data/wikitext-2-raw-v1/`，不入库。中国大陆网络环境下可从 `hf-mirror.com` 下载固定 revision；如果大文件速度不稳定，模型文件可使用 ModelScope 的同名官方模型。
 
+## 官方评测集（2026-08-29 修订）
+
+官方评测面板现在包含 **250 个 Linear case 与 200 个 Attention case**。官方
+分数按全部 case 的 `case_score` 直接求和，样例数增加会同时抬高分数总量和
+端到端耗时；因此本地 `--calib 2 --test 4` 多模型 proxy 只能做方向排序，
+不能与新版官方绝对分数直接换算。当前官方时间限制为 **420s（7 分钟）**。
+
+已确认的新版锚点：v031/C39-FW `21864 / 161.3s`、v034/C41b
+`21864 / 159.4s`、v051/C47b `22451 / 234s`；外部
+[`youxilee/hif4`](https://github.com/youxilee/hif4) 报告 `24153 / 239s`，
+仅用于参考，不作为本地评测器的候选输入。
+
 ## 模型与适配器
 
 默认矩阵包含：
@@ -130,7 +142,7 @@ case_score = (MSE_STD - MSE_PLAYER) / MSE_STD
 - `official_flow_score.linear`：所有 Linear 测试 case 的 `case_score` 直接求和。
 - `official_flow_score.attention`：所有 Attention 测试 case 的 `case_score` 直接求和；当前按任务书未注明 causal mask 的 `Attn(Q,K,V)` 使用 non-causal 路径。
 - `official_flow_score.total`：Linear sum 与 Attention sum 之和，是唯一主排序分。
-- `official_api_total_seconds`：单个模型代理的一次完整六 API 调用耗时；每个代理都必须严格 `<300s`。多模型代理是独立诊断运行，不能把它们的时间相加冒充一次官方提交。
+- `official_api_total_seconds`：单个模型代理的一次完整六 API 调用耗时；每个代理都必须严格 `<420s`（7 分钟）。多模型代理是独立诊断运行，不能把它们的时间相加冒充一次官方提交。
 - 任一 state/HiF4 参数非法、API 异常、结果缺失或面板不完整，`valid_submission=false`。
 
 赛事说明只写明判题器会加载“标准 HiF4 量化函数”，没有附上该函数源码。当前 `reference_hif4.py` 使用工程历史中独立实现的 amax/7 E6M2 与八种合法 lv2/lv3 配置最小 MSE 解；每次报告记录其 SHA256。收到官方标准函数后必须逐位替换并提升评分协议版本，旧协议结果不得与新协议绝对混算。

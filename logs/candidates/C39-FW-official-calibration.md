@@ -42,15 +42,16 @@ GPT-2, 12 layers, sequence 128, calibration 2, test 2, amax6:
 
 Attention remains unchanged at approximately `0.4497` causal and `0.4942`
 non-causal. CUDA algorithm-stage at offset 0 is `27.47s`; this is well below
-the official 300-second limit, although only the official run is authoritative.
+the revised official 420-second limit, although only the official run is authoritative.
 
 Candidate source SHA256:
 
 `B8C9F2A4EB6553367DD17E73D30836AC8911DBEF33759FA8CF95E8C629317A71`
 
-## Official result
+## Official result (legacy panel)
 
-The submitted C39-FW source received `14613` points in `159.2s`.
+The submitted C39-FW source received `14613` points in `159.2s` on the legacy
+panel. The revised panel result is recorded below.
 
 | Candidate | Official score | Official time | Delta vs C21-C |
 |---|---:|---:|---:|
@@ -68,13 +69,28 @@ scored `14092`. Therefore C38's negative result must be attributed to its
 aggressive activation/narrow-layer combination or their interaction; it is not
 evidence against the C39-FW wide-layer mechanism.
 
-Decision: C39-FW is the current compliant official champion. Keep it frozen as
-the parent for the next experiment.
+## Revised official result (250 Linear + 200 Attention cases)
+
+The user-confirmed revised-panel result is **`21864 / 161.3s`**. The new official
+runtime limit is **420s (7 minutes)**.
+
+| Candidate | Revised official score | Revised official time |
+|---|---:|---:|
+| C39-FW (v031) | **21864** | **161.3s** |
+| C41b (v034) | 21864 | 159.4s |
+| C47b (v051) | 22451 | 234s |
+
+Decision: C39-FW is a revised-panel compliant anchor, superseded by v051/C47b
+(`22451 / 234s`) in the local archive. The external
+[`youxilee/hif4`](https://github.com/youxilee/hif4) reference reports `24153 / 239s`
+and is not imported into this workspace.
 
 ## Official calibration rule
 
-The official result is now available. Compare future candidates against both
-the frozen C21-C anchor (`14437/166.6s`) and C39-FW (`14613/159.2s`):
+The legacy official result is retained for historical comparison. On the revised
+panel, compare future candidates against v051/C47b (`22451/234s`) and the
+external reference (`24153/239s`); the legacy C21-C/C39 values are not directly
+comparable.
 
 - Official improvement positive, as in C39-FW: full-64 on FFN layers is a
   viable direction. Test coverage or solver changes one at a time.

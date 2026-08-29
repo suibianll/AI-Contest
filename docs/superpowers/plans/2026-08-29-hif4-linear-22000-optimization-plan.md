@@ -2,15 +2,22 @@
 
 日期：2026-08-29  
 状态：Active  
-目标：将官方分数由当前合规最佳 `14613` 推进到 `22000+`  
+目标：在新版官方面板上保持 `22000+`，从本地归档冠军 `22451 / 234s` 继续逼近外部参考 `24153 / 239s`
 主攻方向：Linear；Attention 只保留已验证的 C41b 增益，不在本计划中继续扩张  
-官方硬约束：六个 API 不变、HiF4 五字段合法、总时间严格 `<300s`
+官方硬约束：六个 API 不变、HiF4 五字段合法、总时间严格 `<420s`（7 分钟）
+
+> **官方口径更新（2026-08-29）**：评测集扩大为 250 个 Linear case 与 200 个
+> Attention case，分数和时间均会高于旧口径。用户确认 v031/C39-FW 为
+> `21864 / 161.3s`、v034/C41b 为 `21864 / 159.4s`、v051/C47b 为
+> `22451 / 234s`；[`youxilee/hif4`](https://github.com/youxilee/hif4) 的外部
+> 参考结果为 `24153 / 239s`。旧锚点只保留作历史对照。
 
 ## 0. 执行摘要
 
 当前算法已经把标准 HiF4、局部 scale 搜索、4/8/16 二阶精修和部分 FULL64 GPTQ
 推到较高完成度。继续扩大 coverage、增加 offset 或增加坐标下降 sweep，只能得到边际
-收益，无法承担 `14613 -> 22000+` 所需的结构级提升。
+收益，无法承担旧口径 `14613 -> 22000+` 所需的结构级提升；新版面板下本地
+`22451` 已越过 22000，后续重点是逼近外部参考 `24153`。
 
 本计划选择唯一高潜力主线：
 
@@ -38,7 +45,7 @@ C41b 合规父版本
    CAT、Activation scale、rotation、coverage 或任何 `activation_state`。用 `A@W` 在每块
    少量离散 Weight 候选中选择，泛化风险远低于拟合完整输出残差。
 5. **不采用过严门限。** calibration 内使用软均值/尾部混合目标，不要求每个 fold、每个
-   模型、每个层都严格正向。只有合规、合法性、非有限数值和官方 `<300s` 是硬门。
+   模型、每个层都严格正向。只有合规、合法性、非有限数值和官方 `<420s` 是硬门。
 
 ## 1. 当前基线、证据与问题定义
 
@@ -57,7 +64,11 @@ C41b 的已知结果：
 | 五模型 official-flow total | 996.745557 | 997.221971 | +0.476414 |
 | Linear | 逐位相同 | 逐位相同 | 0 |
 | Attention | 仅 MHA K-center 改善 | 改善 | +0.476414 |
-| 官方锚点 | 14613 / 159.2s | NA | 待提交 |
+| 官方锚点（旧面板） | 14613 / 159.2s | — | 历史 |
+| v031 / C39-FW（250/200 新面板） | **21864 / 161.3s** | — | 用户确认 |
+| v034 / C41b（250/200 新面板） | **21864 / 159.4s** | — | 用户确认 |
+| v051 / C47b（250/200 新面板） | **22451 / 234s** | — | 当前本地冠军 |
+| 外部 `youxilee/hif4` | **24153 / 239s** | — | 参考实现 |
 
 当前根 `solution.py` 含有上一轮未验收的产品补偿实验。该实验在 GPT-2 small 正向，却在
 GPT-2 medium、OPT、Qwen 上反向，不能作为父版本：
@@ -73,8 +84,9 @@ CAT 或 GPTQ。
 ### 1.2 为什么 Linear 是主战场
 
 五模型本地 official-flow 中，Linear 约占总分的 80% 以上；Attention 的 C41b 总增量只有
-约 `0.048%`。`14613 -> 22000` 需要结构级 Linear 增量，不可能依赖 Attention 微调或
-offset 网格扩张。
+约 `0.048%`。旧面板下 `14613 -> 22000` 需要结构级 Linear 增量；新版面板的
+v051/C47b 已达到 `22451`，后续应以逼近外部 `24153` 为目标，不依赖 Attention
+微调或 offset 网格扩张。
 
 旧本地口径只作为工程量级参考：22000 大约要求 Linear mean 从约 `0.535` 推到 `0.68`
 附近。由于 C38/C40 出现过本地正向、官方反向，该映射不得用于伪造官方分数，只用作
@@ -700,17 +712,17 @@ API time by model
 - 单模型总 Linear 退化超过约 `2%` 才视为结构性风险；
 - 不因一个 layer、一个 role 或一个 fold 小幅退化否决总候选；
 - 候选总增量很小但理论正确时可作为可叠加机制保留；
-- 官方提交前 API 时间目标 `<285s`，不使用过严的 `<225s/<250s` 一票否决；
-- 等于或超过 `300s`、非法 state、非法 HiF4、nonfinite 才是硬失败。
+- 官方提交前 API 时间以 `<420s`（7 分钟）为唯一硬门，不使用更严的一票否决；
+- 等于或超过 `420s`、非法 state、非法 HiF4、nonfinite 才是硬失败。
 
 ## 11. 运行时间与实现预算
 
-| Candidate | Calibration 新增 | Dynamic 新增 | 目标最慢 API 时间 |
+| Candidate | Calibration 新增 | Dynamic 新增 | 最慢 API 时间（仅 420s 硬门，不作更严晋级门） |
 |---|---|---|---:|
-| C43 CAT-64 | batched eigh/inverse | block `64x64` transform | <220s |
-| C44 MR-GPTQ | Weight-only full64 | 0 | <255s |
-| C45 headroom/LWC | 2--4 layer product score | 0 | <275s |
-| C46 learned CAT | 6-step calibration | 与 C43 相同 | <285s |
+| C43 CAT-64 | batched eigh/inverse | block `64x64` transform | <420s |
+| C44 MR-GPTQ | Weight-only full64 | 0 | <420s |
+| C45 headroom/LWC | 2--4 layer product score | 0 | <420s |
+| C46 learned CAT | 6-step calibration | 与 C43 相同 | <420s |
 
 优化要求：
 
@@ -793,7 +805,7 @@ decision and next checkpoint
 
 - 若 Weight full-H error 下降且 Linear 总和正：进入 C45；
 - 若局部 Weight loss 下降但真实 Linear 反向：停止扩大 coverage，检查 CAT 坐标下的 act-order；
-- 若 API 时间接近 300s：先减少 loss coverage，不缩小 CAT 表达能力。
+- 若 API 时间接近 420s：先减少 loss coverage，不缩小 CAT 表达能力。
 
 ### Checkpoint C：C45 headroom/LWC
 
@@ -805,7 +817,7 @@ decision and next checkpoint
 ### Checkpoint D：C46 learned CAT
 
 - 若 learned 只比解析 CAT 提升很小：保留解析 CAT，减少复杂度；
-- 若达到工程目标且 `<285s`：官方提交；
+- 若达到工程目标且 `<420s`：官方提交；
 - 若官方仍明显低于 22000：用官方结果只判断机制方向，不拟合逐层参数。
 
 ## 15. 分数目标分解
@@ -862,4 +874,3 @@ Checkpoint D / 官方提交验证 22000+
 
 每个箭头都代表：预注册、单机制实现、单元测试、合规测试、GPT-2 small 快筛、
 medium/Qwen 高风险筛查、五模型全量、时间评测、归档、决策。不得跨候选一次性合并实现。
-

@@ -4,6 +4,13 @@ Root `solution.py` is the only active submission. Archived source files are immu
 
 顺序实验索引见 [progressive candidate ledger](../logs/execution/2026-08-27-progressive-candidate-ledger.md)。
 
+## 官方评测集修订（2026-08-29）
+
+官方面板现为 **250 个 Linear case + 200 个 Attention case**，分数按全部
+case 求和，因此分数与端到端时间都会高于旧口径。下表已把已确认的 v031、
+v034、v051 官方列更新为新版结果；其余历史官方列保留原提交时的旧口径，
+不可与新版绝对值直接比较。新版时间限制为 **420s（7 分钟）**。
+
 | Version | Date | Topic | Local Linear | Local Attention | Local Time | Official Score | Official Time | Delta | Status | Directory |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |
 | v000 | 2026-08-25 | v9 baseline | NA | NA | NA | ~9000+ | NA | NA | accepted | [archive](20260825_v000_v9-baseline_score9000plus_timeNA/) |
@@ -37,10 +44,10 @@ Root `solution.py` is the only active submission. Archived source files are immu
 | v028 | 2026-08-27 | activation scale-code oracle | NA | NA | probe only | NA | NA | no submission source | diagnostic-only | [archive](20260827_v028_c28-scale-code-probe-rejected/) |
 | v029 | 2026-08-28 | C29 HAES probe | 0.5311 | 0.4497 | probe only | NA | NA | no active behavior change | local-rejected | [archive](20260828_v029_c29-haes-rejected_scoreNA_timeNA/) |
 | v030 | 2026-08-28 | C38 beam2 + narrow FULL64 full-coverage | 0.5695 | 0.4497 | CUDA stage ~30s | 14092 | 170.57s | official inversion vs local +3.84pp (pending A/B) | official-submitted, local-champion, not-promoted | [archive](20260828_v030_c38-beam2-fullcov-official14092_time170.6s/) |
-| v031 | 2026-08-28 | C39-FW wide-layer FULL64 calibration candidate | 0.5357 | 0.4497 | CUDA stage 27.47s | **14613** | **159.2s** | **+176 vs v025** | **official-compliant-champion** | [archive](20260828_v031_c39-fw-official14613_time159.2s/) |
-| v032 | 2026-08-28 | C40 robust Block-LDLQ 128 | 0.5393 | 0.4497 | CUDA stage 45.32s; CPU 100.05s | **14432** | **216.667s** | **-181 vs v031; local/official inversion** | official-rejected | [archive](20260828_v032_c40-robust-blockldlq_official-score14432_time216.667s/) |
+| v031 | 2026-08-28 | C39-FW wide-layer FULL64 calibration candidate | 0.5357 | 0.4497 | CUDA stage 27.47s | **21864** | **161.3s** | **新版面板锚点；与 v034 同分** | **official-compliant-anchor** | [archive](20260828_v031_c39-fw-official14613_time159.2s/) |
+| v032 | 2026-08-28 | C40 robust Block-LDLQ 128 | 0.5393 | 0.4497 | CUDA stage 45.32s; CPU 100.05s | **14432** | **216.667s** | **旧面板 −181 vs 旧 v031；与新版不直接比较** | official-rejected | [archive](20260828_v032_c40-robust-blockldlq_official-score14432_time216.667s/) |
 | v033 | 2026-08-29 | C41 scale-aware K 公共平移（Attention） | 0.5357（Linear 逐位不变） | MHA +0.72% / +0.75%；GQA −0.88% | API 最慢 74.48s | NA | NA | 总分 −0.074；MHA 正向、GQA 负向 | local-rejected | [archive](20260829_v033_c41-scale-aware-k-center_scoreNA_timeNA/) |
-| v034 | 2026-08-29 | C41b scale-aware K 中心（仅 MHA，GQA 禁用） | 0.5357（Linear 逐位不变） | MHA +0.72% / +0.75%；GQA 0% | API 最慢 70.71s | NA | NA | **总分 +0.476；五模型无一负向** | **local-accepted** | [archive](20260829_v034_c41b-mha-k-center_scoreNA_timeNA/) |
+| v034 | 2026-08-29 | C41b scale-aware K 中心（仅 MHA，GQA 禁用） | 0.5357（Linear 逐位不变） | MHA +0.72% / +0.75%；GQA 0% | API 最慢 70.71s | **21864** | **159.4s** | **新版面板与 v031 同分，快 1.9s** | **official-compliant-anchor** | [archive](20260829_v034_c41b-mha-k-center_scoreNA_timeNA/) |
 | v035 | 2026-08-29 | C42e calibration-product compensation | 仅 GPT-2 small 局部代理 `130.183032` | `21.120464` | 35.181s | NA | NA | 高维校准过拟合风险 | **archived-rejected** | [archive](20260829_v035_c42e-product-compensation-rejected_scoreNA_timeNA/) |
 | v036 | 2026-08-29 | C43 analytic CAT-64 | `128.441940` | `21.120464` | 67.115s | NA | NA | Linear `-0.901369` vs C41b；Attention 逐位相同 | **archived-rejected** | [archive](20260829_v036_c43-cat64-rejected_scoreNA_timeNA/) |
 | v037 | 2026-08-29 | C43b CAT-64 β=0.25 | `130.939221` | `21.120464` | 39.740s | NA | NA | Linear `+1.595912` vs C41b；GPT-2 small positive | **local-accepted** | [archive](20260829_v037_c43b-cat64-beta025_scoreNA_timeNA/) |
@@ -57,7 +64,7 @@ Root `solution.py` is the only active submission. Archived source files are immu
 | v048 | 2026-08-29 | C45i 按输出行数限制静态 A@W 产品选择 | GPT-2 small `133.226930`; medium `229.019937`; OPT `43.279017`; Pythia `138.246673`; Qwen `286.266123` | `21.120464` / `43.767156` / `19.581565` / `40.614368` / `62.862350` | 44.21–124.82s | NA | NA | 五模型合计 `1017.984583`，较 C45f `+0.092084`；其余四模型持平 | **local-accepted** | [archive](20260829_v048_c45i-product-outputrowcap_scoreNA_timeNA/) |
 | v049 | 2026-08-29 | C49 CAT block-Hessian operand metric | GPT-2 small `133.226930`; medium `229.019937`; Qwen `286.266123` | `21.120464` / `43.767156` / `62.862350` | 50.35–128.59s | NA | NA | 三模型逐项持平 v048，仅增加校准开销 | **archived-rejected** | [archive](20260829_v049_c49-cat-block-hessian-rejected_scoreNA_timeNA/) |
 | v050 | 2026-08-29 | C47 CAT-aware 4→64 channel grouping | GPT-2 small `133.226930`; medium `229.041484`; OPT `42.981262`; Pythia `138.382957`; Qwen `286.474705` | `21.120464` / `43.767156` / `19.581565` / `40.614368` / `62.862350` | 53.87–156.89s | NA | NA | 五模型合计 `1018.053241`，较 v048 `+0.068658`；OPT −0.297755 | **local-accepted** | [archive](20260829_v050_c47-cat-grouping_scoreNA_timeNA/) |
-| v051 | 2026-08-29 | C47b grouping 0.5% soft gate | GPT-2 small `133.226930`; medium `229.041484`; OPT `43.279017`; Pythia `138.329016`; Qwen `286.481992` | `21.120464` / `43.767156` / `19.581565` / `40.614368` / `62.862350` | 55.67–149.00s | NA | NA | 五模型合计 `1018.304342`，较 v048 `+0.319759`；OPT 回到基线 | **local-accepted** | [archive](20260829_v051_c47b-grouping-threshold005_scoreNA_timeNA/) |
+| v051 | 2026-08-29 | C47b grouping 0.5% soft gate | GPT-2 small `133.226930`; medium `229.041484`; OPT `43.279017`; Pythia `138.329016`; Qwen `286.481992` | `21.120464` / `43.767156` / `19.581565` / `40.614368` / `62.862350` | 55.67–149.00s | **22451** | **234s** | **新版面板较 v031/v034 +587 分；仍低于 420s** | **official-compliant-champion** | [archive](20260829_v051_c47b-grouping-threshold005_scoreNA_timeNA/) |
 | v052 | 2026-08-29 | C47c grouping 1% soft gate | GPT-2 small `133.226930`; medium `229.019937`; OPT `43.279017`; Pythia `138.246673`; Qwen `286.481992` | `21.120464` / `43.767156` / `19.581565` / `40.614368` / `62.862350` | 52.64–148.29s | NA | NA | 五模型合计 `1018.200452`，较 v048 `+0.215869`，低于 v051 | **archived-rejected** | [archive](20260829_v052_c47c-grouping-threshold01-rejected_scoreNA_timeNA/) |
 | v053 | 2026-08-29 | C48 CAT + 16/32-channel micro-Hadamard | GPT-2 small `133.226930`; Qwen `286.481992`; OPT `43.279017` | `21.120464` / `62.862350` / `19.581565` | 53.83–150.69s | NA | NA | 三模型逐项持平 v051，未接受任何组合 | **archived-rejected** | [archive](20260829_v053_c48-micro-hadamard-rejected_scoreNA_timeNA/) |
 | v054 | 2026-08-29 | C54 Weight headroom 覆盖 50% | GPT-2 small `133.226930`; medium `229.041484`; OPT `48.008010`; Pythia `138.329016`; Qwen `286.481992` | `21.120464` / `43.767156` / `19.581565` / `40.614368` / `62.862350` | 53.39–149.42s | NA | NA | 五模型合计 `1023.033335`，较 v051 `+4.728993`；OPT +4.728993 | **local-accepted** | [archive](20260829_v054_c54-headroom50_scoreNA_timeNA/) |
@@ -78,6 +85,15 @@ Root `solution.py` is the only active submission. Archived source files are immu
 | v069 | 2026-08-29 | C69 激活二次项 Gram-8 覆盖上限 `12%` | GPT-2 small `134.329831`; medium `231.098280`; OPT `65.472699`; Pythia `138.291865`; Qwen `287.032704` | `21.306236` / `43.760024` / `19.647602` / `40.647879` / `63.119717` | 54.95–156.68s | NA | NA | 五模型合计 `1044.706838`，较 C66 `+0.003794`；全模型非负 | **local-accepted** | [archive](20260829_v069_c69-activation-gram8-ratio12_scoreNA_timeNA/) |
 | v047 | 2026-08-29 | C45h 全宽多折 A@W 产品选择，预算 8192 | Qwen `285.702496` | `62.862350` | 131.03s | NA | NA | Qwen Total `348.564846`，较 C45f `-0.471543`；4864-row FFN 回退 | **archived-rejected** | [archive](20260829_v047_c45h-product-allfolds-qwen-rejected_scoreNA_timeNA/) |
 
+## 外部参考（不纳入本地版本号）
+
+| 代码 | 新版官方分数 | 新版官方时间 | 说明 |
+| --- | ---: | ---: | --- |
+| [`youxilee/hif4`](https://github.com/youxilee/hif4) | **24153** | **239s** | 用户提供的结果；代码未导入、未在本地复现 |
+
+该外部结果比本地 v051/C47b 高 `1702` 分、仅多 `5s`；它是后续 Linear
+结构优化的参考上限，不改变本地候选的可复现状态。
+
 `*` v002 的 Linear/Attention 数值最初来自远程仓库 `CHANGELOG.md` 的 GPT-2
 12 层、2 calib + 2 test 报告，之后已由 GPU-compatible B0 derivative 在本地
 复现。该 derivative 与 v002 归档行为等价但 SHA256 不同，因此表中 Local Time
@@ -97,10 +113,17 @@ v013 归档字节一致。
 优化 `Q(W)` 本身是允许的。v025 / C21-C 是最新合规官方锚点：
 `14437 / 166.6s`。
 
-当前根 `solution.py` 已恢复为 C41b，作为 C43 实现父版本；C41b 归档源码的
-SHA256 为 `C1E68A5BA9ED798A582618758E45261CCD7C1426CE8F0B8B02C235664ED859C6`。
-C39-FW（官方 `14613 / 159.2s`）仍是合规官方冠军，C41b 只有本地排序证据，
-不以根文件位置暗示官方 Champion 身份。
+2026-08-29 官方评测集扩大为 250 个 Linear case 与 200 个 Attention case，
+并将时间限制提升至 7 分钟。用户确认新版官方结果：v031/C39-FW 为
+`21864 / 161.3s`，v034/C41b 为 `21864 / 159.4s`，v051/C47b 为
+`22451 / 234s`；这些数值覆盖对应条目的旧版 `Official Score/Time`，旧值
+仍可在各自提交历史中追溯。
+
+当前根 `solution.py` 为 C69 本地候选；C69 归档源码的 SHA256 为
+`1F71CA11FA9707EB9720438EC6D780CC6F520FBA80437B3215398608D5866CA1`。
+新版面板下 v051/C47b（官方 `22451 / 234s`）是本地归档冠军；v031/C39-FW
+与 v034/C41b 均为 `21864`。外部 [`youxilee/hif4`](https://github.com/youxilee/hif4)
+的 `24153 / 239s` 仅作参考，不以根文件位置暗示外部代码已导入。
 
 ## Local-first workflow
 
@@ -117,7 +140,7 @@ C39-FW（官方 `14613 / 159.2s`）仍是合规官方冠军，C41b 只有本地�
 6. Use `scoreNA_timeNA` while official evaluation is unavailable; copy the exact evaluated source and verify SHA256 equality.
 7. Do not require a fixed minimum gain for exploration; map the accuracy-runtime Pareto and keep stable improvements.
 8. Treat oracle/proxy results as diagnostics, not as substitutes for deployed-path evaluation.
-9. Before submission, enforce compliance, legal state/API behavior, and the official `<300s` runtime limit.
+9. Before submission, enforce compliance, legal state/API behavior, and the official `<420s` runtime limit (7 minutes).
 10. If official results later become available, append the submitted SHA, score, runtime and date without overwriting local evidence.
 
 Use `NA`, `score9000plus`, or `time300plus` when a historical value is unavailable, approximate, or timed out. Never replace an unknown official value with a local estimate.

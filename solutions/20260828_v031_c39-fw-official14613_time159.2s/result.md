@@ -1,10 +1,15 @@
 # v031 / C39-FW official result
 
+> 2026-08-29 更新：官方评测集改为 250 个 Linear case + 200 个 Attention
+> case。下列新版结果覆盖旧评测集的 `14613 / 159.2s`；归档目录名保留，
+> 以避免破坏既有历史链接。
+
 - Date: 2026-08-28
 - Parent: v025 / C21-C (`14437 / 166.6s`)
-- Official score: **14613**
-- Official runtime: **159.2s**
-- Official delta: **+176 points / -7.4s**
+- Legacy official score/runtime (old panel): `14613 / 159.2s`
+- Revised official score/runtime (250 + 200 cases): **`21864 / 161.3s`**
+- Revised panel time limit: **`420s` (7 minutes)**
+- Revised official delta versus v025/C21-C: not available from the supplied result
 - Source SHA256: `B8C9F2A4EB6553367DD17E73D30836AC8911DBEF33759FA8CF95E8C629317A71`
 - Compliance: activation-only statistics; no `A@W` computation or output-residual fitting
 
@@ -29,11 +34,13 @@ Attention remained `0.4497`; CUDA algorithm-stage runtime was `27.47s`.
 
 ## Decision
 
-C39-FW is the current compliant official champion and the immutable parent for
-the next algorithm experiment. C38 is not a valid parent: its aggressive
+C39-FW was the compliant official champion under the legacy panel and remains
+an immutable historical anchor. C38 is not a valid parent: its aggressive
 activation and narrow-layer FULL64 combination scored only `14092 / 170.57s`.
 
-The next candidate must improve the solver itself. The selected direction is a
-robust Block-LDLQ conditional re-solve across adjacent 64-dimensional blocks,
-guided only by activation Hessians and accepted against independent activation
-folds. Coverage or gate changes alone do not qualify as a new candidate.
+Under the revised panel, C39-FW is a compliant official anchor rather than the
+current local champion (v051/C47b is `22451 / 234s`). The next candidate must
+improve the solver itself. The selected direction is a robust Block-LDLQ
+conditional re-solve across adjacent 64-dimensional blocks, guided only by
+activation Hessians and accepted against independent activation folds. Coverage
+or gate changes alone do not qualify as a new candidate.

@@ -8,18 +8,23 @@ Chinese version: [README.md](README.md)
 
 ## Current status
 
-- Latest compliant official champion: v031 / C39-FW, `14613 / 159.2s`.
-  v025 / C21-C (`14437 / 166.6s`) remains a secondary anchor.
+- The official panel has been revised to **250 Linear cases + 200 Attention
+  cases**. Because scores are summed per case, both scores and runtimes are
+  higher than under the legacy panel and must not be compared directly.
+- On the revised panel, the best official result among archived submissions is
+  v051 / C47b at `22451 / 234s`; v031 / C39-FW and v034 / C41b both scored
+  `21864`, at `161.3s` and `159.4s`, respectively.
+- External reference: the public [`youxilee/hif4`](https://github.com/youxilee/hif4)
+  repository reports `24153 / 239s` under the same user-confirmed protocol.
+  Its code is not imported or locally reproduced here.
 - Historical v024 scored `16043 / 173.8s`, but its Linear output-supervision
   path used output information for activation-side selection. That
   `A@W -> Q(A)` use remains non-compliant, so it is not a compliant parent for
   new work.
-- The current root `solution.py` is the frozen C40 robust Block-LDLQ candidate:
-  local Linear `0.5393`, causal Attention `0.4497`, and official
-  `14432 / 216.667s`. It lost 181 points and added 57.467 seconds versus C39,
-  so it is rejected and must not be used as the next parent.
+- The current root `solution.py` is C69's activation quadratic Gram-8 candidate;
+  its five-model proxy total is `1044.706838`.
 - Current source SHA256:
-  `D24BC94F513907CBE97B43865973D1498133D8B9264FAF12661836FF65AAB656`.
+  `1F71CA11FA9707EB9720438EC6D780CC6F520FBA80437B3215398608D5866CA1`.
 - The local evaluator is no longer considered reliable for ranking compliant
   candidates. Both dev and frozen holdout repeat text across calibration and
   test. See the
@@ -28,6 +33,18 @@ Chinese version: [README.md](README.md)
 Local time and scores are for paired candidate comparison only and are never
 reported as official results. Every official result must be archived together
 with the exact submitted SHA, score, and runtime.
+
+## Revised official anchors (2026-08-29)
+
+| Submission | Score | Runtime | Status |
+| --- | ---: | ---: | --- |
+| v031 / C39-FW | 21864 | 161.3s | compliant archive |
+| v034 / C41b | 21864 | 159.4s | compliant archive |
+| v051 / C47b | **22451** | **234s** | best local official result |
+| `youxilee/hif4` | **24153** | **239s** | external reference |
+
+The revised official runtime limit is **7 minutes (420 seconds)**. Legacy values
+such as `14613 / 159.2s` remain historical records from the old panel.
 
 ## Hard competition constraints
 
@@ -39,12 +56,12 @@ with the exact submitted SHA, score, and runtime.
    that happens to form `A@W`.
 2. Produce legal HiF4 fields and keep the API, state, shape, dtype, and device
    behavior valid.
-3. Keep the final official evaluation strictly below `300s`.
+3. Keep the final official evaluation strictly below `420s` (7 minutes).
 4. Do not tune from holdout or official-score feedback.
 
 There are no fixed gain, coverage, beam, per-component non-regression, or
 intermediate runtime gates beyond these rules. Diagnostic development runs may
-exceed 300 seconds. Once an accuracy signal is found, optimize the algorithm
+exceed 420 seconds. Once an accuracy signal is found, optimize the algorithm
 and implementation to fit the final runtime limit.
 
 ## Current algorithm
@@ -61,11 +78,11 @@ and implementation to fit the final runtime limit.
    - run GPTQ initialization, one 64-dimensional coordinate sweep, and
      hierarchy toggles;
    - omit the redundant second coordinate sweep.
-5. The current root also enables C40 adjacent-128 Block-LDLQ conditional
-   re-solving. Its official result failed, so it is retained only for archived
-   reproduction and does not represent the champion algorithm.
-6. The dynamic Activation path uses sample-local HiF4 encoding and the current
-   validated 4/8-group refinements.
+5. C40 adjacent-128 Block-LDLQ conditional re-solving is retained only in the
+   historical archive; the current root does not enable this rejected path.
+6. Current C69 sets the dynamic activation quadratic Gram-8 coverage cap to
+   `12%`, while retaining sample-local HiF4 encoding and the validated 4/8-group
+   refinements.
 
 ### Attention
 
@@ -268,8 +285,8 @@ historical sources under `solutions/`.
 6. **Check the runtime constraint**
 
    Each complete six-API run on a model proxy must have
-   `official_api_total_seconds` strictly below the official `300s` limit;
-   exactly 300 seconds fails. The multi-model suite uses the maximum proxy
+   `official_api_total_seconds` strictly below the official `420s` limit;
+   exactly 420 seconds fails. The multi-model suite uses the maximum proxy
    time for this check and does not add independent proxy runtimes to pretend
    they are one official submission. Cache reads remove model-forward time
    only and cannot hide a slow candidate. Confirm final end-to-end time with

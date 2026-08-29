@@ -8,9 +8,11 @@
 - Test config: cache_mode=read，seq=128，calib=2，test=4，全层，device=cpu / algorithm-device=cuda，协议 v2；报告 `logs/evaluations/2026-08-29-c41b-full.md`
 - Source SHA256: `c1e68a5ba9ed798a582618758e45261ccd7c1426ce8f0b8b02c235664ed859c6`
 - Cache: `artifacts/real_model_suite/cache/*__seq128__calib2__test4__layersall__schema1.pt`，schema 1；数据集 `wikitext-2-raw-v1` revision `b08601e04326c79dfdd32d625aee71d232d685c3`
-- Official score: NA
-- Official runtime: NA
-- Status: `local-accepted`（晋级；五模型无一负向）
+- Revised official score: **21864**（250 Linear + 200 Attention cases）
+- Revised official runtime: **159.4s**
+- Revised panel time limit: **420s**（7 分钟）
+- Legacy local status: `local-accepted`（晋级；五模型无一负向）
+- Revised official status: `official-compliant-anchor`（与 v031/C39-FW 同分，快 1.9s）
 
 ## 结果（official_flow_total，逐 case 求和）
 
@@ -36,12 +38,19 @@
 - 求解 `sac_center` 的前置条件加入 `q_num_heads == kv_num_heads`；
 - 候选循环对 `center_mode == 4` 增加运行时 GQA 跳过。
 
+## 修订版官方结果
+
+官方在新版 250/200 样例集上确认 C41b 为 `21864 / 159.4s`。该结果覆盖
+旧文档中的 `Official score: NA`；本地五模型 proxy 仍只用于机制排序。
+
 ## 结论与下一步
 
-C41b 是当前新的本地最优，取代 C39-FW 作为后续候选的父版本（官方分数待验证）。
+C41b 是旧本地 proxy 下的改进，但新版官方分数与 C39-FW 持平；当前本地
+归档官方冠军为 v051/C47b（`22451 / 234s`）。
 
 增量规模评估：+0.476 / 996.7 ≈ **+0.048%**。这属于"小而稳定的正增量"，远不足以承担 14613 → 20000 的主增量（需 Linear mean 约 0.5357 → 0.68）。后续主攻方向：
 
 1. **C42 Q/K 可逆平衡**（每 head 4×4）：同为精确 `QK^T` 不变量，零数学风险，Attention 仍有空间（opt/pythia 的门控未选中 mode 4，说明其 K 分布与 midrange/scale-aware 中心都不匹配）。
 2. **Linear alignment（CAT，arXiv 2603.04359）**：Linear 占总分约 81%，是唯一可能承担主增量的方向；现有 rotation/Hadamard 只改善 concentration，alignment 维度工程尚未覆盖。
-3. 官方提交验证：本地正向需在 300s 内、合规通过后再提交，以校准本地→官方兑换率。
+3. 官方提交验证：候选需在新版 `420s`（7 分钟）内并通过合规检查，再提交以
+   校准本地→官方兑换率。
