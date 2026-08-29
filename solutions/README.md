@@ -67,6 +67,7 @@ Root `solution.py` is the only active submission. Archived source files are immu
 | v058 | 2026-08-29 | C58 Headroom E6M2 offsets `{-6,…,6}` | OPT `50.307481`; Qwen `286.481992` | `19.581565` / `62.862350` | 54.18–154.15s | NA | NA | 两模型与 v056 持平（OPT −5.2e-5），未形成有效候选 | **archived-rejected** | [archive](20260829_v058_c58-headroom-offsets6-rejected_scoreNA_timeNA/) |
 | v059 | 2026-08-29 | C59 逐 64-block A@W headroom 混合 | OPT `35.639634` | `19.581565` | 54.42s | NA | NA | OPT Total `55.221199`，较 v056 `−14.667899`，严重过拟合 | **archived-rejected** | [archive](20260829_v059_c59-headroom-blockwise-rejected_scoreNA_timeNA/) |
 | v060 | 2026-08-29 | C60 A@W 产品条件步长 `{0.05,…,0.75}` | OPT `48.878251` | `19.581565` | 57.82s | NA | NA | OPT Total `68.459816`，较 v056 `−1.429282`，候选自由度过高 | **archived-rejected** | [archive](20260829_v060_c60-product-alpha-grid-rejected_scoreNA_timeNA/) |
+| v061 | 2026-08-29 | C61 CAT `WᵀW` 统计 1024 行 | GPT-2 small `133.668200`; OPT `50.271056`; Qwen `266.266543` | `21.120464` / `19.581565` / `62.862350` | 54.45–151.55s | NA | NA | GPT-2 small `+0.441270` 但 Qwen Total `329.128893`，较 v056 `−20.215449` | **archived-rejected** | [archive](20260829_v061_c61-cat-weightgram1024-rejected_scoreNA_timeNA/) |
 | v047 | 2026-08-29 | C45h 全宽多折 A@W 产品选择，预算 8192 | Qwen `285.702496` | `62.862350` | 131.03s | NA | NA | Qwen Total `348.564846`，较 C45f `-0.471543`；4864-row FFN 回退 | **archived-rejected** | [archive](20260829_v047_c45h-product-allfolds-qwen-rejected_scoreNA_timeNA/) |
 
 `*` v002 的 Linear/Attention 数值最初来自远程仓库 `CHANGELOG.md` 的 GPT-2
