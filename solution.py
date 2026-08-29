@@ -288,6 +288,16 @@ _QK_SMOOTH_ALPHAS = (0.25, 0.50)
 _WEIGHT_SMOOTH_RMS = True
 _QK_SMOOTH_RMS = True
 _ATTN_CENTER_MODES = (0, 2)
+# C86: attention-local block Hadamard candidates.  Q and K share the same
+# block size/seed so the continuous QK dot product is invariant; the real
+# output scorer decides whether the two independent HiF4 lattices benefit.
+# Start with one deterministic seed to keep the calibration budget bounded;
+# the state stores only the integer pair when a candidate wins.
+_ATTN_BLOCK_SMOOTH_ENABLED = True
+_ATTN_BLOCK_SMOOTH_SIZES = (4, 8, 16)
+_ATTN_BLOCK_SMOOTH_SEEDS = (0,)
+_ATTN_BLOCK_SMOOTH_MIN_GAIN = 1.0e-3
+_ATTN_BLOCK_SMOOTH_WORST_TOLERANCE = 0.01
 # C41: quantization-aware K center (mode 4), solved by fixed-point iteration.
 # Flagging this off restores the parent behaviour exactly.
 _ATTN_SCALE_AWARE_CENTER = True
@@ -4010,6 +4020,19 @@ def _block_hadamard_transform(
     return torch.matmul(grouped, h).reshape_as(dense)
 
 
+def _block_average(moment: torch.Tensor, size: int) -> torch.Tensor:
+    """Broadcast each block's mean importance after an orthogonal mixing."""
+
+    if int(size) <= 0:
+        return moment
+    width = int(moment.numel())
+    if width % int(size) != 0:
+        raise ValueError("Importance width is not divisible by block size")
+    return moment.reshape(-1, int(size)).mean(dim=-1, keepdim=True).expand(
+        -1, int(size)
+    ).reshape(-1)
+
+
 def _spd_matrix_power(
     matrix: torch.Tensor,
     power: float,
@@ -7440,6 +7463,8 @@ def _attention_candidate_metrics(
     center_mode: int,
     a1_context: Optional[dict] = None,
     center_value: Optional[torch.Tensor] = None,
+    block_smooth_size: int = 0,
+    block_smooth_seed: int = 0,
 ) -> tuple[float, tuple[float, ...]]:
     """Q/K quantization proxy with GQA-aligned equivalent transforms.
 
@@ -7475,6 +7500,13 @@ def _attention_candidate_metrics(
             k_smooth = (k_centered * d_k.reshape(1, -1)).index_select(
                 -1, k_order
             )
+            if int(block_smooth_size) != 0:
+                q_smooth = _block_hadamard_transform(
+                    q_smooth, int(block_smooth_size), int(block_smooth_seed)
+                )
+                k_smooth = _block_hadamard_transform(
+                    k_smooth, int(block_smooth_size), int(block_smooth_seed)
+                )
             q_hat = _dequantize_hif4(_dense_to_hif4(q_smooth))
             k_hat = _dequantize_hif4(_dense_to_hif4(k_smooth))
             out_c = _attention_forward(
@@ -7518,6 +7550,9 @@ def _attention_candidate_metrics(
     h_q_for_k = _normalize_importance(h_q_for_k, kv_num_heads * head_dim)
     if h_k_for_q is None or h_q_for_k is None:
         raise RuntimeError("Attention importance construction failed")
+    if int(block_smooth_size) != 0:
+        h_k_for_q = _block_average(h_k_for_q, int(block_smooth_size))
+        h_q_for_k = _block_average(h_q_for_k, int(block_smooth_size))
 
     case_scores: list[float] = []
     for q_sample, k_sample in zip(q_samples, k_samples):
@@ -7530,6 +7565,13 @@ def _attention_candidate_metrics(
         k_smooth = (k_centered * d_k.reshape(1, -1)).index_select(
             -1, k_order
         )
+        if int(block_smooth_size) != 0:
+            q_smooth = _block_hadamard_transform(
+                q_smooth, int(block_smooth_size), int(block_smooth_seed)
+            )
+            k_smooth = _block_hadamard_transform(
+                k_smooth, int(block_smooth_size), int(block_smooth_seed)
+            )
         q_hat = _dequantize_hif4(_dense_to_hif4(q_smooth))
         k_hat = _dequantize_hif4(_dense_to_hif4(k_smooth))
 
@@ -7824,6 +7866,8 @@ def hif4_calibration_attention(
         best_center_mode = 0
         best_q_perm = q_identity_perm
         best_k_perm = k_identity_perm
+        best_block_smooth_size = 0
+        best_block_smooth_seed = 0
 
         # Midrange K-centering is an exact softmax invariance.  First select
         # the centering/smoothing pair with identity ordering, then test one
@@ -8106,28 +8150,93 @@ def hif4_calibration_attention(
                     best_q_perm = q_candidate
                     best_k_perm = k_candidate
 
-        return best_d, best_center_mode, best_q_perm, best_k_perm
+        # C86: after d/center/permutation are selected, search a shared
+        # head-local Hadamard block transform.  The transform is exactly
+        # QK-preserving before quantization and is scored with the same proxy
+        # or A1 output metric as the parent candidate.  Keeping this stage
+        # last avoids evaluating block candidates against a stale ordering.
+        if _ATTN_BLOCK_SMOOTH_ENABLED:
+            for block_size in _ATTN_BLOCK_SMOOTH_SIZES:
+                block = int(block_size)
+                if block <= 0 or head_dim % block != 0:
+                    continue
+                for block_seed in _ATTN_BLOCK_SMOOTH_SEEDS:
+                    seed = int(block_seed)
+                    block_metrics = _attention_candidate_metrics(
+                        q_samples,
+                        k_samples,
+                        best_d,
+                        q_second_moment,
+                        selected_k_second,
+                        q_num_heads,
+                        kv_num_heads,
+                        head_dim,
+                        best_q_perm,
+                        best_k_perm,
+                        best_center_mode,
+                        context,
+                        sac_center if best_center_mode == 4 else None,
+                        block,
+                        seed,
+                    )
+                    if (
+                        block_metrics[0] < best_metrics[0]
+                        and _candidate_is_safe(
+                            block_metrics,
+                            baseline_metrics,
+                            min_mean_improvement=_ATTN_BLOCK_SMOOTH_MIN_GAIN,
+                            worst_tolerance=_ATTN_BLOCK_SMOOTH_WORST_TOLERANCE,
+                        )
+                    ):
+                        best_metrics = block_metrics
+                        best_block_smooth_size = block
+                        best_block_smooth_seed = seed
+
+        return (
+            best_d,
+            best_center_mode,
+            best_q_perm,
+            best_k_perm,
+            best_block_smooth_size,
+            best_block_smooth_seed,
+        )
 
     # 双轨选择：A1 轨用真实 attention 输出误差（朴素 HiF4 代理量化），
     # proxy 轨复刻当前 Champion（B0）的 Q/K 重建 proxy 选择逻辑。终验门
     # 在部署路径上对比两个 winner，A1 无明确优势时回退 B0 选择。
     if a1_context is not None:
-        a1_d, a1_center, a1_q_perm, a1_k_perm = _run_selection(True)
-        proxy_d, proxy_center, proxy_q_perm, proxy_k_perm = _run_selection(
-            False
-        )
+        (
+            a1_d,
+            a1_center,
+            a1_q_perm,
+            a1_k_perm,
+            a1_block_size,
+            a1_block_seed,
+        ) = _run_selection(True)
+        (
+            proxy_d,
+            proxy_center,
+            proxy_q_perm,
+            proxy_k_perm,
+            proxy_block_size,
+            proxy_block_seed,
+        ) = _run_selection(False)
     else:
         (
             proxy_d,
             proxy_center,
             proxy_q_perm,
             proxy_k_perm,
+            proxy_block_size,
+            proxy_block_seed,
         ) = _run_selection(False)
-        a1_d, a1_center, a1_q_perm, a1_k_perm = (
+        a1_d, a1_center, a1_q_perm, a1_k_perm, a1_block_size, a1_block_seed = (
             proxy_d,
             proxy_center,
             proxy_q_perm,
             proxy_k_perm,
+            proxy_block_size,
+            proxy_block_seed,
         )
 
     def _build_v_state(importance) -> dict:
@@ -8167,6 +8276,8 @@ def hif4_calibration_attention(
         center_mode: int,
         q_perm: torch.Tensor,
         k_perm: torch.Tensor,
+        block_smooth_size: int = 0,
+        block_smooth_seed: int = 0,
         rotation: Optional[torch.Tensor] = None,
         rotation_block: Optional[int] = None,
         q_importance_raw: Optional[torch.Tensor] = None,
@@ -8211,6 +8322,9 @@ def hif4_calibration_attention(
             h_q_for_k = torch.ones(
                 kv_channels, dtype=torch.float32, device=d_k.device
             )
+        if int(block_smooth_size) != 0:
+            h_k_for_q = _block_average(h_k_for_q, int(block_smooth_size))
+            h_q_for_k = _block_average(h_q_for_k, int(block_smooth_size))
         q_flat = d_q.reshape(-1)
         k_flat = d_k.reshape(-1)
 
@@ -8225,6 +8339,12 @@ def hif4_calibration_attention(
                     head_dim,
                     rotation,
                     rotation_block,
+                )
+            if int(block_smooth_size) != 0:
+                transformed = _block_hadamard_transform(
+                    transformed,
+                    int(block_smooth_size),
+                    int(block_smooth_seed),
                 )
             return transformed
 
@@ -8246,6 +8366,12 @@ def hif4_calibration_attention(
                     head_dim,
                     rotation,
                     rotation_block,
+                )
+            if int(block_smooth_size) != 0:
+                transformed = _block_hadamard_transform(
+                    transformed,
+                    int(block_smooth_size),
+                    int(block_smooth_seed),
                 )
             return transformed
 
@@ -8319,6 +8445,11 @@ def hif4_calibration_attention(
             "head_dim": int(head_dim),
             "version": 2,
         }
+        if int(block_smooth_size) != 0:
+            q_state["block_smooth_size"] = int(block_smooth_size)
+            q_state["block_smooth_seed"] = int(block_smooth_seed)
+            k_state["block_smooth_size"] = int(block_smooth_size)
+            k_state["block_smooth_seed"] = int(block_smooth_seed)
         # C41: only carry the center vector when mode 4 is actually selected,
         # so the state key set stays identical to the parent otherwise.
         if int(center_mode) == 4 and sac_center is not None:
@@ -8335,7 +8466,12 @@ def hif4_calibration_attention(
         return q_state, k_state
 
     q_state, k_state = _build_qk_states(
-        a1_d, int(a1_center), a1_q_perm, a1_k_perm
+        a1_d,
+        int(a1_center),
+        a1_q_perm,
+        a1_k_perm,
+        int(a1_block_size),
+        int(a1_block_seed),
     )
     final_d, final_center = a1_d, int(a1_center)
     final_q_perm, final_k_perm = a1_q_perm, a1_k_perm
@@ -8354,10 +8490,17 @@ def hif4_calibration_attention(
         and int(a1_center) == int(proxy_center)
         and torch.equal(a1_q_perm, proxy_q_perm)
         and torch.equal(a1_k_perm, proxy_k_perm)
+        and int(a1_block_size) == int(proxy_block_size)
+        and int(a1_block_seed) == int(proxy_block_seed)
     )
     if a1_context is not None and not same_winner:
         proxy_q_state, proxy_k_state = _build_qk_states(
-            proxy_d, int(proxy_center), proxy_q_perm, proxy_k_perm
+            proxy_d,
+            int(proxy_center),
+            proxy_q_perm,
+            proxy_k_perm,
+            int(proxy_block_size),
+            int(proxy_block_seed),
         )
         a1_v_hats = [
             _dequantize_hif4(
@@ -8494,6 +8637,8 @@ def hif4_calibration_attention(
                     int(final_center),
                     final_q_perm,
                     final_k_perm,
+                    int(q_state.get("block_smooth_size", 0)),
+                    int(q_state.get("block_smooth_seed", 0)),
                     q_importance_raw=q_importance_raw,
                     k_importance_raw=k_importance_raw,
                 )
@@ -8574,6 +8719,8 @@ def hif4_calibration_attention(
                 int(final_center),
                 final_q_perm,
                 final_k_perm,
+                int(q_state.get("block_smooth_size", 0)),
+                int(q_state.get("block_smooth_seed", 0)),
                 rotation=signs,
             )
             rotation_causal, rotation_safety = _attention_deployed_mse(
@@ -8654,6 +8801,8 @@ def hif4_calibration_attention(
                     int(final_center),
                     final_q_perm,
                     final_k_perm,
+                    int(q_state.get("block_smooth_size", 0)),
+                    int(q_state.get("block_smooth_seed", 0)),
                     rotation=signs,
                     rotation_block=block,
                 )
@@ -8780,6 +8929,8 @@ def hif4_dynamic_quantize_q(
         q_scale,
         multiplier=state["multiplier"],
         permutation=state["permutation"],
+        block_smooth_size=int(state.get("block_smooth_size", 0)),
+        block_smooth_seed=int(state.get("block_smooth_seed", 0)),
         attention_rotation=state.get("rotation"),
         rotation_num_heads=int(q_num_heads),
         attention_rotation_block=state.get("rotation_block"),
@@ -8808,6 +8959,8 @@ def hif4_dynamic_quantize_k(
         k_scale,
         multiplier=state["multiplier"],
         permutation=state["permutation"],
+        block_smooth_size=int(state.get("block_smooth_size", 0)),
+        block_smooth_seed=int(state.get("block_smooth_seed", 0)),
         attention_rotation=state.get("rotation"),
         rotation_num_heads=int(kv_num_heads),
         attention_rotation_block=state.get("rotation_block"),
