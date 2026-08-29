@@ -18,13 +18,13 @@
 | 项目 | 当前事实 |
 |---|---|
 | 官方本地冠军 | C66：`22557 / 217.2s` |
-| 当前根版本 | C75.5/C75.6，本地实验版本，无新官方分 |
+| 当前根版本 | C76.4 GQA rotation，本地实验版本，无新官方分 |
 | 外部参考 | `youxilee/hif4`：用户提供 `24153 / 239s` |
 | 官方榜上限信号 | 用户确认已有超过 `36000` |
 | 官方面板 | 250 Linear + 200 Attention |
 | 最终时间上限 | `<420s` |
-| 已完成归档 | v074 / C75 rowwise + wide gram64 hierarchy |
-| 下一可用归档号 | v075 / C76 Attention |
+| 已完成归档 | v075 / C76 GQA head-local rotation |
+| 下一可用归档号 | v076 / C76.2 Fisher/V candidates or C77 |
 
 若面板每 case 以百分制累加，`22557 -> 36000` 需要把当前剩余 MSE 再降低约 60%。因此本计划不把 offset、coverage、固定 headroom 等千分位微调作为主线。
 
@@ -1030,10 +1030,30 @@ offsets=`-4..4`、static JDRQ offsets=`(-2,-1,1,2,3)`、rowwise max-blocks=2、
 rowwise width cap=4096、H32/H64 output reranker=off。`solutions/v074` 已保存
 与根文件相同的源码和 SHA256。
 
+### C76.4 增量状态（v075）
+
+在 v074 的 Qwen 主模型上，固定真实输出 scorer 搜索 head-local signed
+Hadamard 旋转：H16/H32/H64 × 4 个确定性 sign seed。GQA 中同一 KV head
+对应的 Q heads 共享旋转，连续 `QK^T` 严格保持不变；动态 state 只增加
+`rotation` 和 `rotation_block`，均为 CPU、finite、可验证字段。为避免 MHA
+迁移噪声，首版只在 `q_num_heads != kv_num_heads` 的 GQA 结构启用，不依赖
+模型名称。
+
+Qwen 直接复测得到 native total `369.344509`、panel proxy `258.840363`、
+Linear `298.383991`、Attention `70.960519`、API `188.06s`；相对 v074
+Attention `63.119717` 有明显提升。MHA 的 rotation-gated 路径保持 v074
+逐位结果。C76.1 独立 Q/K permutation、C76.2 Fisher importance、C76.3
+reciprocal temperature 已完成消融但在 Qwen test fold 回退，保留为关闭的
+研究开关，不能与 v075 的 GQA rotation 混用。
+
+对应单元/发布测试仍为 `48 passed, 1 deselected`，v075 根与归档 SHA256 为
+`DCA23116D76033A7EB5A04C5CC7EF003A52995905261699B2D06883D4C0BE4A4`。
+
 ### 下一轮唯一优先级
 
-1. 以 v074 为不可变父版本进入 C76：真实 Attention 输出下的两阶段结构化
-   Q/K 搜索，先做等价 head 内变换，再做固定 `Q/K` 的 V/Fisher 加权细化；
+1. 以 v075 为不可变父版本，分别测 C76.2 Fisher/V importance 的
+   validation-fold 选择和 C76.4 rotation 的 block/seed 单机制消融；只在
+   真实 Attention 输出的跨窗口收益稳定时晋级更多结构；
 2. 保持 `A@W` 只服务静态 `Q(W)`，任何候选变换改变后都重建 `Z` 并重跑
    JDRQ，不将输出或 pooled derivative 写入 `activation_state`；
 3. 每个机制至少保留一个可回退开关、单测、局部消融和不可变 `vNNN` 快照，

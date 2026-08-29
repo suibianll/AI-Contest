@@ -78,6 +78,8 @@ def test_release_flags_are_c39_fw_single_mechanism() -> None:
     solution = load_module("release_flags", ROOT / "solution.py")
     assert solution._ATTN_OUTPUT_SELECTOR is True
     assert solution._ATTN_H64 is False
+    assert solution._ATTN_ROTATION_ENABLED is True
+    assert solution._ATTN_ROTATION_GQA_ONLY is True
     assert solution._V_IMPORTANCE_CANDIDATES is False
     assert solution._L1_DATA_DRIVEN_SCALE is False
     assert solution._WEIGHT_QUADRATIC8 is True
@@ -129,6 +131,7 @@ def test_feature_off_is_field_for_field_b0_equivalent() -> None:
     baseline = load_module("feature_off_b0", ROOT / "solution_b0_tmp.py")
     current._ATTN_OUTPUT_SELECTOR = False
     current._ATTN_H64 = False
+    current._ATTN_ROTATION_ENABLED = False
     current._V_IMPORTANCE_CANDIDATES = False
     current._L1_DATA_DRIVEN_SCALE = False
     current._ATTN_SCALE_AWARE_CENTER = False
@@ -161,21 +164,27 @@ def test_rotation_invariance_and_head_dim_128_state_legality() -> None:
     k = torch.randn(24, kv_heads * head_dim)
     v = torch.randn(24, kv_heads * head_dim)
     signs = solution._attention_rotation_signs(kv_heads, head_dim, 0)
-    q_rot = solution._apply_attention_rotation(q, q_heads, head_dim, signs)
-    k_rot = solution._apply_attention_rotation(k, kv_heads, head_dim, signs)
-
     group = q_heads // kv_heads
     reference = torch.einsum(
         "thd,shd->tsh",
         q.reshape(24, q_heads, head_dim),
         k.reshape(24, kv_heads, head_dim).repeat_interleave(group, dim=1),
     )
-    rotated = torch.einsum(
-        "thd,shd->tsh",
-        q_rot.reshape(24, q_heads, head_dim),
-        k_rot.reshape(24, kv_heads, head_dim).repeat_interleave(group, dim=1),
-    )
-    torch.testing.assert_close(reference, rotated, rtol=3e-5, atol=8e-5)
+    for block_size in (16, 32, 64):
+        q_rot = solution._apply_attention_rotation(
+            q, q_heads, head_dim, signs, block_size
+        )
+        k_rot = solution._apply_attention_rotation(
+            k, kv_heads, head_dim, signs, block_size
+        )
+        rotated = torch.einsum(
+            "thd,shd->tsh",
+            q_rot.reshape(24, q_heads, head_dim),
+            k_rot.reshape(24, kv_heads, head_dim).repeat_interleave(
+                group, dim=1
+            ),
+        )
+        torch.testing.assert_close(reference, rotated, rtol=3e-5, atol=8e-5)
 
     sample = {"q": nvfp4_encode(q), "k": nvfp4_encode(k), "v": nvfp4_encode(v)}
     states = solution.hif4_calibration_attention(
@@ -183,6 +192,9 @@ def test_rotation_invariance_and_head_dim_128_state_legality() -> None:
     )
     tensor_count, _ = validate_state(states)
     assert tensor_count < 4096
+    if "rotation" in states["q_state"]:
+        assert states["q_state"]["rotation_block"] in (16, 32, 64)
+        assert states["k_state"]["rotation_block"] == states["q_state"]["rotation_block"]
     outputs = (
         solution.hif4_dynamic_quantize_q(
             *sample["q"], q_heads, head_dim, states["q_state"]

@@ -163,3 +163,50 @@ are byte-identical after the final copy; the SHA256 is recorded in the v074
 archive result. The next experiment starts from this immutable v074 parent and
 targets C76 Attention Q/K structure rather than reopening rejected cross-term
 or output-reranker paths.
+
+## C76.4 GQA head-local rotation (v075)
+
+### Implementation
+
+The active C76 arm searches signed orthogonal Hadamard transforms inside each
+attention head: H16/H32/H64 block sizes and four deterministic sign seeds.
+Q heads sharing one KV head reuse the same transform, preserving the continuous
+QK dot product exactly under GQA. The dynamic state carries only CPU `rotation`
+signs and `rotation_block`; the transform is selected through the real deployed
+Q/K quantizer on calibration prefixes. A structural `q_num_heads !=
+kv_num_heads` gate keeps MHA on the v074 path while Qwen-like GQA receives the
+new search.
+
+C76.1 independent head permutations, C76.2 output-Fisher importance and C76.3
+reciprocal temperature were also implemented as switches. Their Qwen
+calibration-to-test runs regressed (`359.273350` when combined and
+`359.646532` for Fisher-only), so they remain disabled research arms and are not
+part of v075.
+
+### Real-model observations
+
+| model | candidate | native total | panel total | Linear | Attention | API time |
+|---|---|---:|---:|---:|---:|---:|
+| Qwen2.5-0.5B | c76-rot-gqa-only | 369.344509 | 258.840363 | 298.383991 | 70.960519 | 188.06s |
+| GPT-2 small | c76-rot (MHA gate skipped) | 159.373865 | 211.028560 | 137.339381 | 22.034483 | 72.19s |
+| OPT-125M | c76-rot (MHA gate skipped) | 85.625086 | 138.872326 | 66.057761 | 19.567325 | 70.30s |
+| Pythia-160M | c76-rot (MHA gate skipped) | 180.249839 | 292.741517 | 138.937105 | 41.312734 | 71.91s |
+
+The MHA rows above are from the ungated exploratory run and explain why the
+released policy is GQA-only; with the gate they are identical to v074. Qwen's
+Attention native component rises from `63.119717` to `70.960519` while the API
+time remains well below 420 seconds. Native/panel numbers are local relative
+diagnostics, not official score conversions.
+
+### Verification and archive
+
+```text
+python -m py_compile solution.py evaluator/jdrq_diagnostics.py tests/test_jdrq.py
+python -m pytest -q tests/test_jdrq.py tests/test_linear_compliance_guard.py \
+    tests/test_reference_hif4.py tests/test_release_candidate.py \
+    -k "not local_holdout_offsets"       # 48 passed, 1 deselected
+```
+
+The active root and `solutions/20260830_v075_c76-gqa-rotation_scoreNA_timeNA/`
+are byte-identical with SHA256
+`DCA23116D76033A7EB5A04C5CC7EF003A52995905261699B2D06883D4C0BE4A4`.
