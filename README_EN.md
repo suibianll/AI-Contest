@@ -37,6 +37,24 @@ Local time and scores are for paired candidate comparison only and are never
 reported as official results. Every official result must be archived together
 with the exact submitted SHA, score, and runtime.
 
+## Does the local evaluator track the official direction?
+
+On the frozen five-model evidence, the Qwen primary panel reproduces the revised
+official anchor ordering:
+
+| Candidate | Official score | Qwen panel (local relative score) |
+| --- | ---: | ---: |
+| C39 | 21864 | 230.096230 |
+| C41b | 21864 | 230.096230 |
+| C47b | 22451 | 237.541351 |
+| C66 | 22557 | 238.282409 |
+
+Both orderings are `C39 = C41b < C47b < C66`; Qwen's panel Spearman is
+`1.0000`, while the five-model raw sum is `0.9487`. This validates relative
+direction only, not a linear conversion to official scores. The external
+`youxilee/hif4` Qwen panel is `250.327102`, directionally above C66, but is not
+a local anchor.
+
 ## Revised official anchors (2026-08-29)
 
 | Submission | Score | Runtime | Status |
@@ -144,13 +162,35 @@ python -m venv .venv
 .\.venv\Scripts\python -m pip install -r evaluator\requirements.txt
 ```
 
+### Recommended: Qwen primary panel (cached)
+
+Use this command for daily candidate comparisons. It evaluates Qwen2.5-0.5B and
+projects the means onto the fixed 250 Linear + 200 Attention panel. The `read`
+mode requires a matching snapshot and never downloads a model implicitly:
+
+```powershell
+.\.venv\Scripts\python -u evaluator\real_model_suite.py `
+  --models qwen2.5-0.5b --candidates c39 c41b c47b c66 `
+  --solution solution.py --candidate-name active `
+  --panel-profile qwen-official --primary-model qwen2.5-0.5b `
+  --device cpu --algorithm-device cpu --cache-mode read `
+  --seq 128 --calib 2 --test 4 `
+  --output artifacts\real_model_suite\qwen-panel-YYYYMMDD.json `
+  --report logs\evaluations\qwen-panel-YYYYMMDD.md
+```
+
+If CUDA is available, change both device flags to `cuda`. If the cache is
+missing, run the capture step below first. The main ranking field is
+`official_ranking_audit.primary_panel_score_total`; other models are soft
+guardrails, while `official_flow_total` is retained for diagnostics.
+
 Single-model quick evaluation (gpt2-small, cache-first):
 
 ```powershell
 .\.venv\Scripts\python -u evaluator\real_model_suite.py `
   --models gpt2-small --solution solution.py --candidate-name active `
   --panel-profile qwen-official --primary-model gpt2-small `
-  --device cpu --algorithm-device cuda --cache-mode auto `
+  --device cpu --algorithm-device cpu --cache-mode auto `
   --seq 128 --calib 2 --test 4 `
   --output artifacts\real_model_suite\quick-YYYYMMDD.json `
   --report logs\evaluations\quick-YYYYMMDD.md
@@ -162,7 +202,7 @@ GQA example (Qwen2.5-0.5B ships 14Q/2KV heads with RoPE):
 .\.venv\Scripts\python -u evaluator\real_model_suite.py `
   --models qwen2.5-0.5b --solution solution.py --candidate-name active `
   --panel-profile qwen-official --primary-model qwen2.5-0.5b `
-  --device cpu --algorithm-device cuda --cache-mode auto `
+  --device cpu --algorithm-device cpu --cache-mode auto `
   --seq 128 --calib 2 --test 4 `
   --output artifacts\real_model_suite\quick-qwen-YYYYMMDD.json `
   --report logs\evaluations\quick-qwen-YYYYMMDD.md
@@ -181,6 +221,16 @@ Full test suite:
 .\.venv\Scripts\python -m pytest -q
 ```
 
+The full suite also includes real-corpus windows and historical algorithm
+regressions. Missing optional dependencies such as `transformers`, or legacy
+assertions that intentionally track an older experiment switch, are reported
+separately. Before a release, run the syntax checks and the evaluator regression
+with a repository-local ignored temp directory:
+
+```powershell
+.\.venv\Scripts\python -m pytest -q tests/test_real_model_suite.py --basetemp=.tmp_pytest\readme-verify
+```
+
 ### Candidate testing order and result capture
 
 Modify only the root `solution.py` for each experiment. Run syntax, compliance,
@@ -191,32 +241,34 @@ historical sources under `solutions/`.
 
    ```powershell
    git diff --check
-   .\.venv\Scripts\python -m py_compile solution.py evaluator\solution_runtime.py evaluator\real_model_suite.py
+   .\.venv\Scripts\python -m py_compile solution.py evaluator\real_model_suite.py evaluator\reference_hif4.py evaluator\linear_compliance_guard.py
    .\.venv\Scripts\python -m pytest -q
    ```
 
 2. **Test the active root `solution.py`**
 
-   This uses the cached real-model panel and the deployed candidate API to
-   check output format, Linear, Attention, and local runtime:
+   This is a fast `gpt2-small` smoke test for output format, Linear, Attention,
+   and local runtime. It is not the official-direction primary ranking; use the
+   Qwen command above for candidate promotion:
 
    ```powershell
    .\.venv\Scripts\python -u evaluator\real_model_suite.py `
      --models gpt2-small --candidates c39 `
      --solution solution.py --candidate-name active `
      --panel-profile qwen-official --primary-model gpt2-small `
-     --device cpu --algorithm-device cuda --cache-mode read `
+     --device cpu --algorithm-device cpu --cache-mode read `
      --seq 128 --calib 2 --test 4 `
      --output artifacts\real_model_suite\active-YYYYMMDD.json `
      --report logs\evaluations\active-YYYYMMDD.md
    ```
 
-   The default primary score is `250 * Linear_mean + 200 * Attention_mean` on
-   the Qwen-shaped panel. Pair with `--candidates c39 c41b c47b c66`; local
-   scores are only for paired A/B ranking and must not be entered as Official
-   Score. Record the full command, source/target case counts, total API time,
-   and the source SHA256. `official_flow_total` remains in JSON for rollback
-   comparisons.
+   For full candidate comparisons, the primary score is
+   `250 * Linear_mean + 200 * Attention_mean` on the Qwen-shaped panel. The
+   smoke command above explicitly uses gpt2-small; local scores are only for
+   paired A/B ranking and must not be entered as Official Score. Pair promotion
+   runs with `--candidates c39 c41b c47b c66`, and record the full command,
+   source/target case counts, total API time, and source SHA256.
+   `official_flow_total` remains in JSON for rollback comparisons.
 
 3. **Capture real multi-model forward data once**
 
@@ -228,13 +280,14 @@ historical sources under `solutions/`.
 
    ```powershell
    .\.venv\Scripts\python -u evaluator\real_model_suite.py `
-     --device cuda --algorithm-device cuda --cache-mode write --capture-only `
+     --device cpu --algorithm-device cpu --cache-mode write --capture-only `
      --seq 128 --calib 2 --test 4 `
      --output artifacts\real_model_suite\cache-capture-YYYYMMDD.json `
      --report logs\evaluations\cache-capture-YYYYMMDD.md
    ```
 
-   Replace `YYYYMMDD` with the actual run date. Snapshots are stored in
+   Replace `YYYYMMDD` with the actual run date. On a CUDA host, change both
+   device flags to `cuda` to shorten capture. Snapshots are stored in
    `artifacts/real_model_suite/cache/` and are not committed to Git. They
    contain real model weights, Linear inputs, real Q/K/V, token ids, model/data
    revisions, and window-validation metadata.
@@ -248,7 +301,7 @@ historical sources under `solutions/`.
    .\.venv\Scripts\python -u evaluator\real_model_suite.py `
      --candidates c39 c41b c47b c66 --solution solution.py --candidate-name active `
      --panel-profile qwen-official --primary-model qwen2.5-0.5b `
-     --device cpu --algorithm-device cuda --cache-mode read `
+     --device cpu --algorithm-device cpu --cache-mode read `
      --seq 128 --calib 2 --test 4 `
      --output artifacts\real_model_suite\active-YYYYMMDD.json `
      --report logs\evaluations\active-YYYYMMDD.md

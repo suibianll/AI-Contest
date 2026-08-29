@@ -21,9 +21,8 @@
 - 历史 v024 得分为 `16043 / 173.8s`，但其 Linear 输出监督路径把输出信息
   用于激活侧选择；这类 `A@W -> Q(A)` 用法仍不合规，因此不作为后续合规父版本。
 - 当前根 `solution.py` 为 C69 激活二次项 Gram-8 覆盖上限 `12%` 的本地候选；
-  五模型 proxy 合计 `1044.706838`，源文件 SHA256 为
-  `1F71CA11FA9707EB9720438EC6D780CC6F520FBA80437B3215398608D5866CA1`。
-- 当前源码 SHA256：
+  五模型 proxy 合计 `1044.706838`。
+- 当前根源码 SHA256：
   `1F71CA11FA9707EB9720438EC6D780CC6F520FBA80437B3215398608D5866CA1`。
 - 旧版本地评测器（单模型 dev 与 frozen holdout）曾因 calibration/test
   文本重叠不能可靠排序合规候选，相关代码（`real_data_eval.py`、
@@ -38,6 +37,22 @@
 
 本地时间和本地分数仅用于候选比较，不冒充官方结果。任何官方结果都应与
 实际提交 SHA、分数和时间一起归档。
+
+## 本地评测是否能反映官方方向
+
+使用已冻结的五模型结果，新的 Qwen 主面板与官方锚点给出相同的相对顺序：
+
+| 候选 | 官方分数 | Qwen panel（本地相对分） |
+| --- | ---: | ---: |
+| C39 | 21864 | 230.096230 |
+| C41b | 21864 | 230.096230 |
+| C47b | 22451 | 237.541351 |
+| C66 | 22557 | 238.282409 |
+
+官方与本地均为 `C39 = C41b < C47b < C66`；Qwen 主面板的 Spearman 为
+`1.0000`，五模型 raw sum 为 `0.9487`。这只证明相对排序方向，不证明本地
+分数可以线性换算成官方分数。外部 `youxilee/hif4` 的本地 Qwen panel 为
+`250.327102`，方向上也高于 C66，但它不是本地候选锚点。
 
 ## 修订版官方评测锚点（2026-08-29）
 
@@ -70,6 +85,21 @@
 优化压入最终时间限制。
 
 ## 当前算法
+
+当前根版本为 C69，评测和优化优先级如下：
+
+| 优先级 | 组件 | 当前机制 | 作用/状态 |
+| --- | --- | --- | --- |
+| 1 | Linear | SmoothQuant、通道排列、4/8/16 组二阶精修 | 主收益来源，优先用 Qwen panel 比较 |
+| 2 | Linear | wide FFN `fc/proj` 的 FULL64 Hessian/GPTQ | 覆盖率 `0.25`，只更新离线 `Q(W)` |
+| 3 | Linear | 动态激活 Gram-8 | C69 上限 `12%`，作为可回退候选 |
+| 4 | Attention | Smooth-QK、K 居中、head permutation、MHA/GQA 对齐 | 保留已验证 A1 路径，不扩张无收益分支 |
+| 5 | 研究候选 | CAT/alignment、MR-GPTQ、静态 `A@W` 选 `Q(W)` | 下一轮单机制消融，必须通过 Qwen 主分和软 guardrail 观察 |
+
+优化决策只看同一冻结缓存上的相对增量：Qwen `primary_panel_score_total` 是主
+指标，其他模型用于发现结构性回退。不得用官方分数反向调参，也不设置固定的
+增益、coverage 或“每个模型必须正向”门槛；只有合规、合法性、非 finite 和
+主模型 `<420s` 是硬条件。
 
 ### Linear
 
@@ -105,7 +135,7 @@ MHA/GQA 对齐和真实 Attention 双 mask 安全选择。固定 H64、Segment-C
 
 ```text
 solution.py                         唯一活跃提交文件
-evaluator/real_model_suite.py       多模型真实语料评测、前向缓存与官方流程主排序
+evaluator/real_model_suite.py       多模型真实语料评测、前向缓存与 Qwen 主面板排序
 evaluator/reference_hif4.py         独立官方评分协议、标准基线与合法性校验
 evaluator/nvfp4_sim.py              NVFP4 编码模拟
 evaluator/real_data_eval.py         共享的候选加载/计时/评分工具与旧版单模型评测入口
@@ -137,13 +167,57 @@ python -m venv .venv
 .\.venv\Scripts\python -m pip install -r evaluator\requirements.txt
 ```
 
+### 推荐：Qwen 主评测（已有缓存）
+
+这是日常比较候选的最短命令。它只使用 Qwen2.5-0.5B，主分固定投影为
+250 Linear + 200 Attention；`--cache-mode read` 要求对应快照已经存在。
+没有 CUDA 时使用下面的 CPU 命令，结果仍可用于相对排序：
+
+```powershell
+.\.venv\Scripts\python -u evaluator\real_model_suite.py `
+  --models qwen2.5-0.5b --candidates c39 c41b c47b c66 `
+  --solution solution.py --candidate-name active `
+  --panel-profile qwen-official --primary-model qwen2.5-0.5b `
+  --device cpu --algorithm-device cpu --cache-mode read `
+  --seq 128 --calib 2 --test 4 `
+  --output artifacts\real_model_suite\qwen-panel-YYYYMMDD.json `
+  --report logs\evaluations\qwen-panel-YYYYMMDD.md
+```
+
+有可用 CUDA 时，将上面两项改为 `--device cuda --algorithm-device cuda`。
+若缓存不存在，先执行下方“采集缓存”命令；`read` 模式不会偷偷下载模型或
+改用其他配置。
+
+结果字段按下面方式读取：
+
+| 字段 | 用途 |
+| --- | --- |
+| `results[*].panel_score.total` | 单模型固定面板分；Qwen 主模型使用它参与排序 |
+| `official_ranking_audit.primary_panel_score_total` | 候选主排序特征 |
+| `official_ranking_audit.guardrail_panel_mean_total` | 其他模型的软稳定性诊断 |
+| `results[*].official_flow_score.total` | 旧版 native 逐 case 和，仅用于回溯 |
+| `timing.official_api_total_seconds` | 单个模型六 API 代理耗时；主模型必须 `<420s` |
+
+带 `--solution` 的命令在主模型非法、非 finite 或超时会返回退出码 `2`，但仍会
+写出 JSON 和 Markdown，便于定位问题；只做锚点比较时不带 `--solution`。
+
+CPU 全量 Qwen 评测可能接近或超过 420 秒，适合诊断；正式时间判断应使用 CUDA
+或先用 `--layers 1 --calib 1 --test 1` 做接口冒烟，再运行完整配置。
+
+先做不加载模型的环境检查：
+
+```powershell
+.\.venv\Scripts\python -m py_compile solution.py evaluator\real_model_suite.py evaluator\reference_hif4.py evaluator\linear_compliance_guard.py
+.\.venv\Scripts\python evaluator\real_model_suite.py --help
+```
+
 单模型快速评测（gpt2-small，优先读缓存）：
 
 ```powershell
 .\.venv\Scripts\python -u evaluator\real_model_suite.py `
   --models gpt2-small --solution solution.py --candidate-name active `
   --panel-profile qwen-official --primary-model gpt2-small `
-  --device cpu --algorithm-device cuda --cache-mode auto `
+  --device cpu --algorithm-device cpu --cache-mode auto `
   --seq 128 --calib 2 --test 4 `
   --output artifacts\real_model_suite\quick-YYYYMMDD.json `
   --report logs\evaluations\quick-YYYYMMDD.md
@@ -155,7 +229,7 @@ GQA 示例（Qwen2.5-0.5B 自带 14Q/2KV 与 RoPE 适配）：
 .\.venv\Scripts\python -u evaluator\real_model_suite.py `
   --models qwen2.5-0.5b --solution solution.py --candidate-name active `
   --panel-profile qwen-official --primary-model qwen2.5-0.5b `
-  --device cpu --algorithm-device cuda --cache-mode auto `
+  --device cpu --algorithm-device cpu --cache-mode auto `
   --seq 128 --calib 2 --test 4 `
   --output artifacts\real_model_suite\quick-qwen-YYYYMMDD.json `
   --report logs\evaluations\quick-qwen-YYYYMMDD.md
@@ -174,6 +248,15 @@ Attention 合成矩阵：
 .\.venv\Scripts\python -m pytest -q
 ```
 
+完整套件还包含真实语料窗口和历史算法回归；若本机未安装 `transformers`，或
+旧断言与当前 C69 实验开关不一致，相关测试会单独报告环境/历史债务。评测器发布
+前至少执行上面的语法检查和下面的评测器回归（使用仓库内被忽略的临时目录），
+再按本机环境补齐依赖并运行完整套件：
+
+```powershell
+.\.venv\Scripts\python -m pytest -q tests/test_real_model_suite.py --basetemp=.tmp_pytest\readme-verify
+```
+
 ### 候选测试顺序与结果保存
 
 每次实验只修改根目录 `solution.py`。先完成语法、合规和单模型真实路径测试，再进行多模型比较；不要直接修改 `solutions/` 中的历史源码。
@@ -182,26 +265,33 @@ Attention 合成矩阵：
 
    ```powershell
    git diff --check
-   .\.venv\Scripts\python -m py_compile solution.py evaluator\solution_runtime.py evaluator\real_model_suite.py
+   .\.venv\Scripts\python -m py_compile solution.py evaluator\real_model_suite.py evaluator\reference_hif4.py evaluator\linear_compliance_guard.py
    .\.venv\Scripts\python -m pytest -q
    ```
 
-2. **测试当前根 `solution.py`**
+2. **冒烟测试当前根 `solution.py`**
 
-   这一步走真实模型缓存面板和正式候选 API，确认输出格式、Linear、Attention 和本地时间：
+   下面命令显式只跑 `gpt2-small`，用于快速确认输出格式、Linear、Attention
+   和本地计时；它不是官方方向的主排序。需要比较候选时，请使用上面的 Qwen
+   主评测命令，或把本命令的模型和 `--primary-model` 一并改成
+   `qwen2.5-0.5b`：
 
    ```powershell
    .\.venv\Scripts\python -u evaluator\real_model_suite.py `
      --models gpt2-small --candidates c39 `
      --solution solution.py --candidate-name active `
      --panel-profile qwen-official --primary-model gpt2-small `
-     --device cpu --algorithm-device cuda --cache-mode read `
+     --device cpu --algorithm-device cpu --cache-mode read `
      --seq 128 --calib 2 --test 4 `
      --output artifacts\real_model_suite\active-YYYYMMDD.json `
      --report logs\evaluations\active-YYYYMMDD.md
    ```
 
-   默认主排序使用 Qwen shaped panel：`panel_score.total = 250 * Linear_mean + 200 * Attention_mean`。推荐始终配对 `--candidates c39 c41b c47b c66`；本地分数只用于 A/B 排序，不填入 Official Score；同时记录完整命令、源 case 数量、目标 250/200 面板、API 总时间和 source SHA256。`official_flow_total` 仍写入 JSON，便于与旧报告回溯。
+   完整候选比较的默认主排序使用 Qwen shaped panel：
+   `panel_score.total = 250 * Linear_mean + 200 * Attention_mean`。推荐始终配对
+   `--candidates c39 c41b c47b c66`；本地分数只用于 A/B 排序，不填入 Official
+   Score；同时记录完整命令、源 case 数量、目标 250/200 面板、API 总时间和
+   source SHA256。`official_flow_total` 仍写入 JSON，便于与旧报告回溯。
 
 3. **一次性采集多模型真实前向数据**
 
@@ -209,13 +299,16 @@ Attention 合成矩阵：
 
    ```powershell
    .\.venv\Scripts\python -u evaluator\real_model_suite.py `
-     --device cuda --algorithm-device cuda --cache-mode write --capture-only `
+     --device cpu --algorithm-device cpu --cache-mode write --capture-only `
      --seq 128 --calib 2 --test 4 `
      --output artifacts\real_model_suite\cache-capture-YYYYMMDD.json `
      --report logs\evaluations\cache-capture-YYYYMMDD.md
    ```
 
-   命令中的 `YYYYMMDD` 应替换为实际运行日期。快照保存在 `artifacts/real_model_suite/cache/`，不提交到 Git；它包含真实模型权重、Linear 输入、真实 Q/K/V、token ids、模型/data revision 和窗口校验信息。
+   命令中的 `YYYYMMDD` 应替换为实际运行日期。机器有 CUDA 时可将两项 device
+   同时改为 `cuda` 以缩短采集时间。快照保存在
+   `artifacts/real_model_suite/cache/`，不提交到 Git；它包含真实模型权重、
+   Linear 输入、真实 Q/K/V、token ids、模型/data revision 和窗口校验信息。
 
 4. **只从缓存评测**
 
@@ -225,7 +318,7 @@ Attention 合成矩阵：
    .\.venv\Scripts\python -u evaluator\real_model_suite.py `
      --candidates c39 c41b c47b c66 --solution solution.py --candidate-name active `
      --panel-profile qwen-official --primary-model qwen2.5-0.5b `
-     --device cpu --algorithm-device cuda --cache-mode read `
+     --device cpu --algorithm-device cpu --cache-mode read `
      --seq 128 --calib 2 --test 4 `
      --output artifacts\real_model_suite\active-YYYYMMDD.json `
      --report logs\evaluations\active-YYYYMMDD.md
