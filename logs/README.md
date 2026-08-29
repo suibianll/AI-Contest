@@ -20,9 +20,11 @@
 
 官方样例扩展为 250 个 Linear case 与 200 个 Attention case，时间限制提升
 到 7 分钟（420s）。新版已确认：v031/C39-FW `21864 / 161.3s`、
-v034/C41b `21864 / 159.4s`、v051/C47b `22451 / 234s`；外部
+v034/C41b `21864 / 159.4s`、v051/C47b `22451 / 234s`、v066/C66
+`22557 / 217.2s`；外部
 [`youxilee/hif4`](https://github.com/youxilee/hif4) 结果为 `24153 / 239s`，
-仅作为未导入的参考实现。
+仅作为未导入的参考实现。当前本地归档官方冠军为 v066/C66，仍比外部低
+`1596` 分。
 
 ## 评测器参数约束
 
@@ -50,6 +52,8 @@ v034/C41b `21864 / 159.4s`、v051/C47b `22451 / 234s`；外部
 - `evaluations/2026-08-28-baseline-vs-c39.md`：同上，干净工作区下的正式基线，精度逐位复现。
 - `evaluations/2026-08-28-archived-official.md`：已归档官方候选的对照评测。
 - `candidates/C39-FW-official-calibration.md`：新版官方锚点 `21864 / 161.3s`（旧口径为 `14613 / 159.2s`）。
+- `candidates/2026-08-29-external-hif4-gap-analysis.md`：v066/C66 与外部
+  `youxilee/hif4` 的逐项算法差距、Qwen-30B 特征用例假设与 C70 实验路线。
 - `candidates/C40-robust-block-ldlq.md`：C40 机制说明（官方 `14432 / 216.667s`，已拒绝）。
 - `candidates/C40-official-evaluator-diagnosis.md`：本地评测器失效诊断，旧代理排序不可信的依据。
 - `execution/`：2026-08-26 起的执行日志、顺序实验索引与环境记录。

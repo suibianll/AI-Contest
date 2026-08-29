@@ -8,7 +8,7 @@ Root `solution.py` is the only active submission. Archived source files are immu
 
 官方面板现为 **250 个 Linear case + 200 个 Attention case**，分数按全部
 case 求和，因此分数与端到端时间都会高于旧口径。下表已把已确认的 v031、
-v034、v051 官方列更新为新版结果；其余历史官方列保留原提交时的旧口径，
+v034、v051、v066 官方列更新为新版结果；其余历史官方列保留原提交时的旧口径，
 不可与新版绝对值直接比较。新版时间限制为 **420s（7 分钟）**。
 
 | Version | Date | Topic | Local Linear | Local Attention | Local Time | Official Score | Official Time | Delta | Status | Directory |
@@ -79,7 +79,7 @@ v034、v051 官方列更新为新版结果；其余历史官方列保留原提�
 | v063 | 2026-08-29 | C63 Linear 候选 `weight_sample` 512 行 | GPT-2 small `134.316520`; medium `231.081080`; OPT `65.463078`; Pythia `138.282530`; Qwen `287.007536` | `21.120464` / `43.767156` / `19.581565` / `40.614368` / `62.862350` | 54.06–151.69s | NA | NA | 五模型合计 `1044.096647`，较 C62 `+17.842458`；五模型全正向 | **local-accepted** | [archive](20260829_v063_c63-linear-weight-eval512_scoreNA_timeNA/) |
 | v064 | 2026-08-29 | C64 Linear 候选 `weight_sample` 1024 行 | GPT-2 small `134.064366`; OPT `63.119458`; Qwen `287.281990` | `21.120464` / `19.581565` / `62.862350` | 54.80–155.17s | NA | NA | 三模型小计较 C63 `−2.321320`；512 行更稳 | **archived-rejected** | [archive](20260829_v064_c64-linear-weight-eval1024-rejected_scoreNA_timeNA/) |
 | v065 | 2026-08-29 | C65 A@W 折间软混合 `0.50` | GPT-2 small `134.255521`; OPT `65.463078` | `21.120464` / `19.581565` | 55.24–55.80s | NA | NA | OPT 与 C63 持平，GPT-2 small `−0.0610`；`0.25` 更稳 | **archived-rejected** | [archive](20260829_v065_c65-product-robustmix50-rejected_scoreNA_timeNA/) |
-| v066 | 2026-08-29 | C66 动态激活损失覆盖目标 `1.0` | GPT-2 small `134.327340`; medium `231.098280`; OPT `65.472279`; Pythia `138.290983`; Qwen `287.032704` | `21.306236` / `43.760024` / `19.647602` / `40.647879` / `63.119717` | 54.29–151.91s | NA | NA | 五模型合计 `1044.703044`，较 C63 `+0.606397`；五模型全正向 | **local-accepted** | [archive](20260829_v066_c66-activation-ratio100_scoreNA_timeNA/) |
+| v066 | 2026-08-29 | C66 动态激活损失覆盖目标 `1.0` | GPT-2 small `134.327340`; medium `231.098280`; OPT `65.472279`; Pythia `138.290983`; Qwen `287.032704` | `21.306236` / `43.760024` / `19.647602` / `40.647879` / `63.119717` | 54.29–151.91s | **22557** | **217.2s** | **新版面板本地归档冠军；较 v051 +106 分、快 16.8s** | **official-compliant-champion** | [archive](20260829_v066_c66-activation-ratio100_scoreNA_timeNA/) |
 | v067 | 2026-08-29 | C67 Linear 候选 `weight_sample` 640 行 | GPT-2 small `134.335127`; medium `230.953064`; OPT `65.687656`; Pythia `138.183341`; Qwen `287.110685` | `21.306236` / `43.760024` / `19.647602` / `40.647879` / `63.119717` | 54.00–155.95s | NA | NA | 五模型合计 `1044.751331`，仅较 C66 `+0.048287`；medium/Pythia 回退 | **archived-rejected** | [archive](20260829_v067_c67-linear-weight-eval640-rejected_scoreNA_timeNA/) |
 | v068 | 2026-08-29 | C68 A@W 静态块预算 `15%` | GPT-2 small `134.416424`; OPT `65.246115`; Qwen `286.922986` | `21.306236` / `19.647602` / `63.119717` | 57.98–159.93s | NA | NA | 三模型小计较 C66 `−0.246797`；12.5% 更稳 | **archived-rejected** | [archive](20260829_v068_c68-product-ratio15-rejected_scoreNA_timeNA/) |
 | v069 | 2026-08-29 | C69 激活二次项 Gram-8 覆盖上限 `12%` | GPT-2 small `134.329831`; medium `231.098280`; OPT `65.472699`; Pythia `138.291865`; Qwen `287.032704` | `21.306236` / `43.760024` / `19.647602` / `40.647879` / `63.119717` | 54.95–156.68s | NA | NA | 五模型合计 `1044.706838`，较 C66 `+0.003794`；全模型非负 | **local-accepted** | [archive](20260829_v069_c69-activation-gram8-ratio12_scoreNA_timeNA/) |
@@ -91,8 +91,9 @@ v034、v051 官方列更新为新版结果；其余历史官方列保留原提�
 | --- | ---: | ---: | --- |
 | [`youxilee/hif4`](https://github.com/youxilee/hif4) | **24153** | **239s** | 用户提供的结果；代码未导入、未在本地复现 |
 
-该外部结果比本地 v051/C47b 高 `1702` 分、仅多 `5s`；它是后续 Linear
-结构优化的参考上限，不改变本地候选的可复现状态。
+该外部结果比本地 v066/C66 高 `1596` 分、多 `21.8s`；它是后续 Linear
+结构优化的参考上限，不改变本地候选的可复现状态。分数和时间为用户提供的
+同口径结果，仓库页面本身未给出可独立核验的官方排行榜记录。
 
 `*` v002 的 Linear/Attention 数值最初来自远程仓库 `CHANGELOG.md` 的 GPT-2
 12 层、2 calib + 2 test 报告，之后已由 GPU-compatible B0 derivative 在本地
@@ -116,14 +117,15 @@ v013 归档字节一致。
 2026-08-29 官方评测集扩大为 250 个 Linear case 与 200 个 Attention case，
 并将时间限制提升至 7 分钟。用户确认新版官方结果：v031/C39-FW 为
 `21864 / 161.3s`，v034/C41b 为 `21864 / 159.4s`，v051/C47b 为
-`22451 / 234s`；这些数值覆盖对应条目的旧版 `Official Score/Time`，旧值
-仍可在各自提交历史中追溯。
+`22451 / 234s`，v066/C66 为 `22557 / 217.2s`；这些数值覆盖对应条目的
+旧版 `Official Score/Time`，旧值仍可在各自提交历史中追溯。
 
 当前根 `solution.py` 为 C69 本地候选；C69 归档源码的 SHA256 为
 `1F71CA11FA9707EB9720438EC6D780CC6F520FBA80437B3215398608D5866CA1`。
-新版面板下 v051/C47b（官方 `22451 / 234s`）是本地归档冠军；v031/C39-FW
-与 v034/C41b 均为 `21864`。外部 [`youxilee/hif4`](https://github.com/youxilee/hif4)
-的 `24153 / 239s` 仅作参考，不以根文件位置暗示外部代码已导入。
+新版面板下 v066/C66（官方 `22557 / 217.2s`）是本地归档冠军，较此前
+v051/C47b 提升 `106` 分并减少 `16.8s`；v031/C39-FW 与 v034/C41b 均为
+`21864`。外部 [`youxilee/hif4`](https://github.com/youxilee/hif4) 的
+`24153 / 239s` 仍高出 `1596` 分，仅作参考，不以根文件位置暗示外部代码已导入。
 
 ## Local-first workflow
 

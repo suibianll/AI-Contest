@@ -12,11 +12,13 @@ Chinese version: [README.md](README.md)
   cases**. Because scores are summed per case, both scores and runtimes are
   higher than under the legacy panel and must not be compared directly.
 - On the revised panel, the best official result among archived submissions is
-  v051 / C47b at `22451 / 234s`; v031 / C39-FW and v034 / C41b both scored
-  `21864`, at `161.3s` and `159.4s`, respectively.
+  v066 / C66 at `22557 / 217.2s`; the previous v051 / C47b result was
+  `22451 / 234s`. v031 / C39-FW and v034 / C41b both scored `21864`, at
+  `161.3s` and `159.4s`, respectively.
 - External reference: the public [`youxilee/hif4`](https://github.com/youxilee/hif4)
   repository reports `24153 / 239s` under the same user-confirmed protocol.
-  Its code is not imported or locally reproduced here.
+  Its code is not imported or locally reproduced here; C66 remains `1596` points
+  and `21.8s` away, with the gap expected to be primarily in Linear.
 - Historical v024 scored `16043 / 173.8s`, but its Linear output-supervision
   path used output information for activation-side selection. That
   `A@W -> Q(A)` use remains non-compliant, so it is not a compliant parent for
@@ -40,7 +42,8 @@ with the exact submitted SHA, score, and runtime.
 | --- | ---: | ---: | --- |
 | v031 / C39-FW | 21864 | 161.3s | compliant archive |
 | v034 / C41b | 21864 | 159.4s | compliant archive |
-| v051 / C47b | **22451** | **234s** | best local official result |
+| v051 / C47b | 22451 | 234s | previous local official result |
+| v066 / C66 | **22557** | **217.2s** | best local official result |
 | `youxilee/hif4` | **24153** | **239s** | external reference |
 
 The revised official runtime limit is **7 minutes (420 seconds)**. Legacy values

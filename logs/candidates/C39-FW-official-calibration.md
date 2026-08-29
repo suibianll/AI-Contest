@@ -79,16 +79,18 @@ runtime limit is **420s (7 minutes)**.
 | C39-FW (v031) | **21864** | **161.3s** |
 | C41b (v034) | 21864 | 159.4s |
 | C47b (v051) | 22451 | 234s |
+| C66 (v066) | **22557** | **217.2s** |
 
-Decision: C39-FW is a revised-panel compliant anchor, superseded by v051/C47b
-(`22451 / 234s`) in the local archive. The external
+Decision: C39-FW is a revised-panel compliant anchor, superseded by v066/C66
+(`22557 / 217.2s`) in the local archive; v051/C47b (`22451 / 234s`) is the
+previous local champion. The external
 [`youxilee/hif4`](https://github.com/youxilee/hif4) reference reports `24153 / 239s`
 and is not imported into this workspace.
 
 ## Official calibration rule
 
 The legacy official result is retained for historical comparison. On the revised
-panel, compare future candidates against v051/C47b (`22451/234s`) and the
+panel, compare future candidates against v066/C66 (`22557/217.2s`) and the
 external reference (`24153/239s`); the legacy C21-C/C39 values are not directly
 comparable.
 
