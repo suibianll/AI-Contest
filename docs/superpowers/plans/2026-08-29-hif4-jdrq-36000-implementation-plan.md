@@ -23,7 +23,8 @@
 | 官方榜上限信号 | 用户确认已有超过 `36000` |
 | 官方面板 | 250 Linear + 200 Attention |
 | 最终时间上限 | `<420s` |
-| 下一可用归档号 | v072 / C72 起 |
+| 已完成归档 | v073 / C75 source-aware + project-only gram64 |
+| 下一可用归档号 | v074 / C75.3 起 |
 
 若面板每 case 以百分制累加，`22557 -> 36000` 需要把当前剩余 MSE 再降低约 60%。因此本计划不把 offset、coverage、固定 headroom 等千分位微调作为主线。
 
@@ -155,8 +156,7 @@ Attention 没有 Linear 的 `A@W -> Q(A)` 问题。校准阶段允许用真实
 | `solution.py` | 唯一活跃算法；实现 JDRQ 与 Attention 新路径 |
 | `evaluator/jdrq_diagnostics.py` | 新增 ceiling、量化鸿沟和 fold 诊断 CLI |
 | `evaluator/linear_error_decomposition.py` | 扩展 W4A4/teacher/student 分解 |
-| `tests/test_jdrq_ridge.py` | ridge/structured regression 数学测试 |
-| `tests/test_jdrq_discrete.py` | 残差增量、合法参数和单调性测试 |
+| `tests/test_jdrq.py` | ridge/structured regression、残差增量、合法参数和单调性测试 |
 | `tests/test_linear_compliance_guard.py` | state 冻结和 A@W 数据流回归 |
 | `tests/test_release_candidate.py` | 最终 API、合法性和确定性 |
 | `logs/execution/2026-08-29-jdrq-execution.md` | 持续实验账本 |
@@ -275,7 +275,7 @@ $$W_*=W_tC^T.$$
 
 ### Task D0.5：数学测试
 
-新增 `tests/test_jdrq_ridge.py`：
+新增 `tests/test_jdrq.py`（后续若拆分文件，保持同一断言集合）：
 
 1. 小矩阵上 dual 解与 primal 解一致；
 2. `Z=X` 时 `W*` 收缩回 `W0`；
@@ -772,7 +772,7 @@ C78 之前允许诊断版本超过 420 秒。只有确认有效机制后才压�
 ```powershell
 git diff --check
 .\.venv\Scripts\python -m py_compile solution.py evaluator\jdrq_diagnostics.py
-.\.venv\Scripts\python -m pytest -q tests\test_jdrq_ridge.py tests\test_jdrq_discrete.py
+.\.venv\Scripts\python -m pytest -q tests\test_jdrq.py
 .\.venv\Scripts\python -m pytest -q tests\test_linear_compliance_guard.py tests\test_release_candidate.py
 .\.venv\Scripts\python -m pytest -q
 ```
@@ -931,3 +931,70 @@ C78 jdrq-release-pareto
 本计划的核心执行心法：
 
 > 先测上限，再完善求解器；先让算法兑现精度，再压缩时间。负实验只约束被测实现，不能用过严门控把尚未完成的结构级优化提前终止。
+
+---
+
+## 15. 2026-08-29 首轮实现状态（已落地）
+
+本轮没有覆盖用户已有的根父版本；在当前根 C69 系列代码上增量实现并保留开关，后续归档时再按父版本协议生成不可变快照。
+
+### 已实现
+
+| 阶段 | 代码/测试 | 当前策略 |
+|---|---|---|
+| C72 | `solution.py::_jdrq_make_target`、`_jdrq_ridge_projection` | 完整 dual / 64-block structured ridge 已实现为研究臂，默认关闭，便于跨模型复核 |
+| C73 | `solution.py::_jdrq_refine_mantissa_coordinates` | 固定 `Z=Q(A)` 后，对高杠杆 64-block 做合法 signed-mantissa 坐标下降 |
+| C74 | `solution.py::_jdrq_refine_hierarchy_offsets` | 固定 `Z` 后，对 E6M2 offset、lv2、lv3 和 mantissa 做精确输出残差二次变化搜索；默认启用，最多 4 个 block |
+| 合规 | `solution.py` 返回路径 | JDRQ 位于 `activation_state` 完成之后，只返回静态五字段 weight；未把 product/residual 写入 state |
+| 单测 | `tests/test_jdrq.py` | dual/primal 等价、层级参数合法性、产品损失不增 |
+
+### 实测结果
+
+配置：`amax6 / seq128 / calib2 / test4 / cache_mode=read / algorithm-device=cuda`（GPT-2 单项另有 CPU 对照）。分数为本地 evaluator native total，仅用于相对比较，不映射官方绝对分。
+
+| 模型 | 当前 C74 total | 当前 C74 API | 对照（C66/C69 归档） | 结论 |
+|---|---:|---:|---:|---|
+| GPT-2 small | 160.572 | 61.88s CUDA | 155.604（根关闭 JDRQ） | Linear 有可复现增益 |
+| OPT-125M | 85.581 | 59.56s CUDA | 85.120（C66） | 未出现 C71 式灾难回退 |
+| Pythia-160M | 179.059 | 59.71s CUDA | 178.939（C66） | 基本持平、略升 |
+| Qwen2.5-0.5B | 356.606 | 163.41s CUDA | 350.152（C66） | 主模型有增益且远低于 420s |
+
+双重 ridge 研究臂在 GPT-2 的 calibration product 上可降低损失，但 hidden validation 反而退化；因此当前默认先用低自由度 C74，不是删除 C72。下一轮应继续做结构化 target 的正则/交叉窗口实验，而不是直接把整个 JDRQ 理论判死。
+
+D0 诊断工具 `evaluator/jdrq_diagnostics.py` 进一步显示：GPT-2 layer-0
+down-proj 的 parent/continuous/legal/hierarchy 相对损失为
+`0.006693/0.000082/0.003706/0.006481`，Qwen 对应为
+`0.002686/0.000012/0.001883/0.002648`。连续上限与合法投影之间仍有很大
+离散兑现鸿沟，后续应优先完善结构化离散求解器，而不是把当前小幅 C74
+增益误认为已接近上限。
+
+### C75.1/C75.2 增量状态（v073）
+
+已把 C75 的前两项接入活动根版本并归档为 v073：
+
+1. source-aware proposal 从每个 NVFP4 64-group 的四个 E4M3 source scale
+   生成 median/q75/max 三类合法 E6M2 候选，保留旧 amax/offset 候选；
+2. gram64 从静态变换权重构造每个 64-group 的 `W.T@W`，动态激活只对
+   高损失 block 做一次精确 signed-mantissa 格点下降；
+3. gram64 默认按形状启用在 `out_features < in_features` 的
+   down-projection，避免 q/k/v/o 方阵路径的迁移噪声，未使用模型名门控；
+4. 激活 state 完成后重新运行 C72--C74，禁止复用旧 Q(W)。
+
+GPT-2 project-only gram64 实测 native total `158.561896`、API
+`59.64s CUDA`；它优于同一 source-aware arm 的 `160.597330`，且优于
+全形状 gram64 的 `159.690510`。全形状诊断曾观察到 Qwen `363.937585`、
+OPT `87.315586`、Pythia `182.048492`，但这些数字只用于归因，不作为
+v073 最终分数；形状门控后的 Qwen/OPT/Pythia 复测必须重新生成 Q(W)。
+
+对应单元/发布测试：`25 passed, 1 deselected`。当前活动根及 v073
+归档 SHA256 为 `A0DCE5D79DA931D5B67FACCBA47226B6C8FCE9FC9551200ED86A3693A1E464DA`。
+
+### 下一轮唯一优先级
+
+1. 完成 project-only gate 下 Qwen、OPT、Pythia 的真实终验，记录每层
+   gram64 state 命中率、运行时间和 Linear/Attention 分量；
+2. 进入 C75.3 变换候选：identity/Smooth/CAT/H32/H64，在固定 state 后
+   重新生成 `Z`，先测 D0 continuous ceiling，再进入 C74；
+3. 对 source-aware 与 gram64 做单机制消融，并按 successive halving
+   控制预算；若 ceiling 仍高而离散兑现率低，优先扩展 C74 求解器，
+   不增加模型名或硬 per-fold veto。

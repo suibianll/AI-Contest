@@ -434,38 +434,6 @@ _ACTIVATION_QUADRATIC16_MAX_GROUPS = 4096
 _ACTIVATION_QUADRATIC16_SWEEPS = 1
 _ACTIVATION_QUADRATIC16_ACCEPT_MARGIN = 1.0e-5
 
-# C75.2: a bounded full-64 activation metric derived from the static
-# transformed weight.  The state stores only block-diagonal ``W.T @ W``
-# slices; the dynamic path visits the highest-loss blocks and performs one
-# exact legal-grid coordinate sweep.  This is deliberately capped because a
-# full 64-way search on every activation block would spend the entire runtime
-# budget without changing the codec contract.
-_ACTIVATION_GRAM64 = True
-_ACTIVATION_GRAM64_MAX_FEATURES = 4096
-_ACTIVATION_GRAM64_MAX_RATIO = 0.08
-_ACTIVATION_GRAM64_MAX_BLOCKS = 2
-_ACTIVATION_GRAM64_SWEEPS = 1
-_ACTIVATION_GRAM64_ACCEPT_MARGIN = 1.0e-5
-_ACTIVATION_GRAM64_GATE_MIN_GAIN = 1.0e-4
-# Down-projection shape (out < in) has the strongest output leverage and is
-# the stable cross-model arm.  Keeping the full-64 state off for square/up
-# shapes avoids spending calibration/runtime on the GPT-2 q/k/v/o paths where
-# the same metric can migrate poorly, without introducing a model-name gate.
-_ACTIVATION_GRAM64_PROJ_ONLY = True
-
-# C75: source-aware activation scale proposals.  The incoming NVFP4 carrier
-# already contains four E4M3 16-value scales for every HiF4 64-group.  Their
-# log-domain median/upper-tail estimates provide legal E6M2 top-scale
-# candidates that the ordinary amax proposal cannot see.  The standard
-# amax/offset candidates remain in the pool and the existing hierarchy solver
-# still chooses the final code, so this is a proposal expansion rather than a
-# hard replacement.  It is enabled only for the linear activation path; the
-# Attention path keeps its separately calibrated state for this candidate.
-_ACTIVATION_SOURCE_SCALE_PROPOSAL = True
-_ACTIVATION_SOURCE_SCALE_STATS = ("median", "q75", "max")
-_ACTIVATION_SOURCE_SCALE_TO_HIF4_AMAX = 6.0 / 7.0
-_ACTIVATION_SOURCE_SCALE_MARKER = 1_000_000
-
 # C37 (2026-08-28): sample-adaptive activation importance.  The static
 # calibration importance (weight-column energy) biases the offset/refine
 # selection toward the calibration centroid; for a test sample that differs
@@ -1039,156 +1007,6 @@ def _refine_activation_groups16(
     mant16.index_copy_(0, improved_indices, improved_codes.abs() * 0.25)
     refined["sign"] = sign16.reshape_as(params["sign"])
     refined["mant"] = mant16.reshape_as(params["mant"])
-    return refined
-
-
-@torch.no_grad()
-def _refine_activation_blocks64(
-    dense: torch.Tensor,
-    params: dict[str, torch.Tensor],
-    gram64: torch.Tensor,
-    *,
-    max_ratio: float = _ACTIVATION_GRAM64_MAX_RATIO,
-    max_blocks: int = _ACTIVATION_GRAM64_MAX_BLOCKS,
-    sweeps: int = _ACTIVATION_GRAM64_SWEEPS,
-    accept_margin: float = _ACTIVATION_GRAM64_ACCEPT_MARGIN,
-) -> dict[str, torch.Tensor]:
-    """C75.2: refine selected activation 64-groups under full ``W.T@W``.
-
-    ``gram64`` is block diagonal by construction, so a dynamic sample can
-    select its highest-loss 64-groups and solve those groups independently.
-    The existing batched coordinate solver enumerates the legal signed
-    mantissa lattice and accepts only exact negative quadratic changes.  All
-    unselected groups and failed/non-finite groups keep the parent fields.
-    """
-
-    if not _ACTIVATION_GRAM64:
-        return params
-    if dense.ndim != 2 or gram64.ndim != 3:
-        return params
-    rows, channels = map(int, dense.shape)
-    if rows <= 0 or channels % _HIF4_BLOCK_SIZE != 0:
-        return params
-    blocks = channels // _HIF4_BLOCK_SIZE
-    if tuple(int(v) for v in gram64.shape) != (
-        blocks,
-        _HIF4_BLOCK_SIZE,
-        _HIF4_BLOCK_SIZE,
-    ):
-        return params
-    h = gram64.detach().to(device=dense.device, dtype=torch.float32)
-    if not bool(torch.isfinite(h).all()):
-        return params
-
-    x = dense.detach().to(torch.float32).reshape(rows, blocks, _HIF4_BLOCK_SIZE)
-    q = _dequantize_hif4(params).to(
-        device=dense.device, dtype=torch.float32
-    ).reshape(rows, blocks, _HIF4_BLOCK_SIZE)
-    error = q - x
-    losses = torch.einsum("rbi,bij,rbj->rb", error, h, error)
-    losses = torch.where(
-        torch.isfinite(losses), losses, torch.full_like(losses, -torch.inf)
-    )
-    if not bool((losses > _EPS).any()):
-        return params
-    ratio_count = max(
-        1,
-        int(math.ceil(blocks * max(0.0, min(float(max_ratio), 1.0)))),
-    )
-    selected_count = min(blocks, max(1, min(ratio_count, int(max_blocks))))
-    selected = torch.topk(losses, k=selected_count, dim=1, largest=True).indices
-    flat_selected = selected.reshape(-1)
-    row_index = torch.arange(rows, device=dense.device).unsqueeze(1).expand(
-        rows, selected_count
-    ).reshape(-1)
-    valid = losses[row_index, flat_selected] > _EPS
-    if not bool(valid.any()):
-        return params
-    row_index = row_index[valid]
-    block_index = flat_selected[valid]
-
-    q_selected = q[row_index, block_index].unsqueeze(1)
-    x_selected = x[row_index, block_index].unsqueeze(1)
-    h_selected = h.index_select(0, block_index)
-    scale = params["scale_factor"].to(torch.float32).reshape(rows, blocks)
-    lv2 = params["scale_lv2"].to(torch.float32).reshape(rows, blocks, 8)
-    lv3 = params["scale_lv3"].to(torch.float32).reshape(rows, blocks, 8, 2)
-    denominator = (
-        scale[row_index, block_index].reshape(-1, 1, 1, 1)
-        * lv2[row_index, block_index, :, None, None]
-        * lv3[row_index, block_index, :, :, None]
-    ).repeat_interleave(4, dim=-1).reshape(-1, 1, _HIF4_BLOCK_SIZE)
-    q_work = q_selected[:, 0].clone()
-    x_work = x_selected[:, 0]
-    den_work = denominator[:, 0]
-    signed_codes = torch.tensor(
-        _WEIGHT_FULL64_SIGNED_CODES,
-        dtype=torch.float32,
-        device=dense.device,
-    )
-    for _ in range(max(1, int(sweeps))):
-        gradient = torch.einsum("nij,nj->ni", h_selected, q_work - x_work)
-        diagonal = h_selected.diagonal(dim1=-2, dim2=-1).clamp_min(_EPS)
-        for coordinate in range(_HIF4_BLOCK_SIZE):
-            current = q_work[:, coordinate]
-            candidates = den_work[:, coordinate, None] * signed_codes[None, :]
-            delta = candidates - current[:, None]
-            change = (
-                2.0 * delta * gradient[:, coordinate, None]
-                + diagonal[:, coordinate, None] * delta.square()
-            )
-            best_change, best_index = change.min(dim=-1)
-            improve = torch.isfinite(best_change) & (best_change < -_EPS)
-            step = delta.gather(-1, best_index[:, None]).squeeze(-1)
-            step = torch.where(improve, step, torch.zeros_like(step))
-            q_work[:, coordinate] = current + step
-            gradient.add_(step[:, None] * h_selected[:, :, coordinate])
-    q_selected = q_work.unsqueeze(1)
-    improved = q_selected[:, 0] - q[row_index, block_index]
-    if not bool(torch.isfinite(improved).all()):
-        return params
-    # The coordinate solver already accepts only negative changes.  A final
-    # exact loss check keeps the acceptance margin explicit and protects
-    # against roundoff in a near-zero Hessian block.
-    old_loss = torch.einsum(
-        "ni,nij,nj->n",
-        q[row_index, block_index] - x[row_index, block_index],
-        h_selected,
-        q[row_index, block_index] - x[row_index, block_index],
-    )
-    new_loss = torch.einsum(
-        "ni,nij,nj->n",
-        q_selected[:, 0] - x_selected[:, 0],
-        h_selected,
-        q_selected[:, 0] - x_selected[:, 0],
-    )
-    accept = new_loss <= old_loss * (1.0 - max(0.0, float(accept_margin)))
-    if not bool(accept.any()):
-        return params
-    full_denominator = (
-        params["scale_factor"].to(torch.float32).reshape(rows, blocks, 1, 1, 1)
-        * params["scale_lv2"].to(torch.float32).reshape(rows, blocks, 8, 1, 1)
-        * params["scale_lv3"].to(torch.float32).reshape(rows, blocks, 8, 2, 1)
-    ).repeat_interleave(4, dim=-1).reshape(rows, blocks, _HIF4_BLOCK_SIZE)
-    accepted_rows = row_index[accept]
-    accepted_blocks = block_index[accept]
-    accepted_denominator = full_denominator[accepted_rows, accepted_blocks]
-    codes = torch.round(
-        q_selected[accept, 0] * 4.0 / accepted_denominator.clamp_min(_EPS)
-    ).clamp(-7.0, 7.0)
-    refined = dict(params)
-    sign_flat = refined["sign"].to(torch.float32).reshape(
-        rows, blocks, _HIF4_BLOCK_SIZE
-    ).clone()
-    mant_flat = refined["mant"].to(torch.float32).reshape(
-        rows, blocks, _HIF4_BLOCK_SIZE
-    ).clone()
-    sign_flat[accepted_rows, accepted_blocks] = torch.where(
-        codes == 0.0, torch.zeros_like(codes), torch.sign(codes)
-    )
-    mant_flat[accepted_rows, accepted_blocks] = codes.abs().mul(0.25)
-    refined["sign"] = sign_flat.reshape_as(params["sign"])
-    refined["mant"] = mant_flat.reshape_as(params["mant"])
     return refined
 
 
@@ -2684,67 +2502,6 @@ def _standard_e6m2_scale(amax: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor
     return code, _e6m2_decode(code)
 
 
-def _source_scale_code_candidates(
-    source_scale_float: Optional[torch.Tensor],
-    dense_shape: Sequence[int],
-    channels: int,
-) -> Optional[torch.Tensor]:
-    """Build per-64-block E6M2 scale proposals from the NVFP4 source.
-
-    NVFP4 stores one E4M3 scale per 16-value block.  Four such blocks map to
-    one HiF4 64-group.  In the log domain, the median, 75th percentile and
-    maximum are stable summaries of the source dynamic range.  NVFP4's
-    ``amax / 6`` scale is converted to the HiF4 ``amax / 7`` convention by
-    multiplying by ``6/7`` and then encoded with the official E6M2 nearest
-    encoder.  The result is only a candidate list; ``_solve_exact_hierarchy``
-    still decides the legal hierarchy and the ordinary amax/offset candidate
-    remains available.
-
-    Returns ``[..., blocks, num_stats]`` codes, or ``None`` when the source
-    shape is unavailable/incompatible.  No source tensor is retained in the
-    returned activation state.
-    """
-
-    if source_scale_float is None:
-        return None
-    try:
-        prefix = tuple(int(v) for v in dense_shape[:-1])
-        width = int(channels)
-        if width <= 0 or width % _HIF4_BLOCK_SIZE != 0:
-            return None
-        expected = prefix + (width // _NVFP4_BLOCK_SIZE,)
-        if tuple(int(v) for v in source_scale_float.shape) != expected:
-            return None
-        blocks = width // _HIF4_BLOCK_SIZE
-        grouped = source_scale_float.detach().to(torch.float32).reshape(
-            *prefix, blocks, _HIF4_BLOCK_SIZE // _NVFP4_BLOCK_SIZE
-        )
-        grouped = torch.nan_to_num(
-            grouped,
-            nan=_E6M2_MIN,
-            posinf=_E6M2_MAX,
-            neginf=_E6M2_MIN,
-        ).clamp_min(_E6M2_MIN)
-        log2_scale = torch.log2(grouped)
-        stats = []
-        if "median" in _ACTIVATION_SOURCE_SCALE_STATS:
-            stats.append(torch.median(log2_scale, dim=-1).values)
-        if "q75" in _ACTIVATION_SOURCE_SCALE_STATS:
-            # Four source blocks make the percentile inexpensive and
-            # deterministic; interpolation is acceptable because the result
-            # is rounded to the finite E6M2 lattice immediately afterwards.
-            stats.append(torch.quantile(log2_scale, 0.75, dim=-1))
-        if "max" in _ACTIVATION_SOURCE_SCALE_STATS:
-            stats.append(log2_scale.amax(dim=-1))
-        if not stats:
-            return None
-        values = torch.stack(stats, dim=-1).exp2()
-        values = values * float(_ACTIVATION_SOURCE_SCALE_TO_HIF4_AMAX)
-        return _e6m2_encode_nearest(values)
-    except (RuntimeError, ValueError, TypeError):
-        return None
-
-
 def _offsets_as_tuple(offsets: Optional[Iterable[int]]) -> tuple[int, ...]:
     ordered = [0]
     if offsets is None:
@@ -2857,7 +2614,6 @@ def _dense_to_hif4(
     *,
     importance: Optional[torch.Tensor] = None,
     group_gram: Optional[torch.Tensor] = None,
-    source_scale_float: Optional[torch.Tensor] = None,
     search_offsets: Optional[Union[Sequence[int], torch.Tensor]] = None,
     error_threshold: float = 0.0,
     accept_margin: float = 0.0,
@@ -2922,11 +2678,6 @@ def _dense_to_hif4(
     )
 
     offsets = _offsets_as_tuple(search_offsets)
-    source_codes = _source_scale_code_candidates(
-        source_scale_float, x.shape, channels
-    )
-    if source_codes is not None and source_codes.device != x.device:
-        source_codes = source_codes.to(device=x.device)
     refine_ratio = max(0.0, min(float(max_refine_ratio), 1.0))
     if refine_ratio <= 0.0 or len(offsets) == 0:
         return _pack_hif4_params(
@@ -3024,10 +2775,10 @@ def _dense_to_hif4(
         channel_block_ids = torch.remainder(hard_indices, blocks)
         importance_hard = block_importance.index_select(0, channel_block_ids)
 
-    # 全部 scale proposal 一次性批量求解：把 [N] 块沿 candidate 维展开
-    # 成 [K, N]，一次精确求解后按块取 argmin。标准 code（offset 0）必须
-    # 保留在候选里：阈值式 lv2/lv3 与精确解不等价（真实数据约半数块
-    # 有更低损失），offset 0 会把 hard 块的 lv2/lv3 升级为精确解。
+    # 全部 offset 一次性批量求解：把 [N] 块沿 offset 维展开成 [K, N]，
+    # 一次精确求解后按块取 argmin。标准 code（offset 0）必须保留在候选里：
+    # 阈值式 lv2/lv3 与精确解不等价（真实数据约半数块有更低损失），
+    # offset 0 会把 hard 块的 lv2/lv3 升级为精确解。
     offset_values = torch.tensor(
         [int(o) for o in offsets], dtype=torch.int64, device=x.device
     )
@@ -3035,44 +2786,26 @@ def _dense_to_hif4(
         standard_code_hard.to(torch.int64).unsqueeze(0)
         + offset_values.unsqueeze(1)
     ).clamp(min=0, max=254)
-    candidate_markers = offset_values
-    if source_codes is not None:
-        # ``hard_indices`` is flattened over prefix rows and 64-blocks.  Pick
-        # only the source proposals for those blocks; no dense all-block
-        # candidate tensor is materialized.
-        source_flat = source_codes.reshape(-1, blocks, source_codes.shape[-1])
-        row_ids = torch.div(hard_indices, blocks, rounding_mode="floor")
-        block_ids = torch.remainder(hard_indices, blocks)
-        source_hard = source_flat[row_ids, block_ids].transpose(0, 1)
-        expanded_codes = torch.cat((expanded_codes, source_hard), dim=0)
-        # Keep source proposals out of the offset-edge extension below.
-        source_markers = torch.full(
-            (int(source_hard.shape[0]),),
-            _ACTIVATION_SOURCE_SCALE_MARKER,
-            dtype=torch.int64,
-            device=x.device,
-        )
-        candidate_markers = torch.cat((candidate_markers, source_markers), dim=0)
     candidate_scales = _e6m2_decode(expanded_codes)
-    num_candidates = int(expanded_codes.shape[0])
+    num_offsets = int(offset_values.numel())
     x_expanded = x_hard.unsqueeze(0).expand(
-        num_candidates, -1, -1, -1, -1
+        num_offsets, -1, -1, -1, -1
     )
     sign_expanded = sign_hard.unsqueeze(0).expand(
-        num_candidates, -1, -1, -1, -1
+        num_offsets, -1, -1, -1, -1
     )
     importance_expanded = (
         None
         if importance_hard is None
         else importance_hard.unsqueeze(0).expand(
-            num_candidates, -1, -1, -1, -1
+            num_offsets, -1, -1, -1, -1
         )
     )
     gram_expanded = (
         None
         if group_gram_hard is None
         else group_gram_hard.unsqueeze(0).expand(
-            num_candidates, -1, -1, -1, -1, -1
+            num_offsets, -1, -1, -1, -1, -1
         )
     )
     all_losses, all_lv2, all_lv3, all_mantissa = _solve_exact_hierarchy(
@@ -3100,7 +2833,9 @@ def _dense_to_hif4(
     best_mantissa = torch.where(
         improve[:, None, None, None], candidate_mantissa, best_mantissa
     )
-    best_offset = torch.where(improve, candidate_markers[best_k], best_offset)
+    best_offset = torch.where(
+        improve, offset_values[best_k], best_offset
+    )
 
     if _REFINE_EDGE_EXTENSION and len(offsets) > 1:
         lo_offset = int(offsets[0])
@@ -3246,14 +2981,7 @@ def _dense_to_hif4(
         )
 
     margin = max(0.0, min(float(accept_margin), 0.99))
-    # Source proposals are scored with the same operand-local quadratic
-    # metric (when available) but can be useful below the historical 2%
-    # reconstruction margin.  Let a strictly improving source winner pass;
-    # ordinary amax/offset candidates keep the incumbent margin semantics.
-    source_winner = best_offset >= int(_ACTIVATION_SOURCE_SCALE_MARKER)
-    source_accept = best_loss < (standard_loss_hard - _EPS)
-    regular_accept = best_loss <= ((1.0 - margin) * standard_loss_hard)
-    accept = torch.where(source_winner, source_accept, regular_accept)
+    accept = best_loss <= ((1.0 - margin) * standard_loss_hard)
     if not bool(torch.any(accept)):
         return _pack_hif4_params(
             prefix,
@@ -3304,13 +3032,11 @@ def _nvfp4_to_hif4(
     group_gram: Optional[torch.Tensor] = None,
     group_gram8: Optional[torch.Tensor] = None,
     group_gram16: Optional[torch.Tensor] = None,
-    group_gram64: Optional[torch.Tensor] = None,
     search_offsets: Optional[Union[Sequence[int], torch.Tensor]] = None,
     error_threshold: float = 0.0,
     accept_margin: float = 0.0,
     max_refine_ratio: float = 0.0,
     max_refine_blocks: Optional[int] = None,
-    source_scale_proposal: bool = False,
     attention_rotation: Optional[torch.Tensor] = None,
     rotation_num_heads: Optional[int] = None,
 ) -> dict[str, torch.Tensor]:
@@ -3380,7 +3106,6 @@ def _nvfp4_to_hif4(
         dense,
         importance=refine_importance,
         group_gram=gram,
-        source_scale_float=(scale_float if source_scale_proposal else None),
         search_offsets=search_offsets,
         error_threshold=error_threshold,
         accept_margin=accept_margin,
@@ -3409,15 +3134,6 @@ def _nvfp4_to_hif4(
             device=dense.device, dtype=torch.float32
         )
         params = _refine_activation_groups16(dense, params, gram16)
-    if (
-        _ACTIVATION_GRAM64
-        and group_gram64 is not None
-        and channels <= _ACTIVATION_GRAM64_MAX_FEATURES
-    ):
-        gram64 = group_gram64.detach().to(
-            device=dense.device, dtype=torch.float32
-        )
-        params = _refine_activation_blocks64(dense, params, gram64)
     return params
 
 
@@ -4647,101 +4363,6 @@ def _activation8_refinement_is_safe(
     return bool(mean_safe and worst_safe)
 
 
-def _activation_gram64_is_safe(
-    activation_samples: Sequence[torch.Tensor],
-    d: torch.Tensor,
-    permutation: torch.Tensor,
-    block_smooth_size: int,
-    block_smooth_seed: int,
-    importance: Optional[torch.Tensor],
-    group_gram4: Optional[torch.Tensor],
-    gram64: torch.Tensor,
-    activation_ratio: float,
-    cat_transform: Optional[torch.Tensor] = None,
-) -> bool:
-    """Select the full-64 activation metric by an operand-local calibration score.
-
-    The gate compares the exact block ``W.T@W`` objective on each calibration
-    window.  It never constructs a Linear output and it is intentionally a
-    scalar mean criterion: a useful cross-window signal is not rejected just
-    because one small fold is noisy.  The parent path remains available when
-    the full-64 metric has no measurable calibration gain.
-    """
-
-    if not activation_samples or gram64.ndim != 3:
-        return False
-    base_scores: list[float] = []
-    refined_scores: list[float] = []
-    for sample in activation_samples:
-        transformed = _linear_pair_transform(
-            sample.to(dtype=torch.float32),
-            d,
-            permutation,
-            block_smooth_size,
-            block_smooth_seed,
-            weight_side=False,
-            cat_transform=cat_transform,
-        )
-        channels = int(transformed.shape[-1])
-        blocks = channels // _HIF4_BLOCK_SIZE
-        gram4 = None
-        if group_gram4 is not None:
-            gram4 = (
-                group_gram4.detach()
-                .to(device=transformed.device, dtype=torch.float32)
-                .reshape(blocks, 8, 2, 4, 4)
-                .unsqueeze(0)
-                .expand(int(transformed.shape[0]), blocks, 8, 2, 4, 4)
-            )
-        base_params = _dense_to_hif4(
-            transformed,
-            importance=importance,
-            group_gram=gram4,
-            search_offsets=_DYNAMIC_OFFSETS,
-            error_threshold=_ACTIVATION_REFINE_ERROR_THRESHOLD,
-            accept_margin=_ACTIVATION_REFINE_ACCEPT_MARGIN,
-            max_refine_ratio=float(activation_ratio),
-            max_refine_blocks=_ACTIVATION_REFINE_MAX_BLOCKS,
-        )
-        refined_params = _refine_activation_blocks64(
-            transformed,
-            base_params,
-            gram64,
-            max_ratio=_ACTIVATION_GRAM64_MAX_RATIO,
-            max_blocks=_ACTIVATION_GRAM64_MAX_BLOCKS,
-            sweeps=_ACTIVATION_GRAM64_SWEEPS,
-            accept_margin=_ACTIVATION_GRAM64_ACCEPT_MARGIN,
-        )
-        base = _dequantize_hif4(base_params).reshape(
-            int(transformed.shape[0]), blocks, _HIF4_BLOCK_SIZE
-        )
-        refined = _dequantize_hif4(refined_params).reshape_as(base)
-        target = transformed.reshape_as(base)
-        h = gram64.to(device=target.device, dtype=torch.float32)
-        base_error = base - target
-        refined_error = refined - target
-        denominator = torch.einsum(
-            "rbi,bij,rbj->r", target, h, target
-        ).mean().clamp_min(_EPS)
-        base_score = torch.einsum(
-            "rbi,bij,rbj->r", base_error, h, base_error
-        ).mean() / denominator
-        refined_score = torch.einsum(
-            "rbi,bij,rbj->r", refined_error, h, refined_error
-        ).mean() / denominator
-        base_scores.append(float(base_score))
-        refined_scores.append(float(refined_score))
-    if not base_scores or len(base_scores) != len(refined_scores):
-        return False
-    if not all(map(math.isfinite, base_scores + refined_scores)):
-        return False
-    base_mean = sum(base_scores) / float(len(base_scores))
-    refined_mean = sum(refined_scores) / float(len(refined_scores))
-    return bool(
-        refined_mean <= base_mean * (1.0 - _ACTIVATION_GRAM64_GATE_MIN_GAIN)
-    )
-
-
 def _cpu_state_tensor(x: torch.Tensor) -> torch.Tensor:
     return torch.nan_to_num(
         x.detach().to(device="cpu", dtype=torch.float32),
@@ -5122,8 +4743,6 @@ def _jdrq_calibration_products(
                 group_gram=state.get("gram"),
                 group_gram8=state.get("gram8"),
                 group_gram16=state.get("gram16"),
-                group_gram64=state.get("gram64"),
-                source_scale_proposal=_ACTIVATION_SOURCE_SCALE_PROPOSAL,
                 search_offsets=state.get("offsets"),
                 error_threshold=float(state.get("error_threshold", 0.0)),
                 accept_margin=float(state.get("accept_margin", 0.0)),
@@ -6277,7 +5896,6 @@ def hif4_calibration_and_quantize_weight(
 
     activation_gram_state = None
     activation_gram8_state = None
-    activation_gram64_state = None
     if (
         _ACTIVATION_QUADRATIC
         and in_features <= _ACTIVATION_QUADRATIC_MAX_FEATURES
@@ -6286,30 +5904,6 @@ def hif4_calibration_and_quantize_weight(
         activation_gram_state = _cpu_state_tensor(
             _flat_group_gram(gram, in_features)
         )
-        if (
-            _ACTIVATION_GRAM64
-            and not _LINEAR_R64
-            and (
-                not _ACTIVATION_GRAM64_PROJ_ONLY
-                or out_features < in_features
-            )
-        ):
-            gram64_candidate = _full64_hessian_blocks(gram, in_features)
-            if _activation_gram64_is_safe(
-                activation_samples,
-                best_d,
-                best_perm,
-                best_block_smooth_size,
-                best_block_smooth_seed,
-                activation_importance,
-                activation_gram_state,
-                gram64_candidate,
-                activation_ratio,
-                best_cat_transform,
-            ):
-                activation_gram64_state = _cpu_state_tensor(
-                    gram64_candidate
-                )
         if (
             _ACTIVATION_QUADRATIC8
             and in_features >= _ACTIVATION_QUADRATIC8_MIN_FEATURES
@@ -6372,7 +5966,6 @@ def hif4_calibration_and_quantize_weight(
         "gram": activation_gram_state,
         "gram8": activation_gram8_state,
         "gram16": activation_gram16_state,
-        "gram64": activation_gram64_state,
         "offsets": torch.tensor(_DYNAMIC_OFFSETS, dtype=torch.int8, device="cpu"),
         "error_threshold": _ACTIVATION_REFINE_ERROR_THRESHOLD,
         "accept_margin": _ACTIVATION_REFINE_ACCEPT_MARGIN,
@@ -6483,8 +6076,6 @@ def hif4_dynamic_quantize_activation(
         group_gram=activation_state.get("gram"),
         group_gram8=activation_state.get("gram8"),
         group_gram16=activation_state.get("gram16"),
-        group_gram64=activation_state.get("gram64"),
-        source_scale_proposal=_ACTIVATION_SOURCE_SCALE_PROPOSAL,
         search_offsets=activation_state["offsets"],
         error_threshold=float(activation_state["error_threshold"]),
         accept_margin=float(activation_state["accept_margin"]),

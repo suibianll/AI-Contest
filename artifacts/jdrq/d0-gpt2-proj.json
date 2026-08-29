@@ -1,0 +1,46 @@
+{
+  "cache": "artifacts\\real_model_suite\\cache\\gpt2-small__seq128__calib2__test4__layersall__schema1.pt",
+  "layer": 0,
+  "role": "proj",
+  "mode": "amax6",
+  "weight_shape": [
+    768,
+    3072
+  ],
+  "calibration_rows": 256,
+  "calibration_windows": [
+    [
+      0,
+      128
+    ],
+    [
+      128,
+      256
+    ]
+  ],
+  "parent_product_loss": 0.016590650007128716,
+  "continuous_dual_loss": 8.99681617738679e-05,
+  "legal_projection_loss": 0.005977770453318954,
+  "hierarchy_residual_loss": 0.012983340676873923,
+  "continuous_gap_ratio": 0.005422823200731143,
+  "legal_gap_ratio": 0.3603095991266411,
+  "hierarchy_ratio": 0.7825697408658012,
+  "jdrq_default": false,
+  "state_keys": [
+    "accept_margin",
+    "block_smooth_seed",
+    "block_smooth_size",
+    "error_threshold",
+    "gram",
+    "gram16",
+    "gram8",
+    "importance",
+    "in_features",
+    "max_refine_blocks",
+    "max_refine_ratio",
+    "offsets",
+    "permutation",
+    "smooth_inv",
+    "version"
+  ]
+}
