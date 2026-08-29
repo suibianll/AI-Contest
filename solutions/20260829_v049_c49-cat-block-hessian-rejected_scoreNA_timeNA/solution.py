@@ -70,7 +70,7 @@ _CAT64_MAX_CALIB_ROWS = 256
 # unchanged; when enabled, its operand-local weight term uses the existing
 # 64x64 calibration-Hessian blocks instead of only their diagonal.  This
 # remains a calibration-only signal and never enters activation_state.
-_CAT64_BLOCK_HESSIAN_METRIC = False
+_CAT64_BLOCK_HESSIAN_METRIC = True
 # C45: calibration-product selector for the *static* weight quantizer.
 #
 # A@W is used here only as an offline objective for Q(W).  The online
