@@ -510,12 +510,6 @@ _ACTIVATION_GRAM64_MAX_BLOCKS = 128
 _ACTIVATION_GRAM64_SWEEPS = 5
 _ACTIVATION_GRAM64_ACCEPT_MARGIN = 1.0e-5
 _ACTIVATION_GRAM64_GATE_MIN_GAIN = 1.0e-4
-# C85 research: the activation objective is ultimately multiplied by the
-# static quantized weight.  When enabled, build the legal static Gram state
-# from the final offline Q(W) carrier instead of the dense NVFP4 weight.  This
-# never uses A@W or an output residual for Q(A); the switch only changes the
-# fixed weight-derived metric used by the activation codec.
-_ACTIVATION_GRAM64_USE_QUANTIZED_WEIGHT = True
 # Down-projection shape (out < in) has the strongest output leverage and is
 # the stable cross-model arm.  Keeping the full-64 state off for square/up
 # shapes avoids spending calibration/runtime on q/k/v/o paths where the same
@@ -7177,14 +7171,7 @@ def hif4_calibration_and_quantize_weight(
         _ACTIVATION_QUADRATIC
         and in_features <= _ACTIVATION_QUADRATIC_MAX_FEATURES
     ):
-        use_quantized_metric = (
-            _ACTIVATION_GRAM64_USE_QUANTIZED_WEIGHT
-            and in_features < _WIDE_LAYER_MIN_DIM
-        )
-        activation_metric_weight = (
-            weight_hat if use_quantized_metric else weight_smooth
-        )
-        gram = activation_metric_weight.t().mm(activation_metric_weight)
+        gram = weight_smooth.t().mm(weight_smooth)
         activation_gram_state = _cpu_state_tensor(
             _flat_group_gram(gram, in_features)
         )
@@ -7254,10 +7241,7 @@ def hif4_calibration_and_quantize_weight(
         )
         and in_features % _HIF4_BLOCK_SIZE == 0
     ):
-        # This branch is necessarily wide (>4096) and therefore keeps the
-        # dense W^T W metric; the shape split above handles narrow layers.
-        activation_metric_weight = weight_smooth
-        wide_weight_gram = activation_metric_weight.t().mm(activation_metric_weight)
+        wide_weight_gram = weight_smooth.t().mm(weight_smooth)
         wide_gram64 = _full64_hessian_blocks(wide_weight_gram, in_features)
         if _activation_gram64_is_safe(
             activation_samples,
