@@ -80,9 +80,28 @@ activation proposal), not another small fixed offset sweep.
 | GPT-2 small | source-aware + project-only gram64 | 158.561896 | 59.64s CUDA | completed; linear 137.255660, attention 21.306236 |
 | GPT-2 small | source-aware, no gram64 | 160.597330 | 65.79s CUDA | ablation/source arm |
 | GPT-2 small | all-shape gram64 | 159.690510 | 65.79s CUDA | square-path migration noise |
-| Qwen2.5-0.5B | all-shape gram64 | 363.937585 | 189.64s CUDA | directional only; must rerun with project-only gate |
-| OPT-125M | all-shape gram64 | 87.315586 | 69.60s CUDA | directional only; must rerun with project-only gate |
-| Pythia-160M | all-shape gram64 | 182.048492 | 70.71s CUDA | directional only; must rerun with project-only gate |
+| Qwen2.5-0.5B | all-shape gram64 | 363.937585 | 189.64s CUDA | directional attribution |
+| OPT-125M | all-shape gram64 | 87.315586 | 69.60s CUDA | directional attribution |
+| Pythia-160M | all-shape gram64 | 182.048492 | 70.71s CUDA | directional attribution |
+
+### Project-only gate rerun
+
+After the shape-derived `out_features < in_features` gate was enabled, all
+models were rerun from the finalized activation state and a fresh fixed-state
+JDRQ search:
+
+| model | native total | panel total | Linear | Attention | API time |
+|---|---:|---:|---:|---:|---:|
+| GPT-2 small | 158.561896 | 207.921523 | 137.255660 | 21.306236 | 59.64s |
+| Qwen2.5-0.5B | 360.658419 | 242.190891 | 297.538702 | 63.119717 | 168.72s |
+| OPT-125M | 85.772835 | 139.265384 | 66.125233 | 19.647602 | 61.14s |
+| Pythia-160M | 179.473083 | 289.874153 | 138.825204 | 40.647879 | 61.98s |
+
+Compared with C74, Qwen gains `+4.052817` native points; OPT and Pythia
+remain positive and do not reproduce the earlier C71 collapse. All API times
+remain below the 420-second limit. The four runs are stored at
+`artifacts/real_model_suite/active-c75-proj64-{qwen,hetero}.json` and the
+corresponding Markdown reports under `logs/evaluations/`.
 
 Focused command after the C75.2 fixes:
 
@@ -93,5 +112,5 @@ python -m pytest -q tests/test_jdrq.py tests/test_release_candidate.py \
 ```
 
 v073 is archived under `solutions/20260829_v073_c75-source-aware-gram64_scoreNA_timeNA/`.
-The project-only Qwen/OPT/Pythia rerun remains the next measurement before
-claiming a final cross-model score.
+The next measurement is C75.3 transform-candidate successive halving; no
+official-score claim is inferred from the local native/panel values.

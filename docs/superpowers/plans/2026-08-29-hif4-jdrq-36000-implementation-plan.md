@@ -982,17 +982,18 @@ down-proj 的 parent/continuous/legal/hierarchy 相对损失为
 
 GPT-2 project-only gram64 实测 native total `158.561896`、API
 `59.64s CUDA`；它优于同一 source-aware arm 的 `160.597330`，且优于
-全形状 gram64 的 `159.690510`。全形状诊断曾观察到 Qwen `363.937585`、
-OPT `87.315586`、Pythia `182.048492`，但这些数字只用于归因，不作为
-v073 最终分数；形状门控后的 Qwen/OPT/Pythia 复测必须重新生成 Q(W)。
+全形状 gram64 的 `159.690510`。形状门控后的 Qwen/OPT/Pythia 已重新
+生成 Q(W)，native total 分别为 `360.658419`、`85.772835`、
+`179.473083`，API 为 `168.72s`、`61.14s`、`61.98s`，均未出现灾难
+回退。全形状诊断值仍只用于归因，不作为 v073 分数。
 
 对应单元/发布测试：`25 passed, 1 deselected`。当前活动根及 v073
 归档 SHA256 为 `A0DCE5D79DA931D5B67FACCBA47226B6C8FCE9FC9551200ED86A3693A1E464DA`。
 
 ### 下一轮唯一优先级
 
-1. 完成 project-only gate 下 Qwen、OPT、Pythia 的真实终验，记录每层
-   gram64 state 命中率、运行时间和 Linear/Attention 分量；
+1. 归档并复核 project-only gate 下四模型的真实终验，补充每层 gram64
+   state 命中率和 Linear/Attention 分量消融；
 2. 进入 C75.3 变换候选：identity/Smooth/CAT/H32/H64，在固定 state 后
    重新生成 `Z`，先测 D0 continuous ceiling，再进入 C74；
 3. 对 source-aware 与 gram64 做单机制消融，并按 successive halving

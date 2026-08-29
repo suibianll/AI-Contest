@@ -18,16 +18,15 @@
 
 ## Local screen
 
-The project-only gram64 rerun is complete for GPT-2; Qwen/OPT/Pythia are
-being rerun after the shape-derived gate. Earlier all-shape gram64 numbers
-are retained as directional evidence, not as the v073 final score.
+The project-only gram64 rerun is complete for all four local models. Earlier
+all-shape gram64 numbers are retained as directional evidence only.
 
 | model | configuration | native total | API time | status |
 |---|---|---:|---:|---|
 | GPT-2 small | source-aware + project-only gram64 | 158.561896 | 59.64s CUDA | measured; better than all-shape gram64 and parent source arm |
-| Qwen2.5-0.5B | source-aware + project-only gram64 | NA | NA | rerun pending |
-| OPT-125M | source-aware + project-only gram64 | NA | NA | rerun pending |
-| Pythia-160M | source-aware + project-only gram64 | NA | NA | rerun pending |
+| Qwen2.5-0.5B | source-aware + project-only gram64 | 360.658419 | 168.72s CUDA | measured; +4.052817 native vs C74 |
+| OPT-125M | source-aware + project-only gram64 | 85.772835 | 61.14s CUDA | measured; no collapse |
+| Pythia-160M | source-aware + project-only gram64 | 179.473083 | 61.98s CUDA | measured; no collapse |
 
 Directional all-shape gram64 measurements were GPT-2 `159.690510`, Qwen
 `363.937585`, OPT `87.315586`, and Pythia `182.048492`; the GPT-2 attribution
@@ -42,5 +41,5 @@ python -m pytest -q tests/test_jdrq.py tests/test_release_candidate.py \
     -k "not local_holdout_offsets"   # 25 passed, 1 deselected
 ```
 
-The archive is a reproducible candidate snapshot; it is not an official
-score claim until the remaining project-only model reruns finish.
+The archive is a reproducible local candidate snapshot; native/panel values
+are local evaluator values and are not official-score claims.
