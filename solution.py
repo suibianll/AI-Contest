@@ -3734,6 +3734,7 @@ def _nvfp4_to_hif4(
     attention_rotation: Optional[torch.Tensor] = None,
     rotation_num_heads: Optional[int] = None,
     attention_rotation_block: Optional[int] = None,
+    attention_block_signs: Optional[torch.Tensor] = None,
 ) -> dict[str, torch.Tensor]:
     dense = _dequantize_nvfp4_float32(quant_float, scale_float)
     channels = int(dense.shape[-1])
@@ -3776,9 +3777,23 @@ def _nvfp4_to_hif4(
             attention_rotation_block,
         )
     if int(block_smooth_size) != 0:
-        dense = _block_hadamard_transform(
-            dense, int(block_smooth_size), int(block_smooth_seed)
-        )
+        if attention_block_signs is not None:
+            if rotation_num_heads is None:
+                raise ValueError("Attention block smoothing requires head count")
+            block_signs = attention_block_signs.detach().to(device="cpu")
+            if block_signs.ndim != 2 or int(block_signs.shape[1]) <= 0:
+                raise ValueError("Attention block signs have invalid shape")
+            dense = _apply_attention_rotation(
+                dense,
+                int(rotation_num_heads),
+                int(block_signs.shape[1]),
+                block_signs,
+                int(block_smooth_size),
+            )
+        else:
+            dense = _block_hadamard_transform(
+                dense, int(block_smooth_size), int(block_smooth_seed)
+            )
     if cat_transform is not None:
         dense = _apply_cat64_rows(dense, cat_transform, inverse=False)
     gram = None
@@ -7480,6 +7495,11 @@ def _attention_candidate_metrics(
     d_k = d_kv.reciprocal()
     q_order = q_permutation.to(dtype=torch.int64, device=d_kv.device).reshape(-1)
     k_order = k_permutation.to(dtype=torch.int64, device=d_kv.device).reshape(-1)
+    block_signs = None
+    if int(block_smooth_size) != 0:
+        block_signs = _attention_rotation_signs(
+            kv_num_heads, head_dim, int(block_smooth_seed)
+        )
 
     if a1_context is not None:
         causal_scores: list[float] = []
@@ -7501,11 +7521,19 @@ def _attention_candidate_metrics(
                 -1, k_order
             )
             if int(block_smooth_size) != 0:
-                q_smooth = _block_hadamard_transform(
-                    q_smooth, int(block_smooth_size), int(block_smooth_seed)
+                q_smooth = _apply_attention_rotation(
+                    q_smooth,
+                    q_num_heads,
+                    head_dim,
+                    block_signs,
+                    int(block_smooth_size),
                 )
-                k_smooth = _block_hadamard_transform(
-                    k_smooth, int(block_smooth_size), int(block_smooth_seed)
+                k_smooth = _apply_attention_rotation(
+                    k_smooth,
+                    kv_num_heads,
+                    head_dim,
+                    block_signs,
+                    int(block_smooth_size),
                 )
             q_hat = _dequantize_hif4(_dense_to_hif4(q_smooth))
             k_hat = _dequantize_hif4(_dense_to_hif4(k_smooth))
@@ -7566,11 +7594,19 @@ def _attention_candidate_metrics(
             -1, k_order
         )
         if int(block_smooth_size) != 0:
-            q_smooth = _block_hadamard_transform(
-                q_smooth, int(block_smooth_size), int(block_smooth_seed)
+            q_smooth = _apply_attention_rotation(
+                q_smooth,
+                q_num_heads,
+                head_dim,
+                block_signs,
+                int(block_smooth_size),
             )
-            k_smooth = _block_hadamard_transform(
-                k_smooth, int(block_smooth_size), int(block_smooth_seed)
+            k_smooth = _apply_attention_rotation(
+                k_smooth,
+                kv_num_heads,
+                head_dim,
+                block_signs,
+                int(block_smooth_size),
             )
         q_hat = _dequantize_hif4(_dense_to_hif4(q_smooth))
         k_hat = _dequantize_hif4(_dense_to_hif4(k_smooth))
@@ -8155,7 +8191,7 @@ def hif4_calibration_attention(
         # QK-preserving before quantization and is scored with the same proxy
         # or A1 output metric as the parent candidate.  Keeping this stage
         # last avoids evaluating block candidates against a stale ordering.
-        if _ATTN_BLOCK_SMOOTH_ENABLED:
+        if _ATTN_BLOCK_SMOOTH_ENABLED and _ATTN_OUTPUT_SELECTOR:
             for block_size in _ATTN_BLOCK_SMOOTH_SIZES:
                 block = int(block_size)
                 if block <= 0 or head_dim % block != 0:
@@ -8325,6 +8361,13 @@ def hif4_calibration_attention(
         if int(block_smooth_size) != 0:
             h_k_for_q = _block_average(h_k_for_q, int(block_smooth_size))
             h_q_for_k = _block_average(h_q_for_k, int(block_smooth_size))
+        block_signs = (
+            None
+            if int(block_smooth_size) == 0
+            else _attention_rotation_signs(
+                kv_num_heads, head_dim, int(block_smooth_seed)
+            )
+        )
         q_flat = d_q.reshape(-1)
         k_flat = d_k.reshape(-1)
 
@@ -8341,10 +8384,12 @@ def hif4_calibration_attention(
                     rotation_block,
                 )
             if int(block_smooth_size) != 0:
-                transformed = _block_hadamard_transform(
+                transformed = _apply_attention_rotation(
                     transformed,
+                    q_num_heads,
+                    head_dim,
+                    block_signs,
                     int(block_smooth_size),
-                    int(block_smooth_seed),
                 )
             return transformed
 
@@ -8368,10 +8413,12 @@ def hif4_calibration_attention(
                     rotation_block,
                 )
             if int(block_smooth_size) != 0:
-                transformed = _block_hadamard_transform(
+                transformed = _apply_attention_rotation(
                     transformed,
+                    kv_num_heads,
+                    head_dim,
+                    block_signs,
                     int(block_smooth_size),
-                    int(block_smooth_seed),
                 )
             return transformed
 
@@ -8448,8 +8495,10 @@ def hif4_calibration_attention(
         if int(block_smooth_size) != 0:
             q_state["block_smooth_size"] = int(block_smooth_size)
             q_state["block_smooth_seed"] = int(block_smooth_seed)
+            q_state["block_smooth_signs"] = _cpu_state_tensor(block_signs)
             k_state["block_smooth_size"] = int(block_smooth_size)
             k_state["block_smooth_seed"] = int(block_smooth_seed)
+            k_state["block_smooth_signs"] = _cpu_state_tensor(block_signs)
         # C41: only carry the center vector when mode 4 is actually selected,
         # so the state key set stays identical to the parent otherwise.
         if int(center_mode) == 4 and sac_center is not None:
@@ -8934,6 +8983,7 @@ def hif4_dynamic_quantize_q(
         attention_rotation=state.get("rotation"),
         rotation_num_heads=int(q_num_heads),
         attention_rotation_block=state.get("rotation_block"),
+        attention_block_signs=state.get("block_smooth_signs"),
         importance=state["importance"],
         search_offsets=state["offsets"],
         error_threshold=float(state["error_threshold"]),
@@ -8964,6 +9014,7 @@ def hif4_dynamic_quantize_k(
         attention_rotation=state.get("rotation"),
         rotation_num_heads=int(kv_num_heads),
         attention_rotation_block=state.get("rotation_block"),
+        attention_block_signs=state.get("block_smooth_signs"),
         center_mode=int(state["center_mode"]),
         center_num_heads=kv_num_heads,
         center_head_dim=head_dim,
