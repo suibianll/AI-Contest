@@ -144,6 +144,27 @@ _JDRQ_HIERARCHY_ENABLED = True
 _JDRQ_HIERARCHY_MAX_BLOCKS = 4
 _JDRQ_HIERARCHY_RATIO = 0.25
 _JDRQ_HIERARCHY_OFFSETS = (-2, -1, 1, 2, 3)
+# C75.3: the original C74 hierarchy pass selected the same global channel
+# blocks for every output row.  Projection residuals are often row-specific,
+# so use the same bounded number of block decisions *per output row*.  This
+# keeps the number of row/block solves near the C74 budget while exposing a
+# much larger set of legal residual directions.  The old global helper stays
+# available for ablation; the active selector chooses the lower robust loss.
+_JDRQ_ROWWISE_HIERARCHY = True
+_JDRQ_ROWWISE_MAX_BLOCKS = 4
+_JDRQ_ROWWISE_RATIO = 0.25
+# Very wide projections have many more candidate blocks than the two-window
+# calibration can identify reliably.  Keep the row-wise layout for the
+# <=2048-channel regime where it improved OPT/Pythia-like widths, and use the
+# original global layout for wider matrices; this is a shape-derived budget,
+# not a model-name exception.  GPT-2's 3072-wide projection and Qwen's
+# 4864-wide projection therefore retain the stable global layout.
+_JDRQ_ROWWISE_MAX_CHANNELS = 2048
+# When both global and row-wise residual layouts are available, blend the
+# full calibration robust loss with the held-out calibration window.  This is
+# a soft ranking term (not a per-fold veto) that reduces migration from a
+# row-specific fit without discarding the higher-ceiling candidate outright.
+_JDRQ_VALIDATION_MIX = 0.35
 # C22: 64-dim incoherence transform (signed Hadamard, butterfly FWHT).
 # Seed selection is two-stage: a cheap operand-local rank over 32 seeds,
 # then a deployed two-fold validation of the top seeds against the parent
@@ -5586,6 +5607,213 @@ def _jdrq_refine_hierarchy_offsets(
 
 
 @torch.no_grad()
+def _jdrq_refine_rowwise_hierarchy(
+    activation: torch.Tensor,
+    teacher: torch.Tensor,
+    weight_smooth: torch.Tensor,
+    parent_params: dict[str, torch.Tensor],
+    *,
+    max_ratio: float = _JDRQ_ROWWISE_RATIO,
+    max_blocks: int = _JDRQ_ROWWISE_MAX_BLOCKS,
+    offsets: Sequence[int] = _JDRQ_HIERARCHY_OFFSETS,
+) -> dict[str, torch.Tensor]:
+    """C75.3: residual-aware hierarchy with row-specific block budgets.
+
+    C74 ranks channel blocks after summing the output-row leverage.  That is
+    efficient, but it forces every output row to spend its four decisions on
+    the same blocks even when the residual directions differ.  This variant
+    ranks the same legal 64-block choices independently for each output row,
+    then processes the selected row/block pairs in a deterministic global
+    leverage order.  The exact quadratic delta and Gauss--Seidel residual
+    update are unchanged, so every accepted update is a legal static Q(W)
+    change under frozen ``Q(A)``.
+    """
+
+    z = activation.to(dtype=torch.float32)
+    y = teacher.to(device=z.device, dtype=torch.float32)
+    wt = weight_smooth.to(device=z.device, dtype=torch.float32)
+    try:
+        wq = _dequantize_hif4(parent_params).to(
+            device=z.device, dtype=torch.float32
+        )
+    except (RuntimeError, ValueError, TypeError):
+        return parent_params
+    if z.ndim != 2 or y.ndim != 2 or wt.ndim != 2 or wq.ndim != 2:
+        return parent_params
+    out_features, channels = map(int, wt.shape)
+    if tuple(wq.shape) != (out_features, channels):
+        return parent_params
+    if channels % _HIF4_BLOCK_SIZE != 0 or int(z.shape[0]) == 0:
+        return parent_params
+    if int(z.shape[1]) != channels or int(y.shape[1]) != out_features:
+        return parent_params
+    offset_values = tuple(int(value) for value in offsets)
+    if not offset_values:
+        return parent_params
+    blocks = channels // _HIF4_BLOCK_SIZE
+    ratio_count = max(
+        1,
+        int(math.ceil(blocks * max(0.0, min(float(max_ratio), 1.0)))),
+    )
+    selected_count = min(blocks, max(1, min(ratio_count, int(max_blocks))))
+
+    residual = y - z.mm(wq.t())
+    leverage = torch.zeros(
+        (out_features, blocks), dtype=torch.float32, device=z.device
+    )
+    for block_index in range(blocks):
+        lo = block_index * _HIF4_BLOCK_SIZE
+        hi = lo + _HIF4_BLOCK_SIZE
+        cross = z[:, lo:hi].t().mm(residual)
+        leverage[:, block_index] = torch.nan_to_num(
+            cross.square().sum(dim=0), nan=0.0, posinf=0.0, neginf=0.0
+        )
+    selected = torch.zeros_like(leverage, dtype=torch.bool)
+    selected_indices = torch.topk(
+        leverage, k=selected_count, dim=1, largest=True
+    ).indices
+    selected.scatter_(1, selected_indices, True)
+    block_order = torch.argsort(
+        torch.nan_to_num(
+            leverage.sum(dim=0), nan=0.0, posinf=0.0, neginf=0.0
+        ),
+        descending=True,
+    ).tolist()
+
+    work = {
+        key: value.detach().to(device=z.device).clone()
+        for key, value in parent_params.items()
+    }
+    scale_view = work["scale_factor"].reshape(
+        out_features, blocks, 1, 1, 1
+    )
+    lv2_view = work["scale_lv2"].reshape(out_features, blocks, 8, 1, 1)
+    lv3_view = work["scale_lv3"].reshape(out_features, blocks, 8, 2, 1)
+    sign_view = work["sign"].reshape(out_features, blocks, 8, 2, 4)
+    mant_view = work["mant"].reshape(out_features, blocks, 8, 2, 4)
+
+    for block_index in block_order:
+        row_mask = selected[:, int(block_index)]
+        row_ids = torch.nonzero(row_mask, as_tuple=False).reshape(-1)
+        if int(row_ids.numel()) == 0:
+            continue
+        lo = int(block_index) * _HIF4_BLOCK_SIZE
+        hi = lo + _HIF4_BLOCK_SIZE
+        local_z = z[:, lo:hi]
+        gram = local_z.t().mm(local_z)
+        old_block = wq[row_ids, lo:hi].clone()
+        cross = local_z.t().mm(residual[:, row_ids])
+        weight_block_abs = wt[row_ids, lo:hi].abs().reshape(
+            int(row_ids.numel()), 8, 2, 4
+        )
+        block_amax = weight_block_abs.amax(dim=(-1, -2, -3))
+        standard_code, _ = _standard_e6m2_scale(block_amax)
+        sign_block = sign_view[row_ids, int(block_index)].to(
+            dtype=torch.float32
+        )
+        best_energy = torch.zeros(
+            int(row_ids.numel()), dtype=torch.float32, device=z.device
+        )
+        best_offset_index = torch.zeros(
+            int(row_ids.numel()), dtype=torch.int64, device=z.device
+        )
+        for offset_index, offset in enumerate(offset_values):
+            candidate_code = (
+                standard_code.to(torch.int64) + int(offset)
+            ).clamp(min=0, max=254)
+            candidate_scale = _e6m2_decode(candidate_code)
+            _, level2, level3, mantissa = _solve_exact_hierarchy(
+                weight_block_abs,
+                candidate_scale,
+                None,
+                sign_block,
+                None,
+            )
+            candidate = (
+                sign_block
+                * mantissa
+                * level3[..., None]
+                * level2[..., None, None]
+                * candidate_scale[..., None, None, None]
+            ).reshape(int(row_ids.numel()), _HIF4_BLOCK_SIZE)
+            delta = old_block - candidate
+            delta_energy = (
+                2.0 * (cross.t() * delta).sum(dim=1)
+                + (delta.mm(gram) * delta).sum(dim=1)
+            )
+            better = delta_energy < best_energy
+            best_energy = torch.where(better, delta_energy, best_energy)
+            best_offset_index = torch.where(
+                better,
+                torch.full_like(best_offset_index, offset_index),
+                best_offset_index,
+            )
+        accept = torch.isfinite(best_energy) & (best_energy < -_EPS)
+        if not bool(accept.any()):
+            continue
+        selected_offsets = torch.as_tensor(
+            offset_values, dtype=torch.int64, device=z.device
+        ).index_select(0, best_offset_index)
+        selected_code = (
+            standard_code.to(torch.int64) + selected_offsets
+        ).clamp(min=0, max=254)
+        selected_scale = _e6m2_decode(selected_code)
+        _, level2, level3, mantissa = _solve_exact_hierarchy(
+            weight_block_abs,
+            selected_scale,
+            None,
+            sign_block,
+            None,
+        )
+        selected_block = (
+            sign_block
+            * mantissa
+            * level3[..., None]
+            * level2[..., None, None]
+            * selected_scale[..., None, None, None]
+        ).reshape(int(row_ids.numel()), _HIF4_BLOCK_SIZE)
+        applied_delta = torch.where(
+            accept[:, None], old_block - selected_block, torch.zeros_like(old_block)
+        )
+        residual[:, row_ids] = residual[:, row_ids] + local_z.mm(
+            applied_delta.t()
+        )
+        wq[row_ids, lo:hi] = torch.where(
+            accept[:, None], selected_block, old_block
+        )
+        scale_view[row_ids, int(block_index), 0, 0, 0] = torch.where(
+            accept,
+            selected_scale,
+            scale_view[row_ids, int(block_index), 0, 0, 0],
+        )
+        lv2_view[row_ids, int(block_index)] = torch.where(
+            accept[:, None, None, None],
+            level2[..., None, None],
+            lv2_view[row_ids, int(block_index)],
+        )
+        lv3_view[row_ids, int(block_index)] = torch.where(
+            accept[:, None, None, None],
+            level3[..., None],
+            lv3_view[row_ids, int(block_index)],
+        )
+        mant_view[row_ids, int(block_index)] = torch.where(
+            accept[:, None, None, None],
+            mantissa,
+            mant_view[row_ids, int(block_index)],
+        )
+        sign_view[row_ids, int(block_index)] = torch.where(
+            accept[:, None, None, None] & (mantissa != 0.0),
+            sign_block,
+            torch.where(
+                accept[:, None, None, None],
+                torch.zeros_like(sign_block),
+                sign_view[row_ids, int(block_index)],
+            ),
+        )
+    return work
+
+
+@torch.no_grad()
 def _jdrq_select_weight_candidate(
     weight_smooth: torch.Tensor,
     parent_params: dict[str, torch.Tensor],
@@ -5666,7 +5894,8 @@ def _jdrq_select_weight_candidate(
     best_loss = parent_loss
     best_params = parent_params
     if _JDRQ_HIERARCHY_ENABLED:
-        hierarchy_parent = _jdrq_refine_hierarchy_offsets(
+        hierarchy_candidates: list[dict[str, torch.Tensor]] = []
+        global_hierarchy = _jdrq_refine_hierarchy_offsets(
             frozen_activation,
             teacher,
             weight_smooth,
@@ -5675,12 +5904,56 @@ def _jdrq_select_weight_candidate(
             max_blocks=_JDRQ_HIERARCHY_MAX_BLOCKS,
             offsets=_JDRQ_HIERARCHY_OFFSETS,
         )
-        hierarchy_parent_loss = _jdrq_robust_product_loss(
-            frozen_activation, teacher, hierarchy_parent, boundaries
+        hierarchy_candidates.append(global_hierarchy)
+        use_rowwise_hierarchy = (
+            _JDRQ_ROWWISE_HIERARCHY
+            and channels <= int(_JDRQ_ROWWISE_MAX_CHANNELS)
         )
-        if hierarchy_parent_loss < best_loss:
-            best_loss = hierarchy_parent_loss
-            best_params = hierarchy_parent
+        if use_rowwise_hierarchy:
+            hierarchy_candidates.append(
+                _jdrq_refine_rowwise_hierarchy(
+                    frozen_activation,
+                    teacher,
+                    weight_smooth,
+                    parent_params,
+                    max_ratio=_JDRQ_ROWWISE_RATIO,
+                    max_blocks=_JDRQ_ROWWISE_MAX_BLOCKS,
+                    offsets=_JDRQ_HIERARCHY_OFFSETS,
+                )
+            )
+        parent_validation_loss = _jdrq_product_loss(
+            validation_activation, validation_teacher, parent_params
+        )
+        validation_mix = max(
+            0.0, min(float(_JDRQ_VALIDATION_MIX), 1.0)
+        )
+        best_selection_loss = parent_loss
+        for hierarchy_candidate in hierarchy_candidates:
+            hierarchy_loss = _jdrq_robust_product_loss(
+                frozen_activation,
+                teacher,
+                hierarchy_candidate,
+                boundaries,
+            )
+            validation_loss = _jdrq_product_loss(
+                validation_activation,
+                validation_teacher,
+                hierarchy_candidate,
+            )
+            if not math.isfinite(hierarchy_loss) or not math.isfinite(
+                validation_loss
+            ):
+                continue
+            validation_ratio = validation_loss / max(
+                parent_validation_loss, _EPS
+            )
+            selection_loss = (1.0 - validation_mix) * hierarchy_loss + (
+                validation_mix * parent_loss * validation_ratio
+            )
+            if math.isfinite(selection_loss) and selection_loss < best_selection_loss:
+                best_selection_loss = selection_loss
+                best_loss = hierarchy_loss
+                best_params = hierarchy_candidate
     if not _JDRQ_DUAL_ENABLED:
         if best_params is not parent_params and best_loss <= parent_loss * (
             1.0 - float(_JDRQ_MIN_GAIN)
@@ -5762,14 +6035,29 @@ def _jdrq_select_weight_candidate(
             frozen_activation, teacher, trial, boundaries
         )
         if _JDRQ_HIERARCHY_ENABLED:
-            hierarchy_trial = _jdrq_refine_hierarchy_offsets(
-                frozen_activation,
-                teacher,
-                weight_smooth,
-                trial,
-                max_ratio=_JDRQ_HIERARCHY_RATIO,
-                max_blocks=_JDRQ_HIERARCHY_MAX_BLOCKS,
-                offsets=_JDRQ_HIERARCHY_OFFSETS,
+            hierarchy_trial = (
+                _jdrq_refine_rowwise_hierarchy(
+                    frozen_activation,
+                    teacher,
+                    weight_smooth,
+                    trial,
+                    max_ratio=_JDRQ_ROWWISE_RATIO,
+                    max_blocks=_JDRQ_ROWWISE_MAX_BLOCKS,
+                    offsets=_JDRQ_HIERARCHY_OFFSETS,
+                )
+                if (
+                    _JDRQ_ROWWISE_HIERARCHY
+                    and channels <= int(_JDRQ_ROWWISE_MAX_CHANNELS)
+                )
+                else _jdrq_refine_hierarchy_offsets(
+                    frozen_activation,
+                    teacher,
+                    weight_smooth,
+                    trial,
+                    max_ratio=_JDRQ_HIERARCHY_RATIO,
+                    max_blocks=_JDRQ_HIERARCHY_MAX_BLOCKS,
+                    offsets=_JDRQ_HIERARCHY_OFFSETS,
+                )
             )
             hierarchy_loss = _jdrq_robust_product_loss(
                 frozen_activation, teacher, hierarchy_trial, boundaries

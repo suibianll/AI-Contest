@@ -69,6 +69,38 @@ def test_jdrq_hierarchy_refine_is_legal_and_non_worsening() -> None:
     assert torch.all((refined["scale_lv3"] == 1.0) | (refined["scale_lv3"] == 2.0))
 
 
+def test_jdrq_rowwise_hierarchy_is_legal_and_non_worsening() -> None:
+    """C75.3 row-specific block budgets keep the parent fallback valid."""
+
+    torch.manual_seed(13)
+    weight = torch.randn(16, 192) * 0.08
+    activation = torch.randn(64, 192) * 0.25
+    parent = solution._dense_to_hif4(
+        weight,
+        search_offsets=solution._WEIGHT_OFFSETS,
+        error_threshold=solution._WEIGHT_REFINE_ERROR_THRESHOLD,
+        accept_margin=solution._WEIGHT_REFINE_ACCEPT_MARGIN,
+        max_refine_ratio=1.0,
+        max_refine_blocks=solution._WEIGHT_REFINE_MAX_BLOCKS,
+    )
+    teacher = activation @ weight.t()
+    refined = solution._jdrq_refine_rowwise_hierarchy(
+        activation,
+        teacher,
+        weight,
+        parent,
+        max_ratio=0.25,
+        max_blocks=2,
+        offsets=solution._JDRQ_HIERARCHY_OFFSETS,
+    )
+    parent_loss = solution._jdrq_product_loss(activation, teacher, parent)
+    refined_loss = solution._jdrq_product_loss(activation, teacher, refined)
+    assert refined_loss <= parent_loss + 1.0e-7
+    assert set(refined) == set(parent)
+    for key, value in refined.items():
+        assert torch.isfinite(value).all(), key
+
+
 def test_jdrq_product_builder_does_not_mutate_activation_state() -> None:
     torch.manual_seed(19)
     exact = torch.randn(12, 64) * 0.2
