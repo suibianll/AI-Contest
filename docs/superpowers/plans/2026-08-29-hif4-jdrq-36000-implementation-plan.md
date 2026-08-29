@@ -18,13 +18,13 @@
 | 项目 | 当前事实 |
 |---|---|
 | 官方本地冠军 | C66：`22557 / 217.2s` |
-| 当前根版本 | C76.4 GQA rotation，本地实验版本，无新官方分 |
+| 当前根版本 | v080 / C80 full gram64 coverage + C76.4 GQA rotation，本地实验版本，无新官方分 |
 | 外部参考 | `youxilee/hif4`：用户提供 `24153 / 239s` |
 | 官方榜上限信号 | 用户确认已有超过 `36000` |
 | 官方面板 | 250 Linear + 200 Attention |
 | 最终时间上限 | `<420s` |
-| 已完成归档 | v075 / C76 GQA head-local rotation |
-| 下一可用归档号 | v076 / C76.2 Fisher/V candidates or C77 |
+| 已完成归档 | v080 / C80 full gram64 coverage |
+| 下一可用归档号 | v081 / C77 Attention policy or C81 precision-time compression |
 
 若面板每 case 以百分制累加，`22557 -> 36000` 需要把当前剩余 MSE 再降低约 60%。因此本计划不把 offset、coverage、固定 headroom 等千分位微调作为主线。
 
@@ -1067,12 +1067,30 @@ reciprocal temperature 已完成消融但在 Qwen test fold 回退，保留为�
 v076，因此当前继续保留 projection-only JDRQ；GQA group reciprocal scale
 和 non-causal A1 重排也已测为回退，均不启用。
 
-根/v076 归档 SHA256：
+v076 根/归档 SHA256：
 `C87B61C8A4A9F869A43EFDEECF7734A0A810EA0E5621D51826EC5E56A31ED0E4`。
+
+### C80 full gram64 coverage 增量状态（当前根）
+
+在 v076 all-shape gram64 的基础上，连续扩大动态 64-block refinement 覆盖
+预算：`0.08/8 -> 0.16/16 -> 0.32/32 -> 0.64/64 -> 1.0/128`。每一级
+都先在 Qwen 主模型验证，再以 GPT-2、OPT、Pythia 做结构 guardrail；四级
+均正向，最终 full coverage 达到 Qwen native `386.903134`、panel
+`265.372589`、Linear `315.942615`、Attention `70.960519`、API
+`208.70s`。异构模型对应 native 为 `164.221204`、`91.605403`、
+`188.695479`，均高于前一级。中间版本分别由 `877db7d`、`07cf5f6`、
+`50782a8`、`45179eb` 提交，最终归档为 v080。
+
+该方向说明先前的 8-block 预算是求解器预算瓶颈而非理论上限；目前不再
+把固定 coverage 上限作为防御门。state 仍只有静态 CPU gram64 统计和合法
+HiF4 字段，未引入在线 `A@W` 或测试输出。
+
+v080 根/归档 SHA256：
+`62EC3DB74933986886D01751E5307E58DDC8F4007E56D9A484C239F74AE69813`。
 
 ### 下一轮唯一优先级
 
-1. 以 v076 为不可变父版本，继续测 C76.2 Fisher/V importance 的
+1. 以 v080 为不可变父版本，继续测 C76.2 Fisher/V importance 的
    validation-fold 选择和 C76.4 rotation 的 block/seed 单机制消融；只在
    真实 Attention 输出的跨窗口收益稳定时晋级更多结构；
 2. 保持 `A@W` 只服务静态 `Q(W)`，任何候选变换改变后都重建 `Z` 并重跑

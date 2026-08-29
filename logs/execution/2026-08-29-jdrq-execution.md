@@ -238,3 +238,23 @@ all-shape gram64 together produced Qwen native `372.598123` / panel
 `260.050784`, slightly below v076; group-level GQA reciprocal scaling produced
 `369.071722` / `258.272056` from v075; both are rejected.  The active root
 therefore keeps all-shape gram64 with projection-only JDRQ.
+
+## C80 full gram64 coverage (current root)
+
+Starting from the v076 all-shape policy, the dynamic gram64 budget was widened
+in four committed steps: ratio/max-blocks `0.16/16` (`877db7d`), `0.32/32`
+(`07cf5f6`), `0.64/64` (`50782a8`), and finally `1.0/128` (`45179eb`).
+Every step was positive on Qwen and on the three MHA guardrail models; API time
+did not materially change because the exact solver already exits on unchanged
+blocks.
+
+| model | native total | panel total | Linear | Attention | API time |
+|---|---:|---:|---:|---:|---:|
+| Qwen2.5-0.5B | 386.903134 | 265.372589 | 315.942615 | 70.960519 | 208.70s |
+| GPT-2 small | 164.221204 | 212.834117 | 142.914968 | 21.306236 | 78.60s |
+| OPT-125M | 91.605403 | 144.328377 | 71.957801 | 19.647602 | 75.26s |
+| Pythia-160M | 188.695479 | 297.879706 | 148.047600 | 40.647879 | 77.60s |
+
+The full-coverage parent is archived as
+`solutions/20260830_v080_c80-gram64-full-coverage_scoreNA_timeNA/` with
+SHA256 `62EC3DB74933986886D01751E5307E58DDC8F4007E56D9A484C239F74AE69813`.
