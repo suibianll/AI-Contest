@@ -49,6 +49,7 @@ Root `solution.py` is the only active submission. Archived source files are immu
 | v040 | 2026-08-29 | C45c 原始 A@W 静态 Q(W) + max-dim 4096 | GPT-2 `131.769809`; OPT `31.602006`; Qwen `286.174039` | `21.120464` / `19.581565` / `62.862350` | 45.70–103.99s | NA | NA | 三模型合计较 C43b `+0.542193`；Qwen 宽层回退得到控制 | **local-accepted** | [archive](20260829_v040_c45c-raw-sizecapped_scoreNA_timeNA/) |
 | v041 | 2026-08-29 | C44 MR-GPTQ parent full-H 覆盖 97% | GPT-2 `126.219696` | `21.120464` | 39.72s（partial） | NA | NA | GPT-2 较 C43b `-4.719525`；扩大 coverage 扩散误差 | **archived-rejected** | [archive](20260829_v041_c44-mr-gptq-coverage97-rejected_scoreNA_timeNA/) |
 | v042 | 2026-08-29 | C45e 多折 A@W 静态 Q(W) + max-dim 4096 | GPT-2 small `133.226930`; medium `229.019937`; OPT `32.580090`; Pythia `138.246673`; Qwen `286.174039` | `21.120464` / `43.767156` / `19.581565` / `40.614368` / `62.862350` | 45.20–104.70s | NA | NA | 五模型合计较 C43b `+5.188928`；全部不低于父版本 | **local-accepted** | [archive](20260829_v042_c45e-product-allfolds-sizecap_scoreNA_timeNA/) |
+| v043 | 2026-08-29 | C45f adaptive headroom `{-4..4}` + 多折 A@W | GPT-2 small `133.226930`; medium `229.019937`; OPT `43.279017`; Pythia `138.246673`; Qwen `286.174039` | `21.120464` / `43.767156` / `19.581565` / `40.614368` / `62.862350` | 46.58–115.68s | NA | NA | 五模型合计较 C43b `+15.887855`；OPT +10.698927 | **local-accepted** | [archive](20260829_v043_c45f-headroom-multifold_scoreNA_timeNA/) |
 
 `*` v002 的 Linear/Attention 数值最初来自远程仓库 `CHANGELOG.md` 的 GPT-2
 12 层、2 calib + 2 test 报告，之后已由 GPU-compatible B0 derivative 在本地
