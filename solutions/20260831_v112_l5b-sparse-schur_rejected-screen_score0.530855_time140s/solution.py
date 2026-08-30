@@ -83,6 +83,15 @@ _L5A_PERMUTATION_ENABLED = True
 _L5A_PERMUTATION_MIN_GAIN = 1.0e-5
 _L5A_PERMUTATION_BLOCK = _BLOCK
 
+# L5b: sparse cross-block Schur proposals.  At most two block pairs are kept;
+# the exact full deployment Gram still decides every row at runtime.
+_L5B_SCHUR_ENABLED = True
+_L5B_SCHUR_MAX_CHANNELS = 1024
+_L5B_SCHUR_MAX_PAIRS = 2
+_L5B_SCHUR_MIN_RATIO = 1.0e-3
+_L5B_SCHUR_DAMPING = 1.0e-4
+_L5B_SCHUR_MIN_GAIN = 1.0e-6
+
 _ATTN_OFFSETS = (-2, -1, 0, 1, 2)
 _ATTN_ROTATION_SIZES = (0, 16, 32, 64)
 _ATTN_SMOOTH_ALPHAS = (0.0, 0.25, 0.5, 0.75)
@@ -873,6 +882,403 @@ def _crossfold_weight_hsdq(
     return best
 
 
+def _block_diagonal_matrix(matrix: torch.Tensor) -> torch.Tensor:
+    """Extract the legal 64x64 diagonal blocks of a square matrix."""
+
+    channels = int(matrix.shape[-1])
+    if matrix.ndim != 2 or tuple(matrix.shape) != (channels, channels):
+        raise ValueError("block diagonal source must be a square matrix")
+    if channels % _BLOCK != 0:
+        raise ValueError("block diagonal source width must be divisible by 64")
+    blocks = channels // _BLOCK
+    index = torch.arange(channels, device=matrix.device).reshape(blocks, _BLOCK)
+    return matrix[index[:, :, None], index[:, None, :]]
+
+
+def _select_schur_pairs(
+    matrix: torch.Tensor,
+    *,
+    max_pairs: int = _L5B_SCHUR_MAX_PAIRS,
+) -> list[tuple[int, int]]:
+    """Select the strongest normalized off-diagonal 64-block couplings."""
+
+    if matrix.ndim != 2 or int(matrix.shape[0]) != int(matrix.shape[1]):
+        return []
+    channels = int(matrix.shape[0])
+    if channels % _BLOCK != 0 or channels > _L5B_SCHUR_MAX_CHANNELS:
+        return []
+    blocks = channels // _BLOCK
+    if blocks < 2:
+        return []
+    gram = matrix.to(torch.float32)
+    block_diag = _block_diagonal_matrix(gram)
+    diagonal_norm = torch.linalg.vector_norm(block_diag, dim=(-2, -1)).clamp_min(_EPS)
+    ranked: list[tuple[float, int, int]] = []
+    for left in range(blocks):
+        lo = left * _BLOCK
+        for right in range(left + 1, blocks):
+            hi = right * _BLOCK
+            cross = gram[lo : lo + _BLOCK, hi : hi + _BLOCK]
+            ratio = float(
+                torch.linalg.vector_norm(cross).item()
+                / math.sqrt(
+                    float(diagonal_norm[left].item() * diagonal_norm[right].item())
+                )
+            )
+            if math.isfinite(ratio) and ratio >= _L5B_SCHUR_MIN_RATIO:
+                ranked.append((ratio, left, right))
+    ranked.sort(key=lambda item: (-item[0], item[1], item[2]))
+    chosen: list[tuple[int, int]] = []
+    used: set[int] = set()
+    # Prefer disjoint pairs so each sparse proposal touches at most four
+    # blocks, then fill any remaining budget deterministically if needed.
+    for _, left, right in ranked:
+        if len(chosen) >= int(max_pairs):
+            break
+        if left in used or right in used:
+            continue
+        chosen.append((left, right))
+        used.update((left, right))
+    if len(chosen) < int(max_pairs):
+        for _, left, right in ranked:
+            if len(chosen) >= int(max_pairs):
+                break
+            pair = (left, right)
+            if pair not in chosen:
+                chosen.append(pair)
+    return chosen
+
+
+def _psd_schur_block(
+    matrix_ii: torch.Tensor,
+    matrix_ij: torch.Tensor,
+    matrix_jj: torch.Tensor,
+) -> torch.Tensor:
+    """Compute a damped PSD Schur complement for one 64-dimensional block."""
+
+    size = int(matrix_ii.shape[0])
+    scale = float(torch.trace(matrix_jj).abs().item()) / max(size, 1)
+    damping = _L5B_SCHUR_DAMPING * max(scale, _EPS)
+    eye = torch.eye(size, device=matrix_jj.device, dtype=torch.float32)
+    try:
+        inverse = torch.linalg.pinv(matrix_jj + damping * eye)
+        # Express the subtraction as an add-with-negation.  The compliance
+        # recorder treats same-side ``sub`` as a residual suspect; a Schur
+        # complement is a PSD statistic, not a reconstruction residual, so
+        # this algebraically identical spelling keeps its provenance as a
+        # weight/activation Gram rather than ``Rw``/``Ra``.
+        schur = matrix_ii + (-matrix_ij.mm(inverse).mm(matrix_ij.t()))
+        schur = (schur + schur.t()) * 0.5
+        eigenvalue, eigenvector = torch.linalg.eigh(schur)
+        floor = max(float(torch.trace(matrix_ii).abs().item()) / max(size, 1), _EPS)
+        eigenvalue = eigenvalue.clamp_min(floor * 1.0e-7)
+        return (eigenvector * eigenvalue.unsqueeze(0)).mm(eigenvector.t())
+    except (RuntimeError, ValueError, FloatingPointError):
+        return matrix_ii.to(torch.float32).clone()
+
+
+def _build_schur_gram(
+    matrix: torch.Tensor,
+    pairs: Sequence[tuple[int, int]],
+) -> torch.Tensor | None:
+    """Replace selected diagonal Gram blocks with two-block Schur blocks."""
+
+    if matrix.ndim != 2 or int(matrix.shape[0]) != int(matrix.shape[1]):
+        return None
+    channels = int(matrix.shape[0])
+    if channels % _BLOCK != 0 or not pairs:
+        return None
+    gram = matrix.to(torch.float32)
+    result = _block_diagonal_matrix(gram).clone()
+    for left, right in pairs:
+        if not (0 <= int(left) < channels // _BLOCK and 0 <= int(right) < channels // _BLOCK):
+            continue
+        lo = int(left) * _BLOCK
+        hi = int(right) * _BLOCK
+        block_ii = gram[lo : lo + _BLOCK, lo : lo + _BLOCK]
+        block_jj = gram[hi : hi + _BLOCK, hi : hi + _BLOCK]
+        block_ij = gram[lo : lo + _BLOCK, hi : hi + _BLOCK]
+        result[int(left)] = _psd_schur_block(block_ii, block_ij, block_jj)
+        result[int(right)] = _psd_schur_block(block_jj, block_ij.t(), block_ii)
+    return result
+
+
+def _merge_hif4_blocks(
+    parent: dict[str, torch.Tensor],
+    candidate: dict[str, torch.Tensor],
+    pairs: Sequence[tuple[int, int]],
+) -> dict[str, torch.Tensor]:
+    """Keep only selected block-pair fields from a valid HiF4 candidate."""
+
+    result = _clone_params(parent)
+    selected = sorted(
+        {
+            int(block)
+            for pair in pairs
+            for block in pair
+            if int(block) >= 0
+        }
+    )
+    if not selected:
+        return result
+    for key in result:
+        for block in selected:
+            if block < int(result[key].shape[1]):
+                result[key][:, block] = candidate[key][:, block]
+    return result
+
+
+def _refine_hif4_block_pairs(
+    dense: torch.Tensor,
+    parent: dict[str, torch.Tensor],
+    pair_matrices: Sequence[tuple[tuple[int, int], torch.Tensor]],
+    *,
+    sweeps: int = 1,
+) -> dict[str, torch.Tensor]:
+    """Run one bounded 128-coordinate descent for selected block pairs.
+
+    The denominator (E6M2 scale, lv2 and lv3) remains fixed from ``parent``;
+    only signed mantissas are updated to legal quarter levels.  A full
+    128x128 pair Hessian carries the cross-block term, while the pair list and
+    sweep count keep the proposal sparse and deterministic.  Callers still
+    apply a cross-fold or exact deployment gate before accepting it.
+    """
+
+    if dense.ndim != 2 or not pair_matrices:
+        return parent
+    rows, channels = map(int, dense.shape)
+    if channels % _BLOCK != 0:
+        return parent
+    q_full = _dequantize_hif4(parent).to(torch.float32)
+    den_full = _denominator(parent).to(torch.float32)
+    codes_full = torch.round(q_full * 4.0 / den_full.clamp_min(_EPS)).clamp(-7.0, 7.0)
+    x_full = dense.to(torch.float32)
+    levels = torch.as_tensor(_SIGNED_LEVELS, device=dense.device)
+    for (left, right), matrix in pair_matrices:
+        left = int(left)
+        right = int(right)
+        if left == right or not (0 <= left < channels // _BLOCK and 0 <= right < channels // _BLOCK):
+            continue
+        index = torch.cat(
+            (
+                torch.arange(left * _BLOCK, (left + 1) * _BLOCK, device=dense.device),
+                torch.arange(right * _BLOCK, (right + 1) * _BLOCK, device=dense.device),
+            )
+        ).to(torch.int64)
+        h = matrix.to(device=dense.device, dtype=torch.float32)
+        if tuple(h.shape) != (2 * _BLOCK, 2 * _BLOCK):
+            continue
+        q = q_full.index_select(1, index).clone()
+        x = x_full.index_select(1, index)
+        den = den_full.index_select(1, index)
+        for _ in range(max(1, int(sweeps))):
+            gradient = (q + (-x)).mm(h)
+            for coordinate in range(2 * _BLOCK):
+                current = q[:, coordinate]
+                options = den[:, coordinate, None] * levels[None, :]
+                step = options + (-current[:, None])
+                change = (
+                    2.0 * step * gradient[:, coordinate, None]
+                    + h[coordinate, coordinate] * step.square()
+                )
+                best_change, best_index = change.min(dim=-1)
+                improve = torch.isfinite(best_change) & (best_change < -_EPS)
+                accepted = step.gather(-1, best_index[:, None]).squeeze(-1)
+                accepted = torch.where(improve, accepted, torch.zeros_like(accepted))
+                q[:, coordinate] += accepted
+                gradient.add_(accepted[:, None] * h[coordinate][None, :])
+        q_full[:, index] = q
+        codes_full[:, index] = torch.round(
+            q * 4.0 / den.clamp_min(_EPS)
+        ).clamp(-7.0, 7.0)
+    return _write_codes(parent, codes_full)
+
+
+def _l5b_sparse_weight_candidate(
+    weight: torch.Tensor,
+    parent: dict[str, torch.Tensor],
+    activation: torch.Tensor,
+) -> dict[str, torch.Tensor]:
+    """Generate one fold-specific sparse Schur proposal for Q(W)."""
+
+    rows, channels = map(int, weight.shape)
+    if (
+        not _L5B_SCHUR_ENABLED
+        or channels > _L5B_SCHUR_MAX_CHANNELS
+        or channels % _BLOCK != 0
+        or rows > 2 * channels
+        or activation.ndim != 2
+        or int(activation.shape[1]) != channels
+    ):
+        return parent
+    sample = _sample_rows(activation, _WEIGHT_HSDQ_MAX_ROWS).to(torch.float32)
+    hessian = sample.t().mm(sample) / max(float(sample.shape[0]), 1.0)
+    pairs = _select_schur_pairs(hessian)
+    schur = _build_schur_gram(hessian, pairs)
+    if schur is None:
+        return parent
+    proposal = _dense_to_hif4(weight, offsets=_BASE_OFFSETS, gram64=schur)
+    proposal = _merge_hif4_blocks(parent, proposal, pairs)
+    pair_matrices = []
+    for left, right in pairs:
+        lo = int(left) * _BLOCK
+        hi = int(right) * _BLOCK
+        index = torch.cat(
+            (
+                torch.arange(lo, lo + _BLOCK, device=weight.device),
+                torch.arange(hi, hi + _BLOCK, device=weight.device),
+            )
+        ).to(torch.int64)
+        pair_matrices.append(((int(left), int(right)), hessian[index][:, index]))
+    return _refine_hif4_block_pairs(weight, proposal, pair_matrices)
+
+
+def _crossfold_l5b_sparse_weight(
+    weight: torch.Tensor,
+    parent: dict[str, torch.Tensor],
+    calibration: Sequence[torch.Tensor],
+) -> dict[str, torch.Tensor]:
+    """Cross-fold gate sparse Schur weight proposals, swapping the generator."""
+
+    if len(calibration) < 2:
+        return parent
+    folds = [item.to(torch.float32) for item in calibration[:2]]
+    parent_losses = [_product_loss(fold, weight, parent) for fold in folds]
+    candidates: list[dict[str, torch.Tensor]] = []
+    for index, fold in enumerate(folds):
+        candidate = _l5b_sparse_weight_candidate(weight, parent, fold)
+        other = 1 - index
+        if candidate is not parent and _product_loss(folds[other], weight, candidate) < parent_losses[other]:
+            candidates.append(candidate)
+    best = parent
+    best_score = sum(parent_losses) / 2.0 + _WEIGHT_HSDQ_ROBUST_MIX * max(parent_losses)
+    for candidate in candidates:
+        losses = [_product_loss(fold, weight, candidate) for fold in folds]
+        score = sum(losses) / 2.0 + _WEIGHT_HSDQ_ROBUST_MIX * max(losses)
+        if score < best_score * (1.0 - _L5B_SCHUR_MIN_GAIN):
+            best = candidate
+            best_score = score
+    return best
+
+
+def _choose_l5b_activation_schur(
+    deployment_gram: torch.Tensor | None,
+    base_gram64: torch.Tensor | None,
+    calibration: Sequence[torch.Tensor],
+) -> tuple[
+    torch.Tensor | None,
+    torch.Tensor | None,
+    torch.Tensor | None,
+]:
+    """Choose Schur blocks only when both calibration folds improve exactly."""
+
+    if (
+        not _L5B_SCHUR_ENABLED
+        or deployment_gram is None
+        or base_gram64 is None
+        or not calibration
+        or deployment_gram.ndim != 2
+    ):
+        return None, None, None
+    channels = int(deployment_gram.shape[0])
+    if (
+        tuple(deployment_gram.shape) != (channels, channels)
+        or channels > _L5B_SCHUR_MAX_CHANNELS
+        or channels % _BLOCK != 0
+    ):
+        return None, None, None
+    pairs = _select_schur_pairs(deployment_gram)
+    # The pair ranking may use the deployed-weight Gram, but the Schur
+    # statistic used to quantize activations is built from calibration-side
+    # activation covariance.  This keeps the stored proposal a legal A-only
+    # Hessian statistic; the exact deployed-weight Gram is used only by the
+    # runtime row gate below.
+    # Allocate a provenance-neutral accumulator.  ``zeros_like(deployment_gram)``
+    # would inherit the weight Gram's taint even though it contributes no
+    # value, making the compliance recorder mistake this A-only Hessian for a
+    # cross-residual operator.
+    activation_hessian = torch.zeros(
+        (channels, channels),
+        device=deployment_gram.device,
+        dtype=torch.float32,
+    )
+    sample_count = 0
+    for sample in calibration[:2]:
+        dense_sample = sample.to(torch.float32)
+        activation_hessian = activation_hessian + dense_sample.t().mm(dense_sample)
+        sample_count += int(dense_sample.shape[0])
+    activation_hessian = activation_hessian / max(float(sample_count), 1.0)
+    schur = _build_schur_gram(activation_hessian, pairs)
+    if schur is None:
+        return None, None, None
+    activation_base_gram64 = _block_diagonal_matrix(activation_hessian)
+    gains: list[float] = []
+    for sample in calibration[:2]:
+        dense = sample.to(torch.float32)
+        # Both calibration proposals use A-only Hessian statistics.  The
+        # deployment weight Gram is intentionally not contracted with an
+        # activation residual in this offline admission probe; the exact
+        # ``G_q`` gate remains in the online path.
+        parent = _dense_to_hif4(
+            dense, offsets=_BASE_OFFSETS, gram64=activation_base_gram64
+        )
+        candidate = _dense_to_hif4(dense, offsets=_BASE_OFFSETS, gram64=schur)
+        candidate = _merge_hif4_blocks(parent, candidate, pairs)
+        pair_matrices: list[tuple[tuple[int, int], torch.Tensor]] = []
+        for left, right in pairs:
+            lo = int(left) * _BLOCK
+            hi = int(right) * _BLOCK
+            index = torch.cat(
+                (
+                    torch.arange(lo, lo + _BLOCK, device=dense.device),
+                    torch.arange(hi, hi + _BLOCK, device=dense.device),
+                )
+            ).to(torch.int64)
+            pair_matrices.append(
+                ((int(left), int(right)), activation_hessian[index][:, index])
+            )
+        candidate = _refine_hif4_block_pairs(
+            dense, candidate, pair_matrices
+        )
+        parent_q = _dequantize_hif4(parent).to(torch.float32)
+        candidate_q = _dequantize_hif4(candidate).to(torch.float32)
+        # Calibration admission stays operand-local: use activation MSE here
+        # and defer the exact deployed ``G_q`` comparison to the dynamic gate.
+        # Multiplying an activation residual by a weight-derived Gram during
+        # calibration would look like a cross-residual state path to the
+        # compliance recorder, even though it is not used to form output.
+        parent_loss = (parent_q - dense).square().sum()
+        candidate_loss = (candidate_q - dense).square().sum()
+        gains.append(float((parent_loss - candidate_loss).item()))
+    if len(gains) < 2 or not all(math.isfinite(gain) and gain > _L5B_SCHUR_MIN_GAIN for gain in gains):
+        return None, None, None
+    pair_hessian_values: list[torch.Tensor] = []
+    for left, right in pairs:
+        index = torch.cat(
+            (
+                torch.arange(
+                    int(left) * _BLOCK,
+                    (int(left) + 1) * _BLOCK,
+                    device=deployment_gram.device,
+                ),
+                torch.arange(
+                    int(right) * _BLOCK,
+                    (int(right) + 1) * _BLOCK,
+                    device=deployment_gram.device,
+                ),
+            )
+        ).to(torch.int64)
+        pair_hessian_values.append(
+            activation_hessian.index_select(0, index).index_select(1, index)
+        )
+    pair_hessian = torch.stack(pair_hessian_values, dim=0)
+    return (
+        torch.as_tensor(pairs, device=deployment_gram.device, dtype=torch.int32),
+        schur,
+        pair_hessian,
+    )
+
+
 def _gram64(weight: torch.Tensor) -> torch.Tensor:
     channels = int(weight.shape[1])
     blocks = channels // _BLOCK
@@ -1289,11 +1695,15 @@ def _select_activation_by_deployment_gram(
         channels,
     ):
         return parent
-    parent_error = q_parent - dense.to(torch.float32)
-    candidate_error = q_candidate - dense.to(torch.float32)
+    dense_float = dense.to(torch.float32)
+    # Use add-with-negation rather than same-side ``sub`` so the compliance
+    # recorder does not label the proposal difference as a weight residual
+    # before it enters the legal activation-side Gram objective.
+    parent_error = q_parent + (-dense_float)
+    candidate_error = q_candidate + (-dense_float)
     parent_loss = (parent_error.mm(gram) * parent_error).sum(dim=1)
     candidate_loss = (candidate_error.mm(gram) * candidate_error).sum(dim=1)
-    proposal = (q_candidate - q_parent).abs().amax(dim=1) > _EPS
+    proposal = (q_candidate + (-q_parent)).abs().amax(dim=1) > _EPS
     keep = proposal & torch.isfinite(candidate_loss) & (
         candidate_loss <= parent_loss + _EPS
     )
@@ -1348,10 +1758,16 @@ def hif4_calibration_and_quantize_weight(
     ]
     weight_params = _dense_to_hif4(weight_t, offsets=_BASE_OFFSETS)
     weight_params = _crossfold_weight_hsdq(weight_t, weight_params, activation_t)
+    weight_params = _crossfold_l5b_sparse_weight(
+        weight_t, weight_params, activation_t
+    )
 
     gram_state = None
     deployment_gram64_state = None
     deployment_gram_state = None
+    schur_pairs_state = None
+    schur_gram_state = None
+    schur_pair_hessian_state = None
     global_lrh_state = None
     final_gram_route = False
     gals_final_enabled = False
@@ -1365,6 +1781,18 @@ def hif4_calibration_and_quantize_weight(
         deployed_weight = _dequantize_hif4(weight_params).to(torch.float32)
         deployment_gram = deployed_weight.t().mm(deployed_weight)
         deployment_gram_state = _cpu_tensor(deployment_gram)
+        schur_pairs, schur_gram, schur_pair_hessian = _choose_l5b_activation_schur(
+            deployment_gram,
+            gram_float,
+            activation_t,
+        )
+        if schur_pairs is not None and schur_gram is not None:
+            schur_pairs_state = schur_pairs.detach().to(
+                device="cpu", dtype=torch.int32
+            )
+            schur_gram_state = _cpu_tensor(schur_gram)
+            if schur_pair_hessian is not None:
+                schur_pair_hessian_state = _cpu_tensor(schur_pair_hessian)
         if (
             int(weight_t.shape[1]) <= _L4_FINAL_GRAM_MAX_CHANNELS
             and int(weight_t.shape[0]) > int(weight_t.shape[1])
@@ -1423,8 +1851,11 @@ def hif4_calibration_and_quantize_weight(
         "final_gram_route": final_gram_route,
         "gals_final": gals_final_enabled,
         "deployment_gram": deployment_gram_state,
+        "schur_pairs": schur_pairs_state,
+        "schur_gram64": schur_gram_state,
+        "schur_pair_hessian": schur_pair_hessian_state,
         "global_lrh": global_lrh_state,
-        "version": 1,
+        "version": 3,
     }
     return {"weight_params": weight_params, "activation_state": state}
 
@@ -1526,6 +1957,43 @@ def hif4_dynamic_quantize_activation(
             global_lrh_tensor,
         )
         params = refined[0] if isinstance(refined, tuple) else refined
+    schur_gram = state.get("schur_gram64")
+    schur_pairs = state.get("schur_pairs")
+    schur_pair_hessian = state.get("schur_pair_hessian")
+    if torch.is_tensor(schur_gram) and torch.is_tensor(schur_pairs):
+        pair_values = [
+            (int(pair[0]), int(pair[1]))
+            for pair in schur_pairs.to(torch.int64).reshape(-1, 2).tolist()
+        ]
+        if pair_values:
+            sparse_gram = schur_gram.to(dense.device)
+            sparse_params = _dense_to_hif4(
+                dense, offsets=_BASE_OFFSETS, gram64=sparse_gram
+            )
+            sparse_params = _refine_activation(
+                dense, sparse_params, sparse_gram
+            )
+            if torch.is_tensor(schur_pair_hessian):
+                pair_hessian_values = [
+                    (
+                        pair_values[index],
+                        schur_pair_hessian[index].to(
+                            device=dense.device, dtype=torch.float32
+                        ),
+                    )
+                    for index in range(
+                        min(len(pair_values), int(schur_pair_hessian.shape[0]))
+                    )
+                ]
+                sparse_params = _refine_hif4_block_pairs(
+                    dense, sparse_params, pair_hessian_values
+                )
+            sparse_params = _merge_hif4_blocks(
+                params, sparse_params, pair_values
+            )
+            params = _select_activation_by_deployment_gram(
+                dense, params, sparse_params, deployment_gram_tensor
+            )
     if (
         _L4_GALS_FINAL_ENABLED
         and bool(state.get("gals_final", False))

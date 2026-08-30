@@ -3,8 +3,8 @@
 > 状态：**ACTIVE**
 > 建立日期：2026-08-31
 > 适用根：`D:/工作内容/AI竞赛/solution.py`
-> 当前根：v110 L4b final-Gram GALS precision parent
-> 规范 LF SHA256：`3abf9beb7ba50285b65344ce94773350eca16a24ce36a296db1401b9bafeb1ec`
+> 当前根：v111 L5a joint-permutation precision parent
+> 规范 LF SHA256：`6b229081121c4a7edd69575c93dc01488be8f8b5e1479007522421e93e1adc57`
 > 主目标：继续提高 Qwen full-layer `linear_mean`；在合法 API/state 约束内评估
 > `0.9` 的剩余可达性。Attention 继续排队，不插入 Linear 主线。
 
@@ -33,15 +33,15 @@ accuracy-first 阶段不因超过 420 秒拒绝精度候选，但必须记录 AP
 固定配置：Qwen2.5-0.5B、24 层、`seq=128`、`calib=2`、`test=4`、`amax6`、CPU、
 只读 cache `artifacts/real_model_suite/cache/qwen2.5-0.5b__seq128__calib2__test4__layersall__schema1.pt`。
 
-| 指标 | v110 基线 |
+| 指标 | v111 基线 |
 |---|---:|
-| Linear mean | `0.5073395278` |
+| Linear mean | `0.5082983001` |
 | Attention mean | `0.8420394885` |
-| Linear panel | `126.834882` |
+| Linear panel | `127.074575` |
 | Attention panel | `168.407898` |
-| Qwen panel total | **`295.242779647671`** |
-| native total | `421.767953588548` |
-| API time | `701.900553s` |
+| Qwen panel total | **`295.482472728320`** |
+| native total | `422.412248589332` |
+| API time | `726.094116s` |
 | 官方分数/时间 | `NA / NA` |
 
 case gain 仍定义为
@@ -53,11 +53,11 @@ g=1-\frac{\mathrm{MSE}_{player}}{\mathrm{MSE}_{std}}.
 当前距离 `linear_mean=0.9` 为
 
 \[
-\Delta g_L=0.9-0.5073395278=0.3926604722,
+\Delta g_L=0.9-0.5082983001=0.3917016999,
 \]
 
-剩余归一化误差为 `0.4926604722`，还需消除约 `79.72%`；250-case Linear panel
-仍差 `250(0.9-0.5073395278)=98.165118`。这只是本地诊断轴，不能换算官方
+剩余归一化误差为 `0.4917016999`，还需消除约 `79.66%`；250-case Linear panel
+仍差 `250(0.9-0.5082983001)=97.925425`。这只是本地诊断轴，不能换算官方
 `36000`。
 
 ## 3. 合规和数学边界
@@ -123,7 +123,7 @@ v110 panel `295.242779647671` 增加 `+0.239693`；API `726.094s`，仅作探索
 
 ### L5b：稀疏跨 block Schur/LDLQ 激活—权重联合 proposal
 
-**状态：in_progress；下一步立即执行。**
+**状态：done（2026-08-31；v112 rejected at screen）。**
 
 从 `G_q`/`H_A` 的 block off-diagonal ratio 选最多 2 个高耦合 block 对，使用
 
@@ -135,9 +135,20 @@ S_{ij}=H_{ii}-H_{ij}H_{jj}^{-1}H_{ji}
 原子写回，并以完整目标 gate。禁止 full-width dense Hessian、全 block beam 和
 无上限 coverage。screen 仍以 cross-fold 和完整部署 Gram 为准。
 
+执行记录：已实现阻尼 PSD Schur block、最多两对互不重叠 block 的 128 维离散坐标
+下降、weight 两折 cross-fold gate，以及 activation 侧 `AᵀA` state proposal + 在线
+完整 `G_q` 逐行 gate。合成/合规定向测试 29/29 通过；宽度 256、rows 128 的 runtime
+compliance 为 0 violations。五层×七 role screen（35 cases）Linear mean 为
+`0.5308551015775216`，低于当前 v111 screen `0.5318869456762372`（`-0.0010318441`），
+所以没有运行 full-layer，根恢复并保持 v111。候选完整归档于
+[`v112 L5b`](../../../solutions/20260831_v112_l5b-sparse-schur_rejected-screen_score0.530855_time140s/)，
+screen JSON 为 [`l5b screen`](../../../artifacts/real_model_suite/l5b-sparse-schur-stratified-qwen.json)，
+日志为 [`l5b log`](../../../logs/execution/2026-08-31-l5b-sparse-schur-stratified.md)，
+候选 source LF SHA 为 `94a06fcce29b3e6639c4dab4d8c96e4e37f4f74947adec6e1f57b87512e0bc9`。
+
 ### L5c：统计元路由（只依赖 operand-local 特征）
 
-**状态：pending；L5a/L5b 后启动。**
+**状态：in_progress；L5b screen 否决后立即启动。**
 
 为每个 calibration call 计算 shape、RMS、kurtosis、condition number、Gram
 off-diagonal ratio、合法 scale/hierarchy oracle gap 等静态特征；用两折标签训练
@@ -171,7 +182,7 @@ transform 顺序和 state/device 的逐项 diff；只迁移 operand-local/offlin
 | v106 | 0.5034589422 | 0.8420394885 | 294.272633 | 412.65s | 时间 parent |
 | v107 | 0.5069966356 | 0.8420394885 | 295.157057 | 481.04s | 前一精度 parent |
 | v109 | 0.5073256468 | 0.8420394885 | 295.239309 | 517.29s | 前一精度 parent |
-| **v110** | **0.5073395278** | **0.8420394885** | **295.242780** | **701.90s** | **当前精度 parent** |
+| **v110** | **0.5073395278** | **0.8420394885** | **295.242780** | **701.90s** | 前一精度 parent |
 | **v111** | **0.5082983001** | **0.8420394885** | **295.482473** | **726.09s** | **当前精度 parent；L5a accepted** |
 
 ## 6. 完成和换计划条件
