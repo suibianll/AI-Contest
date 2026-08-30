@@ -10,10 +10,8 @@ Linear calibration has three stages:
 1. BOAT selects an invertible diagonal + signed-Hadamard input transform from
    operand-local quantization errors.  It never constructs a Linear output.
 2. The transformed weight is quantized to the legal HiF4 hierarchy.
-3. Cross-fold progressive HSDQ uses exact product deltas to polish Q(W), jointly
-   exploring local E6M2 scale and legal lv2/lv3 hierarchy on non-expansive
-   Linear roles. Products are calibration-local and can only change
-   ``weight_params``.
+3. Cross-fold HSDQ uses exact low-rank Hessians ``A.T @ A`` to polish Q(W).
+   Products are calibration-local and can only change ``weight_params``.
 
 Online Q(A) uses the frozen BOAT transform and a bounded block-Hessian HSDQ
 whose state contains only static transformed-weight Gram blocks.
@@ -55,8 +53,6 @@ _WEIGHT_HSDQ_MIN_CHANNELS = 256
 _WEIGHT_HSDQ_MAX_ROWS = 256
 _WEIGHT_HSDQ_ROBUST_MIX = 0.5
 _WEIGHT_HSDQ_MIN_GAIN = 1.0e-5
-_PROGRESSIVE_HSDQ_MIN_CHANNELS = 512
-_PROGRESSIVE_HSDQ_MAX_ROWS = 4096
 
 _ACT_HSDQ_BLOCKS = 128
 _ACT_HSDQ_SWEEPS = 2
@@ -522,248 +518,6 @@ def _polish_weight(
     return _write_codes(parent, codes.reshape(rows, channels))
 
 
-_HIERARCHY_CONFIGS = tuple(
-    (lv2, lv3_left, lv3_right)
-    for lv2 in (1.0, 2.0)
-    for lv3_left in (1.0, 2.0)
-    for lv3_right in (1.0, 2.0)
-)
-
-
-def _local_hierarchy_denominator(
-    scale: torch.Tensor,
-    lv2: torch.Tensor,
-    lv3: torch.Tensor,
-) -> torch.Tensor:
-    """Expand one or a batch of legal hierarchies to 64-value denominators."""
-
-    lv2_values = lv2.repeat_interleave(8, dim=-1)
-    lv3_values = lv3.repeat_interleave(4, dim=-1).reshape(
-        *lv3.shape[:-2], 64
-    )
-    scale_values = scale.to(torch.float32)
-    while scale_values.ndim < lv2_values.ndim:
-        scale_values = scale_values.unsqueeze(-1)
-    return scale_values * lv2_values * lv3_values
-
-
-def _progressive_hierarchy_block_batch(
-    target: torch.Tensor,
-    parent_q: torch.Tensor,
-    parent_scale_codes: torch.Tensor,
-    parent_lv2: torch.Tensor,
-    parent_lv3: torch.Tensor,
-    local_z: torch.Tensor,
-    residual_base: torch.Tensor,
-) -> tuple[
-    torch.Tensor,
-    torch.Tensor,
-    torch.Tensor,
-    torch.Tensor,
-    torch.Tensor,
-]:
-    """Batched counterpart of ``_progressive_hierarchy_block``.
-
-    Rows are independent in the product objective, so all output rows in one
-    selected input block can be solved together.  This keeps the exact same
-    candidate set while avoiding a Python loop over thousands of rows.
-    """
-
-    rows = int(target.shape[0])
-    device = target.device
-    levels = torch.as_tensor(_SIGNED_LEVELS, device=device, dtype=torch.float32)
-    offsets = torch.as_tensor(_BASE_OFFSETS, device=device, dtype=torch.int64)
-    configs = torch.as_tensor(_HIERARCHY_CONFIGS, device=device, dtype=torch.float32)
-    patterns = torch.stack(
-        [
-            torch.tensor(
-                [left] * 4 + [right] * 4,
-                device=device,
-                dtype=torch.float32,
-            )
-            for _, left, right in _HIERARCHY_CONFIGS
-        ]
-    )
-    candidate_codes = (
-        parent_scale_codes.to(torch.int64)[:, None] + offsets[None, :]
-    ).clamp(0, 254)
-    base_loss = residual_base.square().sum(dim=0)
-    best_change = torch.zeros(rows, device=device, dtype=torch.float32)
-    best_q = parent_q.clone()
-    best_codes = parent_scale_codes.to(torch.int64).clone()
-    best_lv2 = parent_lv2.to(torch.float32).clone()
-    best_lv3 = parent_lv3.to(torch.float32).clone()
-    row_index = torch.arange(rows, device=device)
-
-    for offset_index in range(len(_BASE_OFFSETS)):
-        codes = candidate_codes[:, offset_index]
-        scales = _e6m2_decode(codes).to(torch.float32)
-        lv2_work = parent_lv2.to(torch.float32).clone()
-        lv3_work = parent_lv3.to(torch.float32).clone()
-        den_work = _local_hierarchy_denominator(
-            scales[:, None],
-            lv2_work,
-            lv3_work,
-        )
-        q_work = (
-            torch.round(target * (4.0 / den_work.clamp_min(_EPS)))
-            .clamp(-7.0, 7.0)
-            * 0.25
-            * den_work
-        )
-        residual_work = residual_base - local_z.mm((q_work - parent_q).t())
-
-        for group in range(8):
-            lo = group * 8
-            hi = lo + 8
-            den_candidates = (
-                scales[:, None, None]
-                * configs[None, :, 0, None]
-                * patterns[None, :, :]
-            )
-            q_candidates = (
-                torch.round(
-                    target[:, None, lo:hi]
-                    * (4.0 / den_candidates.clamp_min(_EPS))
-                )
-                .clamp(-7.0, 7.0)
-                * 0.25
-                * den_candidates
-            )
-            delta_candidates = q_candidates - q_work[:, None, lo:hi]
-            projected_candidates = torch.einsum(
-                "tk,rck->rct",
-                local_z[:, lo:hi],
-                delta_candidates,
-            )
-            changes = (
-                -2.0
-                * residual_work.t()[:, None, :]
-                * projected_candidates
-                + projected_candidates.square()
-            ).sum(dim=-1)
-            choice = changes.argmin(dim=1)
-            q_choice = q_candidates[row_index, choice]
-            den_choice = den_candidates[row_index, choice]
-            delta_choice = q_choice - q_work[:, lo:hi]
-            projected_choice = local_z[:, lo:hi].mm(delta_choice.t())
-            q_work[:, lo:hi] = q_choice
-            den_work[:, lo:hi] = den_choice
-            lv2_work[:, group] = configs[choice, 0]
-            lv3_work[:, group, 0] = configs[choice, 1]
-            lv3_work[:, group, 1] = configs[choice, 2]
-            residual_work -= projected_choice
-
-        for coordinate in range(_BLOCK):
-            options = den_work[:, coordinate, None] * levels[None, :]
-            step = options - q_work[:, coordinate, None]
-            projected = local_z[:, coordinate, None, None] * step[None, :, :]
-            changes = (
-                -2.0 * residual_work[:, :, None] * projected
-                + projected.square()
-            ).sum(dim=0)
-            change, choice = changes.min(dim=1)
-            improve = torch.isfinite(change) & (change < -_EPS)
-            accepted = step[row_index, choice]
-            accepted = torch.where(improve, accepted, torch.zeros_like(accepted))
-            q_work[:, coordinate] += accepted
-            residual_work -= local_z[:, coordinate, None] * accepted[None, :]
-
-        change = residual_work.square().sum(dim=0) - base_loss
-        better = torch.isfinite(change) & (change < best_change)
-        best_q = torch.where(better[:, None], q_work, best_q)
-        best_codes = torch.where(better, codes, best_codes)
-        best_lv2 = torch.where(better[:, None], lv2_work, best_lv2)
-        best_lv3 = torch.where(better[:, None, None], lv3_work, best_lv3)
-        best_change = torch.where(better, change, best_change)
-
-    best_residual = residual_base - local_z.mm((best_q - parent_q).t())
-    return best_q, best_codes, best_lv2, best_lv3, best_residual
-
-
-def _polish_weight_progressive(
-    weight: torch.Tensor,
-    parent: dict[str, torch.Tensor],
-    activation: torch.Tensor,
-) -> dict[str, torch.Tensor]:
-    """Progressive full-hierarchy HSDQ for narrow/wide non-expansive roles."""
-
-    rows, channels = map(int, weight.shape)
-    if (
-        channels < _PROGRESSIVE_HSDQ_MIN_CHANNELS
-        or channels % _BLOCK != 0
-        or rows > _PROGRESSIVE_HSDQ_MAX_ROWS
-        or rows > 2 * channels
-    ):
-        return parent
-    z = _sample_rows(activation, _WEIGHT_HSDQ_MAX_ROWS).to(torch.float32)
-    if z.ndim != 2 or int(z.shape[1]) != channels:
-        return parent
-
-    blocks = channels // _BLOCK
-    q = _dequantize_hif4(parent).to(torch.float32).clone()
-    residual = z.mm((weight - q).t())
-    leverage = []
-    for block in range(blocks):
-        lo = block * _BLOCK
-        hi = lo + _BLOCK
-        leverage.append(
-            z[:, lo:hi].t().mm(residual).square().sum()
-        )
-    count = min(blocks, max(1, int(_WEIGHT_HSDQ_BLOCKS)))
-    selected = torch.topk(torch.stack(leverage), k=count).indices.tolist()
-
-    scale_codes = _e6m2_encode_nearest(
-        parent["scale_factor"].reshape(rows, blocks)
-    ).to(torch.int64)
-    lv2 = parent["scale_lv2"].reshape(rows, blocks, 8).to(torch.float32).clone()
-    lv3 = parent["scale_lv3"].reshape(rows, blocks, 8, 2).to(torch.float32).clone()
-
-    for block in selected:
-        lo = int(block) * _BLOCK
-        hi = lo + _BLOCK
-        local_z = z[:, lo:hi]
-        q_block, codes_block, lv2_block, lv3_block, new_residual = (
-            _progressive_hierarchy_block_batch(
-                weight[:, lo:hi],
-                q[:, lo:hi],
-                scale_codes[:, int(block)],
-                lv2[:, int(block)],
-                lv3[:, int(block)],
-                local_z,
-                residual,
-            )
-        )
-        improve = new_residual.square().sum(dim=0) < (
-            residual.square().sum(dim=0) - _EPS
-        )
-        q[:, lo:hi] = torch.where(improve[:, None], q_block, q[:, lo:hi])
-        scale_codes[:, int(block)] = torch.where(
-            improve, codes_block, scale_codes[:, int(block)]
-        )
-        lv2[:, int(block)] = torch.where(
-            improve[:, None], lv2_block, lv2[:, int(block)]
-        )
-        lv3[:, int(block)] = torch.where(
-            improve[:, None, None], lv3_block, lv3[:, int(block)]
-        )
-        residual = torch.where(improve[None, :], new_residual, residual)
-
-    result = _clone_params(parent)
-    result["scale_factor"] = _e6m2_decode(scale_codes).reshape_as(
-        parent["scale_factor"]
-    )
-    result["scale_lv2"] = lv2.reshape_as(parent["scale_lv2"])
-    result["scale_lv3"] = lv3.reshape_as(parent["scale_lv3"])
-    den = (
-        result["scale_factor"].to(torch.float32)
-        * result["scale_lv2"].to(torch.float32)
-        * result["scale_lv3"].to(torch.float32)
-    ).repeat_interleave(4, dim=-1).reshape(rows, channels)
-    codes = torch.round(q * 4.0 / den.clamp_min(_EPS)).clamp(-7.0, 7.0)
-    return _write_codes(result, codes.reshape(rows, channels))
-
-
 def _product_loss(
     activation: torch.Tensor,
     weight: torch.Tensor,
@@ -781,17 +535,12 @@ def _crossfold_weight_hsdq(
     parent: dict[str, torch.Tensor],
     calibration: Sequence[torch.Tensor],
 ) -> dict[str, torch.Tensor]:
-    def solve(fold: torch.Tensor) -> dict[str, torch.Tensor]:
-        if int(weight.shape[1]) >= _PROGRESSIVE_HSDQ_MIN_CHANNELS:
-            return _polish_weight_progressive(weight, parent, fold)
-        return _polish_weight(weight, parent, fold)
-
     if len(calibration) < 2:
-        return solve(calibration[0]) if calibration else parent
+        return _polish_weight(weight, parent, calibration[0]) if calibration else parent
     folds = [item.to(torch.float32) for item in calibration[:2]]
     candidates = [parent]
-    cand0 = solve(folds[0])
-    cand1 = solve(folds[1])
+    cand0 = _polish_weight(weight, parent, folds[0])
+    cand1 = _polish_weight(weight, parent, folds[1])
 
     parent_losses = [_product_loss(fold, weight, parent) for fold in folds]
     # Cross-fit admission: the candidate generated on one fold must improve

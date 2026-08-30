@@ -267,7 +267,7 @@ E0-G 已执行（Qwen 一层、当前 BOAT 后前 32 行、完整 255-code，结
 `artifacts/oracle_dashboard/e0g-qwen-layer1.json`）。结果显示：`fc_gate/fc_up/proj`
 的总 gap 均低于 `0.1%`；`v` 的 weight-MSE gap 为 `0.0313%`，activation-`gram64`
 总 gap 为 `0.6302%`，60/448 blocks 改善，最大单 block `19.321%`。因此 GALS
-只保留为 `v` 高损 block 的候选插件，不再做全局实现；下一步直接进入 E1。
+只保留为 `v` 高损 block 的候选插件，不再做全局实现；E1 只作为一次性诊断实验。
 
 原始 `denom/Δ` 只在 identity、纯置换或可证明保留网格的特殊变换中记录归因。
 当前 BOAT 含对角缩放和 signed-Hadamard，变换后元素通常不再属于单一
@@ -881,7 +881,7 @@ w_t=\sum_{h,q}P_{hqt}^2
 | E0 | D0 dashboard | 4 模型×3 层×全 role | 上限在哪里 | E0-G |
 | E0-G | all-255 scale-lattice oracle | Qwen gate/up/v sampled blocks | `±3` 是否漏掉大量合法 scale 收益 | GALS-C 或 E1 |
 | E0-C | GALS 解析候选召回 | E0-G 高 gap blocks | 稀疏候选能否追回 oracle | E1 |
-| E1 | progressive HSDQ path + 通过门禁的 GALS | Qwen gate/up/v | 强 solver 是否迁移 | E2/E4 |
+| E1 | progressive full-hierarchy HSDQ | Qwen gate/up/v/proj | 强 solver 是否迁移 | 已拒绝，转 A2 |
 | E2 | expansive FFN shrinkage | Qwen gate/up | 能否解除 rows gate | E3 |
 | E3 | LRH rank | v/gate/up/proj | 跨块是否重要 | E4 |
 | E4 | blockwise D/P | v/gate/up | 坐标系是否主瓶颈 | E5 |
@@ -1021,45 +1021,29 @@ next falsifiable experiment
 
 ---
 
-## 15. 下一步执行的第一个算法实验
+## 15. 当前执行状态与下一步
 
-E0-G 已完成并已归档。结论是：全局 GALS 停止，仅保留 Qwen `v` 高损 block 插件。
-现在执行 **E1：Progressive Cross-Fold Hierarchical HSDQ**：
+E0-G 已完成并已归档；结论是全局 GALS 停止，仅保留 `v` 高损 block 作为诊断插件。
+E1 已按计划实现并完成一层/全层门禁，结果已归档到
+`logs/execution/2026-08-30-e1-progressive-hsdq.md`。它在一层样本上提升
+`+2.591832` panel，但在 24 层 Qwen 上回退 `−2.831200` panel，Linear 平均误差由
+`0.501558` 降为 `0.490233`，且运行时间从 `382.15s` 增至 `693.21s`，超过 420s
+门禁；因此 E1 明确拒绝，主代码恢复到 parent SHA256
+`5D1128CC79FEF58154DA2F600EC4B472FF95030E1F1E61B96593D06FD9AAC94F`。
+
+下一步执行 **A2：Expansive-FFN 稀疏行 HSDQ**，只攻击 `fc_gate/fc_up` 的
+`rows > 2 × channels` 形状：
 
 ```text
-模型：Qwen2.5-0.5B
-角色：fc_gate、fc_up、v、proj
-层：0、12、23
-块：Qwen `v` 保留 activation-Gram 高 gap top-32；其他 role 先用当前 `±3`
-对照：当前 fixed-hierarchy、progressive mantissa-only、progressive full-hierarchy、
-以及 `v` 的 GALS+progressive full-hierarchy
-active blocks：top-1 / top-2
-beam：2 / 4 / 8
-path checkpoints：parent、hierarchy、1、4、16、32、64 accepted moves
-fold：A/B 独立统计，validation 只终验
-输出：path checkpoint 的 fold/validation product loss、changed block、GALS 增益保留率
+候选：每个 expansive role 生成 row_fraction = 1%、2%、5% 三个稀疏候选
+求解：对候选行复用已验证的 fixed-hierarchy HSDQ，不引入新的 scale 网格
+选择：两折 cross-fit admission + mean/max 鲁棒评分，parent 永远保留
+预算：每层每 role 最多 5% 行，最多 2 个 block，禁止全矩阵 dense solver
+门禁：Qwen layer-1 先验筛选；全 24 层必须同时满足 panel 不降、Linear 不降、
+      runtime ≤ 420s，任一失败即归档候选并恢复 parent
 ```
 
-必须同时保留五个对照：
-
-1. 当前 parent；
-2. 当前 fixed-hierarchy HSDQ；
-3. progressive mantissa-only；
-4. progressive full-hierarchy HSDQ；
-5. `v` 高损 block 的 GALS + progressive full-hierarchy。
-
-它能一次回答：
-
-- 当前主要问题是不是 fixed hierarchy；
-- 历史 HSDQ 失败是不是因为只保存最终过拟合点；
-- `fc_gate/fc_up` 是否能在稀疏 row-block 约束下安全启用权重精修；
-- 是否值得继续开发 LRH。
-
-裁决：
-
-- 若 full-hierarchy path 在 validation 明显胜出，继续 A2/A3；
-- 若 mantissa path 正向而 hierarchy path回退，保留 path selector、收缩 scale 自由度；
-- 若所有 path 都只改善 train，立即转 A4 BOAT-2；
-- 若 E1 的 legal oracle 本身也几乎无增益，直接转 A2 FFN 扩张；不再扩大 HSDQ。
-
-这是当前信息增益最高、同时能直接攻击最弱 Linear 角色的下一步。
+A2 的目标是验证真正的 Linear 短板是否来自 expansive FFN 的少量高损行；若
+`1%/2%` 在全层稳定正向，再进入 A3（逐行 leverage + block budget）；若三档均不
+正向，则停止继续扩大 HSDQ，转 A4 BOAT-2/激活重标定。所有实验必须保留
+parent、候选分档、fold/validation loss、changed rows/blocks 和完整运行时间。

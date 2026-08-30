@@ -30,28 +30,3 @@ def test_shared_lv2_legal_effective_exponents() -> None:
     assert (0, 2) not in legal
     assert (2, 0) not in legal
     assert len(legal) == 7
-
-
-def test_progressive_full_hierarchy_product_loss_is_monotone() -> None:
-    torch.manual_seed(17)
-    weight = torch.randn(16, 512) * 0.05
-    activation = torch.randn(96, 512) * 0.3
-    parent = solution._dense_to_hif4(weight)
-    refined = solution._polish_weight_progressive(weight, parent, activation)
-    parent_loss = solution._product_loss(activation, weight, parent)
-    refined_loss = solution._product_loss(activation, weight, refined)
-    assert refined_loss <= parent_loss + 1.0e-7
-    assert torch.isfinite(solution._dequantize_hif4(refined)).all()
-    assert torch.all((refined["scale_lv2"] == 1) | (refined["scale_lv2"] == 2))
-    assert torch.all((refined["scale_lv3"] == 1) | (refined["scale_lv3"] == 2))
-
-
-def test_progressive_full_hierarchy_is_deterministic() -> None:
-    torch.manual_seed(23)
-    weight = torch.randn(8, 512) * 0.05
-    activation = torch.randn(64, 512) * 0.2
-    parent = solution._dense_to_hif4(weight)
-    first = solution._polish_weight_progressive(weight, parent, activation)
-    second = solution._polish_weight_progressive(weight, parent, activation)
-    for key in first:
-        assert torch.equal(first[key], second[key]), key
