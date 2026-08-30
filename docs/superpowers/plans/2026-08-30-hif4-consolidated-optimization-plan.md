@@ -124,14 +124,14 @@ E5/A5  joint-fold 离线 A@W           【已拒绝：全层 −9.160 panel】
   ↓
 E3-LRH true cross-block rank-8  【已拒绝：全层 −1.328 panel，381.84s】
   ↓
-E4/CAT-BOAT-2 full组合       【下一步：本地 panel 验证】
+E4/CAT-BOAT-2 full组合       【已拒绝：全层 −10.595 panel，600.61s】
   ↓
-E5/Qronos + Global Activation-LRH + Attention GQRB/FASA/PAWV
+E5/Qronos + Global Activation-LRH + Attention GQRB/FASA/PAWV 【下一步】
   ↓
 P1  取所有本地候选最高分；官方恢复后再建立兑换率
 ```
 
-这不是“全部算法已完成”的声明：E0-C（GALS 解析召回）、CAT/Householder 组合、
+这不是“全部算法已完成”的声明：E0-C（GALS 解析召回）、
 冻结-Q(A) ridge/Qronos、Global Activation-LRH、
 Attention GQRB/FASA/PAWV，以及最终五模型综合（C0）都没有在本轮实现或验收。
 它们目前是未执行的研究项，不应与已拒绝的 E1–E5 变体混为一谈。
@@ -179,6 +179,12 @@ Attention GQRB/FASA/PAWV，以及最终五模型综合（C0）都没有在本轮
 
 先行的两种 blockwise exponent schedule 全层 panel `292.978009`，详见
 `logs/execution/2026-08-30-a4-blockwise-boat.md`；该变体已回退。
+
+随后执行完整 CAT-inspired BOAT-2（blockwise balance + 五种 hierarchy-aware
+permutation + 正则化协方差 Householder），单层 panel `336.716334`，但 24 层
+panel 降至 `283.159693`，API `600.61s` 超过 420s，详见
+`logs/execution/2026-08-30-a4-cat-boat2.md`；该 full-search 变体已回退。CAT/
+Householder 只保留为未来小规模离线 oracle，不再直接写入部署主线。
 
 ### 2.5 E5/A5：FS-JDRQ（最可能的大收益，对应外部核心优势）
 

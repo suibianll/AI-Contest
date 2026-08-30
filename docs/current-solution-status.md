@@ -145,15 +145,17 @@ $$P_{total}=P_L+P_A=293.755106.$$
 | A4 blockwise BOAT-2 | 292.978009 | 0.498449 | 368.23s | 拒绝 |
 | A5 joint-fold offline A@W | 284.595177 | 0.464918 | 358.24s | 拒绝 |
 | A3 true cross-block LRH-r8 | 292.426982 | 0.496245 | 381.84s | 拒绝 |
+| A4 full CAT-inspired BOAT-2 | 283.159693 | 0.459176 | 600.61s | 拒绝，超时 |
 | stable parent（当前根） | **293.755106** | **0.501558** | **382.15s** | **active** |
 
-归档目录：`solutions/20260830_v087...` 至 `solutions/20260830_v092...`；
+归档目录：`solutions/20260830_v087...` 至 `solutions/20260830_v093...`；
 执行日志：`logs/execution/2026-08-30-e1-progressive-hsdq.md`、
 `2026-08-30-a2-expansive-sparse-hsdq.md`、
 `2026-08-30-a3-rowwise-block-hsdq.md`、
 `2026-08-30-a4-blockwise-boat.md`、
 `2026-08-30-a5-joint-aw.md`、
-`2026-08-30-a3-lrh-r8.md`。
+`2026-08-30-a3-lrh-r8.md`、
+`2026-08-30-a4-cat-boat2.md`。
 
 ## 距离 Linear 0.9 与 36,000
 
