@@ -1131,7 +1131,7 @@ def hif4_calibration_attention(
     v_hats = []
     for v in v_samples:
         v_params = _dense_to_hif4(v, offsets=_ATTN_OFFSETS)
-        v_params = _refine_v(v, v_params, row_diagonal, None)
+        v_params = _refine_v(v, v_params, row_diagonal, row_lowrank)
         v_hats.append(_dequantize_hif4(v_params).to(torch.float32))
     q_stack = torch.cat(q_samples).reshape(-1, q_num_heads, head_dim)
     k_stack = torch.cat(k_samples).reshape(-1, kv_num_heads, head_dim)
@@ -1319,7 +1319,7 @@ def hif4_calibration_attention(
         "k_state": k_state,
         "v_state": {
             "row_diagonal": None if row_diagonal is None else _cpu_tensor(row_diagonal),
-            "row_lowrank": None,
+            "row_lowrank": None if row_lowrank is None else _cpu_tensor(row_lowrank),
         },
     }
 

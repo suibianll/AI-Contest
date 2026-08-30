@@ -834,7 +834,7 @@ K'=KT^{-T}
 候选从 Q/K covariance 的广义特征方向初始化；identity 永远保留。部署复评仍用
 真实 causal Attention 输出，不恢复已失败的 softmax Fisher 非对角 Hessian。
 
-### 11.2 B2：FASA shortlist 扩展
+### 11.2 B2：FASA shortlist 扩展（已执行）
 
 保留当前两阶段结构：
 
@@ -844,8 +844,11 @@ cheap proxy -> top-K -> full deployed output MSE
 
 本阶段不考虑时间，可把 top-K 扩展到全部候选，以测量 shortlist 截断损失；候选族
 包含 reciprocal balance、K-centering、shared Hadamard、GQRB block 和组合候选。
+B1 已采用 parent top4 + GQRB top4 的 margin gate；B2 在此 shortlist 上加入
+PAWV V refinement。rank-8 跨 token 版本 layer-1 panel `334.101693` 未通过门禁，
+diag-only 版本全层 panel `293.797301`、API `392.42s`，已接受为 v100。
 
-### 11.3 B3：PAWV
+### 11.3 B3：PAWV（本轮已执行 B2 子集）
 
 当前 V 直接 `_dense_to_hif4`，没有 refinement。由校准 Attention probability
 `P` 计算 token 敏感度：
@@ -883,13 +886,13 @@ w_t=\sum_{h,q}P_{hqt}^2
 | E0-C | GALS 解析候选召回 | E0-G 高 gap blocks | 稀疏候选能否追回 oracle | 未执行 | 需先有新的高 gap 目标 |
 | E1 | progressive full-hierarchy HSDQ | Qwen gate/up/v/proj | 强 solver 是否迁移 | 已执行并拒绝：panel `290.923906` | 归档，恢复 parent |
 | E2 | expansive FFN shrinkage | Qwen gate/up | 能否解除 rows gate | 已执行并拒绝：panel `292.831952` | 停止该 row solver |
-| E3 | LRH rank | v/gate/up/proj | 跨块是否重要 | 未执行；A3 仅是 rowwise 替代诊断 | 需先独立实现跨块 LRH |
-| E4 | blockwise D/P | v/gate/up | 坐标系是否主瓶颈 | 部分执行并拒绝：仅 blockwise exponent，未做 D/P/CAT/Householder 全组合 | 不保留该 schedule |
-| E5 | Householder/CAT low-rank | o/v/proj | 正则化 alignment 初始化能否合法兑现 | 未执行 | 需新的合规、低秩可逆实现 |
-| E6 | FS-JDRQ + block-Qronos | 全 Linear role | 冻结 Q(A) 后联合纠错能否合法兑现 | 部分执行并拒绝：仅 raw joint-fold `A@W`，未做 frozen-Q(A)/ridge/Qronos | 停止 joint candidate |
-| E7 | global activation LRH | 全 Linear role | 激活跨块上限 | 未执行（当前 parent 已有 block Gram，不等于 global LRH） | 需独立状态/上限实验 |
-| E8 | GQRB/PAWV | Attention | 把 A 提到 0.90+ | 本轮未执行；仅沿用历史 Attention 路径 | 需单独 Attention 实验 |
-| E9 | 全层五模型 + wide shape | 全部 | 泛化与最终组合 | 未执行 | 只有新候选通过后才运行 |
+| E3 | LRH rank | v/gate/up/proj | 跨块是否重要 | 已执行并拒绝：true cross-block rank-8，全层 panel `292.426982` | 停止扩大 LRH |
+| E4 | blockwise D/P | v/gate/up | 坐标系是否主瓶颈 | 已执行并拒绝：blockwise schedule 与 CAT/Householder 全组合均回退 | 仅保留 BOAT 基线 |
+| E5 | Householder/CAT low-rank | o/v/proj | 正则化 alignment 初始化能否合法兑现 | 已执行并拒绝：full CAT/BOAT-2，全层 `283.159693` 且超时 | 不写入部署主线 |
+| E6 | FS-JDRQ + block-Qronos | 全 Linear role | 冻结 Q(A) 后联合纠错能否合法兑现 | 已执行并拒绝：frozen-Q(A)/ridge/Qronos 持平但超时 `455.73s` | 停止 joint candidate |
+| E7 | global activation LRH | 全 Linear role | 激活跨块上限 | 已执行并拒绝：Global LRH 全层 `282.616646` | 停止扩大 LRH |
+| E8 | GQRB/PAWV | Attention | 把 A 提到 0.90+ | 已执行：B1 GQRB margin + B2 PAWV diag-only；当前 Attention mean `0.842039` | 进入 C0 五模型确认 |
+| E9 | 全层五模型 + wide shape | 全部 | 泛化与最终组合 | 待执行：C0 固定五模型 panel | 仅验证 v100 稳健性 |
 
 停止规则：
 
@@ -1040,20 +1043,20 @@ LRH-r8（最多 4 个 64-block、rank-8 off-block Hessian），单层 `334.24542
 `logs/execution/2026-08-30-a3-lrh-r8.md`，不再扩大这条实现。
 
 ```text
-当前动作：官方测评不可用，保持 parent `solution.py` 作为最高分基线，继续执行
-尚未验证的独立路线；完整 BOAT-2/CAT-Householder 组合已执行但全层 panel
+当前动作：官方测评不可用，继续以固定 Qwen panel 作为本地门禁。完整 BOAT-2/CAT-Householder 组合已执行但全层 panel
 `283.159693`、API `600.61s`，比 parent 低 `10.595413` 且超时，已归档；下一项
 冻结 Q(A) ridge/Qronos 已执行：全层 panel 与 parent 持平但 API `455.73s` 超过
 420s，已归档。Global Activation-LRH 也已执行（rank-8、10% energy），全层 panel
-`282.616646`，较 parent 低 `11.138460`，已归档。B1 GQRB margin 已通过本地
-门禁：panel `293.793700`、API `406.24s`，较 parent `+0.038594`，当前根切换到
-v098；下一步是 B2 FASA/PAWV 与最终五模型 C0。
+`282.616646`，较 parent 低 `11.138460`，已归档。B1 GQRB margin 先通过本地
+门禁（panel `293.793700`、API `406.24s`），随后 B2 PAWV diag-only 也通过本地
+门禁（panel `293.797301`、API `392.42s`，较 B1 `+0.003601`），当前根已切换到
+v100；下一步是最终五模型 C0 确认。
 所有候选必须满足 panel 不降、
 Linear 不降、runtime ≤ 420s，失败即归档恢复 parent；每一步记录最高分版本和
 提交号，不把未执行项标成已完成。
 ```
 
-这一步的结论是：当前最高可信本地版本就是 parent，不宣称已达到 36000。下一
-个有授权且可验证的动作是官方提交；随后根据真实官方分决定是否投入新的坐标系
-或 FS-JDRQ 目标。所有已执行实验均保留 parent、fold loss、changed blocks 和
-完整运行时间，不删除历史证据。
+这一步的结论是：当前最高可信本地版本是 v100（B2 PAWV diag-only + B1 GQRB），
+但仍不宣称已达到 36000。下一步先完成五模型 C0 确认；之后取所有本地候选的最高
+分版本，待官方恢复再建立兑换率。所有已执行实验均保留 parent、fold loss、changed
+blocks 和完整运行时间，不删除历史证据。

@@ -130,15 +130,17 @@ E5/Qronos（已拒绝：panel 持平但 455.73s） + Global Activation-LRH（已
   ↓
 B1 GQRB margin 【已接受：panel 293.793700，406.24s】
   ↓
-B2 FASA/PAWV + C0 五模型确认 【下一步】
+B2 PAWV diag-only 【已接受：panel 293.797301，392.42s】
+  ↓
+C0 五模型确认 【下一步】
   ↓
 P1  取所有本地候选最高分；官方恢复后再建立兑换率
 ```
 
 这不是“全部算法已完成”的声明：E0-C（GALS 解析召回）、
-冻结-Q(A) ridge/Qronos、Global Activation-LRH、
-Attention GQRB/FASA/PAWV，以及最终五模型综合（C0）都没有在本轮实现或验收。
-它们目前是未执行的研究项，不应与已拒绝的 E1–E5 变体混为一谈。
+冻结-Q(A) ridge/Qronos 与 Global Activation-LRH 已执行并归档；Attention GQRB
+与 PAWV diag-only 已通过本地门禁，PAWV rank-8 低秩变体已拒绝；最终五模型综合
+（C0）仍待确认。已执行项与未执行项不应混为一谈。
 
 ### 2.1 E1/A1：渐进跨 fold 全层级 HSDQ（已拒绝）
 
@@ -214,7 +216,11 @@ residual 的 frozen `Q(A)` 放进 weight residual 会触发合规守卫的 cross
 
 ### 2.6 E7/B：Attention
 
-Attention 当前 0.8418 已远高于 Linear，但 200 个 case 的权重使其 panel 贡献（168.37）超过 Linear（125.39）。方向：GQRB/FASA 扩展 + PAWV（`v_state` 当前为空，V 缺少位置/概率敏感 refinement）。
+Attention 当前 `0.842039` 已远高于 Linear，但 200 个 case 的权重使其 panel 贡献
+（`168.407898`）超过 Linear（`125.389403`）。B1 GQRB margin 已部署；B2 PAWV
+diag-only 使用 attention probability 的 token-row 对角 Hessian 做 V 的合法离散
+refinement。PAWV 的 rank-8 跨 token 低秩扩展在 layer-1 panel 看似更高，但未通过
+全层前置门禁，已归档；下一步只做五模型 C0 稳健性确认。
 
 ### 2.7 已排除（不再重复投入）
 

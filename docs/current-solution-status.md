@@ -7,15 +7,15 @@
 ## 一句话结论
 
 根目录当前为 BOAT + cross-fold HSDQ，并加入已通过本地门禁的 Attention B1 GQRB
-margin 候选。固定 Qwen2.5-0.5B 缓存、`seq=128`、`calib=2`、`test=4`、全 24
-层、CPU 的完整运行中，当前主版本 Qwen shaped panel 为 **293.793700**，正式 API
-累计 **406.243328 s**，低于
+与 B2 PAWV diag-only 候选。固定 Qwen2.5-0.5B 缓存、`seq=128`、`calib=2`、
+`test=4`、全 24 层、CPU 的完整运行中，当前主版本 Qwen shaped panel 为
+**293.797301**，正式 API 累计 **392.423565 s**，低于
 `420 s` 限制；该数值用于本地 A/B 排序，不能线性换算为官方排行榜分数。
 
-2026-08-30 已按执行计划完成 E1→A6、B1 的本地验证。Linear 的 E1/A2/A3/A4/A5/A6
-均未超过 stable parent；B1 GQRB margin 使 Attention mean 从 `0.841829` 提升到
-`0.842021`，panel `+0.038594` 且 API 仍低于 420s，因此当前根切换到 v098。官方
-评测不可用期间，所有新候选仍以固定 Qwen panel 为门禁。
+2026-08-30 已按执行计划完成 E1→A6、B1、B2 的本地验证。Linear 的 E1/A2/A3/A4/A5/A6
+均未超过 stable parent；B1 GQRB margin 先把 panel 提升到 `293.793700`，B2
+PAWV diag-only 再提升到 `293.797301`，并把 API 降到 `392.423565 s`，因此当前根
+切换到 v100。官方评测不可用期间，所有新候选仍以固定 Qwen panel 为门禁。
 
 ## 当前实现
 
@@ -38,12 +38,13 @@ margin 候选。固定 Qwen2.5-0.5B 缓存、`seq=128`、`calib=2`、`test=4`、
 4. **Attention 输出感知 shortlist**：搜索 reciprocal RMS 平衡、K-centering、
    16/32/64 维共享 signed-Hadamard，以及 B1 GQRB 的 2×2/4×4 group-local
    orthogonal mixing；保留 parent 的原始四候选，并要求 mixing exact loss 至少
-   改善 0.1% 才能替换。V 保持独立合法 HiF4 编码。
+   改善 0.1% 才能替换。B2 PAWV 用 attention probability 的 token-row 对角
+   Hessian 做 V 的离散坐标 refinement；V 仍保持独立合法 HiF4 编码。
 
 ## 最新全层实测
 
-报告文件：[`clean-gram-hierarchy-full.md`](../logs/evaluations/clean-gram-hierarchy-full.md)；
-原始 JSON：[`clean-gram-hierarchy-full.json`](../artifacts/real_model_suite/clean-gram-hierarchy-full.json)。
+报告文件：[`b2-pawv-diagonly-qwen-full.md`](../logs/evaluations/b2-pawv-diagonly-qwen-full.md)；
+原始 JSON：[`b2-pawv-diagonly-qwen-full.json`](../artifacts/real_model_suite/b2-pawv-diagonly-qwen-full.json)。
 
 固定输入为 Qwen2.5-0.5B（24 层、hidden 896、14 Q heads、2 KV heads、head dim 64），
 calibration 使用 train 的 2 个窗口，test 使用 validation 的 4 个不重叠窗口。
@@ -51,13 +52,13 @@ calibration 使用 train 的 2 个窗口，test 使用 validation 的 4 个不�
 | 指标 | 当前主版本 | 旧 C86 | 变化 |
 |---|---:|---:|---:|
 | Linear native mean | 0.501558 | 0.477821 | +0.023737 |
-| Attention native mean | 0.842021 | 0.739264 | +0.102757 |
+| Attention native mean | 0.842039 | 0.739264 | +0.102775 |
 | Qwen panel Linear | 125.389403 | 119.455153 | +5.934250 |
-| Qwen panel Attention | 168.404296 | 147.852757 | +20.551539 |
-| Qwen panel total | **293.793700** | 267.307909 | **+26.485791（+9.91%）** |
-| official-flow native total | 417.880778 | 392.064774 | +25.816004 |
-| six-API time | **406.243328 s** | 313.577669 s | +92.665659 s |
-| wall time | 439.932013 s | — | `API <420 s` |
+| Qwen panel Attention | 168.407898 | 147.852757 | +20.555141 |
+| Qwen panel total | **293.797301** | 267.307909 | **+26.489392（+9.91%）** |
+| official-flow native total | 417.882506 | 392.064774 | +25.817732 |
+| six-API time | **392.423565 s** | 313.577669 s | +78.845896 s |
+| wall time | 424.693400 s | — | `API <420 s` |
 
 ## 外部代码本地复测与最高基准
 
@@ -92,10 +93,10 @@ CUDA 会在外部代码的 CPU state / CUDA activation 混用处触发 device mi
 
 | 比较口径 | 当前根 | 外部最高基准 | 当前根领先 |
 |---|---:|---:|---:|
-| Qwen native total | 417.880778 | 369.527269 | **+48.353509（+13.09%）** |
-| Qwen shaped panel | 293.793700 | 250.327102 | **+43.466598（+17.37%）** |
+| Qwen native total | 417.882506 | 369.527269 | **+48.355237（+13.09%）** |
+| Qwen shaped panel | 293.797301 | 250.327102 | **+43.470199（+17.37%）** |
 | panel Linear | 125.389403 | 112.939429 | **+12.449974** |
-| panel Attention | 168.404296 | 137.387673 | **+31.016623** |
+| panel Attention | 168.407898 | 137.387673 | **+31.020225** |
 
 因此，后续本地算法 A/B 应以外部 Qwen `250.327102` 作为第一比较线，
 以外部 Qwen native `369.527269` 作为第二诊断线；`1085.743597` 只能用于检查
@@ -106,16 +107,16 @@ CUDA 会在外部代码的 CPU state / CUDA activation 混用处触发 device mi
 | 组件 | case 数 | gain sum | gain mean | global gain |
 |---|---:|---:|---:|---:|
 | Linear | 672 | 337.046716 | 0.501558 | 0.436952 |
-| Attention | 96 | 80.834062 | 0.842021 | 0.857904 |
-| 合计 | 768 | **417.880778** | — | — |
+| Attention | 96 | 80.835791 | 0.842039 | 0.857899 |
+| 合计 | 768 | **417.882506** | — | — |
 
 `panel_score` 不是把 768 个 case 复制成 450 个，而是保留组件均值后投影：
 
 $$P_L=250\times0.5015576125=125.389403,$$
 
-$$P_A=200\times0.8420214824=168.404296,$$
+$$P_A=200\times0.8420394885=168.407898,$$
 
-$$P_{total}=P_L+P_A=293.793700.$$
+$$P_{total}=P_L+P_A=293.797301.$$
 
 因此 `official_flow_total` 与 `panel_score.total` 同时出现是设计结果，不是计算冲突。
 
@@ -151,10 +152,11 @@ $$P_{total}=P_L+P_A=293.793700.$$
 | A4 full CAT-inspired BOAT-2 | 283.159693 | 0.459176 | 600.61s | 拒绝，超时 |
 | A5 frozen-Q(A) ridge/Qronos | 293.755106 | 0.501558 | 455.73s | 持平但超时 |
 | A6 Global Activation-LRH | 282.616646 | 0.457010 | 373.97s | 拒绝 |
-| B1 GQRB margin（当前根） | **293.793700** | **0.501558** | **406.24s** | **active** |
+| B1 GQRB margin | 293.793700 | 0.501558 | 406.24s | archived baseline |
+| B2 PAWV diag-only + B1 GQRB（当前根） | **293.797301** | **0.501558** | **392.42s** | **active** |
 | stable parent | 293.755106 | 0.501558 | 382.15s | baseline |
 
-归档目录：`solutions/20260830_v087...` 至 `solutions/20260830_v098...`；
+归档目录：`solutions/20260830_v087...` 至 `solutions/20260830_v100...`；
 执行日志：`logs/execution/2026-08-30-e1-progressive-hsdq.md`、
 `2026-08-30-a2-expansive-sparse-hsdq.md`、
 `2026-08-30-a3-rowwise-block-hsdq.md`、
@@ -163,8 +165,8 @@ $$P_{total}=P_L+P_A=293.793700.$$
 `2026-08-30-a3-lrh-r8.md`、
 `2026-08-30-a4-cat-boat2.md`、
 `2026-08-30-a5-frozen-qronos.md`、
-`2026-08-30-a6-global-activation-lrh.md`。
-`2026-08-30-b1-gqrb.md`。
+`2026-08-30-a6-global-activation-lrh.md`、`2026-08-30-b1-gqrb.md`、
+`2026-08-30-b2-pawv.md`。
 
 ## 距离 Linear 0.9 与 36,000
 
@@ -183,15 +185,15 @@ $$\frac{\Delta g_L}{1-g_L}=\frac{0.3984423875}{0.4984423875}=79.94\%.$$
 
 ## 时间与合规
 
-- 六个 API 累计：calibration `257.139266 s` + dynamic `149.104062 s`
-  = `406.243328 s < 420 s`；本地 wall `439.932013 s` 仅作诊断。
+- 六个 API 累计：calibration `249.101740 s` + dynamic `143.321825 s`
+  = `392.423565 s < 420 s`；本地 wall `424.693400 s` 仅作诊断。
 - 调用次数：weight calibration 168；attention calibration 24；dynamic activation
   672；Q/K/V 各 96。
 - `activation_state` 只包含 BOAT 逆缩放、静态 Gram、Attention GQRB 正交 mixing、
-  旋转整数配置和符号；输出
-  监督只用于离线 Attention 候选和权重侧选择，不进入在线 `Q(A)`。
+  PAWV 的静态 token-row diagonal 与旋转整数配置/符号；输出监督只用于离线
+  Attention 候选和权重侧选择，不进入在线 `Q(A)`。
 - 当前源码 SHA256（规范 LF 内容）：
-  `e4b0d2fcb338f97a91a50180ce4269eeb7ffb2678b5048964859b4fce3daa4e1`。
+  `617482cee04ff9514a8d41226b651336e4b8b86692673308e835de1091693eba`。
 - 发布前检查：`34 passed`，包含 reference HiF4、Linear 合规和真实模型套件测试。
 
 历史 C86 源码和每次实验结果仍在 `solutions/`、`logs/` 与 Git 历史中，本文只描述
