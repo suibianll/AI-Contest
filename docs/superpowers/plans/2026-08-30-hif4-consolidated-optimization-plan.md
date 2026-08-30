@@ -116,6 +116,8 @@ P0  提交 stable parent → 取得官方锚点与兑换率       【官方不�
   ↓
 D0  合法上限仪表盘（E0-G 已完成）
   ↓
+E0-C GALS-C 解析候选召回 【oracle 召回 1.0；稀疏部署 layer-1 回退，已归档】
+  ↓
 E1/A1  渐进全层级 HSDQ              【已拒绝：全层 −2.831 panel，693s】
   ↓
 E2/A2  expansive 稀疏 row HSDQ      【已拒绝：全层 −0.923 panel】
@@ -141,7 +143,7 @@ C0 五模型确认 【已完成：Qwen panel 293.797301，API 401.13s；四个�
 P1  取所有本地候选最高分；官方恢复后再建立兑换率
 ```
 
-这不是“全部算法已完成”的声明：E0-C（GALS 解析召回）、
+这不是“全部算法已完成”的声明：E0-C（GALS 解析候选与稀疏部署）已执行并归档，
 冻结-Q(A) ridge/Qronos 与 Global Activation-LRH 已执行并归档；Attention GQRB
 与 PAWV diag-only 已通过本地门禁，PAWV rank-8 低秩变体已拒绝；最终五模型综合
 （C0）已完成并归档。已执行项与未执行项不应混为一谈。

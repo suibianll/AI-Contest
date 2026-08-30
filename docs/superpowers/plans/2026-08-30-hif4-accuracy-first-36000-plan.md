@@ -294,8 +294,11 @@ incumbent。候选去重后必须按完整 64 元素块评分。每 8 元素共�
 不得独立选两个 4 元素组后做“块级投票”。逐元素加权 MSE 可复用
 `_solve_hierarchy`；Gram/Hessian 非对角目标必须交给 A1 beam 联合求解。
 
-GALS-C 的继续条件是：它在 sampled blocks 上追回 GALS-O 的主要增益，并在
-fold B/validation 维持同方向；否则保留 oracle 结论但不进入主代码。
+GALS-C 已在 sampled blocks 上追回 GALS-O 的全部增益，并在 v role 的两折与四个
+validation 窗口保持同方向；但将它接入每行前 4 高损 block 的稀疏部署版后，
+Qwen layer-1 panel 从 v100 的 `336.037091` 降至 `335.988995`，Linear mean
+降至 `0.602878`，API 增加 `41.37s`。因此解析候选保留为 oracle 证据，部署版
+归档，不进入主代码；若重启必须增加 role/state 标识再做 v-only 插件。
 
 ---
 
@@ -883,7 +886,7 @@ w_t=\sum_{h,q}P_{hqt}^2
 |---|---|---|---|---|---|
 | E0 | D0 dashboard | 4 模型×3 层×全 role | 上限在哪里 | 部分执行：只完成 Qwen layer-1 的 E0-G 诊断 | 补齐多模型 dashboard（如重启） |
 | E0-G | all-255 scale-lattice oracle | Qwen gate/up/v sampled blocks | `±3` 是否漏掉大量合法 scale 收益 | 已完成；gap 不支持全局 GALS | 停止全局 scale 扩张 |
-| E0-C | GALS 解析候选召回 | E0-G 高 gap blocks | 稀疏候选能否追回 oracle | 未执行 | 需先有新的高 gap 目标 |
+| E0-C | GALS 解析候选召回 | E0-G 高 gap blocks | 稀疏候选能否追回 oracle | 已执行：四角色召回 `1.0`；稀疏部署 layer-1 `335.988995`，回退 | 仅保留 oracle，停止部署版 |
 | E1 | progressive full-hierarchy HSDQ | Qwen gate/up/v/proj | 强 solver 是否迁移 | 已执行并拒绝：panel `290.923906` | 归档，恢复 parent |
 | E2 | expansive FFN shrinkage | Qwen gate/up | 能否解除 rows gate | 已执行并拒绝：panel `292.831952` | 停止该 row solver |
 | E3 | LRH rank | v/gate/up/proj | 跨块是否重要 | 已执行并拒绝：true cross-block rank-8，全层 panel `292.426982` | 停止扩大 LRH |
@@ -1026,7 +1029,9 @@ next falsifiable experiment
 
 ## 15. 当前执行状态与下一步
 
-E0-G 已完成并已归档；结论是全局 GALS 停止，仅保留 `v` 高损 block 作为诊断插件。
+E0-G 已完成并已归档；E0-C 解析候选在四角色上追回全 255-code oracle，但稀疏
+部署版 layer-1 panel `335.988995`、Linear `0.602878`，较 v100 回退并增加
+`41.37s`，因此仅保留为 oracle 证据，不写入主代码。
 E1 已按计划实现并完成一层/全层门禁，结果已归档到
 `logs/execution/2026-08-30-e1-progressive-hsdq.md`。它在一层样本上提升
 `+2.591832` panel，但在 24 层 Qwen 上回退 `−2.831200` panel，Linear mean/gain 由

@@ -125,6 +125,7 @@ API 时间为 `392.423565s`，仍小于 `420s`。
 | v099 | 2026-08-30 | B2 PAWV diag+rank-8 token Hessian | Qwen layer-1 `0.603071` | `0.916670` | 15.84s CPU | NA | NA | layer-1 panel `334.101693`，低秩跨 token 项全层前置验证失败，未跑全层 | **archived-rejected** | [archive](20260830_v099_b2-pawv-lowrank-rejected_score334.101693_time16s/) |
 | v100 | 2026-08-30 | B2 PAWV diag-only + B1 GQRB | Qwen full-layer `0.501558` | `0.842039` | 392.42s CPU | NA | NA | panel `293.797301`，较 B1 `+0.003601`、较 stable parent `+0.042195`，低于 420s；当前最高分 | **active-candidate** | [archive](20260830_v100_b2-pawv-diagonly-active_score293.797301_time392s/) |
 | v101 | 2026-08-30 | C0 五模型确认（v100 无代码变更） | Qwen full-layer `0.501558` | `0.842039` | 401.13s CPU（Qwen） | NA | NA | 五模型完整运行；Qwen panel `293.797301`，四个软 guardrail 无精度灾难回退；GPT-2 medium `492.64s` 仅时间超限 | **active-confirmed** | [archive](20260830_v101_c0-five-model-confirmed_score293.797301_time401s/) |
+| v102 | 2026-08-30 | E0-C GALS-C 稀疏 activation 部署（前 4 高损 block） | Qwen layer-1 `0.602878` | `0.926347` | 57.41s CPU | NA | NA | 解析候选对全 255-code oracle 召回率 `1.0`，但部署 layer-1 panel `335.988995` 比 v100 `−0.048096` 且慢 `41.37s`，回退 | **archived-rejected** | [archive](20260830_v102_e0c-gals-sparse-rejected_score335.988995_time57s/) |
 | v047 | 2026-08-29 | C45h 全宽多折 A@W 产品选择，预算 8192 | Qwen `285.702496` | `62.862350` | 131.03s | NA | NA | Qwen Total `348.564846`，较 C45f `-0.471543`；4864-row FFN 回退 | **archived-rejected** | [archive](20260829_v047_c45h-product-allfolds-qwen-rejected_scoreNA_timeNA/) |
 
 ## 外部参考（不纳入本地版本号）

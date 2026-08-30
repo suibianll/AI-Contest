@@ -1,0 +1,159 @@
+{
+  "schema": 1,
+  "cache": "artifacts\\real_model_suite\\cache\\qwen2.5-0.5b__seq128__calib2__test4__layers1__schema1.pt",
+  "model": "Qwen2Tokenizer",
+  "max_rows": 32,
+  "candidate_definition": {
+    "mantissa": [
+      0.25,
+      0.5,
+      0.75,
+      1.0,
+      1.25,
+      1.5,
+      1.75
+    ],
+    "effective_exponent": [
+      0,
+      1,
+      2
+    ],
+    "projected_neighbors": [
+      -1,
+      0,
+      1
+    ],
+    "incumbent_offsets": [
+      -3,
+      -2,
+      -1,
+      0,
+      1,
+      2,
+      3
+    ]
+  },
+  "roles": {
+    "fc_gate": {
+      "weight_plain_mse": {
+        "shape": [
+          32,
+          896
+        ],
+        "candidate_offsets": 2887,
+        "baseline_loss": 0.10482320189476013,
+        "candidate_loss": 0.10476324707269669,
+        "oracle_loss": 0.10476324707269669,
+        "baseline_to_oracle_gap": 0.0005719613690453682,
+        "candidate_to_oracle_recall": 1.0,
+        "candidate_improved_blocks": 5,
+        "oracle_improved_blocks": 5
+      },
+      "activation_gram64": {
+        "shape": [
+          32,
+          896
+        ],
+        "candidate_offsets": 2887,
+        "baseline_loss": 165.4603271484375,
+        "candidate_loss": 165.32205200195312,
+        "oracle_loss": 165.32205200195312,
+        "baseline_to_oracle_gap": 0.0008356997043788378,
+        "candidate_to_oracle_recall": 1.0,
+        "candidate_improved_blocks": 19,
+        "oracle_improved_blocks": 19
+      }
+    },
+    "fc_up": {
+      "weight_plain_mse": {
+        "shape": [
+          32,
+          896
+        ],
+        "candidate_offsets": 2887,
+        "baseline_loss": 0.0597500279545784,
+        "candidate_loss": 0.05970766395330429,
+        "oracle_loss": 0.05970766395330429,
+        "baseline_to_oracle_gap": 0.0007090206101043791,
+        "candidate_to_oracle_recall": 1.0,
+        "candidate_improved_blocks": 1,
+        "oracle_improved_blocks": 1
+      },
+      "activation_gram64": {
+        "shape": [
+          32,
+          896
+        ],
+        "candidate_offsets": 2887,
+        "baseline_loss": 100.966064453125,
+        "candidate_loss": 100.91859436035156,
+        "oracle_loss": 100.91859436035156,
+        "baseline_to_oracle_gap": 0.0004701588898265535,
+        "candidate_to_oracle_recall": 1.0,
+        "candidate_improved_blocks": 13,
+        "oracle_improved_blocks": 13
+      }
+    },
+    "v": {
+      "weight_plain_mse": {
+        "shape": [
+          32,
+          896
+        ],
+        "candidate_offsets": 2887,
+        "baseline_loss": 0.018401384353637695,
+        "candidate_loss": 0.01839563250541687,
+        "oracle_loss": 0.01839563250541687,
+        "baseline_to_oracle_gap": 0.00031257692955520143,
+        "candidate_to_oracle_recall": 1.0,
+        "candidate_improved_blocks": 4,
+        "oracle_improved_blocks": 4
+      },
+      "activation_gram64": {
+        "shape": [
+          32,
+          896
+        ],
+        "candidate_offsets": 2887,
+        "baseline_loss": 0.010568884201347828,
+        "candidate_loss": 0.010502276942133904,
+        "oracle_loss": 0.010502276942133904,
+        "baseline_to_oracle_gap": 0.006302203519784059,
+        "candidate_to_oracle_recall": 1.0,
+        "candidate_improved_blocks": 60,
+        "oracle_improved_blocks": 60
+      }
+    },
+    "proj": {
+      "weight_plain_mse": {
+        "shape": [
+          32,
+          4864
+        ],
+        "candidate_offsets": 2887,
+        "baseline_loss": 0.3225352168083191,
+        "candidate_loss": 0.32240939140319824,
+        "oracle_loss": 0.32240939140319824,
+        "baseline_to_oracle_gap": 0.00039011369476477033,
+        "candidate_to_oracle_recall": 1.0,
+        "candidate_improved_blocks": 18,
+        "oracle_improved_blocks": 18
+      },
+      "activation_gram64": {
+        "shape": [
+          32,
+          4864
+        ],
+        "candidate_offsets": 2887,
+        "baseline_loss": 2.6607918739318848,
+        "candidate_loss": 2.6595287322998047,
+        "oracle_loss": 2.6595287322998047,
+        "baseline_to_oracle_gap": 0.00047472395133765885,
+        "candidate_to_oracle_recall": 1.0,
+        "candidate_improved_blocks": 50,
+        "oracle_improved_blocks": 50
+      }
+    }
+  },
+  "elapsed_seconds": 16.378341599949636
+}
