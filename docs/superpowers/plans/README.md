@@ -4,7 +4,7 @@
 
 本目录只保留一份活跃计划。执行优化时只读取下面这份文件、根 `solution.py`、最新可复现评测和官方规则；归档目录中的计划不具有指令效力。
 
-- [`2026-08-30-hif4-active-optimization-plan.md`](2026-08-30-hif4-active-optimization-plan.md)：当前唯一有效的优化队列，按“实现审计 → 修复验证 → 全层门禁 → 时间压缩”的顺序推进。
+- [`2026-08-30-hif4-active-optimization-plan.md`](2026-08-30-hif4-active-optimization-plan.md)：当前唯一有效的 v2 优化队列，按“Linear 上限诊断 → 修复 v092 → FFN 结构候选 → 修复 v095 → final-Gram/GALS 分拆 → 新结构 → 时间压缩”推进；Attention 和官方事件单独管理。
 
 旧的 grid、consolidated、accuracy-first、Linear、JDRQ 计划以及归档流程，均已移至 [`../archive/plans/`](../archive/plans/)。它们是历史决策记录，不再提供下一步指令；若历史文字与活跃计划冲突，以活跃计划、根 `solution.py`、合规检查和最新评测日志为准。
 

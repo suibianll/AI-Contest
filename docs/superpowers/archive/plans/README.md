@@ -10,6 +10,7 @@
 
 ## 归档文件
 
+- `2026-08-30-hif4-active-optimization-plan-v1-superseded.md`（首版 active 计划；因公式、门禁和 API 假设问题被 v2 取代）
 - `2026-08-30-hif4-grid-aligned-complement-plan.md`
 - `2026-08-30-hif4-consolidated-optimization-plan.md`
 - `2026-08-30-hif4-accuracy-first-36000-plan.md`

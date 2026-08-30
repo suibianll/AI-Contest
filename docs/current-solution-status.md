@@ -198,6 +198,20 @@ $$\frac{\Delta g_L}{1-g_L}=\frac{0.3984423875}{0.4984423875}=79.94\%.$$
 `24153 / 239s`。从 C66 到 `36000` 的官方分差是 **13443**，但当前本地 panel
 不做官方绝对分回归，因此不能声称当前版本对应某个官方分数或已经接近 `36000`。
 
+## 当前唯一后续计划
+
+现阶段只执行 [`2026-08-30-hif4-active-optimization-plan.md`](superpowers/plans/2026-08-30-hif4-active-optimization-plan.md)。顺序为：
+
+1. L0：五个分层层位、全 role 的 Linear 单侧误差、合法 oracle 和放宽上限诊断；
+2. L1：原子写回完整 hierarchy 并用正确二次型复验 v092 Weight-LRH；
+3. L2：只按合法 expansive shape 路由的低自由度 FFN CAT/BOAT-2；
+4. L3：用部署 Gram 二次型修复 v095 Activation-LRH gate；
+5. L4：把 final-weight Gram 与 GALS 拆成两个有 oracle 依据的小预算实验；
+6. L5：若前述方向没有结构增益，进入外部逐组件审计和联合坐标—层级离散新路线；
+7. 出现新精度 parent 后再做 `<420s` 压缩。PAWV rank 属于独立 Attention 队列，不插入 Linear 主线。
+
+旧版 active 计划已经归档；官方提交改为接口恢复时触发的外部事件，不阻塞当前本地执行。
+
 ## 时间与合规
 
 - 六个 API 累计：calibration `249.101740 s` + dynamic `143.321825 s`
