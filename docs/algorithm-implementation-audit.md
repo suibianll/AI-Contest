@@ -130,15 +130,15 @@ v110 增加 `+0.239693` panel。完整证据见 [`v111 archive`](../solutions/20
 | v095 Gram-objective Global-LRH | 已修复并采纳（v107 前一精度 parent） | 4-block proposal；最终 Gram gate；时间待 C1 压缩 |
 | final-weight Gram row gate | 已修复并采纳（v109 精度 parent） | 仅 expansive `rows > channels`、`channels <=1024`；完整 `G_q` 行级 gate |
 | final-weight Gram + GALS | 保留（v110 前一 parent） | 基于 v109 做最多 4 block 的小预算验证；已通过 full-layer |
-| L5a block-local permutation | 已采纳（v111 当前 parent） | 两折 operand-local gate；screen/full-layer 均正向；下一步 L5b |
+| L5a block-local permutation | 已采纳（v111 当前 parent） | 两折 operand-local gate；screen/full-layer 均正向；L5b/v112、L5c/v113、L5d/v114 已 screen 拒绝，L5e 已完成 |
 | Attention PAWV rank/position | deferred | 不插入 Linear 主线 |
 
 ## 4. 计划与证据治理
 
-唯一可执行计划是 [`2026-08-31-hif4-active-l5-structural-optimization-plan.md`](superpowers/plans/2026-08-31-hif4-active-l5-structural-optimization-plan.md)。
+唯一可执行计划是 [`2026-08-31-hif4-active-l6-compressed-crossblock-plan.md`](superpowers/plans/2026-08-31-hif4-active-l6-compressed-crossblock-plan.md)。
 每个候选必须保存完整源码、规范 LF SHA、固定 cache/命令、合规扫描和结果日志；
 screen/oracle 不能写入最高分账本。L1 v105、v108 no-op 和其余失败候选均按该
-规则归档；当前根为 v111，下一步是 L5b。计划目录不得同时存在第二份 active 计划。
+规则归档；当前根为 v111，下一步是 L6a rank-16 compressed cross-block factor。计划目录不得同时存在第二份 active 计划。
 
 本审计只记录源码与执行证据；它不把本地 panel 线性换算为官方分数，也不改变
 历史归档文件内容。

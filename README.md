@@ -31,15 +31,17 @@
   审计和复现实验配置见 [`当前主版本算法效果与评测状态`](docs/current-solution-status.md)、
   [`算法全景`](docs/algorithm-inventory-and-directions.md)、
   [`归档实现审计`](docs/archive-implementation-audit.md) 与 [`solutions/README.md`](solutions/README.md)。
-  下一步只按 [`唯一活跃优化计划`](docs/superpowers/plans/2026-08-31-hif4-active-l5-structural-optimization-plan.md) 执行。
+  L5d 外部组件审计与 L5e 可达性 checkpoint 已完成；下一步只按 [`唯一活跃优化计划`](docs/superpowers/plans/2026-08-31-hif4-active-l6-compressed-crossblock-plan.md) 执行，转向压缩跨 block 表达。
 - 当前根源码 SHA256：
-  `3ABF9BEB7BA50285B65344CE94773350ECA16A24CE36A296DB1401B9BFEB1EC`（规范 LF）。
+  `6B229081121C4A7EDD69575C93DC01488BE8F8B5E1479007522421E93E1ADC57`（规范 LF）。
 - L1 full-hierarchy Weight-LRH 已完成合成测试与五层×七 role screen，但 screen
   `both_player=0.523019429222563` 与 L0 逐条持平；候选 v105 已归档。L2 固定
   `α=0.25` 的 expansive-FFN CAT balance 已通过 full-layer，v106 成为时间 parent；
   L3 Gram-gated Global Activation-LRH 在只看精度的 full-layer 得到 v107；L4a final
   deployed-Gram row gate 得到 v109；L4b final-Gram GALS 得到 v110；L5a block-local
-  permutation 得到 v111，当前转入 L5b 稀疏 Schur。证据见 [`v111 execution log`](logs/execution/2026-08-31-v111-l5a-joint-permutation-qwen-full.md)。
+  permutation 得到 v111。L5b/v112、L5c/v113、L5d/v114 均已按 screen 归档拒绝，
+  L5e 记录固定表示/接口的可达性证据；下一步执行 L6a rank-16 cross-block factor。
+  证据见 [`v111 execution log`](logs/execution/2026-08-31-v111-l5a-joint-permutation-qwen-full.md)。
 - 旧版本地评测器（单模型 dev 与 frozen holdout）曾因 calibration/test
   文本重叠不能可靠排序合规候选，相关代码（`real_data_eval.py`、
   `holdout_eval.py`、`cap_oracle.py`）已于 2026-08-28 移除；诊断结论见
@@ -76,7 +78,7 @@ README 顶部的“当前状态”、[`solutions/README.md`](solutions/README.md
 
 仓库同时只能有一份活跃优化计划，位置是
 [`docs/superpowers/plans/`](docs/superpowers/plans/)，当前文件见
-[`2026-08-31-hif4-active-l5-structural-optimization-plan.md`](docs/superpowers/plans/2026-08-31-hif4-active-l5-structural-optimization-plan.md)。
+[`2026-08-31-hif4-active-l6-compressed-crossblock-plan.md`](docs/superpowers/plans/2026-08-31-hif4-active-l6-compressed-crossblock-plan.md)。
 执行任何优化时**只参考这份 active 计划**、当前根代码、最新评测数据和官方规则；
 `docs/superpowers/archive/plans/` 中的文件一律是只读历史，不得作为下一步指令。
 
@@ -147,7 +149,7 @@ Qwen native `369.527269` 仍作为第二诊断线，五模型合计不作为基�
 
 ## 当前算法
 
-当前根是重写后的 clean Gram-hierarchy + B1/B2 版本；v086/C86 仍是不可变历史归档。
+当前根是重写后的 clean Gram-hierarchy + B1/B2 + L5a 版本；v086/C86 仍是不可变历史归档。
 评测和优化优先级如下：
 
 | 优先级 | 组件 | 当前机制 | 作用/状态 |
@@ -159,7 +161,7 @@ Qwen native `369.527269` 仍作为第二诊断线，五模型合计不作为基�
 | 5 | Linear | Global Activation-LRH：rank-8 off-block proposal，逐行 exact deployed-Gram gate | v107 Linear mean `0.506997`；仅窄输入形状启用 |
 | 6 | Linear | L4a final deployed-Gram row gate：expansive 双候选 + 完整 `G_q` 逐行门控 | v109 Linear mean `0.507326`；仅 `rows > channels`、`channels <=1024` |
 | 7 | Attention | reciprocal RMS、K-centering、GQA 对齐、GQRB、PAWV diag-only | 使用真实 non-causal Attention 输出排序；当前 mean `0.842039` |
-| 8 | 下一步 | L0 已完成 → L1 corrected full-hierarchy LRH 已拒绝 → L2 已采纳 → L3 v107 → L4a v109 → L4b v110 → **L5a v111 已通过精度门禁** → **L5b（当前）** | Attention PAWV 独立延后；最终时间压缩在 C1 执行；详细门禁只见唯一活跃计划 |
+| 8 | 下一步 | L0–L5e 已完成（v111 为当前 precision parent；v112/v113/v114 已归档拒绝）→ **L6a rank-16 compressed cross-block factor（当前）** | Attention PAWV 独立延后；最终时间压缩在 C1 执行；详细门禁只见唯一活跃计划 |
 
 优化决策只看同一冻结缓存上的相对增量：Qwen `primary_panel_score_total` 是主
 指标，其他模型用于发现结构性回退。不得用官方分数反向调参，也不设置固定的

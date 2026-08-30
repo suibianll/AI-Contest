@@ -186,16 +186,17 @@ v109 已归档为当前精度 parent；API `517.285773s` 只作为探索期时�
 - 计划中把 v 的 GALS 正向 oracle 当作部署机会，但 v102/v103 已证明当前 sparse/shape-proxy 组合不稳定；v109/v110 已完成无 role-id 的 final-weight-Gram 与 GALS 复验，下一阶段转向 L5 结构路线。
 - 官方提交/兑换率校准从未完成，不能用本地 panel 推断官方 36000 距离。
 
-治理动作：保留一份新的唯一活跃计划 [`2026-08-31-hif4-active-l5-structural-optimization-plan.md`](superpowers/plans/2026-08-31-hif4-active-l5-structural-optimization-plan.md)，其余实施计划和流程文档全部移到 [`docs/superpowers/archive/plans/`](superpowers/archive/plans/)。`plans/README.md` 与 `archive/plans/README.md` 只描述导航和历史性质，不再各自提出下一步。
+治理动作：L5 计划已完成并移入归档；当前唯一 active 计划是 [`2026-08-31-hif4-active-l6-compressed-crossblock-plan.md`](superpowers/plans/2026-08-31-hif4-active-l6-compressed-crossblock-plan.md)，其余实施计划和流程文档均位于 [`docs/superpowers/archive/plans/`](superpowers/archive/plans/)。`plans/README.md` 与归档索引只描述导航及历史性质，不产生下一步指令。
 
 ## 7. 审计后的优先级
 
 1. 官方接口恢复后，提交当前精度 parent v111（或 C1 压缩后的等价版本），获得第一个真实兑换率锚点。
 2. L1 的 v105 corrected full-hierarchy LRH 已完成并拒绝；不再扩大其自由度。
-3. L3 v107、L4a v109、L4b v110、L5a v111 均已完成并产生精度 parent；当前只执行唯一活跃
-   计划的 L5b 稀疏 Schur 路线。
-4. L5 完成后才做最终 Q/K 变换后重建 PAWV rank/position metric；Linear 不回到已
-   否决的全宽 Gram/GALS 扫描。
+3. L3 v107、L4a v109、L4b v110、L5a v111 均已完成并产生精度 parent；L5b/v112、
+   L5c/v113、L5d/v114 已按 screen 归档拒绝，L5e 已完成可达性 checkpoint。
+4. 当前只执行唯一活跃计划的 L6 压缩跨 block 路线；Linear 不回到已否决的 sampler、
+   joint residual、H32/H64 或 group-only solver，完成 L6 后才做最终 Q/K 变换后的
+   PAWV rank/position metric 与 C1 时间压缩。
 5. 每个实验必须保存完整源和 SHA；只要没有完整源，就标为不可复现，不把结果当作硬上限。
 
 ## 8. 本次可复核检查

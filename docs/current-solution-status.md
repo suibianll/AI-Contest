@@ -15,7 +15,7 @@ Qwen shaped panel 为 **295.482473**，Linear mean **0.5082983001**，正式 API
 `420 s` 否决精度候选，最终冻结时再压缩。该数值用于本地 A/B 排序，不能线性换算为
 官方排行榜分数。
 
-当前唯一活跃计划是 [`2026-08-31-hif4-active-l5-structural-optimization-plan.md`](superpowers/plans/2026-08-31-hif4-active-l5-structural-optimization-plan.md)；L0–L4 完成计划已归档，归档候选的写回、目标错位和源码缺失审计见 [`archive-implementation-audit.md`](archive-implementation-audit.md)。
+当前唯一活跃计划是 [`2026-08-31-hif4-active-l6-compressed-crossblock-plan.md`](superpowers/plans/2026-08-31-hif4-active-l6-compressed-crossblock-plan.md)；L5 完成计划已归档，归档候选的写回、目标错位和源码缺失审计见 [`archive-implementation-audit.md`](archive-implementation-audit.md)。
 
 2026-08-31 已按执行计划完成 E0-C、E1→A6、B1、B2、L1、L2、L3 和 L4a。B1 GQRB margin
 先把 panel 提升到 `293.793700`，B2 PAWV diag-only 再提升到 `293.797301`，L2
@@ -27,7 +27,7 @@ L4a 精确 final-Gram 行级 gate 再提升到 panel `295.239309`、Linear mean
 期间，所有新候选仍以固定 Qwen panel 为门禁。L1 已完成真正的 scale/lv2/lv3/mantissa
 原子写回与合成测试，但五层×七 role 预筛与 L0 逐条持平（`0.523019429222563`），
 因此候选 v105 已归档；v106 是时间 parent，v107/v109/v110 是前一精度 parent，v111
-是当前精度 parent，L0–L4 与 L5a 已完成，下一步执行 L5b。
+是当前精度 parent，L0–L5e 已完成，v112/v113/v114 已归档拒绝，下一步执行 L6a。
 
 ## 当前实现
 
@@ -192,7 +192,7 @@ $$P_{total}=P_L+P_A=295.239309.$$
 | **L3 Global Activation-LRH Gram gate（v107 前一 parent）** | **295.157057** | **0.506997** | **481.04s** | 前一精度 parent |
 | **L4a final deployed-Gram row gate（v109 当前 parent）** | **295.239309** | **0.507326** | **517.29s** | **精度采纳；L4b 继续探索，时间暂不作为探索门禁** |
 | **L4b final-Gram GALS（v110 前一 parent）** | **295.242780** | **0.507340** | **701.90s** | **精度采纳；已被 L5a 超越** |
-| **L5a block-local permutation（v111 当前 parent）** | **295.482473** | **0.508298** | **726.09s** | **精度采纳；下一步 L5b** |
+| **L5a block-local permutation（v111 当前 parent）** | **295.482473** | **0.508298** | **726.09s** | **精度采纳；下一步 L6a 压缩跨 block** |
 | L3 1-block 对照（v107b1） | 294.483738 | 0.504303 | 446.29s | 低于 v107，不作为 parent |
 | stable parent | 293.755106 | 0.501558 | 382.15s | baseline |
 
@@ -241,7 +241,7 @@ $$\frac{\Delta g_L}{1-g_L}=\frac{0.3917016999}{0.4917016999}=79.66\%.$$
 
 ## 当前唯一后续计划
 
-现阶段只执行 [`2026-08-31-hif4-active-l5-structural-optimization-plan.md`](superpowers/plans/2026-08-31-hif4-active-l5-structural-optimization-plan.md)。顺序为：
+现阶段只执行 [`2026-08-31-hif4-active-l6-compressed-crossblock-plan.md`](superpowers/plans/2026-08-31-hif4-active-l6-compressed-crossblock-plan.md)。顺序为：
 
 1. L0：已完成五个分层层位、全 role 的 Linear 单侧误差、合法 oracle 和放宽上限诊断；
 2. L1：已完成原子写回完整 hierarchy 与正确二次型复验；预筛拒绝并归档 v105；
@@ -250,8 +250,9 @@ $$\frac{\Delta g_L}{1-g_L}=\frac{0.3917016999}{0.4917016999}=79.66\%.$$
 5. L4a：已完成最终部署 Gram 的双候选 + 完整行级 gate，v109 成为当前精度 parent；
 6. L4b：已完成最终 Gram GALS 小预算验证，v110 成为前一精度 parent；
 7. L5a：已完成 block-local permutation，v111 成为当前精度 parent；
-8. L5b–L5e：当前活跃计划，依次尝试稀疏 Schur、统计元路由、外部差异审计和表示族可达性 checkpoint；
-9. 所有精度方向完成后再做 `<420s` 压缩。PAWV rank 属于独立 Attention 队列，不插入 Linear 主线。
+8. L5b/v112、L5c/v113、L5d/v114：均已完成 screen 并归档拒绝；L5e 已完成当前表示/接口可达性 checkpoint；
+9. L6a–L6e：当前活跃计划，依次尝试窄/宽 rank 压缩跨 block factor、完整 `G_64` 层级求解、结构化 factor 和 checkpoint；
+10. 所有精度方向完成后再做 `<420s` 压缩。PAWV rank 属于独立 Attention 队列，不插入 Linear 主线。
 
 L4b 的正式产物为 [`v110-l4b-gals-final-gated-qwen-full.json`](../artifacts/real_model_suite/v110-l4b-gals-final-gated-qwen-full.json)
 和 [`v110 L4b archive`](../solutions/20260831_v110_l4b-gals-final-gated_score295.242780_time702s/)。
@@ -274,6 +275,22 @@ L5a 的正式产物为 [`v111-l5a-joint-permutation-qwen-full.json`](../artifact
 mean `0.5318869457`，full-layer Linear mean `0.5082983001`、panel `295.482473`，
 较 v110 分别 `+0.0009587723`、`+0.2396930806`；Attention 未变化。API
 `726.094116s`，仍超 420s，仅作为精度 parent 记录，后续统一 C1 压缩。
+
+L5b–L5d 的拒绝证据分别为 [`v112 archive`](../solutions/20260831_v112_l5b-sparse-schur_rejected-screen_score0.530855_time140s/)、
+[`v113 archive`](../solutions/20260831_v113_l5c-meta-router_rejected-screen_score0.531887_time169s/)
+和 [`v114 archive`](../solutions/20260831_v114_l5d-external-sampling_rejected-screen_score0.527311_time125s/)。
+v112 screen Linear `0.5308551016`（较 v111 `-0.0010318441`），v113 与 v111 逐 case
+完全相同（`0.5318869457`，no-op），v114 外部 stride sampling 为 `0.5273114999`
+（`-0.0045754462`），均未跑 full-layer。L5d 外部逐组件审计见
+[`l5d external audit`](../logs/execution/2026-08-31-l5d-external-component-audit.md)。
+
+L5e 的完整诊断见 [`l5e JSON`](../artifacts/oracle_dashboard/l5e-linear-ceiling-v111-qwen.json)
+和 [`l5e log`](../logs/execution/2026-08-31-l5e-linear-ceiling-v111.md)：固定 frame
+screen `0.5318869457`，weight-perfect `0.7140714612`，activation-perfect `0.8188904986`；
+255-code oracle 的加权下降为 weight plain `0.04746%`、weight Gram `4.56979%`、
+activation Gram `0.11279%`。当前固定 HiF4 hierarchy/state 接口若要到 `0.9`，还需
+减少约 `78.64%` 剩余误差；下一方向转为压缩跨 block 表达，不再重复 offset、sampler
+或 joint residual。
 
 L3 的正式产物为 [`v107-l3-global-lrh-qwen-full.json`](../artifacts/real_model_suite/v107-l3-global-lrh-qwen-full.json)
 和 [`v107 L3 archive`](../solutions/20260830_v107_l3-global-lrh-precision-parent_score295.157057_time481s/)。

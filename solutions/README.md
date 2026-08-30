@@ -33,6 +33,9 @@ row gate + L4b final-Gram GALS + B2 PAWV diag-only + B1 GQRB）；C0 五模型�
 API 时间为 `726.094116s`，探索阶段只记录；相对 v110 panel 提升 `+0.239693`，
 Linear mean 提升 `+0.0009587723`。v106 仍作为时间 parent 保留在历史/归档记录中，
 v107/v109/v110 作为前一精度 parent 保留在各自归档，v111 为当前精度 parent。
+L5b/v112、L5c/v113、L5d/v114 均为已归档的 screen 候选，当前 active 计划已切换为
+L6 压缩跨 block 路线。
+计划入口：[`2026-08-31-hif4-active-l6-compressed-crossblock-plan.md`](../docs/superpowers/plans/2026-08-31-hif4-active-l6-compressed-crossblock-plan.md)。
 
 | Version | Date | Topic | Local Linear | Local Attention | Local Time | Official Score | Official Time | Delta | Status | Directory |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |
@@ -141,6 +144,9 @@ v107/v109/v110 作为前一精度 parent 保留在各自归档，v111 为当前�
 | v109 | 2026-08-31 | L4a final deployed-Gram row gate（expansive 双候选、完整 `G_q` 逐行门控） | Qwen full-layer **`0.507326`** | `0.842039` | 517.29s CPU | NA | NA | panel **295.239309**，较 v107 `+0.082253`；前一精度 parent，时间仅作探索记录 | archived-parent | [archive](20260831_v109_l4a-final-gram-gated_score295.239309_time517s/) |
 | v110 | 2026-08-31 | L4b final-Gram GALS（解析 offset、4 block、完整 `G_q` 逐行门控） | Qwen full-layer **`0.507340`** | `0.842039` | 701.90s CPU | NA | NA | panel **295.242780**，较 v109 `+0.003470`；当前精度 parent，时间仅作探索记录 | **active-local-precision** | [archive](20260831_v110_l4b-gals-final-gated_score295.242780_time702s/) |
 | v111 | 2026-08-31 | L5a block-local permutation（压力排序/交错，双折 gate） | Qwen full-layer **`0.508298`** | `0.842039` | 726.09s CPU | NA | NA | panel **295.482473**，较 v110 `+0.239693`；当前精度 parent，时间仅作探索记录 | **active-local-precision** | [archive](20260831_v111_l5a-joint-permutation_scoreNA_timeNA/) |
+| v112 | 2026-08-31 | L5b sparse Schur（最多两对跨 block proposal、完整 `G_q` gate） | Qwen 5-layer×7-role screen `0.530855` | NA | 140s screen | NA | NA | 较 v111 screen `-0.0010318441`；未跑 full-layer | archived-rejected | [archive](20260831_v112_l5b-sparse-schur_rejected-screen_score0.530855_time140s/) |
+| v113 | 2026-08-31 | L5c operand-local meta-router（八维特征、一层 stump） | Qwen 5-layer×7-role screen `0.531887` | NA | 169s screen | NA | NA | 与 v111 screen 逐 case 完全相同（no-op）；未跑 full-layer | archived-rejected-noop | [archive](20260831_v113_l5c-meta-router_rejected-screen_score0.531887_time169s/) |
+| v114 | 2026-08-31 | L5d external hif4 stride sampling | Qwen 5-layer×7-role screen `0.527311` | NA | 125s screen | NA | NA | 较 v111 screen `-0.0045754462`；未跑 full-layer | archived-rejected | [archive](20260831_v114_l5d-external-sampling_rejected-screen_score0.527311_time125s/) |
 | v047 | 2026-08-29 | C45h 全宽多折 A@W 产品选择，预算 8192 | Qwen `285.702496` | `62.862350` | 131.03s | NA | NA | Qwen Total `348.564846`，较 C45f `-0.471543`；4864-row FFN 回退 | **archived-rejected** | [archive](20260829_v047_c45h-product-allfolds-qwen-rejected_scoreNA_timeNA/) |
 
 ## 外部参考（不纳入本地版本号）
@@ -184,13 +190,14 @@ v013 归档字节一致。
 旧版 `Official Score/Time`，旧值仍可在各自提交历史中追溯。
 
 当前根 `solution.py` 不再标记为 v086/C86；当前源码规范 LF SHA256 为
-`3ABF9BEB7BA50285B65344CE94773350ECA16A24CE36A296DB1401B9BFEB1EC`。
+`6B229081121C4A7EDD69575C93DC01488BE8F8B5E1479007522421E93E1ADC57`。
 归档源码缺失、层级写回、目标 gate 和统计坐标问题见
 [`归档实现审计`](../docs/archive-implementation-audit.md)；这些问题会影响部分负结果的可证伪程度，但不会修改不可变历史目录。
 v086 归档源码仍保留其历史 SHA 与结果。新版面板下 v066/C66（官方 `22557 / 217.2s`）是本地归档冠军，较此前
 v051/C47b 提升 `106` 分并减少 `16.8s`；v031/C39-FW 与 v034/C41b 均为
 `21864`。外部 [`youxilee/hif4`](https://github.com/youxilee/hif4) 的
 `24153 / 239s` 仍高出 `1596` 分，仅作参考，不以根文件位置暗示外部代码已导入；当前本地 Qwen parent v111 panel `295.482473`，较外部本地 panel `250.327102` 高 `45.155371`。
+L5d 外部逐组件审计与 L5e 可达性诊断分别见 [`l5d audit`](../logs/execution/2026-08-31-l5d-external-component-audit.md) 和 [`l5e ceiling`](../logs/execution/2026-08-31-l5e-linear-ceiling-v111.md)。
 
 ## Local-first workflow
 

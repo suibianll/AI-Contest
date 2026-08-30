@@ -36,9 +36,9 @@ Chinese version: [README.md](README.md)
   report](docs/current-solution-status.md), the [algorithm inventory](docs/algorithm-inventory-and-directions.md),
   the [archive implementation audit](docs/archive-implementation-audit.md),
   and [`solutions/README.md`](solutions/README.md). Future work follows the
-  [single active optimization plan](docs/superpowers/plans/2026-08-31-hif4-active-l5-structural-optimization-plan.md).
+  [single active optimization plan](docs/superpowers/plans/2026-08-31-hif4-active-l6-compressed-crossblock-plan.md).
 - Current source SHA256:
-  `3ABF9BEB7BA50285B65344CE94773350ECA16A24CE36A296DB1401B9BFEB1EC` (normalized LF).
+  `6B229081121C4A7EDD69575C93DC01488BE8F8B5E1479007522421E93E1ADC57` (normalized LF).
 - The active local evaluator is Qwen-first: it projects frozen-corpus Linear
   and Attention means onto a fixed 250/200 panel, while other models remain
   soft guardrails. The raw `official_flow_total` is retained for compatibility
@@ -71,7 +71,7 @@ date whenever its numbers change; do not leave an old snapshot label in place.
 
 There may be exactly one active optimization plan in
 [`docs/superpowers/plans/`](docs/superpowers/plans/). The current file is
-[`2026-08-31-hif4-active-l5-structural-optimization-plan.md`](docs/superpowers/plans/2026-08-31-hif4-active-l5-structural-optimization-plan.md).
+[`2026-08-31-hif4-active-l6-compressed-crossblock-plan.md`](docs/superpowers/plans/2026-08-31-hif4-active-l6-compressed-crossblock-plan.md).
 When executing an optimization, consult **only this active plan**, the current root,
 latest evaluation data, and the official rules. Files under
 `docs/superpowers/archive/plans/` are read-only history and are never next-step instructions.
