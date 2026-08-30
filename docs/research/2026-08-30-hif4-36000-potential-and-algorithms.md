@@ -1413,3 +1413,410 @@ capture_{local}=
 - 最新 wide hierarchy64：`logs/evaluations/2026-08-30-c75-wide-hierarchy64-b8-o9-qwen.md`
 - 最新 wide JDRQ coordinate 回退：`logs/evaluations/2026-08-30-c75-wide-jdrq-b8-qwen.md`
 - 文献调研底稿：`docs/research/2026-08-28-hif4-algorithm-literature/report.md`
+
+---
+
+## 24. 2026-08-30 C89 Linear 继续优化审计
+
+本轮从 v086/C86 出发，所有候选使用同一份 Qwen2.5-0.5B layer-1
+缓存、相同 `seq=128 / calib=2 / test=4` 配置。基线为：
+
+| 候选 | layer-1 panel | layer-1 Linear | native total | API |
+|---|---:|---:|---:|---:|
+| C86 baseline | 328.065960 | 16.230545 | 19.893553 | 46.88s |
+| Gram64 lv2/lv3 toggle，top-4 wide blocks | 328.065873 | 16.230535 | 19.893543 | 47.23s |
+| JDRQ hierarchy offsets `-4..4` | 328.048875 | 16.228631 | 19.891639 | 46.48s |
+| Gram64 固定点检测，逐坐标 `any()` | 分数逐位一致 | 16.230545 | 19.893553 | 完整运行超过 8 分钟后终止 |
+| Gram64 固定点检测，逐 sweep `clone/equal` | 328.065960 | 16.230545 | 19.893553 | 57.01s |
+| HSDQ-1：top-1 block、候选内 full-H mantissa polish | 324.238002 | 15.801814 | 19.464821 | 54.89s |
+
+### 24.1 结论
+
+1. 扩大 scale offset 不但没有解决离散投影缺口，真实输出还出现轻微回归；
+   因此不再继续扫 offset。
+2. 对动态激活做 hierarchy toggle 能降低内部 Gram 目标，但没有改善最终
+   Linear 输出，且计算成本很高；说明单侧局部二次目标仍不能表示部署误差交互。
+3. Python 端收敛检测的同步、复制成本高于被跳过的空 sweep；固定五轮仍是当前
+   CPU 实现的更优 Pareto 点。若要减少运行时，应向量化整个 sweep 或直接发布
+   sweep=3/4，而不是增加逐坐标同步。
+4. HSDQ-1 证明“更强合法离散求解器”确实会大幅改变结果，但在单一校准
+   product Hessian 上做完整 64-coordinate polish 会严重过拟合：内部目标下降，
+   独立 test 输出反而下降约 `0.429` native Linear 分。未经跨 fold 约束的
+   强 HSDQ 不应推广到更多 block。
+5. 所有改变编码结果的候选均已回退。根 `solution.py` 恢复为 C86，Git blob
+   hash 为 `261ad4c3b62c472ab597cf0b4dac2ce10394e0a4`；发布回归为 49 passed。
+
+### 24.2 下一版 HSDQ 必须增加的稳健约束
+
+下一次不能再对同一校准矩阵同时生成并选择完整 polish。建议采用交叉拟合：
+
+```text
+fold A 生成 HSDQ 路径（保存 parent、1/4、1/2、full polish 四个合法候选）
+fold B 仅负责候选排序
+fold B 生成候选，fold A 排序
+两个方向都胜过 parent 才允许进入最终候选池
+最终仍保留 C86 parent，由原有 robust product selector 终验
+```
+
+对候选 `c` 使用：
+
+```math
+L_{robust}(c)
+=\frac{L_A(c)+L_B(c)}{2}
++\beta\max(L_A(c),L_B(c))
++\gamma\left|L_A(c)-L_B(c)\right|
+```
+
+其中第三项显式惩罚 fold 间迁移差异。首轮建议 `β=0.5, γ=1.0`，并把
+每行改变坐标数限制在 `{1,4,16,64}`，而不是直接执行完整 64-coordinate
+polish。只有跨 fold winner 才进入完整 Qwen panel；否则主线转向 BOAT/LRH-GPTQ。
+
+---
+
+## 25. 以 Linear mean ≥ 0.90 重新评估 36,000 可达性
+
+### 25.1 当前差距不是调参量级
+
+C86 Qwen shaped panel 对应：
+
+```math
+g_L=119.455153/250=0.477820612,
+\qquad
+g_A=147.852757/200=0.739263785
+```
+
+如果只要求本地 panel 达到 360、Attention 保持不变：
+
+```math
+g_L^{min}=\frac{360-147.852757}{250}=0.848588972
+```
+
+这需要捕获当前 Linear 剩余误差的：
+
+```math
+\rho_{0.8486}
+=\frac{0.848588972-0.477820612}{1-0.477820612}
+=71.00\%
+```
+
+考虑本地到官方的迁移误差，把 `g_L≥0.90` 作为研发安全门是合理的：
+
+```math
+\rho_{0.90}
+=\frac{0.90-0.477820612}{1-0.477820612}
+=80.85\%
+```
+
+因此，预期只增加 `0.1–2pp` 的 coverage、offset、seed 或 sweep 实验，
+不可能成为 36,000 主线。
+
+### 25.2 当前 C86 单层双侧上限证据
+
+`cap_oracle.py` 当前只支持 GPT-2 采集，不能直接用于 Qwen。对受支持的
+GPT-2 layer-1、当前 C86、`amax6 / seq128 / calib2 / test2`，fixed-frame
+结果为：
+
+| Arm | 含义 | Linear mean |
+|---|---|---:|
+| A | 当前权重 + 当前激活 | 0.4694 |
+| B | 权重完全无损 + 当前激活 | 0.7436 |
+| C | 当前权重 + 激活完全无损 | 0.7260 |
+| D | 两侧均无损 | 1.0000 |
+
+令当前权重侧和激活侧的归一化误差分别为：
+
+```math
+e_W=1-C=0.2740,
+\qquad
+e_A=1-B=0.2564
+```
+
+观测到：
+
+```math
+1-A=0.5306\approx e_W+e_A=0.5304
+```
+
+这层的交互残差只有约 `0.0002`，两侧误差近似可加。达到 `g_L=0.9`
+需要：
+
+```math
+e_Wr_W+e_Ar_A\le0.1
+```
+
+如果两侧等比例改善：
+
+```math
+r_W=r_A\le\frac{0.1}{0.2740+0.2564}=0.1885
+```
+
+也就是权重和激活两侧都要降低约 `81.15%` 的当前误差。如果权重完全
+无损，激活侧仍需降低约 `61.0%`；如果激活完全无损，权重侧仍需降低
+约 `63.5%`。
+
+| 两侧各自误差降低率 | 近似 Linear mean |
+|---:|---:|
+| 50% | 0.7348 |
+| 70% | 0.8409 |
+| 80% | 0.8939 |
+| 82% | 0.9045 |
+
+这证明 `0.9` 不是某个单侧 GPTQ/HSDQ 的目标，而是双侧联合重构目标。
+
+### 25.3 之前九类算法在 0.9 路线中的真实角色
+
+| 算法 | 主要作用侧 | 单独到 0.9？ | 在组合中的角色 |
+|---|---|---|---|
+| HSDQ | 权重或激活的合法离散投影 | 否 | 提高每个新坐标系内的合法码域兑现率 |
+| LRH-GPTQ | 权重、跨 64-block Hessian | 否 | 捕获 block-diagonal GPTQ 遗漏的跨块误差 |
+| BOAT | 权重和激活同时改变坐标系 | **唯一有双侧结构杠杆的 Linear 主算法** | 先把问题变到更适合 HiF4 的坐标系 |
+| FS-JDRQ | 冻结 Q(A) 后优化 Q(W) | 否 | 权重候选生成和跨 fold 输出选择器 |
+| DSHP | scale/hierarchy proposal | 否 | 扩大 HSDQ 合法候选来源，不负责主增量 |
+| RABS | 计算预算分配 | 否 | 在 420 秒内集中 HSDQ/LRH 预算 |
+| FASA/GQRB/PAWV | Attention | 不直接提高 Linear | 降低 Linear 必须独自承担的目标值 |
+
+正确组合顺序应改为：
+
+```text
+BOAT 联合坐标变换
+  -> 变换后重新冻结 Q(A) state
+  -> HSDQ 分别优化 Q(W) 与 Q(A)
+  -> LRH-GPTQ 补跨 block 权重误差
+  -> FS-JDRQ 跨 fold 选择合法 Q(W)
+  -> RABS 压缩到 420 秒
+```
+
+联合目标不是分别最小化权重和激活的局部 MSE，而是：
+
+```math
+\min_{T,Q_X,Q_W}
+\sum_f
+\left\|
+Q_X(X_fT)Q_W(WT^{-T})^T-X_fW^T
+\right\|_F^2
++\lambda\Omega(T)
+```
+
+其中 `T` 必须可逆，连续乘积严格保持：
+
+```math
+(XT)(WT^{-T})^T=XW^T
+```
+
+`Ω(T)` 约束条件数、变换复杂度和运行时。只有这种目标才能同时降低
+`e_W` 与 `e_A`，具备冲击 `0.9` 所需的误差规模。
+
+### 25.4 可达性结论
+
+1. **绝对数学上可达**：双侧无损 Arm D 为 1.0，不存在评分公式造成的
+   `0.9` 数学障碍。
+2. **当前 C86 邻域不可达**：coverage/offset/sweep/单侧 hierarchy 的已测
+   增益比需要的 `+42.22pp` 小一个到两个数量级。
+3. **单侧算法不可达**：当前 GPT-2 layer-1 两个单侧无损 oracle 都低于 0.75。
+4. **联合算法尚未证明可达**：BOAT + 双侧 HSDQ + LRH 在合法 HiF4、
+   跨 fold、420 秒限制下还没有实测上限；它是唯一仍与 0.9 同量级的路线。
+5. **0.9 不是 36,000 的充分条件**：本地 panel 与官方隐藏分布不完全等价；
+   达到 0.9 后仍需官方提交校准兑换率。
+
+## 26. 主代码从零重写后的实现与全层实测（2026-08-30）
+
+### 26.1 清理结果
+
+根目录 `solution.py` 已从约 9,000 行的 C1--C88 实验集合重写为约 1,100 行的
+单一路径实现。旧 C86 仍可从 Git 与 `solutions/20260830_v086_c86-attn-block-final_scoreNA_timeNA/`
+恢复，但不再混入提交主文件。新文件不存在实验环境变量、关闭分支或被判废的
+Fisher Hessian；保留的四个机制均通过真实模型消融：
+
+1. 多尺度 BOAT：对角平衡 + 4/8/16/64 维 signed Hadamard；
+2. cross-fold Weight-HSDQ：只修改 `weight_params`；
+3. Gram-hierarchy Activation-HSDQ：同时选择 scale hierarchy 与 mantissa；
+4. 输出感知 Attention shortlist：用部署量化路径复评 Q/K 不变量候选。
+
+### 26.2 多尺度 BOAT 的具体算法
+
+对 Linear 输入 `X` 和权重 `W`，选择：
+
+```math
+T=DHR,
+\qquad
+X'=XT^{-1},
+\qquad
+W'=WT^T
+```
+
+当前实现中 `D` 是正对角矩阵，`H` 是 4/8/16/64 维分块归一化 Hadamard，
+`R` 是确定性 `±1` 对角符号矩阵。连续乘积严格不变：
+
+```math
+X'W'^T=XT^{-1}(WT^T)^T
+=XT^{-1}TW^T=XW^T
+```
+
+对角候选由激活与权重 RMS 构造：
+
+```math
+d_j(\alpha)=
+\operatorname{clip}\left[
+\left(\frac{\operatorname{RMS}(X_j)}
+{\operatorname{RMS}(W_{:,j})}\right)^\alpha,
+\frac1{16},16
+\right],
+\qquad
+\alpha\in\{0,0.5,0.75\}
+```
+
+再除以几何均值消除无意义的全局尺度。候选只用两侧各自的 HiF4 相对重建误差
+选择，不构造 Linear 输出，因此 BOAT 参数可以合法写入 `activation_state`。
+先选 `D`，再在固定 `D` 上搜索 Hadamard block/seed，避免组合数爆炸。
+
+### 26.3 Gram-hierarchy HSDQ 的具体算法
+
+对每个 64 维块，权重诱导的二次型为：
+
+```math
+G_b=W_b^TW_b
+```
+
+对一行激活 `x_b` 及其合法 HiF4 重建 `q_b`，Linear 输出误差恰为：
+
+```math
+\| (q_b-x_b)W_b^T \|_2^2
+=(q_b-x_b)^TG_b(q_b-x_b)
+```
+
+新实现不再先按普通 MSE 固定 lv1/lv2/lv3。对 E6M2 基准 scale 的多个合法
+offset `o`，先求该 offset 下的合法 hierarchy/mantissa 候选 `q_b(o)`，再按：
+
+```math
+o^*=\arg\min_o
+[q_b(o)-x_b]^TG_b[q_b(o)-x_b]
+```
+
+选择 scale hierarchy。之后在固定 hierarchy 中做两轮离散坐标下降。若第 `j`
+个 code 从 `c_j` 改为 `c'_j`，令：
+
+```math
+\delta=q'_j-q_j,
+\qquad e=q-x
+```
+
+则二次型损失的精确变化为：
+
+```math
+\Delta L
+=2\delta(Ge)_j+\delta^2G_{jj}
+```
+
+枚举 HiF4 的 15 个 signed levels，只有 `ΔL<0` 才接受。每次接受后用：
+
+```math
+Ge\leftarrow Ge+\delta G_{:,j}
+```
+
+增量更新梯度，无需重新矩阵乘法。最多处理 128 个 64-block、两轮，在全层
+Qwen 上满足 420 秒限制。
+
+Weight-HSDQ 使用校准激活的低秩 Hessian `A^TA`，在两个 fold 交叉生成和验证
+候选。生成于 fold 1 的候选必须改善 fold 2，反之亦然；最终最小化：
+
+```math
+J(Q_W)=\frac{L_1(Q_W)+L_2(Q_W)}2
++0.5\max[L_1(Q_W),L_2(Q_W)]
+```
+
+其中：
+
+```math
+L_f(Q_W)=
+\frac{\|A_f(W-Q_W)^T\|_F^2}
+{\|A_fW^T\|_F^2+\varepsilon}
+```
+
+该输出只用于选择 `weight_params`，不会流入 `activation_state` 或在线 `Q(A)`。
+对 `rows>2*channels` 的扩张 FFN 权重禁用该精修，因为真实模型消融证明两份
+calibration fold 不足以约束大量独立输出行。
+
+### 26.4 Attention 的具体算法
+
+Q/K 候选均利用连续 Attention 的严格不变量：
+
+```math
+Q'=QDR,
+\qquad
+K'=(K-C)D^{-1}R,
+\qquad
+Q'K'^T=QK^T-QD R R^T D^{-1}C^T
+```
+
+`R` 为共享正交变换；`C` 在 token 维上为常量，因此最后一项只给每一行
+softmax logits 加同一个常数，softmax 输出不变。搜索内容包括：
+
+- reciprocal RMS scale 的 `α∈{0,0.25,0.5,0.75}`；
+- 是否 K-centering；
+- 16/32/64 维共享 signed Hadamard 与两个 seed。
+
+先用便宜代理给全部候选排序，再只取前 4 个，用完整部署路径（weighted
+hierarchy + 三轮 Gram-HSDQ）计算真实 Attention 输出 MSE：
+
+```math
+J_{attn}=\operatorname{mean}_f L_f
++0.25\max_f L_f
+```
+
+这样保留了全候选部署复评的分数，同时显著降低时间。Q 的 Gram 来自对应 K head
+的二阶矩，K 的 Gram 来自同一 GQA group 内 Q heads 的二阶矩；它们比校准集
+softmax Fisher 更稳定。实测 softmax Fisher 非对角 Hessian 严重迁移，因此已经
+从主代码删除。
+
+### 26.5 全层 Qwen 实测
+
+固定配置：Qwen2.5-0.5B 全 24 层，`seq=128, calib=2, test=4, amax6, CPU`。
+
+| 版本 | Linear mean | Attention mean | Panel Linear | Panel Attention | Panel total | API 秒 | <420 秒 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| 旧 C86 | 0.477821 | 0.739264 | 119.455 | 147.853 | 267.308 | 313.58 | 是 |
+| 干净预算版（层级仍按 MSE） | 0.478619 | 0.838117 | 119.655 | 167.623 | 287.278 | 397.37 | 是 |
+| **Gram-hierarchy 主版本** | **0.501558** | **0.841829** | **125.389** | **168.366** | **293.755** | **382.15** | **是** |
+
+主版本相对 C86：总 panel `+26.447`，Linear mean `+0.023737`，Attention mean
+`+0.102565`，并保留 `37.85s` API 余量。Linear 分角色均值为：
+
+| q | k | v | o | fc_gate | fc_up | proj |
+|---:|---:|---:|---:|---:|---:|---:|
+| 0.6166 | 0.6205 | 0.5636 | 0.4835 | 0.3751 | 0.4303 | 0.4214 |
+
+新实现提升 q/k/o/up/proj，但 v 和 fc_gate 仍低于旧 C86；它们是下一阶段
+Linear 优化的首要对象。
+
+### 26.6 距离 Linear 0.9 与 36,000 的最新判断
+
+当前全层：
+
+```math
+g_L=0.5015576,
+\qquad
+0.9-g_L=0.3984424
+```
+
+当前剩余归一化误差为：
+
+```math
+e_L=1-g_L=0.4984424
+```
+
+达到 0.9 需要消除当前剩余误差的：
+
+```math
+\frac{0.9-g_L}{1-g_L}
+=\frac{0.3984424}{0.4984424}
+=79.94\%
+```
+
+换成当前 250 个 Linear panel 权重，仍差 `99.611` panel points。因此这次重写
+证明 BOAT + Gram-hierarchy 有真实跨层增益，但也否定了“继续加 offset/sweep
+即可到 0.9”。下一阶段必须实现跨 64-block LRH、对 v/fc_gate 的结构化 BOAT，
+以及在 37.85 秒余量内的自适应预算；否则 0.9 不现实。
+
+本地 panel 不是官方绝对分数回归，不能把 `293.755` 线性换算成 `36,000`。
+可以可靠陈述的是：相对本地 C86 的代理质量提升约 `9.89%`，但 Linear 0.9
+仍有巨大结构性差距；在没有新官方提交点前，不能声称已经达到或接近 36,000。
