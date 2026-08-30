@@ -307,7 +307,7 @@ parent。API `481.036527s` 超过提交限制，但按用户授权的 accuracy-f
 
 ### L4：final-weight Gram 与 GALS 分拆验证
 
-**状态：in_progress（2026-08-31；先执行 L4a）。**
+**状态：in_progress（2026-08-31；L4a rejected，正在执行 L4b）。**
 
 L4 不再把“最终权重 Gram”和“显式 role GALS”捆绑成一次实验。
 
@@ -321,7 +321,14 @@ G_q=W_q^TW_q.
 
 基于 L0 只测试显示 activation-side headroom 的形状/层；必须使用合法 shape/statistics selector。v104 已证明全局替换失败，尤其 `proj` 大幅回退，因此不得再次直接全角色启用。
 
+**L4a 实际结果**：只对 `rows > channels` 且 `channels <=1024` 的 expansive FFN
+切换最终量化权重 `W_q.T@W_q` 的 64-block Gram；五层七 role screen 为
+`0.5289493081`，与 v107 parent 逐层/逐 role 完全相同，0/35 case 改变，未触发
+full-layer。候选 v108 已归档并拒绝：[`v108 archive`](../../../solutions/20260831_v108_l4a-final-weight-gram-screen-rejected_scoreNA_timeNA/)。
+
 #### L4b：GALS 小预算
+
+**状态：in_progress（2026-08-31）。**
 
 只有当 L0 的合法 scale/hierarchy oracle 在对应层/形状上明显超过确定性评测噪声，且理论上能超过 parent 时才运行。候选限制为 1–4 个高 headroom block，cross-fold 选择；若 oracle 本身没有空间，直接记录 `not justified`，不执行部署实验。
 
