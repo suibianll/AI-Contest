@@ -1,0 +1,594 @@
+{
+  "run": {
+    "started_at": "2026-08-30 18:49:10",
+    "mode": "amax6",
+    "sequence_length": 128,
+    "calibration_samples": 2,
+    "test_samples": 4,
+    "device": "cpu",
+    "algorithm_device": "cpu",
+    "data_dir": "D:\\工作内容\\AI竞赛\\data\\wikitext-2-raw-v1",
+    "cache_dir": "D:\\工作内容\\AI竞赛\\artifacts\\real_model_suite\\cache",
+    "cache_mode": "read",
+    "capture_only": false,
+    "layers": 1,
+    "models": [
+      "qwen2.5-0.5b"
+    ],
+    "panel_profile": "qwen-official",
+    "primary_model": "qwen2.5-0.5b",
+    "primary_model_requested": "qwen2.5-0.5b",
+    "primary_model_selection_warning": null,
+    "reference_panel": {
+      "revision": "2026-08-29",
+      "linear_cases": 250,
+      "attention_cases": 200,
+      "total_cases": 450,
+      "case_projection": "component_mean_preserving; no local case duplication or official absolute-score conversion"
+    },
+    "official_reference_context": {
+      "revised_anchors": "2026-08-29",
+      "external": [
+        {
+          "name": "youxilee/hif4",
+          "score": 24153,
+          "time_seconds": 239.0,
+          "url": "https://github.com/youxilee/hif4",
+          "imported_as_candidate": false
+        }
+      ],
+      "extra_cases": {
+        "count": 2,
+        "architecture_hint": "Qwen 30B-like",
+        "local_inputs_available": false,
+        "use": "diagnostic shape guidance only; never a score-fitting target"
+      }
+    },
+    "candidates": [
+      "a6-global-activation-lrh-v3"
+    ],
+    "candidate_sources": {
+      "a6-global-activation-lrh-v3": "D:\\工作内容\\AI竞赛\\solution.py"
+    },
+    "official_runtime_limit_seconds": 420.0,
+    "scoring_protocol": {
+      "version": 3,
+      "case_formula": "(MSE_STD-MSE_PLAYER)/MSE_STD",
+      "aggregation": "qwen-primary fixed panel: 250*Linear_mean + 200*Attention_mean",
+      "native_aggregation": "sum_all_linear_and_attention_cases",
+      "attention_causal": false,
+      "candidate_private_helpers_used_for_scoring": false,
+      "standard_codec_source": "D:\\工作内容\\AI竞赛\\evaluator\\reference_hif4.py",
+      "standard_codec_sha256": "7fb21539c0556d10c77859e3e9ffb3d50dd3a2d0240e1cbb0923455e21bd6d3f"
+    },
+    "finished_at": "2026-08-30 18:49:27",
+    "loaded_models": [
+      "qwen2.5-0.5b"
+    ],
+    "result_count": 1,
+    "official_flow_valid": true,
+    "panel_valid": true
+  },
+  "model_status": [
+    {
+      "model": "qwen2.5-0.5b",
+      "status": "loaded",
+      "source": "cache",
+      "cache_path": "D:\\工作内容\\AI竞赛\\artifacts\\real_model_suite\\cache\\qwen2.5-0.5b__seq128__calib2__test4__layers1__schema1.pt",
+      "metadata": {
+        "model": "qwen2.5-0.5b",
+        "family": "qwen2",
+        "source_revision": "Qwen/Qwen2.5-0.5B@060db6499f32faf8b98477b0a26969ef7d8b9987",
+        "local_path": "D:\\工作内容\\AI竞赛\\models\\qwen2.5-0.5b",
+        "model_type": "qwen2",
+        "architecture": [
+          "Qwen2ForCausalLM"
+        ],
+        "parameter_dtype": "torch.float32",
+        "device": "cpu",
+        "layers": 1,
+        "hidden_size": 896,
+        "q_heads": 14,
+        "kv_heads": 2,
+        "head_dim": 64,
+        "roles": [
+          "q",
+          "k",
+          "v",
+          "o",
+          "fc_gate",
+          "fc_up",
+          "proj"
+        ],
+        "role_groups": {
+          "q": "q",
+          "k": "k",
+          "v": "v",
+          "o": "o",
+          "fc_gate": "fc",
+          "fc_up": "fc",
+          "proj": "proj"
+        },
+        "requested_layers": 1,
+        "data": {
+          "dataset": "Salesforce/wikitext",
+          "config": "wikitext-2-raw-v1",
+          "revision": "b08601e04326c79dfdd32d625aee71d232d685c3",
+          "files": {
+            "train": {
+              "path": "D:\\工作内容\\AI竞赛\\data\\wikitext-2-raw-v1\\train-00000-of-00001.parquet",
+              "sha256": "e83889baabc497075506f91975be5fac0d45c5290b6b20582c8cd1e853d0c9f7",
+              "bytes": 6357543,
+              "rows": 36718
+            },
+            "validation": {
+              "path": "D:\\工作内容\\AI竞赛\\data\\wikitext-2-raw-v1\\validation-00000-of-00001.parquet",
+              "sha256": "204929b7ff9d6184953f867dedb860e40aa69c078fc1e54b3baaa8fb28511c4c",
+              "bytes": 657209,
+              "rows": 3760
+            }
+          },
+          "calibration_documents": [
+            "train:1:= Valkyria Chronicles III =",
+            "train:7:= = Gameplay = ="
+          ],
+          "test_documents": [
+            "validation:15:= = Life cycle = =",
+            "validation:1:= Homarus gammarus =",
+            "validation:20:= = Distribution = =",
+            "validation:5:= = Description = ="
+          ],
+          "calibration_windows": [
+            {
+              "split": "train",
+              "document_id": "train:1:= Valkyria Chronicles III =",
+              "row_start": 1,
+              "row_end": 6,
+              "token_start": 0,
+              "token_end": 128,
+              "input_ids": null
+            },
+            {
+              "split": "train",
+              "document_id": "train:7:= = Gameplay = =",
+              "row_start": 7,
+              "row_end": 12,
+              "token_start": 0,
+              "token_end": 128,
+              "input_ids": null
+            }
+          ],
+          "test_windows": [
+            {
+              "split": "validation",
+              "document_id": "validation:1:= Homarus gammarus =",
+              "row_start": 1,
+              "row_end": 4,
+              "token_start": 0,
+              "token_end": 128,
+              "input_ids": null
+            },
+            {
+              "split": "validation",
+              "document_id": "validation:5:= = Description = =",
+              "row_start": 5,
+              "row_end": 14,
+              "token_start": 0,
+              "token_end": 128,
+              "input_ids": null
+            },
+            {
+              "split": "validation",
+              "document_id": "validation:15:= = Life cycle = =",
+              "row_start": 15,
+              "row_end": 19,
+              "token_start": 0,
+              "token_end": 128,
+              "input_ids": null
+            },
+            {
+              "split": "validation",
+              "document_id": "validation:20:= = Distribution = =",
+              "row_start": 20,
+              "row_end": 25,
+              "token_start": 0,
+              "token_end": 128,
+              "input_ids": null
+            }
+          ],
+          "no_source_document_overlap": true,
+          "no_token_window_overlap": true,
+          "sequence_length": 128,
+          "calibration_samples": 2,
+          "test_samples": 4
+        },
+        "cache_path": "D:\\工作内容\\AI竞赛\\artifacts\\real_model_suite\\cache\\qwen2.5-0.5b__seq128__calib2__test4__layers1__schema1.pt",
+        "cache_schema_version": 1,
+        "loaded_from_cache": true
+      }
+    }
+  ],
+  "results": [
+    {
+      "candidate": "a6-global-activation-lrh-v3",
+      "source": "D:\\工作内容\\AI竞赛\\solution.py",
+      "source_sha256": "c0ca33df1bc6f797cbfffbd8d4083639079fe74e025fc9e752251b833700d214",
+      "official_score": null,
+      "official_time": null,
+      "model": "qwen2.5-0.5b",
+      "linear_by_role": {
+        "q": {
+          "official_score_sum": 3.068615197542063,
+          "official_score_mean": 0.7671537993855158,
+          "official_case_count": 4,
+          "macro_gain": 0.7671537993855158,
+          "global_gain": 0.7683494336864267,
+          "standard_sum": 940.1930675506592,
+          "player_sum": 217.7962565422058,
+          "elements": 458752,
+          "cases": 1
+        },
+        "k": {
+          "official_score_sum": 3.011130753265475,
+          "official_score_mean": 0.7527826883163687,
+          "official_case_count": 4,
+          "macro_gain": 0.7527826883163687,
+          "global_gain": 0.7528277099561629,
+          "standard_sum": 130.7172031402588,
+          "player_sum": 32.30967044830322,
+          "elements": 65536,
+          "cases": 1
+        },
+        "v": {
+          "official_score_sum": 2.587048812436469,
+          "official_score_mean": 0.6467622031091173,
+          "official_case_count": 4,
+          "macro_gain": 0.6467622031091173,
+          "global_gain": 0.6467156162781562,
+          "standard_sum": 1.4919260442256927,
+          "player_sum": 0.5270741730928421,
+          "elements": 65536,
+          "cases": 1
+        },
+        "o": {
+          "official_score_sum": 2.1530441614397575,
+          "official_score_mean": 0.5382610403599394,
+          "official_case_count": 4,
+          "macro_gain": 0.5382610403599394,
+          "global_gain": 0.5351924301472417,
+          "standard_sum": 0.3963365703821182,
+          "player_sum": 0.18422023812308908,
+          "elements": 458752,
+          "cases": 1
+        },
+        "fc_gate": {
+          "official_score_sum": 1.1972371679531901,
+          "official_score_mean": 0.29930929198829753,
+          "official_case_count": 4,
+          "macro_gain": 0.29930929198829753,
+          "global_gain": 0.29931556560758393,
+          "standard_sum": 8309.597206115723,
+          "player_sum": 5822.405418395996,
+          "elements": 2490368,
+          "cases": 1
+        },
+        "fc_up": {
+          "official_score_sum": 1.6981595219152863,
+          "official_score_mean": 0.4245398804788216,
+          "official_case_count": 4,
+          "macro_gain": 0.4245398804788216,
+          "global_gain": 0.42455789367136204,
+          "standard_sum": 4311.351024627686,
+          "player_sum": 2480.9329147338867,
+          "elements": 2490368,
+          "cases": 1
+        },
+        "proj": {
+          "official_score_sum": 1.719329807242668,
+          "official_score_mean": 0.429832451810667,
+          "official_case_count": 4,
+          "macro_gain": 0.429832451810667,
+          "global_gain": 0.4292011954653845,
+          "standard_sum": 120.07039499282837,
+          "player_sum": 68.53603792190552,
+          "elements": 458752,
+          "cases": 1
+        }
+      },
+      "linear_by_group": {
+        "q": {
+          "official_score_sum": 3.068615197542063,
+          "official_score_mean": 0.7671537993855158,
+          "official_case_count": 4,
+          "macro_gain": 0.7671537993855158,
+          "global_gain": 0.7683494336864267,
+          "standard_sum": 940.1930675506592,
+          "player_sum": 217.7962565422058,
+          "elements": 458752,
+          "cases": 1
+        },
+        "k": {
+          "official_score_sum": 3.011130753265475,
+          "official_score_mean": 0.7527826883163687,
+          "official_case_count": 4,
+          "macro_gain": 0.7527826883163687,
+          "global_gain": 0.7528277099561629,
+          "standard_sum": 130.7172031402588,
+          "player_sum": 32.30967044830322,
+          "elements": 65536,
+          "cases": 1
+        },
+        "v": {
+          "official_score_sum": 2.587048812436469,
+          "official_score_mean": 0.6467622031091173,
+          "official_case_count": 4,
+          "macro_gain": 0.6467622031091173,
+          "global_gain": 0.6467156162781562,
+          "standard_sum": 1.4919260442256927,
+          "player_sum": 0.5270741730928421,
+          "elements": 65536,
+          "cases": 1
+        },
+        "o": {
+          "official_score_sum": 2.1530441614397575,
+          "official_score_mean": 0.5382610403599394,
+          "official_case_count": 4,
+          "macro_gain": 0.5382610403599394,
+          "global_gain": 0.5351924301472417,
+          "standard_sum": 0.3963365703821182,
+          "player_sum": 0.18422023812308908,
+          "elements": 458752,
+          "cases": 1
+        },
+        "fc": {
+          "official_score_sum": 2.8953966898684764,
+          "official_score_mean": 0.36192458623355955,
+          "official_case_count": 8,
+          "macro_gain": 0.36192458623355955,
+          "global_gain": 0.3420986932737943,
+          "standard_sum": 12620.948230743408,
+          "player_sum": 8303.338333129883,
+          "elements": 4980736,
+          "cases": 2
+        },
+        "proj": {
+          "official_score_sum": 1.719329807242668,
+          "official_score_mean": 0.429832451810667,
+          "official_case_count": 4,
+          "macro_gain": 0.429832451810667,
+          "global_gain": 0.4292011954653845,
+          "standard_sum": 120.07039499282837,
+          "player_sum": 68.53603792190552,
+          "elements": 458752,
+          "cases": 1
+        }
+      },
+      "linear": {
+        "official_score_sum": 15.43456542179491,
+        "official_score_mean": 0.5512344793498182,
+        "official_case_count": 28,
+        "macro_gain": 0.5512344793498182,
+        "global_gain": 0.3757922597947827,
+        "standard_sum": 13813.817159041762,
+        "player_sum": 8622.691592453513,
+        "elements": 6488064,
+        "cases": 7
+      },
+      "linear_component_macro_gain": 0.5790641798011944,
+      "attention": {
+        "official_score_sum": 3.705354281578767,
+        "official_score_mean": 0.9263385703946917,
+        "official_case_count": 4,
+        "macro_gain": 0.9263385703946917,
+        "global_gain": 0.9270312253399238,
+        "standard_sum": 67.11695504188538,
+        "player_sum": 4.8974419683218,
+        "elements": 458752,
+        "cases": 1
+      },
+      "official_flow_score": {
+        "linear": 15.43456542179491,
+        "attention": 3.705354281578767,
+        "total": 19.139919703373675,
+        "linear_cases": 28,
+        "attention_cases": 4,
+        "total_cases": 32
+      },
+      "panel_score": {
+        "profile": "qwen-official",
+        "revision": "2026-08-29",
+        "linear": 137.80861983745456,
+        "attention": 185.26771407893833,
+        "total": 323.07633391639285,
+        "linear_cases": 250,
+        "attention_cases": 200,
+        "total_cases": 450,
+        "source_linear_cases": 28,
+        "source_attention_cases": 4,
+        "source_case_counts_inferred": false,
+        "linear_mean": 0.5512344793498182,
+        "attention_mean": 0.9263385703946917,
+        "aggregation": "source_component_mean_times_fixed_panel_count"
+      },
+      "timing": {
+        "wall_seconds": 17.09804279997479,
+        "algorithm_stage_seconds": 17.075569699984044,
+        "calibration_seconds": 8.742754100007005,
+        "dynamic_seconds": 7.036715399706736,
+        "official_api_total_seconds": 15.779469499713741,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 7,
+          "hif4_calibration_attention": 1,
+          "hif4_dynamic_quantize_activation": 28,
+          "hif4_dynamic_quantize_q": 4,
+          "hif4_dynamic_quantize_k": 4,
+          "hif4_dynamic_quantize_v": 4
+        },
+        "nested_api_calls": {
+          "hif4_calibration_and_quantize_weight": 0,
+          "hif4_calibration_attention": 0,
+          "hif4_dynamic_quantize_activation": 0,
+          "hif4_dynamic_quantize_q": 0,
+          "hif4_dynamic_quantize_k": 0,
+          "hif4_dynamic_quantize_v": 0
+        },
+        "under_official_runtime_limit": true,
+        "under_300_seconds": true
+      }
+    }
+  ],
+  "official_ranking_audit": {
+    "panel_profile": "qwen-official",
+    "panel_revision": "2026-08-29",
+    "reference_panel": {
+      "linear_cases": 250,
+      "attention_cases": 200,
+      "total_cases": 450
+    },
+    "primary_model": "qwen2.5-0.5b",
+    "primary_model_requested": "qwen2.5-0.5b",
+    "primary_model_fallback": false,
+    "guardrail_models": [],
+    "official_anchor_scores": {},
+    "model_features": {
+      "qwen2.5-0.5b": {
+        "official_flow_total": {
+          "a6-global-activation-lrh-v3": 19.139919703373675
+        },
+        "official_flow_linear": {
+          "a6-global-activation-lrh-v3": 15.43456542179491
+        },
+        "official_flow_attention": {
+          "a6-global-activation-lrh-v3": 3.705354281578767
+        },
+        "linear_global_gain": {
+          "a6-global-activation-lrh-v3": 0.3757922597947827
+        },
+        "linear_macro_gain": {
+          "a6-global-activation-lrh-v3": 0.5512344793498182
+        },
+        "component_macro_gain": {
+          "a6-global-activation-lrh-v3": 0.5790641798011944
+        },
+        "attention_global_gain": {
+          "a6-global-activation-lrh-v3": 0.9270312253399238
+        },
+        "attention_macro_gain": {
+          "a6-global-activation-lrh-v3": 0.9263385703946917
+        },
+        "panel_score_linear": {
+          "a6-global-activation-lrh-v3": 137.80861983745456
+        },
+        "panel_score_attention": {
+          "a6-global-activation-lrh-v3": 185.26771407893833
+        },
+        "panel_score_total": {
+          "a6-global-activation-lrh-v3": 323.07633391639285
+        }
+      }
+    },
+    "aggregate_features": {
+      "official_flow_total": {
+        "a6-global-activation-lrh-v3": 19.139919703373675
+      },
+      "official_flow_linear": {
+        "a6-global-activation-lrh-v3": 15.43456542179491
+      },
+      "official_flow_attention": {
+        "a6-global-activation-lrh-v3": 3.705354281578767
+      },
+      "linear_global_gain": {
+        "a6-global-activation-lrh-v3": 0.3757922597947827
+      },
+      "linear_macro_gain": {
+        "a6-global-activation-lrh-v3": 0.5512344793498182
+      },
+      "component_macro_gain": {
+        "a6-global-activation-lrh-v3": 0.5790641798011944
+      },
+      "attention_global_gain": {
+        "a6-global-activation-lrh-v3": 0.9270312253399238
+      },
+      "attention_macro_gain": {
+        "a6-global-activation-lrh-v3": 0.9263385703946917
+      },
+      "panel_score_linear": {
+        "a6-global-activation-lrh-v3": 137.80861983745456
+      },
+      "panel_score_attention": {
+        "a6-global-activation-lrh-v3": 185.26771407893833
+      },
+      "panel_score_total": {
+        "a6-global-activation-lrh-v3": 323.07633391639285
+      },
+      "primary_panel_score_linear": {
+        "a6-global-activation-lrh-v3": 137.80861983745456
+      },
+      "guardrail_panel_mean_linear": {
+        "a6-global-activation-lrh-v3": null
+      },
+      "all_model_panel_mean_linear": {
+        "a6-global-activation-lrh-v3": 137.80861983745456
+      },
+      "primary_panel_score_attention": {
+        "a6-global-activation-lrh-v3": 185.26771407893833
+      },
+      "guardrail_panel_mean_attention": {
+        "a6-global-activation-lrh-v3": null
+      },
+      "all_model_panel_mean_attention": {
+        "a6-global-activation-lrh-v3": 185.26771407893833
+      },
+      "primary_panel_score_total": {
+        "a6-global-activation-lrh-v3": 323.07633391639285
+      },
+      "guardrail_panel_mean_total": {
+        "a6-global-activation-lrh-v3": null
+      },
+      "all_model_panel_mean_total": {
+        "a6-global-activation-lrh-v3": 323.07633391639285
+      }
+    },
+    "candidate_status": {
+      "a6-global-activation-lrh-v3": {
+        "evaluated_models": 1,
+        "expected_models": 1,
+        "complete": true,
+        "errors": [],
+        "official_api_total_seconds": 15.779469499713741,
+        "proxy_api_seconds_sum": 15.779469499713741,
+        "under_official_runtime_limit": true,
+        "primary_model": "qwen2.5-0.5b",
+        "primary_model_requested": "qwen2.5-0.5b",
+        "primary_model_fallback": false,
+        "primary_evaluated": true,
+        "primary_api_total_seconds": 15.779469499713741,
+        "primary_panel_score": 323.07633391639285,
+        "primary_panel_valid": true,
+        "under_300_seconds": true,
+        "valid_submission": true
+      }
+    },
+    "local_official_flow_order": [
+      {
+        "candidate": "a6-global-activation-lrh-v3",
+        "score": 19.139919703373675
+      }
+    ],
+    "local_primary_panel_order": [
+      {
+        "candidate": "a6-global-activation-lrh-v3",
+        "score": 323.07633391639285
+      }
+    ],
+    "local_panel_order": [
+      {
+        "candidate": "a6-global-activation-lrh-v3",
+        "score": 323.07633391639285
+      }
+    ],
+    "ranking_audit": {},
+    "c39_vs_c40": {},
+    "warning": "official anchors audit ranking only; they are never candidate inputs or regression targets. qwen-official is a mean-preserving local shape, not an absolute official-score conversion"
+  }
+}

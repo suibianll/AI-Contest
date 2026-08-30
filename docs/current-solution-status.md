@@ -146,16 +146,20 @@ $$P_{total}=P_L+P_A=293.755106.$$
 | A5 joint-fold offline A@W | 284.595177 | 0.464918 | 358.24s | 拒绝 |
 | A3 true cross-block LRH-r8 | 292.426982 | 0.496245 | 381.84s | 拒绝 |
 | A4 full CAT-inspired BOAT-2 | 283.159693 | 0.459176 | 600.61s | 拒绝，超时 |
+| A5 frozen-Q(A) ridge/Qronos | 293.755106 | 0.501558 | 455.73s | 持平但超时 |
+| A6 Global Activation-LRH | 282.616646 | 0.457010 | 373.97s | 拒绝 |
 | stable parent（当前根） | **293.755106** | **0.501558** | **382.15s** | **active** |
 
-归档目录：`solutions/20260830_v087...` 至 `solutions/20260830_v093...`；
+归档目录：`solutions/20260830_v087...` 至 `solutions/20260830_v095...`；
 执行日志：`logs/execution/2026-08-30-e1-progressive-hsdq.md`、
 `2026-08-30-a2-expansive-sparse-hsdq.md`、
 `2026-08-30-a3-rowwise-block-hsdq.md`、
 `2026-08-30-a4-blockwise-boat.md`、
 `2026-08-30-a5-joint-aw.md`、
 `2026-08-30-a3-lrh-r8.md`、
-`2026-08-30-a4-cat-boat2.md`。
+`2026-08-30-a4-cat-boat2.md`、
+`2026-08-30-a5-frozen-qronos.md`、
+`2026-08-30-a6-global-activation-lrh.md`。
 
 ## 距离 Linear 0.9 与 36,000
 

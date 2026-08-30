@@ -1043,7 +1043,10 @@ LRH-r8（最多 4 个 64-block、rank-8 off-block Hessian），单层 `334.24542
 当前动作：官方测评不可用，保持 parent `solution.py` 作为最高分基线，继续执行
 尚未验证的独立路线；完整 BOAT-2/CAT-Householder 组合已执行但全层 panel
 `283.159693`、API `600.61s`，比 parent 低 `10.595413` 且超时，已归档；下一项
-转向冻结 Q(A) 的 ridge/Qronos 与 Global Activation-LRH。所有候选必须满足 panel 不降、
+冻结 Q(A) ridge/Qronos 已执行：全层 panel 与 parent 持平但 API `455.73s` 超过
+420s，已归档。Global Activation-LRH 也已执行（rank-8、10% energy），全层 panel
+`282.616646`，较 parent 低 `11.138460`，已归档；现在转向 Attention GQRB/FASA/PAWV。
+所有候选必须满足 panel 不降、
 Linear 不降、runtime ≤ 420s，失败即归档恢复 parent；每一步记录最高分版本和
 提交号，不把未执行项标成已完成。
 ```
