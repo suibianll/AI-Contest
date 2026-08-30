@@ -52,6 +52,43 @@ def test_global_activation_lrh_skips_wide_inputs() -> None:
     assert solution._global_activation_lrh(weight, solution._gram64(weight)) is None
 
 
+def test_global_activation_lrh_wide_rank4_is_bounded_and_finite() -> None:
+    """L6b accepts only the explicit wide-shape rank-4 path.
+
+    A zero block-diagonal operand is sufficient for this synthetic range
+    check and avoids materializing a second dense Gram matrix in the test.
+    """
+
+    torch.manual_seed(708)
+    for channels in (2048, 4096, 4864, 8192):
+        rows = 8
+        weight = torch.randn(rows, channels) * 0.05
+        blocks = channels // solution._BLOCK
+        gram64 = torch.zeros(blocks, solution._BLOCK, solution._BLOCK)
+        lowrank = solution._global_activation_lrh(
+            weight,
+            gram64,
+            rank=solution._ACT_GLOBAL_LRH_WIDE_RANK,
+            max_channels=solution._ACT_GLOBAL_LRH_WIDE_MAX_CHANNELS,
+        )
+        assert lowrank is not None
+        assert tuple(lowrank.shape) == (channels, solution._ACT_GLOBAL_LRH_WIDE_RANK)
+        assert torch.isfinite(lowrank).all()
+
+
+def test_global_activation_lrh_wide_path_respects_channel_cap() -> None:
+    torch.manual_seed(709)
+    channels = 2048
+    weight = torch.randn(8, channels) * 0.05
+    gram64 = torch.zeros(channels // solution._BLOCK, solution._BLOCK, solution._BLOCK)
+    assert solution._global_activation_lrh(
+        weight,
+        gram64,
+        rank=solution._ACT_GLOBAL_LRH_WIDE_RANK,
+        max_channels=channels - solution._BLOCK,
+    ) is None
+
+
 def test_final_gram_selector_is_rowwise_nonincreasing() -> None:
     torch.manual_seed(706)
     dense = torch.randn(5, 128) * 0.1

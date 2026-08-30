@@ -1,14 +1,14 @@
 # HiF4 算法全景：已实现、已验证效果与未实现方向
 
 > 整理日期：2026-08-31
-> 数据来源：`solutions/README.md`（v000–v115）、`docs/current-solution-status.md`、`docs/archive-implementation-audit.md`、`logs/execution/2026-08-30-e0g-scale-oracle.md`、`logs/execution/2026-08-30-e0g-multimodel-dashboard.md`、`logs/execution/2026-08-30-a7-quant-weight-gram.md`、`logs/execution/2026-08-30-l1-full-hierarchy-lrh.md`、`logs/execution/2026-08-31-v110-l4b-gals-final-gated-qwen-full.md`、`logs/execution/2026-08-31-v111-l5a-joint-permutation-qwen-full.md`、`logs/execution/2026-08-31-l5d-external-component-audit.md`、`logs/execution/2026-08-31-l5e-linear-ceiling-v111.md`、`logs/execution/2026-08-31-v115-l6a-rank16-qwen-full.md`。
+> 数据来源：`solutions/README.md`（v000–v116）、`docs/current-solution-status.md`、`docs/archive-implementation-audit.md`、`logs/execution/2026-08-30-e0g-scale-oracle.md`、`logs/execution/2026-08-30-e0g-multimodel-dashboard.md`、`logs/execution/2026-08-30-a7-quant-weight-gram.md`、`logs/execution/2026-08-30-l1-full-hierarchy-lrh.md`、`logs/execution/2026-08-31-v110-l4b-gals-final-gated-qwen-full.md`、`logs/execution/2026-08-31-v111-l5a-joint-permutation-qwen-full.md`、`logs/execution/2026-08-31-l5d-external-component-audit.md`、`logs/execution/2026-08-31-l5e-linear-ceiling-v111.md`、`logs/execution/2026-08-31-v115-l6a-rank16-qwen-full.md`、`logs/execution/2026-08-31-v116-l6b-wide-rank4-qwen-full.md`。
 > 口径纪律：本地只能比 **Qwen 同口径 panel**（`250·g_L + 200·g_A`）；五模型合计 `1085.743597` 只用于检查跨模型结构性回退，**禁止**与官方分数做差值。官方评测集为 250 Linear + 200 Attention case，时间上限 **420s**。
 
 ---
 
 ## 1. 当前根：算法构成与效果
 
-根 `solution.py`（规范 LF SHA `043e5401c7d8cf68339e9faec3f60943c11821e3b51bb1563d2ecd8a812f22e5`）为 clean 单一路径，加入 L6a rank-16 global LRH、L5a block-local permutation、v106 expansive-FFN CAT balance、B1 GQRB、B2 PAWV diag-only、v107 Gram-gated Global Activation-LRH、v109 L4a final deployed-Gram row gate 和 v110 L4b final-Gram GALS。当前精度最高版本为 v115；v106 仍是时间 parent。E0-C 的两个 GALS 稀疏变体（v102/v103）、A7 量化后权重 Gram（v104）和 L1 v105 full-hierarchy LRH 均已归档，详见 [`归档实现审计`](archive-implementation-audit.md)。
+根 `solution.py`（规范 LF SHA `8fa4db38ac96ca0957e1b1cee61d0c5bd248cf3a4df5d24fa04bedc9239b25f4`）为 clean 单一路径，加入 L6b wide rank-4、L6a rank-16 global LRH、L5a block-local permutation、v106 expansive-FFN CAT balance、B1 GQRB、B2 PAWV diag-only、v107 Gram-gated Global Activation-LRH、v109 L4a final deployed-Gram row gate 和 v110 L4b final-Gram GALS。当前精度最高版本为 v116；v106 仍是时间 parent。E0-C 的两个 GALS 稀疏变体（v102/v103）、A7 量化后权重 Gram（v104）和 L1 v105 full-hierarchy LRH 均已归档，详见 [`归档实现审计`](archive-implementation-audit.md)。
 
 | 组件 | 内容 |
 |---|---|
@@ -16,19 +16,19 @@
 | **cross-fold Weight-HSDQ** | fold 1 生成的候选必须改善 fold 2，最终只改变离线 `weight_params` |
 | **Gram-hierarchy Activation-HSDQ** | 从静态变换后权重计算 64 维 Gram block，先按二次型选层级与 E6M2 offset，再做最多 128 个 block、2 轮坐标扫描；state 只含 CPU 静态 `gram64`、BOAT 逆缩放与整数/符号配置 |
 | **Expansive-FFN CAT balance** | 仅对 `rows > channels` 路由，固定 α=0.25 RMS 对角 balance；v106 仅 fc_gate 正向 |
-| **Global Activation-LRH Gram gate** | 输入宽度 ≤1024 的窄形状生成 rank-16 off-block proposal；最终离散候选用部署量化权重 `G_q=W_qᵀW_q` 逐行精确二次型门控；v115 精度正向 |
+| **Global Activation-LRH Gram gate** | 输入宽度 ≤1024 的窄形状生成 rank-16、宽形状 `1024<d<=8192` 生成 rank-4 off-block proposal；最终离散候选用部署量化权重 `G_q=W_qᵀW_q` 逐行精确二次型门控；v116 精度正向 |
 | **L4a final deployed-Gram row gate** | 仅 expansive `rows > channels` 且 `channels <=1024`；v107 parent 与 final-Gram 候选用完整 `G_q` 逐行比较，v109 精度正向 |
 | **Attention 输出感知 shortlist** | reciprocal RMS/K-centering/共享 Hadamard + B1 GQRB 2×2/4×4 group-local mixing；B2 PAWV 用 attention probability 的 token-row 对角 Hessian 做 V refinement；V 保持独立合法 HiF4 编码 |
 
 **实测**（Qwen2.5-0.5B 全 24 层，`seq=128/calib=2/test=4/amax6`，缓存只读）：
 
 ```text
-Linear mean       0.509091      Attention mean  0.842039
-Qwen panel        295.680651    native total    422.944953
-six-API time      716.482861 s  wall time       748.372825 s   （探索阶段只记录时间）
+Linear mean       0.509305      Attention mean  0.842039
+Qwen panel        295.734045    native total    423.088475
+six-API time      739.424609 s  wall time       771.865345 s   （探索阶段只记录时间）
 ```
 
-分角色 Linear gain：`q 0.6167 / k 0.6291 / v 0.5712 / o 0.4976 / fc_gate 0.3954 / fc_up 0.4336 / proj 0.4200`。
+分角色 Linear gain：`q 0.6167 / k 0.6291 / v 0.5712 / o 0.4976 / fc_gate 0.3954 / fc_up 0.4336 / proj 0.4215`。
 
 **官方分数：无（从未提交）。** 这是全局最大的信息缺口。
 
@@ -51,7 +51,8 @@ six-API time      716.482861 s  wall time       748.372825 s   （探索阶段�
 | **v109 前一精度 parent** | **+ final deployed-Gram row gate** | **295.239** | **+0.082（+0.03%）** |
 | **v110 前一精度 parent** | **+ final-Gram GALS 小预算** | **295.243** | **+0.003（+0.001%）** |
 | **v111 前一精度 parent** | **+ L5a block-local permutation** | **295.482** | **+0.240（+0.081%）** |
-| **v115 当前精度 parent** | **+ L6a rank-16 global LRH** | **295.681** | **+0.198（+0.067%）** |
+| **v115 前一精度 parent** | **+ L6a rank-16 global LRH** | **295.681** | **+0.198（+0.067%）** |
+| **v116 当前精度 parent** | **+ L6b wide rank-4 cross-block factor** | **295.734** | **+0.053（+0.018%）** |
 
 **关键观察**：本轮最大的一次跃迁（+9.89%）不是来自新算法，而是**把实验集合重写为 clean 单一路径**——删掉 dormant branch、统一路径后反而大幅变好。
 
@@ -67,7 +68,7 @@ six-API time      716.482861 s  wall time       748.372825 s   （探索阶段�
 
 旧口径（不可直接比较）：v024/C21 `16043`、v025/C21-C `14437`、v030/C38 `14092`、v032/C40 `14432`。
 
-外部本地基准：Qwen panel `250.327102`、Qwen native `369.527269`。当前 v115 本地领先外部 panel **+18.12%**，但官方尚未验证。L5d 逐组件审计表明 codec/dequant 没有差异，外部 joint residual/H32-H64 不能合规迁移；L5e 记录固定表示/接口到 `0.9` 的证据性不可达。
+外部本地基准：Qwen panel `250.327102`、Qwen native `369.527269`。当前 v116 本地领先外部 panel **+18.14%**，但官方尚未验证。L5d 逐组件审计表明 codec/dequant 没有差异，外部 joint residual/H32-H64 不能合规迁移；L5e 记录固定表示/接口到 `0.9` 的证据性不可达。
 
 ---
 
@@ -255,8 +256,9 @@ D0 三层均值（weight / activation-Gram）如下，原始 JSON 保存在
 | **L3 Global Activation-LRH Gram gate** | rank-8 off-block proposal；最终用部署 `WqᵀWq` 精确 gate | **已执行并采纳为精度 parent**：v107 full `295.157057`，Linear `0.5069966356`；4-block 较 v106 `+0.884423` panel；时间 `481.04s` 只作记录 |
 | **L4a final deployed-Gram row gate** | expansive shape 双候选；完整 `G_q` 逐行选择 v107 parent 与 final-Gram proposal | **已执行并采纳为精度 parent**：v109 full `295.239309`，Linear `0.5073256468`；较 v107 `+0.082253` panel；时间 `517.29s` 只作记录 |
 | **L4b final-Gram GALS 小预算** | 最多 4 个高损失 block，解析 E6M2 offset 候选，校准增益后才启用，并用完整 `G_q` 行级 gate | **已执行并采纳为前一 precision parent**：v110 full `295.242780`、Linear `0.5073395278`，较 v109 `+0.003470` panel；时间 `701.90s` 只作记录 |
-| **L5a block-local permutation** | 每个 64 维 hierarchy block 的压力排序/低高交错排列；与 `D`、signed-Hadamard 组成等价 `T=DPR`，两折 operand-local gate | **已执行并采纳为当前 parent**：v111 full `295.482473`、Linear `0.5082983001`，较 v110 `+0.239693` panel；时间 `726.094s` 只作记录 |
-| **L6a rank-16 global LRH** | 窄输入 off-block residual 的 rank-16 factor；proposal 后完整部署 `G_q` 逐行 gate | **已执行并采纳为当前 parent**：v115 full `295.680651`、Linear `0.5090910148`，较 v111 `+0.198179` panel；时间 `716.483s` 只作记录 |
+| **L5a block-local permutation** | 每个 64 维 hierarchy block 的压力排序/低高交错排列；与 `D`、signed-Hadamard 组成等价 `T=DPR`，两折 operand-local gate | **已执行并采纳为前一 parent**：v111 full `295.482473`、Linear `0.5082983001`，较 v110 `+0.239693` panel；时间 `726.094s` 只作记录 |
+| **L6a rank-16 global LRH** | 窄输入 off-block residual 的 rank-16 factor；proposal 后完整部署 `G_q` 逐行 gate | **已执行并采纳为前一 parent**：v115 full `295.680651`、Linear `0.5090910148`，较 v111 `+0.198179` panel；时间 `716.483s` 只作记录 |
+| **L6b wide rank-4 factor** | `d>1024,d<=8192` 的压缩 off-block range factor；proposal 后完整部署 `G_q` 逐行 gate | **已执行并采纳为当前 parent**：v116 full `295.734045`、Linear `0.5093045894`，较 v115 `+0.053394` panel；唯一正向角色为 `proj(d=4864)`，时间 `739.425s` 只作记录 |
 | **L5b sparse Schur** | 最多两对跨 block PSD Schur proposal，完整部署 Gram 逐行 gate | **已执行并拒绝**：v112 screen Linear `0.5308551016`，较 v111 `-0.0010318441` |
 | **L5c operand-local meta-router** | 八维静态特征、两折一层 stump，在既有子路径中选择 | **已执行但 no-op**：v113 screen `0.5318869457`，逐 case 等于 v111 |
 | **L5d 外部组件审计 / sampling** | 对比 youxilee/hif4 v2.7 的 codec、层级、采样、transform、state；单变量 stride sampling | **已执行并拒绝**：v114 screen `0.5273114999`；codec/dequant parity 为 0，joint residual/H32-H64 标记不可行动 |
@@ -271,15 +273,15 @@ D0 三层均值（weight / activation-Gram）如下，原始 JSON 保存在
 | SpinQuant / FlatQuant 的 task-output loss | 会把输出监督引入 `Q(A)`，不合规 |
 | 全局 E6M2 / 顶层 scale 扩张 | E0-G：各 role 总 gap <0.1% |
 
-### 5.3 L6 待验证的新方向（唯一活跃计划）
+### 5.3 L6 方向状态（唯一活跃计划）
 
 | 方向 | 说明 |
 |---|---|
-| **L6a rank-16 global LRH** | 当前窄输入 rank-8 off-block factor 的单变量扩展；先 rank 16，再视 screen 决定 rank 32；完整 `G_q` gate |
-| **L6b 宽输入 rank-4 factor** | 将压缩 off-block factor 扩展到 `d>1024`（重点 4864 proj），最多 4 个高损 block，state 一个 CPU tensor |
-| **L6c 完整 `G_64` hierarchy** | 用完整 64×64 Gram 做 lv2/lv3/mantissa 有界坐标求解；禁止 group-only objective |
+| **L6a rank-16 global LRH** | 窄输入 rank-8 off-block factor 的单变量扩展；完整 `G_q` gate |
+| **L6b 宽输入 rank-4 factor** | 已完成并采纳 v116：将压缩 off-block factor 扩展到 `d>1024`（重点 4864 proj），最多 4 个高损 block，state 一个 CPU tensor |
+| **L6c 完整 `G_64` hierarchy** | 待验证：用完整 64×64 Gram 做 lv2/lv3/mantissa 有界坐标求解；禁止 group-only objective |
 | **L6d block-circulant / DCT factor** | 用少量结构化 block kernel 近似跨 block Gram，避免逐通道 dense state |
-| **L6e checkpoint** | 汇总 recall、`J_64`、state 节点和跨 fold 泛化；无增益则归档 L6 并转 C1 时间压缩 |
+| **L6e checkpoint** | 待验证：汇总 recall、`J_64`、state 节点和跨 fold 泛化；无增益则归档 L6 并转 C1 时间压缩 |
 
 ---
 
@@ -287,7 +289,7 @@ D0 三层均值（weight / activation-Gram）如下，原始 JSON 保存在
 
 1. **当前根是强局部最优但仍有精度空间**：多数结构性方向失败且失败幅度远超噪声；v105 已验证正确的 full-hierarchy 写回在两折上缺乏泛化，而 v107、v109、v110 与 v111 的部署 Gram/等价坐标 gate 修复带来可复现正向增益。
 2. **历史最大跃迁来自"重写为 clean 单一路径"（+9.89%）**，而不是新算法。这提示下一轮收益可能来自**路径精简与计算重分配**，而非新增机制。
-3. **P0 仍是提交当前根**：本地 +18.04% 的领先从未兑现为官方分；九连败也说明本地 panel 已进入饱和区，更需要真实官方反馈来校准方向。
-4. **本轮新增五个精度 parent**：v107 的 Gram-gated Global Activation-LRH 将 panel 提升到 `295.157057`，v109 的 final deployed-Gram row gate 提升到 `295.239309`，v110 的 final-Gram GALS 再提升到 `295.242780`，v111 的 L5a block-local permutation 提升到 `295.482473`、Linear mean `0.5082983001`，v115 的 L6a rank-16 global LRH 再提升到 `295.680651`、Linear mean `0.5090910148`；v106 保留为时间 parent。L5b/v112、L5c/v113、L5d/v114 已拒绝，L5e 已完成；当前唯一 active 计划执行 L6b。
+3. **P0 仍是提交当前根**：本地 +18.14% 的领先从未兑现为官方分；当前根已超 420s，真实官方反馈和后续 C1 压缩仍是必要条件。
+4. **本轮新增六个精度 parent**：v107 的 Gram-gated Global Activation-LRH 将 panel 提升到 `295.157057`，v109 的 final deployed-Gram row gate 提升到 `295.239309`，v110 的 final-Gram GALS 再提升到 `295.242780`，v111 的 L5a block-local permutation 提升到 `295.482473`、Linear mean `0.5082983001`，v115 的 L6a rank-16 global LRH 再提升到 `295.680651`、Linear mean `0.5090910148`，v116 的 L6b wide rank-4 factor 再提升到 `295.734045`、Linear mean `0.5093045894`；v106 保留为时间 parent。L5b/v112、L5c/v113、L5d/v114 已拒绝，L5e 已完成；当前唯一 active 计划执行 L6c。
 5. **L5e 的证据约束下一轮搜索**：固定 frame 的单侧理想臂最高 `0.8188905`，scale oracle 不能填补 0.9 缺口，896 输入宽度 `ρ_off` 平均高达 weight `0.76125`、activation `0.88382`；下一轮只能验证压缩跨 block 结构，不能重复局部 offset 或输出残差。
 6. **警惕跨模型不一致**：这是本工程最主要的失败模式（v044、v061、v071、v091 等）。L6 screen 若出现正向，full-layer 前应增加 OPT/Pythia 低成本复筛，而不是全层跑完再判。

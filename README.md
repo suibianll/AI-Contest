@@ -23,25 +23,25 @@
   的设备混用问题。完整表格见 [`当前主版本算法效果与评测状态`](docs/current-solution-status.md)。
 - 历史 v024 得分为 `16043 / 173.8s`，但其 Linear 输出监督路径把输出信息
   用于激活侧选择；这类 `A@W -> Q(A)` 用法仍不合规，因此不作为后续合规父版本。
-- 当前根 `solution.py` 为 v115 L6a rank-16 global-LRH precision parent，在 v111
-  L5a block-local permutation 之上把窄输入 off-block factor rank 从 8 提到 16；
-  Qwen 全 24 层本地实测 native `422.944953`、shaped panel `295.680651`、Linear
-  mean `0.5090910148`、正式 API `716.482861s`。当前探索阶段只按精度排序，时间暂作
+- 当前根 `solution.py` 为 v116 L6b wide rank-4 cross-block precision parent，在 v115
+  L6a 窄输入 rank-16 基础上为 `d>1024` 宽输入增加 rank-4 off-block factor；
+  Qwen 全 24 层本地实测 native `423.088475`、shaped panel `295.734045`、Linear
+  mean `0.5093045894`、正式 API `739.424609s`。当前探索阶段只按精度排序，时间暂作
   记录；最终冻结时再压缩到 420s 内。逐项结果、归档实现
   审计和复现实验配置见 [`当前主版本算法效果与评测状态`](docs/current-solution-status.md)、
   [`算法全景`](docs/algorithm-inventory-and-directions.md)、
   [`归档实现审计`](docs/archive-implementation-audit.md) 与 [`solutions/README.md`](solutions/README.md)。
   L5d 外部组件审计与 L5e 可达性 checkpoint 已完成；下一步只按 [`唯一活跃优化计划`](docs/superpowers/plans/2026-08-31-hif4-active-l6-compressed-crossblock-plan.md) 执行，转向压缩跨 block 表达。
 - 当前根源码 SHA256：
-  `043E5401C7D8CF68339E9FAEC3F60943C11821E3B51BB1563D2ECD8A812F22E5`（规范 LF）。
+  `8FA4DB38AC96CA0957E1B1CEE61D0C5BD248CF3A4DF5D24FA04BEDC9239B25F4`（规范 LF）。
 - L1 full-hierarchy Weight-LRH 已完成合成测试与五层×七 role screen，但 screen
   `both_player=0.523019429222563` 与 L0 逐条持平；候选 v105 已归档。L2 固定
   `α=0.25` 的 expansive-FFN CAT balance 已通过 full-layer，v106 成为时间 parent；
   L3 Gram-gated Global Activation-LRH 在只看精度的 full-layer 得到 v107；L4a final
   deployed-Gram row gate 得到 v109；L4b final-Gram GALS 得到 v110；L5a block-local
   permutation 得到 v111。L5b/v112、L5c/v113、L5d/v114 均已按 screen 归档拒绝，
-  L5e 记录固定表示/接口的可达性证据；L6a rank-16 已完成，下一步执行 L6b 宽输入
-  rank-4 cross-block factor。
+  L5e 记录固定表示/接口的可达性证据；L6a rank-16 与 L6b 宽 rank-4 均已完成，
+  下一步执行 L6c 完整 `G_64` hierarchy。
   证据见 [`v111 execution log`](logs/execution/2026-08-31-v111-l5a-joint-permutation-qwen-full.md)。
 - 旧版本地评测器（单模型 dev 与 frozen holdout）曾因 calibration/test
   文本重叠不能可靠排序合规候选，相关代码（`real_data_eval.py`、
@@ -115,7 +115,7 @@ git diff --check
 官方与本地均为 `C39 = C41b < C47b < C66`；Qwen 主面板的 Spearman 为
 `1.0000`，五模型 raw sum 为 `0.9487`。这只证明相对排序方向，不证明本地
 分数不可以线性换算成官方分数。外部 `youxilee/hif4` 的最高同口径 Qwen panel 为
-`250.327102`，当前根为 `295.680651`，领先 `45.353549`（`18.12%`）；外部
+`250.327102`，当前根为 `295.734045`，领先 `45.406943`（`18.14%`）；外部
 Qwen native `369.527269` 仍作为第二诊断线，五模型合计不作为基准。
 
 ## 修订版官方评测锚点（2026-08-29）
@@ -150,7 +150,7 @@ Qwen native `369.527269` 仍作为第二诊断线，五模型合计不作为基�
 
 ## 当前算法
 
-当前根是重写后的 clean Gram-hierarchy + B1/B2 + L5a + L6a 版本；v086/C86 仍是不可变历史归档。
+当前根是重写后的 clean Gram-hierarchy + B1/B2 + L5a + L6a + L6b 版本；v086/C86 仍是不可变历史归档。
 评测和优化优先级如下：
 
 | 优先级 | 组件 | 当前机制 | 作用/状态 |
@@ -159,10 +159,10 @@ Qwen native `369.527269` 仍作为第二诊断线，五模型合计不作为基�
 | 2 | Linear | Cross-fold Weight-HSDQ：`AᵀA` 二阶增量、15 levels、top-2 block、1 sweep | 只更新离线 `weight_params`；跨 fold 验证后才接纳 |
 | 3 | Linear | Gram-hierarchy Activation-HSDQ：静态 `WᵀW`、offset/hierarchy 选择、最多 128 block、2 sweeps | 在线 state 仅含合法静态统计；v106 基线 Linear mean `0.503459` |
 | 4 | Linear | Expansive-FFN CAT balance：`rows > channels`、固定 α=0.25 | v106 仅改善 fc_gate；不增加 state 字段 |
-| 5 | Linear | Global Activation-LRH：rank-16 off-block proposal，逐行 exact deployed-Gram gate | v115 Linear mean `0.509091`；窄输入形状启用，rank-8→16 已通过 L6a |
+| 5 | Linear | Global Activation-LRH：窄输入 rank-16、宽输入 rank-4 off-block proposal，逐行 exact deployed-Gram gate | v116 Linear mean `0.509305`；L6a/L6b 均通过 |
 | 6 | Linear | L4a final deployed-Gram row gate：expansive 双候选 + 完整 `G_q` 逐行门控 | v109 Linear mean `0.507326`；仅 `rows > channels`、`channels <=1024` |
 | 7 | Attention | reciprocal RMS、K-centering、GQA 对齐、GQRB、PAWV diag-only | 使用真实 non-causal Attention 输出排序；当前 mean `0.842039` |
-| 8 | 下一步 | L0–L5e 已完成（v115 为当前 precision parent；v112/v113/v114 已归档拒绝）→ **L6b wide rank-4 compressed cross-block factor（当前）** | L6a rank-16 已完成；Attention PAWV 独立延后；最终时间压缩在 C1 执行；详细门禁只见唯一活跃计划 |
+| 8 | 下一步 | L0–L5e 已完成（v116 为当前 precision parent；v112/v113/v114 已归档拒绝）→ **L6c complete `G_64` hierarchy coordinate solver（当前）** | L6a/L6b 已完成；Attention PAWV 独立延后；最终时间压缩在 C1 执行；详细门禁只见唯一活跃计划 |
 
 优化决策只看同一冻结缓存上的相对增量：Qwen `primary_panel_score_total` 是主
 指标，其他模型用于发现结构性回退。不得用官方分数反向调参，也不设置固定的
