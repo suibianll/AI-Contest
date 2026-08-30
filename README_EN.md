@@ -24,13 +24,14 @@ Chinese version: [README.md](README.md)
   path used output information for activation-side selection. That
   `A@W -> Q(A)` use remains non-compliant, so it is not a compliant parent for
   new work.
-- The current root `solution.py` is v084/C84 full gram64 coverage with five
-  coordinate sweeps plus C76.4 GQA rotation. Qwen's local native total is
-  `392.055970` and its panel score is `267.289567`; see
+- The current root `solution.py` is v086/C86 attention block-smooth final-lattice
+  plus v084 full gram64 coverage with five coordinate sweeps and C76.4 GQA
+  rotation. Qwen's local native total is `392.064774`, panel score is
+  `267.307909`, and API time is `313.58s`; see
   [`solutions/README.md`](solutions/README.md) for the paired four-model
   measurements and mechanism details.
 - Current source SHA256:
-  `A8A4427DBA95723570FBDEBCDA1E4EDDBF152A3693CC851E30A87368A02CA284`.
+  `E7A16D6991DBB70A593FBE87D0C5D1D8FD38F801665354A01FFAF2F0A96F03CD`.
 - The active local evaluator is Qwen-first: it projects frozen-corpus Linear
   and Attention means onto a fixed 250/200 panel, while other models remain
   soft guardrails. The raw `official_flow_total` is retained for compatibility
@@ -113,8 +114,11 @@ and implementation to fit the final runtime limit.
 ### Attention
 
 The active A1 path uses Smooth-QK, K midrange centering, headwise permutation,
-MHA/GQA alignment, and real-Attention dual-mask safety selection. Fixed H64,
-Segment-CVaR, and non-beneficial V-importance candidates remain disabled.
+MHA/GQA alignment, and real-Attention dual-mask safety selection. C86 adds a
+shared Q/K 4/8/16 block-Hadamard candidate scored with the final offset and
+refinement lattice; only its legal integer configuration and static signs are
+stored. Fixed H64, Segment-CVaR, and non-beneficial V-importance candidates
+remain disabled.
 
 ## Development principles
 

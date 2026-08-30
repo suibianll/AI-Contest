@@ -303,6 +303,24 @@ the activation path. It is therefore non-compliant and remains rejected.
 Static W-only Gram and dense/proxy blends passed the guard but all fell below
 v084 on the Qwen panel. No C85 candidate is promoted.
 
-The active root is again the v084 behavior; the latest commits are
+At the C85 checkpoint the active root was again the v084 behavior; the latest commits are
 `ff8861f` (experiment) and `4e9861e` (revert). Focused release/compliance
 tests remain `48 passed, 1 deselected`.
+
+## C86 attention block-H final-lattice (v086)
+
+C86 adds a shared head-local Hadamard candidate after Smooth-QK, centering and
+permutation selection. Q heads in the same GQA group and their KV head reuse a
+single deterministic sign pattern, so the continuous QK dot product is
+preserved. The candidate uses the final offset/refinement lattice in the A1
+output scorer; only legal integer configuration and static CPU signs are
+returned. Implementation commits are `2c1cf85`, `31b99d6` (GQA sign alignment)
+and `90844fe` (final-lattice scorer).
+
+Qwen primary result: native `392.064774`, panel `267.307909`, Linear
+`321.095451`, Attention `70.969323`, API `313.58s`; panel delta vs v084 is
+`+0.018342`. Heterogeneous guardrail results are GPT-2 `169.829549`, OPT
+`92.579685`, and Pythia `190.239876`; OPT Attention regresses slightly while
+GPT-2 gains strongly and Pythia is nearly flat. The candidate is promoted under
+the Qwen-primary/soft-guardrail policy and archived at
+`solutions/20260830_v086_c86-attn-block-final_scoreNA_timeNA/`.

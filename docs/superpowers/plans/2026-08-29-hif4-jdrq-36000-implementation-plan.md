@@ -18,13 +18,13 @@
 | 项目 | 当前事实 |
 |---|---|
 | 官方本地冠军 | C66：`22557 / 217.2s` |
-| 当前根版本 | v084 / C84 full gram64 五轮坐标扫描 + C76.4 GQA rotation，本地实验版本，无新官方分 |
+| 当前根版本 | v086 / C86 attention block-smooth final-lattice + v084 full gram64 五轮坐标扫描 + C76.4 GQA rotation，本地实验版本，无新官方分 |
 | 外部参考 | `youxilee/hif4`：用户提供 `24153 / 239s` |
 | 官方榜上限信号 | 用户确认已有超过 `36000` |
 | 官方面板 | 250 Linear + 200 Attention |
 | 最终时间上限 | `<420s` |
-| 已完成归档 | v084 / C84 full gram64 五轮坐标扫描 |
-| 下一可用归档号 | v085 / C77 Attention policy or C85 precision-time compression |
+| 已完成归档 | v084 / C84 full gram64 五轮坐标扫描；v086 / C86 attention block-H final-lattice |
+| 下一可用归档号 | v087 / 跨窗口 Attention 离散求解或 Linear Q(W) 结构化上限 |
 
 若面板每 case 以百分制累加，`22557 -> 36000` 需要把当前剩余 MSE 再降低约 60%。因此本计划不把 offset、coverage、固定 headroom 等千分位微调作为主线。
 
@@ -1113,9 +1113,36 @@ state 仍只包含静态 CPU Gram-64 统计和合法 HiF4 字段；所有 sweep 
 `A@W`、输出残差或测试输出写入在线 activation state。v084 根/归档 SHA256：
 `A8A4427DBA95723570FBDEBCDA1E4EDDBF152A3693CC851E30A87368A02CA284`。
 
+### C86 attention block-H final-lattice 增量状态（v086 当前根）
+
+在 v084 的 Qwen GQA rotation 之上，加入共享 Q/K 的 head-local Hadamard
+候选。每个 Q head group 与对应 KV head 使用同一 4/8/16 block-Hadamard
+和 deterministic sign，因此连续 QK 内积严格保持不变；候选排序改用最终
+offset/refinement lattice 的真实 Attention 输出误差，避免“候选量化器”和
+“部署量化器”目标错位。state 只保存 block size、seed 和静态 CPU signs，
+不保存 A@W、输出残差或测试输出。
+
+Qwen 全层结果为 native `392.064774`、panel `267.307909`、Linear
+`321.095451`、Attention `70.969323`、API `313.58s`，相对 v084 panel
+`+0.018342`，仍低于 420 秒。异构 guardrail：GPT-2 native `169.829549`
+（Attention `24.086283`）、OPT `92.579685`（Attention `19.378433`）、
+Pythia `190.239876`（Attention `40.609788`）；OPT 小幅回退、Pythia 近持平，
+按 Qwen-primary 规则晋级但继续观察跨模型稳定性。
+
+实现提交为 `2c1cf85`、GQA 符号修复为 `31b99d6`、最终量化器对齐为
+`90844fe`；v086 归档 SHA256：
+`E7A16D6991DBB70A593FBE87D0C5D1D8FD38F801665354A01FFAF2F0A96F03CD`。
+
+### C85 rejected audit
+
+C85 二次 JDRQ pass 已在 `ff8861f` 中实现并以 `4e9861e` 回退：Qwen
+panel `267.262237`、API `313.57s`，低于 v084。直接 `Q(W)^TQ(W)` Gram
+虽然局部 proxy 上升，但运行时 provenance 检出 `R_A R_W` 交叉残差，违反
+在线 Q(A) 合规边界；W-only Gram 及 blend 均低于 v084，因此不晋级。
+
 ### 下一轮唯一优先级
 
-1. 以 v084 为不可变父版本，继续测 C76.2 Fisher/V importance 的
+1. 以 v086 为不可变父版本，继续测 C76.2 Fisher/V importance 的
    validation-fold 选择和 C76.4 rotation 的 block/seed 单机制消融；只在
    真实 Attention 输出的跨窗口收益稳定时晋级更多结构；
 2. 保持 `A@W` 只服务静态 `Q(W)`，任何候选变换改变后都重建 `Z` 并重跑
