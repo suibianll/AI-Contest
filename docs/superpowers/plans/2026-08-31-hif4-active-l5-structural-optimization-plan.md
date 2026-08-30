@@ -91,7 +91,7 @@ J(Q')-J(Q)=2\operatorname{tr}(R H Δ^T)+\operatorname{tr}(ΔHΔ^T),
 
 ### L5a：联合等价坐标与合法 hierarchy 的交替离散优化
 
-**状态：in_progress；下一步立即执行。**
+**状态：screen-accepted；full-layer in_progress（2026-08-31）。**
 
 假设：v110 已改善 activation-side，但 weight-side 和坐标投影仍有互补空间；先
 固定一个低自由度等价变换 `T=D·R`，再在合法 scale/lv2/lv3/mantissa 域里做离散
@@ -105,6 +105,15 @@ J(Q')-J(Q)=2\operatorname{tr}(R H Δ^T)+\operatorname{tr}(ΔHΔ^T),
 验收：合成 128/256 维矩阵证明 `T` 的乘积保持、层级字段原子写回、精确增量与暴力
 重算一致；Qwen screen 总体必须高于 `0.52929209`（v110 screen），才允许 full-layer。
 若连续两个 `T` 候选都无 cross-fold 增益，停止该族，不扩大 rotation/置换自由度。
+
+执行记录：已实现 `solution.py` 的 `_l5a_channel_pressure`、
+`_l5a_block_permutation` 和 `_choose_l5a_permutation`，排列只在两折
+operand-local proxy 同时不变差时写入 state。24 项合成/合规测试通过；五层×七 role
+screen（Qwen2.5-0.5B，cache read）Linear mean 为 `0.5318869456762372`，较 v110
+screen `0.52929209` 提升约 `+0.00259486`，因此进入 full-layer。候选归档为
+[`v111 L5a`](../../../solutions/20260831_v111_l5a-joint-permutation_scoreNA_timeNA/)，
+screen 证据为 [`l5a screen JSON`](../../../artifacts/real_model_suite/l5a-joint-permutation-stratified-qwen.json)
+和 [`screen log`](../../../logs/execution/2026-08-31-l5a-joint-permutation-stratified.md)。
 
 ### L5b：稀疏跨 block Schur/LDLQ 激活—权重联合 proposal
 
