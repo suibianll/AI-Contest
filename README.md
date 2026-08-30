@@ -1,5 +1,7 @@
 # HiF4 量化竞赛工程
 
+> 数据快照日期：2026-08-30；当前事实以本文件、最新评测日志和 `solution.py` SHA 为准。
+
 华为 2026 算法竞赛 NVFP4 → HiF4 赛道的开发工作区。根目录
 `solution.py` 是唯一活跃、可提交的算法文件；历史候选保存在
 `solutions/`，不会被运行时引用。
@@ -43,6 +45,50 @@
 
 本地时间和本地分数仅用于候选比较，不冒充官方结果。任何官方结果都应与
 实际提交 SHA、分数和时间一起归档。
+
+## 数据与计划治理（必须遵守）
+
+### 数据及时更新
+
+README 顶部的“当前状态”、[`solutions/README.md`](solutions/README.md)、
+[`docs/current-solution-status.md`](docs/current-solution-status.md) 和最新执行日志
+共同组成当前事实快照。每次本地评测、官方回传或 active `solution.py` 变更，都必须在
+同一提交中更新：
+
+1. 数据日期、模型/数据 revision、完整命令和缓存模式；
+2. Linear/Attention 分项、panel、API 时间和 source SHA256；
+3. `solutions/README.md` 比较表、当前状态报告和对应 execution log；
+4. 若是官方结果，追加官方提交 SHA、分数、时间和日期；若未知，保留 `NA`，不得用本地值代填。
+
+若文档数字冲突，按“根 `solution.py` + 最新可复现评测 JSON/日志 →
+`solutions/README.md` → 当前状态报告 → 其他研究文档”的顺序裁决；归档计划和旧日志
+只用于历史追溯。每次数据更新还要刷新文档的 `更新日期/数据快照日期`，不能继续沿用旧快照描述。
+
+### 计划写入与执行
+
+仓库同时只能有一份活跃优化计划，位置是
+[`docs/superpowers/plans/`](docs/superpowers/plans/)，当前文件见
+[`2026-08-30-hif4-active-optimization-plan.md`](docs/superpowers/plans/2026-08-30-hif4-active-optimization-plan.md)。
+执行任何优化时**只参考这份 active 计划**、当前根代码、最新评测数据和官方规则；
+`docs/superpowers/archive/plans/` 中的文件一律是只读历史，不得作为下一步指令。
+
+计划生命周期规则：
+
+1. 新建计划前先确认 `plans/` 除 README 外没有第二个 `.md`；需要换主线时，在同一提交中把旧计划移入 `archive/plans/`、创建新 active 计划并更新两个 README。
+2. 每个步骤必须写清假设、代码入口、数据集/模型、验收指标、预计产物和失败处理；执行后立即填入实际结果、source SHA、日志链接和 `done/rejected/blocked` 状态。
+3. 一次实验无论成功、失败、超时或未提交，都先按候选归档流程保存；没有完整源码、SHA 或配置的结果只能标记为不可复现。
+4. 计划完成、被替换、明确停止或连续阻塞后，立即归档；不得在旧文件中继续追加新的“下一步”，也不得保留多份“current/active”文字。
+5. 归档文件不改写历史结论；若发现实现 bug 或数据错误，新增审计说明或新 active 计划修复，并在索引中标注影响范围。
+
+执行前后至少检查：
+
+```powershell
+Get-ChildItem docs\superpowers\plans -File -Filter *.md |
+  Where-Object Name -ne README.md
+git diff --check
+```
+
+第一条命令必须只返回一个 active 计划；如果返回 0 或多个，先整理计划目录，不能开始算法实验。
 
 ## 本地评测是否能反映官方方向
 

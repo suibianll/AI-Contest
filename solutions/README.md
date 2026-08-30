@@ -1,5 +1,7 @@
 # HiF4 Solution Archive
 
+> 数据快照日期：2026-08-30；当前根和候选数字以最新可复现评测记录及 source SHA 为准。
+
 Root `solution.py` is the only active submission. Archived source files are immutable.
 
 顺序实验索引见 [progressive candidate ledger](../logs/execution/2026-08-27-progressive-candidate-ledger.md)。

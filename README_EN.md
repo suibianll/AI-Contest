@@ -1,5 +1,8 @@
 # HiF4 Quantization Competition Workspace
 
+> Data snapshot: 2026-08-30. Current facts are keyed by this file, the latest
+> evaluation log, and the `solution.py` SHA.
+
 Development workspace for the Huawei 2026 NVFP4-to-HiF4 algorithm track.
 The root `solution.py` is the only active submission file. Historical
 candidates live under `solutions/` and are never imported at runtime.
@@ -43,6 +46,53 @@ Chinese version: [README.md](README.md)
 Local time and scores are for paired candidate comparison only and are never
 reported as official results. Every official result must be archived together
 with the exact submitted SHA, score, and runtime.
+
+## Data and plan governance (required)
+
+### Keep data current
+
+The “Current status” section above, [`solutions/README.md`](solutions/README.md),
+[`docs/current-solution-status.md`](docs/current-solution-status.md), and the latest
+execution log form the current fact snapshot. Every local evaluation, official result,
+or active `solution.py` change must update in the same commit:
+
+1. the data date, model/data revision, full command, and cache mode;
+2. Linear/Attention components, panel, API time, and source SHA256;
+3. the `solutions/README.md` ledger, current status report, and execution log;
+4. for an official result, the submitted SHA, score, runtime, and date; otherwise keep `NA` and never substitute a local value.
+
+When documents disagree, use this order: root `solution.py` plus the latest reproducible
+JSON/log → `solutions/README.md` → current status report → other research documents.
+Archived plans and old logs are historical only. Refresh each document’s update/data-snapshot
+date whenever its numbers change; do not leave an old snapshot label in place.
+
+### Writing and executing plans
+
+There may be exactly one active optimization plan in
+[`docs/superpowers/plans/`](docs/superpowers/plans/). The current file is
+[`2026-08-30-hif4-active-optimization-plan.md`](docs/superpowers/plans/2026-08-30-hif4-active-optimization-plan.md).
+When executing an optimization, consult **only this active plan**, the current root,
+latest evaluation data, and the official rules. Files under
+`docs/superpowers/archive/plans/` are read-only history and are never next-step instructions.
+
+Plan lifecycle rules:
+
+1. Before creating a plan, verify that `plans/` has no second `.md` besides `README.md`. To change the main line, move the old plan to `archive/plans/`, create the new active plan, and update both READMEs in the same commit.
+2. Every step must state its hypothesis, code entry point, model/data, acceptance metric, expected artifacts, and failure handling. After execution, immediately record the actual result, source SHA, log link, and `done/rejected/blocked` status.
+3. Archive every experiment—success, failure, timeout, or unsubmitted—using the candidate workflow. A result without complete source, SHA, or configuration is `non-reproducible`.
+4. Archive a plan immediately when it is complete, superseded, explicitly stopped, or repeatedly blocked. Never continue adding new “next steps” to an archived file or leave multiple “current/active” claims.
+5. Do not rewrite archived conclusions. For an implementation bug or data error, add an audit note or a new active plan and record the affected scope in the index.
+
+Before and after execution, at minimum check:
+
+```powershell
+Get-ChildItem docs\superpowers\plans -File -Filter *.md |
+  Where-Object Name -ne README.md
+git diff --check
+```
+
+The first command must return exactly one active plan. If it returns zero or more than one,
+clean up the plan directory before running an algorithm experiment.
 
 ## Does the local evaluator track the official direction?
 
