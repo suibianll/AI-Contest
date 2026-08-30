@@ -1,0 +1,111 @@
+# 算法实现审计：当前根与已归档候选
+
+> 审计日期：2026-08-30
+> 审计对象：根 [`solution.py`](../solution.py)，规范 LF SHA256
+> `617482cee04ff9514a8d41226b651336e4b8b86692673308e835de1091693eba`
+> 原则：源码、校准目标、部署解码和评测日志必须逐一对应；不能用旧审计文字替代源码证据。
+
+## 0. 结论
+
+根目录当前是 v100/v101 的 stable parent：BOAT、cross-fold Weight-HSDQ、
+Gram-hierarchy Activation-HSDQ、B1 GQRB 和 B2 PAWV diag-only。Qwen 固定 cache
+的最高已完成 full-layer panel 为 `293.797301`，Linear mean 为 `0.5015576125`，
+Attention mean 为 `0.8420394885`，API 时间 `392.423565s`。
+
+L1 v105 已实现真正的 full-hierarchy cross-block Weight-LRH（scale/lv2/lv3/
+mantissa 原子写回），并通过 `29 passed` 合成/合规测试；但五层×七 role 的
+cross-fold screen 与 L0 逐条持平，70 个 fold 候选仅 1 个被交换 fold 接受，最终
+0/35 case 改变 stable parent。候选已归档，不在根主路径。
+
+## 1. 已核实正确
+
+### 1.1 BOAT 的等价变换
+
+若 `D` 是正对角平衡、`R` 是归一化 signed-Hadamard，则
+
+\[
+X'=XD^{-1}R,\qquad W'=WDR,\qquad
+X'W'^T=XD^{-1}RR^TDW^T=XW^T.
+\]
+
+根实现的 FWHT 除以 `sqrt(block_size)`，因此 `R^TR=I`；`activation_state`
+只保存逆平衡和静态统计，没有保存输出监督。
+
+### 1.2 Weight-HSDQ 的部署边界
+
+权重侧允许用校准激活构造
+
+\[
+J_W(Q)=\|A(W-Q)^T\|_F^2
+       =\operatorname{tr}\big((W-Q)A^TA(W-Q)^T\big),
+\]
+
+根在 15 个 signed levels 上做 block Hessian 增量，cross-fold 后才写回离线
+`weight_params`；在线 `Q(A)` 不读取 Linear 输出。
+
+### 1.3 v105 hierarchy 写回复验
+
+v105 候选将每个离散候选表示为
+
+\[
+q_{r,j}=\frac14 c_{r,j}\,s_r\,u_{r,g(j)},v_{r,h(j)},
+\]
+
+其中 `s` 是 E6M2 scale，`u` 为 lv2，`v` 为 lv3；搜索后先写回全部层级字段，
+再按同一 denominator 重算 mantissa/sign。合成测试证明 round-trip 和二次型
+增量一致。这个实现与保存的 v092 源码不同，不能把 v092 的实现缺陷继续假定为
+已证事实。
+
+## 2. 已确认的实现/实验问题
+
+### 2.1 v092 旧审计结论需要更正
+
+旧文字称 v092 “先搜索 scale/lv2/lv3、再被 `_write_codes` 丢弃”。逐行检查
+[`v092 solution.py`](../solutions/20260830_v092_a3-lrh-r8-rejected_score292.426982_time382s/solution.py)
+未复现这条路径；保存源码实际沿用 parent denominator。因此 v092 的
+`292.426982` 只能约束该保存实现，不能直接证明正确 full-hierarchy LRH 不可行。
+v105 已完成该复验并以 cross-fold 泛化不足为由拒绝，详见
+[`L1 log`](../logs/execution/2026-08-30-l1-full-hierarchy-lrh.md)。
+
+### 2.2 v095 Global Activation-LRH 的 gate 错位
+
+v095 用未加权逐元素 MSE 接受候选，而部署激活误差应使用
+
+\[
+J_A(Q)=\|(Q(A)-A)W^T\|_F^2
+       =\operatorname{tr}\big((Q(A)-A)W^TW(Q(A)-A)^T\big).
+\]
+
+因此 v095 的负结果不能单独否定“用 Gram 二次型 gate 的 Global-LRH”；该修复仍
+属于 active plan 的 L3，尚未执行。
+
+### 2.3 仍有待验证的低风险问题
+
+- `_choose_boat` 先选 balance 再选 rotation，尚未与联合网格的部署侧目标比较；
+- cross-fold 最终 score 仍含生成 fold，可能有乐观偏差；
+- BOAT 的 alpha/seed 网格较稀疏，但扩大前必须有 L0 oracle 证据；
+- v099 PAWV rank-8 在最终 Q/K 变换前构造 metric，当前只保留 diag-only。
+
+这些问题不是当前根的已知回归，不得绕过 active plan 直接叠加到主线。
+
+## 3. 当前方向矩阵
+
+| 方向 | 根状态 | 结论/下一步 |
+|---|---|---|
+| BOAT + Weight-HSDQ | 保留 | stable parent；由 active plan 统一门禁 |
+| Gram-hierarchy Activation-HSDQ | 保留 | stable parent；L3 前不改 gate |
+| v105 full-hierarchy Weight-LRH | 归档 rejected | 正确写回但 screen 无增益；不扩大 rank/block/sweep |
+| expansive-FFN CAT/BOAT-2 | 未执行 | active plan 当前 L2 |
+| v095 Gram-objective Global-LRH | 未执行修复版 | active plan L3 |
+| final-weight Gram + GALS | 未执行 | active plan L4，先做小预算 oracle |
+| Attention PAWV rank/position | deferred | 不插入 Linear 主线 |
+
+## 4. 计划与证据治理
+
+唯一可执行计划是 [`2026-08-30-hif4-active-optimization-plan.md`](superpowers/plans/2026-08-30-hif4-active-optimization-plan.md)。
+每个候选必须保存完整源码、规范 LF SHA、固定 cache/命令、合规扫描和结果日志；
+screen/oracle 不能写入最高分账本。L1 v105 已按该规则归档，根目录恢复 v100/v101，
+当前下一步是 L2。计划目录不得同时存在第二份 active 计划。
+
+本审计只记录源码与执行证据；它不把本地 panel 线性换算为官方分数，也不改变
+历史归档文件内容。

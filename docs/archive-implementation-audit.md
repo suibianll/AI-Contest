@@ -47,20 +47,31 @@ P = 250 g_L + 200 g_A,
 
 ## 3. 归档源码审计结果
 
-### 3.1 P0：v092 的 LRH 层级结果被写回函数丢弃
+### 3.1 v092 / v105 full-hierarchy LRH 写回审计（原结论已更正）
 
 文件：[`v092 solution.py`](../solutions/20260830_v092_a3-lrh-r8-rejected_score292.426982_time382s/solution.py)
 
-`_polish_weight_lrh` 内部根据 `den_work` 重新搜索 `scale_codes`、`lv2`、`lv3`，并以新的层级构造 `q_work`。但是函数最后调用：
+早期审计曾认为 v092 的 `_polish_weight_lrh` 根据 `den_work` 重新搜索了
+`scale_codes`、`lv2`、`lv3`，随后在最后调用：
 
 ```python
 return _write_codes(parent, codes)
 ```
 
-`_write_codes` 只把 mantissa/sign 写回 `parent` 的参数副本，不会写回刚刚搜索出的 scale/lv2/lv3。也就是说，候选的 mantissa 是按新 denominator 计算，最终却和旧 denominator 配对，优化目标和部署表示不一致。
+但逐行复核保存的 v092 源码后，没有找到上述 scale/lv2/lv3 搜索；该版本实际
+沿用 parent denominator，再把 mantissa/sign 交给 `_write_codes`。因此“搜索结果
+被写回函数丢弃”是对源码的过度描述，不能作为 v092 结果的既定事实。
 
-**影响**：v092 的 `292.426982` 只能说明“当前这份写回错误的 LRH 实现失败”，不能证明正确的 full-hierarchy LRH 必然失败。
-**动作**：修复为原子写回完整层级参数（或在候选对象中同时携带全部 code），先做 layer-1，再做一次全层验证；在修复结果前，该方向标记为“未验证”，不能放入停止清单。
+为消除这个不确定性，v105 实现了真正的原子 full-hierarchy 候选：E6M2 scale
+offset、lv2、lv3、sign、mantissa 一起生成并由新 denominator 解码；合成测试
+`29 passed`。Qwen 五层×七 role 的 35-case screen 评估 70 个 fold 候选，仅 1 个
+通过交换 fold，且最终 0/35 case 改变 stable parent，`both_player` 与 L0 逐条相同。
+
+**当前影响**：v092 的 `292.426982` 仍只代表保存的旧实现；v105 的正确写回
+复验则显示当前 LRH 在两折 calibration 上泛化不足。该算法族按 active plan
+标记为“corrected LRH rejected”，不再扩大 rank、block 数或 sweep。证据见
+[`v105 archive`](../solutions/20260830_v105_l1-full-hierarchy-lrh-rejected_screen523019_time266s/)
+和 [`L1 execution log`](../logs/execution/2026-08-30-l1-full-hierarchy-lrh.md)。
 
 ### 3.2 P1：v095 的全局 LRH 用错接受门禁
 
@@ -129,7 +140,7 @@ v102/v103 的 GALS 使用校准时浮点 `weight_t` 计算的 `gram64`，而实�
 
 | 算法族 | 已实现并保留 | 已实现但回退 | 当前仍未验证/需要修复 |
 |---|---|---|---|
-| Linear 基础 | BOAT、cross-fold Weight-HSDQ、Gram-hierarchy Activation-HSDQ、512-row weight sampling、历史稳定 A@W/JDRQ 组件 | blockwise BOAT-2、全宽/逐块 A@W、大步长 headroom、full-H 等 | 修复后的 full-hierarchy LRH、Gram-objective gate 的 Global-LRH、最终权重 Gram + 显式 role 的 GALS、E1 三折/beam 版本 |
+| Linear 基础 | BOAT、cross-fold Weight-HSDQ、Gram-hierarchy Activation-HSDQ、512-row weight sampling、历史稳定 A@W/JDRQ 组件 | blockwise BOAT-2、全宽/逐块 A@W、大步长 headroom、full-H、**v105 corrected full-hierarchy LRH** 等 | Gram-objective gate 的 Global-LRH、最终权重 Gram + 显式 role 的 GALS、E1 三折/beam 版本 |
 | Attention | GQA head-local rotation、MHA K-center、B1 GQRB margin、B2 PAWV diag-only | causal CVaR、全模型 K-center、PAWV rank-8 当前实现 | 最终 Q/K 变换后的 PAWV rank/position bucket、交替 Q/K/V、真正 role-aware 的结构门控 |
 | 变换/CAT | 固定低自由度 CAT/BOAT 子集、共享 Hadamard | R64、CAT β 网格、full-H selector、BOAT-2 | 低自由度新坐标系或外部实现差异对照，尚无可部署候选 |
 | 诊断/工程 | E0-G/D0 scale oracle、C0 五模型确认、clean 单路径重写 | 全局 scale 扩张部署 | 三折合成宽度矩阵、元策略路由、计算预算重分配 |
@@ -148,9 +159,11 @@ v102/v103 的 GALS 使用校准时浮点 `weight_t` 计算的 `gram64`，而实�
 ## 7. 审计后的优先级
 
 1. 官方接口恢复后，先提交当前根 v100，获得第一个真实兑换率锚点。
-2. 若继续本地优化，第一实验是**修复 v092 的完整层级写回**，先 layer-1 再全层；不是直接再发明一个 LRH 变体。
-3. 第二实验是 v095 的 **Gram-objective gate** 修复；若仍失败，才把 Global-LRH 归入已证伪路线。
-4. 第三实验才是最终 Q/K 变换后重建 PAWV rank/position metric；Linear 方向并行做 final-weight-Gram + 显式 role 的 GALS 小预算复筛。
+2. L1 的 v105 corrected full-hierarchy LRH 已完成并拒绝；不再扩大其自由度。
+3. 当前下一实验是 active plan 的 L2 expansive-FFN CAT/BOAT-2；随后再做 v095 的
+   **Gram-objective gate** 修复，若仍失败才把 Global-LRH 归入停止清单。
+4. 之后才做最终 Q/K 变换后重建 PAWV rank/position metric；Linear 方向再做
+   final-weight-Gram + 显式 role 的 GALS 小预算复筛。
 5. 每个实验必须保存完整源和 SHA；只要没有完整源，就标为不可复现，不把结果当作硬上限。
 
 ## 8. 本次可复核检查

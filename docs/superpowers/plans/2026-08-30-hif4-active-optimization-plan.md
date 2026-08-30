@@ -221,9 +221,12 @@ Weight 与 Activation；继续 L1 的已知 hierarchy 写回修复，但不再�
 
 ### L1：修复 v092 full-hierarchy cross-block Weight-LRH
 
-**状态：pending。**
+**状态：rejected（2026-08-30；正确实现完成，但未通过分层预筛）。**
 
-**假设**：v092 的 scale/lv2/lv3 被 `_write_codes(parent,codes)` 丢弃，负结果不能否定正确 full-hierarchy LRH。
+**审计更正**：保存的 v092 源码实际没有可复现的 scale/lv2/lv3 搜索；它沿用
+parent denominator 后调用 `_write_codes`。因此原先“层级字段被写回丢弃”的假设
+不能作为 v092 负结果的直接解释。本步骤按原目标重新实现了真正的 full-hierarchy
+原子候选，再独立判断是否有跨 fold 泛化。
 
 **实现要求**：
 
@@ -236,9 +239,16 @@ Weight 与 Activation；继续 L1 的已知 hierarchy 写回修复，但不再�
 
 **测试**：128 维合成矩阵验证写回 round-trip、旧 denominator 不再出现、增量公式与暴力重算一致；然后按第 3.2 节预筛和 full-layer 门禁。
 
-**成功**：full-layer Linear 超过当前 parent，归档并提升为新最高分版本。
+**实际执行**：rank-8、最多 4 block、合法 E6M2 局部 offset、8 个 hierarchy
+layout 和 15 个 signed level 已完成合成测试（`29 passed`）。Qwen 层位
+`{0,5,11,17,23}` × 七 role 的 35 case 预筛评估了 70 个 fold 候选；仅 1/70
+通过交换 fold 的 admission，最终 0/35 case 改变 stable parent。selected-layer
+`both_player=0.523019429222563`，与 L0 逐条相同，因此没有触发第 3.2 节的
+24 层 full-layer gate。证据：[`l1-lrh-stratified-qwen.json`](../../../artifacts/real_model_suite/l1-lrh-stratified-qwen.json)、
+[`2026-08-30-l1-full-hierarchy-lrh.md`](../../../logs/execution/2026-08-30-l1-full-hierarchy-lrh.md)。
 
-**失败**：修复正确但 full-layer 不升，标记“corrected LRH rejected”，不再扩大 rank、block 数或 sweep；进入 L2。
+**裁决**：实现正确但 cross-fold 泛化不足，标记“corrected LRH rejected”；候选
+源码归档在 `v105`，不提升最高分，不再扩大 rank、block 数或 sweep，进入 L2。
 
 ### L2：低自由度 expansive-FFN CAT/BOAT-2
 
@@ -353,7 +363,7 @@ P=\operatorname{softmax}((QT_Q)(KT_K)^T/\sqrt d),
 |---:|---|---|---|---|
 | 0 | 基线冻结与审计 | `done` | — | v100/v101、SHA、固定 cache |
 | 1 | L0 Linear 上限/误差分解 | `done` | — | ceiling JSON + 报告 |
-| 2 | L1 修复 v092 hierarchy LRH | `pending` | L0 完成 | corrected candidate + full 门禁 |
+| 2 | L1 修复 v092 hierarchy LRH | `rejected` | L0 完成 | v105 screen + audit |
 | 3 | L2 expansive-FFN CAT/BOAT-2 | `pending` | L1 裁决 | 低自由度结构候选 |
 | 4 | L3 修复 v095 Gram gate | `pending` | L2 裁决 | acceptance diagnostic + 候选 |
 | 5 | L4 final-Gram/GALS 分拆 | `pending` | L0 显示对应 headroom | 小预算消融 |
@@ -382,4 +392,6 @@ P=\operatorname{softmax}((QT_Q)(KT_K)^T/\sqrt d),
 - 使用 test/holdout/官方输出逐层回退在线 `Q(A)`；
 - 同时堆叠多个尚未独立证明正向的算法。
 
-当前唯一下一步是 **L1：修复 v092 full-hierarchy LRH**。L0 已完成并归档；L1 完成前不得跳到 L2–L5。
+当前唯一下一步是 **L2：低自由度 expansive-FFN CAT/BOAT-2**。L0 已完成，L1
+已完成正确实现和预筛但被拒绝；不得回到 L1 扩大 rank、block 数或 sweep，除非
+新的 L0/L5 证据改变该裁决。

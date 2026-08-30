@@ -14,11 +14,13 @@
 
 当前唯一活跃计划是 [`2026-08-30-hif4-active-optimization-plan.md`](superpowers/plans/2026-08-30-hif4-active-optimization-plan.md)；归档候选的写回、目标错位和源码缺失审计见 [`archive-implementation-audit.md`](archive-implementation-audit.md)。
 
-2026-08-30 已按执行计划完成 E0-C、E1→A6、B1、B2，并追加验证 A7 的本地实验。Linear 的 E1/A2/A3/A4/A5/A6
-当前运行配置均未超过 stable parent；但归档审计发现 v092 hierarchy 写回和 v095 最终 gate 存在问题，二者的修复版仍未验证。B1 GQRB margin 先把 panel 提升到 `293.793700`，B2
+2026-08-30 已按执行计划完成 E0-C、E1→A6、B1、B2，并追加验证 A7 与 L1 full-hierarchy LRH 的本地实验。Linear 的 E1/A2/A3/A4/A5/A6
+当前运行配置均未超过 stable parent；但归档审计发现 v095 最终 gate 存在问题，仍待后续修复验证。B1 GQRB margin 先把 panel 提升到 `293.793700`，B2
 PAWV diag-only 再提升到 `293.797301`，并把 API 降到 `392.423565 s`，因此当前根
 切换到 v100；随后 C0 五模型确认完成，Qwen 主模型仍通过门禁。官方评测不可用
-期间，所有新候选仍以固定 Qwen panel 为门禁。
+期间，所有新候选仍以固定 Qwen panel 为门禁。L1 已完成真正的 scale/lv2/lv3/mantissa
+原子写回与合成测试，但五层×七 role 预筛与 L0 逐条持平（`0.523019429222563`），
+因此候选 v105 已归档，根目录恢复 stable parent，下一步转入 L2。
 
 ## 当前实现
 
@@ -155,6 +157,7 @@ $$P_{total}=P_L+P_A=293.797301.$$
 | E0/D0 多模型 scale-lattice oracle | — | — | 13.76–14.84s/模型 | 完成诊断；scale gap 亚百分比，无跨模型统一增益 |
 | E0-C GALS-C 稀疏 activation（layer-1） | 335.988995 | 0.602878 | 57.41s | 拒绝；解析召回 oracle `1.0`，部署版回退 `0.048096` |
 | A7 量化后权重 Gram `WqᵀWq`（layer-1/full） | 336.562922 / 290.226694 | 0.605174 / 0.487275 | 24.89s / 470.58s | 拒绝；单层正向不迁移且全层超时 |
+| L1 full-hierarchy cross-block Weight-LRH（v105） | 0.523019（五层×七 role screen） | — | 265.87s screen | 拒绝；70 个 fold 候选仅 1 个 cross-fold admitted，最终 0/35 case 改变 parent；未触发 full-layer |
 | E1 progressive full-hierarchy | 290.923906 | 0.490233 | 693.21s | 拒绝，跨层回退且超时 |
 | A2 expansive sparse-row | 292.831952 | 0.497865 | 385.48s | 拒绝 |
 | A3 rowwise block-leverage | 293.250467 | 0.499539 | 384.83s | 拒绝 |
@@ -169,7 +172,7 @@ $$P_{total}=P_L+P_A=293.797301.$$
 | C0 五模型确认（无代码变更） | **293.797301** | **0.501558** | **401.13s（Qwen）** | **confirmed** |
 | stable parent | 293.755106 | 0.501558 | 382.15s | baseline |
 
-归档目录：`solutions/20260830_v087...` 至 `solutions/20260830_v104...`；
+归档目录：`solutions/20260830_v087...` 至 `solutions/20260830_v105...`；
 执行日志：`logs/execution/2026-08-30-e1-progressive-hsdq.md`、
 `2026-08-30-a2-expansive-sparse-hsdq.md`、
 `2026-08-30-a3-rowwise-block-hsdq.md`、
@@ -181,7 +184,8 @@ $$P_{total}=P_L+P_A=293.797301.$$
 `2026-08-30-a6-global-activation-lrh.md`、`2026-08-30-b1-gqrb.md`、
 `2026-08-30-b2-pawv.md`、`2026-08-30-c0-five-model.md`、
 `2026-08-30-e0c-gals-candidate.md`、`2026-08-30-e0g-multimodel-dashboard.md`、
-`2026-08-30-a7-quant-weight-gram.md`。
+`2026-08-30-a7-quant-weight-gram.md`、`2026-08-30-l1-lrh-stratified.md`、
+`2026-08-30-l1-full-hierarchy-lrh.md`。
 
 ## 距离 Linear 0.9 与 36,000
 
@@ -203,12 +207,18 @@ $$\frac{\Delta g_L}{1-g_L}=\frac{0.3984423875}{0.4984423875}=79.94\%.$$
 现阶段只执行 [`2026-08-30-hif4-active-optimization-plan.md`](superpowers/plans/2026-08-30-hif4-active-optimization-plan.md)。顺序为：
 
 1. L0：已完成五个分层层位、全 role 的 Linear 单侧误差、合法 oracle 和放宽上限诊断；
-2. L1：原子写回完整 hierarchy 并用正确二次型复验 v092 Weight-LRH（当前下一步）；
-3. L2：只按合法 expansive shape 路由的低自由度 FFN CAT/BOAT-2；
+2. L1：已完成原子写回完整 hierarchy 与正确二次型复验；预筛拒绝并归档 v105；
+3. L2：只按合法 expansive shape 路由的低自由度 FFN CAT/BOAT-2（当前下一步）；
 4. L3：用部署 Gram 二次型修复 v095 Activation-LRH gate；
 5. L4：把 final-weight Gram 与 GALS 拆成两个有 oracle 依据的小预算实验；
 6. L5：若前述方向没有结构增益，进入外部逐组件审计和联合坐标—层级离散新路线；
 7. 出现新精度 parent 后再做 `<420s` 压缩。PAWV rank 属于独立 Attention 队列，不插入 Linear 主线。
+
+L1 的正式产物为 [`l1-lrh-stratified-qwen.json`](../artifacts/real_model_suite/l1-lrh-stratified-qwen.json)
+和 [`2026-08-30-l1-full-hierarchy-lrh.md`](../logs/execution/2026-08-30-l1-full-hierarchy-lrh.md)。
+L1 candidate screen 的 selected-layer `both_player=0.523019429222563` 与 L0 逐条一致；
+70 个 fold 候选只有 1 个 cross-fold admitted，最终没有任何 case 改变 stable parent，
+所以没有运行 full-layer。候选完整源码在 `solutions/20260830_v105_l1-full-hierarchy-lrh-rejected_screen523019_time266s/`。
 
 L0 的正式产物为 [`l0-linear-ceiling-qwen.json`](../artifacts/oracle_dashboard/l0-linear-ceiling-qwen.json)
 和 [`2026-08-30-l0-linear-ceiling.md`](../logs/execution/2026-08-30-l0-linear-ceiling.md)。五层×七 role

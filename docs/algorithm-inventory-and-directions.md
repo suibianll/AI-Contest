@@ -1,14 +1,14 @@
 # HiF4 算法全景：已实现、已验证效果与未实现方向
 
 > 整理日期：2026-08-30
-> 数据来源：`solutions/README.md`（v000–v104）、`docs/current-solution-status.md`、`docs/archive-implementation-audit.md`、`logs/execution/2026-08-30-e0g-scale-oracle.md`、`logs/execution/2026-08-30-e0g-multimodel-dashboard.md`、`logs/execution/2026-08-30-a7-quant-weight-gram.md`。
+> 数据来源：`solutions/README.md`（v000–v105）、`docs/current-solution-status.md`、`docs/archive-implementation-audit.md`、`logs/execution/2026-08-30-e0g-scale-oracle.md`、`logs/execution/2026-08-30-e0g-multimodel-dashboard.md`、`logs/execution/2026-08-30-a7-quant-weight-gram.md`、`logs/execution/2026-08-30-l1-full-hierarchy-lrh.md`。
 > 口径纪律：本地只能比 **Qwen 同口径 panel**（`250·g_L + 200·g_A`）；五模型合计 `1085.743597` 只用于检查跨模型结构性回退，**禁止**与官方分数做差值。官方评测集为 250 Linear + 200 Attention case，时间上限 **420s**。
 
 ---
 
 ## 1. 当前根：算法构成与效果
 
-根 `solution.py`（规范 LF SHA `617482cee04ff9514a8d41226b651336e4b8b86692673308e835de1091693eba`）为 clean 单一路径，并在其上加入 B1 GQRB 与 B2 PAWV diag-only。当前最高版本由 C0 五模型确认（v101）复核；E0-C 的两个 GALS 稀疏变体（v102/v103）和 A7 量化后权重 Gram（v104）均已归档，未进入主线。v092/v095/v099 的负结果存在实现审计保留，详见 [`归档实现审计`](archive-implementation-audit.md)。
+根 `solution.py`（规范 LF SHA `617482cee04ff9514a8d41226b651336e4b8b86692673308e835de1091693eba`）为 clean 单一路径，并在其上加入 B1 GQRB 与 B2 PAWV diag-only。当前最高版本由 C0 五模型确认（v101）复核；E0-C 的两个 GALS 稀疏变体（v102/v103）、A7 量化后权重 Gram（v104）和 L1 v105 full-hierarchy LRH 均已归档，未进入主线。v095 的最终 gate 仍待修复；v092 的旧写回问题已用 v105 复验并以 cross-fold 泛化不足拒绝，详见 [`归档实现审计`](archive-implementation-audit.md)。
 
 | 组件 | 内容 |
 |---|---|
@@ -176,8 +176,9 @@ six-API time      392.423565 s  wall time       424.693400 s   （API 在 420s �
 
 L0 的直接结论是：整体 activation-side headroom 大于 weight-side，但 q/k 为
 weight-dominant，v 为 transform-coupled，`fc_gate/fc_up/proj` 的 activation headroom
-最大；scale-code 搜索本身不可能填补 `linear_mean` 到 `0.9` 的大缺口。下一步必须修复
-v092 的完整 hierarchy 写回，随后再测试低自由度 FFN 结构候选；L0 oracle 只作诊断，不进入部署路径。
+最大；scale-code 搜索本身不可能填补 `linear_mean` 到 `0.9` 的大缺口。L1 已完成
+完整 hierarchy 写回复验但 cross-fold 泛化不足，下一步进入低自由度 FFN 结构候选；
+L0 oracle 只作诊断，不进入部署路径。
 
 E0-G 明细：
 
@@ -203,7 +204,7 @@ D0 三层均值（weight / activation-Gram）如下，原始 JSON 保存在
 
 ## 4. 2026-08-30 的结构性回退与审计修正
 
-融合方案中的 E1–E6、以及 36000 计划的 A1–A6，已经有 v087–v095 的实验记录；但其中 v092 的层级写回、v095 的最终 gate 存在实现问题，因此下表的“失败”只对已运行配置成立，不等于这些算法的理论上限：
+融合方案中的 E1–E6、以及 36000 计划的 A1–A6，已经有 v087–v095 的实验记录；v095 的最终 gate 仍存在实现问题，v092 的旧层级写回问题则已由 v105 重新实现并完成预筛，因此下表的“失败”只对已运行配置成立：
 
 | 版本 | 机制（对应计划项） | panel | 相对 stable parent | 时间 | 失败原因 |
 |---|---|---:|---:|---:|---|
@@ -212,7 +213,9 @@ D0 三层均值（weight / activation-Gram）如下，原始 JSON 保存在
 | v089 | A3 扩张 FFN rowwise block-leverage（0.5/1/2%） | 293.250 | −0.505 | 385s | fc_gate/fc_up 仍回退 |
 | v090 | A4 blockwise BOAT-2 指数调度 | 292.978 | −0.777 | 368s | q/k/v/o 回退 |
 | v091 | A5 joint-fold 离线 A@W HSDQ | 284.595 | **−9.160** | 358s | q/k/v/o/proj 严重回退 |
-| v092 | A3 真正跨 block LRH（rank-8, max 4） | 292.427 | −1.328 | 382s | 首次实现真跨块 Hessian，但 hierarchy 写回存在问题，需修复复验 |
+| v092 | A3 真正跨 block LRH（rank-8, max 4） | 292.427 | −1.328 | 382s | 保存源码沿用 parent denominator；旧写回审计描述已更正 |
+| **v105** | **L1 full-hierarchy LRH 原子写回** | **0.523019 screen** | **0** | **265.87s screen** | **70 fold candidates，1 cross-fold admitted，最终 0/35 case 改变 parent；不跑 full-layer** |
+| **v105** | **L1 full-hierarchy cross-block LRH（scale/lv2/lv3/mantissa 原子写回）** | **0.523019 screen** | **0 vs L0** | **265.87s screen** | **正确实现；70 候选仅 1 cross-fold admitted，0/35 final change，未触发 full-layer** |
 | v093 | A4 完整 CAT 式 BOAT-2（balance + 层级置换 + Householder） | 283.160 | **−10.595** | 601s | 单层正向未迁移，超 420s |
 | v094 | A5 frozen-Q(A) ridge / Qronos（η=1/8, λ=1e-4） | 293.755 | **持平** | 456s | 无精度增益且超时 35.73s |
 | v095 | A6 全局 Activation-LRH（rank-8, 10% 能量） | 282.617 | **−11.138** | 374s | 单层门禁失败，全层仍回退；最终 gate 与 Gram 目标错位，需修复复验 |
@@ -220,7 +223,7 @@ D0 三层均值（weight / activation-Gram）如下，原始 JSON 保存在
 **这个模式必须被正视，但不能过度外推**：
 
 1. 失败幅度从 −0.5 到 −11.1，**不是噪声**（E0-G 已证明单点噪声 <0.1%）。
-2. 多数结构性改动确实撞墙，说明当前根是一个**很强的局部最优**；但 v092/v095 需修复后再决定是否加入停止清单。
+2. 多数结构性改动确实撞墙，说明当前根是一个**很强的局部最优**；v105 已验证正确的 full-hierarchy 写回仍无跨 fold 增益，v095 gate 修复仍待执行。
 3. 多数实现都接近或超过 420s，说明当前根的精度是靠**大量校准计算**换来的，再加机制就超时。
 4. 唯一接近成功的是 v094（精度持平），但它也超时。
 5. 历史经验一致：v071（OPT −139）、v044（OPT −826）、v061（Qwen −20.2）都说明**跨模型不一致是主要失败模式**。
@@ -239,6 +242,7 @@ D0 三层均值（weight / activation-Gram）如下，原始 JSON 保存在
 | **v 的稀疏 GALS-C 插件** | E0-G 唯一正向信号（activation Gram 0.6302%，60/448 blocks） | **已执行但拒绝部署**：v102 layer-1 `335.988995`，Linear 回退 |
 | **role-aware GALS-C** | 只在 attention-shaped role 开启候选 | **已执行但拒绝部署**：v103 layer-1 `335.978356`，q/k/v 回退 |
 | **量化后权重 Gram 激活 Hessian** | 用 `WqᵀWq` 贴近部署权重 | **已执行但拒绝部署**：v104 full `290.226694`，API 超时 |
+| **L1 full-hierarchy Weight-LRH** | 跨 block rank-8；scale/lv2/lv3/mantissa 原子写回 | **已执行但拒绝部署**：v105 screen `0.523019429222563` 与 L0 逐条相同；不再扩大 rank/block/sweep |
 
 ### 5.2 已判定不适用 / 排除
 
@@ -262,8 +266,8 @@ D0 三层均值（weight / activation-Gram）如下，原始 JSON 保存在
 
 ## 6. 结论与建议（基于全景）
 
-1. **当前根是强局部最优**：多数结构性方向失败且失败幅度远超噪声；但 v092/v095 的修复版尚未验证，不能把当前实现写成理论上限。
+1. **当前根是强局部最优**：多数结构性方向失败且失败幅度远超噪声；v105 已验证正确的 full-hierarchy 写回在两折上缺乏泛化，v095 的 Gram gate 修复仍未验证。
 2. **历史最大跃迁来自"重写为 clean 单一路径"（+9.89%）**，而不是新算法。这提示下一轮收益可能来自**路径精简与计算重分配**，而非新增机制。
 3. **P0 仍是提交当前根**：本地 +17.37% 的领先从未兑现为官方分；九连败也说明本地 panel 已进入饱和区，更需要真实官方反馈来校准方向。
-4. **本轮未再有已验证的部署空白**：PAWV diag-only 已采纳；GALS-C 两个稀疏变体与 A7 量化 Gram 均已实测并回退，但 final-weight Gram + role-id GALS 仍未验证。后续按唯一活跃计划先修复 LRH，再做小预算 GALS。
+4. **本轮未再有已验证的部署空白**：PAWV diag-only 已采纳；GALS-C 两个稀疏变体、A7 量化 Gram 与 v105 full-hierarchy LRH 均已实测并回退，但 final-weight Gram + role-id GALS 仍未验证。后续按唯一活跃计划进入 L2，再做 Gram gate 与小预算 GALS。
 5. **警惕跨模型不一致**：这是本工程最主要的失败模式（v044、v061、v071、v091 等）。任何新机制都应在单层阶段就用 OPT / Pythia 复筛，而不是全层跑完再判。
