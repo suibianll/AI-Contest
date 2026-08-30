@@ -1031,23 +1031,22 @@ E1 已按计划实现并完成一层/全层门禁，结果已归档到
 门禁；因此 E1 明确拒绝，主代码恢复到 parent SHA256
 `5D1128CC79FEF58154DA2F600EC4B472FF95030E1F1E61B96593D06FD9AAC94F`。
 
-下一步执行 **A3：逐行 block-leverage HSDQ**，只攻击 `fc_gate/fc_up` 的
-`rows > 2 × channels` 形状。A2 已完成但被拒绝，结果归档于
-`logs/execution/2026-08-30-a2-expansive-sparse-hsdq.md`：全层 panel
-`292.831952`，较 parent `293.755106` 回退 `0.923153`，虽然 API `385.48s`
-仍低于 420s。
+下一步执行 **A5：FS-JDRQ（冻结 Q(A) 的离线输出目标）**。A2/A3 的 expansive
+FFN HSDQ 与 A4 blockwise BOAT-2 均已完成但被拒绝；A3 全层 panel
+`293.250467`，A4 全层 panel `292.978009`，都低于 parent `293.755106`。
 
 ```text
-候选：row_fraction = 0.5%、1%、2%，每个候选固定每行 1 个 block
-求解：先按每行 block leverage 选 block，再复用 fixed-hierarchy mantissa HSDQ
-选择：两折均需正向且通过 mean/max 鲁棒评分；parent 永远保留
-预算：每层每 role 最多 2% 行、每行最多 1 个 block，禁止全矩阵 dense solver
+步骤：先建立并冻结与在线路径一致的 Q(A)（只用 operand-local state）
+候选：在每个 calibration fold 形成 teacher `Y=A@W` 与 frozen `Z=Q(A)`
+求解：用 `min_Q ||Y − ZQᵀ||² + λ||Q−Q_parent||²` 生成合法 HiF4 候选
+选择：`η ∈ {0, 1/16, 1/8, 1/4}` 的低自由度 target + 两折 robust selector
+约束：A@W/残差只能进入离线 weight_params，绝不写入 activation_state
 门禁：Qwen layer-1 先验筛选；全 24 层必须同时满足 panel 不降、Linear 不降、
       runtime ≤ 420s，任一失败即归档候选并恢复 parent
 ```
 
-A3 的目标是修正 A2 的关键缺陷：A2 在选中行内仍共享全局 top-2 block，导致
-无关输出行被同一 block 扰动；A3 改为每行独立 leverage，初始只允许一个 block。
-若 `0.5%/1%` 在全层稳定正向，再尝试 2% 或每行 2 blocks；若仍回退，则停止
-FFN HSDQ 扩张，转 A4 BOAT-2/激活重标定。所有实验保留 parent、fraction、
-changed rows/blocks、fold/validation product loss 和完整运行时间。
+A5 直接检验当前 Linear 短板是否来自 Q(A) 与 Q(W) 的失配，而不是继续扩大
+局部 row solver。若 frozen-Q(A) 候选在全层正向，再尝试更小的 ridge λ；若仍
+回退，主线保持 parent，停止无证据的 Linear 微调并转官方提交/真实兑换率校准。
+所有实验保留 parent、`Y/Z` 仅在进程内的 fold loss、η/λ、changed blocks 和
+完整运行时间。
