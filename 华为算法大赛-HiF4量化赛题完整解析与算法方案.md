@@ -9,6 +9,9 @@
 > Attention shortlist 的单一路径。固定 Qwen2.5-0.5B 全 24 层、`seq=128`、
 > `calib=2`、`test=4`、CPU 缓存实测：Linear mean `0.501558`、Attention mean
 > `0.841829`、Qwen shaped panel `293.755106`、正式 API `382.153528s`。
+> 外部 `youxilee/hif4` v2.7 的本地复测最高单模型 Qwen native 为 `369.527269`，
+> 同口径 Qwen panel 为 `250.327102`；五模型 `1085.743597` 只是诊断相加，不能
+> 作为最高分或官方分数换算。当前根相对外部最高 panel 高 `43.428004`（`17.35%`）。
 > 这组数是本地相对排序指标，不是官方绝对分数；完整结果与角色归因见
 > [`docs/current-solution-status.md`](docs/current-solution-status.md)。本文后续
 > 的 JDRQ、FASA 等章节是理论/历史研究路线，除非明确写入根文件，否则不等于当前

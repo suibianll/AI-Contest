@@ -17,9 +17,10 @@ Chinese version: [README.md](README.md)
   `161.3s` and `159.4s`, respectively.
 - External reference: the public [`youxilee/hif4`](https://github.com/youxilee/hif4)
   repository reports `24153 / 239s` under the same user-confirmed protocol. Its
-  code is not imported; an exact v2.7 CPU diagnostic run gives a five-model proxy
-  total of `1085.743597` (Qwen2.5-0.5B: `369.527269`), which is not an absolute
-  conversion to the official score. C66 remains `1596` points and `21.8s` away.
+  code is not imported; an exact v2.7 CPU diagnostic run has a highest single-model
+  Qwen native total of `369.527269` and a like-for-like Qwen panel of `250.327102`
+  (the local benchmark). The five-model sum `1085.743597` is diagnostic only and
+  cannot be converted to the official score.
 - Historical v024 scored `16043 / 173.8s`, but its Linear output-supervision
   path used output information for activation-side selection. That
   `A@W -> Q(A)` use remains non-compliant, so it is not a compliant parent for
@@ -57,8 +58,9 @@ official anchor ordering:
 Both orderings are `C39 = C41b < C47b < C66`; Qwen's panel Spearman is
 `1.0000`, while the five-model raw sum is `0.9487`. This validates relative
 direction only, not a linear conversion to official scores. The external
-`youxilee/hif4` Qwen panel is `250.327102`, directionally above C66, but is not
-a local anchor.
+`youxilee/hif4` Qwen panel is `250.327102`; the current root is `293.755106`,
+which is `43.428004` (`17.35%`) higher. Its Qwen native `369.527269` is the
+secondary diagnostic line; the five-model sum is never a ranking benchmark.
 
 ## Revised official anchors (2026-08-29)
 
@@ -68,7 +70,7 @@ a local anchor.
 | v034 / C41b | 21864 | 159.4s | compliant archive |
 | v051 / C47b | 22451 | 234s | previous local official result |
 | v066 / C66 | **22557** | **217.2s** | best local official result |
-| `youxilee/hif4` | **24153** | **239s** | external official reference; local v2.7 CPU proxy `1085.743597` |
+| `youxilee/hif4` | **24153** | **239s** | external official reference; local highest Qwen native `369.527269`, panel `250.327102`; five-model `1085.743597` is diagnostic only |
 
 The revised official runtime limit is **7 minutes (420 seconds)**. Legacy values
 such as `14613 / 159.2s` remain historical records from the old panel.
