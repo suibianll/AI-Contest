@@ -25,17 +25,16 @@ Chinese version: [README.md](README.md)
   path used output information for activation-side selection. That
   `A@W -> Q(A)` use remains non-compliant, so it is not a compliant parent for
   new work.
-- The root `solution.py` has been rewritten from the C86 experiment collection
-  into one clean BOAT + cross-fold Weight-HSDQ + Gram-hierarchy Activation-HSDQ
-  path, with an output-aware Attention shortlist. On the full 24-layer
-  Qwen2.5-0.5B cached run, its native total is `417.862253`, Qwen shaped panel
-  is `293.755106`, and formal API time is `382.153528s` (wall `414.025852s`,
-  still below 420s). See the [current status report](docs/current-solution-status.md)
-  and [`solutions/README.md`](solutions/README.md). The next accuracy-first phase,
-  which temporarily removes runtime as an acceptance gate, is specified in the
-  [36,000 optimization plan](docs/superpowers/plans/2026-08-30-hif4-accuracy-first-36000-plan.md).
+- The root `solution.py` is v100 B2 PAWV diag-only + B1 GQRB. On the full
+  24-layer Qwen2.5-0.5B cached run, its native total is `417.882506`, Qwen
+  shaped panel is `293.797301`, and formal API time is `392.423565s` (the C0
+  confirmation was `401.130873s`, both below 420s). See the [current status
+  report](docs/current-solution-status.md), the [algorithm inventory](docs/algorithm-inventory-and-directions.md),
+  the [archive implementation audit](docs/archive-implementation-audit.md),
+  and [`solutions/README.md`](solutions/README.md). Future work follows the
+  [single active optimization plan](docs/superpowers/plans/2026-08-30-hif4-active-optimization-plan.md).
 - Current source SHA256:
-  `5D1128CC79FEF58154DA2F600EC4B472FF95030E1F1E61B96593D06FD9AAC94F`.
+  `617482CEE04FF9514A8D41226B651336E4B8B86692673308E835DE1091693EBA` (normalized LF).
 - The active local evaluator is Qwen-first: it projects frozen-corpus Linear
   and Attention means onto a fixed 250/200 panel, while other models remain
   soft guardrails. The raw `official_flow_total` is retained for compatibility
@@ -60,8 +59,8 @@ official anchor ordering:
 Both orderings are `C39 = C41b < C47b < C66`; Qwen's panel Spearman is
 `1.0000`, while the five-model raw sum is `0.9487`. This validates relative
 direction only, not a linear conversion to official scores. The external
-`youxilee/hif4` Qwen panel is `250.327102`; the current root is `293.755106`,
-which is `43.428004` (`17.35%`) higher. Its Qwen native `369.527269` is the
+`youxilee/hif4` Qwen panel is `250.327102`; the current root is `293.797301`,
+which is `43.470199` (`17.37%`) higher. Its Qwen native `369.527269` is the
 secondary diagnostic line; the five-model sum is never a ranking benchmark.
 
 ## Revised official anchors (2026-08-29)
@@ -164,7 +163,7 @@ logs/execution/                     execution logs and calibration records
 docs/current-solution-status.md    current root algorithm, measurements, and score attribution
 docs/real-model-evaluator.md        evaluator usage guide
 docs/research/                      literature survey
-docs/superpowers/plans/             implementation plans and process docs
+docs/superpowers/plans/             the single active implementation plan
 docs/superpowers/specs/             designs and specifications
 docs/superpowers/archive/plans/     superseded plans, historical only
 ```
@@ -466,7 +465,9 @@ out. Do not keep only improvements. Before archiving, freeze the root
 - The latest execution history is in
   [2026-08-26-optimization-execution-log.md](logs/execution/2026-08-26-optimization-execution-log.md).
 - Candidate archiving follows
-  [2026-08-26-solution-archive-workflow.md](docs/superpowers/plans/2026-08-26-solution-archive-workflow.md).
+  [2026-08-26-solution-archive-workflow.md](docs/superpowers/archive/plans/2026-08-26-solution-archive-workflow.md).
+- The archive implementation audit is in
+  [docs/archive-implementation-audit.md](docs/archive-implementation-audit.md).
 - Multi-model real data, cache modes, and compliance boundaries are documented
   in [real-model-evaluator.md](docs/real-model-evaluator.md).
 - Official per-case summation, independent codec/validation, and ranking audit

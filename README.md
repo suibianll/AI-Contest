@@ -21,16 +21,15 @@
   的设备混用问题。完整表格见 [`当前主版本算法效果与评测状态`](docs/current-solution-status.md)。
 - 历史 v024 得分为 `16043 / 173.8s`，但其 Linear 输出监督路径把输出信息
   用于激活侧选择；这类 `A@W -> Q(A)` 用法仍不合规，因此不作为后续合规父版本。
-- 当前根 `solution.py` 已从 C86 实验集合重写为单一路径 BOAT + cross-fold
-  Weight-HSDQ + Gram-hierarchy Activation-HSDQ，并保留输出感知 Attention
-  shortlist。Qwen 全 24 层本地实测 native `417.862253`、shaped panel
-  `293.755106`、正式 API `382.153528s`（wall `414.025852s`，均在 420s 内）。
-  逐项结果、角色归因和复现实验配置见
-  [`当前主版本算法效果与评测状态`](docs/current-solution-status.md) 与
-  [`solutions/README.md`](solutions/README.md)；下一阶段的无时间约束精度优化步骤见
-  [`36,000 Accuracy-First 详细方案`](docs/superpowers/plans/2026-08-30-hif4-accuracy-first-36000-plan.md)。
+- 当前根 `solution.py` 为 v100 B2 PAWV diag-only + B1 GQRB；Qwen 全 24 层
+  本地实测 native `417.882506`、shaped panel `293.797301`、正式 API
+  `392.423565s`（C0 复测 `401.130873s`，均低于 420s）。逐项结果、归档实现
+  审计和复现实验配置见 [`当前主版本算法效果与评测状态`](docs/current-solution-status.md)、
+  [`算法全景`](docs/algorithm-inventory-and-directions.md)、
+  [`归档实现审计`](docs/archive-implementation-audit.md) 与 [`solutions/README.md`](solutions/README.md)。
+  下一步只按 [`唯一活跃优化计划`](docs/superpowers/plans/2026-08-30-hif4-active-optimization-plan.md) 执行。
 - 当前根源码 SHA256：
-  `5D1128CC79FEF58154DA2F600EC4B472FF95030E1F1E61B96593D06FD9AAC94F`。
+  `617482CEE04FF9514A8D41226B651336E4B8B86692673308E835DE1091693EBA`（规范 LF）。
 - 旧版本地评测器（单模型 dev 与 frozen holdout）曾因 calibration/test
   文本重叠不能可靠排序合规候选，相关代码（`real_data_eval.py`、
   `holdout_eval.py`、`cap_oracle.py`）已于 2026-08-28 移除；诊断结论见
@@ -59,7 +58,7 @@
 官方与本地均为 `C39 = C41b < C47b < C66`；Qwen 主面板的 Spearman 为
 `1.0000`，五模型 raw sum 为 `0.9487`。这只证明相对排序方向，不证明本地
 分数可以线性换算成官方分数。外部 `youxilee/hif4` 的最高同口径 Qwen panel 为
-`250.327102`，当前根为 `293.755106`，领先 `43.428004`（`17.35%`）；外部
+`250.327102`，当前根为 `293.797301`，领先 `43.470199`（`17.37%`）；外部
 Qwen native `369.527269` 仍作为第二诊断线，五模型合计不作为基准。
 
 ## 修订版官方评测锚点（2026-08-29）
@@ -94,7 +93,7 @@ Qwen native `369.527269` 仍作为第二诊断线，五模型合计不作为基�
 
 ## 当前算法
 
-当前根是重写后的 clean Gram-hierarchy 版本；v086/C86 仍是不可变历史归档。
+当前根是重写后的 clean Gram-hierarchy + B1/B2 版本；v086/C86 仍是不可变历史归档。
 评测和优化优先级如下：
 
 | 优先级 | 组件 | 当前机制 | 作用/状态 |
@@ -102,8 +101,8 @@ Qwen native `369.527269` 仍作为第二诊断线，五模型合计不作为基�
 | 1 | Linear | BOAT：RMS 对角平衡 + 4/8/16/64 signed-Hadamard | 先压低两侧 operand-local 误差；不构造 Linear 输出 |
 | 2 | Linear | Cross-fold Weight-HSDQ：`AᵀA` 二阶增量、15 levels、top-2 block、1 sweep | 只更新离线 `weight_params`；跨 fold 验证后才接纳 |
 | 3 | Linear | Gram-hierarchy Activation-HSDQ：静态 `WᵀW`、offset/hierarchy 选择、最多 128 block、2 sweeps | 在线 state 仅含合法静态统计；当前 Linear mean `0.501558` |
-| 4 | Attention | reciprocal RMS、K-centering、GQA 对齐、16/32/64 signed-Hadamard；前 4 候选部署复评 | 使用真实 non-causal Attention 输出排序；当前 mean `0.841829` |
-| 5 | 下一步 | Progressive cross-fold HSDQ → expansive-FFN shrinkage → LRH → BOAT-2 → FS-JDRQ → PAWV | accuracy-first 阶段暂不以时间淘汰；目标 Linear 0.9，当前仍差 `0.398442` mean |
+| 4 | Attention | reciprocal RMS、K-centering、GQA 对齐、GQRB、PAWV diag-only | 使用真实 non-causal Attention 输出排序；当前 mean `0.842039` |
+| 5 | 下一步 | 修复 v092 LRH → 修复 v095 Gram gate → 最终 Q/K 后 PAWV rank → final-weight Gram + role-id GALS | 先验证实现缺陷，再做全层门禁；未验证方向见唯一活跃计划 |
 
 优化决策只看同一冻结缓存上的相对增量：Qwen `primary_panel_score_total` 是主
 指标，其他模型用于发现结构性回退。不得用官方分数反向调参，也不设置固定的
@@ -163,7 +162,7 @@ logs/execution/                     执行日志与校准记录
 docs/current-solution-status.md    当前根算法、全层实测和分数归因快照
 docs/real-model-evaluator.md        评估器使用说明
 docs/research/                      文献调研
-docs/superpowers/plans/             实施计划与通用流程（历史计划明确标注）
+docs/superpowers/plans/             唯一活跃实施计划
 docs/superpowers/specs/             设计与规范
 docs/superpowers/archive/plans/     已失效优化计划，仅供历史查阅
 ```
@@ -430,7 +429,9 @@ Attention 合成矩阵：
 - 最新执行记录见
   [2026-08-26-optimization-execution-log.md](logs/execution/2026-08-26-optimization-execution-log.md)。
 - 候选归档流程见
-  [2026-08-26-solution-archive-workflow.md](docs/superpowers/plans/2026-08-26-solution-archive-workflow.md)。
+  [2026-08-26-solution-archive-workflow.md](docs/superpowers/archive/plans/2026-08-26-solution-archive-workflow.md)。
+- 归档实现问题与不可复现候选见
+  [archive-implementation-audit.md](docs/archive-implementation-audit.md)。
 - 多模型真实语料、缓存模式和合规边界见
   [real-model-evaluator.md](docs/real-model-evaluator.md)。
 - 官方流程逐 case 求和、独立 codec/校验和排序审计见

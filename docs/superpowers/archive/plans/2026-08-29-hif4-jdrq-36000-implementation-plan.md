@@ -4,8 +4,8 @@
 状态：Superseded in root / 保留为研究与回滚参考
 目标：跳出局部 HiF4 重建框架，以固定在线 `Q(A)` 下的离线输出蒸馏、完整合法 HiF4 离散残差求解和 Attention 端到端结构化校准，持续逼近官方榜 `36000+`  
 实施对象：其他 AI、开发者或后续 Codex 任务可按需复现实验；新实现以根 `solution.py` 和当前状态报告为准
-权威设计说明：[`华为算法大赛-HiF4量化赛题完整解析与算法方案.md`](../../../华为算法大赛-HiF4量化赛题完整解析与算法方案.md)  
-官方硬约束：六个 API 不变、HiF4 五字段合法、state 合规、不得用 `A@W` 拟合/选择/反推在线逐元素 `Q(A)`、最终总时间严格 `<420s`。当前根实测与本计划的差异见 [`docs/current-solution-status.md`](../../../docs/current-solution-status.md)
+权威设计说明：[`华为算法大赛-HiF4量化赛题完整解析与算法方案.md`](../../../../华为算法大赛-HiF4量化赛题完整解析与算法方案.md)
+官方硬约束：六个 API 不变、HiF4 五字段合法、state 合规、不得用 `A@W` 拟合/选择/反推在线逐元素 `Q(A)`、最终总时间严格 `<420s`。当前根实测与本计划的差异见 [`docs/current-solution-status.md`](../../../current-solution-status.md)
 
 ---
 

@@ -2,7 +2,7 @@
 
 > 整理日期：2026-08-30
 > 范围：`solutions/` 下全部归档候选（当前至 v104）与外部参考，按**算法族**归纳，不按版本号罗列。
-> 逐条清单与未实现方向见 [`算法全景`](algorithm-inventory-and-directions.md)。
+> 逐条清单与未实现方向见 [`算法全景`](algorithm-inventory-and-directions.md)；归档源码/指标问题见 [`归档实现审计`](archive-implementation-audit.md)。
 > 口径：本地只比 Qwen 同口径 panel（`250·g_L + 200·g_A`）；官方为 250 Linear + 200 Attention case，上限 420s。
 
 ---
@@ -105,7 +105,7 @@ PAWV rank-8 跨 token 变体在 layer-1 回退；v100 PAWV diag-only 提升到
 |---|---|---|---|
 | Robust Block-LDLQ 128 | v032 / C40 | 跨块 LDLQ 误差反馈 | **失败**：本地 +0.36pp，官方 −181 分（本地/官方反向的经典案例） |
 | MR-GPTQ | v041 / C44 | full-H 覆盖 97% | 拒绝（−4.72，扩大 coverage 扩散误差） |
-| 跨 block LRH（rank-8） | v092、v095 | 真正的跨 64-block 低秩 Hessian，含激活侧全局版 | **全部失败**（v092 −1.328、v095 −11.138） |
+| 跨 block LRH（rank-8） | v092、v095 | 真正的跨 64-block 低秩 Hessian，含激活侧全局版 | 当前实现回退；v092 hierarchy 写回、v095 最终 gate 存在审计问题，修复版未定论 |
 
 **规律**：本族在本赛题上**连续三次失败**（C40、v092、v095）。可能原因：评测器提供的是真实未量化激活，跨块二阶结构在校准集上估计不准，迁移到 test 就反向。建议在投入前先用单层异构模型（尤其 OPT）复筛。
 
@@ -165,7 +165,7 @@ PAWV rank-8 跨 token 变体在 layer-1 回退；v100 PAWV diag-only 提升到
 | 方向 | 状态 |
 |---|---|
 | **`v_state` / PAWV** | v100 已写入 token-row 对角 Hessian；跨 token rank-8 项仍关闭（`row_lowrank=None`） |
-| **Linear 方法论跃迁** | 当前 E1–E7、E0-C 和 A7 已验证但未超过 v100；需等待官方兑换率或新的坐标系/目标 |
+| **Linear 方法论跃迁** | E1/A2–A6、E0-C、A7 的当前组合未超过 v100；v092/v095 修复版及 final-weight Gram + role-id GALS 仍未验证 |
 | 外部实现差异审计 | 仍可做组件级对照，但不得把外部输出监督迁移到在线 `Q(A)` |
 | 官方提交与兑换率校准 | 官方评测恢复后优先提交 v100，避免继续叠加未经证实的大改动 |
 | C0 元策略路由（shape/role/RMS/kurtosis/condition number） | 计划中列出，未实验 |

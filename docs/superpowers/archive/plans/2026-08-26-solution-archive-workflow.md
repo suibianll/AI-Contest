@@ -180,8 +180,8 @@ Root `solution.py` is the only active submission. Archived source files are immu
 
 | Version | Date | Topic | Local Linear | Local Attention | Local Time | Official Score | Official Time | Delta | Status | Directory |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |
-| v000 | 2026-08-25 | v9 baseline | NA | NA | NA | ~9000+ | NA | NA | accepted | [archive](20260825_v000_v9-baseline_score9000plus_timeNA/) |
-| v001 | 2026-08-26 | current baseline | NA | NA | NA | 10250 | 127s | NA | champion | [archive](20260826_v001_current-baseline_score10250_time127s/) |
+| v000 | 2026-08-25 | v9 baseline | NA | NA | NA | ~9000+ | NA | NA | accepted | [archive](../../../../solutions/20260825_v000_v9-baseline_score9000plus_timeNA/) |
+| v001 | 2026-08-26 | current baseline | NA | NA | NA | 10250 | 127s | NA | champion | [archive](../../../../solutions/20260826_v001_current-baseline_score10250_time127s/) |
 ```
 
 - [ ] **Step 2: Add the manual workflow below the table**

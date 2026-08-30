@@ -12,8 +12,10 @@
 **293.797301**，正式 API 累计 **392.423565 s**，低于
 `420 s` 限制；该数值用于本地 A/B 排序，不能线性换算为官方排行榜分数。
 
+当前唯一活跃计划是 [`2026-08-30-hif4-active-optimization-plan.md`](superpowers/plans/2026-08-30-hif4-active-optimization-plan.md)；归档候选的写回、目标错位和源码缺失审计见 [`archive-implementation-audit.md`](archive-implementation-audit.md)。
+
 2026-08-30 已按执行计划完成 E0-C、E1→A6、B1、B2，并追加验证 A7 的本地实验。Linear 的 E1/A2/A3/A4/A5/A6
-均未超过 stable parent；B1 GQRB margin 先把 panel 提升到 `293.793700`，B2
+当前运行配置均未超过 stable parent；但归档审计发现 v092 hierarchy 写回和 v095 最终 gate 存在问题，二者的修复版仍未验证。B1 GQRB margin 先把 panel 提升到 `293.793700`，B2
 PAWV diag-only 再提升到 `293.797301`，并把 API 降到 `392.423565 s`，因此当前根
 切换到 v100；随后 C0 五模型确认完成，Qwen 主模型仍通过门禁。官方评测不可用
 期间，所有新候选仍以固定 Qwen panel 为门禁。
@@ -158,10 +160,10 @@ $$P_{total}=P_L+P_A=293.797301.$$
 | A3 rowwise block-leverage | 293.250467 | 0.499539 | 384.83s | 拒绝 |
 | A4 blockwise BOAT-2 | 292.978009 | 0.498449 | 368.23s | 拒绝 |
 | A5 joint-fold offline A@W | 284.595177 | 0.464918 | 358.24s | 拒绝 |
-| A3 true cross-block LRH-r8 | 292.426982 | 0.496245 | 381.84s | 拒绝 |
+| A3 true cross-block LRH-r8 | 292.426982 | 0.496245 | 381.84s | 暂不采纳；归档实现存在 hierarchy 写回问题，需修复复验 |
 | A4 full CAT-inspired BOAT-2 | 283.159693 | 0.459176 | 600.61s | 拒绝，超时 |
 | A5 frozen-Q(A) ridge/Qronos | 293.755106 | 0.501558 | 455.73s | 持平但超时 |
-| A6 Global Activation-LRH | 282.616646 | 0.457010 | 373.97s | 拒绝 |
+| A6 Global Activation-LRH | 282.616646 | 0.457010 | 373.97s | 暂不采纳；全局 Gram 目标与最终 MSE gate 错位，需修复复验 |
 | B1 GQRB margin | 293.793700 | 0.501558 | 406.24s | archived baseline |
 | B2 PAWV diag-only + B1 GQRB（当前根） | **293.797301** | **0.501558** | **392.42s** | **active** |
 | C0 五模型确认（无代码变更） | **293.797301** | **0.501558** | **401.13s（Qwen）** | **confirmed** |

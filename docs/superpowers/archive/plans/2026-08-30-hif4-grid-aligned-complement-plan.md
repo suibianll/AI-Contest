@@ -365,4 +365,4 @@ A6 仅做 activation-only 全局 HSDQ
 - [NVIDIA Nemotron 3 Ultra Technical Report](https://research.nvidia.com/labs/nemotron/files/NVIDIA-Nemotron-3-Ultra-Technical-Report.pdf)
 - [CAT: Concentration-Alignment Transforms for Low-Bit Quantization](https://arxiv.org/abs/2603.04359)
 - [Qronos: Correcting the Past by Shaping the Future…](https://arxiv.org/abs/2505.11695)
-- 工程内部：[36,000 Accuracy-First 详细方案](2026-08-30-hif4-accuracy-first-36000-plan.md)、[当前主版本算法效果与评测状态](../../current-solution-status.md)、[外部 v2.7 本地差距审计](../../../logs/candidates/2026-08-29-external-hif4-gap-analysis.md)。
+- 工程内部：[36,000 Accuracy-First 详细方案](2026-08-30-hif4-accuracy-first-36000-plan.md)、[当前主版本算法效果与评测状态](../../../current-solution-status.md)、[外部 v2.7 本地差距审计](../../../../logs/candidates/2026-08-29-external-hif4-gap-analysis.md)。
