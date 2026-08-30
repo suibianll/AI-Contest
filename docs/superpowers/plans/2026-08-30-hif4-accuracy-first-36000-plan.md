@@ -262,11 +262,12 @@ g_{scale}=
 若 validation 上很小，停止尺度搜索，直接进入 A2/A3/A4；若明显且跨 fold 可迁移，
 才实现 A0 GALS。
 
-初步只读 smoke test（Qwen 一层 `v`、BOAT 后 32 行、448 blocks）显示：weight-MSE
-仅 4 个 block 改善、平均 gap `0.0393%`；activation-`gram64` 有 60 个 block 改善、
-总 loss gap `0.6302%`、最大单 block `19.321%`。这说明方向真实存在但大概率稀疏，
-正式 E0-G 应优先覆盖高-loss block，并把“亚百分比总 gap”视为可能的停止信号，
-而不是预设为主增益来源。
+E0-G 已执行（Qwen 一层、当前 BOAT 后前 32 行、完整 255-code，结果归档于
+`logs/execution/2026-08-30-e0g-scale-oracle.md` 和
+`artifacts/oracle_dashboard/e0g-qwen-layer1.json`）。结果显示：`fc_gate/fc_up/proj`
+的总 gap 均低于 `0.1%`；`v` 的 weight-MSE gap 为 `0.0313%`，activation-`gram64`
+总 gap 为 `0.6302%`，60/448 blocks 改善，最大单 block `19.321%`。因此 GALS
+只保留为 `v` 高损 block 的候选插件，不再做全局实现；下一步直接进入 E1。
 
 原始 `denom/Δ` 只在 identity、纯置换或可证明保留网格的特殊变换中记录归因。
 当前 BOAT 含对角缩放和 signed-Hadamard，变换后元素通常不再属于单一
@@ -1020,48 +1021,32 @@ next falsifiable experiment
 
 ---
 
-## 15. 推荐立即执行的第一个实验
+## 15. 下一步执行的第一个算法实验
 
-第一项先实现 **E0-G：全 255 E6M2 scale-lattice oracle**，因为它能以很小的
-概念风险直接判定新增 GALS 是否值得开发：
-
-```text
-模型：Qwen2.5-0.5B
-角色：fc_gate、fc_up、v、proj
-层：0、12、23
-块：按当前 deployed loss 选 top-32 sampled 64-block
-对照：当前 ±3、all-255+对角 hierarchy、all-255+Gram beam（小块 oracle）
-fold：A/B 独立统计，validation 只终验
-输出：scale gap、最优 code 与标准 code 距离、GALS-C candidate recall
-```
-
-裁决：
-
-- `all-255` 在 validation 几乎不优于 `±3`：删除 GALS 实现分支，直接做 E1；
-- `all-255` 有明显迁移收益且 GALS-C 高召回：把 GALS-C 候选接入 E1；
-- 对角 hierarchy 有收益而 Gram beam 继续显著提升：A1 优先解决非对角层级耦合；
-- train gap 大、validation gap 小：停止尺度方向，不用更大候选掩盖代理失配。
-
-随后执行 **E1：Progressive Cross-Fold Hierarchical HSDQ**，范围限定为：
+E0-G 已完成并已归档。结论是：全局 GALS 停止，仅保留 Qwen `v` 高损 block 插件。
+现在执行 **E1：Progressive Cross-Fold Hierarchical HSDQ**：
 
 ```text
 模型：Qwen2.5-0.5B
 角色：fc_gate、fc_up、v、proj
 层：0、12、23
+块：Qwen `v` 保留 activation-Gram 高 gap top-32；其他 role 先用当前 `±3`
+对照：当前 fixed-hierarchy、progressive mantissa-only、progressive full-hierarchy、
+以及 `v` 的 GALS+progressive full-hierarchy
 active blocks：top-1 / top-2
 beam：2 / 4 / 8
 path checkpoints：parent、hierarchy、1、4、16、32、64 accepted moves
-fold：A 生成 B 选择；B 生成 A 选择；validation 只终验
+fold：A/B 独立统计，validation 只终验
+输出：path checkpoint 的 fold/validation product loss、changed block、GALS 增益保留率
 ```
 
-必须同时保留六个对照（GALS 未过门时第 3、6 项记为不适用）：
+必须同时保留五个对照：
 
 1. 当前 parent；
 2. 当前 fixed-hierarchy HSDQ；
-3. GALS-only（仅当 E0-G/E0-C 通过）；
-4. progressive mantissa-only；
-5. progressive full-hierarchy HSDQ；
-6. GALS + progressive full-hierarchy（仅当 GALS 通过）。
+3. progressive mantissa-only；
+4. progressive full-hierarchy HSDQ；
+5. `v` 高损 block 的 GALS + progressive full-hierarchy。
 
 它能一次回答：
 
@@ -1075,6 +1060,6 @@ fold：A 生成 B 选择；B 生成 A 选择；validation 只终验
 - 若 full-hierarchy path 在 validation 明显胜出，继续 A2/A3；
 - 若 mantissa path 正向而 hierarchy path回退，保留 path selector、收缩 scale 自由度；
 - 若所有 path 都只改善 train，立即转 A4 BOAT-2；
-- 若 legal oracle 本身也几乎无增益，直接判定当前坐标系不足，不再扩大 HSDQ。
+- 若 E1 的 legal oracle 本身也几乎无增益，直接转 A2 FFN 扩张；不再扩大 HSDQ。
 
 这是当前信息增益最高、同时能直接攻击最弱 Linear 角色的下一步。
