@@ -295,7 +295,7 @@ _ATTN_CENTER_MODES = (0, 2)
 # the state stores only the integer pair when a candidate wins.
 _ATTN_BLOCK_SMOOTH_ENABLED = True
 _ATTN_BLOCK_SMOOTH_SIZES = (4, 8, 16)
-_ATTN_BLOCK_SMOOTH_SEEDS = (0,)
+_ATTN_BLOCK_SMOOTH_SEEDS = (0, 1, 2, 3)
 _ATTN_BLOCK_SMOOTH_MIN_GAIN = 1.0e-3
 _ATTN_BLOCK_SMOOTH_WORST_TOLERANCE = 0.01
 # Use the deployed offset/refinement lattice when ranking the block candidates
