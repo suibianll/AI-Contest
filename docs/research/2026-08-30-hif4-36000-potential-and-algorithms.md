@@ -6,6 +6,10 @@
 > 文档性质：算法设计与实验决策报告，不是官方分数承诺  
 > 规则边界：输出必须为合法 HiF4 五字段；Linear 不允许用 `A@W` 拟合、选择或反推在线 `Q(A)`；官方总时间 `<420s`
 
+当前从 clean 根版本继续推进的 accuracy-first 执行步骤见
+[`HiF4 36,000 Accuracy-First 详细优化方案`](../superpowers/plans/2026-08-30-hif4-accuracy-first-36000-plan.md)。
+该阶段按用户要求暂不以运行时间淘汰算法，先测量合法精度上限与跨 fold 泛化。
+
 ---
 
 ## 1. 结论摘要

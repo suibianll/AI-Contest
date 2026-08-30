@@ -31,7 +31,9 @@ Chinese version: [README.md](README.md)
   Qwen2.5-0.5B cached run, its native total is `417.862253`, Qwen shaped panel
   is `293.755106`, and formal API time is `382.153528s` (wall `414.025852s`,
   still below 420s). See the [current status report](docs/current-solution-status.md)
-  and [`solutions/README.md`](solutions/README.md).
+  and [`solutions/README.md`](solutions/README.md). The next accuracy-first phase,
+  which temporarily removes runtime as an acceptance gate, is specified in the
+  [36,000 optimization plan](docs/superpowers/plans/2026-08-30-hif4-accuracy-first-36000-plan.md).
 - Current source SHA256:
   `5D1128CC79FEF58154DA2F600EC4B472FF95030E1F1E61B96593D06FD9AAC94F`.
 - The active local evaluator is Qwen-first: it projects frozen-corpus Linear
@@ -92,6 +94,10 @@ There are no fixed gain, coverage, beam, per-component non-regression, or
 intermediate runtime gates beyond these rules. Diagnostic development runs may
 exceed 420 seconds. Once an accuracy signal is found, optimize the algorithm
 and implementation to fit the final runtime limit.
+
+For the current accuracy-first phase, runtime is recorded but is not an
+acceptance gate. The `<420s` requirement becomes a hard gate again only when a
+validated mechanism enters submission compression.
 
 ## Current algorithm
 

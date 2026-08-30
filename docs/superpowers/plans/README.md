@@ -12,6 +12,11 @@ therefore the JDRQ file is now a research/rollback reference rather than a
 literal description of the active root. The current measured behavior is kept
 in [`docs/current-solution-status.md`](../../current-solution-status.md).
 
+- `2026-08-30-hif4-accuracy-first-36000-plan.md`: **current execution plan**.
+  It starts from the clean root and, at the user's direction, temporarily removes
+  runtime as an acceptance gate. The order is oracle dashboard, progressive
+  cross-fold HSDQ, expansive-FFN shrinkage, LRH, BOAT-2, frozen-state JDRQ,
+  global activation refinement, and Attention GQRB/PAWV.
 - `2026-08-26-solution-archive-workflow.md`: immutable candidate archive and
   result-recording workflow.
 - `2026-08-29-hif4-jdrq-36000-implementation-plan.md`: **superseded research

@@ -1,0 +1,953 @@
+# HiF4 36,000 Accuracy-First 详细优化方案
+
+> 日期：2026-08-30  
+> 状态：当前执行计划  
+> 父版本：根目录 `solution.py`，clean BOAT + cross-fold Weight-HSDQ +
+> Gram-hierarchy Activation-HSDQ + Attention deployed shortlist  
+> 本阶段原则：**暂不以 420 秒或实现复杂度淘汰算法，只评估精度上限、泛化、
+> HiF4 合法性和赛事合规性。** 时间压缩在算法方向证明后单独进行。  
+> 官方合规边界：校准输出 `A@W` 只能优化离线 `Q(W)`；不得用于拟合、选择或
+> 反推在线 `Q(A)`，也不得写入 `activation_state`。
+
+---
+
+## 1. 当前基线与目标
+
+固定 Qwen2.5-0.5B 全 24 层、`seq=128`、`calib=2`、`test=4`、`amax6`、CPU
+缓存结果：
+
+| 指标 | 当前值 |
+|---|---:|
+| Linear mean | 0.5015576125 |
+| Attention mean | 0.8418285164 |
+| Panel Linear | 125.389403 |
+| Panel Attention | 168.365703 |
+| Panel total | **293.755106** |
+| native total | 417.862253 |
+
+本地固定面板为：
+
+```math
+P=250g_L+200g_A
+```
+
+若以 `P=360` 作为 36,000 的本地诊断刻度，并保持当前 Attention：
+
+```math
+g_L^{360}
+=\frac{360-200\times0.8418285164}{250}
+=0.7665371869
+```
+
+当前 Linear 还差：
+
+```math
+\Delta g_L=0.7665371869-0.5015576125=0.2649795744
+```
+
+需要捕获当前 Linear 剩余误差的：
+
+```math
+\rho_L^{360}
+=\frac{0.7665371869-0.5015576125}{1-0.5015576125}
+=53.16\%
+```
+
+Linear `0.9` 是更强的迁移安全目标：
+
+```math
+\rho_L^{0.9}
+=\frac{0.9-0.5015576125}{1-0.5015576125}
+=79.94\%
+```
+
+若达到 `g_L=0.9` 且 Attention 不回退，本地 panel 为：
+
+```math
+P=250\times0.9+200\times0.8418285164=393.365703
+```
+
+所以本计划设置四级里程碑：
+
+| 里程碑 | Linear mean | 当前 Attention 下的 panel | 含义 |
+|---|---:|---:|---|
+| M1 | 0.55 | 305.866 | 证明存在跨层结构增益 |
+| M2 | 0.65 | 330.866 | 进入双侧联合改善区间 |
+| M3 | 0.766537 | 360.000 | 达到本地 36,000 诊断刻度 |
+| M4 | 0.90 | 393.366 | 为官方隐藏分布保留安全余量 |
+
+以上均为本地研究刻度，不是官方分数承诺。
+
+---
+
+## 2. 当前瓶颈的定量归因
+
+当前 Linear 分角色均值：
+
+| q | k | v | o | fc_gate | fc_up | proj |
+|---:|---:|---:|---:|---:|---:|---:|
+| 0.616561 | 0.620526 | 0.563596 | 0.483463 | 0.375126 | 0.430255 | 0.421376 |
+
+不能只修 `fc_gate/fc_up/proj`。即使这三个角色达到 `1.0`，其余角色保持当前值：
+
+```math
+g_L^{max(3)}
+=\frac{0.616561+0.620526+0.563596+0.483463+3}{7}
+=0.754878<0.766537
+```
+
+若 q/k/v 完全不变，则 o/gate/up/proj 四个角色平均必须达到：
+
+```math
+\bar g_{weak}
+=\frac{7\times0.766537-(0.616561+0.620526+0.563596)}{4}
+=0.891269
+```
+
+因此正确问题是：
+
+```text
+坐标系可量化性
+  + 权重合法码域求解
+  + 激活合法码域求解
+  + 跨 64-block 相关性
+  + 跨 fold 泛化
+  + Attention 的剩余误差分担
+```
+
+而不是某一个角色增加更多 offset。
+
+当前实现的主要结构缺口：
+
+1. Weight-HSDQ 只在固定 hierarchy 中改 mantissa code；没有完整的
+   E6M2/lv2/lv3/符号/mantissa 联合 beam。
+2. Weight-HSDQ 每个 fold 只生成一个最终候选，没有保留渐进路径；完整 polish
+   过拟合时，中间的更优合法候选也被丢弃。
+3. `rows > 2 * channels` 的扩张 FFN 权重完全跳过 Weight-HSDQ，恰好覆盖最弱的
+   `fc_gate/fc_up`。
+4. Activation-HSDQ 只保存 64×64 block-diagonal Gram，缺少跨 64-block
+   相关性。
+5. BOAT 只搜索全层统一 diagonal alpha 和固定 signed-Hadamard；没有 blockwise
+   balance、hierarchy-aware permutation 或低秩可逆变换。
+6. Attention 已有真实部署输出复评，但 `v_state={}`，V 没有位置/概率敏感的
+   refinement。
+
+---
+
+## 3. 总体算法路线
+
+精度优先阶段按以下依赖顺序推进：
+
+```text
+D0 合法上限仪表盘
+  -> A1 Progressive Cross-Fold HSDQ
+  -> A2 Expansive-FFN Shrinkage HSDQ
+  -> A3 LRH：跨 64-block 低秩 Hessian
+  -> A4 BOAT-2：blockwise 可逆坐标变换
+  -> A5 FS-JDRQ：冻结 Q(A) 后的稳健 Q(W) 联合重构
+  -> A6 Global Activation-HSDQ
+  -> B1 GQRB/FASA 扩展
+  -> B2 PAWV：V 路径优化
+  -> C0 全模型、全角色、宽形状综合选择
+```
+
+原则是先证明“合法求解器能兑现收益”，再增加更强连续目标；否则更复杂的
+Hessian/JDRQ 只会产生无法投影到 HiF4 的连续上限。
+
+---
+
+## 4. D0：合法上限与误差仪表盘
+
+### 4.1 目的
+
+在修改主算法前，逐层回答三个问题：
+
+1. 当前坐标系内，合法 HiF4 最多还能提升多少？
+2. 损失发生在连续目标、合法投影还是跨 fold 泛化？
+3. 哪些 role/layer/block 值得进入后续高成本算法？
+
+### 4.2 覆盖矩阵
+
+模型：
+
+- Qwen2.5-0.5B：主模型；
+- GPT-2 small/medium：MHA 与不同深度；
+- OPT-125M：独立 q/k/v 和不同激活统计；
+- Pythia-160M：fused QKV、RoPE；
+- synthetic wide：hidden `4096/5120/6144`、FFN `out>in` 与 `out<in`、
+  GQA `32:8/32:4`。
+
+层：首层、中层、末层，后续扩展到全层。
+
+角色：`q/k/v/o/fc_gate/fc_up/proj`。
+
+fold：至少 `train-A / train-B / validation` 三份独立窗口。
+
+### 4.3 每个 case 保存的指标
+
+```text
+parent deployed loss
+weight-float / activation-quantized oracle
+weight-quantized / activation-float oracle
+both-float oracle
+continuous ridge target loss
+nearest legal hierarchy loss
+progressive HSDQ loss
+held-out HSDQ loss
+cross-block LRH loss
+accepted code count
+changed block count
+fold disagreement
+role/layer/shape metadata
+```
+
+定义连续到合法的保留率：
+
+```math
+R_{cont\to legal}
+=\frac{L_{parent}-L_{legal}}
+{L_{parent}-L_{continuous}+\epsilon}
+```
+
+定义校准到验证的迁移率：
+
+```math
+R_{transfer}
+=\frac{L_{val,parent}-L_{val,candidate}}
+{L_{train,parent}-L_{train,candidate}+\epsilon}
+```
+
+### 4.4 产物
+
+新增建议：
+
+```text
+evaluator/linear_oracle_dashboard.py
+artifacts/oracle_dashboard/<candidate>-<model>.json
+logs/evaluations/<date>-oracle-dashboard.md
+```
+
+D0 不改变 `solution.py`，只负责建立可证伪的上限地图。
+
+---
+
+## 5. A1：Progressive Cross-Fold Hierarchical HSDQ
+
+### 5.1 核心问题
+
+当前 `_polish_weight` 在一个 calibration fold 上执行完整坐标扫描，只输出最终
+candidate。历史 HSDQ-1 已证明这种做法会降低 calibration product loss，却在
+独立 test 上回退。需要把“生成路径”和“选择路径”分离。
+
+### 5.2 完整合法候选
+
+每个 64 元素 block 的变量为：
+
+```math
+q=s_1\,s_2\,s_3\,m\,\sigma
+```
+
+其中：
+
+- `s1`：E6M2 顶层 scale；
+- `s2`：8 个 lv2；
+- `s3`：16 个 lv3；
+- `m`：64 个 `{0, 1/4, ..., 7/4}` mantissa；
+- `σ`：64 个符号。
+
+不再只固定 `s1/s2/s3` 后修改 mantissa，而是构造分层 beam：
+
+```text
+parent hierarchy
+  -> top-scale candidates
+  -> lv2 partial assignments
+  -> lv3 partial assignments
+  -> signed mantissa coordinate path
+```
+
+### 5.3 渐进候选路径
+
+fold A 生成：
+
+```text
+C_A = {
+  parent,
+  hierarchy-only,
+  accepted moves = 1,
+  accepted moves = 4,
+  accepted moves = 16,
+  accepted moves = 32,
+  accepted moves = 64,
+  second-block checkpoints
+}
+```
+
+fold B 只评价，不参与生成。然后交换 A/B。
+
+稳健目标：
+
+```math
+J(c)=
+\frac{L_A(c)+L_B(c)}2
++\beta\max[L_A(c),L_B(c)]
++\gamma|L_A(c)-L_B(c)|
++\lambda\|Q_W(c)-Q_W(parent)\|_{D_H}^2
+```
+
+初始研究网格：
+
+```text
+beta ∈ {0.25, 0.5, 1.0}
+gamma ∈ {0.5, 1.0, 2.0}
+lambda ∈ {0, 1e-4, 1e-3, 1e-2}
+beam ∈ {2, 4, 8, 16}
+active blocks ∈ {1, 2, 4, 8, all}
+```
+
+本阶段不按耗时删网格，但每次只改变一个结构变量，避免无法归因。
+
+### 5.4 精确二次增量
+
+固定 activation `Z`，权重输出误差为：
+
+```math
+L(Q_W)=\|Z(W-Q_W)^T\|_F^2
+```
+
+令 residual：
+
+```math
+R=Z(W-Q_W)^T
+```
+
+某输出行的合法变化为 `δ`，则：
+
+```math
+\Delta L
+=-2\langle Z\delta^T,R_r\rangle
++\|Z\delta^T\|_2^2
+```
+
+候选比较全部用这个精确增量，不使用 representation MSE 代替部署 product loss。
+
+### 5.5 双向准入
+
+候选至少满足其一：
+
+1. A 生成、B 验证为正，且反向存在同 hierarchy family 的正候选；
+2. 三 fold 的 CVaR/均值混合目标优于 parent；
+3. validation 改善且 fold disagreement 显著低于无正则 candidate。
+
+parent 永远保留，不要求每一行都改变。
+
+### 5.6 首轮实验范围
+
+按以下顺序：
+
+1. Qwen `fc_gate`：首/中/末三层；
+2. Qwen `fc_up`；
+3. Qwen `v`；
+4. Qwen `proj/o`；
+5. q/k；
+6. 全层 Qwen；
+7. 其他模型 guardrail。
+
+### 5.7 继续条件
+
+- legal realization 相对当前 solver 至少提升到 `20%`；
+- validation product loss 与 panel 同方向；
+- 全层 Linear mean 至少出现 `+0.01` 的结构增益，或明确识别出单 role
+  `+0.03` 以上的可迁移增益；
+- 不出现 OPT/Qwen 一正一灾难性回退。
+
+如果训练目标大幅下降而 validation 不改善，停止扩大 beam，转 A4 BOAT-2。
+
+---
+
+## 6. A2：Expansive-FFN Shrinkage HSDQ
+
+### 6.1 动机
+
+当前代码对：
+
+```text
+rows > 2 * channels
+```
+
+直接跳过 Weight-HSDQ。Qwen 的 `fc_gate/fc_up` 因此缺少权重侧精修，而它们正是
+最低分角色。直接对全部输出行完整 polish 又会产生过多自由度。
+
+### 6.2 稀疏 row-block 选择
+
+对每个输出行 `r` 和 block `b` 计算 held-out gain：
+
+```math
+v_{rb}
+=\frac{L_{B,parent}^{(r)}-L_{B,candidate}^{(r)}}
+{L_{B,parent}^{(r)}+\epsilon}
+```
+
+只接受：
+
+```math
+v_{rb}>0
+```
+
+且属于全矩阵 top percentile 的 row-block 对。研究网格：
+
+```text
+accepted row-block ratio ∈ {0.5%, 1%, 2%, 5%, 10%, 25%, 100%}
+```
+
+### 6.3 层级收缩
+
+对于候选变化 `ΔW`，使用经验 Bayes 式收缩：
+
+```math
+\Delta W_{shrunk}=\eta_{rb}\Delta W,
+\qquad
+\eta_{rb}=\operatorname{clip}
+\left(
+\frac{g_{heldout}}{g_{train}+\epsilon},0,1
+\right)
+```
+
+由于最终必须落在合法 HiF4，`η` 不直接插值数值，而是选择渐进 HSDQ 路径上
+最接近该收缩幅度的合法 checkpoint。
+
+### 6.4 验收
+
+- `fc_gate/fc_up` 均值必须分别报告；
+- 不允许只看全 Linear 平均掩盖某一扩张 FFN 灾难回退；
+- 保留 parent、稀疏、全量三组对照；
+- 统计 gain 随 row-block ratio 的完整曲线，不在本阶段考虑耗时。
+
+---
+
+## 7. A3：LRH——跨 64-block 低秩 Hessian
+
+### 7.1 当前缺口
+
+Activation-HSDQ 使用：
+
+```math
+G\approx\operatorname{blockdiag}(G_1,\ldots,G_B)
+```
+
+忽略不同 64-block 之间的相关性。Weight-HSDQ 虽通过全局 residual 间接看到其他
+block，但 active block 数很少，没有显式建模全局低秩方向。
+
+### 7.2 分解
+
+对 activation Hessian：
+
+```math
+H=Z^TZ
+```
+
+使用：
+
+```math
+H\approx B+UU^T,
+\qquad
+B=\operatorname{blockdiag}(H_1,\ldots,H_B)
+```
+
+`U` 由 `H-B` 的 randomized eig/SVD 得到。研究 rank：
+
+```text
+r ∈ {4, 8, 16, 32, 64}
+```
+
+### 7.3 精确候选项
+
+对跨块变化 `δ`：
+
+```math
+\delta^TH\delta
+\approx
+\sum_b\delta_b^TH_b\delta_b
++\|U^T\delta\|_2^2
+```
+
+低秩项允许用 `O(rn)` 增量更新，而不需要保存完整 `n×n` Hessian。
+
+### 7.4 求解顺序
+
+1. 用 block-diagonal HSDQ 产生每个 block 的 top-K 合法候选；
+2. 计算候选的 `U^Tδ`；
+3. 用 beam/动态规划组合多个 block；
+4. 用精确 calibration product loss 终验；
+5. 交叉 fold 选择。
+
+组合 beam：
+
+```text
+per-block candidates ∈ {2, 4, 8}
+global beam ∈ {4, 8, 16, 32, 64}
+```
+
+### 7.5 关键消融
+
+必须区分：
+
+- blockdiag HSDQ 增加同等 candidate 数；
+- blockdiag + 随机 rank；
+- blockdiag + 数据低秩 U；
+- 完整 Hessian 小层 oracle。
+
+只有数据低秩 U 在相同候选预算下优于 blockdiag，才能证明 LRH 捕获了真正的
+跨块结构。
+
+---
+
+## 8. A4：BOAT-2——角色/块级双侧坐标变换
+
+### 8.1 目标
+
+当更强 HSDQ 仍无法把连续收益投影到合法 HiF4 时，说明需要改变坐标系本身。
+
+对每个 64-channel block 使用：
+
+```math
+T_b=D_bP_bH_bR_b
+```
+
+其中：
+
+- `D_b`：blockwise diagonal balance；
+- `P_b`：hierarchy-aware permutation；
+- `H_b`：4/8/16/32/64 signed-Hadamard；
+- `R_b`：1–4 个 Householder reflector 或低秩可逆修正。
+
+连续等价关系：
+
+```math
+X'=XT^{-1},
+\qquad
+W'=WT^T,
+\qquad
+X'W'^T=XW^T
+```
+
+### 8.2 blockwise balance
+
+当前全层统一 `alpha` 改为每个 64-block：
+
+```math
+d_{bj}(\alpha_b)
+=\left(
+\frac{RMS(X_{bj})}{RMS(W_{:,bj})}
+\right)^{\alpha_b}
+```
+
+```text
+alpha_b ∈ {0, 0.125, 0.25, 0.375, 0.5, 0.75, 1.0}
+```
+
+使用两个 calibration fold 的 operand-local/Gram-safe 目标选择，不使用 `A@W`
+选择 activation state。
+
+### 8.3 hierarchy-aware permutation
+
+HiF4 的 lv2/lv3 固定按 8/4 元素分组。构造 permutation，使：
+
+- 极端值分散到不同 lv2/lv3 子组；
+- 相近动态范围集中共享 scale；
+- activation 与 weight 的高能通道不同时挤在一个 hierarchy group；
+- permutation 对 X/W 同步应用，保持乘积等价。
+
+候选：
+
+```text
+identity
+sort by activation RMS
+sort by weight RMS
+sort by geometric mean RMS
+interleave high/low
+balanced bin packing into 8 lv2 groups
+```
+
+### 8.4 低秩可逆变换
+
+以 covariance/CAT 解的主方向初始化 Householder：
+
+```math
+H(v)=I-2\frac{vv^T}{v^Tv}
+```
+
+候选 rank：`1/2/4/8`。本阶段可离线完整扫描，不因推理成本拒绝；但必须报告
+条件数、逆变换误差和合法 HiF4 部署结果。
+
+### 8.5 role-aware 策略
+
+优先顺序：
+
+1. `fc_gate/fc_up`：blockwise D + permutation；
+2. `v/o/proj`：D + permutation + Householder；
+3. q/k：只有跨模型一致时才扩展。
+
+不得使用模型名称门控；最终策略只能依赖 shape、role、RMS、kurtosis、block
+condition number 等可复现统计量。
+
+---
+
+## 9. A5：FS-JDRQ——冻结激活状态后的权重联合重构
+
+### 9.1 合规顺序
+
+```text
+先仅用 operand-local/静态 W Gram 选择 BOAT 与 activation_state
+  -> 冻结 activation_state
+  -> 得到 Z=Q(A)
+  -> 允许用 Y=A@W 优化离线 Q(W)
+  -> 输出信息只进入 weight_params 候选选择
+```
+
+任何 `Y`、residual、target 或 candidate score 都不得进入 `activation_state`。
+
+### 9.2 连续权重目标
+
+固定 `Z=Q(A)`，教师输出：
+
+```math
+Y=AW^T
+```
+
+连续目标：
+
+```math
+\widetilde W^T
+=(Z^TZ+\lambda I)^{-1}Z^TY
+```
+
+研究 ridge：
+
+```text
+lambda / trace(ZTZ) ∈ {0, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2}
+```
+
+### 9.3 不直接量化连续解
+
+历史 JDRQ 失败说明“生成更好的连续 W”不足。FS-JDRQ 只负责提供多个低自由度
+target：
+
+```math
+W_\eta=(1-\eta)W+\eta\widetilde W,
+\qquad
+\eta\in\{0,1/16,1/8,1/4,1/2,3/4,1\}
+```
+
+每个 `W_eta` 必须通过 A1/A3 的合法 HSDQ/LRH 投影，再进入跨 fold selector。
+
+### 9.4 稳健选择
+
+使用三 fold CVaR：
+
+```math
+J_{FS}(c)
+=\operatorname{mean}_fL_f(c)
++\beta\max_fL_f(c)
++\gamma\operatorname{std}_fL_f(c)
+```
+
+保留 parent、不同 eta、不同 ridge、不同 HSDQ path checkpoint。禁止直接启用
+无 parent 回退的多轮 residual Gauss--Seidel。
+
+### 9.5 失败判据
+
+若 continuous target 明显改善但所有合法投影都不迁移，问题归因到 HSDQ/BOAT，
+不继续增加 JDRQ target 数。如果合法投影在单模型有效、异构模型灾难回退，则提高
+fold/shape 正则，而不是增加模型名分支。
+
+---
+
+## 10. A6：Global Activation-HSDQ
+
+### 10.1 合规目标
+
+在线激活量化只能使用当前 activation、冻结变换和静态浮点权重信息。使用：
+
+```math
+G_W=W^TW
+```
+
+或其 blockdiag + low-rank 分解。禁止用 `Q(W)^TQ(W)` 的 cross-residual 拟合
+Q(A)，也禁止使用 `A@W`。
+
+### 10.2 全局目标
+
+```math
+L_A(q)=(q-x)^TG_W(q-x)
+```
+
+分解：
+
+```math
+G_W\approx B_W+U_WU_W^T
+```
+
+使用 A3 相同的 block candidate + global beam 组合，研究 rank `4–64`。
+
+### 10.3 sample-local candidate
+
+动态 activation 每一行独立生成：
+
+- parent hierarchy；
+- hierarchy beam；
+- blockdiag HSDQ；
+- blockdiag + low-rank global HSDQ。
+
+最终以静态 `G_W` 二次型选择。状态仅保存 `B_W/U_W`、BOAT 参数和合法整数配置。
+
+### 10.4 验收
+
+- `tests/test_linear_compliance_guard.py` 全绿；
+- state 序列化后不含 calibration output/residual；
+- float-W Gram 与 quantized-W Gram 做明确隔离；
+- q/k/v/o/FFN 分角色报告，尤其检查 activation 侧是否修复 `v/fc_gate`。
+
+---
+
+## 11. Attention 路线
+
+Linear 是主线，但 Attention 从 `0.841829` 提升到 `0.90`，可以把达到 panel 360
+所需的 Linear 从 `0.766537` 降到：
+
+```math
+g_L=\frac{360-200\times0.9}{250}=0.72
+```
+
+因此 Attention 仍有明确的目标分担价值。
+
+### 11.1 B1：GQRB-2
+
+当前 reciprocal RMS 是逐通道 diagonal。扩展到每个 GQA group 内的 2×2/4×4
+可逆 block：
+
+```math
+Q'=QT,
+\qquad
+K'=KT^{-T}
+```
+
+候选从 Q/K covariance 的广义特征方向初始化；identity 永远保留。部署复评仍用
+真实 causal Attention 输出，不恢复已失败的 softmax Fisher 非对角 Hessian。
+
+### 11.2 B2：FASA shortlist 扩展
+
+保留当前两阶段结构：
+
+```text
+cheap proxy -> top-K -> full deployed output MSE
+```
+
+本阶段不考虑时间，可把 top-K 扩展到全部候选，以测量 shortlist 截断损失；候选族
+包含 reciprocal balance、K-centering、shared Hadamard、GQRB block 和组合候选。
+
+### 11.3 B3：PAWV
+
+当前 V 直接 `_dense_to_hif4`，没有 refinement。由校准 Attention probability
+`P` 计算 token 敏感度：
+
+```math
+w_t=\sum_{h,q}P_{hqt}^2
+```
+
+精确 V 误差：
+
+```math
+\|P(Q_V-V)\|_F^2
+=\operatorname{tr}[(Q_V-V)^TP^TP(Q_V-V)]
+```
+
+首版依次测试：
+
+1. `diag(P^TP)` 只用于选择需要 HSDQ 的 token rows；
+2. position bucket / attention-sink 预算；
+3. `diag + low-rank(P^TP)` 的跨 token HSDQ；
+4. 与 Q/K candidate 交替选择 2–4 轮。
+
+单纯给每行 loss 乘标量不会改变该行量化 argmin，所以 PAWV 必须作用于 refinement
+预算、跨 token low-rank 项或 Q/K/V 联合选择，不能只增加一个无效 importance
+数组。
+
+---
+
+## 12. 实验序列与停止规则
+
+| 实验 | 唯一变量 | 首测范围 | 主要问题 | 通过后下一步 |
+|---|---|---|---|---|
+| E0 | D0 dashboard | 4 模型×3 层×全 role | 上限在哪里 | E1 |
+| E1 | progressive HSDQ path | Qwen gate/up/v | 强 solver 是否迁移 | E2/E4 |
+| E2 | expansive FFN shrinkage | Qwen gate/up | 能否解除 rows gate | E3 |
+| E3 | LRH rank | v/gate/up/proj | 跨块是否重要 | E4 |
+| E4 | blockwise D/P | v/gate/up | 坐标系是否主瓶颈 | E5 |
+| E5 | Householder/CAT low-rank | o/v/proj | 更强双侧变换 | E6 |
+| E6 | FS-JDRQ targets | 全 Linear role | 输出补偿能否合法兑现 | E7 |
+| E7 | global activation LRH | 全 Linear role | 激活跨块上限 | E8 |
+| E8 | GQRB/PAWV | Attention | 把 A 提到 0.90+ | E9 |
+| E9 | 全层五模型 + wide shape | 全部 | 泛化与最终组合 | 时间压缩阶段 |
+
+停止规则：
+
+1. **内部目标下降、validation 不变或回退**：停止扩大同类搜索，转坐标变换。
+2. **Qwen 正向、OPT/Pythia 灾难回退**：增加 fold/shape 正则，不使用模型名门控。
+3. **连续 oracle 高、合法 oracle 低**：优先 HSDQ/BOAT。
+4. **合法 oracle 高、部署迁移低**：优先 cross-fold/shrinkage。
+5. **所有合法 oracle 都低**：该坐标系已接近上限，必须转 BOAT-2。
+6. **Attention 到 0.90 后边际很小**：计算和研究预算全部转回 Linear。
+
+---
+
+## 13. 统一验收指标
+
+### 13.1 主指标
+
+```text
+Qwen shaped panel total
+Qwen Linear mean
+Qwen Attention mean
+per-role Linear mean
+remaining-error capture
+```
+
+候选对 parent 的剩余误差捕获率：
+
+```math
+capture_{local}
+=\frac{P_{candidate}-P_{parent}}
+{450-P_{parent}}
+```
+
+当前 parent 到 360 需要：
+
+```math
+\frac{360-293.755106}{450-293.755106}=42.40\%
+```
+
+### 13.2 泛化指标
+
+- train fold mean/max/std；
+- validation loss；
+- fold disagreement；
+- GPT-2/OPT/Pythia 同方向率；
+- wide FFN/GQA shape 结果；
+- role/layer 胜率和最差回退。
+
+其他模型是软 guardrail，不要求全部逐 case 正向；但任何单模型灾难性回退必须
+解释并通过统计量规则解决。
+
+### 13.3 合法性与合规
+
+- HiF4 五字段 shape/dtype/value 合法；
+- 六个 API 不变；
+- activation state 不含 output/residual/teacher target；
+- dynamic Q(A) 不读取校准输出；
+- 所有 transform 可逆且连续乘积误差接近浮点舍入误差；
+- NaN/Inf/zero/极端 scale case 有 parent fallback。
+
+### 13.4 本阶段明确不设的门
+
+- 不以 420 秒淘汰；
+- 不限制 state 大小；
+- 不限制 beam/rank/candidate 数；
+- 不因为 Python 实现慢而否定数学方向；
+- 不把本地 panel 线性换算成官方绝对分数。
+
+所有实验仍要记录时间和内存，只是不作为本阶段接受/拒绝条件，以便后续压缩。
+
+---
+
+## 14. 代码实施边界
+
+### 14.1 建议新增的诊断代码
+
+```text
+evaluator/linear_oracle_dashboard.py
+evaluator/hif4_candidate_replay.py
+tests/test_hsdq_progressive.py
+tests/test_lrh_hessian.py
+tests/test_boat_invariance.py
+tests/test_activation_state_provenance.py
+tests/test_pawv_objective.py
+```
+
+### 14.2 `solution.py` 预期接入点
+
+| 机制 | 当前函数 | 新函数建议 |
+|---|---|---|
+| Progressive HSDQ | `_polish_weight` | `_generate_hsdq_path`、`_crossfold_select_path` |
+| Expansive FFN | `_crossfold_weight_hsdq` | `_select_sparse_row_blocks` |
+| LRH | `_gram64` | `_lowrank_cross_block_gram`、`_lrh_candidate_delta` |
+| BOAT-2 | `_choose_boat` | `_boat_block_candidates`、`_hierarchy_permutation` |
+| FS-JDRQ | weight calibration | `_ridge_weight_targets`、`_robust_weight_pool` |
+| Global A-HSDQ | `_refine_activation` | `_refine_activation_lrh` |
+| GQRB | attention calibration | `_gqrb_block_candidates` |
+| PAWV | `v_state={}` | `_build_pawv_state`、`_refine_v_pawv` |
+
+研究阶段可以先把算法拆到 evaluator-side prototype 验证；只有机制通过全层和多模型
+验证后，才合并进根 `solution.py`，避免重新形成包含大量 dormant branch 的主文件。
+
+### 14.3 实验纪律
+
+每个实验必须记录：
+
+```text
+parent SHA
+unique change
+mathematical target
+candidate space
+fold split
+oracle result
+legal result
+deployed result
+per-role result
+heterogeneous guardrail
+runtime/memory（只记录、不裁决）
+compliance result
+decision
+next falsifiable experiment
+```
+
+被拒绝候选归档到 `solutions/`，不得以关闭 flag 的形式留在主代码。
+
+---
+
+## 15. 推荐立即执行的第一个实验
+
+第一项实现为 **E1：Progressive Cross-Fold Hierarchical HSDQ**，范围限定为：
+
+```text
+模型：Qwen2.5-0.5B
+角色：fc_gate、fc_up、v、proj
+层：0、12、23
+active blocks：top-1 / top-2
+beam：2 / 4 / 8
+path checkpoints：parent、hierarchy、1、4、16、32、64 accepted moves
+fold：A 生成 B 选择；B 生成 A 选择；validation 只终验
+```
+
+必须同时保留四个对照：
+
+1. 当前 parent；
+2. 当前 fixed-hierarchy HSDQ；
+3. progressive mantissa-only；
+4. progressive full-hierarchy HSDQ。
+
+它能一次回答：
+
+- 当前主要问题是不是 fixed hierarchy；
+- 历史 HSDQ 失败是不是因为只保存最终过拟合点；
+- `fc_gate/fc_up` 是否能在稀疏 row-block 约束下安全启用权重精修；
+- 是否值得继续开发 LRH。
+
+裁决：
+
+- 若 full-hierarchy path 在 validation 明显胜出，继续 A2/A3；
+- 若 mantissa path 正向而 hierarchy path回退，保留 path selector、收缩 scale 自由度；
+- 若所有 path 都只改善 train，立即转 A4 BOAT-2；
+- 若 legal oracle 本身也几乎无增益，直接判定当前坐标系不足，不再扩大 HSDQ。
+
+这是当前信息增益最高、同时能直接攻击最弱 Linear 角色的下一步。
+
