@@ -156,6 +156,32 @@ def test_structured_activation_gate_is_rowwise_nonincreasing() -> None:
     assert torch.all(after_loss <= before_loss + 1.0e-5)
 
 
+def test_structured_vectorized_proposal_matches_reference() -> None:
+    """C1a batching must preserve v118 proposal and exact-gate decisions."""
+
+    torch.manual_seed(714)
+    dense = torch.randn(4, 256) * 0.1
+    deployment = torch.randn(96, 256) * 0.05
+    deployment_gram = deployment.t().mm(deployment)
+    gram64 = solution._gram64(deployment)
+    parent = solution._dense_to_hif4(dense, gram64=gram64)
+    structured = solution._structured_activation_lrh(deployment_gram, components=2)
+    assert structured is not None
+    state = {"kernels": structured[0], "coefficients": structured[1]}
+
+    reference = solution._refine_activation_structured_reference(
+        dense, parent, gram64, deployment_gram, state, max_blocks=2
+    )
+    vectorized = solution._refine_activation_structured_vectorized(
+        dense, parent, gram64, deployment_gram, state, max_blocks=2
+    )
+    assert set(reference) == set(vectorized)
+    for key in reference:
+        torch.testing.assert_close(
+            vectorized[key], reference[key], rtol=0.0, atol=1.0e-6
+        )
+
+
 def test_g64_hierarchy_sweep_matches_independent_coordinate_bruteforce() -> None:
     """The fixed-scale hierarchy sweep must agree with an exhaustive reference."""
 

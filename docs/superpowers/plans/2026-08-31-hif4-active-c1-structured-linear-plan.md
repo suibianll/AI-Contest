@@ -3,9 +3,9 @@
 > 状态：**ACTIVE**
 > 建立日期：2026-08-31
 > 适用根：`D:/工作内容/AI竞赛/solution.py`
-> 当前精度 parent：v118 L6d structured block-circulant factor
-> 根 `solution.py` 规范 LF SHA256：`ec44cf79abcd5170c1667ef7e50fb0a494753c3a96c1b6fcceca9f5030630251`
-> 主目标：保持 v118 的完整部署 `G_q` exact gate 语义，继续提升 Qwen full-layer
+> 当前精度 parent：v119 C1a structured proposal vectorization（与 v118 精度等价）
+> 根 `solution.py` 规范 LF SHA256：`c9c45a7911594b4b378d0c5e2769187d76dc587d79b6da9fa5f5a487e4b7cb11`
+> 主目标：保持 v119（继承 v118）的完整部署 `G_q` exact gate 语义，继续提升 Qwen full-layer
 > `linear_mean`；同时把结构化 proposal 的原型实现压缩为可审计的 C1 路径。Attention
 > 只作回归检查，不在本计划中扩展 PAWV。
 
@@ -33,15 +33,15 @@ JSON/日志和官方规则；`docs/superpowers/archive/plans/` 只作历史证�
 固定评测：Qwen2.5-0.5B、24 层、`seq=128`、`calib=2`、`test=4`、`amax6`、CPU、
 只读 cache `artifacts/real_model_suite/cache/qwen2.5-0.5b__seq128__calib2__test4__layersall__schema1.pt`。
 
-| 指标 | v118 |
+| 指标 | v119（v118 等价） |
 |---|---:|
 | screen Linear mean | `0.53337532` |
 | full Linear mean | `0.5096012555` |
 | Attention mean | `0.8420394885` |
 | Qwen panel | `295.8082115559` |
 | native total | `423.2878345580` |
-| API time | `2249.746436s` |
-| LF SHA | `ec44cf79abcd5170c1667ef7e50fb0a494753c3a96c1b6fcceca9f5030630251` |
+| API time | `2040.504690s` |
+| LF SHA | `c9c45a7911594b4b378d0c5e2769187d76dc587d79b6da9fa5f5a487e4b7cb11` |
 
 到 `linear_mean=0.9` 仍差 `0.3903987445`，需消除当前剩余归一化误差的
 `79.6084%`；这只是本地诊断轴，不能换算官方 36000。所有在线候选必须遵守：
@@ -83,23 +83,27 @@ R_{ij}\approx \sum_{s=1}^{S}c_{j-i,s}K_s,
 
 ### C1a：结构化 proposal 的向量化等价实现
 
-**状态：pending。**
+**状态：completed（v119）。**
 
 入口：`_structured_gram_matmul`、`_refine_activation_structured`。
 
 把当前逐 row/逐 coordinate 的 15-level Python 循环改成批量 tensor 运算：一次构造
 候选 `step`，批量计算局部 `h` 梯度、冻结 structured 梯度和精确 gate 所需的
 `G_q` 行积；候选选择顺序、tie break、`_write_codes` 和 exact row gate 必须保持
-一致。先用 v118 的 `proj(d=4864)` 样本做 bit/`1e-6` 级重构对照，再跑 screen/full。
+一致。已用 v118 的宽层样本做 `1e-6` 级字段对照，并完成 screen/full。
 
-验收：screen/full 不低于 v118，至少减少动态阶段时间；任何数值差异都要作为独立
-精度候选记录，不能直接替换 parent。
+验收结果：screen `0.5333753185` 与 v118 完全相同；full Linear `0.5096012555`、
+Attention `0.8420394885`、panel `295.8082115559` 的全部分数位与 v118 相同；
+API 从 `2249.7464359s` 降至 `2040.5046895s`（`-9.30%`），dynamic 从
+`1832.8779521s` 降至 `1633.3390318s`（`-10.88%`），因此 v119 接替为 parent。
 
 ### C1b：structured gradient refresh / 多 sweep
 
 **状态：pending。**
 
 当前 proposal 在整行坐标扫描中冻结 `R e`，导致已接受坐标后的跨 block 梯度过期。
+C1a 已证明批量化不改变 v118 的精度；本节从 v119 等价 parent 继续，只改变
+proposal 梯度刷新策略。
 在同一合法 state 上测试两种低自由度变体：每个 block 一次增量 refresh，或最多两轮
 block sweep。每次 refresh 只更新 proposal 梯度，候选仍由完整 `G_q` row gate 裁决。
 
@@ -147,7 +151,8 @@ exact gate 的路线：批量使用现有 dense `G_q`，或离线保存可证明
 |---|---:|---:|---:|---:|---|
 | v116 | 0.5093045894 | 0.8420394885 | 295.734045 | 739.42s | 前一 parent |
 | v117 | 0.5095117268 | 0.8420394885 | 295.785829 | 2019.48s | 前一 parent |
-| **v118** | **0.5096012555** | **0.8420394885** | **295.808212** | **2249.75s** | **当前 parent；L6 completed** |
+| v118 | 0.5096012555 | 0.8420394885 | 295.808212 | 2249.75s | L6d precision parent |
+| **v119** | **0.5096012555** | **0.8420394885** | **295.808212** | **2040.50s** | **当前 parent；C1a completed** |
 
 ## 6. 完成条件
 

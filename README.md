@@ -23,18 +23,18 @@
   的设备混用问题。完整表格见 [`当前主版本算法效果与评测状态`](docs/current-solution-status.md)。
 - 历史 v024 得分为 `16043 / 173.8s`，但其 Linear 输出监督路径把输出信息
   用于激活侧选择；这类 `A@W -> Q(A)` 用法仍不合规，因此不作为后续合规父版本。
-- 当前根 `solution.py` 为 v118 L6d structured block-circulant precision parent，
-  在 v117 L6c full `G_64` hierarchy 基础上用最多 4 个 `64×64` kernel 压缩宽输入
-  cross-block proposal；Qwen 全 24 层本地实测 native `423.287835`、shaped panel
-  `295.808212`、Linear mean `0.5096012555`、正式 API `2249.746436s`。
+- 当前根 `solution.py` 为 v119 C1a structured proposal vectorization parent，
+  在 v118 L6d 的最多 4 个 `64×64` kernel proposal 上批量化独立 row/block 的 15-level
+  候选评估；Qwen 全 24 层本地实测 native `423.287835`、shaped panel `295.808212`、
+  Linear mean `0.5096012555`、正式 API `2040.504690s`。
   当前探索阶段只按精度排序，时间暂作
   记录；最终冻结时再压缩到 420s 内。逐项结果、归档实现
   审计和复现实验配置见 [`当前主版本算法效果与评测状态`](docs/current-solution-status.md)、
   [`算法全景`](docs/algorithm-inventory-and-directions.md)、
   [`归档实现审计`](docs/archive-implementation-audit.md) 与 [`solutions/README.md`](solutions/README.md)。
-  L5d 外部组件审计与 L5e 可达性 checkpoint 已完成；L6a–L6e 已完成并归档；下一步只按 [`唯一活跃优化计划`](docs/superpowers/plans/2026-08-31-hif4-active-c1-structured-linear-plan.md) 执行，保持 v118 精度并压缩结构化路径。
+  L5d 外部组件审计与 L5e 可达性 checkpoint 已完成；L6a–L6e 已完成并归档；C1a 已完成并保持 v118 精度，同时将 API 时间降低 `9.30%`；下一步只按 [`唯一活跃优化计划`](docs/superpowers/plans/2026-08-31-hif4-active-c1-structured-linear-plan.md) 执行 C1b。
 - 当前根源码 SHA256：
-  `EC44CF79ABCD5170C1667EF7E50FB0A494753C3A96C1B6FCFCECA9F5030630251`（规范 LF）。
+  `C9C45A7911594B4B378D0C5E2769187D76DC587D79B6DA9FA5F5A487E4B7CB11`（规范 LF）。
 - L1 full-hierarchy Weight-LRH 已完成合成测试与五层×七 role screen，但 screen
   `both_player=0.523019429222563` 与 L0 逐条持平；候选 v105 已归档。L2 固定
   `α=0.25` 的 expansive-FFN CAT balance 已通过 full-layer，v106 成为时间 parent；
@@ -152,7 +152,7 @@ Qwen native `369.527269` 仍作为第二诊断线，五模型合计不作为基�
 
 ## 当前算法
 
-当前根是重写后的 clean Gram-hierarchy + B1/B2 + L5a + L6a + L6b + L6c + L6d 版本；v086/C86 仍是不可变历史归档。
+当前根是重写后的 clean Gram-hierarchy + B1/B2 + L5a + L6a + L6b + L6c + L6d + C1a 版本；v086/C86 仍是不可变历史归档。
 评测和优化优先级如下：
 
 | 优先级 | 组件 | 当前机制 | 作用/状态 |
@@ -161,10 +161,10 @@ Qwen native `369.527269` 仍作为第二诊断线，五模型合计不作为基�
 | 2 | Linear | Cross-fold Weight-HSDQ：`AᵀA` 二阶增量、15 levels、top-2 block、1 sweep | 只更新离线 `weight_params`；跨 fold 验证后才接纳 |
 | 3 | Linear | Gram-hierarchy Activation-HSDQ：静态 `WᵀW`、offset/hierarchy 选择、最多 128 block、2 sweeps | 在线 state 仅含合法静态统计；v106 基线 Linear mean `0.503459` |
 | 4 | Linear | Expansive-FFN CAT balance：`rows > channels`、固定 α=0.25 | v106 仅改善 fc_gate；不增加 state 字段 |
-| 5 | Linear | Global Activation-LRH：窄输入 rank-16、宽输入 rank-4 off-block proposal，逐行 exact deployed-Gram gate | v118 Linear mean `0.509601`；L6a–L6d 均通过 |
-| 6 | Linear | L6d structured block-circulant factor：4 个 `64×64` kernel + 距离系数，完整 `G_q` gate | v118 panel `295.808212`；增益集中在 `proj(d=4864)` |
+| 5 | Linear | Global Activation-LRH：窄输入 rank-16、宽输入 rank-4 off-block proposal，逐行 exact deployed-Gram gate | v119 Linear mean `0.509601`；L6a–L6d 均通过 |
+| 6 | Linear | L6d + C1a structured factor：4 个 `64×64` kernel + 距离系数，批量 proposal、完整 `G_q` gate | v119 panel `295.808212`；精度等价 v118，API `-9.30%` |
 | 7 | Attention | reciprocal RMS、K-centering、GQA 对齐、GQRB、PAWV diag-only | 使用真实 non-causal Attention 输出排序；当前 mean `0.842039` |
-| 8 | 下一步 | L0–L5e、L6a–L6e 已完成（v118 为当前 precision parent；L6 计划已归档）→ **C1a structured proposal vectorization（当前）** | 只参考唯一活跃计划；C1a–C3 按 active 计划执行；Attention PAWV 独立延后 |
+| 8 | 下一步 | L0–L5e、L6a–L6e、C1a 已完成（v119 为当前 precision/time parent）→ **C1b structured gradient refresh（当前）** | 只参考唯一活跃计划；C1b–C3 按 active 计划执行；Attention PAWV 独立延后 |
 
 优化决策只看同一冻结缓存上的相对增量：Qwen `primary_panel_score_total` 是主
 指标，其他模型用于发现结构性回退。不得用官方分数反向调参，也不设置固定的
