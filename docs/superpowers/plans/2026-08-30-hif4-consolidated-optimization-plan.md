@@ -125,6 +125,11 @@ E5/A5  joint-fold 离线 A@W           【已拒绝：全层 −9.160 panel】
 P1  保持 parent；官方提交后再决定是否重启新目标
 ```
 
+这不是“全部算法已完成”的声明：E0-C（GALS 解析召回）、完整跨块 LRH、
+CAT/Householder 组合、冻结-Q(A) ridge/Qronos、Global Activation-LRH、
+Attention GQRB/FASA/PAWV，以及最终五模型综合（C0）都没有在本轮实现或验收。
+它们目前是未执行的研究项，不应与已拒绝的 E1–E5 变体混为一谈。
+
 ### 2.1 E1/A1：渐进跨 fold 全层级 HSDQ（已拒绝）
 
 - **问题**：`_polish_weight` 在单个 fold 上做完整坐标扫描，只输出最终候选 → 历史 HSDQ-1 在 calibration 改善、独立 test 回退。

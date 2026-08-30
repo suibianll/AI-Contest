@@ -876,20 +876,20 @@ w_t=\sum_{h,q}P_{hqt}^2
 
 ## 12. 实验序列与停止规则
 
-| 实验 | 唯一变量 | 首测范围 | 主要问题 | 通过后下一步 |
-|---|---|---|---|---|
-| E0 | D0 dashboard | 4 模型×3 层×全 role | 上限在哪里 | E0-G |
-| E0-G | all-255 scale-lattice oracle | Qwen gate/up/v sampled blocks | `±3` 是否漏掉大量合法 scale 收益 | GALS-C 或 E1 |
-| E0-C | GALS 解析候选召回 | E0-G 高 gap blocks | 稀疏候选能否追回 oracle | E1 |
-| E1 | progressive full-hierarchy HSDQ | Qwen gate/up/v/proj | 强 solver 是否迁移 | 已拒绝，转 A2 |
-| E2 | expansive FFN shrinkage | Qwen gate/up | 能否解除 rows gate | E3 |
-| E3 | LRH rank | v/gate/up/proj | 跨块是否重要 | E4 |
-| E4 | blockwise D/P | v/gate/up | 坐标系是否主瓶颈 | E5 |
-| E5 | Householder/CAT low-rank | o/v/proj | 正则化 alignment 初始化能否合法兑现 | E6 |
-| E6 | FS-JDRQ + block-Qronos | 全 Linear role | 冻结 Q(A) 后联合纠错能否合法兑现 | E7 |
-| E7 | global activation LRH | 全 Linear role | 激活跨块上限 | E8 |
-| E8 | GQRB/PAWV | Attention | 把 A 提到 0.90+ | E9 |
-| E9 | 全层五模型 + wide shape | 全部 | 泛化与最终组合 | 时间压缩阶段 |
+| 实验 | 唯一变量 | 首测范围 | 主要问题 | 执行状态 | 通过后下一步 |
+|---|---|---|---|---|---|
+| E0 | D0 dashboard | 4 模型×3 层×全 role | 上限在哪里 | 部分执行：只完成 Qwen layer-1 的 E0-G 诊断 | 补齐多模型 dashboard（如重启） |
+| E0-G | all-255 scale-lattice oracle | Qwen gate/up/v sampled blocks | `±3` 是否漏掉大量合法 scale 收益 | 已完成；gap 不支持全局 GALS | 停止全局 scale 扩张 |
+| E0-C | GALS 解析候选召回 | E0-G 高 gap blocks | 稀疏候选能否追回 oracle | 未执行 | 需先有新的高 gap 目标 |
+| E1 | progressive full-hierarchy HSDQ | Qwen gate/up/v/proj | 强 solver 是否迁移 | 已执行并拒绝：panel `290.923906` | 归档，恢复 parent |
+| E2 | expansive FFN shrinkage | Qwen gate/up | 能否解除 rows gate | 已执行并拒绝：panel `292.831952` | 停止该 row solver |
+| E3 | LRH rank | v/gate/up/proj | 跨块是否重要 | 未执行；A3 仅是 rowwise 替代诊断 | 需先独立实现跨块 LRH |
+| E4 | blockwise D/P | v/gate/up | 坐标系是否主瓶颈 | 部分执行并拒绝：仅 blockwise exponent，未做 D/P/CAT/Householder 全组合 | 不保留该 schedule |
+| E5 | Householder/CAT low-rank | o/v/proj | 正则化 alignment 初始化能否合法兑现 | 未执行 | 需新的合规、低秩可逆实现 |
+| E6 | FS-JDRQ + block-Qronos | 全 Linear role | 冻结 Q(A) 后联合纠错能否合法兑现 | 部分执行并拒绝：仅 raw joint-fold `A@W`，未做 frozen-Q(A)/ridge/Qronos | 停止 joint candidate |
+| E7 | global activation LRH | 全 Linear role | 激活跨块上限 | 未执行（当前 parent 已有 block Gram，不等于 global LRH） | 需独立状态/上限实验 |
+| E8 | GQRB/PAWV | Attention | 把 A 提到 0.90+ | 本轮未执行；仅沿用历史 Attention 路径 | 需单独 Attention 实验 |
+| E9 | 全层五模型 + wide shape | 全部 | 泛化与最终组合 | 未执行 | 只有新候选通过后才运行 |
 
 停止规则：
 
