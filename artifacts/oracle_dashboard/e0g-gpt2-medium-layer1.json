@@ -1,0 +1,3311 @@
+{
+  "schema": 1,
+  "cache": "artifacts\\real_model_suite\\cache\\gpt2-medium__seq128__calib2__test4__layersall__schema1.pt",
+  "model": "GPT2Tokenizer",
+  "layers": 24,
+  "max_rows": 32,
+  "top_blocks": 32,
+  "scale_candidates": {
+    "local_offsets": [
+      -3,
+      -2,
+      -1,
+      0,
+      1,
+      2,
+      3
+    ],
+    "oracle_codes": 255
+  },
+  "roles": {
+    "q": {
+      "boat": {
+        "seed": 0,
+        "block_size": 4,
+        "balance_min": 0.5399783253669739,
+        "balance_max": 2.345200777053833
+      },
+      "weight_plain_mse": {
+        "shape": [
+          1024,
+          1024
+        ],
+        "sample_rows": 32,
+        "sample_blocks": 512,
+        "improved_blocks": 9,
+        "mean_block_relative_gap": 0.0010034653823822737,
+        "total_relative_gap": 0.0008060215447883588,
+        "max_block_relative_gap": 0.1268751621246338,
+        "top_blocks": [
+          {
+            "row": 10,
+            "block": 7,
+            "relative_gap": 0.1268751621246338,
+            "baseline_code": 176,
+            "oracle_code": 180,
+            "code_distance": 4
+          },
+          {
+            "row": 17,
+            "block": 8,
+            "relative_gap": 0.12159676104784012,
+            "baseline_code": 172,
+            "oracle_code": 176,
+            "code_distance": 4
+          },
+          {
+            "row": 9,
+            "block": 14,
+            "relative_gap": 0.057868581265211105,
+            "baseline_code": 177,
+            "oracle_code": 180,
+            "code_distance": 3
+          },
+          {
+            "row": 8,
+            "block": 10,
+            "relative_gap": 0.05202009156346321,
+            "baseline_code": 177,
+            "oracle_code": 180,
+            "code_distance": 3
+          },
+          {
+            "row": 8,
+            "block": 13,
+            "relative_gap": 0.03909028694033623,
+            "baseline_code": 178,
+            "oracle_code": 180,
+            "code_distance": 2
+          },
+          {
+            "row": 14,
+            "block": 0,
+            "relative_gap": 0.035205066204071045,
+            "baseline_code": 176,
+            "oracle_code": 180,
+            "code_distance": 4
+          },
+          {
+            "row": 18,
+            "block": 13,
+            "relative_gap": 0.030626345425844193,
+            "baseline_code": 176,
+            "oracle_code": 180,
+            "code_distance": 4
+          },
+          {
+            "row": 7,
+            "block": 4,
+            "relative_gap": 0.02738167531788349,
+            "baseline_code": 178,
+            "oracle_code": 182,
+            "code_distance": 4
+          },
+          {
+            "row": 1,
+            "block": 1,
+            "relative_gap": 0.023110313341021538,
+            "baseline_code": 177,
+            "oracle_code": 180,
+            "code_distance": 3
+          },
+          {
+            "row": 0,
+            "block": 2,
+            "relative_gap": 0.0,
+            "baseline_code": 180,
+            "oracle_code": 180,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 3,
+            "relative_gap": 0.0,
+            "baseline_code": 176,
+            "oracle_code": 176,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 4,
+            "relative_gap": 0.0,
+            "baseline_code": 177,
+            "oracle_code": 177,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 5,
+            "relative_gap": 0.0,
+            "baseline_code": 178,
+            "oracle_code": 178,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 6,
+            "relative_gap": 0.0,
+            "baseline_code": 175,
+            "oracle_code": 175,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 7,
+            "relative_gap": 0.0,
+            "baseline_code": 177,
+            "oracle_code": 177,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 8,
+            "relative_gap": 0.0,
+            "baseline_code": 179,
+            "oracle_code": 179,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 9,
+            "relative_gap": 0.0,
+            "baseline_code": 179,
+            "oracle_code": 179,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 10,
+            "relative_gap": 0.0,
+            "baseline_code": 179,
+            "oracle_code": 179,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 11,
+            "relative_gap": 0.0,
+            "baseline_code": 176,
+            "oracle_code": 176,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 12,
+            "relative_gap": 0.0,
+            "baseline_code": 177,
+            "oracle_code": 177,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 13,
+            "relative_gap": 0.0,
+            "baseline_code": 179,
+            "oracle_code": 179,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 14,
+            "relative_gap": 0.0,
+            "baseline_code": 178,
+            "oracle_code": 178,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 15,
+            "relative_gap": 0.0,
+            "baseline_code": 176,
+            "oracle_code": 176,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 0,
+            "relative_gap": 0.0,
+            "baseline_code": 177,
+            "oracle_code": 177,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 2,
+            "relative_gap": 0.0,
+            "baseline_code": 177,
+            "oracle_code": 177,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 3,
+            "relative_gap": 0.0,
+            "baseline_code": 176,
+            "oracle_code": 176,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 4,
+            "relative_gap": 0.0,
+            "baseline_code": 176,
+            "oracle_code": 176,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 5,
+            "relative_gap": 0.0,
+            "baseline_code": 177,
+            "oracle_code": 177,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 6,
+            "relative_gap": 0.0,
+            "baseline_code": 179,
+            "oracle_code": 179,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 7,
+            "relative_gap": 0.0,
+            "baseline_code": 178,
+            "oracle_code": 178,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 8,
+            "relative_gap": 0.0,
+            "baseline_code": 174,
+            "oracle_code": 174,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 9,
+            "relative_gap": 0.0,
+            "baseline_code": 176,
+            "oracle_code": 176,
+            "code_distance": 0
+          }
+        ]
+      },
+      "activation_gram": {
+        "shape": [
+          128,
+          1024
+        ],
+        "sample_rows": 32,
+        "sample_blocks": 512,
+        "improved_blocks": 72,
+        "mean_block_relative_gap": 0.006388787180185318,
+        "total_relative_gap": 0.007303781238472306,
+        "max_block_relative_gap": 0.179350346326828,
+        "top_blocks": [
+          {
+            "row": 13,
+            "block": 10,
+            "relative_gap": 0.179350346326828,
+            "baseline_code": 170,
+            "oracle_code": 172,
+            "code_distance": 2
+          },
+          {
+            "row": 31,
+            "block": 2,
+            "relative_gap": 0.15315869450569153,
+            "baseline_code": 169,
+            "oracle_code": 172,
+            "code_distance": 3
+          },
+          {
+            "row": 24,
+            "block": 9,
+            "relative_gap": 0.13489514589309692,
+            "baseline_code": 170,
+            "oracle_code": 174,
+            "code_distance": 4
+          },
+          {
+            "row": 10,
+            "block": 10,
+            "relative_gap": 0.1137588769197464,
+            "baseline_code": 171,
+            "oracle_code": 175,
+            "code_distance": 4
+          },
+          {
+            "row": 17,
+            "block": 9,
+            "relative_gap": 0.10994131118059158,
+            "baseline_code": 169,
+            "oracle_code": 173,
+            "code_distance": 4
+          },
+          {
+            "row": 22,
+            "block": 7,
+            "relative_gap": 0.103176049888134,
+            "baseline_code": 168,
+            "oracle_code": 174,
+            "code_distance": 6
+          },
+          {
+            "row": 1,
+            "block": 10,
+            "relative_gap": 0.10129997879266739,
+            "baseline_code": 168,
+            "oracle_code": 172,
+            "code_distance": 4
+          },
+          {
+            "row": 23,
+            "block": 15,
+            "relative_gap": 0.10072813928127289,
+            "baseline_code": 166,
+            "oracle_code": 174,
+            "code_distance": 8
+          },
+          {
+            "row": 23,
+            "block": 11,
+            "relative_gap": 0.09935308247804642,
+            "baseline_code": 168,
+            "oracle_code": 172,
+            "code_distance": 4
+          },
+          {
+            "row": 26,
+            "block": 11,
+            "relative_gap": 0.09658585488796234,
+            "baseline_code": 166,
+            "oracle_code": 174,
+            "code_distance": 8
+          },
+          {
+            "row": 17,
+            "block": 12,
+            "relative_gap": 0.09246779978275299,
+            "baseline_code": 171,
+            "oracle_code": 174,
+            "code_distance": 3
+          },
+          {
+            "row": 12,
+            "block": 10,
+            "relative_gap": 0.0877874568104744,
+            "baseline_code": 170,
+            "oracle_code": 174,
+            "code_distance": 4
+          },
+          {
+            "row": 14,
+            "block": 11,
+            "relative_gap": 0.08550084382295609,
+            "baseline_code": 168,
+            "oracle_code": 172,
+            "code_distance": 4
+          },
+          {
+            "row": 9,
+            "block": 7,
+            "relative_gap": 0.08431262522935867,
+            "baseline_code": 166,
+            "oracle_code": 174,
+            "code_distance": 8
+          },
+          {
+            "row": 10,
+            "block": 2,
+            "relative_gap": 0.08299180120229721,
+            "baseline_code": 171,
+            "oracle_code": 173,
+            "code_distance": 2
+          },
+          {
+            "row": 26,
+            "block": 14,
+            "relative_gap": 0.0807887464761734,
+            "baseline_code": 169,
+            "oracle_code": 173,
+            "code_distance": 4
+          },
+          {
+            "row": 26,
+            "block": 0,
+            "relative_gap": 0.0801200345158577,
+            "baseline_code": 169,
+            "oracle_code": 173,
+            "code_distance": 4
+          },
+          {
+            "row": 9,
+            "block": 6,
+            "relative_gap": 0.07149553298950195,
+            "baseline_code": 169,
+            "oracle_code": 173,
+            "code_distance": 4
+          },
+          {
+            "row": 0,
+            "block": 9,
+            "relative_gap": 0.06487270444631577,
+            "baseline_code": 166,
+            "oracle_code": 170,
+            "code_distance": 4
+          },
+          {
+            "row": 11,
+            "block": 14,
+            "relative_gap": 0.058261688798666,
+            "baseline_code": 169,
+            "oracle_code": 173,
+            "code_distance": 4
+          },
+          {
+            "row": 7,
+            "block": 4,
+            "relative_gap": 0.05685128644108772,
+            "baseline_code": 167,
+            "oracle_code": 171,
+            "code_distance": 4
+          },
+          {
+            "row": 27,
+            "block": 13,
+            "relative_gap": 0.05621573328971863,
+            "baseline_code": 169,
+            "oracle_code": 173,
+            "code_distance": 4
+          },
+          {
+            "row": 9,
+            "block": 10,
+            "relative_gap": 0.05326113477349281,
+            "baseline_code": 169,
+            "oracle_code": 173,
+            "code_distance": 4
+          },
+          {
+            "row": 30,
+            "block": 12,
+            "relative_gap": 0.05014179274439812,
+            "baseline_code": 169,
+            "oracle_code": 173,
+            "code_distance": 4
+          },
+          {
+            "row": 14,
+            "block": 0,
+            "relative_gap": 0.04799536615610123,
+            "baseline_code": 170,
+            "oracle_code": 173,
+            "code_distance": 3
+          },
+          {
+            "row": 31,
+            "block": 7,
+            "relative_gap": 0.04777083918452263,
+            "baseline_code": 167,
+            "oracle_code": 171,
+            "code_distance": 4
+          },
+          {
+            "row": 14,
+            "block": 1,
+            "relative_gap": 0.04724631831049919,
+            "baseline_code": 170,
+            "oracle_code": 174,
+            "code_distance": 4
+          },
+          {
+            "row": 0,
+            "block": 6,
+            "relative_gap": 0.04709627479314804,
+            "baseline_code": 166,
+            "oracle_code": 170,
+            "code_distance": 4
+          },
+          {
+            "row": 11,
+            "block": 4,
+            "relative_gap": 0.04641476646065712,
+            "baseline_code": 168,
+            "oracle_code": 172,
+            "code_distance": 4
+          },
+          {
+            "row": 16,
+            "block": 2,
+            "relative_gap": 0.045929331332445145,
+            "baseline_code": 166,
+            "oracle_code": 173,
+            "code_distance": 7
+          },
+          {
+            "row": 31,
+            "block": 15,
+            "relative_gap": 0.045712679624557495,
+            "baseline_code": 169,
+            "oracle_code": 173,
+            "code_distance": 4
+          },
+          {
+            "row": 3,
+            "block": 6,
+            "relative_gap": 0.044797807931900024,
+            "baseline_code": 169,
+            "oracle_code": 173,
+            "code_distance": 4
+          }
+        ]
+      }
+    },
+    "k": {
+      "boat": {
+        "seed": 0,
+        "block_size": 4,
+        "balance_min": 0.4554011821746826,
+        "balance_max": 2.330928325653076
+      },
+      "weight_plain_mse": {
+        "shape": [
+          1024,
+          1024
+        ],
+        "sample_rows": 32,
+        "sample_blocks": 512,
+        "improved_blocks": 4,
+        "mean_block_relative_gap": 0.00029684085166081786,
+        "total_relative_gap": 0.00032882680356269165,
+        "max_block_relative_gap": 0.08614639192819595,
+        "top_blocks": [
+          {
+            "row": 16,
+            "block": 7,
+            "relative_gap": 0.08614639192819595,
+            "baseline_code": 176,
+            "oracle_code": 180,
+            "code_distance": 4
+          },
+          {
+            "row": 30,
+            "block": 9,
+            "relative_gap": 0.043271224945783615,
+            "baseline_code": 176,
+            "oracle_code": 180,
+            "code_distance": 4
+          },
+          {
+            "row": 2,
+            "block": 14,
+            "relative_gap": 0.017315160483121872,
+            "baseline_code": 177,
+            "oracle_code": 178,
+            "code_distance": 1
+          },
+          {
+            "row": 5,
+            "block": 9,
+            "relative_gap": 0.00524974474683404,
+            "baseline_code": 173,
+            "oracle_code": 177,
+            "code_distance": 4
+          },
+          {
+            "row": 0,
+            "block": 2,
+            "relative_gap": 0.0,
+            "baseline_code": 178,
+            "oracle_code": 178,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 3,
+            "relative_gap": 0.0,
+            "baseline_code": 178,
+            "oracle_code": 178,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 4,
+            "relative_gap": 0.0,
+            "baseline_code": 178,
+            "oracle_code": 178,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 5,
+            "relative_gap": 0.0,
+            "baseline_code": 176,
+            "oracle_code": 176,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 6,
+            "relative_gap": 0.0,
+            "baseline_code": 178,
+            "oracle_code": 178,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 7,
+            "relative_gap": 0.0,
+            "baseline_code": 179,
+            "oracle_code": 179,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 8,
+            "relative_gap": 0.0,
+            "baseline_code": 177,
+            "oracle_code": 177,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 9,
+            "relative_gap": 0.0,
+            "baseline_code": 178,
+            "oracle_code": 178,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 10,
+            "relative_gap": 0.0,
+            "baseline_code": 179,
+            "oracle_code": 179,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 11,
+            "relative_gap": 0.0,
+            "baseline_code": 178,
+            "oracle_code": 178,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 12,
+            "relative_gap": 0.0,
+            "baseline_code": 181,
+            "oracle_code": 181,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 13,
+            "relative_gap": 0.0,
+            "baseline_code": 179,
+            "oracle_code": 179,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 14,
+            "relative_gap": 0.0,
+            "baseline_code": 176,
+            "oracle_code": 176,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 15,
+            "relative_gap": 0.0,
+            "baseline_code": 176,
+            "oracle_code": 176,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 0,
+            "relative_gap": 0.0,
+            "baseline_code": 174,
+            "oracle_code": 174,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 1,
+            "relative_gap": 0.0,
+            "baseline_code": 175,
+            "oracle_code": 175,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 2,
+            "relative_gap": 0.0,
+            "baseline_code": 174,
+            "oracle_code": 174,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 3,
+            "relative_gap": 0.0,
+            "baseline_code": 176,
+            "oracle_code": 176,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 4,
+            "relative_gap": 0.0,
+            "baseline_code": 177,
+            "oracle_code": 177,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 5,
+            "relative_gap": 0.0,
+            "baseline_code": 175,
+            "oracle_code": 175,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 6,
+            "relative_gap": 0.0,
+            "baseline_code": 175,
+            "oracle_code": 175,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 7,
+            "relative_gap": 0.0,
+            "baseline_code": 178,
+            "oracle_code": 178,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 8,
+            "relative_gap": 0.0,
+            "baseline_code": 173,
+            "oracle_code": 173,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 9,
+            "relative_gap": 0.0,
+            "baseline_code": 176,
+            "oracle_code": 176,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 10,
+            "relative_gap": 0.0,
+            "baseline_code": 173,
+            "oracle_code": 173,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 11,
+            "relative_gap": 0.0,
+            "baseline_code": 176,
+            "oracle_code": 176,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 12,
+            "relative_gap": 0.0,
+            "baseline_code": 178,
+            "oracle_code": 178,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 13,
+            "relative_gap": 0.0,
+            "baseline_code": 174,
+            "oracle_code": 174,
+            "code_distance": 0
+          }
+        ]
+      },
+      "activation_gram": {
+        "shape": [
+          128,
+          1024
+        ],
+        "sample_rows": 32,
+        "sample_blocks": 512,
+        "improved_blocks": 76,
+        "mean_block_relative_gap": 0.007018228992819786,
+        "total_relative_gap": 0.008594471862359775,
+        "max_block_relative_gap": 0.19742703437805176,
+        "top_blocks": [
+          {
+            "row": 14,
+            "block": 13,
+            "relative_gap": 0.19742703437805176,
+            "baseline_code": 169,
+            "oracle_code": 173,
+            "code_distance": 4
+          },
+          {
+            "row": 3,
+            "block": 3,
+            "relative_gap": 0.17710784077644348,
+            "baseline_code": 169,
+            "oracle_code": 173,
+            "code_distance": 4
+          },
+          {
+            "row": 19,
+            "block": 14,
+            "relative_gap": 0.17430934309959412,
+            "baseline_code": 169,
+            "oracle_code": 173,
+            "code_distance": 4
+          },
+          {
+            "row": 2,
+            "block": 9,
+            "relative_gap": 0.17264913022518158,
+            "baseline_code": 171,
+            "oracle_code": 172,
+            "code_distance": 1
+          },
+          {
+            "row": 21,
+            "block": 10,
+            "relative_gap": 0.1644589751958847,
+            "baseline_code": 168,
+            "oracle_code": 176,
+            "code_distance": 8
+          },
+          {
+            "row": 15,
+            "block": 10,
+            "relative_gap": 0.13711953163146973,
+            "baseline_code": 172,
+            "oracle_code": 176,
+            "code_distance": 4
+          },
+          {
+            "row": 23,
+            "block": 1,
+            "relative_gap": 0.13125547766685486,
+            "baseline_code": 171,
+            "oracle_code": 175,
+            "code_distance": 4
+          },
+          {
+            "row": 4,
+            "block": 9,
+            "relative_gap": 0.12447108328342438,
+            "baseline_code": 170,
+            "oracle_code": 172,
+            "code_distance": 2
+          },
+          {
+            "row": 28,
+            "block": 14,
+            "relative_gap": 0.11632745712995529,
+            "baseline_code": 169,
+            "oracle_code": 173,
+            "code_distance": 4
+          },
+          {
+            "row": 16,
+            "block": 9,
+            "relative_gap": 0.10535086691379547,
+            "baseline_code": 169,
+            "oracle_code": 172,
+            "code_distance": 3
+          },
+          {
+            "row": 12,
+            "block": 7,
+            "relative_gap": 0.0940328985452652,
+            "baseline_code": 169,
+            "oracle_code": 173,
+            "code_distance": 4
+          },
+          {
+            "row": 17,
+            "block": 15,
+            "relative_gap": 0.09097715467214584,
+            "baseline_code": 166,
+            "oracle_code": 174,
+            "code_distance": 8
+          },
+          {
+            "row": 16,
+            "block": 5,
+            "relative_gap": 0.08769001811742783,
+            "baseline_code": 169,
+            "oracle_code": 173,
+            "code_distance": 4
+          },
+          {
+            "row": 11,
+            "block": 11,
+            "relative_gap": 0.08610914647579193,
+            "baseline_code": 169,
+            "oracle_code": 173,
+            "code_distance": 4
+          },
+          {
+            "row": 2,
+            "block": 3,
+            "relative_gap": 0.07996902614831924,
+            "baseline_code": 170,
+            "oracle_code": 174,
+            "code_distance": 4
+          },
+          {
+            "row": 19,
+            "block": 2,
+            "relative_gap": 0.0716278925538063,
+            "baseline_code": 166,
+            "oracle_code": 174,
+            "code_distance": 8
+          },
+          {
+            "row": 22,
+            "block": 9,
+            "relative_gap": 0.07123950868844986,
+            "baseline_code": 168,
+            "oracle_code": 172,
+            "code_distance": 4
+          },
+          {
+            "row": 26,
+            "block": 13,
+            "relative_gap": 0.07049376517534256,
+            "baseline_code": 169,
+            "oracle_code": 173,
+            "code_distance": 4
+          },
+          {
+            "row": 6,
+            "block": 4,
+            "relative_gap": 0.07042984664440155,
+            "baseline_code": 168,
+            "oracle_code": 172,
+            "code_distance": 4
+          },
+          {
+            "row": 20,
+            "block": 3,
+            "relative_gap": 0.06979928910732269,
+            "baseline_code": 167,
+            "oracle_code": 171,
+            "code_distance": 4
+          },
+          {
+            "row": 6,
+            "block": 15,
+            "relative_gap": 0.06635977327823639,
+            "baseline_code": 170,
+            "oracle_code": 174,
+            "code_distance": 4
+          },
+          {
+            "row": 24,
+            "block": 3,
+            "relative_gap": 0.05372864007949829,
+            "baseline_code": 169,
+            "oracle_code": 173,
+            "code_distance": 4
+          },
+          {
+            "row": 11,
+            "block": 0,
+            "relative_gap": 0.053352754563093185,
+            "baseline_code": 167,
+            "oracle_code": 171,
+            "code_distance": 4
+          },
+          {
+            "row": 23,
+            "block": 10,
+            "relative_gap": 0.05171271041035652,
+            "baseline_code": 168,
+            "oracle_code": 172,
+            "code_distance": 4
+          },
+          {
+            "row": 15,
+            "block": 4,
+            "relative_gap": 0.05081950128078461,
+            "baseline_code": 168,
+            "oracle_code": 172,
+            "code_distance": 4
+          },
+          {
+            "row": 26,
+            "block": 14,
+            "relative_gap": 0.050394125282764435,
+            "baseline_code": 170,
+            "oracle_code": 173,
+            "code_distance": 3
+          },
+          {
+            "row": 13,
+            "block": 4,
+            "relative_gap": 0.04680846631526947,
+            "baseline_code": 168,
+            "oracle_code": 172,
+            "code_distance": 4
+          },
+          {
+            "row": 26,
+            "block": 9,
+            "relative_gap": 0.04662569612264633,
+            "baseline_code": 167,
+            "oracle_code": 171,
+            "code_distance": 4
+          },
+          {
+            "row": 23,
+            "block": 7,
+            "relative_gap": 0.045879919081926346,
+            "baseline_code": 168,
+            "oracle_code": 172,
+            "code_distance": 4
+          },
+          {
+            "row": 31,
+            "block": 7,
+            "relative_gap": 0.04547504335641861,
+            "baseline_code": 167,
+            "oracle_code": 171,
+            "code_distance": 4
+          },
+          {
+            "row": 23,
+            "block": 8,
+            "relative_gap": 0.04530744254589081,
+            "baseline_code": 169,
+            "oracle_code": 173,
+            "code_distance": 4
+          },
+          {
+            "row": 6,
+            "block": 1,
+            "relative_gap": 0.04220703989267349,
+            "baseline_code": 168,
+            "oracle_code": 172,
+            "code_distance": 4
+          }
+        ]
+      }
+    },
+    "v": {
+      "boat": {
+        "seed": 0,
+        "block_size": 8,
+        "balance_min": 0.6178593039512634,
+        "balance_max": 3.8942036628723145
+      },
+      "weight_plain_mse": {
+        "shape": [
+          1024,
+          1024
+        ],
+        "sample_rows": 32,
+        "sample_blocks": 512,
+        "improved_blocks": 7,
+        "mean_block_relative_gap": 0.0010461044730618596,
+        "total_relative_gap": 0.001330325170077599,
+        "max_block_relative_gap": 0.13554798066616058,
+        "top_blocks": [
+          {
+            "row": 10,
+            "block": 3,
+            "relative_gap": 0.13554798066616058,
+            "baseline_code": 168,
+            "oracle_code": 172,
+            "code_distance": 4
+          },
+          {
+            "row": 9,
+            "block": 7,
+            "relative_gap": 0.12988044321537018,
+            "baseline_code": 168,
+            "oracle_code": 172,
+            "code_distance": 4
+          },
+          {
+            "row": 27,
+            "block": 8,
+            "relative_gap": 0.08970168977975845,
+            "baseline_code": 170,
+            "oracle_code": 172,
+            "code_distance": 2
+          },
+          {
+            "row": 20,
+            "block": 7,
+            "relative_gap": 0.0630200132727623,
+            "baseline_code": 168,
+            "oracle_code": 172,
+            "code_distance": 4
+          },
+          {
+            "row": 12,
+            "block": 1,
+            "relative_gap": 0.06261780858039856,
+            "baseline_code": 172,
+            "oracle_code": 176,
+            "code_distance": 4
+          },
+          {
+            "row": 1,
+            "block": 7,
+            "relative_gap": 0.042039841413497925,
+            "baseline_code": 168,
+            "oracle_code": 172,
+            "code_distance": 4
+          },
+          {
+            "row": 14,
+            "block": 1,
+            "relative_gap": 0.012797719798982143,
+            "baseline_code": 168,
+            "oracle_code": 172,
+            "code_distance": 4
+          },
+          {
+            "row": 0,
+            "block": 2,
+            "relative_gap": 0.0,
+            "baseline_code": 168,
+            "oracle_code": 168,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 3,
+            "relative_gap": 0.0,
+            "baseline_code": 170,
+            "oracle_code": 170,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 4,
+            "relative_gap": 0.0,
+            "baseline_code": 169,
+            "oracle_code": 169,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 5,
+            "relative_gap": 0.0,
+            "baseline_code": 169,
+            "oracle_code": 169,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 6,
+            "relative_gap": 0.0,
+            "baseline_code": 170,
+            "oracle_code": 170,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 7,
+            "relative_gap": 0.0,
+            "baseline_code": 168,
+            "oracle_code": 168,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 8,
+            "relative_gap": 0.0,
+            "baseline_code": 170,
+            "oracle_code": 170,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 9,
+            "relative_gap": 0.0,
+            "baseline_code": 170,
+            "oracle_code": 170,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 10,
+            "relative_gap": 0.0,
+            "baseline_code": 172,
+            "oracle_code": 172,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 11,
+            "relative_gap": 0.0,
+            "baseline_code": 170,
+            "oracle_code": 170,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 12,
+            "relative_gap": 0.0,
+            "baseline_code": 170,
+            "oracle_code": 170,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 13,
+            "relative_gap": 0.0,
+            "baseline_code": 168,
+            "oracle_code": 168,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 14,
+            "relative_gap": 0.0,
+            "baseline_code": 170,
+            "oracle_code": 170,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 15,
+            "relative_gap": 0.0,
+            "baseline_code": 168,
+            "oracle_code": 168,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 0,
+            "relative_gap": 0.0,
+            "baseline_code": 170,
+            "oracle_code": 170,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 1,
+            "relative_gap": 0.0,
+            "baseline_code": 173,
+            "oracle_code": 173,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 2,
+            "relative_gap": 0.0,
+            "baseline_code": 172,
+            "oracle_code": 172,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 3,
+            "relative_gap": 0.0,
+            "baseline_code": 172,
+            "oracle_code": 172,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 4,
+            "relative_gap": 0.0,
+            "baseline_code": 169,
+            "oracle_code": 169,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 5,
+            "relative_gap": 0.0,
+            "baseline_code": 171,
+            "oracle_code": 171,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 6,
+            "relative_gap": 0.0,
+            "baseline_code": 171,
+            "oracle_code": 171,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 8,
+            "relative_gap": 0.0,
+            "baseline_code": 173,
+            "oracle_code": 173,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 9,
+            "relative_gap": 0.0,
+            "baseline_code": 172,
+            "oracle_code": 172,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 10,
+            "relative_gap": 0.0,
+            "baseline_code": 169,
+            "oracle_code": 169,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 11,
+            "relative_gap": 0.0,
+            "baseline_code": 171,
+            "oracle_code": 171,
+            "code_distance": 0
+          }
+        ]
+      },
+      "activation_gram": {
+        "shape": [
+          128,
+          1024
+        ],
+        "sample_rows": 32,
+        "sample_blocks": 512,
+        "improved_blocks": 20,
+        "mean_block_relative_gap": 0.0009098001173697412,
+        "total_relative_gap": 0.0010139627244120859,
+        "max_block_relative_gap": 0.10305000096559525,
+        "top_blocks": [
+          {
+            "row": 12,
+            "block": 7,
+            "relative_gap": 0.10305000096559525,
+            "baseline_code": 168,
+            "oracle_code": 172,
+            "code_distance": 4
+          },
+          {
+            "row": 14,
+            "block": 14,
+            "relative_gap": 0.0722823292016983,
+            "baseline_code": 169,
+            "oracle_code": 172,
+            "code_distance": 3
+          },
+          {
+            "row": 0,
+            "block": 9,
+            "relative_gap": 0.04784765839576721,
+            "baseline_code": 167,
+            "oracle_code": 171,
+            "code_distance": 4
+          },
+          {
+            "row": 19,
+            "block": 13,
+            "relative_gap": 0.03406693413853645,
+            "baseline_code": 168,
+            "oracle_code": 172,
+            "code_distance": 4
+          },
+          {
+            "row": 31,
+            "block": 2,
+            "relative_gap": 0.03204658254981041,
+            "baseline_code": 169,
+            "oracle_code": 172,
+            "code_distance": 3
+          },
+          {
+            "row": 24,
+            "block": 14,
+            "relative_gap": 0.023459887132048607,
+            "baseline_code": 170,
+            "oracle_code": 174,
+            "code_distance": 4
+          },
+          {
+            "row": 16,
+            "block": 10,
+            "relative_gap": 0.02110382169485092,
+            "baseline_code": 168,
+            "oracle_code": 172,
+            "code_distance": 4
+          },
+          {
+            "row": 15,
+            "block": 9,
+            "relative_gap": 0.02065521851181984,
+            "baseline_code": 166,
+            "oracle_code": 171,
+            "code_distance": 5
+          },
+          {
+            "row": 4,
+            "block": 12,
+            "relative_gap": 0.015336188487708569,
+            "baseline_code": 168,
+            "oracle_code": 172,
+            "code_distance": 4
+          },
+          {
+            "row": 15,
+            "block": 0,
+            "relative_gap": 0.014819071628153324,
+            "baseline_code": 169,
+            "oracle_code": 173,
+            "code_distance": 4
+          },
+          {
+            "row": 30,
+            "block": 9,
+            "relative_gap": 0.014716077595949173,
+            "baseline_code": 169,
+            "oracle_code": 173,
+            "code_distance": 4
+          },
+          {
+            "row": 16,
+            "block": 3,
+            "relative_gap": 0.01447963435202837,
+            "baseline_code": 169,
+            "oracle_code": 173,
+            "code_distance": 4
+          },
+          {
+            "row": 16,
+            "block": 8,
+            "relative_gap": 0.011800204403698444,
+            "baseline_code": 168,
+            "oracle_code": 172,
+            "code_distance": 4
+          },
+          {
+            "row": 7,
+            "block": 9,
+            "relative_gap": 0.010483560152351856,
+            "baseline_code": 166,
+            "oracle_code": 170,
+            "code_distance": 4
+          },
+          {
+            "row": 10,
+            "block": 3,
+            "relative_gap": 0.00943655613809824,
+            "baseline_code": 168,
+            "oracle_code": 172,
+            "code_distance": 4
+          },
+          {
+            "row": 28,
+            "block": 13,
+            "relative_gap": 0.006670481991022825,
+            "baseline_code": 167,
+            "oracle_code": 171,
+            "code_distance": 4
+          },
+          {
+            "row": 25,
+            "block": 13,
+            "relative_gap": 0.006281397305428982,
+            "baseline_code": 168,
+            "oracle_code": 172,
+            "code_distance": 4
+          },
+          {
+            "row": 30,
+            "block": 15,
+            "relative_gap": 0.0029608290642499924,
+            "baseline_code": 170,
+            "oracle_code": 174,
+            "code_distance": 4
+          },
+          {
+            "row": 22,
+            "block": 14,
+            "relative_gap": 0.0028863500338047743,
+            "baseline_code": 168,
+            "oracle_code": 172,
+            "code_distance": 4
+          },
+          {
+            "row": 10,
+            "block": 11,
+            "relative_gap": 0.0014299467438831925,
+            "baseline_code": 169,
+            "oracle_code": 173,
+            "code_distance": 4
+          },
+          {
+            "row": 2,
+            "block": 6,
+            "relative_gap": 4.9476798267278355e-06,
+            "baseline_code": 169,
+            "oracle_code": 173,
+            "code_distance": 4
+          },
+          {
+            "row": 0,
+            "block": 12,
+            "relative_gap": 0.0,
+            "baseline_code": 164,
+            "oracle_code": 164,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 13,
+            "relative_gap": 0.0,
+            "baseline_code": 167,
+            "oracle_code": 167,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 14,
+            "relative_gap": 0.0,
+            "baseline_code": 163,
+            "oracle_code": 163,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 15,
+            "relative_gap": 0.0,
+            "baseline_code": 164,
+            "oracle_code": 164,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 0,
+            "relative_gap": 0.0,
+            "baseline_code": 166,
+            "oracle_code": 166,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 1,
+            "relative_gap": 0.0,
+            "baseline_code": 167,
+            "oracle_code": 167,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 2,
+            "relative_gap": 0.0,
+            "baseline_code": 168,
+            "oracle_code": 168,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 3,
+            "relative_gap": 0.0,
+            "baseline_code": 168,
+            "oracle_code": 168,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 4,
+            "relative_gap": 0.0,
+            "baseline_code": 168,
+            "oracle_code": 168,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 5,
+            "relative_gap": 0.0,
+            "baseline_code": 166,
+            "oracle_code": 166,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 6,
+            "relative_gap": 0.0,
+            "baseline_code": 167,
+            "oracle_code": 167,
+            "code_distance": 0
+          }
+        ]
+      }
+    },
+    "o": {
+      "boat": {
+        "seed": 0,
+        "block_size": 4,
+        "balance_min": 0.4829367697238922,
+        "balance_max": 2.7799365520477295
+      },
+      "weight_plain_mse": {
+        "shape": [
+          1024,
+          1024
+        ],
+        "sample_rows": 32,
+        "sample_blocks": 512,
+        "improved_blocks": 1,
+        "mean_block_relative_gap": 0.00020885225967504084,
+        "total_relative_gap": 4.0840696947403674e-05,
+        "max_block_relative_gap": 0.10693235695362091,
+        "top_blocks": [
+          {
+            "row": 20,
+            "block": 3,
+            "relative_gap": 0.10693235695362091,
+            "baseline_code": 164,
+            "oracle_code": 168,
+            "code_distance": 4
+          },
+          {
+            "row": 0,
+            "block": 1,
+            "relative_gap": 0.0,
+            "baseline_code": 170,
+            "oracle_code": 170,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 2,
+            "relative_gap": 0.0,
+            "baseline_code": 171,
+            "oracle_code": 171,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 3,
+            "relative_gap": 0.0,
+            "baseline_code": 165,
+            "oracle_code": 165,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 4,
+            "relative_gap": 0.0,
+            "baseline_code": 168,
+            "oracle_code": 168,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 5,
+            "relative_gap": 0.0,
+            "baseline_code": 171,
+            "oracle_code": 171,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 6,
+            "relative_gap": 0.0,
+            "baseline_code": 173,
+            "oracle_code": 173,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 7,
+            "relative_gap": 0.0,
+            "baseline_code": 165,
+            "oracle_code": 165,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 8,
+            "relative_gap": 0.0,
+            "baseline_code": 167,
+            "oracle_code": 167,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 9,
+            "relative_gap": 0.0,
+            "baseline_code": 171,
+            "oracle_code": 171,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 10,
+            "relative_gap": 0.0,
+            "baseline_code": 172,
+            "oracle_code": 172,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 11,
+            "relative_gap": 0.0,
+            "baseline_code": 168,
+            "oracle_code": 168,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 12,
+            "relative_gap": 0.0,
+            "baseline_code": 172,
+            "oracle_code": 172,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 13,
+            "relative_gap": 0.0,
+            "baseline_code": 165,
+            "oracle_code": 165,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 14,
+            "relative_gap": 0.0,
+            "baseline_code": 172,
+            "oracle_code": 172,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 15,
+            "relative_gap": 0.0,
+            "baseline_code": 166,
+            "oracle_code": 166,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 0,
+            "relative_gap": 0.0,
+            "baseline_code": 167,
+            "oracle_code": 167,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 1,
+            "relative_gap": 0.0,
+            "baseline_code": 170,
+            "oracle_code": 170,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 2,
+            "relative_gap": 0.0,
+            "baseline_code": 166,
+            "oracle_code": 166,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 3,
+            "relative_gap": 0.0,
+            "baseline_code": 164,
+            "oracle_code": 164,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 4,
+            "relative_gap": 0.0,
+            "baseline_code": 169,
+            "oracle_code": 169,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 5,
+            "relative_gap": 0.0,
+            "baseline_code": 169,
+            "oracle_code": 169,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 6,
+            "relative_gap": 0.0,
+            "baseline_code": 170,
+            "oracle_code": 170,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 7,
+            "relative_gap": 0.0,
+            "baseline_code": 162,
+            "oracle_code": 162,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 8,
+            "relative_gap": 0.0,
+            "baseline_code": 164,
+            "oracle_code": 164,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 9,
+            "relative_gap": 0.0,
+            "baseline_code": 172,
+            "oracle_code": 172,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 10,
+            "relative_gap": 0.0,
+            "baseline_code": 170,
+            "oracle_code": 170,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 11,
+            "relative_gap": 0.0,
+            "baseline_code": 169,
+            "oracle_code": 169,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 12,
+            "relative_gap": 0.0,
+            "baseline_code": 170,
+            "oracle_code": 170,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 13,
+            "relative_gap": 0.0,
+            "baseline_code": 164,
+            "oracle_code": 164,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 14,
+            "relative_gap": 0.0,
+            "baseline_code": 172,
+            "oracle_code": 172,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 15,
+            "relative_gap": 0.0,
+            "baseline_code": 165,
+            "oracle_code": 165,
+            "code_distance": 0
+          }
+        ]
+      },
+      "activation_gram": {
+        "shape": [
+          128,
+          1024
+        ],
+        "sample_rows": 32,
+        "sample_blocks": 512,
+        "improved_blocks": 29,
+        "mean_block_relative_gap": 0.0013162237592041492,
+        "total_relative_gap": 0.0019420976946999632,
+        "max_block_relative_gap": 0.11179134249687195,
+        "top_blocks": [
+          {
+            "row": 12,
+            "block": 9,
+            "relative_gap": 0.11179134249687195,
+            "baseline_code": 164,
+            "oracle_code": 168,
+            "code_distance": 4
+          },
+          {
+            "row": 12,
+            "block": 15,
+            "relative_gap": 0.08857272565364838,
+            "baseline_code": 161,
+            "oracle_code": 169,
+            "code_distance": 8
+          },
+          {
+            "row": 26,
+            "block": 13,
+            "relative_gap": 0.08636564761400223,
+            "baseline_code": 160,
+            "oracle_code": 164,
+            "code_distance": 4
+          },
+          {
+            "row": 4,
+            "block": 10,
+            "relative_gap": 0.059272315353155136,
+            "baseline_code": 165,
+            "oracle_code": 169,
+            "code_distance": 4
+          },
+          {
+            "row": 25,
+            "block": 12,
+            "relative_gap": 0.03794517368078232,
+            "baseline_code": 165,
+            "oracle_code": 169,
+            "code_distance": 4
+          },
+          {
+            "row": 4,
+            "block": 14,
+            "relative_gap": 0.033327292650938034,
+            "baseline_code": 165,
+            "oracle_code": 169,
+            "code_distance": 4
+          },
+          {
+            "row": 13,
+            "block": 9,
+            "relative_gap": 0.026323607191443443,
+            "baseline_code": 166,
+            "oracle_code": 170,
+            "code_distance": 4
+          },
+          {
+            "row": 28,
+            "block": 8,
+            "relative_gap": 0.020610375329852104,
+            "baseline_code": 163,
+            "oracle_code": 167,
+            "code_distance": 4
+          },
+          {
+            "row": 28,
+            "block": 13,
+            "relative_gap": 0.02045644074678421,
+            "baseline_code": 161,
+            "oracle_code": 165,
+            "code_distance": 4
+          },
+          {
+            "row": 16,
+            "block": 9,
+            "relative_gap": 0.020057203248143196,
+            "baseline_code": 165,
+            "oracle_code": 169,
+            "code_distance": 4
+          },
+          {
+            "row": 14,
+            "block": 6,
+            "relative_gap": 0.017787903547286987,
+            "baseline_code": 165,
+            "oracle_code": 169,
+            "code_distance": 4
+          },
+          {
+            "row": 17,
+            "block": 1,
+            "relative_gap": 0.0164833664894104,
+            "baseline_code": 164,
+            "oracle_code": 168,
+            "code_distance": 4
+          },
+          {
+            "row": 7,
+            "block": 9,
+            "relative_gap": 0.016443295404314995,
+            "baseline_code": 168,
+            "oracle_code": 172,
+            "code_distance": 4
+          },
+          {
+            "row": 1,
+            "block": 2,
+            "relative_gap": 0.016163000836968422,
+            "baseline_code": 165,
+            "oracle_code": 169,
+            "code_distance": 4
+          },
+          {
+            "row": 28,
+            "block": 1,
+            "relative_gap": 0.012415359728038311,
+            "baseline_code": 164,
+            "oracle_code": 168,
+            "code_distance": 4
+          },
+          {
+            "row": 1,
+            "block": 8,
+            "relative_gap": 0.012131398543715477,
+            "baseline_code": 167,
+            "oracle_code": 171,
+            "code_distance": 4
+          },
+          {
+            "row": 1,
+            "block": 0,
+            "relative_gap": 0.011140395887196064,
+            "baseline_code": 168,
+            "oracle_code": 172,
+            "code_distance": 4
+          },
+          {
+            "row": 15,
+            "block": 10,
+            "relative_gap": 0.01076904870569706,
+            "baseline_code": 168,
+            "oracle_code": 172,
+            "code_distance": 4
+          },
+          {
+            "row": 18,
+            "block": 11,
+            "relative_gap": 0.009512781165540218,
+            "baseline_code": 165,
+            "oracle_code": 169,
+            "code_distance": 4
+          },
+          {
+            "row": 10,
+            "block": 15,
+            "relative_gap": 0.008507294580340385,
+            "baseline_code": 164,
+            "oracle_code": 168,
+            "code_distance": 4
+          },
+          {
+            "row": 27,
+            "block": 2,
+            "relative_gap": 0.008455237373709679,
+            "baseline_code": 163,
+            "oracle_code": 167,
+            "code_distance": 4
+          },
+          {
+            "row": 2,
+            "block": 6,
+            "relative_gap": 0.00786686036735773,
+            "baseline_code": 166,
+            "oracle_code": 170,
+            "code_distance": 4
+          },
+          {
+            "row": 30,
+            "block": 13,
+            "relative_gap": 0.005963191855698824,
+            "baseline_code": 161,
+            "oracle_code": 165,
+            "code_distance": 4
+          },
+          {
+            "row": 0,
+            "block": 5,
+            "relative_gap": 0.004417728632688522,
+            "baseline_code": 169,
+            "oracle_code": 173,
+            "code_distance": 4
+          },
+          {
+            "row": 21,
+            "block": 14,
+            "relative_gap": 0.003557884367182851,
+            "baseline_code": 165,
+            "oracle_code": 169,
+            "code_distance": 4
+          },
+          {
+            "row": 21,
+            "block": 3,
+            "relative_gap": 0.00294141354970634,
+            "baseline_code": 162,
+            "oracle_code": 166,
+            "code_distance": 4
+          },
+          {
+            "row": 25,
+            "block": 13,
+            "relative_gap": 0.002493299776688218,
+            "baseline_code": 161,
+            "oracle_code": 165,
+            "code_distance": 4
+          },
+          {
+            "row": 2,
+            "block": 10,
+            "relative_gap": 0.0017624931642785668,
+            "baseline_code": 165,
+            "oracle_code": 169,
+            "code_distance": 4
+          },
+          {
+            "row": 14,
+            "block": 5,
+            "relative_gap": 0.0003724953858181834,
+            "baseline_code": 164,
+            "oracle_code": 168,
+            "code_distance": 4
+          },
+          {
+            "row": 0,
+            "block": 14,
+            "relative_gap": 0.0,
+            "baseline_code": 165,
+            "oracle_code": 165,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 15,
+            "relative_gap": 0.0,
+            "baseline_code": 168,
+            "oracle_code": 168,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 1,
+            "relative_gap": 0.0,
+            "baseline_code": 166,
+            "oracle_code": 166,
+            "code_distance": 0
+          }
+        ]
+      }
+    },
+    "fc": {
+      "boat": {
+        "seed": 0,
+        "block_size": 16,
+        "balance_min": 0.780988872051239,
+        "balance_max": 2.5850231647491455
+      },
+      "weight_plain_mse": {
+        "shape": [
+          4096,
+          1024
+        ],
+        "sample_rows": 32,
+        "sample_blocks": 512,
+        "improved_blocks": 3,
+        "mean_block_relative_gap": 5.614759720629081e-05,
+        "total_relative_gap": 4.9487846090760254e-05,
+        "max_block_relative_gap": 0.022595897316932678,
+        "top_blocks": [
+          {
+            "row": 2,
+            "block": 11,
+            "relative_gap": 0.022595897316932678,
+            "baseline_code": 172,
+            "oracle_code": 176,
+            "code_distance": 4
+          },
+          {
+            "row": 19,
+            "block": 2,
+            "relative_gap": 0.005565418861806393,
+            "baseline_code": 173,
+            "oracle_code": 176,
+            "code_distance": 3
+          },
+          {
+            "row": 24,
+            "block": 7,
+            "relative_gap": 0.0005862520192749798,
+            "baseline_code": 172,
+            "oracle_code": 176,
+            "code_distance": 4
+          },
+          {
+            "row": 0,
+            "block": 2,
+            "relative_gap": 0.0,
+            "baseline_code": 175,
+            "oracle_code": 175,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 3,
+            "relative_gap": 0.0,
+            "baseline_code": 173,
+            "oracle_code": 173,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 4,
+            "relative_gap": 0.0,
+            "baseline_code": 174,
+            "oracle_code": 174,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 5,
+            "relative_gap": 0.0,
+            "baseline_code": 173,
+            "oracle_code": 173,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 6,
+            "relative_gap": 0.0,
+            "baseline_code": 171,
+            "oracle_code": 171,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 7,
+            "relative_gap": 0.0,
+            "baseline_code": 173,
+            "oracle_code": 173,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 8,
+            "relative_gap": 0.0,
+            "baseline_code": 173,
+            "oracle_code": 173,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 9,
+            "relative_gap": 0.0,
+            "baseline_code": 172,
+            "oracle_code": 172,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 10,
+            "relative_gap": 0.0,
+            "baseline_code": 176,
+            "oracle_code": 176,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 11,
+            "relative_gap": 0.0,
+            "baseline_code": 171,
+            "oracle_code": 171,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 12,
+            "relative_gap": 0.0,
+            "baseline_code": 172,
+            "oracle_code": 172,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 13,
+            "relative_gap": 0.0,
+            "baseline_code": 174,
+            "oracle_code": 174,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 14,
+            "relative_gap": 0.0,
+            "baseline_code": 173,
+            "oracle_code": 173,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 15,
+            "relative_gap": 0.0,
+            "baseline_code": 174,
+            "oracle_code": 174,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 0,
+            "relative_gap": 0.0,
+            "baseline_code": 173,
+            "oracle_code": 173,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 1,
+            "relative_gap": 0.0,
+            "baseline_code": 174,
+            "oracle_code": 174,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 2,
+            "relative_gap": 0.0,
+            "baseline_code": 174,
+            "oracle_code": 174,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 3,
+            "relative_gap": 0.0,
+            "baseline_code": 176,
+            "oracle_code": 176,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 4,
+            "relative_gap": 0.0,
+            "baseline_code": 175,
+            "oracle_code": 175,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 5,
+            "relative_gap": 0.0,
+            "baseline_code": 174,
+            "oracle_code": 174,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 6,
+            "relative_gap": 0.0,
+            "baseline_code": 173,
+            "oracle_code": 173,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 7,
+            "relative_gap": 0.0,
+            "baseline_code": 175,
+            "oracle_code": 175,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 8,
+            "relative_gap": 0.0,
+            "baseline_code": 174,
+            "oracle_code": 174,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 9,
+            "relative_gap": 0.0,
+            "baseline_code": 174,
+            "oracle_code": 174,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 10,
+            "relative_gap": 0.0,
+            "baseline_code": 175,
+            "oracle_code": 175,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 11,
+            "relative_gap": 0.0,
+            "baseline_code": 173,
+            "oracle_code": 173,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 12,
+            "relative_gap": 0.0,
+            "baseline_code": 174,
+            "oracle_code": 174,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 13,
+            "relative_gap": 0.0,
+            "baseline_code": 174,
+            "oracle_code": 174,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 14,
+            "relative_gap": 0.0,
+            "baseline_code": 172,
+            "oracle_code": 172,
+            "code_distance": 0
+          }
+        ]
+      },
+      "activation_gram": {
+        "shape": [
+          128,
+          1024
+        ],
+        "sample_rows": 32,
+        "sample_blocks": 512,
+        "improved_blocks": 23,
+        "mean_block_relative_gap": 0.001487149391323328,
+        "total_relative_gap": 0.0017375275134001048,
+        "max_block_relative_gap": 0.26726627349853516,
+        "top_blocks": [
+          {
+            "row": 21,
+            "block": 0,
+            "relative_gap": 0.26726627349853516,
+            "baseline_code": 176,
+            "oracle_code": 180,
+            "code_distance": 4
+          },
+          {
+            "row": 6,
+            "block": 9,
+            "relative_gap": 0.1185009703040123,
+            "baseline_code": 177,
+            "oracle_code": 180,
+            "code_distance": 3
+          },
+          {
+            "row": 7,
+            "block": 4,
+            "relative_gap": 0.085226871073246,
+            "baseline_code": 177,
+            "oracle_code": 180,
+            "code_distance": 3
+          },
+          {
+            "row": 14,
+            "block": 3,
+            "relative_gap": 0.058810245245695114,
+            "baseline_code": 177,
+            "oracle_code": 180,
+            "code_distance": 3
+          },
+          {
+            "row": 27,
+            "block": 0,
+            "relative_gap": 0.036127567291259766,
+            "baseline_code": 176,
+            "oracle_code": 180,
+            "code_distance": 4
+          },
+          {
+            "row": 28,
+            "block": 9,
+            "relative_gap": 0.03540044277906418,
+            "baseline_code": 177,
+            "oracle_code": 181,
+            "code_distance": 4
+          },
+          {
+            "row": 2,
+            "block": 4,
+            "relative_gap": 0.027313727885484695,
+            "baseline_code": 174,
+            "oracle_code": 178,
+            "code_distance": 4
+          },
+          {
+            "row": 14,
+            "block": 6,
+            "relative_gap": 0.022599665448069572,
+            "baseline_code": 177,
+            "oracle_code": 181,
+            "code_distance": 4
+          },
+          {
+            "row": 11,
+            "block": 14,
+            "relative_gap": 0.020735476166009903,
+            "baseline_code": 176,
+            "oracle_code": 180,
+            "code_distance": 4
+          },
+          {
+            "row": 7,
+            "block": 1,
+            "relative_gap": 0.01803506352007389,
+            "baseline_code": 178,
+            "oracle_code": 182,
+            "code_distance": 4
+          },
+          {
+            "row": 16,
+            "block": 2,
+            "relative_gap": 0.015671130269765854,
+            "baseline_code": 177,
+            "oracle_code": 181,
+            "code_distance": 4
+          },
+          {
+            "row": 25,
+            "block": 6,
+            "relative_gap": 0.010800146497786045,
+            "baseline_code": 176,
+            "oracle_code": 180,
+            "code_distance": 4
+          },
+          {
+            "row": 31,
+            "block": 15,
+            "relative_gap": 0.00948803685605526,
+            "baseline_code": 178,
+            "oracle_code": 182,
+            "code_distance": 4
+          },
+          {
+            "row": 20,
+            "block": 1,
+            "relative_gap": 0.008101689629256725,
+            "baseline_code": 177,
+            "oracle_code": 181,
+            "code_distance": 4
+          },
+          {
+            "row": 31,
+            "block": 2,
+            "relative_gap": 0.007389960810542107,
+            "baseline_code": 177,
+            "oracle_code": 181,
+            "code_distance": 4
+          },
+          {
+            "row": 22,
+            "block": 7,
+            "relative_gap": 0.005411303136497736,
+            "baseline_code": 178,
+            "oracle_code": 182,
+            "code_distance": 4
+          },
+          {
+            "row": 16,
+            "block": 12,
+            "relative_gap": 0.005107231438159943,
+            "baseline_code": 177,
+            "oracle_code": 181,
+            "code_distance": 4
+          },
+          {
+            "row": 8,
+            "block": 5,
+            "relative_gap": 0.0031971256248652935,
+            "baseline_code": 178,
+            "oracle_code": 182,
+            "code_distance": 4
+          },
+          {
+            "row": 17,
+            "block": 7,
+            "relative_gap": 0.00186210370156914,
+            "baseline_code": 177,
+            "oracle_code": 181,
+            "code_distance": 4
+          },
+          {
+            "row": 3,
+            "block": 4,
+            "relative_gap": 0.0016238210955634713,
+            "baseline_code": 176,
+            "oracle_code": 180,
+            "code_distance": 4
+          },
+          {
+            "row": 3,
+            "block": 11,
+            "relative_gap": 0.001161018037237227,
+            "baseline_code": 174,
+            "oracle_code": 178,
+            "code_distance": 4
+          },
+          {
+            "row": 22,
+            "block": 8,
+            "relative_gap": 0.0009896208066493273,
+            "baseline_code": 176,
+            "oracle_code": 180,
+            "code_distance": 4
+          },
+          {
+            "row": 8,
+            "block": 10,
+            "relative_gap": 0.0006010462529957294,
+            "baseline_code": 175,
+            "oracle_code": 179,
+            "code_distance": 4
+          },
+          {
+            "row": 0,
+            "block": 12,
+            "relative_gap": 0.0,
+            "baseline_code": 177,
+            "oracle_code": 177,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 13,
+            "relative_gap": 0.0,
+            "baseline_code": 177,
+            "oracle_code": 177,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 14,
+            "relative_gap": 0.0,
+            "baseline_code": 176,
+            "oracle_code": 176,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 15,
+            "relative_gap": 0.0,
+            "baseline_code": 173,
+            "oracle_code": 173,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 0,
+            "relative_gap": 0.0,
+            "baseline_code": 175,
+            "oracle_code": 175,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 1,
+            "relative_gap": 0.0,
+            "baseline_code": 174,
+            "oracle_code": 174,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 2,
+            "relative_gap": 0.0,
+            "baseline_code": 176,
+            "oracle_code": 176,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 3,
+            "relative_gap": 0.0,
+            "baseline_code": 176,
+            "oracle_code": 176,
+            "code_distance": 0
+          },
+          {
+            "row": 1,
+            "block": 4,
+            "relative_gap": 0.0,
+            "baseline_code": 176,
+            "oracle_code": 176,
+            "code_distance": 0
+          }
+        ]
+      }
+    },
+    "proj": {
+      "boat": {
+        "seed": 0,
+        "block_size": 4,
+        "balance_min": 0.18016892671585083,
+        "balance_max": 8.98706340789795
+      },
+      "weight_plain_mse": {
+        "shape": [
+          1024,
+          4096
+        ],
+        "sample_rows": 32,
+        "sample_blocks": 2048,
+        "improved_blocks": 19,
+        "mean_block_relative_gap": 0.0005903179408051074,
+        "total_relative_gap": 0.0006416265089863054,
+        "max_block_relative_gap": 0.2784905731678009,
+        "top_blocks": [
+          {
+            "row": 22,
+            "block": 39,
+            "relative_gap": 0.2784905731678009,
+            "baseline_code": 172,
+            "oracle_code": 176,
+            "code_distance": 4
+          },
+          {
+            "row": 2,
+            "block": 51,
+            "relative_gap": 0.20168232917785645,
+            "baseline_code": 172,
+            "oracle_code": 176,
+            "code_distance": 4
+          },
+          {
+            "row": 26,
+            "block": 58,
+            "relative_gap": 0.15477821230888367,
+            "baseline_code": 174,
+            "oracle_code": 176,
+            "code_distance": 2
+          },
+          {
+            "row": 24,
+            "block": 32,
+            "relative_gap": 0.0764622762799263,
+            "baseline_code": 172,
+            "oracle_code": 176,
+            "code_distance": 4
+          },
+          {
+            "row": 5,
+            "block": 26,
+            "relative_gap": 0.07351342588663101,
+            "baseline_code": 172,
+            "oracle_code": 176,
+            "code_distance": 4
+          },
+          {
+            "row": 1,
+            "block": 23,
+            "relative_gap": 0.07269208878278732,
+            "baseline_code": 172,
+            "oracle_code": 176,
+            "code_distance": 4
+          },
+          {
+            "row": 18,
+            "block": 61,
+            "relative_gap": 0.06981270015239716,
+            "baseline_code": 172,
+            "oracle_code": 176,
+            "code_distance": 4
+          },
+          {
+            "row": 22,
+            "block": 25,
+            "relative_gap": 0.06350914388895035,
+            "baseline_code": 173,
+            "oracle_code": 176,
+            "code_distance": 3
+          },
+          {
+            "row": 14,
+            "block": 44,
+            "relative_gap": 0.05138186365365982,
+            "baseline_code": 170,
+            "oracle_code": 172,
+            "code_distance": 2
+          },
+          {
+            "row": 16,
+            "block": 12,
+            "relative_gap": 0.04523588716983795,
+            "baseline_code": 172,
+            "oracle_code": 176,
+            "code_distance": 4
+          },
+          {
+            "row": 1,
+            "block": 12,
+            "relative_gap": 0.02479487657546997,
+            "baseline_code": 172,
+            "oracle_code": 176,
+            "code_distance": 4
+          },
+          {
+            "row": 31,
+            "block": 42,
+            "relative_gap": 0.01947607845067978,
+            "baseline_code": 170,
+            "oracle_code": 174,
+            "code_distance": 4
+          },
+          {
+            "row": 22,
+            "block": 61,
+            "relative_gap": 0.018656907603144646,
+            "baseline_code": 170,
+            "oracle_code": 174,
+            "code_distance": 4
+          },
+          {
+            "row": 8,
+            "block": 11,
+            "relative_gap": 0.01790224388241768,
+            "baseline_code": 172,
+            "oracle_code": 176,
+            "code_distance": 4
+          },
+          {
+            "row": 23,
+            "block": 12,
+            "relative_gap": 0.013466614298522472,
+            "baseline_code": 170,
+            "oracle_code": 174,
+            "code_distance": 4
+          },
+          {
+            "row": 22,
+            "block": 52,
+            "relative_gap": 0.010347790084779263,
+            "baseline_code": 170,
+            "oracle_code": 174,
+            "code_distance": 4
+          },
+          {
+            "row": 23,
+            "block": 40,
+            "relative_gap": 0.010153519921004772,
+            "baseline_code": 172,
+            "oracle_code": 176,
+            "code_distance": 4
+          },
+          {
+            "row": 28,
+            "block": 41,
+            "relative_gap": 0.005779637023806572,
+            "baseline_code": 172,
+            "oracle_code": 176,
+            "code_distance": 4
+          },
+          {
+            "row": 17,
+            "block": 7,
+            "relative_gap": 0.0008349291165359318,
+            "baseline_code": 172,
+            "oracle_code": 176,
+            "code_distance": 4
+          },
+          {
+            "row": 0,
+            "block": 31,
+            "relative_gap": 0.0,
+            "baseline_code": 171,
+            "oracle_code": 171,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 7,
+            "relative_gap": 0.0,
+            "baseline_code": 172,
+            "oracle_code": 172,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 16,
+            "relative_gap": 0.0,
+            "baseline_code": 174,
+            "oracle_code": 174,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 17,
+            "relative_gap": 0.0,
+            "baseline_code": 175,
+            "oracle_code": 175,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 3,
+            "relative_gap": 0.0,
+            "baseline_code": 173,
+            "oracle_code": 173,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 8,
+            "relative_gap": 0.0,
+            "baseline_code": 174,
+            "oracle_code": 174,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 18,
+            "relative_gap": 0.0,
+            "baseline_code": 173,
+            "oracle_code": 173,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 15,
+            "relative_gap": 0.0,
+            "baseline_code": 169,
+            "oracle_code": 169,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 19,
+            "relative_gap": 0.0,
+            "baseline_code": 173,
+            "oracle_code": 173,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 9,
+            "relative_gap": 0.0,
+            "baseline_code": 173,
+            "oracle_code": 173,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 20,
+            "relative_gap": 0.0,
+            "baseline_code": 173,
+            "oracle_code": 173,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 21,
+            "relative_gap": 0.0,
+            "baseline_code": 174,
+            "oracle_code": 174,
+            "code_distance": 0
+          },
+          {
+            "row": 0,
+            "block": 1,
+            "relative_gap": 0.0,
+            "baseline_code": 171,
+            "oracle_code": 171,
+            "code_distance": 0
+          }
+        ]
+      },
+      "activation_gram": {
+        "shape": [
+          128,
+          4096
+        ],
+        "sample_rows": 32,
+        "sample_blocks": 2048,
+        "improved_blocks": 94,
+        "mean_block_relative_gap": 0.0018592588603496552,
+        "total_relative_gap": 0.002878017283532172,
+        "max_block_relative_gap": 0.2668114900588989,
+        "top_blocks": [
+          {
+            "row": 24,
+            "block": 62,
+            "relative_gap": 0.2668114900588989,
+            "baseline_code": 176,
+            "oracle_code": 182,
+            "code_distance": 6
+          },
+          {
+            "row": 24,
+            "block": 12,
+            "relative_gap": 0.25418978929519653,
+            "baseline_code": 181,
+            "oracle_code": 187,
+            "code_distance": 6
+          },
+          {
+            "row": 23,
+            "block": 25,
+            "relative_gap": 0.21893168985843658,
+            "baseline_code": 179,
+            "oracle_code": 183,
+            "code_distance": 4
+          },
+          {
+            "row": 19,
+            "block": 32,
+            "relative_gap": 0.18968136608600616,
+            "baseline_code": 176,
+            "oracle_code": 180,
+            "code_distance": 4
+          },
+          {
+            "row": 0,
+            "block": 23,
+            "relative_gap": 0.1883486807346344,
+            "baseline_code": 174,
+            "oracle_code": 182,
+            "code_distance": 8
+          },
+          {
+            "row": 7,
+            "block": 59,
+            "relative_gap": 0.16999071836471558,
+            "baseline_code": 174,
+            "oracle_code": 175,
+            "code_distance": 1
+          },
+          {
+            "row": 4,
+            "block": 39,
+            "relative_gap": 0.13464584946632385,
+            "baseline_code": 178,
+            "oracle_code": 182,
+            "code_distance": 4
+          },
+          {
+            "row": 2,
+            "block": 47,
+            "relative_gap": 0.1315503865480423,
+            "baseline_code": 181,
+            "oracle_code": 184,
+            "code_distance": 3
+          },
+          {
+            "row": 3,
+            "block": 60,
+            "relative_gap": 0.11899503320455551,
+            "baseline_code": 176,
+            "oracle_code": 180,
+            "code_distance": 4
+          },
+          {
+            "row": 18,
+            "block": 18,
+            "relative_gap": 0.11792498826980591,
+            "baseline_code": 176,
+            "oracle_code": 180,
+            "code_distance": 4
+          },
+          {
+            "row": 27,
+            "block": 51,
+            "relative_gap": 0.11542536318302155,
+            "baseline_code": 177,
+            "oracle_code": 181,
+            "code_distance": 4
+          },
+          {
+            "row": 0,
+            "block": 60,
+            "relative_gap": 0.09877455234527588,
+            "baseline_code": 173,
+            "oracle_code": 177,
+            "code_distance": 4
+          },
+          {
+            "row": 4,
+            "block": 30,
+            "relative_gap": 0.09809435158967972,
+            "baseline_code": 176,
+            "oracle_code": 180,
+            "code_distance": 4
+          },
+          {
+            "row": 8,
+            "block": 14,
+            "relative_gap": 0.09548438340425491,
+            "baseline_code": 178,
+            "oracle_code": 180,
+            "code_distance": 2
+          },
+          {
+            "row": 12,
+            "block": 32,
+            "relative_gap": 0.08999770879745483,
+            "baseline_code": 177,
+            "oracle_code": 181,
+            "code_distance": 4
+          },
+          {
+            "row": 16,
+            "block": 42,
+            "relative_gap": 0.08106188476085663,
+            "baseline_code": 174,
+            "oracle_code": 179,
+            "code_distance": 5
+          },
+          {
+            "row": 23,
+            "block": 51,
+            "relative_gap": 0.07952862977981567,
+            "baseline_code": 177,
+            "oracle_code": 181,
+            "code_distance": 4
+          },
+          {
+            "row": 4,
+            "block": 18,
+            "relative_gap": 0.07729656994342804,
+            "baseline_code": 178,
+            "oracle_code": 182,
+            "code_distance": 4
+          },
+          {
+            "row": 1,
+            "block": 51,
+            "relative_gap": 0.06836317479610443,
+            "baseline_code": 177,
+            "oracle_code": 181,
+            "code_distance": 4
+          },
+          {
+            "row": 19,
+            "block": 0,
+            "relative_gap": 0.058341145515441895,
+            "baseline_code": 178,
+            "oracle_code": 182,
+            "code_distance": 4
+          },
+          {
+            "row": 18,
+            "block": 59,
+            "relative_gap": 0.05792022496461868,
+            "baseline_code": 179,
+            "oracle_code": 183,
+            "code_distance": 4
+          },
+          {
+            "row": 10,
+            "block": 41,
+            "relative_gap": 0.05623173713684082,
+            "baseline_code": 177,
+            "oracle_code": 181,
+            "code_distance": 4
+          },
+          {
+            "row": 7,
+            "block": 23,
+            "relative_gap": 0.05594608187675476,
+            "baseline_code": 173,
+            "oracle_code": 177,
+            "code_distance": 4
+          },
+          {
+            "row": 1,
+            "block": 58,
+            "relative_gap": 0.05295021831989288,
+            "baseline_code": 178,
+            "oracle_code": 182,
+            "code_distance": 4
+          },
+          {
+            "row": 6,
+            "block": 1,
+            "relative_gap": 0.04175960645079613,
+            "baseline_code": 173,
+            "oracle_code": 181,
+            "code_distance": 8
+          },
+          {
+            "row": 9,
+            "block": 49,
+            "relative_gap": 0.04123871028423309,
+            "baseline_code": 177,
+            "oracle_code": 181,
+            "code_distance": 4
+          },
+          {
+            "row": 1,
+            "block": 53,
+            "relative_gap": 0.04008251801133156,
+            "baseline_code": 176,
+            "oracle_code": 180,
+            "code_distance": 4
+          },
+          {
+            "row": 8,
+            "block": 31,
+            "relative_gap": 0.039890922605991364,
+            "baseline_code": 178,
+            "oracle_code": 182,
+            "code_distance": 4
+          },
+          {
+            "row": 9,
+            "block": 36,
+            "relative_gap": 0.03713678941130638,
+            "baseline_code": 179,
+            "oracle_code": 183,
+            "code_distance": 4
+          },
+          {
+            "row": 7,
+            "block": 35,
+            "relative_gap": 0.03594886511564255,
+            "baseline_code": 171,
+            "oracle_code": 175,
+            "code_distance": 4
+          },
+          {
+            "row": 8,
+            "block": 5,
+            "relative_gap": 0.03341854736208916,
+            "baseline_code": 179,
+            "oracle_code": 183,
+            "code_distance": 4
+          },
+          {
+            "row": 27,
+            "block": 4,
+            "relative_gap": 0.03316807374358177,
+            "baseline_code": 177,
+            "oracle_code": 181,
+            "code_distance": 4
+          }
+        ]
+      }
+    }
+  },
+  "elapsed_seconds": 14.838817800045945
+}

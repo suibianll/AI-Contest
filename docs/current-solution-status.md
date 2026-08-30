@@ -150,6 +150,7 @@ $$P_{total}=P_L+P_A=293.797301.$$
 
 | 实验 | panel | Linear mean | API time | 裁决 |
 |---|---:|---:|---:|---|
+| E0/D0 多模型 scale-lattice oracle | — | — | 13.76–14.84s/模型 | 完成诊断；scale gap 亚百分比，无跨模型统一增益 |
 | E0-C GALS-C 稀疏 activation（layer-1） | 335.988995 | 0.602878 | 57.41s | 拒绝；解析召回 oracle `1.0`，部署版回退 `0.048096` |
 | E1 progressive full-hierarchy | 290.923906 | 0.490233 | 693.21s | 拒绝，跨层回退且超时 |
 | A2 expansive sparse-row | 292.831952 | 0.497865 | 385.48s | 拒绝 |
@@ -176,7 +177,7 @@ $$P_{total}=P_L+P_A=293.797301.$$
 `2026-08-30-a5-frozen-qronos.md`、
 `2026-08-30-a6-global-activation-lrh.md`、`2026-08-30-b1-gqrb.md`、
 `2026-08-30-b2-pawv.md`、`2026-08-30-c0-five-model.md`、
-`2026-08-30-e0c-gals-candidate.md`。
+`2026-08-30-e0c-gals-candidate.md`、`2026-08-30-e0g-multimodel-dashboard.md`。
 
 ## 距离 Linear 0.9 与 36,000
 

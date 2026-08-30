@@ -884,7 +884,7 @@ w_t=\sum_{h,q}P_{hqt}^2
 
 | 实验 | 唯一变量 | 首测范围 | 主要问题 | 执行状态 | 通过后下一步 |
 |---|---|---|---|---|---|
-| E0 | D0 dashboard | 4 模型×3 层×全 role | 上限在哪里 | 部分执行：只完成 Qwen layer-1 的 E0-G 诊断 | 补齐多模型 dashboard（如重启） |
+| E0 | D0 dashboard | 4 模型×3 层×全 role | 上限在哪里 | 已补齐第 1 层五模型 oracle；三层全量仍非必要 | 记录跨模型 gap，停止全局 scale 扩张 |
 | E0-G | all-255 scale-lattice oracle | Qwen gate/up/v sampled blocks | `±3` 是否漏掉大量合法 scale 收益 | 已完成；gap 不支持全局 GALS | 停止全局 scale 扩张 |
 | E0-C | GALS 解析候选召回 | E0-G 高 gap blocks | 稀疏候选能否追回 oracle | 已执行：四角色召回 `1.0`；稀疏部署 layer-1 `335.988995`，回退 | 仅保留 oracle，停止部署版 |
 | E1 | progressive full-hierarchy HSDQ | Qwen gate/up/v/proj | 强 solver 是否迁移 | 已执行并拒绝：panel `290.923906` | 归档，恢复 parent |
@@ -1029,7 +1029,8 @@ next falsifiable experiment
 
 ## 15. 当前执行状态与下一步
 
-E0-G 已完成并已归档；E0-C 解析候选在四角色上追回全 255-code oracle，但稀疏
+E0-G 已完成并已归档；D0 多模型第 1 层 dashboard 已补齐，结论仍是 scale gap
+亚百分比且没有跨模型统一 role。E0-C 解析候选在四角色上追回全 255-code oracle，但稀疏
 部署版 layer-1 panel `335.988995`、Linear `0.602878`，较 v100 回退并增加
 `41.37s`，因此仅保留为 oracle 证据，不写入主代码。
 E1 已按计划实现并完成一层/全层门禁，结果已归档到
