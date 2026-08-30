@@ -83,6 +83,15 @@ _L5A_PERMUTATION_ENABLED = True
 _L5A_PERMUTATION_MIN_GAIN = 1.0e-5
 _L5A_PERMUTATION_BLOCK = _BLOCK
 
+# L5c: a tiny operand-local meta-router.  It can select only the three
+# already-validated activation routes (v107/v109/v110); a negative route keeps
+# the current v111 path exactly.  The router is deliberately per-call and
+# feature-only: no model, role, test, or output statistic is retained.
+_L5C_META_ENABLED = True
+_L5C_META_MAX_CHANNELS = 1024
+_L5C_META_ROUTE_COUNT = 3
+_L5C_META_MIN_GAIN = 1.0e-6
+
 _ATTN_OFFSETS = (-2, -1, 0, 1, 2)
 _ATTN_ROTATION_SIZES = (0, 16, 32, 64)
 _ATTN_SMOOTH_ALPHAS = (0.0, 0.25, 0.5, 0.75)
@@ -1304,6 +1313,320 @@ def _select_activation_by_deployment_gram(
     return result
 
 
+def _l5c_static_features(
+    weight: torch.Tensor,
+    calibration: Sequence[torch.Tensor],
+    deployment_gram: torch.Tensor | None,
+) -> torch.Tensor:
+    """Build eight operand-local features for the L5c route stump.
+
+    The feature vector deliberately contains no product/output statistic.  It
+    describes shape, scale, tail heaviness, block conditioning, deployed
+    weight-Gram coupling, and a legal codec hierarchy gap.  The latter is an
+    operand-local Q(A) proxy and is never written to the activation state.
+    """
+
+    rows, channels = map(int, weight.shape)
+    if not calibration or channels <= 0:
+        return torch.zeros(8, device=weight.device, dtype=torch.float32)
+    weight_sample = _sample_rows(weight, 128).to(torch.float32)
+    activation_parts = [
+        _sample_rows(item, 128).to(device=weight.device, dtype=torch.float32)
+        for item in calibration[:2]
+        if item.ndim == 2 and int(item.shape[1]) == channels
+    ]
+    if not activation_parts:
+        return torch.zeros(8, device=weight.device, dtype=torch.float32)
+    activation_sample = torch.cat(activation_parts, dim=0)
+
+    def moments(value: torch.Tensor) -> tuple[float, float]:
+        flat = value.reshape(-1)
+        mean = flat.mean()
+        centered = flat + (-mean)
+        variance = centered.square().mean().clamp_min(_EPS)
+        rms = float(value.square().mean().add(_EPS).sqrt().item())
+        kurtosis = float(
+            (centered.pow(4).mean() / variance.square().clamp_min(_EPS)).item()
+        )
+        return rms, kurtosis
+
+    weight_rms, weight_kurtosis = moments(weight_sample)
+    activation_rms, activation_kurtosis = moments(activation_sample)
+
+    condition = 1.0
+    if channels % _BLOCK == 0:
+        covariance = activation_sample.t().mm(activation_sample)
+        covariance = covariance / max(float(activation_sample.shape[0]), 1.0)
+        block_count = channels // _BLOCK
+        block_index = torch.arange(channels, device=weight.device).reshape(
+            block_count, _BLOCK
+        )
+        blocks = covariance[
+            block_index[:, :, None], block_index[:, None, :]
+        ]
+        try:
+            singular = torch.linalg.svdvals(blocks).clamp_min(_EPS)
+            condition = float((singular[..., 0] / singular[..., -1]).amax().item())
+        except (RuntimeError, ValueError, FloatingPointError):
+            condition = 1.0
+
+    offdiag_ratio = 0.0
+    if deployment_gram is not None and tuple(deployment_gram.shape) == (
+        channels,
+        channels,
+    ):
+        gram = deployment_gram.to(device=weight.device, dtype=torch.float32)
+        full_norm_sq = gram.square().sum().clamp_min(_EPS)
+        block_count = channels // _BLOCK
+        block_index = torch.arange(channels, device=weight.device).reshape(
+            block_count, _BLOCK
+        )
+        diagonal_norm_sq = gram[
+            block_index[:, :, None], block_index[:, None, :]
+        ].square().sum()
+        offdiag_norm_sq = (full_norm_sq + (-diagonal_norm_sq)).clamp_min(0.0)
+        offdiag_ratio = float(
+            (offdiag_norm_sq.sqrt() / full_norm_sq.sqrt().clamp_min(_EPS)).item()
+        )
+
+    hierarchy_gap = 0.0
+    try:
+        hierarchy_parent = _dense_to_hif4(
+            activation_sample, offsets=_BASE_OFFSETS
+        )
+        hierarchy_error = _dequantize_hif4(hierarchy_parent).to(torch.float32) + (
+            -activation_sample
+        )
+        hierarchy_gap = float(
+            hierarchy_error.square().mean().item()
+            / (float(activation_sample.square().mean().item()) + _EPS)
+        )
+    except (RuntimeError, ValueError, FloatingPointError):
+        hierarchy_gap = 0.0
+
+    values = (
+        math.log1p(max(float(rows) / max(float(channels), 1.0), 0.0)),
+        math.log1p(max(weight_rms, 0.0)),
+        math.log1p(max(activation_rms, 0.0)),
+        math.log1p(max(weight_kurtosis, 0.0)),
+        math.log1p(max(activation_kurtosis, 0.0)),
+        math.log1p(max(condition, 0.0)),
+        max(offdiag_ratio, 0.0),
+        max(hierarchy_gap, 0.0),
+    )
+    return torch.nan_to_num(
+        torch.as_tensor(values, device=weight.device, dtype=torch.float32),
+        nan=0.0,
+        posinf=32.0,
+        neginf=0.0,
+    )
+
+
+def _l5c_fit_stump(
+    features: torch.Tensor,
+    labels: Sequence[int],
+) -> tuple[int, float, int, int]:
+    """Fit a deterministic one-split multiclass decision stump."""
+
+    if features.ndim != 2 or int(features.shape[0]) == 0:
+        return -1, 0.0, 0, 0
+    values = torch.nan_to_num(features.to(torch.float32), nan=0.0, posinf=32.0, neginf=0.0)
+    labels_list = [int(value) for value in labels]
+    if len(labels_list) != int(values.shape[0]):
+        return -1, 0.0, 0, 0
+
+    def majority(indices: Sequence[int]) -> int:
+        if not indices:
+            return 0
+        counts = [0] * _L5C_META_ROUTE_COUNT
+        for index in indices:
+            label = labels_list[int(index)]
+            if 0 <= label < _L5C_META_ROUTE_COUNT:
+                counts[label] += 1
+        return max(range(_L5C_META_ROUTE_COUNT), key=lambda item: (counts[item], -item))
+
+    best_left = majority(list(range(len(labels_list))))
+    best = (sum(label != best_left for label in labels_list), -1, 0.0, best_left, best_left)
+    for feature_index in range(int(values.shape[1])):
+        column = values[:, feature_index]
+        unique = torch.unique(column).sort().values.tolist()
+        if len(unique) < 2:
+            continue
+        thresholds = [
+            (float(left) + float(right)) * 0.5
+            for left, right in zip(unique[:-1], unique[1:])
+            if math.isfinite(float(left)) and math.isfinite(float(right))
+        ]
+        for threshold in thresholds:
+            left_indices = [
+                index for index, value in enumerate(column.tolist()) if value <= threshold
+            ]
+            right_indices = [
+                index for index, value in enumerate(column.tolist()) if value > threshold
+            ]
+            if not left_indices or not right_indices:
+                continue
+            left_label = majority(left_indices)
+            right_label = majority(right_indices)
+            error = sum(
+                (labels_list[index] != (left_label if index in left_indices else right_label))
+                for index in range(len(labels_list))
+            )
+            candidate = (error, feature_index, threshold, left_label, right_label)
+            if candidate < best:
+                best = candidate
+    return int(best[1]), float(best[2]), int(best[3]), int(best[4])
+
+
+def _l5c_predict_stump(
+    stump: tuple[int, float, int, int],
+    feature: torch.Tensor,
+) -> int:
+    feature_index, threshold, left_label, right_label = stump
+    if feature_index < 0 or feature_index >= int(feature.numel()):
+        return int(left_label)
+    value = float(feature.reshape(-1)[feature_index].item())
+    return int(left_label if value <= threshold else right_label)
+
+
+def _l5c_activation_route(
+    dense: torch.Tensor,
+    gram64: torch.Tensor | None,
+    deployment_gram64: torch.Tensor | None,
+    deployment_gram: torch.Tensor | None,
+    global_lrh: torch.Tensor | None,
+    final_gram_route: bool,
+    gals_final_enabled: bool,
+    route: int,
+) -> dict[str, torch.Tensor]:
+    """Materialize one of the existing v107/v109/v110 activation routes."""
+
+    parent = _dense_to_hif4(dense, offsets=_BASE_OFFSETS, gram64=gram64)
+    parent = _refine_activation(dense, parent, gram64)
+    refined = _refine_activation_global_lrh(
+        dense, parent, gram64, deployment_gram, global_lrh
+    )
+    parent = refined[0] if isinstance(refined, tuple) else refined
+    if (
+        int(route) <= 0
+        or not final_gram_route
+        or deployment_gram64 is None
+    ):
+        return parent
+    final = _dense_to_hif4(
+        dense, offsets=_BASE_OFFSETS, gram64=deployment_gram64
+    )
+    final = _refine_activation(dense, final, deployment_gram64)
+    refined = _refine_activation_global_lrh(
+        dense, final, deployment_gram64, deployment_gram, global_lrh
+    )
+    final = refined[0] if isinstance(refined, tuple) else refined
+    selected = _select_activation_by_deployment_gram(
+        dense, parent, final, deployment_gram
+    )
+    if int(route) <= 1 or not gals_final_enabled:
+        return selected
+    return _refine_activation_gals_final(
+        dense,
+        selected,
+        deployment_gram64,
+        max_blocks=4,
+        deployment_gram=deployment_gram,
+    )
+
+
+def _choose_l5c_route(
+    weight: torch.Tensor,
+    calibration: Sequence[torch.Tensor],
+    gram64: torch.Tensor | None,
+    deployment_gram64: torch.Tensor | None,
+    deployment_gram: torch.Tensor | None,
+    global_lrh: torch.Tensor | None,
+    final_gram_route: bool,
+    gals_final_enabled: bool,
+) -> int:
+    """Choose a route only after leave-one-fold-out operand-local validation."""
+
+    if (
+        not _L5C_META_ENABLED
+        or len(calibration) < 2
+        or gram64 is None
+        or weight.ndim != 2
+        or int(weight.shape[1]) > _L5C_META_MAX_CHANNELS
+        or int(weight.shape[1]) % _BLOCK != 0
+    ):
+        return -1
+    current_route = (
+        2 if final_gram_route and gals_final_enabled else
+        1 if final_gram_route else 0
+    )
+    folds = [item.to(device=weight.device, dtype=torch.float32) for item in calibration[:2]]
+    # Route labels are trained from the dense transformed weight operand, not
+    # from the already-quantized deployment Gram.  The latter carries the
+    # weight residual taint introduced by Q(W); contracting it with a Q(A)-A
+    # residual here would turn this offline feature probe into a forbidden
+    # cross-residual path.  The actual runtime route still uses the frozen
+    # deployment Gram and exact row gate.
+    local_deployment_gram = weight.t().mm(weight)
+    local_deployment_gram64 = _gram64(weight)
+    # Do not build the residual low-rank factor in this label probe: its
+    # off-block subtraction is intentionally a W-residual statistic and would
+    # be contracted with the activation residual by the route refiner.  The
+    # production route still receives the frozen factor from calibration.
+    local_global_lrh = None
+    feature_rows = [
+        _l5c_static_features(weight, [fold], deployment_gram) for fold in folds
+    ]
+    features = torch.stack(feature_rows, dim=0)
+    losses = torch.full(
+        (len(folds), _L5C_META_ROUTE_COUNT),
+        float("inf"),
+        device=weight.device,
+        dtype=torch.float32,
+    )
+    candidates: list[list[dict[str, torch.Tensor]]] = []
+    for fold in folds:
+        row_candidates: list[dict[str, torch.Tensor]] = []
+        for route in range(_L5C_META_ROUTE_COUNT):
+            candidate = _l5c_activation_route(
+                fold,
+                gram64,
+                local_deployment_gram64,
+                local_deployment_gram,
+                local_global_lrh,
+                final_gram_route,
+                gals_final_enabled,
+                route,
+            )
+            row_candidates.append(candidate)
+            error = _dequantize_hif4(candidate).to(torch.float32) + (-fold)
+            losses[len(candidates), route] = error.square().mean()
+        candidates.append(row_candidates)
+    labels = losses.argmin(dim=1).to(torch.int64).tolist()
+    # Exchange the training/validation fold.  With two folds this reduces to a
+    # one-sample stump, but it explicitly prevents selecting a route that only
+    # wins on the fold that generated its label.
+    for holdout in range(len(folds)):
+        train = [index for index in range(len(folds)) if index != holdout]
+        stump = _l5c_fit_stump(features[train], [labels[index] for index in train])
+        predicted = _l5c_predict_stump(stump, features[holdout])
+        if losses[holdout, predicted] > losses[holdout, current_route] + _EPS:
+            return -1
+    stump = _l5c_fit_stump(features, labels)
+    selected = _l5c_predict_stump(stump, features.mean(dim=0))
+    if selected == current_route:
+        return -1
+    baseline = losses[:, current_route]
+    chosen = losses[:, selected]
+    if (
+        not torch.isfinite(chosen).all()
+        or bool((chosen > baseline + _EPS).any())
+        or float((baseline + (-chosen)).sum().item()) <= _L5C_META_MIN_GAIN
+    ):
+        return -1
+    return int(selected)
+
+
 def _cpu_tensor(x: torch.Tensor) -> torch.Tensor:
     return x.detach().to(device="cpu", dtype=torch.float32).contiguous()
 
@@ -1355,6 +1678,7 @@ def hif4_calibration_and_quantize_weight(
     global_lrh_state = None
     final_gram_route = False
     gals_final_enabled = False
+    meta_route = -1
     if int(weight_t.shape[1]) <= _ACT_GRAM_MAX_CHANNELS:
         gram_float = _gram64(weight_t)
         gram_state = _cpu_tensor(gram_float)
@@ -1409,6 +1733,16 @@ def hif4_calibration_and_quantize_weight(
                     len(probe_gains) >= 2
                     and all(gain > _EPS for gain in probe_gains)
                 )
+        meta_route = _choose_l5c_route(
+            weight_t,
+            activation_t,
+            gram_state,
+            deployment_gram64_state,
+            deployment_gram_state,
+            global_lrh_state,
+            final_gram_route,
+            gals_final_enabled,
+        )
     state: dict[str, Any] = {
         "smooth_inv": _cpu_tensor(balance.reciprocal()),
         "permutation": (
@@ -1424,7 +1758,8 @@ def hif4_calibration_and_quantize_weight(
         "gals_final": gals_final_enabled,
         "deployment_gram": deployment_gram_state,
         "global_lrh": global_lrh_state,
-        "version": 1,
+        "meta_route": int(meta_route),
+        "version": 2,
     }
     return {"weight_params": weight_params, "activation_state": state}
 
@@ -1538,6 +1873,28 @@ def hif4_dynamic_quantize_activation(
             deployment_gram64_tensor,
             max_blocks=4,
             deployment_gram=deployment_gram_tensor,
+        )
+    meta_route = int(state.get("meta_route", -1))
+    current_route = (
+        2 if final_gram_route and bool(state.get("gals_final", False)) else
+        1 if final_gram_route else 0
+    )
+    if (
+        0 <= meta_route < _L5C_META_ROUTE_COUNT
+        and meta_route != current_route
+    ):
+        routed_params = _l5c_activation_route(
+            dense,
+            gram_tensor,
+            deployment_gram64_tensor,
+            deployment_gram_tensor,
+            global_lrh_tensor,
+            final_gram_route,
+            bool(state.get("gals_final", False)),
+            meta_route,
+        )
+        params = _select_activation_by_deployment_gram(
+            dense, params, routed_params, deployment_gram_tensor
         )
     return params
 

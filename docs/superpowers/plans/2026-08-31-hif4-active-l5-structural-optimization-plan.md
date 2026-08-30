@@ -148,16 +148,28 @@ screen JSON 为 [`l5b screen`](../../../artifacts/real_model_suite/l5b-sparse-sc
 
 ### L5c：统计元路由（只依赖 operand-local 特征）
 
-**状态：in_progress；L5b screen 否决后立即启动。**
+**状态：done（2026-08-31；v113 rejected/no-op at screen）。**
 
 为每个 calibration call 计算 shape、RMS、kurtosis、condition number、Gram
 off-diagonal ratio、合法 scale/hierarchy oracle gap 等静态特征；用两折标签训练
 小决策树选择现有 `{v107, v109, v110}` 子路径。禁止模型名、role 名、test 输出、
 官方分数和调用顺序。必须在未参与训练的 calibration fold 上复核，再做五层 screen。
 
+执行记录：已实现八维 operand-local 特征（shape ratio、两侧 RMS/kurtosis、block
+condition、Gram off-diagonal ratio、hierarchy gap）、两折 leave-one-fold-out 一层
+决策树和 `{v107,v109,v110}` route proposal。route 标签探测不使用输出或残差低秩项；
+只有两折都不差且累计 MSE gain 超过门槛才写入标量 `meta_route`，否则保持 `-1`。
+合成/合规定向测试 34/34 通过，静态与 runtime compliance 均为 0 violations。
+五层×七 role screen 为 `0.5318869456762372`，与 v111 screen 逐 case 完全相同，
+差值为 `0`，故没有运行 full-layer。候选归档于
+[`v113 L5c`](../../../solutions/20260831_v113_l5c-meta-router_rejected-screen_score0.531887_time169s/)，
+screen JSON 为 [`l5c screen`](../../../artifacts/real_model_suite/l5c-meta-router-stratified-qwen.json)，
+日志为 [`l5c log`](../../../logs/execution/2026-08-31-l5c-meta-router-stratified.md)，
+候选 source LF SHA 为 `65e4ad45808e8a4e24bb688f369a0606786344d5470ad6d334cbad436f0b0699`。
+
 ### L5d：外部实现逐组件差异审计
 
-**状态：pending；与 L5a–c 串行，不直接复制外部输出监督。**
+**状态：in_progress；L5c screen 无增益后启动。**
 
 对外部 `youxilee/hif4` 做 codec decode、rounding、scale hierarchy、sampling、
 transform 顺序和 state/device 的逐项 diff；只迁移 operand-local/offline-weight
