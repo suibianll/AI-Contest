@@ -1031,19 +1031,23 @@ E1 已按计划实现并完成一层/全层门禁，结果已归档到
 门禁；因此 E1 明确拒绝，主代码恢复到 parent SHA256
 `5D1128CC79FEF58154DA2F600EC4B472FF95030E1F1E61B96593D06FD9AAC94F`。
 
-下一步执行 **A2：Expansive-FFN 稀疏行 HSDQ**，只攻击 `fc_gate/fc_up` 的
-`rows > 2 × channels` 形状：
+下一步执行 **A3：逐行 block-leverage HSDQ**，只攻击 `fc_gate/fc_up` 的
+`rows > 2 × channels` 形状。A2 已完成但被拒绝，结果归档于
+`logs/execution/2026-08-30-a2-expansive-sparse-hsdq.md`：全层 panel
+`292.831952`，较 parent `293.755106` 回退 `0.923153`，虽然 API `385.48s`
+仍低于 420s。
 
 ```text
-候选：每个 expansive role 生成 row_fraction = 1%、2%、5% 三个稀疏候选
-求解：对候选行复用已验证的 fixed-hierarchy HSDQ，不引入新的 scale 网格
-选择：两折 cross-fit admission + mean/max 鲁棒评分，parent 永远保留
-预算：每层每 role 最多 5% 行，最多 2 个 block，禁止全矩阵 dense solver
+候选：row_fraction = 0.5%、1%、2%，每个候选固定每行 1 个 block
+求解：先按每行 block leverage 选 block，再复用 fixed-hierarchy mantissa HSDQ
+选择：两折均需正向且通过 mean/max 鲁棒评分；parent 永远保留
+预算：每层每 role 最多 2% 行、每行最多 1 个 block，禁止全矩阵 dense solver
 门禁：Qwen layer-1 先验筛选；全 24 层必须同时满足 panel 不降、Linear 不降、
       runtime ≤ 420s，任一失败即归档候选并恢复 parent
 ```
 
-A2 的目标是验证真正的 Linear 短板是否来自 expansive FFN 的少量高损行；若
-`1%/2%` 在全层稳定正向，再进入 A3（逐行 leverage + block budget）；若三档均不
-正向，则停止继续扩大 HSDQ，转 A4 BOAT-2/激活重标定。所有实验必须保留
-parent、候选分档、fold/validation loss、changed rows/blocks 和完整运行时间。
+A3 的目标是修正 A2 的关键缺陷：A2 在选中行内仍共享全局 top-2 block，导致
+无关输出行被同一 block 扰动；A3 改为每行独立 leverage，初始只允许一个 block。
+若 `0.5%/1%` 在全层稳定正向，再尝试 2% 或每行 2 blocks；若仍回退，则停止
+FFN HSDQ 扩张，转 A4 BOAT-2/激活重标定。所有实验保留 parent、fraction、
+changed rows/blocks、fold/validation product loss 和完整运行时间。

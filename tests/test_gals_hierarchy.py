@@ -30,3 +30,4 @@ def test_shared_lv2_legal_effective_exponents() -> None:
     assert (0, 2) not in legal
     assert (2, 0) not in legal
     assert len(legal) == 7
+
