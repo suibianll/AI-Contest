@@ -1,14 +1,14 @@
 # HiF4 算法全景：已实现、已验证效果与未实现方向
 
 > 整理日期：2026-08-30
-> 数据来源：`solutions/README.md`（v000–v102）、`docs/current-solution-status.md`、`logs/execution/2026-08-30-e0g-scale-oracle.md`、`logs/execution/2026-08-30-e0g-multimodel-dashboard.md`、融合方案与 36000 计划。
+> 数据来源：`solutions/README.md`（v000–v104）、`docs/current-solution-status.md`、`logs/execution/2026-08-30-e0g-scale-oracle.md`、`logs/execution/2026-08-30-e0g-multimodel-dashboard.md`、`logs/execution/2026-08-30-a7-quant-weight-gram.md`、融合方案与 36000 计划。
 > 口径纪律：本地只能比 **Qwen 同口径 panel**（`250·g_L + 200·g_A`）；五模型合计 `1085.743597` 只用于检查跨模型结构性回退，**禁止**与官方分数做差值。官方评测集为 250 Linear + 200 Attention case，时间上限 **420s**。
 
 ---
 
 ## 1. 当前根：算法构成与效果
 
-根 `solution.py`（规范 LF SHA `617482cee04ff9514a8d41226b651336e4b8b86692673308e835de1091693eba`）为 clean 单一路径，并在其上加入 B1 GQRB 与 B2 PAWV diag-only。当前最高版本由 C0 五模型确认（v101）复核，失败的 E0-C GALS 稀疏部署归档为 v102。
+根 `solution.py`（规范 LF SHA `617482cee04ff9514a8d41226b651336e4b8b86692673308e835de1091693eba`）为 clean 单一路径，并在其上加入 B1 GQRB 与 B2 PAWV diag-only。当前最高版本由 C0 五模型确认（v101）复核；E0-C 的两个 GALS 稀疏变体（v102/v103）和 A7 量化后权重 Gram（v104）均已归档，未进入主线。
 
 | 组件 | 内容 |
 |---|---|
@@ -103,6 +103,7 @@ six-API time      392.423565 s  wall time       424.693400 s   （API 在 420s �
 | v076 / C77 | all-shape gram64 激活精修 | 采纳（+1.22） |
 | v080 / C80、v084 / C84 | gram64 全覆盖、5 轮坐标扫描 | 采纳（+5.31、+1.92） |
 | v066 / C66 | 动态激活损失覆盖目标 1.0 | **官方 22557**（本地归档冠军） |
+| v104 / A7 | 用量化后权重 `WqᵀWq` 替换浮点 `WᵀW` | **拒绝**：layer-1 `+0.525831`，full `−3.570607` 且 API `470.58s` |
 
 ### 3.4 坐标变换 / CAT 系
 
@@ -154,6 +155,7 @@ six-API time      392.423565 s  wall time       424.693400 s   （API 在 420s �
 | v028 | activation scale-code oracle | 仅诊断，无提交源 |
 | v029 / C29 | HAES probe | 拒绝（无行为变化） |
 | **E0-G** | **完整 255 个 E6M2 code 尺度 oracle** | **除 `v` 的 activation Gram（0.6302%）外，各 role 总 gap 均 <0.1%** → 顶层 scale 搜索空间已耗尽 |
+| **D0** | **五模型 layer-1/2/3 全 role dashboard** | 少数层/role 的 activation-Gram 局部 gap 达 2–6%，但跨模型/跨层不稳定；只保留诊断，不部署全局搜索 |
 
 E0-G 明细：
 
@@ -163,6 +165,17 @@ E0-G 明细：
 | fc_up | weight / Gram | 1 / 13（/448） | 0.0709% / 0.0470% | 22.20% / 12.82% |
 | v | weight / **Gram** | 4 / **60**（/448） | 0.0313% / **0.6302%** | 7.47% / **19.32%** |
 | proj | weight / Gram | 18 / 50（/2432） | 0.0390% / 0.0475% | 9.94% / 20.53% |
+
+D0 三层均值（weight / activation-Gram）如下，原始 JSON 保存在
+`artifacts/oracle_dashboard/e0g-*-layer{1,2,3}.json`：
+
+| 模型 | layer 1 | layer 2 | layer 3 |
+|---|---:|---:|---:|
+| gpt2-small | 0.0744% / 0.3161% | 0.0673% / 0.6096% | 0.0667% / 2.7787% |
+| gpt2-medium | 0.0533% / 0.3912% | 0.0642% / 0.8577% | 0.0569% / 0.5605% |
+| opt-125m | 0.0366% / 0.3317% | 0.0304% / 6.6520% | 0.0596% / 1.6992% |
+| pythia-160m | 0.0934% / 0.2091% | 0.0591% / 0.2362% | 0.0840% / 0.1941% |
+| qwen2.5-0.5b | 0.0677% / 2.0133% | 0.0544% / 0.3222% | 0.0642% / 0.3667% |
 
 ---
 
@@ -202,6 +215,8 @@ E0-G 明细：
 | **B2 PAWV（V 路径优化）** | attention probability token-row Hessian 的 V refinement | **已执行并采纳 diag-only**：v100，panel `293.797301`；rank-8 跨 token 变体回退 |
 | **C0 全模型/全角色/宽形状综合选择** | 五模型固定缓存确认，Qwen 主模型排序、其他模型软 guardrail | **已执行并确认**：v101；Qwen panel `293.797301` |
 | **v 的稀疏 GALS-C 插件** | E0-G 唯一正向信号（activation Gram 0.6302%，60/448 blocks） | **已执行但拒绝部署**：v102 layer-1 `335.988995`，Linear 回退 |
+| **role-aware GALS-C** | 只在 attention-shaped role 开启候选 | **已执行但拒绝部署**：v103 layer-1 `335.978356`，q/k/v 回退 |
+| **量化后权重 Gram 激活 Hessian** | 用 `WqᵀWq` 贴近部署权重 | **已执行但拒绝部署**：v104 full `290.226694`，API 超时 |
 
 ### 5.2 已判定不适用 / 排除
 
@@ -228,5 +243,5 @@ E0-G 明细：
 1. **当前根是强局部最优**：九个结构性方向全部失败，且失败是系统性的。继续在同一框架内叠加机制的期望收益很低。
 2. **历史最大跃迁来自"重写为 clean 单一路径"（+9.89%）**，而不是新算法。这提示下一轮收益可能来自**路径精简与计算重分配**，而非新增机制。
 3. **P0 仍是提交当前根**：本地 +17.37% 的领先从未兑现为官方分；九连败也说明本地 panel 已进入饱和区，更需要真实官方反馈来校准方向。
-4. **本轮未再有已验证的部署空白**：PAWV diag-only 与 GALS-C 稀疏插件均已实测；前者采纳，后者因 layer-1 回退归档。后续应把预算转回 Linear 或等待官方兑换率。
+4. **本轮未再有已验证的部署空白**：PAWV diag-only 已采纳；GALS-C 两个稀疏变体与 A7 量化 Gram 均已实测并回退。后续应把预算转回 Linear 或等待官方兑换率。
 5. **警惕跨模型不一致**：这是本工程最主要的失败模式（v044、v061、v071、v091 等）。任何新机制都应在单层阶段就用 OPT / Pythia 复筛，而不是全层跑完再判。

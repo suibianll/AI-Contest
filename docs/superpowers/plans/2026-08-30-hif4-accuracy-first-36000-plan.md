@@ -896,6 +896,7 @@ w_t=\sum_{h,q}P_{hqt}^2
 | E7 | global activation LRH | 全 Linear role | 激活跨块上限 | 已执行并拒绝：Global LRH 全层 `282.616646` | 停止扩大 LRH |
 | E8 | GQRB/PAWV | Attention | 把 A 提到 0.90+ | 已执行：B1 GQRB margin + B2 PAWV diag-only；当前 Attention mean `0.842039` | C0 已确认 |
 | E9 | 全层五模型 + wide shape | 全部 | 泛化与最终组合 | 已执行：C0 五模型；Qwen panel `293.797301`，主 API `401.13s` | 取 v100 为当前最高版本 |
+| E10 | 量化后权重 Gram 激活 Hessian | 全 Linear role | `W_qᵀW_q` 是否比浮点 `WᵀW` 更贴近部署输出 | 已执行并拒绝：layer-1 `336.562922`，full `290.226694`，API `470.58s` | 归档，不进入主线 |
 
 停止规则：
 
@@ -1065,7 +1066,7 @@ Linear 不降、runtime ≤ 420s，失败即归档恢复 parent；每一步记�
 ```
 
 这一步的结论是：当前最高可信本地版本是 v100（B2 PAWV diag-only + B1 GQRB），
-C0 已确认其五模型稳健性，但仍不宣称已达到 36000。下一步取所有本地候选的最高
+C0 已确认其五模型稳健性；追加 A7 量化后权重 Gram 仍在全层回退，因此仍不宣称已达到 36000。下一步取所有本地候选的最高
 分版本，待官方恢复再建立兑换率；若继续研究，优先针对 Linear 的跨模型泛化和
 gpt2-medium 运行时。所有已执行实验均保留 parent、fold loss、changed blocks
 和完整运行时间，不删除历史证据。

@@ -140,13 +140,15 @@ B2 PAWV diag-only 【已接受：panel 293.797301，392.42s】
   ↓
 C0 五模型确认 【已完成：Qwen panel 293.797301，API 401.13s；四个软 guardrail 无精度灾难回退】
   ↓
+A7 量化后权重 Gram 激活 Hessian 【已拒绝：layer-1 +0.526 panel；full −3.571、470.58s】
+  ↓
 P1  取所有本地候选最高分；官方恢复后再建立兑换率
 ```
 
 这不是“全部算法已完成”的声明：E0-C（GALS 解析候选与稀疏部署）已执行并归档，
 冻结-Q(A) ridge/Qronos 与 Global Activation-LRH 已执行并归档；Attention GQRB
 与 PAWV diag-only 已通过本地门禁，PAWV rank-8 低秩变体已拒绝；最终五模型综合
-（C0）已完成并归档。已执行项与未执行项不应混为一谈。
+（C0）已完成并归档；A7 量化后权重 Gram 也已执行并归档。已执行项与未执行项不应混为一谈。
 
 ### 2.1 E1/A1：渐进跨 fold 全层级 HSDQ（已拒绝）
 

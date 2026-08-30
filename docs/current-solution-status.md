@@ -12,7 +12,7 @@
 **293.797301**，正式 API 累计 **392.423565 s**，低于
 `420 s` 限制；该数值用于本地 A/B 排序，不能线性换算为官方排行榜分数。
 
-2026-08-30 已按执行计划完成 E0-C、E1→A6、B1、B2 的本地验证。Linear 的 E1/A2/A3/A4/A5/A6
+2026-08-30 已按执行计划完成 E0-C、E1→A6、B1、B2，并追加验证 A7 的本地实验。Linear 的 E1/A2/A3/A4/A5/A6
 均未超过 stable parent；B1 GQRB margin 先把 panel 提升到 `293.793700`，B2
 PAWV diag-only 再提升到 `293.797301`，并把 API 降到 `392.423565 s`，因此当前根
 切换到 v100；随后 C0 五模型确认完成，Qwen 主模型仍通过门禁。官方评测不可用
@@ -152,6 +152,7 @@ $$P_{total}=P_L+P_A=293.797301.$$
 |---|---:|---:|---:|---|
 | E0/D0 多模型 scale-lattice oracle | — | — | 13.76–14.84s/模型 | 完成诊断；scale gap 亚百分比，无跨模型统一增益 |
 | E0-C GALS-C 稀疏 activation（layer-1） | 335.988995 | 0.602878 | 57.41s | 拒绝；解析召回 oracle `1.0`，部署版回退 `0.048096` |
+| A7 量化后权重 Gram `WqᵀWq`（layer-1/full） | 336.562922 / 290.226694 | 0.605174 / 0.487275 | 24.89s / 470.58s | 拒绝；单层正向不迁移且全层超时 |
 | E1 progressive full-hierarchy | 290.923906 | 0.490233 | 693.21s | 拒绝，跨层回退且超时 |
 | A2 expansive sparse-row | 292.831952 | 0.497865 | 385.48s | 拒绝 |
 | A3 rowwise block-leverage | 293.250467 | 0.499539 | 384.83s | 拒绝 |
@@ -166,7 +167,7 @@ $$P_{total}=P_L+P_A=293.797301.$$
 | C0 五模型确认（无代码变更） | **293.797301** | **0.501558** | **401.13s（Qwen）** | **confirmed** |
 | stable parent | 293.755106 | 0.501558 | 382.15s | baseline |
 
-归档目录：`solutions/20260830_v087...` 至 `solutions/20260830_v102...`；
+归档目录：`solutions/20260830_v087...` 至 `solutions/20260830_v104...`；
 执行日志：`logs/execution/2026-08-30-e1-progressive-hsdq.md`、
 `2026-08-30-a2-expansive-sparse-hsdq.md`、
 `2026-08-30-a3-rowwise-block-hsdq.md`、
@@ -177,7 +178,8 @@ $$P_{total}=P_L+P_A=293.797301.$$
 `2026-08-30-a5-frozen-qronos.md`、
 `2026-08-30-a6-global-activation-lrh.md`、`2026-08-30-b1-gqrb.md`、
 `2026-08-30-b2-pawv.md`、`2026-08-30-c0-five-model.md`、
-`2026-08-30-e0c-gals-candidate.md`、`2026-08-30-e0g-multimodel-dashboard.md`。
+`2026-08-30-e0c-gals-candidate.md`、`2026-08-30-e0g-multimodel-dashboard.md`、
+`2026-08-30-a7-quant-weight-gram.md`。
 
 ## 距离 Linear 0.9 与 36,000
 

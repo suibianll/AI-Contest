@@ -41,6 +41,14 @@ def _first_activation(folds: list[list[torch.Tensor]]) -> list[torch.Tensor]:
     return [fold[0].to(torch.float32) for fold in folds]
 
 
+def _layer_activation(
+    folds: list[list[torch.Tensor]], layer_index: int
+) -> list[torch.Tensor]:
+    """Select one cached layer from each calibration window."""
+
+    return [fold[layer_index].to(torch.float32) for fold in folds]
+
+
 def _block_losses(
     dense: torch.Tensor,
     params: dict[str, torch.Tensor],
@@ -128,15 +136,17 @@ def run_oracle(
     *,
     max_rows: int,
     top_blocks: int,
+    layer_index: int = 0,
 ) -> dict[str, Any]:
     cache = torch.load(cache_path, map_location="cpu", weights_only=False)
-    layer_weights = cache["weights"][0]
+    layer_weights = cache["weights"][layer_index]
     calibration = cache["calibration_activations"]
     result: dict[str, Any] = {
         "schema": 1,
         "cache": str(cache_path),
         "model": cache.get("tokenizer_name", "unknown"),
         "layers": cache.get("layers"),
+        "layer_index": int(layer_index),
         "max_rows": int(max_rows),
         "top_blocks": int(top_blocks),
         "scale_candidates": {"local_offsets": list(solution._BASE_OFFSETS), "oracle_codes": 255},
@@ -145,7 +155,7 @@ def run_oracle(
 
     for role in roles:
         weight = layer_weights[role].to(torch.float32)
-        activation_folds = _first_activation(calibration[role])
+        activation_folds = _layer_activation(calibration[role], layer_index)
         balance, seed, block_size = solution._choose_boat(weight, activation_folds)
         weight_t = solution._apply_boat_rotation(
             weight * balance.reshape(1, -1), seed, block_size
@@ -185,6 +195,7 @@ def main() -> int:
     parser.add_argument("--roles", nargs="+", default=list(DEFAULT_ROLES))
     parser.add_argument("--max-rows", type=int, default=32)
     parser.add_argument("--top-blocks", type=int, default=32)
+    parser.add_argument("--layer-index", type=int, default=0)
     parser.add_argument("--output", type=Path, default=None)
     args = parser.parse_args()
     started = time.perf_counter()
@@ -193,6 +204,7 @@ def main() -> int:
         args.roles,
         max_rows=args.max_rows,
         top_blocks=args.top_blocks,
+        layer_index=args.layer_index,
     )
     result["elapsed_seconds"] = time.perf_counter() - started
     encoded = json.dumps(result, ensure_ascii=False, indent=2) + "\n"
