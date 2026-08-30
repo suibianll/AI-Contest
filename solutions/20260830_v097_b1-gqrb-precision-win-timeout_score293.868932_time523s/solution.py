@@ -64,7 +64,6 @@ _ATTN_SMOOTH_ALPHAS = (0.0, 0.25, 0.5, 0.75)
 _ATTN_ROTATION_SEEDS = (0, 1)
 _ATTN_GQRB_WIDTHS = (2, 4)
 _ATTN_GQRB_ANGLES = (math.pi / 8.0, -math.pi / 8.0, math.pi / 4.0, -math.pi / 4.0)
-_ATTN_GQRB_MIN_GAIN = 1.0e-3
 
 # ---------------------------------------------------------------------------
 # Codec
@@ -1081,10 +1080,6 @@ def hif4_calibration_attention(
                 best_q_importance = q_importance
                 best_k_importance = k_importance
 
-    # Preserve the exact four-entry no-mixing proxy shortlist used by the
-    # validated parent before adding any GQRB entries.
-    base_proxy_shortlist = sorted(candidate_pool, key=lambda item: item[0])[:4]
-
     # B1 GQRB: a small block-orthogonal Q/K mixing shortlist.  The matrices
     # are shared inside each GQA group so the QK dot product is preserved.
     for mixing in _gqrb_candidates(
@@ -1113,15 +1108,15 @@ def hif4_calibration_attention(
 
     # The proxy scan is cheap; only its three strongest candidates are
     # re-ranked through the exact deployed Gram-HSDQ path.
-    best_base_score = math.inf
-    best_gqrb_score = math.inf
-    best_base_entry: tuple[Any, ...] | None = None
-    best_gqrb_entry: tuple[Any, ...] | None = None
-    proxy_sorted = sorted(
-        [item for item in candidate_pool if item[5] is not None],
-        key=lambda item: item[0],
-    )
-    shortlist = base_proxy_shortlist + proxy_sorted[:4]
+    best_score = math.inf
+    proxy_sorted = sorted(candidate_pool, key=lambda item: item[0])
+    shortlist = proxy_sorted[:4]
+    baseline_entries = [item for item in candidate_pool if item[5] is None]
+    if baseline_entries:
+        # Proxy ranking can prefer a GQRB frame whose deployed Gram-HSDQ
+        # objective is worse.  Always exact-score the best no-mixing parent
+        # so this stage cannot regress the validated attention path.
+        shortlist.extend(baseline_entries)
     for _, multiplier, signs, block_size, center, mixing in shortlist:
         score, q_importance, k_importance = _attention_candidate_score(
             q_samples, k_samples, v_hats, references,
@@ -1129,35 +1124,15 @@ def hif4_calibration_attention(
             multiplier, signs, block_size, center, refine=True,
             mixing=mixing,
         )
-        entry = (
-            score,
-            multiplier,
-            signs,
-            int(block_size),
-            bool(center),
-            mixing,
-            q_importance,
-            k_importance,
-        )
-        if mixing is None and score < best_base_score:
-            best_base_score = score
-            best_base_entry = entry
-        if mixing is not None and score < best_gqrb_score:
-            best_gqrb_score = score
-            best_gqrb_entry = entry
-
-    if best_base_entry is None:
-        raise RuntimeError("attention shortlist lost its parent candidate")
-    selected_entry = best_base_entry
-    if (
-        best_gqrb_entry is not None
-        and best_gqrb_score < best_base_score * (1.0 - _ATTN_GQRB_MIN_GAIN)
-    ):
-        selected_entry = best_gqrb_entry
-    _, best_multiplier, best_signs, best_block, best_center, best_mixing, best_q_importance, best_k_importance = selected_entry
-    best_multiplier = best_multiplier.clone()
-    best_signs = None if best_signs is None else best_signs.clone()
-    best_mixing = None if best_mixing is None else best_mixing.clone()
+        if score < best_score:
+            best_score = score
+            best_multiplier = multiplier.clone()
+            best_signs = None if signs is None else signs.clone()
+            best_mixing = None if mixing is None else mixing.clone()
+            best_block = int(block_size)
+            best_center = bool(center)
+            best_q_importance = q_importance
+            best_k_importance = k_importance
 
     final_q: list[torch.Tensor] = []
     final_k: list[torch.Tensor] = []

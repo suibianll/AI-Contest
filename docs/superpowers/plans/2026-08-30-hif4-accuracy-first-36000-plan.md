@@ -1045,7 +1045,9 @@ LRH-r8（最多 4 个 64-block、rank-8 off-block Hessian），单层 `334.24542
 `283.159693`、API `600.61s`，比 parent 低 `10.595413` 且超时，已归档；下一项
 冻结 Q(A) ridge/Qronos 已执行：全层 panel 与 parent 持平但 API `455.73s` 超过
 420s，已归档。Global Activation-LRH 也已执行（rank-8、10% energy），全层 panel
-`282.616646`，较 parent 低 `11.138460`，已归档；现在转向 Attention GQRB/FASA/PAWV。
+`282.616646`，较 parent 低 `11.138460`，已归档。B1 GQRB margin 已通过本地
+门禁：panel `293.793700`、API `406.24s`，较 parent `+0.038594`，当前根切换到
+v098；下一步是 B2 FASA/PAWV 与最终五模型 C0。
 所有候选必须满足 panel 不降、
 Linear 不降、runtime ≤ 420s，失败即归档恢复 parent；每一步记录最高分版本和
 提交号，不把未执行项标成已完成。

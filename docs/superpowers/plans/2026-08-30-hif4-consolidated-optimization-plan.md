@@ -127,7 +127,10 @@ E3-LRH true cross-block rank-8  【已拒绝：全层 −1.328 panel，381.84s�
 E4/CAT-BOAT-2 full组合       【已拒绝：全层 −10.595 panel，600.61s】
   ↓
 E5/Qronos（已拒绝：panel 持平但 455.73s） + Global Activation-LRH（已拒绝：全层 −11.138 panel）
-  + Attention GQRB/FASA/PAWV 【下一步】
+  ↓
+B1 GQRB margin 【已接受：panel 293.793700，406.24s】
+  ↓
+B2 FASA/PAWV + C0 五模型确认 【下一步】
   ↓
 P1  取所有本地候选最高分；官方恢复后再建立兑换率
 ```
