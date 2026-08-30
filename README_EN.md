@@ -24,14 +24,15 @@ Chinese version: [README.md](README.md)
   path used output information for activation-side selection. That
   `A@W -> Q(A)` use remains non-compliant, so it is not a compliant parent for
   new work.
-- The current root `solution.py` is v086/C86 attention block-smooth final-lattice
-  plus v084 full gram64 coverage with five coordinate sweeps and C76.4 GQA
-  rotation. Qwen's local native total is `392.064774`, panel score is
-  `267.307909`, and API time is `313.58s`; see
-  [`solutions/README.md`](solutions/README.md) for the paired four-model
-  measurements and mechanism details.
+- The root `solution.py` has been rewritten from the C86 experiment collection
+  into one clean BOAT + cross-fold Weight-HSDQ + Gram-hierarchy Activation-HSDQ
+  path, with an output-aware Attention shortlist. On the full 24-layer
+  Qwen2.5-0.5B cached run, its native total is `417.862253`, Qwen shaped panel
+  is `293.755106`, and formal API time is `382.153528s` (wall `414.025852s`,
+  still below 420s). See the [current status report](docs/current-solution-status.md)
+  and [`solutions/README.md`](solutions/README.md).
 - Current source SHA256:
-  `E7A16D6991DBB70A593FBE87D0C5D1D8FD38F801665354A01FFAF2F0A96F03CD`.
+  `5D1128CC79FEF58154DA2F600EC4B472FF95030E1F1E61B96593D06FD9AAC94F`.
 - The active local evaluator is Qwen-first: it projects frozen-corpus Linear
   and Attention means onto a fixed 250/200 panel, while other models remain
   soft guardrails. The raw `official_flow_total` is retained for compatibility
@@ -92,33 +93,31 @@ and implementation to fit the final runtime limit.
 
 ## Current algorithm
 
+The root is the rewritten clean Gram-hierarchy version; v086/C86 remains an
+immutable historical archive.
+
 ### Linear
 
 1. Reconstruct the floating-point reference from NVFP4 scales and E2M1 data.
-2. Search SmoothQuant diagonal scaling, channel permutations, and small
-   4/8/16-dimensional orthogonal transforms.
-3. Build standard HiF4 parameters and apply 4/8/16-group quadratic refinement.
-4. Weight FULL64 uses the legal activation Hessian:
-   - retain four scale-beam candidates;
-   - process only wide FFN `fc/proj` layers at `0.25` coverage;
-   - run GPTQ initialization, one 64-dimensional coordinate sweep, and
-     hierarchy toggles;
-   - omit the redundant second coordinate sweep.
-5. C40 adjacent-128 Block-LDLQ conditional re-solving is retained only in the
-   historical archive; the current root does not enable this rejected path.
-6. Current C84 enables all-shape dynamic activation Gram-64 refinement at
-   `ratio=1.0`, `max_blocks=128`, and five deterministic coordinate sweeps,
-   while retaining Gram-8, sample-local HiF4 encoding, and the validated
-   4/8-group refinements.
+2. BOAT searches RMS diagonal balancing and 4/8/16/64-dimensional signed
+   Hadamard blocks using operand-local errors only; it never constructs a
+   Linear output.
+3. Cross-fold Weight-HSDQ uses `A.T @ A` block Hessians, 15 signed levels,
+   top-two 64-dimensional blocks and one coordinate sweep. A candidate made on
+   one calibration fold must improve the other before admission.
+4. Online Activation-HSDQ uses static transformed-weight Gram blocks to choose
+   hierarchy/offset and refine at most 128 blocks for two sweeps. Only static
+   Gram and legal BOAT configuration are stored in `activation_state`.
 
 ### Attention
 
-The active A1 path uses Smooth-QK, K midrange centering, headwise permutation,
-MHA/GQA alignment, and real-Attention dual-mask safety selection. C86 adds a
-shared Q/K 4/8/16 block-Hadamard candidate scored with the final offset and
-refinement lattice; only its legal integer configuration and static signs are
-stored. Fixed H64, Segment-CVaR, and non-beneficial V-importance candidates
-remain disabled.
+The active path searches reciprocal RMS balancing, K-centering, GQA alignment,
+and shared 16/32/64-dimensional signed Hadamard transforms. A cheap proxy scans
+all candidates, then the strongest four are re-evaluated through the deployed
+quantizer and real non-causal Attention output. Q/K state stores only static CPU
+Gram, importance, integer block/seed, and signs; V remains an independent legal
+HiF4 encoding. The old C86 experiment flags, Segment-CVaR, and non-beneficial
+V-importance branches are not present in the root file.
 
 ## Development principles
 
@@ -154,9 +153,10 @@ artifacts/real_model_suite/         evaluation JSON results; cache/ holds local 
 logs/evaluations/                   evaluation run reports (path must be given explicitly)
 logs/candidates/                    candidate official results and diagnosis reports
 logs/execution/                     execution logs and calibration records
+docs/current-solution-status.md    current root algorithm, measurements, and score attribution
 docs/real-model-evaluator.md        evaluator usage guide
 docs/research/                      literature survey
-docs/superpowers/plans/             currently active general workflows
+docs/superpowers/plans/             implementation plans and process docs
 docs/superpowers/specs/             designs and specifications
 docs/superpowers/archive/plans/     superseded plans, historical only
 ```
@@ -223,20 +223,28 @@ Synthetic Attention matrix:
   --solution solution.py
 ```
 
-Full test suite:
+Clean-root release regression (format, compliance, reference codec, and the
+real-model evaluator):
 
 ```powershell
-.\.venv\Scripts\python -m pytest -q
+.\.venv\Scripts\python.exe -m pytest -q `
+  tests/test_reference_hif4.py tests/test_linear_compliance_guard.py `
+  tests/test_real_model_suite.py --basetemp=.tmp_pytest\clean-root
 ```
 
-The full suite also includes real-corpus windows and historical algorithm
-regressions. Missing optional dependencies such as `transformers`, or legacy
-assertions that intentionally track an older experiment switch, are reported
-separately. Before a release, run the syntax checks and the evaluator regression
-with a repository-local ignored temp directory:
+The current environment reports **34 passed**. `test_jdrq.py`,
+`test_weight_cross64.py`, `test_weight_full64.py`, and `test_release_candidate.py`
+still contain historical assertions for removed C86/JDRQ helpers, experiment
+flags, or state schemas. They are not clean-root release gates; do not use the
+failure count from an unfiltered `pytest -q` run to judge the active algorithm.
+If one of those directions is restarted, rewrite its tests against the current
+API/state before adding it to the release command.
+
+To run only the real-model evaluator (with an ignored repository-local temp
+directory):
 
 ```powershell
-.\.venv\Scripts\python -m pytest -q tests/test_real_model_suite.py --basetemp=.tmp_pytest\readme-verify
+.\.venv\Scripts\python.exe -m pytest -q tests/test_real_model_suite.py --basetemp=.tmp_pytest\readme-verify
 ```
 
 ### Candidate testing order and result capture
@@ -250,7 +258,9 @@ historical sources under `solutions/`.
    ```powershell
    git diff --check
    .\.venv\Scripts\python -m py_compile solution.py evaluator\real_model_suite.py evaluator\reference_hif4.py evaluator\linear_compliance_guard.py
-   .\.venv\Scripts\python -m pytest -q
+   .\.venv\Scripts\python.exe -m pytest -q `
+     tests/test_reference_hif4.py tests/test_linear_compliance_guard.py `
+     tests/test_real_model_suite.py --basetemp=.tmp_pytest\clean-root
    ```
 
 2. **Test the active root `solution.py`**
@@ -426,7 +436,9 @@ out. Do not keep only improvements. Before archiving, freeze the root
    ```powershell
    git diff --check
    .\.venv\Scripts\python -m py_compile solutions\YYYYMMDD_vNNN_topic_scoreNA_timeNA\solution.py
-   .\.venv\Scripts\python -m pytest -q
+   .\.venv\Scripts\python.exe -m pytest -q `
+     tests/test_reference_hif4.py tests/test_linear_compliance_guard.py `
+     tests/test_real_model_suite.py --basetemp=.tmp_pytest\archive-check
    git add solution.py solutions\YYYYMMDD_vNNN_topic_scoreNA_timeNA\solution.py `
      solutions\YYYYMMDD_vNNN_topic_scoreNA_timeNA\result.md solutions\README.md `
      logs\execution\YYYYMMDD-experiment.md

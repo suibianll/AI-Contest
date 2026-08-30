@@ -13,21 +13,40 @@
 ## 总体架构
 
 ```
-                    ┌─────────────────────────────────────────────┐
-                    │            solution.py 总体结构              │
-                    ├─────────────────────────────────────────────┤
-                    │ 工具层:  dequant_nvfp4 / dequant_hif4(复现)  │
-                    │         s1p2_round / e6m2_grid / fwht       │
-                    │ 核心层:  hif4_quantize_core  (Step 1)        │
-                    │ 整形层:  smooth / rotate / gate (Step 2,5)   │
-                    │ 补偿层:  gptq / adaround_cd / brecq (Step 3) │
-                    │ 接口层:  6 个判题接口 (Step 0,4,6)           │
-                    └─────────────────────────────────────────────┘
+                    ┌──────────────────────────────────────────────┐
+                    │       当前 root solution.py（clean path）     │
+                    ├──────────────────────────────────────────────┤
+                    │ codec: NVFP4 反量化 + 合法 HiF4 五字段编码      │
+                    │ BOAT: RMS 对角平衡 + 4/8/16/64 signed-Hadamard │
+                    │ W-HSDQ: cross-fold AᵀA + 15 levels + top-2 block│
+                    │ A-HSDQ: 静态 WᵀW Gram + hierarchy + 2 sweeps  │
+                    │ Attn: Q/K 不变量候选，前 4 个部署路径复评      │
+                    │ API: 六个赛事正式接口                            │
+                    └──────────────────────────────────────────────┘
 
-离线: W ─▶ 反量化 ─▶ [整形] ─▶ [核心量化] ─▶ [补偿精调] ─▶ HiF4(W)
-                └─▶ 校准统计 ─▶ state ──────────────┐
-在线: A ─▶ 反量化 ─▶ [应用state] ─▶ [核心量化] ─▶ HiF4(A)
+离线 Linear: W ─▶ NVFP4 反量化 ─▶ BOAT ─▶ HiF4 ─▶ cross-fold W-HSDQ ─▶ weight_params
+                         └─▶ 静态 WᵀW Gram + BOAT 逆缩放 ─▶ activation_state
+在线 Linear: A ─▶ NVFP4 反量化 ─▶ 应用 state ─▶ HiF4 + A-HSDQ ─▶ activation_params
+
+离线 Attention: Q/K/V ─▶ 不变量候选 ─▶ 真实输出复评 ─▶ Q/K state（V 独立编码）
+在线 Attention: Q/K/V ─▶ 应用静态 state ─▶ 合法 HiF4 参数
 ```
+
+### 当前主版本实测快照（2026-08-30）
+
+固定 Qwen2.5-0.5B 全 24 层、`seq=128`、`calib=2`、`test=4`、CPU 缓存评测：
+
+| 指标 | 当前值 |
+|---|---:|
+| Linear native mean | 0.501558 |
+| Attention native mean | 0.841829 |
+| Qwen shaped panel total | **293.755106** |
+| official-flow native total（诊断） | 417.862253 |
+| 六 API 累计时间 | **382.153528s** |
+
+这不是官方分数；完整结果见 [`docs/current-solution-status.md`](docs/current-solution-status.md)。
+后续实现仍应参考下方 Step 0–6 的理论候选，但只有已经落入根 `solution.py` 的
+机制才是当前线上行为；历史 C86/GPTQ/AdaRound/BRECQ 分支不再隐式启用。
 
 ---
 

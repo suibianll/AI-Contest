@@ -1,10 +1,11 @@
 # HiF4 精度优化：算法理论、文献证据与可执行路线
 
-> 调研日期：2026-08-28  
-> 代码基线：根目录 `solution.py`，C38  
-> 当前本地结果：Linear `0.5695`，causal Attention `0.4497`，CPU algorithm-stage 约 `99s`  
-> 最新合规官方锚点：v025 / C21-C，`14437 / 166.6s`  
-> 最终评测硬约束：运行时间严格小于 `300s`
+> 调研日期：2026-08-28（历史研究快照）
+> 代码基线：根目录 `solution.py`，C38（已不再是当前根行为）
+> 当时本地结果：Linear `0.5695`，causal Attention `0.4497`，CPU algorithm-stage 约 `99s`
+> 当时最新合规官方锚点：v025 / C21-C，`14437 / 166.6s`
+> 当时评测硬约束：运行时间严格小于 `300s`；当前约束为 `<420s`，当前根实测见
+> [`docs/current-solution-status.md`](../../current-solution-status.md)
 
 ## 1. 结论
 

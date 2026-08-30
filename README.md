@@ -20,12 +20,15 @@
   还存在外部代码的设备混用问题。C66 与官方外部结果相差 `1596` 分、`21.8s`。
 - 历史 v024 得分为 `16043 / 173.8s`，但其 Linear 输出监督路径把输出信息
   用于激活侧选择；这类 `A@W -> Q(A)` 用法仍不合规，因此不作为后续合规父版本。
-- 当前根 `solution.py` 为 v086/C86 attention block-smooth final-lattice +
-  v084 full gram64 五轮坐标扫描 + C76.4 GQA rotation；Qwen 本地 native
-  `392.064774`、panel `267.307909`、API `313.58s`。四模型结果与实现细节见
+- 当前根 `solution.py` 已从 C86 实验集合重写为单一路径 BOAT + cross-fold
+  Weight-HSDQ + Gram-hierarchy Activation-HSDQ，并保留输出感知 Attention
+  shortlist。Qwen 全 24 层本地实测 native `417.862253`、shaped panel
+  `293.755106`、正式 API `382.153528s`（wall `414.025852s`，均在 420s 内）。
+  逐项结果、角色归因和复现实验配置见
+  [`当前主版本算法效果与评测状态`](docs/current-solution-status.md) 与
   [`solutions/README.md`](solutions/README.md)。
 - 当前根源码 SHA256：
-  `E7A16D6991DBB70A593FBE87D0C5D1D8FD38F801665354A01FFAF2F0A96F03CD`。
+  `5D1128CC79FEF58154DA2F600EC4B472FF95030E1F1E61B96593D06FD9AAC94F`。
 - 旧版本地评测器（单模型 dev 与 frozen holdout）曾因 calibration/test
   文本重叠不能可靠排序合规候选，相关代码（`real_data_eval.py`、
   `holdout_eval.py`、`cap_oracle.py`）已于 2026-08-28 移除；诊断结论见
@@ -88,15 +91,16 @@
 
 ## 当前算法
 
-当前根版本为 v086/C86，评测和优化优先级如下：
+当前根是重写后的 clean Gram-hierarchy 版本；v086/C86 仍是不可变历史归档。
+评测和优化优先级如下：
 
 | 优先级 | 组件 | 当前机制 | 作用/状态 |
 | --- | --- | --- | --- |
-| 1 | Linear | SmoothQuant、通道排列、4/8/16 组二阶精修 | 主收益来源，优先用 Qwen panel 比较 |
-| 2 | Linear | wide FFN `fc/proj` 的 FULL64 Hessian/GPTQ | 覆盖率 `0.25`，只更新离线 `Q(W)` |
-| 3 | Linear | 动态激活 Gram-8 + all-shape Gram-64 | C84 full coverage (`ratio=1.0`, `max_blocks=128`, `sweeps=5`)，只保留静态 CPU `WᵀW` state |
-| 4 | Attention | Smooth-QK、K 居中、head permutation、GQA H16/H32/H64 rotation、C86 block-H final lattice | C86 已晋级；MHA 小模型按软 guardrail 观察 |
-| 5 | 研究候选 | V importance、Q/K policy alternating、压缩覆盖预算 | 以 v086 为父版本，优先做跨窗口输出级离散求解 |
+| 1 | Linear | BOAT：RMS 对角平衡 + 4/8/16/64 signed-Hadamard | 先压低两侧 operand-local 误差；不构造 Linear 输出 |
+| 2 | Linear | Cross-fold Weight-HSDQ：`AᵀA` 二阶增量、15 levels、top-2 block、1 sweep | 只更新离线 `weight_params`；跨 fold 验证后才接纳 |
+| 3 | Linear | Gram-hierarchy Activation-HSDQ：静态 `WᵀW`、offset/hierarchy 选择、最多 128 block、2 sweeps | 在线 state 仅含合法静态统计；当前 Linear mean `0.501558` |
+| 4 | Attention | reciprocal RMS、K-centering、GQA 对齐、16/32/64 signed-Hadamard；前 4 候选部署复评 | 使用真实 non-causal Attention 输出排序；当前 mean `0.841829` |
+| 5 | 下一步 | 跨 64-block LRH、`v/fc_gate` 专项 BOAT、预算调度与更多 calibration fold | 目标是 Linear 0.9；当前仍差 `0.398442` mean（99.611 panel） |
 
 优化决策只看同一冻结缓存上的相对增量：Qwen `primary_panel_score_total` 是主
 指标，其他模型用于发现结构性回退。不得用官方分数反向调参，也不设置固定的
@@ -106,27 +110,22 @@
 ### Linear
 
 1. 按 NVFP4 scale 和 E2M1 载荷重建浮点参考。
-2. 搜索 SmoothQuant 对角缩放、通道排列和 4/8/16 小块正交变换。
-3. 生成标准 HiF4 参数，并执行 4/8/16 组二阶精修。
-4. Weight FULL64 使用合法激活 Hessian：
-   - scale beam 保留 4 路；
-   - 仅处理 wide FFN `fc/proj` 层，覆盖率为 `0.25`；
-   - 执行 GPTQ 初始化、一次 64 维坐标下降和层级 toggle；
-   - 已删除无收益的第二轮坐标下降。
-5. C40 相邻 128 维 Block-LDLQ 仅保留在历史归档中；当前根不启用该已被官方
-   否定的路径。
-6. 当前根 C84 将动态 activation Gram-64 的合法 refinement 覆盖设为
-   `ratio=1.0/max_blocks=128`，每个 block 做 `5` 轮确定性坐标扫描，并保留
-   Gram-8、source-aware proposal、sample-local HiF4 编码和已验证的 4/8 组精修。
+2. BOAT 用激活/权重 RMS 搜索对角平衡和 4/8/16/64 维 signed-Hadamard；
+   候选只使用两侧 operand-local 误差，不构造 Linear 输出。
+3. Cross-fold Weight-HSDQ 对宽度满足条件的权重使用 `AᵀA` block Hessian，
+   在 15 个 signed levels 上做 top-2 block、1 轮坐标增量；fold 间不泛化的候选
+   不进入最终参数。
+4. 在线 Activation-HSDQ 使用静态变换后权重 `WᵀW` 的 Gram block 选择
+   E6M2 offset/hierarchy，最多处理 128 个 block、每块 2 轮；state 不含输出监督
+   或测试样本。
 
 ### Attention
 
-当前保留 A1 路径：Smooth-QK、K midrange 居中、headwise permutation、
-MHA/GQA 对齐、真实 Attention 双 mask 安全选择，以及 GQA-only H16/H32/H64
-head-local rotation。C86 额外搜索 Q/K 共享的 4/8/16 block-Hadamard，使用
-最终 offset/refinement lattice 做校准输出排序，并在 state 中只保存合法
-整数配置与静态符号。固定 H64、Segment-CVaR 和无收益的 V importance 候选
-保持关闭；OPT 的小幅回退作为软 guardrail 记录。
+当前搜索 reciprocal RMS 平衡、K-centering、GQA 对齐和 16/32/64 维共享
+signed-Hadamard。便宜代理扫描后只对前 4 个候选执行完整部署量化和真实
+Attention 输出复评；Q/K state 只保存 CPU 静态 Gram、重要性、整数 block/seed
+和符号，V 保持独立合法 HiF4 编码。旧 C86 的实验开关、Segment-CVaR 和无收益
+V importance 分支不再位于根文件。
 
 ## 开发原则
 
@@ -157,9 +156,10 @@ artifacts/real_model_suite/         评测 JSON 结果；cache/ 为本地模型�
 logs/evaluations/                   评测运行报告（每次运行显式指定路径）
 logs/candidates/                    候选官方结果与诊断报告
 logs/execution/                     执行日志与校准记录
+docs/current-solution-status.md    当前根算法、全层实测和分数归因快照
 docs/real-model-evaluator.md        评估器使用说明
 docs/research/                      文献调研
-docs/superpowers/plans/             当前通用流程
+docs/superpowers/plans/             实施计划与通用流程（历史计划明确标注）
 docs/superpowers/specs/             设计与规范
 docs/superpowers/archive/plans/     已失效优化计划，仅供历史查阅
 ```
@@ -248,19 +248,24 @@ Attention 合成矩阵：
   --solution solution.py
 ```
 
-完整测试：
+当前 clean 根版本的发布回归（格式、合规、reference codec、真实模型套件）：
 
 ```powershell
-.\.venv\Scripts\python -m pytest -q
+.\.venv\Scripts\python.exe -m pytest -q `
+  tests/test_reference_hif4.py tests/test_linear_compliance_guard.py `
+  tests/test_real_model_suite.py --basetemp=.tmp_pytest\clean-root
 ```
 
-完整套件还包含真实语料窗口和历史算法回归；若本机未安装 `transformers`，或
-旧断言与当前 C84 实验开关不一致，相关测试会单独报告环境/历史债务。评测器发布
-前至少执行上面的语法检查和下面的评测器回归（使用仓库内被忽略的临时目录），
-再按本机环境补齐依赖并运行完整套件：
+当前环境结果为 **34 passed**。`test_jdrq.py`、`test_weight_cross64.py`、
+`test_weight_full64.py` 和 `test_release_candidate.py` 中仍有针对已删除 C86/JDRQ
+私有 helper、实验开关或旧 state schema 的历史断言；它们不再是 clean 根版本的发布
+门禁，不能用整库 `pytest -q` 的失败数评价当前算法效果。若重启这些方向，先按
+当前 API/state 重新编写测试，再把测试加入发布命令。
+
+如需单独检查真实模型评测器（使用仓库内被忽略的临时目录）：
 
 ```powershell
-.\.venv\Scripts\python -m pytest -q tests/test_real_model_suite.py --basetemp=.tmp_pytest\readme-verify
+.\.venv\Scripts\python.exe -m pytest -q tests/test_real_model_suite.py --basetemp=.tmp_pytest\readme-verify
 ```
 
 ### 候选测试顺序与结果保存
@@ -272,7 +277,9 @@ Attention 合成矩阵：
    ```powershell
    git diff --check
    .\.venv\Scripts\python -m py_compile solution.py evaluator\real_model_suite.py evaluator\reference_hif4.py evaluator\linear_compliance_guard.py
-   .\.venv\Scripts\python -m pytest -q
+   .\.venv\Scripts\python.exe -m pytest -q `
+     tests/test_reference_hif4.py tests/test_linear_compliance_guard.py `
+     tests/test_real_model_suite.py --basetemp=.tmp_pytest\clean-root
    ```
 
 2. **冒烟测试当前根 `solution.py`**
@@ -400,7 +407,9 @@ Attention 合成矩阵：
    ```powershell
    git diff --check
    .\.venv\Scripts\python -m py_compile solutions\YYYYMMDD_vNNN_topic_scoreNA_timeNA\solution.py
-   .\.venv\Scripts\python -m pytest -q
+   .\.venv\Scripts\python.exe -m pytest -q `
+     tests/test_reference_hif4.py tests/test_linear_compliance_guard.py `
+     tests/test_real_model_suite.py --basetemp=.tmp_pytest\archive-check
    git add solution.py solutions\YYYYMMDD_vNNN_topic_scoreNA_timeNA\solution.py `
      solutions\YYYYMMDD_vNNN_topic_scoreNA_timeNA\result.md solutions\README.md `
      logs\execution\YYYYMMDD-experiment.md

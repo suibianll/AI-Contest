@@ -44,12 +44,33 @@
 OPT、Pythia 等只作软 guardrail，用于识别结构性回退，不按层数直接加入主分。
 这使模型层数、角色数和 `--test` 窗口数不会改变同一候选的权重。
 
-已确认的新版锚点：v031/C39-FW `21864 / 161.3s`、v034/C41b
+已确认的新版官方锚点：v031/C39-FW `21864 / 161.3s`、v034/C41b
 `21864 / 159.4s`、v051/C47b `22451 / 234s`、v066/C66
 `22557 / 217.2s`；外部
 [`youxilee/hif4`](https://github.com/youxilee/hif4) 报告 `24153 / 239s`，
-仅用于参考，不作为本地评测器的候选输入。当前本地冠军 C66 与外部差
-`1596` 分，时间余量为 `21.8s`。
+仅用于参考，不作为本地评测器的候选输入。C66 与外部参考相差 `1596` 分，
+时间余量为 `21.8s`。
+
+## 当前根版本实测（2026-08-30）
+
+根目录 `solution.py` 是重写后的 clean Gram-hierarchy 实现，不是新的官方提交。
+以下结果来自固定缓存 `clean-gram-hierarchy-full`：Qwen2.5-0.5B 全 24 层，
+`seq=128`、`calib=2`、`test=4`、`amax6`、CPU、`cache-mode=read`。
+
+| 指标 | 当前根 | 旧 C86 归档 | 变化 |
+|---|---:|---:|---:|
+| Linear native mean | 0.501558 | 0.477821 | +0.023737 |
+| Attention native mean | 0.841829 | 0.739264 | +0.102565 |
+| Qwen panel total | **293.755106** | 267.307909 | **+26.447197（+9.89%）** |
+| official-flow native total | 417.862253 | 392.064774 | +25.797479 |
+| formal API time | **382.153528s** | 313.577669s | +68.575859s |
+| wall time | 414.025852s | — | `<420s` |
+
+报告：[Markdown](../logs/evaluations/clean-gram-hierarchy-full.md)，
+[JSON](../artifacts/real_model_suite/clean-gram-hierarchy-full.json)。当前根的
+`official_score`/`official_time` 为空；`panel_score` 只用于相对排序，不能换算
+官方绝对分数。Linear 仍是主要优化缺口：mean 为 `0.501558`，到 `0.9` 还差
+`0.398442`（当前剩余误差的 `79.94%`，即 250-case panel 的 `99.6106` 分）。
 
 官方另提供了两个测试用例；目前根据样例统计特征判断其接近千问 30B，
 但用例文件和完整形状清单尚未进入本地仓库。它们应作为后续候选的独立

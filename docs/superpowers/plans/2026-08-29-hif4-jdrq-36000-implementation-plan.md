@@ -1,30 +1,32 @@
 # HiF4 JDRQ 36000+ 算法实施计划
 
-日期：2026-08-29  
-状态：Active / 当前最高优先级  
+日期：2026-08-29（方案原始日期；状态更新 2026-08-30）
+状态：Superseded in root / 保留为研究与回滚参考
 目标：跳出局部 HiF4 重建框架，以固定在线 `Q(A)` 下的离线输出蒸馏、完整合法 HiF4 离散残差求解和 Attention 端到端结构化校准，持续逼近官方榜 `36000+`  
-实施对象：其他 AI、开发者或后续 Codex 任务可直接按本文件逐阶段执行  
+实施对象：其他 AI、开发者或后续 Codex 任务可按需复现实验；新实现以根 `solution.py` 和当前状态报告为准
 权威设计说明：[`华为算法大赛-HiF4量化赛题完整解析与算法方案.md`](../../../华为算法大赛-HiF4量化赛题完整解析与算法方案.md)  
-官方硬约束：六个 API 不变、HiF4 五字段合法、state 合规、不得用 `A@W` 拟合/选择/反推在线逐元素 `Q(A)`、最终总时间严格 `<420s`
+官方硬约束：六个 API 不变、HiF4 五字段合法、state 合规、不得用 `A@W` 拟合/选择/反推在线逐元素 `Q(A)`、最终总时间严格 `<420s`。当前根实测与本计划的差异见 [`docs/current-solution-status.md`](../../../docs/current-solution-status.md)
 
 ---
 
 ## 0. 本计划覆盖范围与执行原则
 
-本计划取代 `2026-08-29-hif4-linear-22000-optimization-plan.md` 作为当前算法实施主线。旧计划保留用于历史追溯，不再指导新候选。
+本计划曾取代 `2026-08-29-hif4-linear-22000-optimization-plan.md` 作为算法实施主线；
+随后根目录改为 clean Gram-hierarchy 单一路径。本文件及旧计划都保留用于历史追溯，
+不直接描述当前提交文件。
 
 ### 0.1 固定事实
 
 | 项目 | 当前事实 |
 |---|---|
 | 官方本地冠军 | C66：`22557 / 217.2s` |
-| 当前根版本 | v086 / C86 attention block-smooth final-lattice + v084 full gram64 五轮坐标扫描 + C76.4 GQA rotation，本地实验版本，无新官方分 |
+| 当前根版本 | clean Gram-hierarchy：BOAT + cross-fold Weight-HSDQ + Gram-hierarchy Activation-HSDQ + Attention top-4 部署复评；本地实验版本，无新官方分 |
 | 外部参考 | `youxilee/hif4`：用户提供 `24153 / 239s` |
 | 官方榜上限信号 | 用户确认已有超过 `36000` |
 | 官方面板 | 250 Linear + 200 Attention |
 | 最终时间上限 | `<420s` |
-| 已完成归档 | v084 / C84 full gram64 五轮坐标扫描；v086 / C86 attention block-H final-lattice |
-| 下一可用归档号 | v087 / 跨窗口 Attention 离散求解或 Linear Q(W) 结构化上限 |
+| 已完成归档 | v084 / C84、v086 / C86（历史快照）；clean 根版本尚未产生新的 vNNN 官方归档 |
+| 下一可用归档号 | v087 / 下一次经过完整评测并确认的发布候选 |
 
 若面板每 case 以百分制累加，`22557 -> 36000` 需要把当前剩余 MSE 再降低约 60%。因此本计划不把 offset、coverage、固定 headroom 等千分位微调作为主线。
 
