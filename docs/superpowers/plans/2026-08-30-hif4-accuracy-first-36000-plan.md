@@ -8,6 +8,8 @@
 > HiF4 合法性和赛事合规性。** 时间压缩在算法方向证明后单独进行。  
 > 官方合规边界：校准输出 `A@W` 只能优化离线 `Q(W)`；不得用于拟合、选择或
 > 反推在线 `Q(A)`，也不得写入 `activation_state`。
+> 补充审查：[`合法尺度晶格、CAT 与 Qronos 审查`](2026-08-30-hif4-grid-aligned-complement-plan.md)
+> 已于 2026-08-30 部分采纳；其中原始 NVFP4 `Δ` 对齐被修正为变换后值域 GALS。
 
 ---
 
@@ -140,6 +142,8 @@ g_L^{max(3)}
 
 ```text
 D0 合法上限仪表盘
+  -> D0-G 全 255 E6M2 scale-lattice oracle
+  -> A0 GALS：变换后值域合法尺度晶格搜索（仅在 oracle gap 足够大时）
   -> A1 Progressive Cross-Fold HSDQ
   -> A2 Expansive-FFN Shrinkage HSDQ
   -> A3 LRH：跨 64-block 低秩 Hessian
@@ -198,6 +202,11 @@ cross-block LRH loss
 accepted code count
 changed block count
 fold disagreement
+local ±3 scale loss
+all-255 legal E6M2 scale oracle loss
+scale-lattice gap
+continuous CAT alignment gain
+CAT continuous-to-legal retention
 role/layer/shape metadata
 ```
 
@@ -229,6 +238,64 @@ logs/evaluations/<date>-oracle-dashboard.md
 
 D0 不改变 `solution.py`，只负责建立可证伪的上限地图。
 
+### 4.5 D0-G：合法 E6M2 尺度晶格 oracle
+
+当前 `_encode_rows` 只搜索标准 `amax/7` code 附近 `±3`。对 sampled 64-block，
+枚举 evaluator 接受的全部 255 个有限无符号 E6M2 code，并在每个 code 下求合法
+lv2/lv3/mantissa 解：
+
+```math
+L_{all255}(v)=
+\min_{c\in\{0,\ldots,254\}}
+\min_{z\in\mathcal Z_{HiF4}(c)}\mathcal L(v,z)
+```
+
+定义：
+
+```math
+g_{scale}=
+\frac{L_{\pm3}-L_{all255}}
+{L_{\pm3}+\epsilon}
+```
+
+`g_scale` 是固定变换、固定目标下仅扩大顶层 scale/hierarchy 搜索可获得的硬诊断。
+若 validation 上很小，停止尺度搜索，直接进入 A2/A3/A4；若明显且跨 fold 可迁移，
+才实现 A0 GALS。
+
+初步只读 smoke test（Qwen 一层 `v`、BOAT 后 32 行、448 blocks）显示：weight-MSE
+仅 4 个 block 改善、平均 gap `0.0393%`；activation-`gram64` 有 60 个 block 改善、
+总 loss gap `0.6302%`、最大单 block `19.321%`。这说明方向真实存在但大概率稀疏，
+正式 E0-G 应优先覆盖高-loss block，并把“亚百分比总 gap”视为可能的停止信号，
+而不是预设为主增益来源。
+
+原始 `denom/Δ` 只在 identity、纯置换或可证明保留网格的特殊变换中记录归因。
+当前 BOAT 含对角缩放和 signed-Hadamard，变换后元素通常不再属于单一
+`E2M1×Δ` 集合，禁止以原始 `Δ` 命中率作为主算法依据。
+
+### 4.6 A0：GALS 解析候选
+
+对实际待编码的变换后非零值 `|v_i|`，枚举：
+
+```math
+s_{i,m,e}=\frac{|v_i|}{m2^e},\qquad
+m\in\{1/4,2/4,\ldots,7/4\},\ e\in\{0,1,2\}
+```
+
+把 `s_{i,m,e}` 投影到最近合法 E6M2 code，并加入相邻 code、当前 `±3` 邻域和
+incumbent。候选去重后必须按完整 64 元素块评分。每 8 元素共享 lv2，因此两个
+4 元素子组的有效指数只能取：
+
+```math
+\mathcal E_8=
+\{(0,0),(0,1),(1,0),(1,1),(1,2),(2,1),(2,2)\}
+```
+
+不得独立选两个 4 元素组后做“块级投票”。逐元素加权 MSE 可复用
+`_solve_hierarchy`；Gram/Hessian 非对角目标必须交给 A1 beam 联合求解。
+
+GALS-C 的继续条件是：它在 sampled blocks 上追回 GALS-O 的主要增益，并在
+fold B/validation 维持同方向；否则保留 oracle 结论但不进入主代码。
+
 ---
 
 ## 5. A1：Progressive Cross-Fold Hierarchical HSDQ
@@ -259,7 +326,7 @@ q=s_1\,s_2\,s_3\,m\,\sigma
 
 ```text
 parent hierarchy
-  -> top-scale candidates
+  -> top-scale candidates（当前邻域 + 通过门禁的 GALS-C）
   -> lv2 partial assignments
   -> lv3 partial assignments
   -> signed mantissa coordinate path
@@ -579,6 +646,27 @@ H(v)=I-2\frac{vv^T}{v^Tv}
 候选 rank：`1/2/4/8`。本阶段可离线完整扫描，不因推理成本拒绝；但必须报告
 条件数、逆变换误差和合法 HiF4 部署结果。
 
+CAT 初始化必须使用正则化二阶矩：
+
+```math
+A_\epsilon=A+\epsilon\frac{\operatorname{tr}(A)}dI,
+\qquad
+B_\epsilon=B+\epsilon\frac{\operatorname{tr}(B)}dI
+```
+
+在列向量约定下令：
+
+```math
+C=A_\epsilon^{1/2}B_\epsilon A_\epsilon^{1/2},
+\qquad
+T_{CAT}=C^{1/4}A_\epsilon^{-1/2}
+```
+
+于是 `T A T^T` 与 `T^{-T} B T^{-1}` 同为 `C^{1/2}`。乘法顺序不可交换；若
+代码使用行向量约定，必须整体转置推导。CAT 原理论不是为 HiF4 层级量化推导的，
+所以这里只把它当作连续初始化和 alignment oracle；最终仍需投影为合法、可逆的
+BOAT-2 结构并通过跨 fold 部署目标。
+
 ### 8.5 role-aware 策略
 
 优先顺序：
@@ -659,6 +747,17 @@ J_{FS}(c)
 若 continuous target 明显改善但所有合法投影都不迁移，问题归因到 HSDQ/BOAT，
 不继续增加 JDRQ target 数。如果合法投影在单模型有效、异构模型灾难回退，则提高
 fold/shape 正则，而不是增加模型名分支。
+
+### 9.6 HiF4-block Qronos correction
+
+Qronos 式纠错只进入冻结激活状态后的权重求解：先得到 `Z=Q(A)`，再用
+`(A,W,AW^T,Z)` 调整离线 `weight_params`，目标是使 `Z Q(W)^T` 接近 `AW^T`。
+任何 teacher output 或 residual 都不得写入 `activation_state`。
+
+原始逐标量顺序舍入需改造成 HiF4 block 版本：GALS 生成顶层 scale 候选，
+A1/HSDQ 生成合法 hierarchy/mantissa 候选，Qronos/Cholesky correction 只负责
+块顺序与连续 residual diffusion。每步保留 parent，并用真实部署 residual 接受。
+本赛题不采用跨层误差传播，因为 evaluator 为每层提供未级联量化的真实激活。
 
 ---
 
@@ -778,13 +877,15 @@ w_t=\sum_{h,q}P_{hqt}^2
 
 | 实验 | 唯一变量 | 首测范围 | 主要问题 | 通过后下一步 |
 |---|---|---|---|---|
-| E0 | D0 dashboard | 4 模型×3 层×全 role | 上限在哪里 | E1 |
-| E1 | progressive HSDQ path | Qwen gate/up/v | 强 solver 是否迁移 | E2/E4 |
+| E0 | D0 dashboard | 4 模型×3 层×全 role | 上限在哪里 | E0-G |
+| E0-G | all-255 scale-lattice oracle | Qwen gate/up/v sampled blocks | `±3` 是否漏掉大量合法 scale 收益 | GALS-C 或 E1 |
+| E0-C | GALS 解析候选召回 | E0-G 高 gap blocks | 稀疏候选能否追回 oracle | E1 |
+| E1 | progressive HSDQ path + 通过门禁的 GALS | Qwen gate/up/v | 强 solver 是否迁移 | E2/E4 |
 | E2 | expansive FFN shrinkage | Qwen gate/up | 能否解除 rows gate | E3 |
 | E3 | LRH rank | v/gate/up/proj | 跨块是否重要 | E4 |
 | E4 | blockwise D/P | v/gate/up | 坐标系是否主瓶颈 | E5 |
-| E5 | Householder/CAT low-rank | o/v/proj | 更强双侧变换 | E6 |
-| E6 | FS-JDRQ targets | 全 Linear role | 输出补偿能否合法兑现 | E7 |
+| E5 | Householder/CAT low-rank | o/v/proj | 正则化 alignment 初始化能否合法兑现 | E6 |
+| E6 | FS-JDRQ + block-Qronos | 全 Linear role | 冻结 Q(A) 后联合纠错能否合法兑现 | E7 |
 | E7 | global activation LRH | 全 Linear role | 激活跨块上限 | E8 |
 | E8 | GQRB/PAWV | Attention | 把 A 提到 0.90+ | E9 |
 | E9 | 全层五模型 + wide shape | 全部 | 泛化与最终组合 | 时间压缩阶段 |
@@ -866,10 +967,14 @@ capture_{local}
 ```text
 evaluator/linear_oracle_dashboard.py
 evaluator/hif4_candidate_replay.py
+evaluator/e6m2_scale_lattice_oracle.py
 tests/test_hsdq_progressive.py
+tests/test_gals_hierarchy.py
 tests/test_lrh_hessian.py
 tests/test_boat_invariance.py
+tests/test_cat_transform.py
 tests/test_activation_state_provenance.py
+tests/test_qronos_state_boundary.py
 tests/test_pawv_objective.py
 ```
 
@@ -877,11 +982,12 @@ tests/test_pawv_objective.py
 
 | 机制 | 当前函数 | 新函数建议 |
 |---|---|---|
+| E6M2 oracle/GALS | `_encode_rows`、`_solve_hierarchy` | `_all_scale_oracle`、`_gals_scale_codes` |
 | Progressive HSDQ | `_polish_weight` | `_generate_hsdq_path`、`_crossfold_select_path` |
 | Expansive FFN | `_crossfold_weight_hsdq` | `_select_sparse_row_blocks` |
 | LRH | `_gram64` | `_lowrank_cross_block_gram`、`_lrh_candidate_delta` |
-| BOAT-2 | `_choose_boat` | `_boat_block_candidates`、`_hierarchy_permutation` |
-| FS-JDRQ | weight calibration | `_ridge_weight_targets`、`_robust_weight_pool` |
+| BOAT-2/CAT | `_choose_boat` | `_boat_block_candidates`、`_hierarchy_permutation`、`_cat_initializer` |
+| FS-JDRQ/Qronos | weight calibration | `_ridge_weight_targets`、`_qronos_block_path`、`_robust_weight_pool` |
 | Global A-HSDQ | `_refine_activation` | `_refine_activation_lrh` |
 | GQRB | attention calibration | `_gqrb_block_candidates` |
 | PAWV | `v_state={}` | `_build_pawv_state`、`_refine_v_pawv` |
@@ -916,7 +1022,27 @@ next falsifiable experiment
 
 ## 15. 推荐立即执行的第一个实验
 
-第一项实现为 **E1：Progressive Cross-Fold Hierarchical HSDQ**，范围限定为：
+第一项先实现 **E0-G：全 255 E6M2 scale-lattice oracle**，因为它能以很小的
+概念风险直接判定新增 GALS 是否值得开发：
+
+```text
+模型：Qwen2.5-0.5B
+角色：fc_gate、fc_up、v、proj
+层：0、12、23
+块：按当前 deployed loss 选 top-32 sampled 64-block
+对照：当前 ±3、all-255+对角 hierarchy、all-255+Gram beam（小块 oracle）
+fold：A/B 独立统计，validation 只终验
+输出：scale gap、最优 code 与标准 code 距离、GALS-C candidate recall
+```
+
+裁决：
+
+- `all-255` 在 validation 几乎不优于 `±3`：删除 GALS 实现分支，直接做 E1；
+- `all-255` 有明显迁移收益且 GALS-C 高召回：把 GALS-C 候选接入 E1；
+- 对角 hierarchy 有收益而 Gram beam 继续显著提升：A1 优先解决非对角层级耦合；
+- train gap 大、validation gap 小：停止尺度方向，不用更大候选掩盖代理失配。
+
+随后执行 **E1：Progressive Cross-Fold Hierarchical HSDQ**，范围限定为：
 
 ```text
 模型：Qwen2.5-0.5B
@@ -928,12 +1054,14 @@ path checkpoints：parent、hierarchy、1、4、16、32、64 accepted moves
 fold：A 生成 B 选择；B 生成 A 选择；validation 只终验
 ```
 
-必须同时保留四个对照：
+必须同时保留六个对照（GALS 未过门时第 3、6 项记为不适用）：
 
 1. 当前 parent；
 2. 当前 fixed-hierarchy HSDQ；
-3. progressive mantissa-only；
-4. progressive full-hierarchy HSDQ。
+3. GALS-only（仅当 E0-G/E0-C 通过）；
+4. progressive mantissa-only；
+5. progressive full-hierarchy HSDQ；
+6. GALS + progressive full-hierarchy（仅当 GALS 通过）。
 
 它能一次回答：
 
@@ -950,4 +1078,3 @@ fold：A 生成 B 选择；B 生成 A 选择；validation 只终验
 - 若 legal oracle 本身也几乎无增益，直接判定当前坐标系不足，不再扩大 HSDQ。
 
 这是当前信息增益最高、同时能直接攻击最弱 Linear 角色的下一步。
-
