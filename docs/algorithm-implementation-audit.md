@@ -2,16 +2,17 @@
 
 > 审计日期：2026-08-31
 > 审计对象：根 [`solution.py`](../solution.py)，规范 LF SHA256
-> `cb3e84c019c4be39853c47a65a9f01bac4b4d1e6de2184242fd09ae01470b710`
+> `3abf9beb7ba50285b65344ce94773350eca16a24ce36a296db1401b9bafeb1ec`
 > 原则：源码、校准目标、部署解码和评测日志必须逐一对应；不能用旧审计文字替代源码证据。
 
 ## 0. 结论
 
-根目录当前是 v107 的 precision parent：BOAT、expansive-FFN CAT balance、cross-fold
-Weight-HSDQ、Gram-hierarchy Activation-HSDQ、Gram-gated Global Activation-LRH、B1
-GQRB 和 B2 PAWV diag-only。Qwen 固定 cache 的最高已完成 full-layer panel 为
-`295.157057`，Linear mean 为 `0.5069966356`，Attention mean 为 `0.8420394885`，
-API 时间 `481.036527s`（探索阶段记录，最终仍需 C1 压缩）。
+根目录当前是 v110 的 precision parent：BOAT、expansive-FFN CAT balance、cross-fold
+Weight-HSDQ、Gram-hierarchy Activation-HSDQ、Gram-gated Global Activation-LRH、L4a
+final deployed-Gram row gate、L4b final-Gram GALS、B1 GQRB 和 B2 PAWV diag-only。Qwen
+固定 cache 的最高已完成 full-layer panel 为 `295.242780`，Linear mean 为
+`0.5073395278`，Attention mean 为 `0.8420394885`，API 时间 `701.900553s`（探索阶段
+记录，最终仍需 C1 压缩）。
 
 L1 v105 已实现真正的 full-hierarchy cross-block Weight-LRH（scale/lv2/lv3/
 mantissa 原子写回），并通过 `29 passed` 合成/合规测试；但五层×七 role 的
@@ -83,7 +84,16 @@ J_A(Q)=\|(Q(A)-A)W^T\|_F^2
 `295.157057`。具体门禁冲突率和两折稳定性见
 [`L3 diagnostic`](../logs/execution/2026-08-30-l3-global-lrh-diagnostic.md)。
 
-### 2.3 仍有待验证的低风险问题
+### 2.3 v108 L4a 路由误判与 v109 修复
+
+v108 将 dynamic token 张量的第一维误当成权重 output-row，导致 final-Gram 分支
+从未触发；其 `0.5289493081` screen 与 v107 相同，只能标记为 no-op。v109 在
+calibration state 写入结构路由，并以 v107 parent 与 final `G_q` 候选做完整二次型
+逐行门控。正确复验得到五层 screen `0.5292690913`、full-layer Linear
+`0.5073256468`、panel `295.239309`，较 v107 增加 `+0.0003290112` / `+0.0822528`。
+源码、测试和全层证据见 [`v109 archive`](../solutions/20260831_v109_l4a-final-gram-gated_score295.239309_time517s/)。
+
+### 2.4 仍有待验证的低风险问题
 
 - `_choose_boat` 先选 balance 再选 rotation，尚未与联合网格的部署侧目标比较；
 - cross-fold 最终 score 仍含生成 fold，可能有乐观偏差；
@@ -101,16 +111,17 @@ J_A(Q)=\|(Q(A)-A)W^T\|_F^2
 | expansive-FFN CAT balance | 保留（v106） | `rows > channels`、α=0.25；只改善 fc_gate |
 | v105 full-hierarchy Weight-LRH | 归档 rejected | 正确写回但 screen 无增益；不扩大 rank/block/sweep |
 | expansive-FFN CAT/BOAT-2 进一步变体 | 未执行 | 不恢复全局 block 搜索 |
-| v095 Gram-objective Global-LRH | 已修复并采纳（v107 精度 parent） | 4-block proposal；最终 Gram gate；时间待 C1 压缩 |
-| final-weight Gram + GALS | 未执行 | active plan L4，先做小预算 oracle |
+| v095 Gram-objective Global-LRH | 已修复并采纳（v107 前一精度 parent） | 4-block proposal；最终 Gram gate；时间待 C1 压缩 |
+| final-weight Gram row gate | 已修复并采纳（v109 精度 parent） | 仅 expansive `rows > channels`、`channels <=1024`；完整 `G_q` 行级 gate |
+| final-weight Gram + GALS | 进行中 | 基于 v109 做最多 4 block 的小预算验证；结果未定 |
 | Attention PAWV rank/position | deferred | 不插入 Linear 主线 |
 
 ## 4. 计划与证据治理
 
-唯一可执行计划是 [`2026-08-30-hif4-active-optimization-plan.md`](superpowers/plans/2026-08-30-hif4-active-optimization-plan.md)。
+唯一可执行计划是 [`2026-08-31-hif4-active-l5-structural-optimization-plan.md`](superpowers/plans/2026-08-31-hif4-active-l5-structural-optimization-plan.md)。
 每个候选必须保存完整源码、规范 LF SHA、固定 cache/命令、合规扫描和结果日志；
-screen/oracle 不能写入最高分账本。L1 v105 已按该规则归档，根目录恢复 v100/v101，
-当前下一步是 L4。计划目录不得同时存在第二份 active 计划。
+screen/oracle 不能写入最高分账本。L1 v105、v108 no-op 和其余失败候选均按该
+规则归档；当前根为 v110，下一步是 L5a。计划目录不得同时存在第二份 active 计划。
 
 本审计只记录源码与执行证据；它不把本地 panel 线性换算为官方分数，也不改变
 历史归档文件内容。

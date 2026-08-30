@@ -23,22 +23,23 @@
   的设备混用问题。完整表格见 [`当前主版本算法效果与评测状态`](docs/current-solution-status.md)。
 - 历史 v024 得分为 `16043 / 173.8s`，但其 Linear 输出监督路径把输出信息
   用于激活侧选择；这类 `A@W -> Q(A)` 用法仍不合规，因此不作为后续合规父版本。
-- 当前根 `solution.py` 为 v107 Global Activation-LRH Gram-gated precision parent，
-  在 v106 expansive-FFN CAT balance + B2 PAWV diag-only + B1 GQRB 之上加入
-  exact deployed-Gram gate；Qwen 全 24 层本地实测 native `421.537530`、shaped panel
-  `295.157057`、Linear mean `0.5069966356`、正式 API `481.036527s`。当前探索阶段
+- 当前根 `solution.py` 为 v110 L4b final-Gram GALS precision parent，
+  在 v109 L4a 的 expansive FFN parent/final Gram 双候选逐行 gate 之上，再做最多 4
+  个高损失 block 的解析 offset GALS；Qwen 全 24 层本地实测 native `421.767954`、
+  shaped panel `295.242780`、Linear mean `0.5073395278`、正式 API `701.900553s`。当前探索阶段
   只按精度排序，时间暂作记录；最终冻结时再压缩到 420s 内。逐项结果、归档实现
   审计和复现实验配置见 [`当前主版本算法效果与评测状态`](docs/current-solution-status.md)、
   [`算法全景`](docs/algorithm-inventory-and-directions.md)、
   [`归档实现审计`](docs/archive-implementation-audit.md) 与 [`solutions/README.md`](solutions/README.md)。
-  下一步只按 [`唯一活跃优化计划`](docs/superpowers/plans/2026-08-30-hif4-active-optimization-plan.md) 执行。
+  下一步只按 [`唯一活跃优化计划`](docs/superpowers/plans/2026-08-31-hif4-active-l5-structural-optimization-plan.md) 执行。
 - 当前根源码 SHA256：
-  `CB3E84C019C4BE39853C47A65A9F01BAC4B4D1E6DE2184242FD09AE01470B710`（规范 LF）。
+  `3ABF9BEB7BA50285B65344CE94773350ECA16A24CE36A296DB1401B9BFEB1EC`（规范 LF）。
 - L1 full-hierarchy Weight-LRH 已完成合成测试与五层×七 role screen，但 screen
   `both_player=0.523019429222563` 与 L0 逐条持平；候选 v105 已归档。L2 固定
   `α=0.25` 的 expansive-FFN CAT balance 已通过 full-layer，v106 成为时间 parent；
-  L3 Gram-gated Global Activation-LRH 在只看精度的 full-layer 得到 v107，当前下一步
-  是 L4 final-weight Gram/GALS 分拆。证据见 [`L3 execution log`](logs/execution/2026-08-30-v107-l3-global-lrh-qwen-full.md)。
+  L3 Gram-gated Global Activation-LRH 在只看精度的 full-layer 得到 v107；L4a final
+  deployed-Gram row gate 得到 v109；L4b final-Gram GALS 得到 v110，当前已转入 L5
+  结构优化。证据见 [`v110 execution log`](logs/execution/2026-08-31-v110-l4b-gals-final-gated-qwen-full.md)。
 - 旧版本地评测器（单模型 dev 与 frozen holdout）曾因 calibration/test
   文本重叠不能可靠排序合规候选，相关代码（`real_data_eval.py`、
   `holdout_eval.py`、`cap_oracle.py`）已于 2026-08-28 移除；诊断结论见
@@ -75,7 +76,7 @@ README 顶部的“当前状态”、[`solutions/README.md`](solutions/README.md
 
 仓库同时只能有一份活跃优化计划，位置是
 [`docs/superpowers/plans/`](docs/superpowers/plans/)，当前文件见
-[`2026-08-30-hif4-active-optimization-plan.md`](docs/superpowers/plans/2026-08-30-hif4-active-optimization-plan.md)。
+[`2026-08-31-hif4-active-l5-structural-optimization-plan.md`](docs/superpowers/plans/2026-08-31-hif4-active-l5-structural-optimization-plan.md)。
 执行任何优化时**只参考这份 active 计划**、当前根代码、最新评测数据和官方规则；
 `docs/superpowers/archive/plans/` 中的文件一律是只读历史，不得作为下一步指令。
 
@@ -111,7 +112,7 @@ git diff --check
 官方与本地均为 `C39 = C41b < C47b < C66`；Qwen 主面板的 Spearman 为
 `1.0000`，五模型 raw sum 为 `0.9487`。这只证明相对排序方向，不证明本地
 分数不可以线性换算成官方分数。外部 `youxilee/hif4` 的最高同口径 Qwen panel 为
-`250.327102`，当前根为 `295.157057`，领先 `44.829955`（`17.91%`）；外部
+`250.327102`，当前根为 `295.242780`，领先 `44.915678`（`17.94%`）；外部
 Qwen native `369.527269` 仍作为第二诊断线，五模型合计不作为基准。
 
 ## 修订版官方评测锚点（2026-08-29）
@@ -156,8 +157,9 @@ Qwen native `369.527269` 仍作为第二诊断线，五模型合计不作为基�
 | 3 | Linear | Gram-hierarchy Activation-HSDQ：静态 `WᵀW`、offset/hierarchy 选择、最多 128 block、2 sweeps | 在线 state 仅含合法静态统计；v106 基线 Linear mean `0.503459` |
 | 4 | Linear | Expansive-FFN CAT balance：`rows > channels`、固定 α=0.25 | v106 仅改善 fc_gate；不增加 state 字段 |
 | 5 | Linear | Global Activation-LRH：rank-8 off-block proposal，逐行 exact deployed-Gram gate | v107 Linear mean `0.506997`；仅窄输入形状启用 |
-| 6 | Attention | reciprocal RMS、K-centering、GQA 对齐、GQRB、PAWV diag-only | 使用真实 non-causal Attention 输出排序；当前 mean `0.842039` |
-| 7 | 下一步 | L0 已完成 → L1 corrected full-hierarchy LRH 已拒绝 → L2 已采纳 → **L3 已通过精度门禁（v107）** → **L4 final-Gram/GALS（当前）** → L5 新结构 | Attention PAWV 独立延后；最终时间压缩在 C1 执行；详细门禁只见唯一活跃计划 |
+| 6 | Linear | L4a final deployed-Gram row gate：expansive 双候选 + 完整 `G_q` 逐行门控 | v109 Linear mean `0.507326`；仅 `rows > channels`、`channels <=1024` |
+| 7 | Attention | reciprocal RMS、K-centering、GQA 对齐、GQRB、PAWV diag-only | 使用真实 non-causal Attention 输出排序；当前 mean `0.842039` |
+| 8 | 下一步 | L0 已完成 → L1 corrected full-hierarchy LRH 已拒绝 → L2 已采纳 → L3 v107 → **L4a v109 已通过精度门禁** → **L4b GALS（当前）** → L5 新结构 | Attention PAWV 独立延后；最终时间压缩在 C1 执行；详细门禁只见唯一活跃计划 |
 
 优化决策只看同一冻结缓存上的相对增量：Qwen `primary_panel_score_total` 是主
 指标，其他模型用于发现结构性回退。不得用官方分数反向调参，也不设置固定的

@@ -7,7 +7,7 @@
 > 规则边界：输出必须为合法 HiF4 五字段；Linear 不允许用 `A@W` 拟合、选择或反推在线 `Q(A)`；官方总时间 `<420s`
 
 当前从 clean 根版本继续推进的步骤见
-[`HiF4 唯一活跃优化计划`](../superpowers/plans/2026-08-30-hif4-active-optimization-plan.md)。
+[`HiF4 唯一活跃优化计划`](../superpowers/plans/2026-08-31-hif4-active-l5-structural-optimization-plan.md)。
 该阶段按用户要求暂不以运行时间淘汰算法，先测量合法精度上限与跨 fold 泛化。
 
 ---

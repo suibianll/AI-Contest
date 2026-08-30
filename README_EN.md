@@ -1,6 +1,6 @@
 # HiF4 Quantization Competition Workspace
 
-> Data snapshot: 2026-08-30. Current facts are keyed by this file, the latest
+> Data snapshot: 2026-08-31. Current facts are keyed by this file, the latest
 > evaluation log, and the `solution.py` SHA.
 
 Development workspace for the Huawei 2026 NVFP4-to-HiF4 algorithm track.
@@ -28,16 +28,17 @@ Chinese version: [README.md](README.md)
   path used output information for activation-side selection. That
   `A@W -> Q(A)` use remains non-compliant, so it is not a compliant parent for
   new work.
-- The root `solution.py` is v100 B2 PAWV diag-only + B1 GQRB. On the full
-  24-layer Qwen2.5-0.5B cached run, its native total is `417.882506`, Qwen
-  shaped panel is `293.797301`, and formal API time is `392.423565s` (the C0
-  confirmation was `401.130873s`, both below 420s). See the [current status
+- The root `solution.py` is v110 final-Gram GALS precision parent on top of
+  v109/v107 and the B1/B2 path. On the full 24-layer Qwen2.5-0.5B cached run,
+  its native total is `421.767954`, Qwen shaped panel is `295.242780`, Linear
+  mean is `0.5073395278`, and formal API time is `701.900553s` (accuracy-first;
+  C1 must later compress below 420s). See the [current status
   report](docs/current-solution-status.md), the [algorithm inventory](docs/algorithm-inventory-and-directions.md),
   the [archive implementation audit](docs/archive-implementation-audit.md),
   and [`solutions/README.md`](solutions/README.md). Future work follows the
-  [single active optimization plan](docs/superpowers/plans/2026-08-30-hif4-active-optimization-plan.md).
+  [single active optimization plan](docs/superpowers/plans/2026-08-31-hif4-active-l5-structural-optimization-plan.md).
 - Current source SHA256:
-  `617482CEE04FF9514A8D41226B651336E4B8B86692673308E835DE1091693EBA` (normalized LF).
+  `3ABF9BEB7BA50285B65344CE94773350ECA16A24CE36A296DB1401B9BFEB1EC` (normalized LF).
 - The active local evaluator is Qwen-first: it projects frozen-corpus Linear
   and Attention means onto a fixed 250/200 panel, while other models remain
   soft guardrails. The raw `official_flow_total` is retained for compatibility
@@ -70,7 +71,7 @@ date whenever its numbers change; do not leave an old snapshot label in place.
 
 There may be exactly one active optimization plan in
 [`docs/superpowers/plans/`](docs/superpowers/plans/). The current file is
-[`2026-08-30-hif4-active-optimization-plan.md`](docs/superpowers/plans/2026-08-30-hif4-active-optimization-plan.md).
+[`2026-08-31-hif4-active-l5-structural-optimization-plan.md`](docs/superpowers/plans/2026-08-31-hif4-active-l5-structural-optimization-plan.md).
 When executing an optimization, consult **only this active plan**, the current root,
 latest evaluation data, and the official rules. Files under
 `docs/superpowers/archive/plans/` are read-only history and are never next-step instructions.
@@ -109,8 +110,8 @@ official anchor ordering:
 Both orderings are `C39 = C41b < C47b < C66`; Qwen's panel Spearman is
 `1.0000`, while the five-model raw sum is `0.9487`. This validates relative
 direction only, not a linear conversion to official scores. The external
-`youxilee/hif4` Qwen panel is `250.327102`; the current root is `293.797301`,
-which is `43.470199` (`17.37%`) higher. Its Qwen native `369.527269` is the
+`youxilee/hif4` Qwen panel is `250.327102`; the current root v110 is `295.242780`,
+which is `44.915678` (`17.94%`) higher. Its Qwen native `369.527269` is the
 secondary diagnostic line; the five-model sum is never a ranking benchmark.
 
 ## Revised official anchors (2026-08-29)

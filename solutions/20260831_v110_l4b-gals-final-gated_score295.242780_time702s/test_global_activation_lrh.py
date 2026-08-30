@@ -70,26 +70,3 @@ def test_final_gram_selector_is_rowwise_nonincreasing() -> None:
     before_loss = (before.mm(deployment_gram) * before).sum(dim=1)
     after_loss = (after.mm(deployment_gram) * after).sum(dim=1)
     assert torch.all(after_loss <= before_loss + 1.0e-5)
-
-
-def test_final_gram_gals_exact_gate_is_nonincreasing() -> None:
-    torch.manual_seed(707)
-    dense = torch.randn(3, 128) * 0.1
-    deployment = torch.randn(64, 128) * 0.05
-    gram64 = solution._gram64(deployment)
-    deployment_gram = deployment.t().mm(deployment)
-    parent = solution._dense_to_hif4(dense, gram64=gram64)
-    refined, gain = solution._refine_activation_gals_final(
-        dense,
-        parent,
-        gram64,
-        max_blocks=2,
-        deployment_gram=deployment_gram,
-        return_gain=True,
-    )
-    before = solution._dequantize_hif4(parent).to(torch.float32) - dense
-    after = solution._dequantize_hif4(refined).to(torch.float32) - dense
-    before_loss = (before.mm(deployment_gram) * before).sum(dim=1)
-    after_loss = (after.mm(deployment_gram) * after).sum(dim=1)
-    assert torch.all(after_loss <= before_loss + 1.0e-5)
-    assert gain >= -1.0e-5

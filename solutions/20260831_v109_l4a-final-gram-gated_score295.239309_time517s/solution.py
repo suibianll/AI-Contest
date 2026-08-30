@@ -71,7 +71,7 @@ _ACT_GLOBAL_LRH_BLOCKS = 4
 _L4_FINAL_GRAM_MAX_CHANNELS = 1024
 # Keep the L4a final-weight-Gram ablation isolated from the later GALS
 # candidate.  This switch is flipped only in the L4b candidate snapshot.
-_L4_GALS_FINAL_ENABLED = True
+_L4_GALS_FINAL_ENABLED = False
 
 _ATTN_OFFSETS = (-2, -1, 0, 1, 2)
 _ATTN_ROTATION_SIZES = (0, 16, 32, 64)
@@ -962,7 +962,6 @@ def _refine_activation_gals_final(
     gram64: torch.Tensor | None,
     *,
     max_blocks: int = 4,
-    deployment_gram: torch.Tensor | None = None,
     return_gain: bool = False,
 ) -> dict[str, torch.Tensor] | tuple[dict[str, torch.Tensor], float]:
     """Small final-weight-Gram GALS search for high-headroom shapes.
@@ -1010,23 +1009,7 @@ def _refine_activation_gals_final(
                 (rows, blocks) + (1,) * (best[key].ndim - 2)
             )
             best[key] = torch.where(condition, candidate[key], best[key])
-    if deployment_gram is not None:
-        best = _select_activation_by_deployment_gram(
-            dense, parent, best, deployment_gram
-        )
-        q_best = _dequantize_hif4(best).to(torch.float32)
-        full_gram = deployment_gram.to(
-            device=dense.device, dtype=torch.float32
-        )
-        parent_error = q_parent - dense.to(torch.float32)
-        best_error = q_best - dense.to(torch.float32)
-        parent_full_loss = (parent_error.mm(full_gram) * parent_error).sum(
-            dim=1
-        )
-        best_full_loss = (best_error.mm(full_gram) * best_error).sum(dim=1)
-        gain = float((parent_full_loss - best_full_loss).sum().item())
-    else:
-        gain = float((parent_loss - best_loss).sum().item())
+    gain = float((parent_loss - best_loss).sum().item())
     if return_gain:
         return best, gain
     return best
@@ -1153,17 +1136,11 @@ def hif4_calibration_and_quantize_weight(
                     probe_params = _dense_to_hif4(
                         sample, offsets=_BASE_OFFSETS, gram64=probe_gram
                     )
-                    probe_full_gram = (
-                        deployment_gram_state.to(weight_t.device)
-                        if deployment_gram_state is not None
-                        else None
-                    )
                     _, probe_gain = _refine_activation_gals_final(
                         sample,
                         probe_params,
                         probe_gram,
                         max_blocks=4,
-                        deployment_gram=probe_full_gram,
                         return_gain=True,
                     )
                     probe_gains.append(float(probe_gain))
@@ -1288,7 +1265,6 @@ def hif4_dynamic_quantize_activation(
             params,
             deployment_gram64_tensor,
             max_blocks=4,
-            deployment_gram=deployment_gram_tensor,
         )
     return params
 

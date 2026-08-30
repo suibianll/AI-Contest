@@ -1,10 +1,10 @@
 # HiF4 唯一活跃优化计划 v2：Linear 结构增益与 0.9 可达性验证
 
-> 状态：**ACTIVE**
+> 状态：**COMPLETED — archived 2026-08-31**
 > 建立日期：2026-08-30；最近更新：2026-08-31
 > 适用根：`D:/工作内容/AI竞赛/solution.py`
-> 当前根：v107 L3 Global Activation-LRH Gram-gated precision parent
-> 规范 LF SHA256：`cb3e84c019c4be39853c47a65a9f01bac4b4d1e6de2184242fd09ae01470b710`
+> 完成根：v110 L4b final-Gram GALS precision parent
+> 规范 LF SHA256：`3abf9beb7ba50285b65344ce94773350eca16a24ce36a296db1401b9bafeb1ec`
 > 主目标：先提高 Qwen full-layer `linear_mean`，同时判断 `0.9` 在当前合法表示族内是否可达；Attention 单独排队。
 
 ## 1. 唯一执行规则
@@ -28,13 +28,13 @@
 
 | 指标 | 当前值 |
 |---|---:|
-| Linear mean | `0.5069966356` |
+| Linear mean | `0.5073395278` |
 | Attention mean | `0.8420394885` |
-| Linear panel | `126.749159` |
+| Linear panel | `126.834882` |
 | Attention panel | `168.407898` |
-| panel total | **`295.157057`** |
-| native total | `421.537530` |
-| API 时间 | `481.036527s` |
+| panel total | **`295.242780`** |
+| native total | `421.767954` |
+| API 时间 | `701.900553s` |
 | 当前根官方成绩 | `NA` |
 
 本地 case gain 定义为
@@ -48,13 +48,13 @@ g=\frac{\operatorname{MSE}_{std}-\operatorname{MSE}_{player}}
 当前 Linear 剩余归一化误差为
 
 \[
-r_L=1-g_L=0.4930033644.
+r_L=1-g_L=0.4926743532.
 \]
 
 若目标为 `linear_mean=0.9`，则还差
 
 \[
-\Delta g_L=0.3930033644,
+\Delta g_L=0.3926743532,
 \qquad
 \frac{\Delta g_L}{1-g_L}=79.72\%.
 \]
@@ -62,7 +62,7 @@ r_L=1-g_L=0.4930033644.
 等价地，必须把当前 Linear MSE 压到现有值的
 
 \[
-\frac{0.1}{0.4930033644}=20.2839\%,
+\frac{0.1}{0.4926743532}=20.2974\%,
 \]
 
 约为五分之一。Attention 不变时，本地 panel 将为
@@ -307,7 +307,7 @@ parent。API `481.036527s` 超过提交限制，但按用户授权的 accuracy-f
 
 ### L4：final-weight Gram 与 GALS 分拆验证
 
-**状态：in_progress（2026-08-31；L4a rejected，正在执行 L4b）。**
+**状态：done（2026-08-31；L4a/L4b 均通过精度 full-layer，v110 为完成根）。**
 
 L4 不再把“最终权重 Gram”和“显式 role GALS”捆绑成一次实验。
 
@@ -322,13 +322,31 @@ G_q=W_q^TW_q.
 基于 L0 只测试显示 activation-side headroom 的形状/层；必须使用合法 shape/statistics selector。v104 已证明全局替换失败，尤其 `proj` 大幅回退，因此不得再次直接全角色启用。
 
 **L4a 实际结果**：只对 `rows > channels` 且 `channels <=1024` 的 expansive FFN
-切换最终量化权重 `W_q.T@W_q` 的 64-block Gram；五层七 role screen 为
-`0.5289493081`，与 v107 parent 逐层/逐 role 完全相同，0/35 case 改变，未触发
-full-layer。候选 v108 已归档并拒绝：[`v108 archive`](../../../solutions/20260831_v108_l4a-final-weight-gram-screen-rejected_scoreNA_timeNA/)。
+切换最终量化权重 `W_q.T@W_q` 的 64-block Gram，并保留 v107 proposal 作为
+row-wise parent；最终候选用完整部署 Gram 做精确二次型 gate。五层七 role
+screen 为 `0.5292690913`，较 v107 screen `+0.0003197832`；触发 full-layer
+后 v109 Linear mean `0.5073256468`、panel `295.239309`、native total
+`421.758626`，相对 v107 分别 `+0.0003290112`、`+0.0822528`、`+0.2210953`。
+Attention 保持 `0.8420394885`。候选已提升为当前 precision parent：
+[`v109 archive`](../../../solutions/20260831_v109_l4a-final-gram-gated_score295.239309_time517s/)。
+此前未加 row-wise exact gate 的 v108 实验实际是路由 bug 导致的 no-op，见
+[`v108 archive`](../../../solutions/20260831_v108_l4a-final-weight-gram-screen-rejected_scoreNA_timeNA/)
+中的更正说明，不作为 L4a 证据。
 
 #### L4b：GALS 小预算
 
-**状态：in_progress（2026-08-31）。**
+**状态：done（2026-08-31；基于 v109 parent，v110 accepted）。**
+
+使用解析 E6M2 critical-scale offset 集合，在每行最多 4 个高损失 block 上执行
+原子 hierarchy 候选；校准两折都得到正的完整部署 Gram 增益后才启用，在线再用
+完整 `G_q` 行级门控。五层 screen `0.52929209`，较 v109 screen
+`0.52926909` 增加 `+0.00002300`；full-layer v110 Linear mean
+`0.5073395278`、panel `295.242779647671`、native total `421.767953588548`，
+较 v109 分别 `+0.0000138810`、`+0.0034702542`、`+0.0093280424`。API
+`701.900553s`，仅作 accuracy-first 记录，C1 再处理时间。证据见
+[`l4b-gals-final-gated-stratified-qwen.json`](../../../artifacts/real_model_suite/l4b-gals-final-gated-stratified-qwen.json)、
+[`v110 full-layer`](../../../artifacts/real_model_suite/v110-l4b-gals-final-gated-qwen-full.json)、
+[`v110 archive`](../../../solutions/20260831_v110_l4b-gals-final-gated_score295.242780_time702s/)。
 
 只有当 L0 的合法 scale/hierarchy oracle 在对应层/形状上明显超过确定性评测噪声，且理论上能超过 parent 时才运行。候选限制为 1–4 个高 headroom block，cross-fold 选择；若 oracle 本身没有空间，直接记录 `not justified`，不执行部署实验。
 
@@ -336,7 +354,7 @@ full-layer。候选 v108 已归档并拒绝：[`v108 archive`](../../../solution
 
 ### L5：结构性新路线与外部差异审计
 
-**状态：pending；在 L1–L4 无足够增益时启动。**
+**状态：deferred to new active plan（L5 方向未在本计划中执行）。**
 
 L5 的目标是寻找能够同时改善 q/k/v 和 FFN/proj 的方法论变化，而不是继续微调单一弱 role。
 
@@ -398,8 +416,8 @@ P=\operatorname{softmax}((QT_Q)(KT_K)^T/\sqrt d),
 | 2 | L1 修复 v092 hierarchy LRH | `rejected` | L0 完成 | v105 screen + audit |
 | 3 | L2 expansive-FFN CAT/BOAT-2 | `done` | L1 裁决 | v106 full-layer parent |
 | 4 | L3 修复 v095 Gram gate | `done` | L2 完成 | v107 diagnostic + full-layer parent |
-| 5 | L4 final-Gram/GALS 分拆 | `in_progress` | L0 显示对应 headroom | L4a final Gram 消融 |
-| 6 | L5 新结构/外部审计 | `pending` | L1–L4 无足够结构增益 | 新算法族裁决 |
+| 5 | L4 final-Gram/GALS 分拆 | `done` | L0 显示对应 headroom | L4a v109 + L4b v110 full-layer parent |
+| 6 | L5 新结构/外部审计 | `deferred` | 新 active 计划 | 转入 2026-08-31 L5 计划 |
 | 7 | C1 压缩/冻结 | `pending` | 出现新精度 parent | `<420s` submission candidate |
 | A | A1 Attention PAWV | `deferred` | Linear 等待或切换目标 | Attention candidate |
 | O | O0 官方提交 | `blocked-external` | 官方接口恢复 | 官方 score/time 锚点 |
@@ -413,6 +431,8 @@ P=\operatorname{softmax}((QT_Q)(KT_K)^T/\sqrt d),
 | v100/v101 | `617482ce...1693eba` | 0.5015576125 | 0.8420394885 | 293.797301 | 392.42s / 401.13s | NA | previous parent |
 | **v106** | `708081b5...67dd77` | **0.5034589422** | **0.8420394885** | **294.272633** | **412.65s** | NA | **current parent** |
 | **v107** | `cb3e84c0...1470b710` | **0.5069966356** | **0.8420394885** | **295.157057** | 481.04s | NA | **current precision parent** |
+| **v109** | `e44e9d85...42ad4de1` | **0.5073256468** | **0.8420394885** | **295.239309** | 517.29s | NA | **current precision parent; L4b exploratory** |
+| **v110** | `3abf9beb...bafeb1ec` | **0.5073395278** | **0.8420394885** | **295.242780** | 701.90s | NA | **completed precision parent; handoff to L5** |
 
 ## 9. 明确不再执行
 
@@ -426,7 +446,7 @@ P=\operatorname{softmax}((QT_Q)(KT_K)^T/\sqrt d),
 - 使用 test/holdout/官方输出逐层回退在线 `Q(A)`；
 - 同时堆叠多个尚未独立证明正向的算法。
 
-当前唯一下一步是 **L4：final-weight Gram 与 GALS 分拆验证**。L0 已完成，L1 已正确
-实现并拒绝，L2 v106 保留为时间 parent，L3 v107 已通过精度 full-layer 并成为当前
-precision parent；不得回到 L1 扩大 rank、block 数或 sweep，除非新的 L0/L5 证据改变
-该裁决。
+本计划已完成：L0 已完成，L1 已正确实现并拒绝，L2 v106 保留为时间 parent，L3
+v107、L4a v109、L4b v110 均通过精度 full-layer。下一步不在本文件追加，而是
+归档本文件并执行新的唯一活跃 L5 结构优化计划；不得回到 L1 扩大 rank、block 数
+或 sweep，除非新的 L0/L5 证据改变该裁决。

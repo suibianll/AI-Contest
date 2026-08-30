@@ -15,22 +15,23 @@ v034、v051、v066 官方列更新为新版结果；其余历史官方列保留�
 
 ## 当前活跃根版本（不属于下方历史版本号）
 
-根目录 `solution.py` 当前为 v107 precision parent（expansive-FFN CAT balance +
-Gram-gated Global Activation-LRH + B2 PAWV diag-only + B1 GQRB）；C0 五模型复测已
+根目录 `solution.py` 当前为 v110 precision parent（expansive-FFN CAT balance +
+Gram-gated Global Activation-LRH + L4a final deployed-Gram row gate + L4b final-Gram GALS + B2 PAWV diag-only + B1 GQRB）；C0 五模型复测已
 确认 v100 的 Qwen 主模型门禁。历史目录（包括 v073–v086/C75–C86）保持不可变；
 下表中的 `active-candidate` 只表示该候选在当时的排序状态，不代表当前根文件。
 
 | Candidate | Source | Qwen Linear mean | Qwen Attention mean | Qwen panel total | Native total | API time | Status |
 |---|---|---:|---:|---:|---:|---:|---|
-| v107 Global Activation-LRH Gram gate + v106/B1/B2 | `solution.py` | **0.506997** | 0.842039 | **295.157057** | 421.537530 | 481.036527s | **active-precision** |
+| v110 L4b final-Gram GALS + v109/B1/B2 | `solution.py` | **0.507340** | 0.842039 | **295.242780** | 421.767954 | 701.900553s | **active-precision** |
 
 固定配置为 Qwen2.5-0.5B 全 24 层、`seq=128`、`calib=2`、`test=4`、`amax6`、CPU、
-缓存只读。完整报告见 [`v107-l3-global-lrh-qwen-full.md`](../logs/execution/2026-08-30-v107-l3-global-lrh-qwen-full.md)，
+缓存只读。完整报告见 [`v110-l4b-gals-final-gated-qwen-full.md`](../logs/execution/2026-08-31-v110-l4b-gals-final-gated-qwen-full.md)，
 五模型确认见 [`2026-08-30-c0-b2-pawv-five-model.md`](../logs/evaluations/2026-08-30-c0-b2-pawv-five-model.md)。
-`official_score` 和 `official_time` 尚无值；295.157057 是本地 Qwen shaped panel，
+`official_score` 和 `official_time` 尚无值；295.242780 是本地 Qwen shaped panel，
 不能换算成官方分数。相对旧 C86 归档，panel 提升 `+26.964724`（`+10.09%`），正式
-API 时间为 `481.036527s`，探索阶段只记录；相对 v106 panel 提升 `+0.884423`，
-Linear mean 提升 `+0.003538`。v106 仍作为时间 parent 保留在历史/归档记录中。
+API 时间为 `517.285773s`，探索阶段只记录；相对 v107 panel 提升 `+0.082253`，
+Linear mean 提升 `+0.000014`。v106 仍作为时间 parent 保留在历史/归档记录中，
+v107/v109 作为前一精度 parent 保留在各自归档，v110 为当前精度 parent。
 
 | Version | Date | Topic | Local Linear | Local Attention | Local Time | Official Score | Official Time | Delta | Status | Directory |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |
@@ -134,6 +135,10 @@ Linear mean 提升 `+0.003538`。v106 仍作为时间 parent 保留在历史/归
 | v104 | 2026-08-30 | A7 量化后权重 Gram `WqᵀWq` 激活 Hessian | Qwen full-layer `0.487275` | `0.842039` | 470.58s CPU | NA | NA | layer-1 panel `336.562922`，但 full panel `290.226694`，比 v100 `−3.570607` 且超时 | **archived-rejected** | [archive](20260830_v104_a7-quant-weight-gram-rejected_score290.226694_time471s/) |
 | v105 | 2026-08-30 | L1 full-hierarchy cross-block Weight-LRH（scale/lv2/lv3/mantissa 原子写回） | Qwen 五层×七 role screen `0.523019` | NA | 265.87s screen | NA | NA | 70 个 fold candidates，仅 1 个 cross-fold admitted；最终 0/35 case 改变 stable parent；未触发 full-layer | **archived-rejected** | [archive](20260830_v105_l1-full-hierarchy-lrh-rejected_screen523019_time266s/) |
 | v106 | 2026-08-30 | L2 expansive-FFN CAT balance（结构 `rows > channels`、α=0.25） | Qwen full-layer `0.503459` | `0.842039` | **412.65s CPU** | NA | NA | panel **294.272633**，较 v100 `+0.475332`；fc_gate +0.013309，API 仍低于 420s；当前最高本地 parent | **active-local** | [archive](20260830_v106_l2-expansive-cat-active_score294.272633_time413s/) |
+| v107 | 2026-08-30 | L3 Global Activation-LRH Gram gate（4-block、部署 `G_q` 精确 gate） | Qwen full-layer `0.506997` | `0.842039` | 481.04s CPU | NA | NA | panel **295.157057**，较 v106 `+0.884423`；精度 parent，时间超限仅作探索记录 | archived-parent | [archive](20260830_v107_l3-global-lrh-precision-parent_score295.157057_time481s/) |
+| v108 | 2026-08-31 | L4a 首次 final-weight Gram screen（错误 dynamic shape 路由） | `0.528949` screen | NA | 80.39s screen | NA | NA | **no-op：路由从未触发，与 v107 完全相同；不能作为算法否定证据** | archived-invalid-noop | [archive](20260831_v108_l4a-final-weight-gram-screen-rejected_scoreNA_timeNA/) |
+| v109 | 2026-08-31 | L4a final deployed-Gram row gate（expansive 双候选、完整 `G_q` 逐行门控） | Qwen full-layer **`0.507326`** | `0.842039` | 517.29s CPU | NA | NA | panel **295.239309**，较 v107 `+0.082253`；前一精度 parent，时间仅作探索记录 | archived-parent | [archive](20260831_v109_l4a-final-gram-gated_score295.239309_time517s/) |
+| v110 | 2026-08-31 | L4b final-Gram GALS（解析 offset、4 block、完整 `G_q` 逐行门控） | Qwen full-layer **`0.507340`** | `0.842039` | 701.90s CPU | NA | NA | panel **295.242780**，较 v109 `+0.003470`；当前精度 parent，时间仅作探索记录 | **active-local-precision** | [archive](20260831_v110_l4b-gals-final-gated_score295.242780_time702s/) |
 | v047 | 2026-08-29 | C45h 全宽多折 A@W 产品选择，预算 8192 | Qwen `285.702496` | `62.862350` | 131.03s | NA | NA | Qwen Total `348.564846`，较 C45f `-0.471543`；4864-row FFN 回退 | **archived-rejected** | [archive](20260829_v047_c45h-product-allfolds-qwen-rejected_scoreNA_timeNA/) |
 
 ## 外部参考（不纳入本地版本号）
@@ -177,13 +182,13 @@ v013 归档字节一致。
 旧版 `Official Score/Time`，旧值仍可在各自提交历史中追溯。
 
 当前根 `solution.py` 不再标记为 v086/C86；当前源码规范 LF SHA256 为
-`708081B5281E02DA0C2A6E21881027B2E8D31EED423FD3C70E4572424667DD77`。
+`3ABF9BEB7BA50285B65344CE94773350ECA16A24CE36A296DB1401B9BFEB1EC`。
 归档源码缺失、层级写回、目标 gate 和统计坐标问题见
 [`归档实现审计`](../docs/archive-implementation-audit.md)；这些问题会影响部分负结果的可证伪程度，但不会修改不可变历史目录。
 v086 归档源码仍保留其历史 SHA 与结果。新版面板下 v066/C66（官方 `22557 / 217.2s`）是本地归档冠军，较此前
 v051/C47b 提升 `106` 分并减少 `16.8s`；v031/C39-FW 与 v034/C41b 均为
 `21864`。外部 [`youxilee/hif4`](https://github.com/youxilee/hif4) 的
-`24153 / 239s` 仍高出 `1596` 分，仅作参考，不以根文件位置暗示外部代码已导入；当前本地 Qwen parent v106 panel `294.272633`，较外部本地 panel `250.327102` 高 `43.945531`。
+`24153 / 239s` 仍高出 `1596` 分，仅作参考，不以根文件位置暗示外部代码已导入；当前本地 Qwen parent v110 panel `295.242780`，较外部本地 panel `250.327102` 高 `44.915678`。
 
 ## Local-first workflow
 
