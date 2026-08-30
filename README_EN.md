@@ -28,17 +28,17 @@ Chinese version: [README.md](README.md)
   path used output information for activation-side selection. That
   `A@W -> Q(A)` use remains non-compliant, so it is not a compliant parent for
   new work.
-- The root `solution.py` is the v111 L5a block-local permutation precision parent
-  on top of v110 final-Gram GALS and the B1/B2 path. On the full 24-layer
-  Qwen2.5-0.5B cached run, its native total is `422.412249`, Qwen shaped panel is
-  `295.482473`, Linear mean is `0.5082983001`, and formal API time is
-  `726.094116s` (accuracy-first; C1 must later compress below 420s). See the [current status
+- The root `solution.py` is the v115 L6a rank-16 global-LRH precision parent
+  on top of v111 block-local permutation, v110 final-Gram GALS, and the B1/B2 path.
+  On the full 24-layer Qwen2.5-0.5B cached run, its native total is `422.944953`,
+  Qwen shaped panel is `295.680651`, Linear mean is `0.5090910148`, and formal API
+  time is `716.482861s` (accuracy-first; C1 must later compress below 420s). See the [current status
   report](docs/current-solution-status.md), the [algorithm inventory](docs/algorithm-inventory-and-directions.md),
   the [archive implementation audit](docs/archive-implementation-audit.md),
   and [`solutions/README.md`](solutions/README.md). Future work follows the
   [single active optimization plan](docs/superpowers/plans/2026-08-31-hif4-active-l6-compressed-crossblock-plan.md).
 - Current source SHA256:
-  `6B229081121C4A7EDD69575C93DC01488BE8F8B5E1479007522421E93E1ADC57` (normalized LF).
+  `043E5401C7D8CF68339E9FAEC3F60943C11821E3B51BB1563D2ECD8A812F22E5` (normalized LF).
 - The active local evaluator is Qwen-first: it projects frozen-corpus Linear
   and Attention means onto a fixed 250/200 panel, while other models remain
   soft guardrails. The raw `official_flow_total` is retained for compatibility
@@ -110,8 +110,8 @@ official anchor ordering:
 Both orderings are `C39 = C41b < C47b < C66`; Qwen's panel Spearman is
 `1.0000`, while the five-model raw sum is `0.9487`. This validates relative
 direction only, not a linear conversion to official scores. The external
-`youxilee/hif4` Qwen panel is `250.327102`; the current root v111 is `295.482473`,
-which is `45.155371` (`18.04%`) higher. Its Qwen native `369.527269` is the
+`youxilee/hif4` Qwen panel is `250.327102`; the current root v115 is `295.680651`,
+  which is `45.353549` (`18.12%`) higher. Its Qwen native `369.527269` is the
 secondary diagnostic line; the five-model sum is never a ranking benchmark.
 
 ## Revised official anchors (2026-08-29)

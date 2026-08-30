@@ -1,7 +1,7 @@
 # 归档算法实现与可复现性审计
 
 > 审计日期：2026-08-31
-> 范围：`solutions/` 下 v000–v111 候选（排除工具目录 `.mimosa`）、`logs/execution/`、当前根 `solution.py` 以及所有历史计划。
+> 范围：`solutions/` 下 v000–v115 候选（排除工具目录 `.mimosa`）、`logs/execution/`、当前根 `solution.py` 以及所有历史计划。
 > 结论性质：这是实现审计和实验可复现性审计，不是官方成绩承诺。
 
 ## 1. 审计口径
@@ -22,17 +22,17 @@ P = 250 g_L + 200 g_A,
 
 ## 2. 当前根与已确认效果
 
-根目录 `solution.py` 是 v111 的 L5a block-local permutation + expansive-FFN CAT balance + B2 PAWV **diag-only** + B1 GQRB + Global Activation-LRH Gram gate + L4a final deployed-Gram row gate + L4b final-Gram GALS 路径；v101 是此前 v100 的五模型确认。当前规范 LF SHA256：
+根目录 `solution.py` 是 v115 的 L6a rank-16 global-LRH + v111 L5a block-local permutation + expansive-FFN CAT balance + B2 PAWV **diag-only** + B1 GQRB + Global Activation-LRH Gram gate + L4a final deployed-Gram row gate + L4b final-Gram GALS 路径；v101 是此前 v100 的五模型确认。当前规范 LF SHA256：
 
-`6b229081121c4a7edd69575c93dc01488be8f8b5e1479007522421e93e1adc57`
+`043e5401c7d8cf68339e9faec3f60943c11821e3b51bb1563d2ecd8a812f22e5`
 
-| 指标 | 当前根 v111（precision parent） |
+| 指标 | 当前根 v115（precision parent） |
 |---|---:|
-| Qwen Linear mean | 0.508298 |
+| Qwen Linear mean | 0.509091 |
 | Qwen Attention mean | 0.842039 |
-| Qwen shaped panel | **295.482473** |
-| Qwen native total | 422.412249 |
-| Qwen API time | 726.094116 s |
+| Qwen shaped panel | **295.680651** |
+| Qwen native total | 422.944953 |
+| Qwen API time | 716.482861 s |
 | 官方分数 | 尚无提交结果 |
 
 当前正式路径的有效组件是：
@@ -190,7 +190,7 @@ v109 已归档为当前精度 parent；API `517.285773s` 只作为探索期时�
 
 ## 7. 审计后的优先级
 
-1. 官方接口恢复后，提交当前精度 parent v111（或 C1 压缩后的等价版本），获得第一个真实兑换率锚点。
+1. 官方接口恢复后，提交当前精度 parent v115（或 C1 压缩后的等价版本），获得第一个真实兑换率锚点。
 2. L1 的 v105 corrected full-hierarchy LRH 已完成并拒绝；不再扩大其自由度。
 3. L3 v107、L4a v109、L4b v110、L5a v111 均已完成并产生精度 parent；L5b/v112、
    L5c/v113、L5d/v114 已按 screen 归档拒绝，L5e 已完成可达性 checkpoint。

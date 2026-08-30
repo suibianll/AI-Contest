@@ -3,8 +3,8 @@
 > 状态：**ACTIVE**
 > 建立日期：2026-08-31
 > 适用根：`D:/工作内容/AI竞赛/solution.py`
-> 当前精度 parent：v111 L5a block-local permutation
-> 根 `solution.py` 规范 LF SHA256：`6b229081121c4a7edd69575c93dc01488be8f8b5e1479007522421e93e1adc57`
+> 当前精度 parent：v115 L6a rank-16 global LRH
+> 根 `solution.py` 规范 LF SHA256：`043e5401c7d8cf68339e9faec3f60943c11821e3b51bb1563d2ecd8a812f22e5`
 > 主目标：在合法 HiF4 五字段和 CPU static state 约束内，处理已测得的跨 64-channel
 > block coupling，继续提升 Qwen full-layer `linear_mean`；Attention 只作回归检查。
 
@@ -34,17 +34,17 @@ JSON/日志和官方规则；`docs/superpowers/archive/plans/` 只作历史证�
 固定配置：Qwen2.5-0.5B、24 层、`seq=128`、`calib=2`、`test=4`、`amax6`、CPU、
 只读 cache `artifacts/real_model_suite/cache/qwen2.5-0.5b__seq128__calib2__test4__layersall__schema1.pt`。
 
-| 指标 | v111 |
+| 指标 | v115 |
 |---|---:|
-| Linear mean | `0.5082983001`（screen `0.5318869457`） |
+| Linear mean | `0.5090910148`（screen `0.53284175`） |
 | Attention mean | `0.8420394885` |
-| Qwen panel | `295.482472728320` |
-| native total | `422.412248589332` |
-| API time | `726.094116s` |
-| 规范 LF SHA | `6b229081121c4a7edd69575c93dc01488be8f8b5e1479007522421e93e1adc57` |
+| Qwen panel | `295.680651400101` |
+| native total | `422.944952859081` |
+| API time | `716.482861s` |
+| 规范 LF SHA | `043e5401c7d8cf68339e9faec3f60943c11821e3b51bb1563d2ecd8a812f22e5` |
 
-当前到 `linear_mean=0.9` 仍差 `0.3917016999`，需减少当前剩余归一化误差约
-`79.66%`；L5e 证据表明固定 frame 的单侧理想臂最高仅 `0.8188905`，255-code
+当前到 `linear_mean=0.9` 仍差 `0.3909089852`，需减少当前剩余归一化误差约
+`79.63%`；L5e 证据表明固定 frame 的单侧理想臂最高仅 `0.8188905`，255-code
 scale oracle 的总体余量远小于这个缺口。L6 不承诺 0.9，而是验证压缩跨 block
 表示是否还能产生可泛化增益；连续两个候选无正向时立即停掉对应族。
 
@@ -86,7 +86,7 @@ J_A(E)=\operatorname{tr}(E G_qE^T),
 
 ### L6a：窄输入 rank 扩展（rank-16 global LRH）
 
-**状态：pending。**
+**状态：done（2026-08-31；v115 accepted precision parent）。**
 
 当前根只在 `d<=1024` 保存 rank-8 off-block factor `U_8`，用
 
@@ -100,8 +100,15 @@ R\approx U_rU_r^T,
 一次叠加。state 节点仍为一个 CPU tensor，合成测试要检查 `U_r` 的 shape、finite
 和退化到 `B` 的 fallback。
 
-验收：screen Linear mean 必须高于 `0.5318869457` 且不是单 case 偶然提升；若
-screen 无增益或回退，候选归档并恢复 v111，不跑 full-layer。
+执行结果：只把 `_ACT_GLOBAL_LRH_RANK` 从 8 改为 16；30 项定向回归通过，静态/运行时
+compliance 均为 0 violations。screen Linear mean `0.53284175`，较 v111
+`0.53188695` 增加 `+0.00095480`，触发 full-layer；v115 full Linear
+`0.5090910148`、Attention `0.8420394885`、Qwen panel `295.6806514001`，较 v111
+分别 `+0.0007927147`、`0`、`+0.1981786718`，API `716.482861s`、wall `748.372825s`。
+候选已完整归档于 [`v115 L6a`](../../../solutions/20260831_v115_l6a-rank16-accepted_score295.680651_time716s/)，
+证据为 [`screen JSON`](../../../artifacts/real_model_suite/l6a-rank16-stratified-qwen.json)
+和 [`full JSON`](../../../artifacts/real_model_suite/v115-l6a-rank16-qwen-full.json)。
+v115 成为新的 precision parent；时间仍只作探索记录，下一步为 L6b。
 
 ### L6b：宽输入 rank-4 cross-block factor
 
@@ -178,7 +185,8 @@ parent，另建下一计划做泛化/多模型审计。只有 checkpoint 后才�
 | 版本 | Linear | Attention | panel | API time | 状态 |
 |---|---:|---:|---:|---:|---|
 | v110 | 0.5073395278 | 0.8420394885 | 295.242780 | 701.90s | 前一精度 parent |
-| **v111** | **0.5082983001** | **0.8420394885** | **295.482473** | **726.09s** | **当前 precision parent** |
+| v111 | 0.5082983001 | 0.8420394885 | 295.482473 | 726.09s | 前一 precision parent |
+| **v115** | **0.5090910148** | **0.8420394885** | **295.680651** | **716.48s** | **当前 precision parent；L6a accepted** |
 
 ## 6. 完成和换计划条件
 
@@ -186,4 +194,3 @@ L6a–L6e 完成后必须把本文件标记 `COMPLETED`，写明每个方向的�
 `docs/superpowers/archive/plans/`，更新 `docs/superpowers/plans/README.md`、根
 README、`docs/current-solution-status.md`、算法清单和 `solutions/README.md`，并在
 同一提交创建下一份唯一 active 计划。归档计划不可继续追加新的执行步骤。
-
