@@ -1031,22 +1031,19 @@ E1 已按计划实现并完成一层/全层门禁，结果已归档到
 门禁；因此 E1 明确拒绝，主代码恢复到 parent SHA256
 `5D1128CC79FEF58154DA2F600EC4B472FF95030E1F1E61B96593D06FD9AAC94F`。
 
-下一步执行 **A5：FS-JDRQ（冻结 Q(A) 的离线输出目标）**。A2/A3 的 expansive
-FFN HSDQ 与 A4 blockwise BOAT-2 均已完成但被拒绝；A3 全层 panel
-`293.250467`，A4 全层 panel `292.978009`，都低于 parent `293.755106`。
+下一步不再把未经验证的算法留在主线。A2/A3 的 expansive FFN HSDQ、A4
+blockwise BOAT-2 与 A5 joint-fold A@W 均已完成并归档；最高仍是 stable parent
+panel `293.755106`。A5 单层虽达 `337.501045`，全层降至 `284.595177`，说明
+仅扩大 calibration product 目标会破坏跨层迁移。
 
 ```text
-步骤：先建立并冻结与在线路径一致的 Q(A)（只用 operand-local state）
-候选：在每个 calibration fold 形成 teacher `Y=A@W` 与 frozen `Z=Q(A)`
-求解：用 `min_Q ||Y − ZQᵀ||² + λ||Q−Q_parent||²` 生成合法 HiF4 候选
-选择：`η ∈ {0, 1/16, 1/8, 1/4}` 的低自由度 target + 两折 robust selector
-约束：A@W/残差只能进入离线 weight_params，绝不写入 activation_state
-门禁：Qwen layer-1 先验筛选；全 24 层必须同时满足 panel 不降、Linear 不降、
-      runtime ≤ 420s，任一失败即归档候选并恢复 parent
+当前动作：保持 parent `solution.py`，提交/记录一次官方分，建立本地 panel→官方
+兑换率；没有新的可证明目标前不继续修改 Linear。
+若重新启动研究，先在独立缓存上验证单个 role 的跨层稳定性，再实现候选；所有
+候选必须满足 panel 不降、Linear 不降、runtime ≤ 420s，失败即归档恢复 parent。
 ```
 
-A5 直接检验当前 Linear 短板是否来自 Q(A) 与 Q(W) 的失配，而不是继续扩大
-局部 row solver。若 frozen-Q(A) 候选在全层正向，再尝试更小的 ridge λ；若仍
-回退，主线保持 parent，停止无证据的 Linear 微调并转官方提交/真实兑换率校准。
-所有实验保留 parent、`Y/Z` 仅在进程内的 fold loss、η/λ、changed blocks 和
-完整运行时间。
+这一步的结论是：当前最高可信本地版本就是 parent，不宣称已达到 36000。下一
+个有授权且可验证的动作是官方提交；随后根据真实官方分决定是否投入新的坐标系
+或 FS-JDRQ 目标。所有已执行实验均保留 parent、fold loss、changed blocks 和
+完整运行时间，不删除历史证据。
