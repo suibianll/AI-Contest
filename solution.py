@@ -7,13 +7,14 @@ dormant research branches do not live in this submission file.
 
 Linear calibration has three stages:
 
-1. BOAT selects an invertible diagonal + signed-Hadamard input transform from
-   operand-local quantization errors.  It never constructs a Linear output.
+1. BOAT/L5a selects an invertible diagonal + block permutation +
+   signed-Hadamard input transform from operand-local quantization errors.  It
+   never constructs a Linear output.
 2. The transformed weight is quantized to the legal HiF4 hierarchy.
 3. Cross-fold HSDQ uses exact low-rank Hessians ``A.T @ A`` to polish Q(W).
    Products are calibration-local and can only change ``weight_params``.
 
-Online Q(A) uses the frozen BOAT transform and a bounded block-Hessian HSDQ
+Online Q(A) uses the frozen BOAT/L5a transform and a bounded block-Hessian HSDQ
 whose state contains only static transformed-weight Gram blocks.
 """
 
@@ -72,6 +73,15 @@ _L4_FINAL_GRAM_MAX_CHANNELS = 1024
 # Keep the L4a final-weight-Gram ablation isolated from the later GALS
 # candidate.  This switch is flipped only in the L4b candidate snapshot.
 _L4_GALS_FINAL_ENABLED = True
+
+# L5a: one fixed, block-local channel permutation is selected from
+# operand-local outlier pressure.  The candidate list is deliberately tiny:
+# identity, monotone pressure grouping, and low/high interleaving.  A
+# permutation is written to state only when it improves both calibration folds;
+# otherwise the v110 parent frame is retained exactly.
+_L5A_PERMUTATION_ENABLED = True
+_L5A_PERMUTATION_MIN_GAIN = 1.0e-5
+_L5A_PERMUTATION_BLOCK = _BLOCK
 
 _ATTN_OFFSETS = (-2, -1, 0, 1, 2)
 _ATTN_ROTATION_SIZES = (0, 16, 32, 64)
@@ -340,11 +350,41 @@ def _fwht_blocks(x: torch.Tensor, block_size: int) -> torch.Tensor:
     return (y / math.sqrt(float(block_size))).reshape_as(x)
 
 
+def _validate_permutation(
+    permutation: torch.Tensor | None,
+    channels: int,
+    device: torch.device,
+) -> torch.Tensor | None:
+    """Return a device-local permutation or ``None`` for the identity frame."""
+
+    if permutation is None:
+        return None
+    order = permutation.detach().to(device=device, dtype=torch.int64).reshape(-1)
+    if int(order.numel()) != int(channels):
+        raise ValueError("Linear permutation width does not match feature width")
+    if int(order.numel()) == 0:
+        return None
+    if int(order.min().item()) < 0 or int(order.max().item()) >= int(channels):
+        raise ValueError("Linear permutation contains an out-of-range index")
+    if int(torch.unique(order).numel()) != int(channels):
+        raise ValueError("Linear permutation must contain every feature once")
+    return order
+
+
 def _apply_boat_rotation(
-    x: torch.Tensor, seed: int, block_size: int = _BLOCK
+    x: torch.Tensor,
+    seed: int,
+    block_size: int = _BLOCK,
+    permutation: torch.Tensor | None = None,
 ) -> torch.Tensor:
     if int(seed) < 0 or int(block_size) <= 0:
-        return x
+        if permutation is None:
+            return x
+        order = _validate_permutation(permutation, int(x.shape[-1]), x.device)
+        return x.index_select(-1, order) if order is not None else x
+    order = _validate_permutation(permutation, int(x.shape[-1]), x.device)
+    if order is not None:
+        x = x.index_select(-1, order)
     signs = _rotation_signs(int(x.shape[-1]), seed, x.device, x.dtype)
     return _fwht_blocks(x * signs, int(block_size))
 
@@ -361,9 +401,11 @@ def _linear_pair_transform(
 ) -> torch.Tensor:
     """Compatibility helper used by local fixed-frame diagnostics."""
 
-    del permutation
     d = balance.to(device=tensor.device, dtype=torch.float32).reshape(1, -1)
     transformed = tensor.to(torch.float32) * (d if weight_side else d.reciprocal())
+    order = _validate_permutation(permutation, int(tensor.shape[-1]), tensor.device)
+    if order is not None:
+        transformed = transformed.index_select(-1, order)
     if int(block_smooth_size) > 0:
         transformed = _apply_boat_rotation(
             transformed, int(block_smooth_seed), int(block_smooth_size)
@@ -385,6 +427,193 @@ def _relative_quant_error(
 ) -> float:
     q = _dequantize_hif4(_dense_to_hif4(x, offsets=offsets)).to(torch.float32)
     return float((q - x).square().sum() / (x.square().sum() + _EPS))
+
+
+def _l5a_channel_pressure(
+    weight: torch.Tensor,
+    calibration: Sequence[torch.Tensor],
+    balance: torch.Tensor,
+) -> torch.Tensor:
+    """Estimate per-channel hierarchy pressure without forming a product.
+
+    A channel with a large ``amax / rms`` ratio is more likely to force a
+    shared lv2/lv3 scale away from its neighbours.  The pressure combines the
+    independently observed weight-side and activation-side ratios after the
+    already selected diagonal balance.  It is intentionally a first-order
+    statistic: no evaluator output, residual, or cross-operand contraction is
+    used to build the state permutation.
+    """
+
+    channels = int(weight.shape[1])
+    if (
+        not calibration
+        or channels % _L5A_PERMUTATION_BLOCK != 0
+        or int(balance.numel()) != channels
+    ):
+        return torch.zeros(channels, device=weight.device, dtype=torch.float32)
+    w = _sample_rows(weight, _BOAT_PROXY_WEIGHT_ROWS).to(torch.float32)
+    d = balance.to(device=weight.device, dtype=torch.float32).reshape(1, -1)
+    w = w * d
+    joined = torch.cat(
+        [_sample_rows(item, 128).to(torch.float32) for item in calibration],
+        dim=0,
+    )
+    a = joined / d
+    w_rms = w.square().mean(dim=0).add(_EPS).sqrt()
+    a_rms = a.square().mean(dim=0).add(_EPS).sqrt()
+    w_tail = w.abs().amax(dim=0) / w_rms
+    a_tail = a.abs().amax(dim=0) / a_rms
+    pressure = 0.5 * (
+        torch.log1p(w_tail.clamp_min(0.0))
+        + torch.log1p(a_tail.clamp_min(0.0))
+    )
+    return torch.nan_to_num(pressure, nan=0.0, posinf=32.0, neginf=0.0)
+
+
+def _l5a_block_permutation(
+    pressure: torch.Tensor,
+    mode: int,
+) -> torch.Tensor:
+    """Build one deterministic 64-channel permutation family.
+
+    ``mode=0`` is identity, ``mode=1`` groups channels with similar pressure,
+    and ``mode=2`` alternates low/high pressure.  All modes preserve 64-channel
+    boundaries, so the legal HiF4 hierarchy remains unchanged; only which
+    channels share each hierarchy scale is changed.
+    """
+
+    channels = int(pressure.numel())
+    block = int(_L5A_PERMUTATION_BLOCK)
+    identity = torch.arange(channels, device=pressure.device, dtype=torch.int64)
+    if mode == 0 or channels % block != 0:
+        return identity
+    result = identity.clone()
+    for start in range(0, channels, block):
+        local = torch.argsort(
+            pressure[start : start + block], stable=True
+        ).to(torch.int64)
+        if mode == 1:
+            chosen = local
+        elif mode == 2:
+            # Interleave the low and high halves.  Reversing the high half
+            # keeps adjacent pairs at similar pressure distance while making
+            # every lv2/lv3 group see both ends of the local distribution.
+            low = local[: block // 2]
+            high = local[block // 2 :].flip(0)
+            chosen = torch.empty_like(local)
+            chosen[0::2] = low
+            chosen[1::2] = high
+        else:
+            # A second low-degree grouping: four pressure quartiles are
+            # interleaved, without introducing a free per-channel search.
+            quarter = block // 4
+            chosen = torch.stack(
+                (
+                    local[:quarter],
+                    local[quarter : 2 * quarter],
+                    local[2 * quarter : 3 * quarter],
+                    local[3 * quarter :],
+                ),
+                dim=1,
+            ).reshape(-1)
+        result[start : start + block] = (
+            chosen + start
+        ).to(torch.int64)
+    return result
+
+
+def _choose_l5a_permutation(
+    weight: torch.Tensor,
+    calibration: Sequence[torch.Tensor],
+    balance: torch.Tensor,
+    seed: int,
+    block_size: int,
+) -> torch.Tensor | None:
+    """Select at most one fixed block permutation with a two-fold gate.
+
+    The score is the same operand-local BOAT proxy used for the existing
+    diagonal/Hadamard choice.  A proposal must improve the aggregate score and
+    not worsen either calibration fold; otherwise ``None`` preserves v110
+    exactly.  This makes the new state field a strict precision candidate
+    rather than an unconditional change to every layer.
+    """
+
+    if (
+        not _L5A_PERMUTATION_ENABLED
+        or not calibration
+        or weight.ndim != 2
+        or int(weight.shape[1]) % _L5A_PERMUTATION_BLOCK != 0
+        or int(balance.numel()) != int(weight.shape[1])
+    ):
+        return None
+    pressure = _l5a_channel_pressure(weight, calibration, balance)
+    weight_proxy = _sample_rows(weight, _BOAT_PROXY_WEIGHT_ROWS)
+
+    def score(order: torch.Tensor) -> tuple[float, list[float]]:
+        w_t = _apply_boat_rotation(
+            weight_proxy * balance.reshape(1, -1),
+            int(seed),
+            int(block_size),
+            permutation=order,
+        )
+        weight_error = _relative_quant_error(w_t, _PROXY_OFFSETS)
+        fold_errors: list[float] = []
+        for sample in calibration:
+            a_t = _apply_boat_rotation(
+                _sample_rows(sample, 128) / balance.reshape(1, -1),
+                int(seed),
+                int(block_size),
+                permutation=order,
+            )
+            fold_errors.append(_relative_quant_error(a_t, _PROXY_OFFSETS))
+        act_mean = sum(fold_errors) / len(fold_errors)
+        act_worst = max(fold_errors)
+        aggregate = (
+            math.sqrt(max(weight_error, 0.0))
+            + math.sqrt(max(act_mean, 0.0))
+            + math.sqrt(max(weight_error * act_mean, 0.0))
+            + 0.25 * math.sqrt(max(act_worst, 0.0))
+        )
+        return aggregate, fold_errors
+
+    identity = torch.arange(
+        int(weight.shape[1]), device=weight.device, dtype=torch.int64
+    )
+    try:
+        base_score, base_folds = score(identity)
+    except (RuntimeError, ValueError, FloatingPointError):
+        return None
+    if not math.isfinite(base_score) or not all(
+        math.isfinite(value) for value in base_folds
+    ):
+        return None
+    best_score = base_score
+    best_order: torch.Tensor | None = None
+    # Three low-degree families are enough to test the hypothesis.  The state
+    # still carries only one selected order, never the candidate list.
+    for mode in (1, 2, 3):
+        order = _l5a_block_permutation(pressure, mode)
+        try:
+            candidate_score, candidate_folds = score(order)
+        except (RuntimeError, ValueError, FloatingPointError):
+            continue
+        if not math.isfinite(candidate_score) or not all(
+            math.isfinite(value) for value in candidate_folds
+        ):
+            continue
+        robust = all(
+            candidate <= base + 1.0e-7
+            for candidate, base in zip(candidate_folds, base_folds)
+        )
+        if (
+            robust
+            and candidate_score < best_score - _L5A_PERMUTATION_MIN_GAIN
+        ):
+            best_score = candidate_score
+            best_order = order
+    if best_order is None or torch.equal(best_order, identity):
+        return None
+    return best_order
 
 
 def _choose_boat(
@@ -1099,12 +1328,21 @@ def hif4_calibration_and_quantize_weight(
     balance = _choose_expansive_cat_balance(
         weight, calibration, balance, seed, block_size
     )
+    permutation = _choose_l5a_permutation(
+        weight, calibration, balance, seed, block_size
+    )
     weight_t = _apply_boat_rotation(
-        weight * balance.reshape(1, -1), seed, block_size
+        weight * balance.reshape(1, -1),
+        seed,
+        block_size,
+        permutation=permutation,
     )
     activation_t = [
         _apply_boat_rotation(
-            sample / balance.reshape(1, -1), seed, block_size
+            sample / balance.reshape(1, -1),
+            seed,
+            block_size,
+            permutation=permutation,
         )
         for sample in calibration
     ]
@@ -1173,6 +1411,11 @@ def hif4_calibration_and_quantize_weight(
                 )
     state: dict[str, Any] = {
         "smooth_inv": _cpu_tensor(balance.reciprocal()),
+        "permutation": (
+            permutation.detach().to(device="cpu", dtype=torch.int32)
+            if permutation is not None
+            else None
+        ),
         "block_smooth_size": int(block_size),
         "block_smooth_seed": int(seed),
         "gram64": gram_state,
@@ -1197,10 +1440,16 @@ def hif4_dynamic_quantize_activation(
     smooth_inv = state.get("smooth_inv")
     if torch.is_tensor(smooth_inv):
         dense = dense * smooth_inv.to(dense.device).reshape(1, -1)
+    permutation = state.get("permutation")
     seed = int(state.get("block_smooth_seed", -1))
     block_size = int(state.get("block_smooth_size", 0))
-    if block_size > 0:
-        dense = _apply_boat_rotation(dense, seed, block_size)
+    if block_size > 0 or permutation is not None:
+        dense = _apply_boat_rotation(
+            dense,
+            seed,
+            block_size,
+            permutation=permutation,
+        )
     gram = state.get("gram64")
     gram_tensor = gram if torch.is_tensor(gram) else None
     if gram_tensor is not None:
