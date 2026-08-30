@@ -891,8 +891,8 @@ w_t=\sum_{h,q}P_{hqt}^2
 | E5 | Householder/CAT low-rank | o/v/proj | 正则化 alignment 初始化能否合法兑现 | 已执行并拒绝：full CAT/BOAT-2，全层 `283.159693` 且超时 | 不写入部署主线 |
 | E6 | FS-JDRQ + block-Qronos | 全 Linear role | 冻结 Q(A) 后联合纠错能否合法兑现 | 已执行并拒绝：frozen-Q(A)/ridge/Qronos 持平但超时 `455.73s` | 停止 joint candidate |
 | E7 | global activation LRH | 全 Linear role | 激活跨块上限 | 已执行并拒绝：Global LRH 全层 `282.616646` | 停止扩大 LRH |
-| E8 | GQRB/PAWV | Attention | 把 A 提到 0.90+ | 已执行：B1 GQRB margin + B2 PAWV diag-only；当前 Attention mean `0.842039` | 进入 C0 五模型确认 |
-| E9 | 全层五模型 + wide shape | 全部 | 泛化与最终组合 | 待执行：C0 固定五模型 panel | 仅验证 v100 稳健性 |
+| E8 | GQRB/PAWV | Attention | 把 A 提到 0.90+ | 已执行：B1 GQRB margin + B2 PAWV diag-only；当前 Attention mean `0.842039` | C0 已确认 |
+| E9 | 全层五模型 + wide shape | 全部 | 泛化与最终组合 | 已执行：C0 五模型；Qwen panel `293.797301`，主 API `401.13s` | 取 v100 为当前最高版本 |
 
 停止规则：
 
@@ -1050,13 +1050,16 @@ LRH-r8（最多 4 个 64-block、rank-8 off-block Hessian），单层 `334.24542
 `282.616646`，较 parent 低 `11.138460`，已归档。B1 GQRB margin 先通过本地
 门禁（panel `293.793700`、API `406.24s`），随后 B2 PAWV diag-only 也通过本地
 门禁（panel `293.797301`、API `392.42s`，较 B1 `+0.003601`），当前根已切换到
-v100；下一步是最终五模型 C0 确认。
+v100；C0 五模型确认已完成，Qwen 主模型 panel 保持 `293.797301`、API
+`401.13s`，四个软 guardrail 无精度灾难回退；gpt2-medium 仅出现 `492.64s`
+的软 guardrail 时间超限。
 所有候选必须满足 panel 不降、
 Linear 不降、runtime ≤ 420s，失败即归档恢复 parent；每一步记录最高分版本和
 提交号，不把未执行项标成已完成。
 ```
 
 这一步的结论是：当前最高可信本地版本是 v100（B2 PAWV diag-only + B1 GQRB），
-但仍不宣称已达到 36000。下一步先完成五模型 C0 确认；之后取所有本地候选的最高
-分版本，待官方恢复再建立兑换率。所有已执行实验均保留 parent、fold loss、changed
-blocks 和完整运行时间，不删除历史证据。
+C0 已确认其五模型稳健性，但仍不宣称已达到 36000。下一步取所有本地候选的最高
+分版本，待官方恢复再建立兑换率；若继续研究，优先针对 Linear 的跨模型泛化和
+gpt2-medium 运行时。所有已执行实验均保留 parent、fold loss、changed blocks
+和完整运行时间，不删除历史证据。

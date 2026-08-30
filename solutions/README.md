@@ -13,20 +13,20 @@ v034、v051、v066 官方列更新为新版结果；其余历史官方列保留�
 
 ## 当前活跃根版本（不属于下方历史版本号）
 
-根目录 `solution.py` 已在 2026-08-30 从 C86 实验集合重写为 clean
-Gram-hierarchy 单一路径。历史目录（包括 v073–v086/C75–C86）保持不可变；下表
-中的 `active-candidate` 只表示该候选在当时的排序状态，不代表当前根文件。
+根目录 `solution.py` 当前为 v100（B2 PAWV diag-only + B1 GQRB）；C0 五模型复测已
+确认 v100 的 Qwen 主模型门禁。历史目录（包括 v073–v086/C75–C86）保持不可变；
+下表中的 `active-candidate` 只表示该候选在当时的排序状态，不代表当前根文件。
 
 | Candidate | Source | Qwen Linear mean | Qwen Attention mean | Qwen panel total | Native total | API time | Status |
 |---|---|---:|---:|---:|---:|---:|---|
-| clean-gram-hierarchy-full | `solution.py` | 0.501558 | 0.841829 | **293.755106** | 417.862253 | 382.153528s | **active-local** |
+| v100 B2 PAWV diag-only + B1 GQRB | `solution.py` | 0.501558 | 0.842039 | **293.797301** | 417.882506 | 392.423565s | **active-local** |
 
 固定配置为 Qwen2.5-0.5B 全 24 层、`seq=128`、`calib=2`、`test=4`、`amax6`、CPU、
-缓存只读。报告见 [`clean-gram-hierarchy-full.md`](../logs/evaluations/clean-gram-hierarchy-full.md)，
-原始 JSON 见 [`clean-gram-hierarchy-full.json`](../artifacts/real_model_suite/clean-gram-hierarchy-full.json)。
-`official_score` 和 `official_time` 尚无值；293.755106 是本地 Qwen shaped panel，
-不能换算成官方分数。相对旧 C86 归档，panel 提升 `+26.447197`（`+9.89%`），正式
-API 时间增加到 `382.153528s`，仍小于 `420s`。
+缓存只读。完整报告见 [`b2-pawv-diagonly-qwen-full.md`](../logs/evaluations/b2-pawv-diagonly-qwen-full.md)，
+五模型确认见 [`2026-08-30-c0-b2-pawv-five-model.md`](../logs/evaluations/2026-08-30-c0-b2-pawv-five-model.md)。
+`official_score` 和 `official_time` 尚无值；293.797301 是本地 Qwen shaped panel，
+不能换算成官方分数。相对旧 C86 归档，panel 提升 `+26.489392`（`+9.91%`），正式
+API 时间为 `392.423565s`，仍小于 `420s`。
 
 | Version | Date | Topic | Local Linear | Local Attention | Local Time | Official Score | Official Time | Delta | Status | Directory |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |
@@ -123,7 +123,8 @@ API 时间增加到 `382.153528s`，仍小于 `420s`。
 | v097 | 2026-08-30 | B1 GQRB precision 版（top4 + 全部 baseline） | Qwen full-layer `0.501558` | `0.842398` | 523.37s CPU | NA | NA | panel `293.868932`，精度最高但超时 `103.37s` | **archived-rejected-timeout** | [archive](20260830_v097_b1-gqrb-precision-win-timeout_score293.868932_time523s/) |
 | v098 | 2026-08-30 | B1 GQRB margin 版（原始 baseline top4 + GQRB top4，0.1% gate） | Qwen full-layer `0.501558` | `0.842021` | 406.24s CPU | NA | NA | panel `293.793700`，较 stable parent `+0.038594`，低于 420s；B2 前最高版本 | **archived-baseline** | [archive](20260830_v098_b1-gqrb-margin-active_score293.793700_time406s/) |
 | v099 | 2026-08-30 | B2 PAWV diag+rank-8 token Hessian | Qwen layer-1 `0.603071` | `0.916670` | 15.84s CPU | NA | NA | layer-1 panel `334.101693`，低秩跨 token 项全层前置验证失败，未跑全层 | **archived-rejected** | [archive](20260830_v099_b2-pawv-lowrank-rejected_score334.101693_time16s/) |
-| v100 | 2026-08-30 | B2 PAWV diag-only + B1 FASA | Qwen full-layer `0.501558` | `0.842039` | 392.42s CPU | NA | NA | panel `293.797301`，较 B1 `+0.003601`、较 stable parent `+0.042195`，低于 420s；当前最高分 | **active-candidate** | [archive](20260830_v100_b2-pawv-diagonly-active_score293.797301_time392s/) |
+| v100 | 2026-08-30 | B2 PAWV diag-only + B1 GQRB | Qwen full-layer `0.501558` | `0.842039` | 392.42s CPU | NA | NA | panel `293.797301`，较 B1 `+0.003601`、较 stable parent `+0.042195`，低于 420s；当前最高分 | **active-candidate** | [archive](20260830_v100_b2-pawv-diagonly-active_score293.797301_time392s/) |
+| v101 | 2026-08-30 | C0 五模型确认（v100 无代码变更） | Qwen full-layer `0.501558` | `0.842039` | 401.13s CPU（Qwen） | NA | NA | 五模型完整运行；Qwen panel `293.797301`，四个软 guardrail 无精度灾难回退；GPT-2 medium `492.64s` 仅时间超限 | **active-confirmed** | [archive](20260830_v101_c0-five-model-confirmed_score293.797301_time401s/) |
 | v047 | 2026-08-29 | C45h 全宽多折 A@W 产品选择，预算 8192 | Qwen `285.702496` | `62.862350` | 131.03s | NA | NA | Qwen Total `348.564846`，较 C45f `-0.471543`；4864-row FFN 回退 | **archived-rejected** | [archive](20260829_v047_c45h-product-allfolds-qwen-rejected_scoreNA_timeNA/) |
 
 ## 外部参考（不纳入本地版本号）
@@ -137,8 +138,8 @@ API 时间增加到 `382.153528s`，仍小于 `420s`。
 五模型 `official_flow_total` 合计为 `1085.743597`，其中 Qwen2.5-0.5B 的
 `369.527269` 是最高单模型 native；按本地固定 250/200 panel 投影后，最高同口径
 比较线是 Qwen `250.327102`。五模型合计不能作为“最高分”，也不能换算官方
-`24153`。当前根 Qwen panel `293.755106` 比该外部 panel 高 `43.428004`
-（`17.35%`），native 高 `48.334984`（`13.08%`）。分数和时间为用户提供的
+`24153`。当前根 Qwen panel `293.797301` 比该外部 panel 高 `43.470199`
+（`17.37%`），native 高 `48.355237`（`13.09%`）。分数和时间为用户提供的
 同口径结果，仓库页面本身未给出可独立核验的官方排行榜记录。
 
 `*` v002 的 Linear/Attention 数值最初来自远程仓库 `CHANGELOG.md` 的 GPT-2

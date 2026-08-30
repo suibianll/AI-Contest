@@ -2,9 +2,9 @@
 
 > 日期：2026-08-30
 > 性质：将 [`36,000 Accuracy-First 详细方案`](2026-08-30-hif4-accuracy-first-36000-plan.md)（1065 行，含 E0-G 实测）与 [`网格对齐补充方案`](2026-08-30-hif4-grid-aligned-complement-plan.md) 融合为单一执行文件。
-> 父版本：根 `solution.py`，clean BOAT + cross-fold Weight-HSDQ + Gram-hierarchy Activation-HSDQ + Attention deployed shortlist，SHA `5d1128cc79fef58154da2f600ec4b472ff95030e1f1e61b96593d06fd9aac94f`。
+> 稳定父版本：clean BOAT + cross-fold Weight-HSDQ + Gram-hierarchy Activation-HSDQ + Attention deployed shortlist，SHA `5d1128cc79fef58154da2f600ec4b472ff95030e1f1e61b96593d06fd9aac94f`；当前 v100 根目录在其上加入 B1 GQRB + B2 PAWV diag-only，源码 SHA `617482cee04ff9514a8d41226b651336e4b8b86692673308e835de1091693eba`。
 > 合规边界：校准输出 `A@W` 只能优化离线 `Q(W)`；不得用于拟合、选择或反推在线 `Q(A)`，不得写入 `activation_state`。
-> 时间上限：官方 420s；当前根 six-API `382.15s`、wall `414.03s`。
+> 时间上限：官方 420s；当前 v100 根 six-API `392.423565s`、wall `424.693400s`；C0 Qwen 复测 API `401.130873s`。
 
 ---
 
@@ -12,13 +12,17 @@
 
 ### 1.1 当前基线与目标刻度
 
-固定 Qwen2.5-0.5B 全 24 层、`seq=128`、`calib=2`、`test=4`、`amax6`：
+固定 Qwen2.5-0.5B 全 24 层、`seq=128`、`calib=2`、`test=4`、`amax6`。下列
+差距公式仍以 stable parent 作基准，当前 v100 的实测值随后列出：
 
 ```text
 Linear mean     0.5015576125
 Attention mean  0.8418285164
 panel = 250 × g_L + 200 × g_A = 125.389403 + 168.365703 = 293.755106
 native total    417.862253
+
+v100 current: Linear mean 0.5015576125, Attention mean 0.8420394885,
+panel 293.797301, native total 417.882506, API 392.423565s
 ```
 
 若以 `panel = 360` 作为 36,000 的本地诊断刻度、且 Attention 不回退：
@@ -94,7 +98,7 @@ E0-G 在 Qwen 第 1 层、BOAT 后前 32 行、完整 255 个 E6M2 code 上跑�
 
 | 口径 | 当前根 | 外部 v2.7 | 差 |
 |---|---:|---:|---:|
-| Qwen panel（本地，唯一可比口径） | **293.755106** | 250.327102 | **+17.35%** |
+| Qwen panel（本地，唯一可比口径） | **293.797301** | 250.327102 | **+17.37%** |
 | 官方 | **未提交** | 24153 / 239s | — |
 
 C66 官方 `22557 / 217.2s` 是现有唯一官方锚点。**当前根本土领先外部基准 17.35%，却从未提交官方**——这是全局最大的信息缺口。
@@ -108,7 +112,7 @@ C66 官方 `22557 / 217.2s` 是现有唯一官方锚点。**当前根本土领�
 把原计划（A1–A6、B1/B2）与补充方案（GALS 修正版、CAT、Qronos、稀疏插件）合并，按"先证明合法求解器能兑现收益，再增加更强连续目标"排序：
 
 ```text
-P0  提交 stable parent → 取得官方锚点与兑换率       【当前应执行】
+P0  提交 stable parent → 取得官方锚点与兑换率       【官方不可用，暂缓】
   ↓
 D0  合法上限仪表盘（E0-G 已完成）
   ↓
@@ -132,7 +136,7 @@ B1 GQRB margin 【已接受：panel 293.793700，406.24s】
   ↓
 B2 PAWV diag-only 【已接受：panel 293.797301，392.42s】
   ↓
-C0 五模型确认 【下一步】
+C0 五模型确认 【已完成：Qwen panel 293.797301，API 401.13s；四个软 guardrail 无精度灾难回退】
   ↓
 P1  取所有本地候选最高分；官方恢复后再建立兑换率
 ```
@@ -140,7 +144,7 @@ P1  取所有本地候选最高分；官方恢复后再建立兑换率
 这不是“全部算法已完成”的声明：E0-C（GALS 解析召回）、
 冻结-Q(A) ridge/Qronos 与 Global Activation-LRH 已执行并归档；Attention GQRB
 与 PAWV diag-only 已通过本地门禁，PAWV rank-8 低秩变体已拒绝；最终五模型综合
-（C0）仍待确认。已执行项与未执行项不应混为一谈。
+（C0）已完成并归档。已执行项与未执行项不应混为一谈。
 
 ### 2.1 E1/A1：渐进跨 fold 全层级 HSDQ（已拒绝）
 
@@ -220,7 +224,7 @@ Attention 当前 `0.842039` 已远高于 Linear，但 200 个 case 的权重使�
 （`168.407898`）超过 Linear（`125.389403`）。B1 GQRB margin 已部署；B2 PAWV
 diag-only 使用 attention probability 的 token-row 对角 Hessian 做 V 的合法离散
 refinement。PAWV 的 rank-8 跨 token 低秩扩展在 layer-1 panel 看似更高，但未通过
-全层前置门禁，已归档；下一步只做五模型 C0 稳健性确认。
+全层前置门禁，已归档；C0 已完成五模型稳健性确认，当前只保留 v100 最高版本。
 
 ### 2.7 已排除（不再重复投入）
 

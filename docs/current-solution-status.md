@@ -15,7 +15,8 @@
 2026-08-30 已按执行计划完成 E1→A6、B1、B2 的本地验证。Linear 的 E1/A2/A3/A4/A5/A6
 均未超过 stable parent；B1 GQRB margin 先把 panel 提升到 `293.793700`，B2
 PAWV diag-only 再提升到 `293.797301`，并把 API 降到 `392.423565 s`，因此当前根
-切换到 v100。官方评测不可用期间，所有新候选仍以固定 Qwen panel 为门禁。
+切换到 v100；随后 C0 五模型确认完成，Qwen 主模型仍通过门禁。官方评测不可用
+期间，所有新候选仍以固定 Qwen panel 为门禁。
 
 ## 当前实现
 
@@ -59,6 +60,12 @@ calibration 使用 train 的 2 个窗口，test 使用 validation 的 4 个不�
 | official-flow native total | 417.882506 | 392.064774 | +25.817732 |
 | six-API time | **392.423565 s** | 313.577669 s | +78.845896 s |
 | wall time | 424.693400 s | — | `API <420 s` |
+
+五模型 C0 确认报告：[`2026-08-30-c0-b2-pawv-five-model.md`](../logs/evaluations/2026-08-30-c0-b2-pawv-five-model.md)。
+Qwen 复测 panel `293.797301`、Linear `0.501558`、Attention `0.842039`、
+API `401.130873s`，仍低于 `420s`；gpt2-small/OPT/Pythia 的 API 分别为
+`196.975s/192.776s/193.423s`，gpt2-medium 为 `492.641s`（仅软 guardrail 时间
+超限，未影响 Qwen 主门禁）。五模型 aggregate panel `263.604453` 仅作泛化诊断。
 
 ## 外部代码本地复测与最高基准
 
@@ -154,6 +161,7 @@ $$P_{total}=P_L+P_A=293.797301.$$
 | A6 Global Activation-LRH | 282.616646 | 0.457010 | 373.97s | 拒绝 |
 | B1 GQRB margin | 293.793700 | 0.501558 | 406.24s | archived baseline |
 | B2 PAWV diag-only + B1 GQRB（当前根） | **293.797301** | **0.501558** | **392.42s** | **active** |
+| C0 五模型确认（无代码变更） | **293.797301** | **0.501558** | **401.13s（Qwen）** | **confirmed** |
 | stable parent | 293.755106 | 0.501558 | 382.15s | baseline |
 
 归档目录：`solutions/20260830_v087...` 至 `solutions/20260830_v100...`；
@@ -166,7 +174,7 @@ $$P_{total}=P_L+P_A=293.797301.$$
 `2026-08-30-a4-cat-boat2.md`、
 `2026-08-30-a5-frozen-qronos.md`、
 `2026-08-30-a6-global-activation-lrh.md`、`2026-08-30-b1-gqrb.md`、
-`2026-08-30-b2-pawv.md`。
+`2026-08-30-b2-pawv.md`、`2026-08-30-c0-five-model.md`。
 
 ## 距离 Linear 0.9 与 36,000
 
