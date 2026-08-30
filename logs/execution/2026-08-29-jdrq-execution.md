@@ -324,3 +324,12 @@ Qwen primary result: native `392.064774`, panel `267.307909`, Linear
 GPT-2 gains strongly and Pythia is nearly flat. The candidate is promoted under
 the Qwen-primary/soft-guardrail policy and archived at
 `solutions/20260830_v086_c86-attn-block-final_scoreNA_timeNA/`.
+
+## C87/C88 follow-up audits
+
+Enabling the dormant JDRQ dual residual pool (`cf59a1e`) reduced the Qwen
+panel to `266.634403` and increased API time to `320.40s`; `c678631` reverts it.
+Expanding C86 block-H signs from seed 0 to seeds 0--3 (`5fdf2cb`) left the
+Qwen panel unchanged at `267.307909` while increasing API time to `323.26s`;
+`d7793c3` reverts it. Both commits remain in history for reproducibility, and
+the active root stays at the C86 seed-0 configuration.
