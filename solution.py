@@ -139,7 +139,7 @@ _JDRQ_PROJ_ONLY = True
 # The full dual target has high upside but also the largest calibration-shift
 # variance.  Keep it available behind an environment/ablation switch while
 # shipping the lower-variance hierarchy residual arm as the default.
-_JDRQ_DUAL_ENABLED = False
+_JDRQ_DUAL_ENABLED = True
 _JDRQ_HIERARCHY_ENABLED = True
 _JDRQ_HIERARCHY_MAX_BLOCKS = 4
 _JDRQ_HIERARCHY_RATIO = 0.25
