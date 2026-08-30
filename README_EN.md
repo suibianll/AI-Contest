@@ -28,11 +28,11 @@ Chinese version: [README.md](README.md)
   path used output information for activation-side selection. That
   `A@W -> Q(A)` use remains non-compliant, so it is not a compliant parent for
   new work.
-- The root `solution.py` is v110 final-Gram GALS precision parent on top of
-  v109/v107 and the B1/B2 path. On the full 24-layer Qwen2.5-0.5B cached run,
-  its native total is `421.767954`, Qwen shaped panel is `295.242780`, Linear
-  mean is `0.5073395278`, and formal API time is `701.900553s` (accuracy-first;
-  C1 must later compress below 420s). See the [current status
+- The root `solution.py` is the v111 L5a block-local permutation precision parent
+  on top of v110 final-Gram GALS and the B1/B2 path. On the full 24-layer
+  Qwen2.5-0.5B cached run, its native total is `422.412249`, Qwen shaped panel is
+  `295.482473`, Linear mean is `0.5082983001`, and formal API time is
+  `726.094116s` (accuracy-first; C1 must later compress below 420s). See the [current status
   report](docs/current-solution-status.md), the [algorithm inventory](docs/algorithm-inventory-and-directions.md),
   the [archive implementation audit](docs/archive-implementation-audit.md),
   and [`solutions/README.md`](solutions/README.md). Future work follows the
@@ -110,8 +110,8 @@ official anchor ordering:
 Both orderings are `C39 = C41b < C47b < C66`; Qwen's panel Spearman is
 `1.0000`, while the five-model raw sum is `0.9487`. This validates relative
 direction only, not a linear conversion to official scores. The external
-`youxilee/hif4` Qwen panel is `250.327102`; the current root v110 is `295.242780`,
-which is `44.915678` (`17.94%`) higher. Its Qwen native `369.527269` is the
+`youxilee/hif4` Qwen panel is `250.327102`; the current root v111 is `295.482473`,
+which is `45.155371` (`18.04%`) higher. Its Qwen native `369.527269` is the
 secondary diagnostic line; the five-model sum is never a ranking benchmark.
 
 ## Revised official anchors (2026-08-29)

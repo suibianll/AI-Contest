@@ -15,23 +15,24 @@ v034、v051、v066 官方列更新为新版结果；其余历史官方列保留�
 
 ## 当前活跃根版本（不属于下方历史版本号）
 
-根目录 `solution.py` 当前为 v110 precision parent（expansive-FFN CAT balance +
-Gram-gated Global Activation-LRH + L4a final deployed-Gram row gate + L4b final-Gram GALS + B2 PAWV diag-only + B1 GQRB）；C0 五模型复测已
+根目录 `solution.py` 当前为 v111 precision parent（L5a block-local permutation +
+expansive-FFN CAT balance + Gram-gated Global Activation-LRH + L4a final deployed-Gram
+row gate + L4b final-Gram GALS + B2 PAWV diag-only + B1 GQRB）；C0 五模型复测已
 确认 v100 的 Qwen 主模型门禁。历史目录（包括 v073–v086/C75–C86）保持不可变；
 下表中的 `active-candidate` 只表示该候选在当时的排序状态，不代表当前根文件。
 
 | Candidate | Source | Qwen Linear mean | Qwen Attention mean | Qwen panel total | Native total | API time | Status |
 |---|---|---:|---:|---:|---:|---:|---|
-| v110 L4b final-Gram GALS + v109/B1/B2 | `solution.py` | **0.507340** | 0.842039 | **295.242780** | 421.767954 | 701.900553s | **active-precision** |
+| v111 L5a block-local permutation + v110/B1/B2 | `solution.py` | **0.508298** | 0.842039 | **295.482473** | 422.412249 | 726.094116s | **active-precision** |
 
 固定配置为 Qwen2.5-0.5B 全 24 层、`seq=128`、`calib=2`、`test=4`、`amax6`、CPU、
-缓存只读。完整报告见 [`v110-l4b-gals-final-gated-qwen-full.md`](../logs/execution/2026-08-31-v110-l4b-gals-final-gated-qwen-full.md)，
+缓存只读。完整报告见 [`v111-l5a-joint-permutation-qwen-full.md`](../logs/execution/2026-08-31-v111-l5a-joint-permutation-qwen-full.md)，
 五模型确认见 [`2026-08-30-c0-b2-pawv-five-model.md`](../logs/evaluations/2026-08-30-c0-b2-pawv-five-model.md)。
-`official_score` 和 `official_time` 尚无值；295.242780 是本地 Qwen shaped panel，
+`official_score` 和 `official_time` 尚无值；295.482473 是本地 Qwen shaped panel，
 不能换算成官方分数。相对旧 C86 归档，panel 提升 `+26.964724`（`+10.09%`），正式
-API 时间为 `517.285773s`，探索阶段只记录；相对 v107 panel 提升 `+0.082253`，
-Linear mean 提升 `+0.000014`。v106 仍作为时间 parent 保留在历史/归档记录中，
-v107/v109 作为前一精度 parent 保留在各自归档，v110 为当前精度 parent。
+API 时间为 `726.094116s`，探索阶段只记录；相对 v110 panel 提升 `+0.239693`，
+Linear mean 提升 `+0.0009587723`。v106 仍作为时间 parent 保留在历史/归档记录中，
+v107/v109/v110 作为前一精度 parent 保留在各自归档，v111 为当前精度 parent。
 
 | Version | Date | Topic | Local Linear | Local Attention | Local Time | Official Score | Official Time | Delta | Status | Directory |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |
@@ -139,6 +140,7 @@ v107/v109 作为前一精度 parent 保留在各自归档，v110 为当前精度
 | v108 | 2026-08-31 | L4a 首次 final-weight Gram screen（错误 dynamic shape 路由） | `0.528949` screen | NA | 80.39s screen | NA | NA | **no-op：路由从未触发，与 v107 完全相同；不能作为算法否定证据** | archived-invalid-noop | [archive](20260831_v108_l4a-final-weight-gram-screen-rejected_scoreNA_timeNA/) |
 | v109 | 2026-08-31 | L4a final deployed-Gram row gate（expansive 双候选、完整 `G_q` 逐行门控） | Qwen full-layer **`0.507326`** | `0.842039` | 517.29s CPU | NA | NA | panel **295.239309**，较 v107 `+0.082253`；前一精度 parent，时间仅作探索记录 | archived-parent | [archive](20260831_v109_l4a-final-gram-gated_score295.239309_time517s/) |
 | v110 | 2026-08-31 | L4b final-Gram GALS（解析 offset、4 block、完整 `G_q` 逐行门控） | Qwen full-layer **`0.507340`** | `0.842039` | 701.90s CPU | NA | NA | panel **295.242780**，较 v109 `+0.003470`；当前精度 parent，时间仅作探索记录 | **active-local-precision** | [archive](20260831_v110_l4b-gals-final-gated_score295.242780_time702s/) |
+| v111 | 2026-08-31 | L5a block-local permutation（压力排序/交错，双折 gate） | Qwen full-layer **`0.508298`** | `0.842039` | 726.09s CPU | NA | NA | panel **295.482473**，较 v110 `+0.239693`；当前精度 parent，时间仅作探索记录 | **active-local-precision** | [archive](20260831_v111_l5a-joint-permutation_scoreNA_timeNA/) |
 | v047 | 2026-08-29 | C45h 全宽多折 A@W 产品选择，预算 8192 | Qwen `285.702496` | `62.862350` | 131.03s | NA | NA | Qwen Total `348.564846`，较 C45f `-0.471543`；4864-row FFN 回退 | **archived-rejected** | [archive](20260829_v047_c45h-product-allfolds-qwen-rejected_scoreNA_timeNA/) |
 
 ## 外部参考（不纳入本地版本号）
@@ -188,7 +190,7 @@ v013 归档字节一致。
 v086 归档源码仍保留其历史 SHA 与结果。新版面板下 v066/C66（官方 `22557 / 217.2s`）是本地归档冠军，较此前
 v051/C47b 提升 `106` 分并减少 `16.8s`；v031/C39-FW 与 v034/C41b 均为
 `21864`。外部 [`youxilee/hif4`](https://github.com/youxilee/hif4) 的
-`24153 / 239s` 仍高出 `1596` 分，仅作参考，不以根文件位置暗示外部代码已导入；当前本地 Qwen parent v110 panel `295.242780`，较外部本地 panel `250.327102` 高 `44.915678`。
+`24153 / 239s` 仍高出 `1596` 分，仅作参考，不以根文件位置暗示外部代码已导入；当前本地 Qwen parent v111 panel `295.482473`，较外部本地 panel `250.327102` 高 `45.155371`。
 
 ## Local-first workflow
 

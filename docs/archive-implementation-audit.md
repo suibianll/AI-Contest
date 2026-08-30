@@ -1,7 +1,7 @@
 # 归档算法实现与可复现性审计
 
 > 审计日期：2026-08-31
-> 范围：`solutions/` 下 v000–v109 候选（排除工具目录 `.mimosa`）、`logs/execution/`、当前根 `solution.py` 以及所有历史计划。
+> 范围：`solutions/` 下 v000–v111 候选（排除工具目录 `.mimosa`）、`logs/execution/`、当前根 `solution.py` 以及所有历史计划。
 > 结论性质：这是实现审计和实验可复现性审计，不是官方成绩承诺。
 
 ## 1. 审计口径
@@ -22,17 +22,17 @@ P = 250 g_L + 200 g_A,
 
 ## 2. 当前根与已确认效果
 
-根目录 `solution.py` 是 v110 的 expansive-FFN CAT balance + B2 PAWV **diag-only** + B1 GQRB + Global Activation-LRH Gram gate + L4a final deployed-Gram row gate + L4b final-Gram GALS 路径；v101 是此前 v100 的五模型确认。当前规范 LF SHA256：
+根目录 `solution.py` 是 v111 的 L5a block-local permutation + expansive-FFN CAT balance + B2 PAWV **diag-only** + B1 GQRB + Global Activation-LRH Gram gate + L4a final deployed-Gram row gate + L4b final-Gram GALS 路径；v101 是此前 v100 的五模型确认。当前规范 LF SHA256：
 
-`3abf9beb7ba50285b65344ce94773350eca16a24ce36a296db1401b9bafeb1ec`
+`6b229081121c4a7edd69575c93dc01488be8f8b5e1479007522421e93e1adc57`
 
-| 指标 | 当前根 v110（precision parent） |
+| 指标 | 当前根 v111（precision parent） |
 |---|---:|
-| Qwen Linear mean | 0.507340 |
+| Qwen Linear mean | 0.508298 |
 | Qwen Attention mean | 0.842039 |
-| Qwen shaped panel | **295.242780** |
-| Qwen native total | 421.767954 |
-| Qwen API time | 701.900553 s |
+| Qwen shaped panel | **295.482473** |
+| Qwen native total | 422.412249 |
+| Qwen API time | 726.094116 s |
 | 官方分数 | 尚无提交结果 |
 
 当前正式路径的有效组件是：
@@ -46,8 +46,12 @@ P = 250 g_L + 200 g_A,
 - **L4a final deployed-Gram row gate**：仅对 `rows > channels` 且 `channels <= 1024`
   的 expansive FFN，在 v107 parent 和最终部署 `G_q=W_q.T@W_q` 候选之间做完整 Gram
   二次型逐行选择；不变差的行才写回，避免 block surrogate 回退。
+- **L5a block-local permutation**：在每个 64 维 hierarchy block 内，用独立
+  `amax/rms` pressure 选择至多一个固定排列，与 `D`、signed-Hadamard 同步作用于
+  W/A；两折 operand-local gate 不通过则回退 identity。该等价坐标变换 full-layer
+  panel `295.482473`，Linear `0.508298`。
 
-最新正向链为：v086 `267.307909` → v098 `293.793700` → v100 `293.797301` → v106 `294.272633` → v107 `295.157057` → v109 `295.239309` → v110 `295.242780`。其中最大跃迁来自 C86 实验集合重写为 clean 单一路径；v106 的增益只来自 expansive `fc_gate`，v107 的增益来自窄输入 q/k/v/o 的 Gram-gated Global-LRH，v109 的增益来自 expansive FFN final-Gram row gate，v110 再来自其上 GALS 小预算。
+最新正向链为：v086 `267.307909` → v098 `293.793700` → v100 `293.797301` → v106 `294.272633` → v107 `295.157057` → v109 `295.239309` → v110 `295.242780` → v111 `295.482473`。其中最大跃迁来自 C86 实验集合重写为 clean 单一路径；v106 的增益只来自 expansive `fc_gate`，v107 的增益来自窄输入 q/k/v/o 的 Gram-gated Global-LRH，v109 的增益来自 expansive FFN final-Gram row gate，v110 再来自其上 GALS 小预算，v111 来自 block-local 等价排列。
 
 ## 3. 归档源码审计结果
 
@@ -159,7 +163,8 @@ v109 已归档为当前精度 parent；API `517.285773s` 只作为探索期时�
 | v104 A7 quantized-weight Gram | 统计替换本身已正确落地；layer-1 正向不能迁移到全层，且 470.58s 超时，按组合算法失败处理。 |
 | v106 expansive-FFN CAT balance | 固定 α=0.25 的结构路由，full-layer `+0.475332` panel，API `412.65s`；仅 fc_gate 改善，作为当前 parent。 |
 | v109 L4a final deployed-Gram row gate | v107 parent 与最终 `G_q` 候选做完整二次型逐行门控；full-layer panel `295.239309`、Linear `0.507326`，较 v107 `+0.082253` panel；API `517.29s`，当前精度 parent。 |
-| v110 L4b final-Gram GALS | 解析 critical-scale offsets，最多 4 个高损失 block；两折完整 Gram 正向才启用，在线完整 `G_q` 行级 gate；full-layer panel `295.242780`、Linear `0.507340`，较 v109 `+0.003470` panel；API `701.90s`，当前精度 parent。 |
+| v110 L4b final-Gram GALS | 解析 critical-scale offsets，最多 4 个高损失 block；两折完整 Gram 正向才启用，在线完整 `G_q` 行级 gate；full-layer panel `295.242780`、Linear `0.507340`，较 v109 `+0.003470` panel；API `701.90s`，前一精度 parent。 |
+| v111 L5a block-local permutation | 每个 64 个通道块的压力排序/交错候选，两折 operand-local gate；full-layer panel `295.482473`、Linear `0.508298`，较 v110 `+0.239693` panel；API `726.094s`，当前精度 parent。 |
 
 最近候选的静态/运行时 Linear 合规扫描均为 `violations=0, static=0`；本次没有发现把 `A@W` 输出监督写入在线 `Q(A)` 的新违规。合规通过不等于精度通过，二者分开记录。
 
@@ -167,7 +172,7 @@ v109 已归档为当前精度 parent；API `517.285773s` 只作为探索期时�
 
 | 算法族 | 已实现并保留 | 已实现但回退 | 当前仍未验证/需要修复 |
 |---|---|---|---|
-| Linear 基础 | BOAT、cross-fold Weight-HSDQ、Gram-hierarchy Activation-HSDQ、**v106 expansive CAT balance**、**v107 Gram-gated Global-LRH**、**v109 final deployed-Gram row gate**、**v110 final-Gram GALS**、512-row weight sampling、历史稳定 A@W/JDRQ 组件 | blockwise BOAT-2、全宽/逐块 A@W、大步长 headroom、full-H、**v105 corrected full-hierarchy LRH** 等 | L5 联合坐标/层级离散、稀疏 Schur、统计元路由、外部差异审计、表示族 checkpoint |
+| Linear 基础 | BOAT、**v111 L5a block-local permutation**、cross-fold Weight-HSDQ、Gram-hierarchy Activation-HSDQ、**v106 expansive CAT balance**、**v107 Gram-gated Global-LRH**、**v109 final deployed-Gram row gate**、**v110 final-Gram GALS**、512-row weight sampling、历史稳定 A@W/JDRQ 组件 | blockwise BOAT-2、全宽/逐块 A@W、大步长 headroom、full-H、**v105 corrected full-hierarchy LRH** 等 | 稀疏 Schur、统计元路由、外部差异审计、表示族 checkpoint |
 | Attention | GQA head-local rotation、MHA K-center、B1 GQRB margin、B2 PAWV diag-only | causal CVaR、全模型 K-center、PAWV rank-8 当前实现 | 最终 Q/K 变换后的 PAWV rank/position bucket、交替 Q/K/V、真正 role-aware 的结构门控 |
 | 变换/CAT | 固定低自由度 CAT/BOAT 子集、共享 Hadamard | R64、CAT β 网格、full-H selector、BOAT-2 | 低自由度新坐标系或外部实现差异对照，尚无可部署候选 |
 | 诊断/工程 | E0-G/D0 scale oracle、C0 五模型确认、clean 单路径重写 | 全局 scale 扩张部署 | 三折合成宽度矩阵、元策略路由、计算预算重分配 |
@@ -185,10 +190,10 @@ v109 已归档为当前精度 parent；API `517.285773s` 只作为探索期时�
 
 ## 7. 审计后的优先级
 
-1. 官方接口恢复后，提交当前精度 parent v110（或 C1 压缩后的等价版本），获得第一个真实兑换率锚点。
+1. 官方接口恢复后，提交当前精度 parent v111（或 C1 压缩后的等价版本），获得第一个真实兑换率锚点。
 2. L1 的 v105 corrected full-hierarchy LRH 已完成并拒绝；不再扩大其自由度。
-3. L3 v107、L4a v109、L4b v110 均已完成并产生精度 parent；当前只执行唯一活跃
-   计划的 L5a 联合坐标—层级离散路线。
+3. L3 v107、L4a v109、L4b v110、L5a v111 均已完成并产生精度 parent；当前只执行唯一活跃
+   计划的 L5b 稀疏 Schur 路线。
 4. L5 完成后才做最终 Q/K 变换后重建 PAWV rank/position metric；Linear 不回到已
    否决的全宽 Gram/GALS 扫描。
 5. 每个实验必须保存完整源和 SHA；只要没有完整源，就标为不可复现，不把结果当作硬上限。

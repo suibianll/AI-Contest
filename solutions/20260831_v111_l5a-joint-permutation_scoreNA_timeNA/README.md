@@ -2,7 +2,7 @@
 
 ## Status
 
-`screen-accepted; full-layer pending`。这是从 v110 precision parent 分出的第一个
+`accepted precision parent`。这是从 v110 precision parent 分出的第一个
 L5a 候选；官方接口不可用，目录名保留 `scoreNA_timeNA`。时间只作记录，不参与本轮
 精度门禁。
 
@@ -34,10 +34,21 @@ X' W'^T = X W^T.
   `0.8188904985846687`；35/35 cases 保持合法 gate。
 - Screen elapsed：`136.616s`；此时间不是官方时间，也不作为拒绝理由。
 - 规范 LF SHA256：`6b229081121c4a7edd69575c93dc01488be8f8b5e1479007522421e93e1adc57`。
-- 原始 screen JSON 与日志已随本目录复制；full-layer 结果待补充。
+- Full-layer 命令：
+  `python evaluator/real_model_suite.py --models qwen2.5-0.5b --primary-model qwen2.5-0.5b --panel-profile qwen-official --device cpu --algorithm-device cpu --cache-mode read --solution solution.py --candidate-name v111-l5a-joint-permutation --output artifacts/real_model_suite/v111-l5a-joint-permutation-qwen-full.json --report logs/execution/2026-08-31-v111-l5a-joint-permutation-qwen-full.md`
+- Full-layer native total：`422.412249`；Qwen shaped panel：`295.482473`。
+- Linear mean：`0.5082983001444541`；Attention mean：`0.8420394884610322`。
+- 相对 v110：panel `+0.239693`，Linear `+0.0009587723`，Attention `0`；
+  native `+0.644295`。
+- Full-layer API time：`726.094s`（主模型超过 420s；按当前精度优先规则仍采纳，
+  后续统一执行 C1 压缩）。
+- Full-layer source raw SHA256：`a891b72fb32e2a9f2ae6a730814e87677df29e4a0dd9070d8e0fb6122c5d048a`；
+  normalized LF SHA256：`6b229081121c4a7edd69575c93dc01488be8f8b5e1479007522421e93e1adc57`。
+- 原始 screen/full JSON 与日志已随本目录复制；full report 记录 cache/data revision
+  与 protocol v3。
 
 ## Reproduction / acceptance
 
-Full-layer 只有在 screen 高于 `0.52929209` 后运行。若 full-layer panel 高于 v110
-`295.242779647671`，则更新根为新的 precision parent；否则保留 v110，并将本候选
-标为 `rejected`。无论结果如何都保存完整 source、SHA、JSON、日志和测试记录。
+Full-layer 已在 screen 高于 `0.52929209` 后运行，panel 高于 v110
+`295.242779647671`，因此 v111 成为当前 precision parent。无论后续是否做时间压缩，
+该目录保持为不可变证据。

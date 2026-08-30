@@ -91,7 +91,7 @@ J(Q')-J(Q)=2\operatorname{tr}(R H Δ^T)+\operatorname{tr}(ΔHΔ^T),
 
 ### L5a：联合等价坐标与合法 hierarchy 的交替离散优化
 
-**状态：screen-accepted；full-layer in_progress（2026-08-31）。**
+**状态：done（2026-08-31；v111 accepted precision parent）。**
 
 假设：v110 已改善 activation-side，但 weight-side 和坐标投影仍有互补空间；先
 固定一个低自由度等价变换 `T=D·R`，再在合法 scale/lv2/lv3/mantissa 域里做离散
@@ -114,10 +114,16 @@ screen `0.52929209` 提升约 `+0.00259486`，因此进入 full-layer。候选�
 [`v111 L5a`](../../../solutions/20260831_v111_l5a-joint-permutation_scoreNA_timeNA/)，
 screen 证据为 [`l5a screen JSON`](../../../artifacts/real_model_suite/l5a-joint-permutation-stratified-qwen.json)
 和 [`screen log`](../../../logs/execution/2026-08-31-l5a-joint-permutation-stratified.md)。
+full-layer 结果为 Linear mean `0.5082983001444541`、Attention mean
+`0.8420394884610322`、native total `422.412249`、Qwen panel `295.482473`，较
+v110 panel `295.242779647671` 增加 `+0.239693`；API `726.094s`，仅作探索记录。
+原始结果见 [`v111 full JSON`](../../../artifacts/real_model_suite/v111-l5a-joint-permutation-qwen-full.json)
+和 [`v111 full log`](../../../logs/execution/2026-08-31-v111-l5a-joint-permutation-qwen-full.md)。
+该方向已通过 full-layer，v111 成为新的 precision parent。
 
 ### L5b：稀疏跨 block Schur/LDLQ 激活—权重联合 proposal
 
-**状态：pending；仅在 L5a 无正向时启动。**
+**状态：in_progress；下一步立即执行。**
 
 从 `G_q`/`H_A` 的 block off-diagonal ratio 选最多 2 个高耦合 block 对，使用
 
@@ -166,6 +172,7 @@ transform 顺序和 state/device 的逐项 diff；只迁移 operand-local/offlin
 | v107 | 0.5069966356 | 0.8420394885 | 295.157057 | 481.04s | 前一精度 parent |
 | v109 | 0.5073256468 | 0.8420394885 | 295.239309 | 517.29s | 前一精度 parent |
 | **v110** | **0.5073395278** | **0.8420394885** | **295.242780** | **701.90s** | **当前精度 parent** |
+| **v111** | **0.5082983001** | **0.8420394885** | **295.482473** | **726.09s** | **当前精度 parent；L5a accepted** |
 
 ## 6. 完成和换计划条件
 

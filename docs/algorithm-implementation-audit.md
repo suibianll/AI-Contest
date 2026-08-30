@@ -2,16 +2,16 @@
 
 > 审计日期：2026-08-31
 > 审计对象：根 [`solution.py`](../solution.py)，规范 LF SHA256
-> `3abf9beb7ba50285b65344ce94773350eca16a24ce36a296db1401b9bafeb1ec`
+> `6b229081121c4a7edd69575c93dc01488be8f8b5e1479007522421e93e1adc57`
 > 原则：源码、校准目标、部署解码和评测日志必须逐一对应；不能用旧审计文字替代源码证据。
 
 ## 0. 结论
 
-根目录当前是 v110 的 precision parent：BOAT、expansive-FFN CAT balance、cross-fold
+根目录当前是 v111 的 precision parent：L5a block-local permutation、BOAT、expansive-FFN CAT balance、cross-fold
 Weight-HSDQ、Gram-hierarchy Activation-HSDQ、Gram-gated Global Activation-LRH、L4a
 final deployed-Gram row gate、L4b final-Gram GALS、B1 GQRB 和 B2 PAWV diag-only。Qwen
-固定 cache 的最高已完成 full-layer panel 为 `295.242780`，Linear mean 为
-`0.5073395278`，Attention mean 为 `0.8420394885`，API 时间 `701.900553s`（探索阶段
+固定 cache 的最高已完成 full-layer panel 为 `295.482473`，Linear mean 为
+`0.5082983001`，Attention mean 为 `0.8420394885`，API 时间 `726.094116s`（探索阶段
 记录，最终仍需 C1 压缩）。
 
 L1 v105 已实现真正的 full-hierarchy cross-block Weight-LRH（scale/lv2/lv3/
@@ -31,7 +31,14 @@ X'W'^T=XD^{-1}RR^TDW^T=XW^T.
 \]
 
 根实现的 FWHT 除以 `sqrt(block_size)`，因此 `R^TR=I`；`activation_state`
-只保存逆平衡和静态统计，没有保存输出监督。
+保存逆平衡、一个可选的 block-local permutation 和静态统计，没有保存输出监督。
+
+L5a 的排列 `P` 只在校准激活/权重的独立 `amax/rms` pressure 两折均不变差时写入，
+并保持
+
+\[
+X'=XD^{-1}PR,\qquad W'=WDPR,\qquad X'W'^{T}=XW^{T}.
+\]
 
 ### 1.2 Weight-HSDQ 的部署边界
 
@@ -93,7 +100,16 @@ calibration state 写入结构路由，并以 v107 parent 与 final `G_q` 候选
 `0.5073256468`、panel `295.239309`，较 v107 增加 `+0.0003290112` / `+0.0822528`。
 源码、测试和全层证据见 [`v109 archive`](../solutions/20260831_v109_l4a-final-gram-gated_score295.239309_time517s/)。
 
-### 2.4 仍有待验证的低风险问题
+### 2.4 L5a block-local permutation（v111）
+
+在 64 维 hierarchy block 内生成 identity、pressure 排序、低/高交错和四分位交错
+候选；排列只改变共享 lv2/lv3 scale 的通道分组，不改变 HiF4 五字段格式。候选
+选择完全基于 calibration operand-local proxy，随后由现有合法 hierarchy、部署 Gram
+和 GALS 路径重新计算。合成等价性、state 合法性和 runtime guard 共 24 项测试通过；
+五层 screen `0.5318869457`，full-layer `0.5082983001` / panel `295.482473`，较
+v110 增加 `+0.239693` panel。完整证据见 [`v111 archive`](../solutions/20260831_v111_l5a-joint-permutation_scoreNA_timeNA/)。
+
+### 2.5 仍有待验证的低风险问题
 
 - `_choose_boat` 先选 balance 再选 rotation，尚未与联合网格的部署侧目标比较；
 - cross-fold 最终 score 仍含生成 fold，可能有乐观偏差；
@@ -113,7 +129,8 @@ calibration state 写入结构路由，并以 v107 parent 与 final `G_q` 候选
 | expansive-FFN CAT/BOAT-2 进一步变体 | 未执行 | 不恢复全局 block 搜索 |
 | v095 Gram-objective Global-LRH | 已修复并采纳（v107 前一精度 parent） | 4-block proposal；最终 Gram gate；时间待 C1 压缩 |
 | final-weight Gram row gate | 已修复并采纳（v109 精度 parent） | 仅 expansive `rows > channels`、`channels <=1024`；完整 `G_q` 行级 gate |
-| final-weight Gram + GALS | 进行中 | 基于 v109 做最多 4 block 的小预算验证；结果未定 |
+| final-weight Gram + GALS | 保留（v110 前一 parent） | 基于 v109 做最多 4 block 的小预算验证；已通过 full-layer |
+| L5a block-local permutation | 已采纳（v111 当前 parent） | 两折 operand-local gate；screen/full-layer 均正向；下一步 L5b |
 | Attention PAWV rank/position | deferred | 不插入 Linear 主线 |
 
 ## 4. 计划与证据治理
@@ -121,7 +138,7 @@ calibration state 写入结构路由，并以 v107 parent 与 final `G_q` 候选
 唯一可执行计划是 [`2026-08-31-hif4-active-l5-structural-optimization-plan.md`](superpowers/plans/2026-08-31-hif4-active-l5-structural-optimization-plan.md)。
 每个候选必须保存完整源码、规范 LF SHA、固定 cache/命令、合规扫描和结果日志；
 screen/oracle 不能写入最高分账本。L1 v105、v108 no-op 和其余失败候选均按该
-规则归档；当前根为 v110，下一步是 L5a。计划目录不得同时存在第二份 active 计划。
+规则归档；当前根为 v111，下一步是 L5b。计划目录不得同时存在第二份 active 计划。
 
 本审计只记录源码与执行证据；它不把本地 panel 线性换算为官方分数，也不改变
 历史归档文件内容。
