@@ -11,9 +11,9 @@
 的 Qwen shaped panel 为 **293.755106**，正式 API 累计 **382.153528 s**，低于
 `420 s` 限制；该数值用于本地 A/B 排序，不能线性换算为官方排行榜分数。
 
-2026-08-30 已按执行计划完成 E1→A5 的连续实验；所有候选均已归档并回退，
-根目录没有留下未经验证的算法。当前最高可信版本仍是上述 stable parent，下一步
-应先提交官方评测取得兑换率，再决定是否重启新的 Linear 目标。
+2026-08-30 已按执行计划完成 E1→A5 的连续实验，并继续执行真正跨 block LRH-r8；
+所有候选均已归档并回退，根目录没有留下未经验证的算法。当前最高可信版本仍是
+上述 stable parent；官方评测不可用期间，以固定 Qwen panel 继续验证后续独立路线。
 
 ## 当前实现
 
@@ -144,14 +144,16 @@ $$P_{total}=P_L+P_A=293.755106.$$
 | A3 rowwise block-leverage | 293.250467 | 0.499539 | 384.83s | 拒绝 |
 | A4 blockwise BOAT-2 | 292.978009 | 0.498449 | 368.23s | 拒绝 |
 | A5 joint-fold offline A@W | 284.595177 | 0.464918 | 358.24s | 拒绝 |
+| A3 true cross-block LRH-r8 | 292.426982 | 0.496245 | 381.84s | 拒绝 |
 | stable parent（当前根） | **293.755106** | **0.501558** | **382.15s** | **active** |
 
-归档目录：`solutions/20260830_v087...` 至 `solutions/20260830_v091...`；
+归档目录：`solutions/20260830_v087...` 至 `solutions/20260830_v092...`；
 执行日志：`logs/execution/2026-08-30-e1-progressive-hsdq.md`、
 `2026-08-30-a2-expansive-sparse-hsdq.md`、
 `2026-08-30-a3-rowwise-block-hsdq.md`、
 `2026-08-30-a4-blockwise-boat.md`、
-`2026-08-30-a5-joint-aw.md`。
+`2026-08-30-a5-joint-aw.md`、
+`2026-08-30-a3-lrh-r8.md`。
 
 ## 距离 Linear 0.9 与 36,000
 

@@ -13,10 +13,11 @@ literal description of the active root. The current measured behavior is kept
 in [`docs/current-solution-status.md`](../../current-solution-status.md).
 
 - `2026-08-30-hif4-accuracy-first-36000-plan.md`: **current execution plan**.
-  E0-G、E1、A2、A3、A4、A5 have now been executed; every experimental candidate
-  that lost the full-layer panel was archived and the clean parent restored. The
-  immediate action in the plan is an official submission/兑换率 calibration;
-  future Linear work must start from a new, separately gated objective.
+  E0-G、E1、A2、A3、A4、A5 plus the first true cross-block LRH-r8 candidate have
+  now been executed; every experimental candidate that lost the full-layer panel
+  was archived and the clean parent restored. Official evaluation is currently
+  unavailable, so the immediate action is continued fixed-panel validation of the
+  still-unexecuted CAT/Householder, frozen-Q(A), and global-LRH routes.
 - `2026-08-30-hif4-grid-aligned-complement-plan.md`: **reviewed supplement**.
   The original NVFP4-Delta alignment premise does not survive the active BOAT
   transform. The retained version searches the legal E6M2 lattice on actual

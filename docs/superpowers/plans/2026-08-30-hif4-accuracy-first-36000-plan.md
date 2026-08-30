@@ -1034,13 +1034,17 @@ E1 已按计划实现并完成一层/全层门禁，结果已归档到
 下一步不再把未经验证的算法留在主线。A2/A3 的 expansive FFN HSDQ、A4
 blockwise BOAT-2 与 A5 joint-fold A@W 均已完成并归档；最高仍是 stable parent
 panel `293.755106`。A5 单层虽达 `337.501045`，全层降至 `284.595177`，说明
-仅扩大 calibration product 目标会破坏跨层迁移。
+仅扩大 calibration product 目标会破坏跨层迁移。随后首次实现真正跨 block 的
+LRH-r8（最多 4 个 64-block、rank-8 off-block Hessian），单层 `334.245422`、
+全层 `292.426982`，仍比 parent 低 `1.328124`，因此同样归档到
+`logs/execution/2026-08-30-a3-lrh-r8.md`，不再扩大这条实现。
 
 ```text
-当前动作：保持 parent `solution.py`，提交/记录一次官方分，建立本地 panel→官方
-兑换率；没有新的可证明目标前不继续修改 Linear。
-若重新启动研究，先在独立缓存上验证单个 role 的跨层稳定性，再实现候选；所有
-候选必须满足 panel 不降、Linear 不降、runtime ≤ 420s，失败即归档恢复 parent。
+当前动作：官方测评不可用，保持 parent `solution.py` 作为最高分基线，继续执行
+尚未验证的独立路线；下一项为完整 BOAT-2/CAT-Householder 组合，再后是冻结
+Q(A) 的 ridge/Qronos 与 Global Activation-LRH。所有候选必须满足 panel 不降、
+Linear 不降、runtime ≤ 420s，失败即归档恢复 parent；每一步记录最高分版本和
+提交号，不把未执行项标成已完成。
 ```
 
 这一步的结论是：当前最高可信本地版本就是 parent，不宣称已达到 36000。下一

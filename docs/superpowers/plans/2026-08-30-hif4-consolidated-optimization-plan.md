@@ -122,11 +122,17 @@ E4/A4  blockwise BOAT-2             【已拒绝：全层 −0.777 panel】
   ↓
 E5/A5  joint-fold 离线 A@W           【已拒绝：全层 −9.160 panel】
   ↓
-P1  保持 parent；官方提交后再决定是否重启新目标
+E3-LRH true cross-block rank-8  【已拒绝：全层 −1.328 panel，381.84s】
+  ↓
+E4/CAT-BOAT-2 full组合       【下一步：本地 panel 验证】
+  ↓
+E5/Qronos + Global Activation-LRH + Attention GQRB/FASA/PAWV
+  ↓
+P1  取所有本地候选最高分；官方恢复后再建立兑换率
 ```
 
-这不是“全部算法已完成”的声明：E0-C（GALS 解析召回）、完整跨块 LRH、
-CAT/Householder 组合、冻结-Q(A) ridge/Qronos、Global Activation-LRH、
+这不是“全部算法已完成”的声明：E0-C（GALS 解析召回）、CAT/Householder 组合、
+冻结-Q(A) ridge/Qronos、Global Activation-LRH、
 Attention GQRB/FASA/PAWV，以及最终五模型综合（C0）都没有在本轮实现或验收。
 它们目前是未执行的研究项，不应与已拒绝的 E1–E5 变体混为一谈。
 
@@ -155,7 +161,12 @@ Attention GQRB/FASA/PAWV，以及最终五模型综合（C0）都没有在本轮
 
 ### 2.3 E3/A3：LRH 跨块低秩 Hessian
 
-当前 Activation-HSDQ 只保存 64×64 block-diagonal Gram，缺跨 64-block 相关性。用低秩近似补上（注意 C40 的教训：跨块二阶结构对校准分布敏感，必须跨 fold + 跨模型复验）。
+当前 Activation-HSDQ 只保存 64×64 block-diagonal Gram，缺跨 64-block 相关性。已
+实现 rank-8、最多 4 block 的真实 LRH：保留块内 Gram，对 off-block 做 PSD 低秩
+近似，再经完整 Gram 的离散验收；但 Qwen 全层 panel `292.426982`，比 parent
+`293.755106` 低 `1.328124`，详见 `logs/execution/2026-08-30-a3-lrh-r8.md`，
+因此停止扩大该实现。注意 C40 的教训：跨块二阶结构对校准分布敏感，必须跨 fold
+和跨模型复验。
 
 当前实现的逐行 block-leverage 试验（`logs/execution/2026-08-30-a3-rowwise-block-hsdq.md`）
 并未达到 LRH 目标，全层 panel `293.250467`，停止继续扩大 FFN HSDQ。
