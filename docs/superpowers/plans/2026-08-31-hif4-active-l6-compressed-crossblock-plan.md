@@ -3,8 +3,8 @@
 > 状态：**ACTIVE**
 > 建立日期：2026-08-31
 > 适用根：`D:/工作内容/AI竞赛/solution.py`
-> 当前精度 parent：v116 L6b wide rank-4 cross-block factor
-> 根 `solution.py` 规范 LF SHA256：`8fa4db38ac96ca0957e1b1cee61d0c5bd248cf3a4df5d24fa04bedc9239b25f`
+> 当前精度 parent：v117 L6c full `G_64` hierarchy coordinate sweep
+> 根 `solution.py` 规范 LF SHA256：`8746b8026495cb56a3dc1d622e463f89226b23e3206e2202bd468f45530d952c`
 > 主目标：在合法 HiF4 五字段和 CPU static state 约束内，处理已测得的跨 64-channel
 > block coupling，继续提升 Qwen full-layer `linear_mean`；Attention 只作回归检查。
 
@@ -34,17 +34,17 @@ JSON/日志和官方规则；`docs/superpowers/archive/plans/` 只作历史证�
 固定配置：Qwen2.5-0.5B、24 层、`seq=128`、`calib=2`、`test=4`、`amax6`、CPU、
 只读 cache `artifacts/real_model_suite/cache/qwen2.5-0.5b__seq128__calib2__test4__layersall__schema1.pt`。
 
-| 指标 | v116 |
+| 指标 | v117 |
 |---|---:|
-| Linear mean | `0.5093045894`（screen `0.53309065`） |
+| Linear mean | `0.5095117268`（screen `0.53329460`） |
 | Attention mean | `0.8420394885` |
-| Qwen panel | `295.734045042953` |
-| native total | `423.088474971067` |
-| API time | `739.424609s` |
-| 规范 LF SHA | `8fa4db38ac96ca0957e1b1cee61d0c5bd248cf3a4df5d24fa04bedc9239b25f` |
+| Qwen panel | `295.785829395641` |
+| native total | `423.227671311092` |
+| API time | `2019.475204s` |
+| 规范 LF SHA | `8746b8026495cb56a3dc1d622e463f89226b23e3206e2202bd468f45530d952c` |
 
-当前到 `linear_mean=0.9` 仍差 `0.3906954106`，需减少当前剩余归一化误差约
-`79.62%`；L5e 证据表明固定 frame 的单侧理想臂最高仅 `0.8188905`，255-code
+当前到 `linear_mean=0.9` 仍差 `0.3904882732`，需减少当前剩余归一化误差约
+`79.61%`；L5e 证据表明固定 frame 的单侧理想臂最高仅 `0.8188905`，255-code
 scale oracle 的总体余量远小于这个缺口。L6 不承诺 0.9，而是验证压缩跨 block
 表示是否还能产生可泛化增益；连续两个候选无正向时立即停掉对应族。
 
@@ -144,7 +144,7 @@ v116 成为新的 precision parent；时间仍只作探索记录，下一步为 
 
 ### L6c：完整 `G_64` 指导的层级坐标求解
 
-**状态：pending。**
+**状态：done（2026-08-31；v117 accepted precision parent）。**
 
 当前 `_solve_hierarchy` 在选择 `lv2/lv3` 时主要使用逐 4 元组平方误差，`gram64`
 只在 offset 选择阶段介入。候选固定 scale 后，对一个 block 内的 8 个 8-channel
@@ -161,6 +161,19 @@ Gram gate。外部 4×4 group solver 已证明局部 `J_group` 下降不代表 `
 
 验收：合成暴力枚举必须逐字段一致；screen 至少超过 v111 且所有异常回退 parent；
 若只改善局部 Gram、完整 `G_64` 不改善，标记 `not actionable`。
+
+执行结果：固定 E6M2 scale，对每行最多 4 个高损 block 做 1 sweep 的 `lv2/lv3`
+坐标更新；每次候选都重编码 hierarchy 并使用精确 `G_64` 增量，随后由完整部署
+`G_q` 逐行 gate。33 项定向测试通过，静态/运行时 compliance 均为 0；screen
+Linear mean `0.5332946034`，较 v116 screen `+0.0002039570`，7 个 role 均不降，
+触发 full-layer。v117 full Linear `0.5095117268`、Attention `0.8420394885`、
+Qwen panel `295.7858293956`，较 v116 分别 `+0.0002071374`、`0`、`+0.0517843527`；
+API `2019.475204s`、wall `2051.884441s`，仅作 accuracy-first 探索记录。候选已归档于
+[`v117 L6c`](../../../solutions/20260831_v117_l6c-g64-hierarchy-accepted_score295.785829_time2019s/)，
+证据为 [`synthetic`](../../../logs/execution/2026-08-31-l6c-g64-hierarchy-synthetic.md)、
+[`screen`](../../../logs/execution/2026-08-31-l6c-g64-hierarchy-stratified.md) 和
+[`full`](../../../logs/execution/2026-08-31-v117-l6c-g64-hierarchy-qwen-full.md)。
+v117 成为新的 precision parent；下一步执行 L6d。
 
 ### L6d：结构化跨 block factor（block-circulant / DCT 低秩）
 
@@ -199,7 +212,8 @@ parent，另建下一计划做泛化/多模型审计。只有 checkpoint 后才�
 | v110 | 0.5073395278 | 0.8420394885 | 295.242780 | 701.90s | 前一精度 parent |
 | v111 | 0.5082983001 | 0.8420394885 | 295.482473 | 726.09s | 历史 precision parent |
 | v115 | 0.5090910148 | 0.8420394885 | 295.680651 | 716.48s | 前一 precision parent；L6a accepted |
-| **v116** | **0.5093045894** | **0.8420394885** | **295.734045** | **739.42s** | **当前 precision parent；L6b accepted** |
+| v116 | 0.5093045894 | 0.8420394885 | 295.734045 | 739.42s | 前一 precision parent；L6b accepted |
+| **v117** | **0.5095117268** | **0.8420394885** | **295.785829** | **2019.48s** | **当前 precision parent；L6c accepted** |
 
 ## 6. 完成和换计划条件
 

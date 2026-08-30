@@ -89,6 +89,83 @@ def test_global_activation_lrh_wide_path_respects_channel_cap() -> None:
     ) is None
 
 
+def test_g64_hierarchy_sweep_matches_independent_coordinate_bruteforce() -> None:
+    """The fixed-scale hierarchy sweep must agree with an exhaustive reference."""
+
+    torch.manual_seed(710)
+    dense = torch.randn(1, 64) * 0.12
+    gram64 = solution._gram64(torch.randn(96, 64) * 0.05)
+    parent = solution._dense_to_hif4(dense, offsets=(0,), gram64=gram64)
+    refined, diagnostics = solution._refine_activation_hierarchy_g64(
+        dense, parent, gram64, max_blocks=1, sweeps=1, return_diagnostics=True
+    )
+    assert diagnostics["selected_blocks"] == 1
+
+    x = dense.reshape(8, 2, 4).to(torch.float32)
+    sf = parent["scale_factor"].reshape(1, 1, 1, 1, 1)[0, 0, 0, 0, 0]
+    lv2 = parent["scale_lv2"].reshape(1, 1, 8, 1, 1)[0, 0, :, 0, 0].clone()
+    lv3 = parent["scale_lv3"].reshape(1, 1, 8, 2, 1)[0, 0, :, :, 0].clone()
+    q = solution._dequantize_hif4(parent).reshape(64).to(torch.float32)
+    sign = parent["sign"].reshape(1, 1, 8, 2, 4)[0, 0].clone()
+    mant = parent["mant"].reshape(1, 1, 8, 2, 4)[0, 0].clone()
+    gram = gram64[0].to(torch.float32)
+
+    def encode(trial_lv2: torch.Tensor, trial_lv3: torch.Tensor):
+        denominator = sf * trial_lv2[:, None, None] * trial_lv3[:, :, None]
+        trial_mant = torch.round(x.abs() * 4.0 / denominator).clamp(0.0, 7.0) * 0.25
+        trial_sign = torch.sign(x)
+        trial_sign = torch.where(trial_mant == 0.0, torch.zeros_like(trial_sign), trial_sign)
+        return (trial_sign * trial_mant * denominator).reshape(64), trial_sign, trial_mant
+
+    for group in range(8):
+        current = float(lv2[group].item())
+        best = None
+        for value in (1.0, 2.0):
+            if abs(current - value) <= solution._EPS:
+                continue
+            trial_lv2 = lv2.clone()
+            trial_lv2[group] = value
+            trial_q, trial_sign, trial_mant = encode(trial_lv2, lv3)
+            step = trial_q - q
+            gram_step = gram.mv(step)
+            delta = 2.0 * torch.dot(q - dense.reshape(64), gram_step) + torch.dot(step, gram_step)
+            if torch.isfinite(delta) and delta < 0:
+                if best is None or float(delta) < best[0]:
+                    best = (float(delta), value, trial_q, trial_sign, trial_mant)
+        if best is not None:
+            _, value, q, sign, mant = best
+            lv2[group] = value
+
+    for group in range(8):
+        for subgroup in range(2):
+            current = float(lv3[group, subgroup].item())
+            best = None
+            for value in (1.0, 2.0):
+                if abs(current - value) <= solution._EPS:
+                    continue
+                trial_lv3 = lv3.clone()
+                trial_lv3[group, subgroup] = value
+                trial_q, trial_sign, trial_mant = encode(lv2, trial_lv3)
+                step = trial_q - q
+                gram_step = gram.mv(step)
+                delta = 2.0 * torch.dot(q - dense.reshape(64), gram_step) + torch.dot(step, gram_step)
+                if torch.isfinite(delta) and delta < 0:
+                    if best is None or float(delta) < best[0]:
+                        best = (float(delta), value, trial_q, trial_sign, trial_mant)
+            if best is not None:
+                _, value, q, sign, mant = best
+                lv3[group, subgroup] = value
+
+    expected = solution._dequantize_hif4(refined).reshape(64).to(torch.float32)
+    torch.testing.assert_close(expected, q, rtol=0.0, atol=1.0e-7)
+    torch.testing.assert_close(
+        refined["scale_lv2"].reshape(1, 1, 8, 1, 1)[0, 0, :, 0, 0], lv2
+    )
+    torch.testing.assert_close(
+        refined["scale_lv3"].reshape(1, 1, 8, 2, 1)[0, 0, :, :, 0], lv3
+    )
+
+
 def test_final_gram_selector_is_rowwise_nonincreasing() -> None:
     torch.manual_seed(706)
     dense = torch.randn(5, 128) * 0.1

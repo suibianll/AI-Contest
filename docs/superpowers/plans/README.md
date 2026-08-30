@@ -4,7 +4,7 @@
 
 本目录只保留一份活跃计划。执行优化时只读取下面这份文件、根 `solution.py`、最新可复现评测和官方规则；归档目录中的计划不具有指令效力。
 
-- [`2026-08-31-hif4-active-l6-compressed-crossblock-plan.md`](2026-08-31-hif4-active-l6-compressed-crossblock-plan.md)：当前唯一有效的 v4 L6 Linear 队列，基于 v116 precision parent 继续执行完整 64×64 hierarchy 求解、结构化跨 block factor 和可达性 checkpoint；L6a/L6b 已完成。
+- [`2026-08-31-hif4-active-l6-compressed-crossblock-plan.md`](2026-08-31-hif4-active-l6-compressed-crossblock-plan.md)：当前唯一有效的 v4 L6 Linear 队列，基于 v117 precision parent 继续执行结构化跨 block factor 和可达性 checkpoint；L6a/L6b/L6c 已完成。
 
 旧的 v2 active、grid、consolidated、accuracy-first、Linear、JDRQ 计划以及归档流程，均已移至 [`../archive/plans/`](../archive/plans/)。它们是历史决策记录，不再提供下一步指令；若历史文字与活跃计划冲突，以活跃计划、根 `solution.py`、合规检查和最新评测日志为准。
 
