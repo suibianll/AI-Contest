@@ -89,6 +89,73 @@ def test_global_activation_lrh_wide_path_respects_channel_cap() -> None:
     ) is None
 
 
+def test_structured_lrh_block_circulant_matmul_matches_explicit_reference() -> None:
+    """The rolled-kernel product must match explicit circular block coupling."""
+
+    torch.manual_seed(711)
+    rows, blocks, components = 3, 4, 2
+    error = torch.randn(rows, blocks, solution._BLOCK)
+    kernels = torch.randn(components, solution._BLOCK, solution._BLOCK) * 0.02
+    coefficients = torch.randn(blocks, components) * 0.1
+    actual = solution._structured_gram_matmul(error, kernels, coefficients)
+    expected = torch.zeros_like(actual)
+    for distance in range(blocks):
+        for target in range(blocks):
+            source = (target - distance) % blocks
+            for component in range(components):
+                expected[:, target] += (
+                    coefficients[distance, component]
+                    * error[:, source].matmul(kernels[component])
+                )
+    torch.testing.assert_close(actual, expected, rtol=1.0e-5, atol=1.0e-6)
+
+
+def test_structured_lrh_factor_extracts_bounded_finite_state() -> None:
+    """A four-block structured Gram has a bounded, finite compressed state."""
+
+    torch.manual_seed(712)
+    blocks = 4
+    kernels = torch.randn(blocks, solution._BLOCK, solution._BLOCK) * 0.02
+    gram = torch.zeros(blocks * solution._BLOCK, blocks * solution._BLOCK)
+    for source in range(blocks):
+        for target in range(blocks):
+            distance = (target - source) % blocks
+            gram[
+                source * solution._BLOCK : (source + 1) * solution._BLOCK,
+                target * solution._BLOCK : (target + 1) * solution._BLOCK,
+            ] = kernels[distance]
+    state = solution._structured_activation_lrh(gram, components=4)
+    assert state is not None
+    extracted, coefficients = state
+    assert tuple(extracted.shape) == (3, solution._BLOCK, solution._BLOCK)
+    assert tuple(coefficients.shape) == (blocks, 3)
+    assert torch.all(coefficients[0] == 0)
+    assert torch.isfinite(extracted).all()
+    assert torch.isfinite(coefficients).all()
+
+
+def test_structured_activation_gate_is_rowwise_nonincreasing() -> None:
+    """The structured proposal may only survive the exact deployed-Gram gate."""
+
+    torch.manual_seed(713)
+    dense = torch.randn(3, 128) * 0.1
+    deployment = torch.randn(96, 128) * 0.05
+    deployment_gram = deployment.t().mm(deployment)
+    gram64 = solution._gram64(deployment)
+    parent = solution._dense_to_hif4(dense, gram64=gram64)
+    structured = solution._structured_activation_lrh(deployment_gram, components=2)
+    assert structured is not None
+    state = {"kernels": structured[0], "coefficients": structured[1]}
+    refined = solution._refine_activation_structured(
+        dense, parent, gram64, deployment_gram, state, max_blocks=2
+    )
+    before = solution._dequantize_hif4(parent).to(torch.float32) - dense
+    after = solution._dequantize_hif4(refined).to(torch.float32) - dense
+    before_loss = (before.mm(deployment_gram) * before).sum(dim=1)
+    after_loss = (after.mm(deployment_gram) * after).sum(dim=1)
+    assert torch.all(after_loss <= before_loss + 1.0e-5)
+
+
 def test_g64_hierarchy_sweep_matches_independent_coordinate_bruteforce() -> None:
     """The fixed-scale hierarchy sweep must agree with an exhaustive reference."""
 

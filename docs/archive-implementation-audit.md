@@ -1,7 +1,7 @@
 # 归档算法实现与可复现性审计
 
 > 审计日期：2026-08-31
-> 范围：`solutions/` 下 v000–v117 候选（排除工具目录 `.mimosa`）、`logs/execution/`、当前根 `solution.py` 以及所有历史计划。
+> 范围：`solutions/` 下 v000–v118 候选（排除工具目录 `.mimosa`）、`logs/execution/`、当前根 `solution.py` 以及所有历史计划。
 > 结论性质：这是实现审计和实验可复现性审计，不是官方成绩承诺。
 
 ## 1. 审计口径
@@ -22,17 +22,17 @@ P = 250 g_L + 200 g_A,
 
 ## 2. 当前根与已确认效果
 
-根目录 `solution.py` 是 v117 的 L6c full `G_64` hierarchy coordinate sweep + v116 L6b wide rank-4 cross-block factor + v115 L6a rank-16 global-LRH + v111 L5a block-local permutation + expansive-FFN CAT balance + B2 PAWV **diag-only** + B1 GQRB + Global Activation-LRH Gram gate + L4a final deployed-Gram row gate + L4b final-Gram GALS 路径；v101 是此前 v100 的五模型确认。当前规范 LF SHA256：
+根目录 `solution.py` 是 v118 的 L6d structured block-circulant factor + v117 L6c full `G_64` hierarchy coordinate sweep + v116 L6b wide rank-4 cross-block factor + v115 L6a rank-16 global-LRH + v111 L5a block-local permutation + expansive-FFN CAT balance + B2 PAWV **diag-only** + B1 GQRB + Global Activation-LRH Gram gate + L4a final deployed-Gram row gate + L4b final-Gram GALS 路径；v101 是此前 v100 的五模型确认。当前规范 LF SHA256：
 
-`8746b8026495cb56a3dc1d622e463f89226b23e3206e2202bd468f45530d952c`
+`ec44cf79abcd5170c1667ef7e50fb0a494753c3a96c1b6fcceca9f5030630251`
 
-| 指标 | 当前根 v117（precision parent） |
+| 指标 | 当前根 v118（precision parent） |
 |---|---:|
-| Qwen Linear mean | 0.509512 |
+| Qwen Linear mean | 0.509601 |
 | Qwen Attention mean | 0.842039 |
-| Qwen shaped panel | **295.785829** |
-| Qwen native total | 423.227671 |
-| Qwen API time | 2019.475204 s |
+| Qwen shaped panel | **295.808212** |
+| Qwen native total | 423.287835 |
+| Qwen API time | 2249.746436 s |
 | 官方分数 | 尚无提交结果 |
 
 当前正式路径的有效组件是：
@@ -51,7 +51,7 @@ P = 250 g_L + 200 g_A,
   W/A；两折 operand-local gate 不通过则回退 identity。该等价坐标变换 full-layer
   panel `295.482473`，Linear `0.508298`。
 
-最新正向链为：v086 `267.307909` → v098 `293.793700` → v100 `293.797301` → v106 `294.272633` → v107 `295.157057` → v109 `295.239309` → v110 `295.242780` → v111 `295.482473` → v115 `295.680651` → v116 `295.734045` → v117 `295.785829`。其中最大跃迁来自 C86 实验集合重写为 clean 单一路径；v106 的增益只来自 expansive `fc_gate`，v107 的增益来自窄输入 q/k/v/o 的 Gram-gated Global-LRH，v109 的增益来自 expansive FFN final-Gram row gate，v110 再来自其上 GALS 小预算，v111 来自 block-local 等价排列，v115 来自窄输入 rank-16 off-block factor，v116 来自宽 `proj(d=4864)` rank-4 off-block factor，v117 来自 full `G_64` hierarchy coordinate sweep。
+最新正向链为：v086 `267.307909` → v098 `293.793700` → v100 `293.797301` → v106 `294.272633` → v107 `295.157057` → v109 `295.239309` → v110 `295.242780` → v111 `295.482473` → v115 `295.680651` → v116 `295.734045` → v117 `295.785829` → v118 `295.808212`。其中最大跃迁来自 C86 实验集合重写为 clean 单一路径；v106 的增益只来自 expansive `fc_gate`，v107 的增益来自窄输入 q/k/v/o 的 Gram-gated Global-LRH，v109 的增益来自 expansive FFN final-Gram row gate，v110 再来自其上 GALS 小预算，v111 来自 block-local 等价排列，v115 来自窄输入 rank-16 off-block factor，v116 来自宽 `proj(d=4864)` rank-4 off-block factor，v117 来自 full `G_64` hierarchy coordinate sweep，v118 来自结构化 block-circulant proposal + 完整部署 Gram gate。
 
 ## 3. 归档源码审计结果
 
@@ -168,6 +168,7 @@ v109 已归档为当前精度 parent；API `517.285773s` 只作为探索期时�
 | v115 L6a rank-16 global LRH | 窄输入 off-block factor rank 8→16；full-layer panel `295.680651`、Linear `0.509091`，较 v111 `+0.198179` panel；API `716.483s`，前一精度 parent。 |
 | v116 L6b wide rank-4 factor | 宽输入 `d>1024,d<=8192` 的 off-block factor；full-layer panel `295.734045`、Linear `0.509305`，较 v115 `+0.053394` panel；API `739.425s`，前一精度 parent。 |
 | v117 L6c full `G_64` hierarchy | 固定 scale、最多 4 个高损 block 的 `lv2/lv3` 坐标 sweep；full-layer panel `295.785829`、Linear `0.509512`，较 v116 `+0.051784` panel；API `2019.475s`，当前精度 parent。 |
+| v118 L6d structured block-circulant factor | 宽输入最多 4 个 `64×64` kernel 生成跨 block proposal，full-layer panel `295.808212`、Linear `0.509601`，较 v117 `+0.022382` panel；API `2249.746s`，当前精度 parent。 |
 
 最近候选的静态/运行时 Linear 合规扫描均为 `violations=0, static=0`；本次没有发现把 `A@W` 输出监督写入在线 `Q(A)` 的新违规。合规通过不等于精度通过，二者分开记录。
 
@@ -175,7 +176,7 @@ v109 已归档为当前精度 parent；API `517.285773s` 只作为探索期时�
 
 | 算法族 | 已实现并保留 | 已实现但回退 | 当前仍未验证/需要修复 |
 |---|---|---|---|
-| Linear 基础 | BOAT、**v111 L5a block-local permutation**、cross-fold Weight-HSDQ、Gram-hierarchy Activation-HSDQ、**v106 expansive CAT balance**、**v107 Gram-gated Global-LRH**、**v109 final deployed-Gram row gate**、**v110 final-Gram GALS**、**v115 L6a rank-16**、**v116 L6b wide rank-4**、**v117 L6c full `G_64` hierarchy**、512-row weight sampling、历史稳定 A@W/JDRQ 组件 | blockwise BOAT-2、全宽/逐块 A@W、大步长 headroom、full-H、**v105 corrected full-hierarchy LRH** 等 | 稀疏 Schur、统计元路由、外部差异审计、L6d/L6e checkpoint |
+| Linear 基础 | BOAT、**v111 L5a block-local permutation**、cross-fold Weight-HSDQ、Gram-hierarchy Activation-HSDQ、**v106 expansive CAT balance**、**v107 Gram-gated Global-LRH**、**v109 final deployed-Gram row gate**、**v110 final-Gram GALS**、**v115 L6a rank-16**、**v116 L6b wide rank-4**、**v117 L6c full `G_64` hierarchy**、**v118 L6d structured factor**、512-row weight sampling、历史稳定 A@W/JDRQ 组件 | blockwise BOAT-2、全宽/逐块 A@W、大步长 headroom、full-H、**v105 corrected full-hierarchy LRH** 等 | 稀疏 Schur、统计元路由、外部差异审计、C1a–C3 结构化向量化/refresh/压缩 |
 | Attention | GQA head-local rotation、MHA K-center、B1 GQRB margin、B2 PAWV diag-only | causal CVaR、全模型 K-center、PAWV rank-8 当前实现 | 最终 Q/K 变换后的 PAWV rank/position bucket、交替 Q/K/V、真正 role-aware 的结构门控 |
 | 变换/CAT | 固定低自由度 CAT/BOAT 子集、共享 Hadamard | R64、CAT β 网格、full-H selector、BOAT-2 | 低自由度新坐标系或外部实现差异对照，尚无可部署候选 |
 | 诊断/工程 | E0-G/D0 scale oracle、C0 五模型确认、clean 单路径重写 | 全局 scale 扩张部署 | 三折合成宽度矩阵、元策略路由、计算预算重分配 |
@@ -189,22 +190,23 @@ v109 已归档为当前精度 parent；API `517.285773s` 只作为探索期时�
 - 计划中把 v 的 GALS 正向 oracle 当作部署机会，但 v102/v103 已证明当前 sparse/shape-proxy 组合不稳定；v109/v110 已完成无 role-id 的 final-weight-Gram 与 GALS 复验，下一阶段转向 L5 结构路线。
 - 官方提交/兑换率校准从未完成，不能用本地 panel 推断官方 36000 距离。
 
-治理动作：L5 计划已完成并移入归档；当前唯一 active 计划是 [`2026-08-31-hif4-active-l6-compressed-crossblock-plan.md`](superpowers/plans/2026-08-31-hif4-active-l6-compressed-crossblock-plan.md)，其余实施计划和流程文档均位于 [`docs/superpowers/archive/plans/`](superpowers/archive/plans/)。`plans/README.md` 与归档索引只描述导航及历史性质，不产生下一步指令。
+治理动作：L6 计划已完成并移入归档；当前唯一 active 计划是 [`2026-08-31-hif4-active-c1-structured-linear-plan.md`](superpowers/plans/2026-08-31-hif4-active-c1-structured-linear-plan.md)，其余实施计划和流程文档均位于 [`docs/superpowers/archive/plans/`](superpowers/archive/plans/)。`plans/README.md` 与归档索引只描述导航及历史性质，不产生下一步指令。
 
 ## 7. 审计后的优先级
 
-1. 官方接口恢复后，提交当前精度 parent v117（或 C1 压缩后的等价版本），获得第一个真实兑换率锚点。
+1. 官方接口恢复后，提交当前精度 parent v118（或 C1 压缩后的等价版本），获得第一个真实兑换率锚点。
 2. L1 的 v105 corrected full-hierarchy LRH 已完成并拒绝；不再扩大其自由度。
-3. L3 v107、L4a v109、L4b v110、L5a v111、L6a v115、L6b v116、L6c v117 均已完成并产生精度 parent；L5b/v112、
+3. L3 v107、L4a v109、L4b v110、L5a v111、L6a v115、L6b v116、L6c v117、L6d v118 均已完成并产生精度 parent；L5b/v112、
    L5c/v113、L5d/v114 已按 screen 归档拒绝，L5e 已完成可达性 checkpoint。
-4. 当前只执行唯一活跃计划的 L6 压缩跨 block 路线；Linear 不回到已否决的 sampler、
-   joint residual、H32/H64 或 group-only solver，完成 L6 后才做最终 Q/K 变换后的
-   PAWV rank/position metric 与 C1 时间压缩。
+4. 当前只执行唯一活跃计划的 C1 structured Linear 路线；Linear 不回到已否决的 sampler、
+   joint residual、H32/H64 或 group-only solver，先完成 proposal 向量化、gradient refresh、
+   rank/budget 和跨模型审计，再做最终 state/time checkpoint。Attention PAWV rank/position
+   metric 继续独立延后。
 5. 每个实验必须保存完整源和 SHA；只要没有完整源，就标为不可复现，不把结果当作硬上限。
 
 ## 8. 本次可复核检查
 
 - 当前根静态/运行时 Linear 合规扫描：`violations=0`、`static_violations=0`，8 个 review items 均是允许的离线 `A@W` 人工复核提示。
- - 当前根代表性测试：L6a/L6b/L6c 定向集合（含 `tests/test_global_activation_lrh.py`、`tests/test_l5a_joint_transform.py`、`tests/test_linear_compliance_guard.py`、`tests/test_linear_error_decomposition.py`、`tests/test_expansive_cat.py`）共 **33 passed**。
+- 当前根代表性测试：L6a/L6b/L6c/L6d 定向集合（含 `tests/test_global_activation_lrh.py`、`tests/test_l5a_joint_transform.py`、`tests/test_linear_compliance_guard.py`、`tests/test_linear_error_decomposition.py`、`tests/test_expansive_cat.py`）共 **36 passed**。
 - 全量 pytest 本次为 `51 passed, 38 failed, 1 skipped, 5 errors`。失败主要来自仍针对已删除 C39/FULL64/JDRQ 内部接口的历史测试，以及 Windows 临时目录权限错误；本次只改文档、归档和导航，没有把这些历史测试伪装成当前根通过。
 - 计划目录检查：`docs/superpowers/plans/` 仅有一份非 README 计划；归档计划的相对链接检查通过。

@@ -1,10 +1,10 @@
 # HiF4 唯一活跃优化计划 v4：L6 压缩跨 block 精度路线
 
-> 状态：**ACTIVE**
+> 状态：**COMPLETED**
 > 建立日期：2026-08-31
 > 适用根：`D:/工作内容/AI竞赛/solution.py`
-> 当前精度 parent：v117 L6c full `G_64` hierarchy coordinate sweep
-> 根 `solution.py` 规范 LF SHA256：`8746b8026495cb56a3dc1d622e463f89226b23e3206e2202bd468f45530d952c`
+> 当前精度 parent：v118 L6d structured block-circulant factor
+> 根 `solution.py` 规范 LF SHA256：`ec44cf79abcd5170c1667ef7e50fb0a494753c3a96c1b6fcceca9f5030630251`
 > 主目标：在合法 HiF4 五字段和 CPU static state 约束内，处理已测得的跨 64-channel
 > block coupling，继续提升 Qwen full-layer `linear_mean`；Attention 只作回归检查。
 
@@ -34,17 +34,17 @@ JSON/日志和官方规则；`docs/superpowers/archive/plans/` 只作历史证�
 固定配置：Qwen2.5-0.5B、24 层、`seq=128`、`calib=2`、`test=4`、`amax6`、CPU、
 只读 cache `artifacts/real_model_suite/cache/qwen2.5-0.5b__seq128__calib2__test4__layersall__schema1.pt`。
 
-| 指标 | v117 |
+| 指标 | v118 |
 |---|---:|
-| Linear mean | `0.5095117268`（screen `0.53329460`） |
+| Linear mean | `0.5096012555`（screen `0.53337532`） |
 | Attention mean | `0.8420394885` |
-| Qwen panel | `295.785829395641` |
-| native total | `423.227671311092` |
-| API time | `2019.475204s` |
-| 规范 LF SHA | `8746b8026495cb56a3dc1d622e463f89226b23e3206e2202bd468f45530d952c` |
+| Qwen panel | `295.808211555944` |
+| native total | `423.287834557986` |
+| API time | `2249.746436s` |
+| 规范 LF SHA | `ec44cf79abcd5170c1667ef7e50fb0a494753c3a96c1b6fcceca9f5030630251` |
 
-当前到 `linear_mean=0.9` 仍差 `0.3904882732`，需减少当前剩余归一化误差约
-`79.61%`；L5e 证据表明固定 frame 的单侧理想臂最高仅 `0.8188905`，255-code
+当前到 `linear_mean=0.9` 仍差 `0.3903987445`，需减少当前剩余归一化误差约
+`79.59%`；L5e 证据表明固定 frame 的单侧理想臂最高仅 `0.8188905`，255-code
 scale oracle 的总体余量远小于这个缺口。L6 不承诺 0.9，而是验证压缩跨 block
 表示是否还能产生可泛化增益；连续两个候选无正向时立即停掉对应族。
 
@@ -177,7 +177,7 @@ v117 成为新的 precision parent；下一步执行 L6d。
 
 ### L6d：结构化跨 block factor（block-circulant / DCT 低秩）
 
-**状态：pending。**
+**状态：done（2026-08-31；v118 accepted precision parent）。**
 
 若 L6a–c 均无增益，测试不保存逐通道 `U` 的结构化近似：将 block 间 Gram 按相对
 距离聚合为少量 `K_s∈R^{64×64}`，或用固定 DCT basis `V` 与每个 block 的小系数
@@ -192,14 +192,39 @@ proposal 用结构化矩阵向量乘法，state 只保存 `S` 个 64×64 CPU 张
 直接把所有 block-pair Gram 写入 state。先在合成 block-circulant、随机低秩和真实
 校准统计上测近似误差，再跑 Qwen screen；若近似误差或 screen 回退，立即归档。
 
+执行结果：结构化乘法与显式块循环最大误差为 `0`；四块重构相对误差 `2.68e-7`，
+随机低秩序列误差 `4.48e-7`，state 为 49,200 bytes；36 项定向回归和合规扫描通过。
+screen Linear `0.53337532`，较 v117 `+0.00008072`；full-layer Linear
+`0.5096012555`、Attention `0.8420394885`、Qwen panel `295.8082115559`，较 v117
+分别 `+0.0000895286`、`0`、`+0.0223821603`。唯一正向角色为 `proj(d=4864)`，
+API `2249.746436s`、wall `2282.625213s`。候选已归档于
+[`v118 L6d`](../../../solutions/20260831_v118_l6d-structured-factor-accepted_score295.808212_time2249s/)，
+证据为 [`synthetic`](../../../logs/execution/2026-08-31-l6d-structured-factor-synthetic.md)、
+[`screen`](../../../logs/execution/2026-08-31-l6d-structured-factor-stratified.md) 和
+[`full`](../../../logs/execution/2026-08-31-v118-l6d-structured-factor-qwen-full.md)。
+v118 成为新的 precision parent；下一步执行 L6e checkpoint。
+
 ### L6e：压缩跨 block 表达 checkpoint
 
-**状态：pending。**
+**状态：done（2026-08-31；L6 checkpoint completed）。**
 
 汇总 L6a–d 的 screen/full 结果，重新计算 `ρ_off`、proposal recall、完整 `J_64`
 下降和每个候选的 state 成本。若所有压缩表示都没有跨 fold 正向，归档 L6 计划并
 记录“当前 state 接口下跨 block 压缩不可行动”；若某个方向正向，保留最高 Qwen
 parent，另建下一计划做泛化/多模型审计。只有 checkpoint 后才能进入 C1 时间压缩。
+
+执行结果：L6a、L6b、L6c、L6d 均产生正向 full-layer Qwen parent，v118 为最高
+precision parent（Linear `0.5096012555`、panel `295.8082115559`）。L5e frame
+未改变，跨 block 比例沿用并复核为 weight `rho_off=0.76125`、calibration
+activation `0.88382`。真实 Qwen `proj(d=4864)` 的 L6d proposal recall 为
+`71/2048=3.47%`，完整 `J_64` aggregate relative decrease `0.0991%`；新增结构化
+state `66,752 bytes`，总 activation-state tensor bytes `96,043,200`（dense
+deployment Gram 为既有基线）。完整 checkpoint 见
+[`L6e log`](../../../logs/execution/2026-08-31-l6e-crossblock-checkpoint.md)。
+
+结论：跨 block 压缩可行动但当前 proposal 覆盖窄、原型时间不可提交；L6a–L6e
+全部完成，本文件必须归档，下一份 active 计划负责保持 v118 精度并向量化/压缩，
+不得在本文件继续添加新的下一步。
 
 ## 5. 版本与候选账本
 
@@ -213,11 +238,12 @@ parent，另建下一计划做泛化/多模型审计。只有 checkpoint 后才�
 | v111 | 0.5082983001 | 0.8420394885 | 295.482473 | 726.09s | 历史 precision parent |
 | v115 | 0.5090910148 | 0.8420394885 | 295.680651 | 716.48s | 前一 precision parent；L6a accepted |
 | v116 | 0.5093045894 | 0.8420394885 | 295.734045 | 739.42s | 前一 precision parent；L6b accepted |
-| **v117** | **0.5095117268** | **0.8420394885** | **295.785829** | **2019.48s** | **当前 precision parent；L6c accepted** |
+| v117 | 0.5095117268 | 0.8420394885 | 295.785829 | 2019.48s | 前一 precision parent；L6c accepted |
+| **v118** | **0.5096012555** | **0.8420394885** | **295.808212** | **2249.75s** | **当前 precision parent；L6d/L6e completed** |
 
 ## 6. 完成和换计划条件
 
-L6a–L6e 完成后必须把本文件标记 `COMPLETED`，写明每个方向的结果和证据，移入
-`docs/superpowers/archive/plans/`，更新 `docs/superpowers/plans/README.md`、根
-README、`docs/current-solution-status.md`、算法清单和 `solutions/README.md`，并在
-同一提交创建下一份唯一 active 计划。归档计划不可继续追加新的执行步骤。
+本文件已完成 L6a–L6e，归档时必须保留每个方向的结果和证据，并同步更新
+`docs/superpowers/plans/README.md`、根 README、`docs/current-solution-status.md`、
+算法清单和 `solutions/README.md`；下一份唯一 active 计划另行创建。归档计划不可
+继续追加新的执行步骤。

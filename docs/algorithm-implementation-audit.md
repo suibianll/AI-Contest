@@ -2,16 +2,16 @@
 
 > 审计日期：2026-08-31
 > 审计对象：根 [`solution.py`](../solution.py)，规范 LF SHA256
-> `8746b8026495cb56a3dc1d622e463f89226b23e3206e2202bd468f45530d952c`
+> `ec44cf79abcd5170c1667ef7e50fb0a494753c3a96c1b6fcceca9f5030630251`
 > 原则：源码、校准目标、部署解码和评测日志必须逐一对应；不能用旧审计文字替代源码证据。
 
 ## 0. 结论
 
-根目录当前是 v117 的 precision parent：L6c full `G_64` hierarchy coordinate sweep、L6b wide rank-4 cross-block factor、L6a rank-16 global-LRH、L5a block-local permutation、BOAT、expansive-FFN CAT balance、cross-fold
+根目录当前是 v118 的 precision parent：L6d structured block-circulant factor、L6c full `G_64` hierarchy coordinate sweep、L6b wide rank-4 cross-block factor、L6a rank-16 global-LRH、L5a block-local permutation、BOAT、expansive-FFN CAT balance、cross-fold
 Weight-HSDQ、Gram-hierarchy Activation-HSDQ、Gram-gated Global Activation-LRH、L4a
 final deployed-Gram row gate、L4b final-Gram GALS、B1 GQRB 和 B2 PAWV diag-only。Qwen
-固定 cache 的最高已完成 full-layer panel 为 `295.785829`，Linear mean 为
-`0.5095117268`，Attention mean 为 `0.8420394885`，API 时间 `2019.475204s`（探索阶段
+固定 cache 的最高已完成 full-layer panel 为 `295.808212`，Linear mean 为
+`0.5096012555`，Attention mean 为 `0.8420394885`，API 时间 `2249.746436s`（探索阶段
 记录，最终仍需 C1 压缩）。
 
 L1 v105 已实现真正的 full-hierarchy cross-block Weight-LRH（scale/lv2/lv3/
@@ -134,14 +134,15 @@ v110 增加 `+0.239693` panel。完整证据见 [`v111 archive`](../solutions/20
 | L6a rank-16 global LRH | 已采纳（v115 前一 parent） | 窄输入 off-block rank 8→16；screen/full-layer 均正向，state/compliance 无违规 |
 | L6b wide rank-4 cross-block factor | 已采纳（v116 前一 parent） | `d>1024,d<=8192`；screen/full-layer 正向，唯一正向角色为 `proj(d=4864)`，state/compliance 无违规 |
 | L6c full `G_64` hierarchy coordinate sweep | 已采纳（v117 当前 parent） | 固定 scale、最多 4 个高损 block 的 `lv2/lv3` 坐标更新；33 项定向测试、screen/full-layer 正向，7 role 均不降；state/compliance 无违规 |
+| L6d structured block-circulant factor | 已采纳（v118 当前 parent） | 宽输入最多 4 个 `64×64` kernel 的 proposal，36 项定向测试、screen/full-layer 正向；`proj` 正向；完整部署 `G_q` gate，state/compliance 无违规 |
 | Attention PAWV rank/position | deferred | 不插入 Linear 主线 |
 
 ## 4. 计划与证据治理
 
-唯一可执行计划是 [`2026-08-31-hif4-active-l6-compressed-crossblock-plan.md`](superpowers/plans/2026-08-31-hif4-active-l6-compressed-crossblock-plan.md)。
+唯一可执行计划是 [`2026-08-31-hif4-active-c1-structured-linear-plan.md`](superpowers/plans/2026-08-31-hif4-active-c1-structured-linear-plan.md)。
 每个候选必须保存完整源码、规范 LF SHA、固定 cache/命令、合规扫描和结果日志；
 screen/oracle 不能写入最高分账本。L1 v105、v108 no-op 和其余失败候选均按该
-规则归档；当前根为 v117，下一步是 L6d structured block-circulant/DCT factor。计划目录不得同时存在第二份 active 计划。
+规则归档；当前根为 v118，L6 已完成归档，下一步是 C1a structured proposal vectorization。计划目录不得同时存在第二份 active 计划。
 
 本审计只记录源码与执行证据；它不把本地 panel 线性换算为官方分数，也不改变
 历史归档文件内容。

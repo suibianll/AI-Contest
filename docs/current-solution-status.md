@@ -6,16 +6,16 @@
 
 ## 一句话结论
 
-根目录当前为 v117 L6c full `G_64` hierarchy coordinate sweep + v116 L6b wide rank-4 cross-block factor + v115 L6a rank-16 global LRH + v111 L5a block-local permutation + BOAT + expansive-FFN CAT balance +
+根目录当前为 v118 L6d structured block-circulant factor + v117 L6c full `G_64` hierarchy coordinate sweep + v116 L6b wide rank-4 cross-block factor + v115 L6a rank-16 global LRH + v111 L5a block-local permutation + BOAT + expansive-FFN CAT balance +
 cross-fold HSDQ + Global Activation-LRH Gram gate + L4a final deployed-Gram row gate +
 L4b GALS，并保留 Attention B1 GQRB 与 B2 PAWV diag-only。固定 Qwen2.5-0.5B 缓存、
 `seq=128`、`calib=2`、`test=4`、全 24 层、CPU 的完整运行中，当前精度 parent 的
-Qwen shaped panel 为 **295.785829**，Linear mean **0.5095117268**，正式 API 累计
-**2019.475s**；探索阶段只记录时间，不以
+Qwen shaped panel 为 **295.808212**，Linear mean **0.5096012555**，正式 API 累计
+**2249.746s**；探索阶段只记录时间，不以
 `420 s` 否决精度候选，最终冻结时再压缩。该数值用于本地 A/B 排序，不能线性换算为
 官方排行榜分数。
 
-当前唯一活跃计划是 [`2026-08-31-hif4-active-l6-compressed-crossblock-plan.md`](superpowers/plans/2026-08-31-hif4-active-l6-compressed-crossblock-plan.md)；L5 完成计划已归档，归档候选的写回、目标错位和源码缺失审计见 [`archive-implementation-audit.md`](archive-implementation-audit.md)。
+当前唯一活跃计划是 [`2026-08-31-hif4-active-c1-structured-linear-plan.md`](superpowers/plans/2026-08-31-hif4-active-c1-structured-linear-plan.md)；L6 完成计划已归档，归档候选的写回、目标错位和源码缺失审计见 [`archive-implementation-audit.md`](archive-implementation-audit.md)。
 
 2026-08-31 已按执行计划完成 E0-C、E1→A6、B1、B2、L1、L2、L3 和 L4a。B1 GQRB margin
 先把 panel 提升到 `293.793700`，B2 PAWV diag-only 再提升到 `293.797301`，L2
@@ -27,7 +27,7 @@ L4a 精确 final-Gram 行级 gate 再提升到 panel `295.239309`、Linear mean
 期间，所有新候选仍以固定 Qwen panel 为门禁。L1 已完成真正的 scale/lv2/lv3/mantissa
 原子写回与合成测试，但五层×七 role 预筛与 L0 逐条持平（`0.523019429222563`），
 因此候选 v105 已归档；v106 是时间 parent，v107/v109/v110 是前一精度 parent，v111
-是前一精度 parent；v115 L6a、v116 L6b 与 v117 L6c 均通过 full-layer，v117 成为当前精度 parent，下一步执行 L6d。
+是前一精度 parent；v115 L6a、v116 L6b、v117 L6c 与 v118 L6d 均通过 full-layer，v118 成为当前精度 parent，下一步执行 C1a。
 
 ## 当前实现
 
@@ -54,9 +54,9 @@ L4a 精确 final-Gram 行级 gate 再提升到 panel `295.239309`、Linear mean
 5. **Global Activation-LRH（L3/L6a/L6b）**：窄输入使用 rank-16、宽输入（`d>1024`
    且 `d<=8192`）使用 rank-4 off-block factor；所有 proposal 最终都由部署
    `G_q=W_q^T W_q` 逐行精确门控。v116 的正向增益来自 `proj(d=4864)`。
-6. **L6c full `G_64` hierarchy**：固定 E6M2 scale，对每行最多 4 个高损 block
+6. **L6c full `G_64` hierarchy + L6d structured factor**：固定 E6M2 scale，对每行最多 4 个高损 block
    依次尝试合法 `lv2/lv3`，每次按完整 64×64 二次型增量更新并重编码，最终仍用
-   部署 `G_q` 行级 gate；v117 7 个 Linear role 均不降。
+   部署 `G_q` 行级 gate；L6d 用 4 个 `64×64` kernel 近似跨 block proposal；v118 7 个 Linear role 均不降。
 6. **L4a final deployed-Gram row gate（Linear 基座）**：在
    `rows > channels` 且 `channels <= 1024` 的 expansive FFN 上，同时生成 v107
    parent 与最终 `G_q=W_q^T W_q` 候选；用完整 `G_q` 逐行比较二次型，只写回不变差
@@ -69,28 +69,28 @@ L4a 精确 final-Gram 行级 gate 再提升到 panel `295.239309`、Linear mean
 
 ## 最新全层实测（当前精度 parent）
 
-报告文件：[`2026-08-31-v117-l6c-g64-hierarchy-qwen-full.md`](../logs/execution/2026-08-31-v117-l6c-g64-hierarchy-qwen-full.md)；
-原始 JSON：[`v117-l6c-g64-hierarchy-qwen-full.json`](../artifacts/real_model_suite/v117-l6c-g64-hierarchy-qwen-full.json)。
+报告文件：[`2026-08-31-v118-l6d-structured-factor-qwen-full.md`](../logs/execution/2026-08-31-v118-l6d-structured-factor-qwen-full.md)；
+原始 JSON：[`v118-l6d-structured-factor-qwen-full.json`](../artifacts/real_model_suite/v118-l6d-structured-factor-qwen-full.json)。
 v106 时间 parent 对照：[`v106-l2-cat-qwen-full.md`](../logs/execution/2026-08-30-v106-l2-cat-qwen-full.md)。
 上一 parent 的对照报告：[`b2-pawv-diagonly-qwen-full.md`](../logs/evaluations/b2-pawv-diagonly-qwen-full.md)。
 
 固定输入为 Qwen2.5-0.5B（24 层、hidden 896、14 Q heads、2 KV heads、head dim 64），
 calibration 使用 train 的 2 个窗口，test 使用 validation 的 4 个不重叠窗口。
 
-| 指标 | 当前 v117 | v116 | 相对 v116 |
+| 指标 | 当前 v118 | v117 | 相对 v117 |
 |---|---:|---:|---:|
-| Linear native mean | **0.509512** | 0.509305 | **+0.000207** |
+| Linear native mean | **0.509601** | 0.509512 | **+0.000090** |
 | Attention native mean | 0.842039 | 0.842039 | 0 |
-| Qwen panel Linear | **127.377932** | 127.326147 | **+0.051784** |
+| Qwen panel Linear | **127.400314** | 127.377932 | **+0.022382** |
 | Qwen panel Attention | 168.407898 | 168.407898 | 0 |
-| Qwen panel total | **295.785829** | 295.734045 | **+0.051784** |
-| official-flow native total | **423.227671** | 423.088475 | **+0.139196** |
-| six-API time | 2019.475204 s | 739.424609 s | +1280.050595 s |
-| wall time | 2051.884441 s | 771.865345 s | exploratory timing |
+| Qwen panel total | **295.808212** | 295.785829 | **+0.022382** |
+| official-flow native total | **423.287835** | 423.227671 | **+0.060163** |
+| six-API time | 2249.746436 s | 2019.475204 s | +230.271231 s |
+| wall time | 2282.625213 s | 2051.884441 s | exploratory timing |
 
 五模型 C0 确认报告：[`2026-08-30-c0-b2-pawv-five-model.md`](../logs/evaluations/2026-08-30-c0-b2-pawv-five-model.md)。
-v117 Qwen panel `295.785829`、Linear `0.509512`、Attention `0.842039`、
-API `2019.475s`；该精度 parent 暂不满足最终 420s 冻结条件。gpt2-small/OPT/Pythia 的旧 parent API 分别为
+v118 Qwen panel `295.808212`、Linear `0.509601`、Attention `0.842039`、
+API `2249.746s`；该精度 parent 暂不满足最终 420s 冻结条件。gpt2-small/OPT/Pythia 的旧 parent API 分别为
 `196.975s/192.776s/193.423s`，gpt2-medium 为 `492.641s`（仅软 guardrail 时间
 超限，未影响 Qwen 主门禁）。五模型 aggregate panel `263.604453` 仅作泛化诊断。
 
@@ -127,9 +127,9 @@ CUDA 会在外部代码的 CPU state / CUDA activation 混用处触发 device mi
 
 | 比较口径 | 当前根 | 外部最高基准 | 当前根领先 |
 |---|---:|---:|---:|
-| Qwen native total | **423.227671** | 369.527269 | **+53.700402（+14.53%）** |
-| Qwen shaped panel | **295.785829** | 250.327102 | **+45.458727（+18.16%）** |
-| panel Linear | **127.377932** | 112.939429 | **+14.438503** |
+| Qwen native total | **423.287835** | 369.527269 | **+53.760566（+14.55%）** |
+| Qwen shaped panel | **295.808212** | 250.327102 | **+45.481110（+18.17%）** |
+| panel Linear | **127.400314** | 112.939429 | **+14.460885** |
 | panel Attention | 168.407898 | 137.387673 | **+31.020225** |
 
 因此，后续本地算法 A/B 应以外部 Qwen `250.327102` 作为第一比较线，
@@ -146,11 +146,11 @@ CUDA 会在外部代码的 CPU state / CUDA activation 混用处触发 device mi
 
 `panel_score` 不是把 768 个 case 复制成 450 个，而是保留组件均值后投影：
 
-$$P_L=250\times0.5095117268=127.377932,$$
+$$P_L=250\times0.5096012555=127.400314,$$
 
 $$P_A=200\times0.8420394885=168.407898,$$
 
-$$P_{total}=P_L+P_A=295.785829.$$
+$$P_{total}=P_L+P_A=295.808212.$$
 
 因此 `official_flow_total` 与 `panel_score.total` 同时出现是设计结果，不是计算冲突。
 
@@ -164,7 +164,7 @@ $$P_{total}=P_L+P_A=295.785829.$$
 | o | 0.498290 |
 | fc_gate | **0.395579** |
 | fc_up | 0.433860 |
-| proj | 0.421574 |
+| proj | 0.422201 |
 
 `v` 与 `fc_gate` 是当前最弱角色；L2 CAT balance 已改善 fc_gate，但从总体收益看，扩张 FFN 和输出投影仍受跨
 64-block 相关性、校准 fold 数量和运行时约束共同限制，不能仅靠增加 offset 或 sweep
@@ -201,7 +201,8 @@ $$P_{total}=P_L+P_A=295.785829.$$
 | **L5a block-local permutation（v111 前一 parent）** | **295.482473** | **0.508298** | **726.09s** | **已被 v115 超越** |
 | **L6a rank-16 global LRH（v115 前一 parent）** | **295.680651** | **0.509091** | **716.48s** | **精度采纳；已被 L6b 超越** |
 | **L6b wide rank-4 cross-block factor（v116 前一 parent）** | **295.734045** | **0.509305** | **739.42s** | **精度采纳；已被 L6c 超越** |
-| **L6c full `G_64` hierarchy coordinate sweep（v117 当前 parent）** | **295.785829** | **0.509512** | **2019.48s** | **精度采纳；下一步 L6d 结构化 factor** |
+| **L6c full `G_64` hierarchy coordinate sweep（v117 前一 parent）** | **295.785829** | **0.509512** | **2019.48s** | **精度采纳；已被 v118 超越** |
+| **L6d structured block-circulant factor（v118 当前 parent）** | **295.808212** | **0.509601** | **2249.75s** | **精度采纳；下一步 C1a 向量化** |
 | L3 1-block 对照（v107b1） | 294.483738 | 0.504303 | 446.29s | 低于 v107，不作为 parent |
 | stable parent | 293.755106 | 0.501558 | 382.15s | baseline |
 
@@ -235,14 +236,14 @@ L3 证据：`2026-08-30-l3-global-lrh-stratified.md`、
 
 ## 距离 Linear 0.9 与 36,000
 
-当前精度 parent v117 的 Linear native mean 为 `0.5095117268`。若以本地 panel 的 mean 作为诊断目标：
+当前精度 parent v118 的 Linear native mean 为 `0.5096012555`。若以本地 panel 的 mean 作为诊断目标：
 
-$$\Delta g_L=0.9-0.5095117268=0.3904882732,$$
+$$\Delta g_L=0.9-0.5096012555=0.3903987445,$$
 
-$$\frac{\Delta g_L}{1-g_L}=\frac{0.3904882732}{0.4904882732}=79.61\%.$$
+$$\frac{\Delta g_L}{1-g_L}=\frac{0.3903987445}{0.4903987445}=79.6084\%.$$
 
-也就是还要消除当前 Linear 剩余归一化误差的约 **79.61%**，对应 250-case panel
-仍差 **97.622068** 分。这个数轴不是官方排行榜的绝对分数。
+也就是还要消除当前 Linear 剩余归一化误差的约 **79.6084%**，对应 250-case panel
+仍差 **97.599686** 分。这个数轴不是官方排行榜的绝对分数。
 
 官方历史合规锚点为 C66：`22557 / 217.2s`；外部参考 `youxilee/hif4` 为用户提供的
 `24153 / 239s`。从 C66 到 `36000` 的官方分差是 **13443**，但当前本地 panel
@@ -250,7 +251,7 @@ $$\frac{\Delta g_L}{1-g_L}=\frac{0.3904882732}{0.4904882732}=79.61\%.$$
 
 ## 当前唯一后续计划
 
-现阶段只执行 [`2026-08-31-hif4-active-l6-compressed-crossblock-plan.md`](superpowers/plans/2026-08-31-hif4-active-l6-compressed-crossblock-plan.md)。顺序为：
+现阶段只执行 [`2026-08-31-hif4-active-c1-structured-linear-plan.md`](superpowers/plans/2026-08-31-hif4-active-c1-structured-linear-plan.md)。顺序为：
 
 1. L0：已完成五个分层层位、全 role 的 Linear 单侧误差、合法 oracle 和放宽上限诊断；
 2. L1：已完成原子写回完整 hierarchy 与正确二次型复验；预筛拒绝并归档 v105；
@@ -262,9 +263,11 @@ $$\frac{\Delta g_L}{1-g_L}=\frac{0.3904882732}{0.4904882732}=79.61\%.$$
 8. L5b/v112、L5c/v113、L5d/v114：均已完成 screen 并归档拒绝；L5e 已完成当前表示/接口可达性 checkpoint；
 9. L6a：已完成 rank-16 global LRH，v115 成为前一 precision parent；
 10. L6b：已完成宽输入 rank-4 factor，v116 成为前一 precision parent；
-11. L6c：已完成 full `G_64` hierarchy coordinate sweep，v117 成为当前 precision parent；
-12. L6d–L6e 继续尝试结构化 factor 和 checkpoint；
-13. 所有精度方向完成后再做 `<420s` 压缩。PAWV rank 属于独立 Attention 队列，不插入 Linear 主线。
+11. L6c：已完成 full `G_64` hierarchy coordinate sweep，v117 成为前一 precision parent；
+12. L6d：已完成 structured block-circulant factor，v118 成为当前 precision parent；
+13. L6e：已完成 cross-block recall/`J_64`/state checkpoint，L6 计划已归档；
+14. C1a：执行 proposal 向量化等价实现；随后按 active 计划执行 C1b、C1c、C2、C3；
+15. 所有精度方向完成后再做 `<420s` 压缩。PAWV rank 属于独立 Attention 队列，不插入 Linear 主线。
 
 L4b 的正式产物为 [`v110-l4b-gals-final-gated-qwen-full.json`](../artifacts/real_model_suite/v110-l4b-gals-final-gated-qwen-full.json)
 和 [`v110 L4b archive`](../solutions/20260831_v110_l4b-gals-final-gated_score295.242780_time702s/)。
@@ -316,7 +319,24 @@ L6c 的正式产物为 [`v117-l6c-g64-hierarchy-qwen-full.json`](../artifacts/re
 `+0.0002039570`，7 个 role 均不降；full-layer Linear mean `0.5095117268`、
 panel `295.7858293956`，较 v116 分别 `+0.0002071374`、`+0.0517843527`，
 Attention `0.8420394885` 不变。API `2019.475204s`、wall `2051.884441s`，仅作
-精度探索记录；v117 成为当前 precision parent，下一步执行 L6d 结构化跨 block factor。
+精度探索记录；v117 成为前一 precision parent，随后执行 L6d。
+
+L6d 的正式产物为 [`v118-l6d-structured-factor-qwen-full.json`](../artifacts/real_model_suite/v118-l6d-structured-factor-qwen-full.json)
+和 [`v118 L6d archive`](../solutions/20260831_v118_l6d-structured-factor-accepted_score295.808212_time2249s/)。
+候选只对宽输入 `1024<d<=8192` 生成最多 4 个 `64×64` block-circulant kernel，
+用距离系数产生 proposal，再由完整部署 `G_q` 逐行 exact gate；结构化合成最大重构误差
+`2.68e-7`，36 项定向回归与合规检查通过。screen Linear mean `0.53337532`，full-layer
+Linear mean `0.5096012555`、panel `295.8082115559`，较 v117 分别 `+0.0000895286`、
+`+0.0223821603`；唯一新增正向 role 为 `proj`（`0.4215743858→0.4222010863`），
+Attention `0.8420394885` 不变。API `2249.746436s`、wall `2282.625213s`，只作
+精度探索记录，下一步执行 C1a 向量化。
+
+L6e checkpoint 见 [`2026-08-31-l6e-crossblock-checkpoint.md`](../logs/execution/2026-08-31-l6e-crossblock-checkpoint.md)：
+在真实 layer-23 `proj(d=4864)` 的 4 个 test window 中，结构化 proposal 共 2048 个
+block proposals，完整 `G_q` gate 接受 71 个（recall `3.4668%`），`J_64` 相对下降
+`0.0991%`；结构化增量 state 为 `66,752` bytes，而该 shape 总 activation state 为
+`96,043,200` bytes。该 checkpoint 支持继续做语义等价向量化，但不把压缩 proposal
+误称为对 dense deployed Gram 的高 recall。
 
 L5b–L5d 的拒绝证据分别为 [`v112 archive`](../solutions/20260831_v112_l5b-sparse-schur_rejected-screen_score0.530855_time140s/)、
 [`v113 archive`](../solutions/20260831_v113_l5c-meta-router_rejected-screen_score0.531887_time169s/)
@@ -360,21 +380,21 @@ L0 的正式产物为 [`l0-linear-ceiling-qwen.json`](../artifacts/oracle_dashbo
 的 `both_player=0.52301943`、`weight_perfect=0.70417026`、
 `activation_perfect=0.82035698`；整体 activation-side headroom (`0.29733755`)
 大于 weight-side (`0.18115083`)，但 q/k 权重侧更突出，FFN/proj 激活侧更突出。
-这只调整 L1–L4 的优先级，不产生部署 parent，也不替代 v117 当前 24 层精度 parent `0.5095117268`。
+这只调整 L1–L4 的优先级，不产生部署 parent，也不替代 v118 当前 24 层精度 parent `0.5096012555`。
 
 旧版 active 计划已经归档；官方提交改为接口恢复时触发的外部事件，不阻塞当前本地执行。
 
 ## 时间与合规
 
-- 六个 API 累计：v117 calibration+dynamic `2019.475204 s`；本地 wall
-  `2051.884441 s`。探索阶段只记录时间；C1 再以 `<420s` 作为提交门禁。
+- 六个 API 累计：v118 calibration+dynamic `2249.746436 s`；本地 wall
+  `2282.625213 s`。探索阶段只记录时间；C3 再以 `<420s` 作为提交门禁。
 - 调用次数：weight calibration 168；attention calibration 24；dynamic activation
   672；Q/K/V 各 96。
 - `activation_state` 只包含 BOAT 逆缩放、静态 Gram、Attention GQRB 正交 mixing、
   PAWV 的静态 token-row diagonal 与旋转整数配置/符号；输出监督只用于离线
   Attention 候选和权重侧选择，不进入在线 `Q(A)`。
 - 当前源码 SHA256（规范 LF 内容）：
-  `8746b8026495cb56a3dc1d622e463f89226b23e3206e2202bd468f45530d952c`。
+  `ec44cf79abcd5170c1667ef7e50fb0a494753c3a96c1b6fcceca9f5030630251`。
 - 发布前检查：L3/L4a 合成/合规/精度门控测试 `19 passed`，另有既有 Linear 合规
   `15 passed`；v109 full-layer `valid_submission=true`，但 `under_official_runtime_limit=false`。
 

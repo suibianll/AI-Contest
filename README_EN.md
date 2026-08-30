@@ -28,19 +28,20 @@ Chinese version: [README.md](README.md)
   path used output information for activation-side selection. That
   `A@W -> Q(A)` use remains non-compliant, so it is not a compliant parent for
   new work.
-- The root `solution.py` is the v117 L6c full `G_64` hierarchy coordinate precision
-  parent on top of v116 L6b wide rank-4, v115 L6a rank-16, v111 block-local
-  permutation, v110 final-Gram GALS, and the B1/B2 path. On the full 24-layer
-  Qwen2.5-0.5B cached run, its native total is `423.227671`, Qwen shaped panel is
-  `295.785829`, Linear mean is `0.5095117268`, and formal API time is `2019.475204s`
+- The root `solution.py` is the v118 L6d structured block-circulant precision parent
+  on top of v117 full `G_64` hierarchy, v116 L6b wide rank-4, v115 L6a rank-16,
+  v111 block-local permutation, v110 final-Gram GALS, and the B1/B2 path. On the
+  full 24-layer Qwen2.5-0.5B cached run, its native total is `423.287835`, Qwen
+  shaped panel is `295.808212`, Linear mean is `0.5096012555`, and formal API time is
+  `2249.746436s`
   (accuracy-first; C1 must later compress below
   420s). See the [current status
   report](docs/current-solution-status.md), the [algorithm inventory](docs/algorithm-inventory-and-directions.md),
   the [archive implementation audit](docs/archive-implementation-audit.md),
   and [`solutions/README.md`](solutions/README.md). Future work follows the
-  [single active optimization plan](docs/superpowers/plans/2026-08-31-hif4-active-l6-compressed-crossblock-plan.md).
+  [single active optimization plan](docs/superpowers/plans/2026-08-31-hif4-active-c1-structured-linear-plan.md).
 - Current source SHA256:
-  `8746B8026495CB56A3DC1D622E463F89226B23E3206E2202BD468F45530D952C` (normalized LF).
+  `EC44CF79ABCD5170C1667EF7E50FB0A494753C3A96C1B6FCFCECA9F5030630251` (normalized LF).
 - The active local evaluator is Qwen-first: it projects frozen-corpus Linear
   and Attention means onto a fixed 250/200 panel, while other models remain
   soft guardrails. The raw `official_flow_total` is retained for compatibility
@@ -73,7 +74,7 @@ date whenever its numbers change; do not leave an old snapshot label in place.
 
 There may be exactly one active optimization plan in
 [`docs/superpowers/plans/`](docs/superpowers/plans/). The current file is
-[`2026-08-31-hif4-active-l6-compressed-crossblock-plan.md`](docs/superpowers/plans/2026-08-31-hif4-active-l6-compressed-crossblock-plan.md).
+[`2026-08-31-hif4-active-c1-structured-linear-plan.md`](docs/superpowers/plans/2026-08-31-hif4-active-c1-structured-linear-plan.md).
 When executing an optimization, consult **only this active plan**, the current root,
 latest evaluation data, and the official rules. Files under
 `docs/superpowers/archive/plans/` are read-only history and are never next-step instructions.
@@ -112,8 +113,8 @@ official anchor ordering:
 Both orderings are `C39 = C41b < C47b < C66`; Qwen's panel Spearman is
 `1.0000`, while the five-model raw sum is `0.9487`. This validates relative
 direction only, not a linear conversion to official scores. The external
-`youxilee/hif4` Qwen panel is `250.327102`; the current root v117 is `295.785829`,
-  which is `45.406943` (`18.14%`) higher. Its Qwen native `369.527269` is the
+`youxilee/hif4` Qwen panel is `250.327102`; the current root v118 is `295.808212`,
+  which is `45.481110` (`18.17%`) higher. Its Qwen native `369.527269` is the
 secondary diagnostic line; the five-model sum is never a ranking benchmark.
 
 ## Revised official anchors (2026-08-29)
