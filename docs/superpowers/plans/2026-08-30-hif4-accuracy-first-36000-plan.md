@@ -1026,7 +1026,7 @@ next falsifiable experiment
 E0-G 已完成并已归档；结论是全局 GALS 停止，仅保留 `v` 高损 block 作为诊断插件。
 E1 已按计划实现并完成一层/全层门禁，结果已归档到
 `logs/execution/2026-08-30-e1-progressive-hsdq.md`。它在一层样本上提升
-`+2.591832` panel，但在 24 层 Qwen 上回退 `−2.831200` panel，Linear 平均误差由
+`+2.591832` panel，但在 24 层 Qwen 上回退 `−2.831200` panel，Linear mean/gain 由
 `0.501558` 降为 `0.490233`，且运行时间从 `382.15s` 增至 `693.21s`，超过 420s
 门禁；因此 E1 明确拒绝，主代码恢复到 parent SHA256
 `5D1128CC79FEF58154DA2F600EC4B472FF95030E1F1E61B96593D06FD9AAC94F`。

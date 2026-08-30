@@ -11,6 +11,10 @@
 的 Qwen shaped panel 为 **293.755106**，正式 API 累计 **382.153528 s**，低于
 `420 s` 限制；该数值用于本地 A/B 排序，不能线性换算为官方排行榜分数。
 
+2026-08-30 已按执行计划完成 E1→A5 的连续实验；所有候选均已归档并回退，
+根目录没有留下未经验证的算法。当前最高可信版本仍是上述 stable parent，下一步
+应先提交官方评测取得兑换率，再决定是否重启新的 Linear 目标。
+
 ## 当前实现
 
 `solution.py` 只保留六个正式 API 和必要的 codec/优化原语：
@@ -127,6 +131,27 @@ $$P_{total}=P_L+P_A=293.755106.$$
 `v` 与 `fc_gate` 是当前最弱角色；但从总体收益看，扩张 FFN 和输出投影仍受跨
 64-block 相关性、校准 fold 数量和运行时约束共同限制，不能仅靠增加 offset 或 sweep
 解决。
+
+## 2026-08-30 执行计划结果
+
+以下均为同一 Qwen2.5-0.5B、24 层、`cache=read` 的本地 shaped panel；parent
+永远保留，候选失败后已恢复。详细 fold 与角色数据见各 execution log。
+
+| 实验 | panel | Linear mean | API time | 裁决 |
+|---|---:|---:|---:|---|
+| E1 progressive full-hierarchy | 290.923906 | 0.490233 | 693.21s | 拒绝，跨层回退且超时 |
+| A2 expansive sparse-row | 292.831952 | 0.497865 | 385.48s | 拒绝 |
+| A3 rowwise block-leverage | 293.250467 | 0.499539 | 384.83s | 拒绝 |
+| A4 blockwise BOAT-2 | 292.978009 | 0.498449 | 368.23s | 拒绝 |
+| A5 joint-fold offline A@W | 284.595177 | 0.464918 | 358.24s | 拒绝 |
+| stable parent（当前根） | **293.755106** | **0.501558** | **382.15s** | **active** |
+
+归档目录：`solutions/20260830_v087...` 至 `solutions/20260830_v091...`；
+执行日志：`logs/execution/2026-08-30-e1-progressive-hsdq.md`、
+`2026-08-30-a2-expansive-sparse-hsdq.md`、
+`2026-08-30-a3-rowwise-block-hsdq.md`、
+`2026-08-30-a4-blockwise-boat.md`、
+`2026-08-30-a5-joint-aw.md`。
 
 ## 距离 Linear 0.9 与 36,000
 
