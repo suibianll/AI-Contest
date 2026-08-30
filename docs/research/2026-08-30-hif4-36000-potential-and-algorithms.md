@@ -1820,3 +1820,209 @@ e_L=1-g_L=0.4984424
 本地 panel 不是官方绝对分数回归，不能把 `293.755` 线性换算成 `36,000`。
 可以可靠陈述的是：相对本地 C86 的代理质量提升约 `9.89%`，但 Linear 0.9
 仍有巨大结构性差距；在没有新官方提交点前，不能声称已经达到或接近 36,000。
+
+## 27. 评测分数的逐项来源（对应 evaluator/real_model_suite.py）
+
+### 27.1 输入、参考值和三条计算路径
+
+最终运行使用固定缓存：Qwen2.5-0.5B 的 24 层、`hidden=896`、
+`q_heads=14`、`kv_heads=2`、`head_dim=64`，`seq=128`，2 个 train
+calibration window，4 个 validation test window，`mode=amax6`。缓存只保存模型
+前向快照；候选没有接触 validation 样本的真实输出。
+
+每个 Linear test case 的矩阵都来自同一个 NVFP4 参考输入：
+
+```math
+W_0=\operatorname{dequantizeNVFP4}(W_q,W_s),
+\qquad
+A_0=\operatorname{dequantizeNVFP4}(A_q,A_s)
+```
+
+评测器建立三条路径：
+
+```math
+Y_{ref}=A_0W_0^T
+```
+
+```math
+Y_{std}=Q_{HiF4}^{std}(A_0)\;Q_{HiF4}^{std}(W_0)^T
+```
+
+```math
+Y_{player}=Q_{HiF4}^{candidate}(A_0;state)\;
+Q_{HiF4}^{candidate}(W_0;calibration)^T
+```
+
+这里 `std` 永远调用 evaluator 内置的冻结 reference codec，不能调用候选的
+`_dense_to_hif4`。候选只返回合法 HiF4 参数和 CPU state，矩阵乘法全部在
+评测器中进行。
+
+Attention 同理，但三路分别对 Q/K/V 编码，再计算非 causal GQA 注意力：
+
+```math
+O(Q,K,V)=\operatorname{softmax}\left(
+\frac{QK^T}{\sqrt{64}}\right)V
+```
+
+```math
+O_{ref}=O(Q_0,K_0,V_0),
+\quad
+O_{std}=O(Q_{std},K_{std},V_{std}),
+\quad
+O_{player}=O(Q_{player},K_{player},V_{player})
+```
+
+函数名虽然叫 `causal_attention`，本套件传入 `causal=False`，因此当前 Qwen
+panel 的 Attention 分数是 non-causal mask 配置；这不是候选代码可改变的选项。
+
+### 27.2 单 case 分数
+
+对每个 case，先计算全输出张量的均方误差：
+
+```math
+MSE_{STD}=\frac1N\|Y_{std}-Y_{ref}\|_F^2,
+\qquad
+MSE_{PLAYER}=\frac1N\|Y_{player}-Y_{ref}\|_F^2
+```
+
+case gain 为：
+
+```math
+s_i=\frac{MSE_{STD}-MSE_{PLAYER}}{MSE_{STD}}
+=1-\frac{MSE_{PLAYER}}{MSE_{STD}}
+```
+
+因此：
+
+- `s_i=1` 表示候选输出无误差；
+- `s_i=0` 表示候选与标准 HiF4 一样；
+- `s_i<0` 表示候选比标准 HiF4 更差；
+- 评测器不把单 case gain 截断到 `[0,1]`。
+
+实现中同时累计：
+
+```math
+S=\sum_i s_i,
+\qquad
+\bar{s}=\frac1n\sum_i s_i
+```
+
+以及用于诊断的全局误差比：
+
+```math
+g_{global}=\frac{\sum_i N_iMSE_{STD,i}
+-\sum_i N_iMSE_{PLAYER,i}}
+{\sum_i N_iMSE_{STD,i}}
+```
+
+当前主版本的全层原始结果是：
+
+| 组件 | case 数 | gain sum（official_flow） | gain mean | global gain |
+|---|---:|---:|---:|---:|
+| Linear | 672 | 337.046716 | 0.501558 | 0.436952 |
+| Attention | 96 | 80.815538 | 0.841829 | 0.857768 |
+| 合计 | 768 | **417.862253** | — | — |
+
+672 个 Linear case 的来源是 `24 层 × 7 个角色（q/k/v/o/fc_gate/fc_up/proj）
+× 4 个 test window`；96 个 Attention case 的来源是 `24 × 4`。所以
+`official_flow_total=417.862253` 只是 768 个本地 case gain 的求和，不能直接
+解释成排行榜的 36,000。
+
+### 27.3 Panel 分数的真实公式
+
+本地 Qwen 数据的 672/96 个 case 数与官方 panel 形状不同。默认
+`panel_profile=qwen-official` 固定使用：
+
+```math
+N_L^{panel}=250,
+\qquad
+N_A^{panel}=200
+```
+
+评测器先保留每个组件的 native mean，再投影到固定 case 数：
+
+```math
+P_L=250\times\bar{s}_L
+=250\times\frac{337.0467155985}{672}
+=125.3894031244
+```
+
+```math
+P_A=200\times\bar{s}_A
+=200\times\frac{80.8155375735}{96}
+=168.3657032781
+```
+
+```math
+P_{total}=P_L+P_A
+=125.3894031244+168.3657032781
+=\mathbf{293.7551064026}
+```
+
+这就是报告中的 `panel-total=293.755106`。它不是把 768 个 case 重复到 450
+个，也不是按 case 数加权；它是“组件 native mean × 固定 panel case 数”。
+`global_gain`、Linear role 的宏平均和 `official_flow_total` 都不参与当前
+`qwen-official` 主排序。
+
+如果显式选择 `panel_profile=native`，则不会做上述投影，结果仅为：
+
+```math
+P_{native}=S_L+S_A=417.862253
+```
+
+因此同一次运行同时出现 `official_flow_total=417.862253` 和
+`panel-total=293.755106` 是设计如此，并非计算矛盾。
+
+### 27.4 时间和有效性判定
+
+评测器只把六个正式 API 的累计时间作为官方预算：
+
+```math
+t_{API}=t_{calibration}+t_{dynamic}
+=216.530669+165.622859
+=\mathbf{382.153528\;s}
+```
+
+本次 API 调用计数为：
+
+| API | 次数 |
+|---|---:|
+| `hif4_calibration_and_quantize_weight` | 168 |
+| `hif4_calibration_attention` | 24 |
+| `hif4_dynamic_quantize_activation` | 672 |
+| `hif4_dynamic_quantize_q/k/v` | 各 96 |
+
+官方限制判断是严格的：
+
+```math
+t_{API}<420\text{s}
+\Longrightarrow 382.153528<420\quad\text{通过}
+```
+
+本次 `wall_seconds=414.026` 包含调度、缓存和报告开销；它不用于
+`under_official_runtime_limit` 字段。`under_300_seconds=False` 只是旧兼容诊断，
+不会使当前候选失效。
+
+### 27.5 为什么不能从 293.755 推出 36,000
+
+当前 panel 的理论满分是 `250+200=450`，而官方排行榜目标 36,000 使用另一套
+官方聚合、样例分布和可能的缩放/排名规则。评测器明确不做绝对分数回归；
+`official_score` 和 `official_time` 在本地候选中为空，外部 `youxilee/hif4`
+的 `24153/239s` 只作为不可导入的参考锚点。因此当前能严谨报告的是：
+
+```math
+\text{相对 C86 的本地 panel 提升}
+=\frac{293.755106-267.307909}{267.307909}
+=9.89\%
+```
+
+不能严谨报告“293.755 对应官方多少分”。Linear 目标也必须按 panel 自己计算：
+
+```math
+g_L=\frac{P_L}{250}=0.5015576125,
+\qquad
+0.9-g_L=0.3984423875
+```
+
+所以若只看当前本地 Linear panel，达到 0.9 还差 `99.6106` panel points；
+这与官方 36,000 不是同一个数轴。
