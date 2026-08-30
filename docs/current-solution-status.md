@@ -202,13 +202,20 @@ $$\frac{\Delta g_L}{1-g_L}=\frac{0.3984423875}{0.4984423875}=79.94\%.$$
 
 现阶段只执行 [`2026-08-30-hif4-active-optimization-plan.md`](superpowers/plans/2026-08-30-hif4-active-optimization-plan.md)。顺序为：
 
-1. L0：五个分层层位、全 role 的 Linear 单侧误差、合法 oracle 和放宽上限诊断；
-2. L1：原子写回完整 hierarchy 并用正确二次型复验 v092 Weight-LRH；
+1. L0：已完成五个分层层位、全 role 的 Linear 单侧误差、合法 oracle 和放宽上限诊断；
+2. L1：原子写回完整 hierarchy 并用正确二次型复验 v092 Weight-LRH（当前下一步）；
 3. L2：只按合法 expansive shape 路由的低自由度 FFN CAT/BOAT-2；
 4. L3：用部署 Gram 二次型修复 v095 Activation-LRH gate；
 5. L4：把 final-weight Gram 与 GALS 拆成两个有 oracle 依据的小预算实验；
 6. L5：若前述方向没有结构增益，进入外部逐组件审计和联合坐标—层级离散新路线；
 7. 出现新精度 parent 后再做 `<420s` 压缩。PAWV rank 属于独立 Attention 队列，不插入 Linear 主线。
+
+L0 的正式产物为 [`l0-linear-ceiling-qwen.json`](../artifacts/oracle_dashboard/l0-linear-ceiling-qwen.json)
+和 [`2026-08-30-l0-linear-ceiling.md`](../logs/execution/2026-08-30-l0-linear-ceiling.md)。五层×七 role
+的 `both_player=0.52301943`、`weight_perfect=0.70417026`、
+`activation_perfect=0.82035698`；整体 activation-side headroom (`0.29733755`)
+大于 weight-side (`0.18115083`)，但 q/k 权重侧更突出，FFN/proj 激活侧更突出。
+这只调整 L1–L4 的优先级，不产生部署 parent，也不替代 24 层基线 `0.5015576125`。
 
 旧版 active 计划已经归档；官方提交改为接口恢复时触发的外部事件，不阻塞当前本地执行。
 

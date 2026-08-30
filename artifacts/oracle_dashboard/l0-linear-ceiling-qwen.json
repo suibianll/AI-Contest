@@ -1,0 +1,3309 @@
+{
+  "schema": 1,
+  "diagnostic": "L0-linear-ceiling-dashboard",
+  "compliance": {
+    "deployment_path_modified": false,
+    "candidate_state_written": false,
+    "test_output_used_for_selection": false,
+    "official_score_used": false,
+    "oracle_is_diagnostic_only": true
+  },
+  "cache": "D:\\工作内容\\AI竞赛\\artifacts\\real_model_suite\\cache\\qwen2.5-0.5b__seq128__calib2__test4__layersall__schema1.pt",
+  "solution": "D:\\工作内容\\AI竞赛\\solution.py",
+  "mode": "amax6",
+  "layers": [
+    0,
+    5,
+    11,
+    17,
+    23
+  ],
+  "roles": [
+    "q",
+    "k",
+    "v",
+    "o",
+    "fc_gate",
+    "fc_up",
+    "proj"
+  ],
+  "oracle_rows": 32,
+  "oracle_scale_codes": 255,
+  "sha256": {
+    "cache": "ff40b5e0ce9568faae6582004f23f4f9b1f3f28a913671b9cd1fd40397f65aea",
+    "solution_lf": "617482cee04ff9514a8d41226b651336e4b8b86692673308e835de1091693eba",
+    "dashboard_script_lf": "c5e20e8f0ae144a9e7593a923123ca64c5ba27c6a18f55c2f3b51f4aef4d63ad"
+  },
+  "cache_metadata": {
+    "model": "qwen2.5-0.5b",
+    "layers": 24,
+    "hidden_size": 896,
+    "calibration_samples": 2,
+    "test_samples": 4
+  },
+  "definition": {
+    "gain": "(MSE_STD-MSE_PLAYER)/MSE_STD",
+    "weight_perfect": "Q(A) with transformed dense W",
+    "activation_perfect": "transformed dense A with Q(W)",
+    "both_perfect": "transformed dense A and W",
+    "weight_headroom": "gain(weight_perfect)-gain(both_player)",
+    "activation_headroom": "gain(activation_perfect)-gain(both_player)",
+    "oracle": "sampled all-255 E6M2 scale codes with legal lv2/lv3 hierarchy"
+  },
+  "records": [
+    {
+      "layer": 0,
+      "role": "q",
+      "weight_shape": [
+        896,
+        896
+      ],
+      "state": {
+        "block_smooth_size": 4,
+        "block_smooth_seed": 0,
+        "balance_min": 0.658768355846405,
+        "balance_max": 3.3302159309387207,
+        "balance_condition": 5.055215358734131
+      },
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.8232992340799529,
+          "weight_perfect": 0.9548896686931829,
+          "activation_perfect": 0.8705175790740309,
+          "both_perfect": 0.9999999999927673
+        },
+        "weight_side_headroom": 0.13159043461323006,
+        "activation_side_headroom": 0.047218344994078065,
+        "relaxed_both_perfect_headroom": 0.17670076591281447,
+        "standard_mse_mean": 0.00204511359333992,
+        "frame_reference_mse_mean": 1.4762743478908516e-14,
+        "classification": "weight-dominant"
+      },
+      "oracle": {
+        "weight_plain": {
+          "shape": [
+            896,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.7505324482917786,
+          "oracle_loss": 0.7503629326820374,
+          "baseline_to_oracle_gap": 0.0002258604676280561,
+          "improved_blocks": 3,
+          "max_block_gap": 0.14303141832351685
+        },
+        "weight_gram": {
+          "shape": [
+            896,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 4.05911111831665,
+          "oracle_loss": 3.829263210296631,
+          "baseline_to_oracle_gap": 0.056625182538816404,
+          "improved_blocks": 141,
+          "max_block_gap": 0.6865288615226746
+        },
+        "activation_gram": {
+          "sample_count": 2,
+          "sample_rows": 64,
+          "sample_blocks": 896,
+          "improved_blocks": 280,
+          "baseline_loss": 5.470082998275757,
+          "oracle_loss": 5.031594753265381,
+          "baseline_to_oracle_gap": 0.07980677782383933,
+          "max_block_gap": 0.6209136545658112
+        }
+      }
+    },
+    {
+      "layer": 0,
+      "role": "k",
+      "weight_shape": [
+        128,
+        896
+      ],
+      "state": {
+        "block_smooth_size": 4,
+        "block_smooth_seed": 0,
+        "balance_min": 0.6173909306526184,
+        "balance_max": 3.6252968311309814,
+        "balance_condition": 5.871963024139404
+      },
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.8344470823473452,
+          "weight_perfect": 0.9671118239150902,
+          "activation_perfect": 0.8723912290295393,
+          "both_perfect": 0.999999999990625
+        },
+        "weight_side_headroom": 0.132664741567745,
+        "activation_side_headroom": 0.037944146682194035,
+        "relaxed_both_perfect_headroom": 0.16555291764327984,
+        "standard_mse_mean": 0.0019860461470671,
+        "frame_reference_mse_mean": 1.870732826866851e-14,
+        "classification": "weight-dominant"
+      },
+      "oracle": {
+        "weight_plain": {
+          "shape": [
+            128,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.818731427192688,
+          "oracle_loss": 0.8184698820114136,
+          "baseline_to_oracle_gap": 0.0003194517427665074,
+          "improved_blocks": 3,
+          "max_block_gap": 0.09448622167110443
+        },
+        "weight_gram": {
+          "shape": [
+            128,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.7636582851409912,
+          "oracle_loss": 0.7179871201515198,
+          "baseline_to_oracle_gap": 0.05980576113443115,
+          "improved_blocks": 136,
+          "max_block_gap": 0.5126966834068298
+        },
+        "activation_gram": {
+          "sample_count": 2,
+          "sample_rows": 64,
+          "sample_blocks": 896,
+          "improved_blocks": 269,
+          "baseline_loss": 0.8456447422504425,
+          "oracle_loss": 0.8023887574672699,
+          "baseline_to_oracle_gap": 0.051194678946632516,
+          "max_block_gap": 0.5128157287836075
+        }
+      }
+    },
+    {
+      "layer": 0,
+      "role": "v",
+      "weight_shape": [
+        128,
+        896
+      ],
+      "state": {
+        "block_smooth_size": 4,
+        "block_smooth_seed": 0,
+        "balance_min": 1.0,
+        "balance_max": 1.0,
+        "balance_condition": 1.0
+      },
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.7237331495151963,
+          "weight_perfect": 0.8233065488685285,
+          "activation_perfect": 0.9009631089257084,
+          "both_perfect": 1.0
+        },
+        "weight_side_headroom": 0.0995733993533322,
+        "activation_side_headroom": 0.17722995941051212,
+        "relaxed_both_perfect_headroom": 0.2762668504848037,
+        "standard_mse_mean": 2.2681942027702462e-05,
+        "frame_reference_mse_mean": 0.0,
+        "classification": "activation-dominant"
+      },
+      "oracle": {
+        "weight_plain": {
+          "shape": [
+            128,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.0018691420555114746,
+          "oracle_loss": 0.0018691420555114746,
+          "baseline_to_oracle_gap": 0.0,
+          "improved_blocks": 0,
+          "max_block_gap": 0.0
+        },
+        "weight_gram": {
+          "shape": [
+            128,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 3.23450040013995e-05,
+          "oracle_loss": 3.2243740861304104e-05,
+          "baseline_to_oracle_gap": 0.003130719665114785,
+          "improved_blocks": 2,
+          "max_block_gap": 0.10085336863994598
+        },
+        "activation_gram": {
+          "sample_count": 2,
+          "sample_rows": 64,
+          "sample_blocks": 896,
+          "improved_blocks": 41,
+          "baseline_loss": 0.02096994873136282,
+          "oracle_loss": 0.020928481593728065,
+          "baseline_to_oracle_gap": 0.001978144107007211,
+          "max_block_gap": 0.24656781554222107
+        }
+      }
+    },
+    {
+      "layer": 0,
+      "role": "o",
+      "weight_shape": [
+        896,
+        896
+      ],
+      "state": {
+        "block_smooth_size": 0,
+        "block_smooth_seed": -1,
+        "balance_min": 1.0,
+        "balance_max": 1.0,
+        "balance_condition": 1.0
+      },
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.6197208883315273,
+          "weight_perfect": 0.7632322530744897,
+          "activation_perfect": 0.8841156767874452,
+          "both_perfect": 1.0
+        },
+        "weight_side_headroom": 0.14351136474296244,
+        "activation_side_headroom": 0.2643947884559179,
+        "relaxed_both_perfect_headroom": 0.3802791116684727,
+        "standard_mse_mean": 8.639106710006672e-07,
+        "frame_reference_mse_mean": 0.0,
+        "classification": "activation-dominant"
+      },
+      "oracle": {
+        "weight_plain": {
+          "shape": [
+            896,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.0055294036865234375,
+          "oracle_loss": 0.0055294036865234375,
+          "baseline_to_oracle_gap": 0.0,
+          "improved_blocks": 0,
+          "max_block_gap": 0.0
+        },
+        "weight_gram": {
+          "shape": [
+            896,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.001955321989953518,
+          "oracle_loss": 0.0019516517641022801,
+          "baseline_to_oracle_gap": 0.0018770442260126286,
+          "improved_blocks": 2,
+          "max_block_gap": 0.07576870918273926
+        },
+        "activation_gram": {
+          "sample_count": 2,
+          "sample_rows": 64,
+          "sample_blocks": 896,
+          "improved_blocks": 25,
+          "baseline_loss": 0.007398063782602549,
+          "oracle_loss": 0.007377594942227006,
+          "baseline_to_oracle_gap": 0.002714549930929427,
+          "max_block_gap": 0.3017146810889244
+        }
+      }
+    },
+    {
+      "layer": 0,
+      "role": "fc_gate",
+      "weight_shape": [
+        4864,
+        896
+      ],
+      "state": {
+        "block_smooth_size": 0,
+        "block_smooth_seed": -1,
+        "balance_min": 1.0,
+        "balance_max": 1.0,
+        "balance_condition": 1.0
+      },
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.3394960797692166,
+          "weight_perfect": 0.5423333210149769,
+          "activation_perfect": 0.8033131363332615,
+          "both_perfect": 1.0
+        },
+        "weight_side_headroom": 0.2028372412457603,
+        "activation_side_headroom": 0.4638170565640449,
+        "relaxed_both_perfect_headroom": 0.6605039202307834,
+        "standard_mse_mean": 0.0033368412405252457,
+        "frame_reference_mse_mean": 0.0,
+        "classification": "activation-dominant"
+      },
+      "oracle": {
+        "weight_plain": {
+          "shape": [
+            4864,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.04014301300048828,
+          "oracle_loss": 0.04014301300048828,
+          "baseline_to_oracle_gap": 0.0,
+          "improved_blocks": 0,
+          "max_block_gap": 0.0
+        },
+        "weight_gram": {
+          "shape": [
+            4864,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.11131609976291656,
+          "oracle_loss": 0.11131609976291656,
+          "baseline_to_oracle_gap": 0.0,
+          "improved_blocks": 0,
+          "max_block_gap": 0.0
+        },
+        "activation_gram": {
+          "sample_count": 2,
+          "sample_rows": 64,
+          "sample_blocks": 896,
+          "improved_blocks": 31,
+          "baseline_loss": 267.724365234375,
+          "oracle_loss": 267.65867614746094,
+          "baseline_to_oracle_gap": 0.0002446132718175508,
+          "max_block_gap": 0.05209287628531456
+        }
+      }
+    },
+    {
+      "layer": 0,
+      "role": "fc_up",
+      "weight_shape": [
+        4864,
+        896
+      ],
+      "state": {
+        "block_smooth_size": 0,
+        "block_smooth_seed": -1,
+        "balance_min": 1.0,
+        "balance_max": 1.0,
+        "balance_condition": 1.0
+      },
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.4364961678603709,
+          "weight_perfect": 0.48617883091665215,
+          "activation_perfect": 0.9525936351428796,
+          "both_perfect": 1.0
+        },
+        "weight_side_headroom": 0.04968266305628127,
+        "activation_side_headroom": 0.5160974672825087,
+        "relaxed_both_perfect_headroom": 0.5635038321396291,
+        "standard_mse_mean": 0.0017300895997323096,
+        "frame_reference_mse_mean": 0.0,
+        "classification": "activation-dominant"
+      },
+      "oracle": {
+        "weight_plain": {
+          "shape": [
+            4864,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.0060176849365234375,
+          "oracle_loss": 0.0060176849365234375,
+          "baseline_to_oracle_gap": 0.0,
+          "improved_blocks": 0,
+          "max_block_gap": 0.0
+        },
+        "weight_gram": {
+          "shape": [
+            4864,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.010120566934347153,
+          "oracle_loss": 0.010120566934347153,
+          "baseline_to_oracle_gap": 0.0,
+          "improved_blocks": 0,
+          "max_block_gap": 0.0
+        },
+        "activation_gram": {
+          "sample_count": 2,
+          "sample_rows": 64,
+          "sample_blocks": 896,
+          "improved_blocks": 17,
+          "baseline_loss": 150.3047103881836,
+          "oracle_loss": 150.2939910888672,
+          "baseline_to_oracle_gap": 7.257911857587949e-05,
+          "max_block_gap": 0.013922097627073526
+        }
+      }
+    },
+    {
+      "layer": 0,
+      "role": "proj",
+      "weight_shape": [
+        896,
+        4864
+      ],
+      "state": {
+        "block_smooth_size": 0,
+        "block_smooth_seed": -1,
+        "balance_min": 1.0,
+        "balance_max": 1.0,
+        "balance_condition": 1.0
+      },
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.43034027233522654,
+          "weight_perfect": 0.5643411726087094,
+          "activation_perfect": 0.8703651989672893,
+          "both_perfect": 1.0
+        },
+        "weight_side_headroom": 0.13400090027348288,
+        "activation_side_headroom": 0.4400249266320627,
+        "relaxed_both_perfect_headroom": 0.5696597276647735,
+        "standard_mse_mean": 0.0002618588841869496,
+        "frame_reference_mse_mean": 0.0,
+        "classification": "activation-dominant"
+      },
+      "oracle": {
+        "weight_plain": {
+          "shape": [
+            896,
+            4864
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 2432,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.06321382522583008,
+          "oracle_loss": 0.06321382522583008,
+          "baseline_to_oracle_gap": 0.0,
+          "improved_blocks": 0,
+          "max_block_gap": 0.0
+        },
+        "weight_gram": {
+          "shape": [
+            896,
+            4864
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 2432,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.020200837403535843,
+          "oracle_loss": 0.020200837403535843,
+          "baseline_to_oracle_gap": 0.0,
+          "improved_blocks": 0,
+          "max_block_gap": 0.0
+        },
+        "activation_gram": {
+          "sample_count": 2,
+          "sample_rows": 64,
+          "sample_blocks": 4864,
+          "improved_blocks": 37,
+          "baseline_loss": 4.598163604736328,
+          "oracle_loss": 4.597991228103638,
+          "baseline_to_oracle_gap": 3.7275610664362046e-05,
+          "max_block_gap": 0.03220498841255903
+        }
+      }
+    },
+    {
+      "layer": 5,
+      "role": "q",
+      "weight_shape": [
+        896,
+        896
+      ],
+      "state": {
+        "block_smooth_size": 4,
+        "block_smooth_seed": 0,
+        "balance_min": 1.0,
+        "balance_max": 1.0,
+        "balance_condition": 1.0
+      },
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.42336561078954127,
+          "weight_perfect": 0.7549969280825688,
+          "activation_perfect": 0.6663732034980673,
+          "both_perfect": 1.0
+        },
+        "weight_side_headroom": 0.3316313172930275,
+        "activation_side_headroom": 0.243007592708526,
+        "relaxed_both_perfect_headroom": 0.5766343892104587,
+        "standard_mse_mean": 0.010219191899523139,
+        "frame_reference_mse_mean": 0.0,
+        "classification": "weight-dominant"
+      },
+      "oracle": {
+        "weight_plain": {
+          "shape": [
+            896,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.11890977621078491,
+          "oracle_loss": 0.118863046169281,
+          "baseline_to_oracle_gap": 0.00039298738079424555,
+          "improved_blocks": 2,
+          "max_block_gap": 0.1118881106376648
+        },
+        "weight_gram": {
+          "shape": [
+            896,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.05374063551425934,
+          "oracle_loss": 0.053637199103832245,
+          "baseline_to_oracle_gap": 0.0019247336663826403,
+          "improved_blocks": 13,
+          "max_block_gap": 0.22277721762657166
+        },
+        "activation_gram": {
+          "sample_count": 2,
+          "sample_rows": 64,
+          "sample_blocks": 896,
+          "improved_blocks": 38,
+          "baseline_loss": 73.76813125610352,
+          "oracle_loss": 73.69494247436523,
+          "baseline_to_oracle_gap": 0.0009926092424765618,
+          "max_block_gap": 0.1384095512330532
+        }
+      }
+    },
+    {
+      "layer": 5,
+      "role": "k",
+      "weight_shape": [
+        128,
+        896
+      ],
+      "state": {
+        "block_smooth_size": 4,
+        "block_smooth_seed": 0,
+        "balance_min": 0.593766987323761,
+        "balance_max": 2.8875999450683594,
+        "balance_condition": 4.863187313079834
+      },
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.6363779771290596,
+          "weight_perfect": 0.8694065195734018,
+          "activation_perfect": 0.7674286776810236,
+          "both_perfect": 0.9999999999935736
+        },
+        "weight_side_headroom": 0.23302854244434212,
+        "activation_side_headroom": 0.131050700551964,
+        "relaxed_both_perfect_headroom": 0.36362202286451395,
+        "standard_mse_mean": 0.014737096382305026,
+        "frame_reference_mse_mean": 9.45021682706871e-14,
+        "classification": "weight-dominant"
+      },
+      "oracle": {
+        "weight_plain": {
+          "shape": [
+            128,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.14821302890777588,
+          "oracle_loss": 0.14798516035079956,
+          "baseline_to_oracle_gap": 0.0015374394454761961,
+          "improved_blocks": 4,
+          "max_block_gap": 0.18533459305763245
+        },
+        "weight_gram": {
+          "shape": [
+            128,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.014376599341630936,
+          "oracle_loss": 0.014276922680437565,
+          "baseline_to_oracle_gap": 0.0069332572206232965,
+          "improved_blocks": 59,
+          "max_block_gap": 0.2711268663406372
+        },
+        "activation_gram": {
+          "sample_count": 2,
+          "sample_rows": 64,
+          "sample_blocks": 896,
+          "improved_blocks": 116,
+          "baseline_loss": 11.524157524108887,
+          "oracle_loss": 11.425622463226318,
+          "baseline_to_oracle_gap": 0.00853690460845393,
+          "max_block_gap": 0.4323347359895706
+        }
+      }
+    },
+    {
+      "layer": 5,
+      "role": "v",
+      "weight_shape": [
+        128,
+        896
+      ],
+      "state": {
+        "block_smooth_size": 0,
+        "block_smooth_seed": -1,
+        "balance_min": 1.0,
+        "balance_max": 1.0,
+        "balance_condition": 1.0
+      },
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.5211392119682576,
+          "weight_perfect": 0.5942626326747467,
+          "activation_perfect": 0.9326085564449764,
+          "both_perfect": 1.0
+        },
+        "weight_side_headroom": 0.07312342070648903,
+        "activation_side_headroom": 0.4114693444767188,
+        "relaxed_both_perfect_headroom": 0.47886078803174237,
+        "standard_mse_mean": 0.0056549375876784325,
+        "frame_reference_mse_mean": 0.0,
+        "classification": "activation-dominant"
+      },
+      "oracle": {
+        "weight_plain": {
+          "shape": [
+            128,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.01092529296875,
+          "oracle_loss": 0.01092529296875,
+          "baseline_to_oracle_gap": 0.0,
+          "improved_blocks": 0,
+          "max_block_gap": 0.0
+        },
+        "weight_gram": {
+          "shape": [
+            128,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.0005799097707495093,
+          "oracle_loss": 0.0005799097707495093,
+          "baseline_to_oracle_gap": 0.0,
+          "improved_blocks": 0,
+          "max_block_gap": 0.0
+        },
+        "activation_gram": {
+          "sample_count": 2,
+          "sample_rows": 64,
+          "sample_blocks": 896,
+          "improved_blocks": 38,
+          "baseline_loss": 10.795244693756104,
+          "oracle_loss": 10.783410549163818,
+          "baseline_to_oracle_gap": 0.0010973040861318969,
+          "max_block_gap": 0.1087697483599186
+        }
+      }
+    },
+    {
+      "layer": 5,
+      "role": "o",
+      "weight_shape": [
+        896,
+        896
+      ],
+      "state": {
+        "block_smooth_size": 0,
+        "block_smooth_seed": -1,
+        "balance_min": 1.0,
+        "balance_max": 1.0,
+        "balance_condition": 1.0
+      },
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.5036452629754431,
+          "weight_perfect": 0.5889312084172501,
+          "activation_perfect": 0.9102429883194201,
+          "both_perfect": 1.0
+        },
+        "weight_side_headroom": 0.08528594544180701,
+        "activation_side_headroom": 0.406597725343977,
+        "relaxed_both_perfect_headroom": 0.4963547370245569,
+        "standard_mse_mean": 0.0002130084358213935,
+        "frame_reference_mse_mean": 0.0,
+        "classification": "activation-dominant"
+      },
+      "oracle": {
+        "weight_plain": {
+          "shape": [
+            896,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.010732650756835938,
+          "oracle_loss": 0.010732650756835938,
+          "baseline_to_oracle_gap": 0.0,
+          "improved_blocks": 0,
+          "max_block_gap": 0.0
+        },
+        "weight_gram": {
+          "shape": [
+            896,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.0040293303318321705,
+          "oracle_loss": 0.0040293303318321705,
+          "baseline_to_oracle_gap": 0.0,
+          "improved_blocks": 0,
+          "max_block_gap": 0.0
+        },
+        "activation_gram": {
+          "sample_count": 2,
+          "sample_rows": 64,
+          "sample_blocks": 896,
+          "improved_blocks": 30,
+          "baseline_loss": 2.5362155437469482,
+          "oracle_loss": 2.5330379009246826,
+          "baseline_to_oracle_gap": 0.001259661744282822,
+          "max_block_gap": 0.05978412739932537
+        }
+      }
+    },
+    {
+      "layer": 5,
+      "role": "fc_gate",
+      "weight_shape": [
+        4864,
+        896
+      ],
+      "state": {
+        "block_smooth_size": 8,
+        "block_smooth_seed": 0,
+        "balance_min": 1.0,
+        "balance_max": 1.0,
+        "balance_condition": 1.0
+      },
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.414188314793128,
+          "weight_perfect": 0.7533707458093921,
+          "activation_perfect": 0.6604085773864963,
+          "both_perfect": 0.9999999999997196
+        },
+        "weight_side_headroom": 0.3391824310162641,
+        "activation_side_headroom": 0.24622026259336827,
+        "relaxed_both_perfect_headroom": 0.5858116852065915,
+        "standard_mse_mean": 0.018145956564694643,
+        "frame_reference_mse_mean": 5.08520761510387e-15,
+        "classification": "weight-dominant"
+      },
+      "oracle": {
+        "weight_plain": {
+          "shape": [
+            4864,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.10496784001588821,
+          "oracle_loss": 0.10490460693836212,
+          "baseline_to_oracle_gap": 0.0006024042937010174,
+          "improved_blocks": 9,
+          "max_block_gap": 0.09932690113782883
+        },
+        "weight_gram": {
+          "shape": [
+            4864,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.3087635934352875,
+          "oracle_loss": 0.30820432305336,
+          "baseline_to_oracle_gap": 0.0018113222990608362,
+          "improved_blocks": 23,
+          "max_block_gap": 0.23018641769886017
+        },
+        "activation_gram": {
+          "sample_count": 2,
+          "sample_rows": 64,
+          "sample_blocks": 896,
+          "improved_blocks": 34,
+          "baseline_loss": 716.2578735351562,
+          "oracle_loss": 711.6867065429688,
+          "baseline_to_oracle_gap": 0.006381920127897877,
+          "max_block_gap": 0.13705559074878693
+        }
+      }
+    },
+    {
+      "layer": 5,
+      "role": "fc_up",
+      "weight_shape": [
+        4864,
+        896
+      ],
+      "state": {
+        "block_smooth_size": 0,
+        "block_smooth_seed": -1,
+        "balance_min": 1.0,
+        "balance_max": 1.0,
+        "balance_condition": 1.0
+      },
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.44113005844386627,
+          "weight_perfect": 0.472890860362507,
+          "activation_perfect": 0.9703481884122068,
+          "both_perfect": 1.0
+        },
+        "weight_side_headroom": 0.031760801918640724,
+        "activation_side_headroom": 0.5292181299683405,
+        "relaxed_both_perfect_headroom": 0.5588699415561338,
+        "standard_mse_mean": 0.006377591984346509,
+        "frame_reference_mse_mean": 0.0,
+        "classification": "activation-dominant"
+      },
+      "oracle": {
+        "weight_plain": {
+          "shape": [
+            4864,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.004446983337402344,
+          "oracle_loss": 0.004446983337402344,
+          "baseline_to_oracle_gap": 0.0,
+          "improved_blocks": 0,
+          "max_block_gap": 0.0
+        },
+        "weight_gram": {
+          "shape": [
+            4864,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.006841186434030533,
+          "oracle_loss": 0.006841186434030533,
+          "baseline_to_oracle_gap": 0.0,
+          "improved_blocks": 0,
+          "max_block_gap": 0.0
+        },
+        "activation_gram": {
+          "sample_count": 2,
+          "sample_rows": 64,
+          "sample_blocks": 896,
+          "improved_blocks": 12,
+          "baseline_loss": 492.7170104980469,
+          "oracle_loss": 492.6978759765625,
+          "baseline_to_oracle_gap": 3.87898139749284e-05,
+          "max_block_gap": 0.013517954852432013
+        }
+      }
+    },
+    {
+      "layer": 5,
+      "role": "proj",
+      "weight_shape": [
+        896,
+        4864
+      ],
+      "state": {
+        "block_smooth_size": 0,
+        "block_smooth_seed": -1,
+        "balance_min": 1.0,
+        "balance_max": 1.0,
+        "balance_condition": 1.0
+      },
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.45048309389426994,
+          "weight_perfect": 0.5326385159454303,
+          "activation_perfect": 0.91539241599966,
+          "both_perfect": 1.0
+        },
+        "weight_side_headroom": 0.08215542205116039,
+        "activation_side_headroom": 0.4649093221053901,
+        "relaxed_both_perfect_headroom": 0.5495169061057301,
+        "standard_mse_mean": 0.0006807489698985592,
+        "frame_reference_mse_mean": 0.0,
+        "classification": "activation-dominant"
+      },
+      "oracle": {
+        "weight_plain": {
+          "shape": [
+            896,
+            4864
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 2432,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.027342796325683594,
+          "oracle_loss": 0.027342796325683594,
+          "baseline_to_oracle_gap": 0.0,
+          "improved_blocks": 0,
+          "max_block_gap": 0.0
+        },
+        "weight_gram": {
+          "shape": [
+            896,
+            4864
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 2432,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.007880192250013351,
+          "oracle_loss": 0.007880192250013351,
+          "baseline_to_oracle_gap": 0.0,
+          "improved_blocks": 0,
+          "max_block_gap": 0.0
+        },
+        "activation_gram": {
+          "sample_count": 2,
+          "sample_rows": 64,
+          "sample_blocks": 4864,
+          "improved_blocks": 92,
+          "baseline_loss": 11.573673248291016,
+          "oracle_loss": 11.572718620300293,
+          "baseline_to_oracle_gap": 8.262095119836543e-05,
+          "max_block_gap": 0.04763384349644184
+        }
+      }
+    },
+    {
+      "layer": 11,
+      "role": "q",
+      "weight_shape": [
+        896,
+        896
+      ],
+      "state": {
+        "block_smooth_size": 4,
+        "block_smooth_seed": 0,
+        "balance_min": 0.43495434522628784,
+        "balance_max": 2.516692638397217,
+        "balance_condition": 5.786107540130615
+      },
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.7004216323970731,
+          "weight_perfect": 0.8747030694075837,
+          "activation_perfect": 0.8269482542534984,
+          "both_perfect": 0.9999999999965652
+        },
+        "weight_side_headroom": 0.17428143701051058,
+        "activation_side_headroom": 0.12652662185642527,
+        "relaxed_both_perfect_headroom": 0.2995783675994921,
+        "standard_mse_mean": 0.01797379180788994,
+        "frame_reference_mse_mean": 6.170395818643273e-14,
+        "classification": "weight-dominant"
+      },
+      "oracle": {
+        "weight_plain": {
+          "shape": [
+            896,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.0770874097943306,
+          "oracle_loss": 0.0770859569311142,
+          "baseline_to_oracle_gap": 1.8846958540653903e-05,
+          "improved_blocks": 1,
+          "max_block_gap": 0.0062963771633803844
+        },
+        "weight_gram": {
+          "shape": [
+            896,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.034070778638124466,
+          "oracle_loss": 0.03389512374997139,
+          "baseline_to_oracle_gap": 0.0051555877257387405,
+          "improved_blocks": 61,
+          "max_block_gap": 0.15343405306339264
+        },
+        "activation_gram": {
+          "sample_count": 2,
+          "sample_rows": 64,
+          "sample_blocks": 896,
+          "improved_blocks": 83,
+          "baseline_loss": 76.5746078491211,
+          "oracle_loss": 76.28395080566406,
+          "baseline_to_oracle_gap": 0.003711449090919341,
+          "max_block_gap": 0.24503931775689125
+        }
+      }
+    },
+    {
+      "layer": 11,
+      "role": "k",
+      "weight_shape": [
+        128,
+        896
+      ],
+      "state": {
+        "block_smooth_size": 4,
+        "block_smooth_seed": 0,
+        "balance_min": 0.43854349851608276,
+        "balance_max": 2.596294403076172,
+        "balance_condition": 5.920266628265381
+      },
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.7473449414279789,
+          "weight_perfect": 0.918930758275798,
+          "activation_perfect": 0.829664040044348,
+          "both_perfect": 0.9999999999934072
+        },
+        "weight_side_headroom": 0.17158581684781904,
+        "activation_side_headroom": 0.0823190986163691,
+        "relaxed_both_perfect_headroom": 0.25265505856542825,
+        "standard_mse_mean": 0.03219477413222194,
+        "frame_reference_mse_mean": 2.118922103207764e-13,
+        "classification": "weight-dominant"
+      },
+      "oracle": {
+        "weight_plain": {
+          "shape": [
+            128,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.11638830602169037,
+          "oracle_loss": 0.11628706008195877,
+          "baseline_to_oracle_gap": 0.0008698978719797631,
+          "improved_blocks": 5,
+          "max_block_gap": 0.3083382248878479
+        },
+        "weight_gram": {
+          "shape": [
+            128,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.009044000878930092,
+          "oracle_loss": 0.008926521986722946,
+          "baseline_to_oracle_gap": 0.01298970375830431,
+          "improved_blocks": 73,
+          "max_block_gap": 0.4967423379421234
+        },
+        "activation_gram": {
+          "sample_count": 2,
+          "sample_rows": 64,
+          "sample_blocks": 896,
+          "improved_blocks": 130,
+          "baseline_loss": 16.810623168945312,
+          "oracle_loss": 16.573501586914062,
+          "baseline_to_oracle_gap": 0.014127787213295046,
+          "max_block_gap": 0.6143631637096405
+        }
+      }
+    },
+    {
+      "layer": 11,
+      "role": "v",
+      "weight_shape": [
+        128,
+        896
+      ],
+      "state": {
+        "block_smooth_size": 4,
+        "block_smooth_seed": 0,
+        "balance_min": 1.0,
+        "balance_max": 1.0,
+        "balance_condition": 1.0
+      },
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.5000829976927884,
+          "weight_perfect": 0.8089503915292887,
+          "activation_perfect": 0.6883288383730118,
+          "both_perfect": 1.0
+        },
+        "weight_side_headroom": 0.3088673938365003,
+        "activation_side_headroom": 0.18824584068022343,
+        "relaxed_both_perfect_headroom": 0.4999170023072116,
+        "standard_mse_mean": 0.009777280734851956,
+        "frame_reference_mse_mean": 0.0,
+        "classification": "weight-dominant"
+      },
+      "oracle": {
+        "weight_plain": {
+          "shape": [
+            128,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.04130756855010986,
+          "oracle_loss": 0.04130756855010986,
+          "baseline_to_oracle_gap": 0.0,
+          "improved_blocks": 0,
+          "max_block_gap": 0.0
+        },
+        "weight_gram": {
+          "shape": [
+            128,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.0015998471062630415,
+          "oracle_loss": 0.0015923810424283147,
+          "baseline_to_oracle_gap": 0.004666735843380815,
+          "improved_blocks": 37,
+          "max_block_gap": 0.12769486010074615
+        },
+        "activation_gram": {
+          "sample_count": 2,
+          "sample_rows": 64,
+          "sample_blocks": 896,
+          "improved_blocks": 30,
+          "baseline_loss": 10.431660652160645,
+          "oracle_loss": 10.415704250335693,
+          "baseline_to_oracle_gap": 0.0015045272025739354,
+          "max_block_gap": 0.3018583580851555
+        }
+      }
+    },
+    {
+      "layer": 11,
+      "role": "o",
+      "weight_shape": [
+        896,
+        896
+      ],
+      "state": {
+        "block_smooth_size": 0,
+        "block_smooth_seed": -1,
+        "balance_min": 0.03686235845088959,
+        "balance_max": 8.389717102050781,
+        "balance_condition": 227.5957794189453
+      },
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.5374245823598591,
+          "weight_perfect": 0.8049841322984457,
+          "activation_perfect": 0.7335057611084153,
+          "both_perfect": 0.9999999999999016
+        },
+        "weight_side_headroom": 0.26755954993858655,
+        "activation_side_headroom": 0.19608117874855613,
+        "relaxed_both_perfect_headroom": 0.4625754176400425,
+        "standard_mse_mean": 0.0002732414286583662,
+        "frame_reference_mse_mean": 2.6683905643013894e-17,
+        "classification": "weight-dominant"
+      },
+      "oracle": {
+        "weight_plain": {
+          "shape": [
+            896,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.10214771330356598,
+          "oracle_loss": 0.102081298828125,
+          "baseline_to_oracle_gap": 0.0006501807362403332,
+          "improved_blocks": 5,
+          "max_block_gap": 0.3693702518939972
+        },
+        "weight_gram": {
+          "shape": [
+            896,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.12995755672454834,
+          "oracle_loss": 0.12946584820747375,
+          "baseline_to_oracle_gap": 0.0037836085062509,
+          "improved_blocks": 51,
+          "max_block_gap": 0.5197099447250366
+        },
+        "activation_gram": {
+          "sample_count": 2,
+          "sample_rows": 64,
+          "sample_blocks": 896,
+          "improved_blocks": 112,
+          "baseline_loss": 1.402841329574585,
+          "oracle_loss": 1.3954195976257324,
+          "baseline_to_oracle_gap": 0.0055073206495204925,
+          "max_block_gap": 0.44880537688732147
+        }
+      }
+    },
+    {
+      "layer": 11,
+      "role": "fc_gate",
+      "weight_shape": [
+        4864,
+        896
+      ],
+      "state": {
+        "block_smooth_size": 0,
+        "block_smooth_seed": -1,
+        "balance_min": 1.0,
+        "balance_max": 1.0,
+        "balance_condition": 1.0
+      },
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.34587750411362844,
+          "weight_perfect": 0.5365286525597904,
+          "activation_perfect": 0.8073918494843341,
+          "both_perfect": 1.0
+        },
+        "weight_side_headroom": 0.190651148446162,
+        "activation_side_headroom": 0.4615143453707056,
+        "relaxed_both_perfect_headroom": 0.6541224958863716,
+        "standard_mse_mean": 0.004908513510599732,
+        "frame_reference_mse_mean": 0.0,
+        "classification": "activation-dominant"
+      },
+      "oracle": {
+        "weight_plain": {
+          "shape": [
+            4864,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.017310142517089844,
+          "oracle_loss": 0.017310142517089844,
+          "baseline_to_oracle_gap": 0.0,
+          "improved_blocks": 0,
+          "max_block_gap": 0.0
+        },
+        "weight_gram": {
+          "shape": [
+            4864,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.03368930146098137,
+          "oracle_loss": 0.03368930146098137,
+          "baseline_to_oracle_gap": 0.0,
+          "improved_blocks": 0,
+          "max_block_gap": 0.0
+        },
+        "activation_gram": {
+          "sample_count": 2,
+          "sample_rows": 64,
+          "sample_blocks": 896,
+          "improved_blocks": 24,
+          "baseline_loss": 379.5866394042969,
+          "oracle_loss": 379.5523681640625,
+          "baseline_to_oracle_gap": 9.10173945474233e-05,
+          "max_block_gap": 0.027416929602622986
+        }
+      }
+    },
+    {
+      "layer": 11,
+      "role": "fc_up",
+      "weight_shape": [
+        4864,
+        896
+      ],
+      "state": {
+        "block_smooth_size": 0,
+        "block_smooth_seed": -1,
+        "balance_min": 1.0,
+        "balance_max": 1.0,
+        "balance_condition": 1.0
+      },
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.436836503383334,
+          "weight_perfect": 0.506520952606646,
+          "activation_perfect": 0.9281594093389093,
+          "both_perfect": 1.0
+        },
+        "weight_side_headroom": 0.06968444922331196,
+        "activation_side_headroom": 0.49132290595557526,
+        "relaxed_both_perfect_headroom": 0.563163496616666,
+        "standard_mse_mean": 0.0037642703391611576,
+        "frame_reference_mse_mean": 0.0,
+        "classification": "activation-dominant"
+      },
+      "oracle": {
+        "weight_plain": {
+          "shape": [
+            4864,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.009478569030761719,
+          "oracle_loss": 0.009478569030761719,
+          "baseline_to_oracle_gap": 0.0,
+          "improved_blocks": 0,
+          "max_block_gap": 0.0
+        },
+        "weight_gram": {
+          "shape": [
+            4864,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.016641533002257347,
+          "oracle_loss": 0.016641533002257347,
+          "baseline_to_oracle_gap": 0.0,
+          "improved_blocks": 0,
+          "max_block_gap": 0.0
+        },
+        "activation_gram": {
+          "sample_count": 2,
+          "sample_rows": 64,
+          "sample_blocks": 896,
+          "improved_blocks": 19,
+          "baseline_loss": 295.38832092285156,
+          "oracle_loss": 295.37123107910156,
+          "baseline_to_oracle_gap": 5.787112124674027e-05,
+          "max_block_gap": 0.02203945629298687
+        }
+      }
+    },
+    {
+      "layer": 11,
+      "role": "proj",
+      "weight_shape": [
+        896,
+        4864
+      ],
+      "state": {
+        "block_smooth_size": 0,
+        "block_smooth_seed": -1,
+        "balance_min": 1.0,
+        "balance_max": 1.0,
+        "balance_condition": 1.0
+      },
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.3924056857119914,
+          "weight_perfect": 0.5179356670532416,
+          "activation_perfect": 0.8717467250511994,
+          "both_perfect": 1.0
+        },
+        "weight_side_headroom": 0.12552998134125015,
+        "activation_side_headroom": 0.479341039339208,
+        "relaxed_both_perfect_headroom": 0.6075943142880086,
+        "standard_mse_mean": 0.0004890825002803467,
+        "frame_reference_mse_mean": 0.0,
+        "classification": "activation-dominant"
+      },
+      "oracle": {
+        "weight_plain": {
+          "shape": [
+            896,
+            4864
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 2432,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.062316179275512695,
+          "oracle_loss": 0.062316179275512695,
+          "baseline_to_oracle_gap": 0.0,
+          "improved_blocks": 0,
+          "max_block_gap": 0.0
+        },
+        "weight_gram": {
+          "shape": [
+            896,
+            4864
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 2432,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.023663507774472237,
+          "oracle_loss": 0.02366216666996479,
+          "baseline_to_oracle_gap": 5.6673952155692166e-05,
+          "improved_blocks": 2,
+          "max_block_gap": 0.0095546068623662
+        },
+        "activation_gram": {
+          "sample_count": 2,
+          "sample_rows": 64,
+          "sample_blocks": 4864,
+          "improved_blocks": 82,
+          "baseline_loss": 6.708144664764404,
+          "oracle_loss": 6.707081317901611,
+          "baseline_to_oracle_gap": 0.00016222924737555107,
+          "max_block_gap": 0.05308578349649906
+        }
+      }
+    },
+    {
+      "layer": 17,
+      "role": "q",
+      "weight_shape": [
+        896,
+        896
+      ],
+      "state": {
+        "block_smooth_size": 4,
+        "block_smooth_seed": 0,
+        "balance_min": 0.47169172763824463,
+        "balance_max": 2.376946449279785,
+        "balance_condition": 5.039194583892822
+      },
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.5674061499491386,
+          "weight_perfect": 0.8128857279006889,
+          "activation_perfect": 0.7540803056800685,
+          "both_perfect": 0.9999999999964703
+        },
+        "weight_side_headroom": 0.2454795779515503,
+        "activation_side_headroom": 0.18667415573092982,
+        "relaxed_both_perfect_headroom": 0.43259385004733164,
+        "standard_mse_mean": 0.014840081101283431,
+        "frame_reference_mse_mean": 5.243038737000848e-14,
+        "classification": "weight-dominant"
+      },
+      "oracle": {
+        "weight_plain": {
+          "shape": [
+            896,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.12138520181179047,
+          "oracle_loss": 0.12130463123321533,
+          "baseline_to_oracle_gap": 0.0006637594811603159,
+          "improved_blocks": 7,
+          "max_block_gap": 0.11367911100387573
+        },
+        "weight_gram": {
+          "shape": [
+            896,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.05288969725370407,
+          "oracle_loss": 0.052638471126556396,
+          "baseline_to_oracle_gap": 0.0047500012326139795,
+          "improved_blocks": 44,
+          "max_block_gap": 0.17265459895133972
+        },
+        "activation_gram": {
+          "sample_count": 2,
+          "sample_rows": 64,
+          "sample_blocks": 896,
+          "improved_blocks": 91,
+          "baseline_loss": 77.13336563110352,
+          "oracle_loss": 76.89424133300781,
+          "baseline_to_oracle_gap": 0.0031297654217009017,
+          "max_block_gap": 0.29637958109378815
+        }
+      }
+    },
+    {
+      "layer": 17,
+      "role": "k",
+      "weight_shape": [
+        128,
+        896
+      ],
+      "state": {
+        "block_smooth_size": 4,
+        "block_smooth_seed": 0,
+        "balance_min": 0.5765647292137146,
+        "balance_max": 2.3830831050872803,
+        "balance_condition": 4.133244514465332
+      },
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.6092738613360239,
+          "weight_perfect": 0.8718647331068207,
+          "activation_perfect": 0.7421092975216265,
+          "both_perfect": 0.9999999999940322
+        },
+        "weight_side_headroom": 0.26259087177079676,
+        "activation_side_headroom": 0.13283543618560256,
+        "relaxed_both_perfect_headroom": 0.3907261386580083,
+        "standard_mse_mean": 0.016762842889875174,
+        "frame_reference_mse_mean": 1.0005143008572429e-13,
+        "classification": "weight-dominant"
+      },
+      "oracle": {
+        "weight_plain": {
+          "shape": [
+            128,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.0834214836359024,
+          "oracle_loss": 0.08339148759841919,
+          "baseline_to_oracle_gap": 0.00035957209313292325,
+          "improved_blocks": 5,
+          "max_block_gap": 0.15571147203445435
+        },
+        "weight_gram": {
+          "shape": [
+            128,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.005469819530844688,
+          "oracle_loss": 0.005422889720648527,
+          "baseline_to_oracle_gap": 0.008579773049461841,
+          "improved_blocks": 71,
+          "max_block_gap": 0.24448496103286743
+        },
+        "activation_gram": {
+          "sample_count": 2,
+          "sample_rows": 64,
+          "sample_blocks": 896,
+          "improved_blocks": 142,
+          "baseline_loss": 13.079273223876953,
+          "oracle_loss": 12.923712253570557,
+          "baseline_to_oracle_gap": 0.01194069696843831,
+          "max_block_gap": 0.5051389336585999
+        }
+      }
+    },
+    {
+      "layer": 17,
+      "role": "v",
+      "weight_shape": [
+        128,
+        896
+      ],
+      "state": {
+        "block_smooth_size": 4,
+        "block_smooth_seed": 0,
+        "balance_min": 1.0,
+        "balance_max": 1.0,
+        "balance_condition": 1.0
+      },
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.4496922534763662,
+          "weight_perfect": 0.786924398246019,
+          "activation_perfect": 0.6603860894642042,
+          "both_perfect": 1.0
+        },
+        "weight_side_headroom": 0.3372321447696528,
+        "activation_side_headroom": 0.21069383598783797,
+        "relaxed_both_perfect_headroom": 0.5503077465236338,
+        "standard_mse_mean": 0.011714699910953641,
+        "frame_reference_mse_mean": 0.0,
+        "classification": "weight-dominant"
+      },
+      "oracle": {
+        "weight_plain": {
+          "shape": [
+            128,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.05797082185745239,
+          "oracle_loss": 0.057962238788604736,
+          "baseline_to_oracle_gap": 0.00014805842961415356,
+          "improved_blocks": 1,
+          "max_block_gap": 0.02812499925494194
+        },
+        "weight_gram": {
+          "shape": [
+            128,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.0033225284423679113,
+          "oracle_loss": 0.003309811232611537,
+          "baseline_to_oracle_gap": 0.003827569869442867,
+          "improved_blocks": 32,
+          "max_block_gap": 0.11440183222293854
+        },
+        "activation_gram": {
+          "sample_count": 2,
+          "sample_rows": 64,
+          "sample_blocks": 896,
+          "improved_blocks": 52,
+          "baseline_loss": 12.901692390441895,
+          "oracle_loss": 12.862195014953613,
+          "baseline_to_oracle_gap": 0.0030635630032405632,
+          "max_block_gap": 0.27369268983602524
+        }
+      }
+    },
+    {
+      "layer": 17,
+      "role": "o",
+      "weight_shape": [
+        896,
+        896
+      ],
+      "state": {
+        "block_smooth_size": 0,
+        "block_smooth_seed": -1,
+        "balance_min": 0.333898663520813,
+        "balance_max": 4.918248176574707,
+        "balance_condition": 14.72976303100586
+      },
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.6496824041315512,
+          "weight_perfect": 0.8451074349883568,
+          "activation_perfect": 0.8047590913640384,
+          "both_perfect": 0.9999999999999434
+        },
+        "weight_side_headroom": 0.19542503085680563,
+        "activation_side_headroom": 0.15507668723248724,
+        "relaxed_both_perfect_headroom": 0.3503175958683922,
+        "standard_mse_mean": 0.0006460403965320438,
+        "frame_reference_mse_mean": 3.6664736810840486e-17,
+        "classification": "weight-dominant"
+      },
+      "oracle": {
+        "weight_plain": {
+          "shape": [
+            896,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.053693387657403946,
+          "oracle_loss": 0.053636256605386734,
+          "baseline_to_oracle_gap": 0.001064023979670315,
+          "improved_blocks": 4,
+          "max_block_gap": 0.38270655274391174
+        },
+        "weight_gram": {
+          "shape": [
+            896,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.021159501746296883,
+          "oracle_loss": 0.021037310361862183,
+          "baseline_to_oracle_gap": 0.005774776074587138,
+          "improved_blocks": 41,
+          "max_block_gap": 0.4835047125816345
+        },
+        "activation_gram": {
+          "sample_count": 2,
+          "sample_rows": 64,
+          "sample_blocks": 896,
+          "improved_blocks": 53,
+          "baseline_loss": 2.4259936809539795,
+          "oracle_loss": 2.409801483154297,
+          "baseline_to_oracle_gap": 0.006351660570134487,
+          "max_block_gap": 0.16937947273254395
+        }
+      }
+    },
+    {
+      "layer": 17,
+      "role": "fc_gate",
+      "weight_shape": [
+        4864,
+        896
+      ],
+      "state": {
+        "block_smooth_size": 8,
+        "block_smooth_seed": 0,
+        "balance_min": 1.0,
+        "balance_max": 1.0,
+        "balance_condition": 1.0
+      },
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.38193351289583477,
+          "weight_perfect": 0.7398366419115272,
+          "activation_perfect": 0.6416641692845604,
+          "both_perfect": 0.9999999999997303
+        },
+        "weight_side_headroom": 0.35790312901569243,
+        "activation_side_headroom": 0.2597306563887256,
+        "relaxed_both_perfect_headroom": 0.6180664871038956,
+        "standard_mse_mean": 0.01860941620543599,
+        "frame_reference_mse_mean": 5.0176041156384916e-15,
+        "classification": "weight-dominant"
+      },
+      "oracle": {
+        "weight_plain": {
+          "shape": [
+            4864,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.07826461642980576,
+          "oracle_loss": 0.07819236069917679,
+          "baseline_to_oracle_gap": 0.0009232234683443732,
+          "improved_blocks": 12,
+          "max_block_gap": 0.12697848677635193
+        },
+        "weight_gram": {
+          "shape": [
+            4864,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.193006694316864,
+          "oracle_loss": 0.19273538887500763,
+          "baseline_to_oracle_gap": 0.0014056789212242308,
+          "improved_blocks": 21,
+          "max_block_gap": 0.15730653703212738
+        },
+        "activation_gram": {
+          "sample_count": 2,
+          "sample_rows": 64,
+          "sample_blocks": 896,
+          "improved_blocks": 37,
+          "baseline_loss": 658.3934936523438,
+          "oracle_loss": 657.5691833496094,
+          "baseline_to_oracle_gap": 0.0012491062077183825,
+          "max_block_gap": 0.16073713079094887
+        }
+      }
+    },
+    {
+      "layer": 17,
+      "role": "fc_up",
+      "weight_shape": [
+        4864,
+        896
+      ],
+      "state": {
+        "block_smooth_size": 0,
+        "block_smooth_seed": -1,
+        "balance_min": 1.0,
+        "balance_max": 1.0,
+        "balance_condition": 1.0
+      },
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.42133339223693955,
+          "weight_perfect": 0.4732863380686843,
+          "activation_perfect": 0.9500660665074868,
+          "both_perfect": 1.0
+        },
+        "weight_side_headroom": 0.05195294583174476,
+        "activation_side_headroom": 0.5287326742705473,
+        "relaxed_both_perfect_headroom": 0.5786666077630604,
+        "standard_mse_mean": 0.010359152918681502,
+        "frame_reference_mse_mean": 0.0,
+        "classification": "activation-dominant"
+      },
+      "oracle": {
+        "weight_plain": {
+          "shape": [
+            4864,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.011155843734741211,
+          "oracle_loss": 0.011155843734741211,
+          "baseline_to_oracle_gap": 0.0,
+          "improved_blocks": 0,
+          "max_block_gap": 0.0
+        },
+        "weight_gram": {
+          "shape": [
+            4864,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.02010524645447731,
+          "oracle_loss": 0.02010524645447731,
+          "baseline_to_oracle_gap": 0.0,
+          "improved_blocks": 0,
+          "max_block_gap": 0.0
+        },
+        "activation_gram": {
+          "sample_count": 2,
+          "sample_rows": 64,
+          "sample_blocks": 896,
+          "improved_blocks": 7,
+          "baseline_loss": 758.3991088867188,
+          "oracle_loss": 758.3601684570312,
+          "baseline_to_oracle_gap": 4.9448068870774296e-05,
+          "max_block_gap": 0.016582170140232222
+        }
+      }
+    },
+    {
+      "layer": 17,
+      "role": "proj",
+      "weight_shape": [
+        896,
+        4864
+      ],
+      "state": {
+        "block_smooth_size": 0,
+        "block_smooth_seed": -1,
+        "balance_min": 1.0,
+        "balance_max": 1.0,
+        "balance_condition": 1.0
+      },
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.46206435353160613,
+          "weight_perfect": 0.5249377245318536,
+          "activation_perfect": 0.9337922656316742,
+          "both_perfect": 1.0
+        },
+        "weight_side_headroom": 0.06287337100024748,
+        "activation_side_headroom": 0.47172791210006804,
+        "relaxed_both_perfect_headroom": 0.5379356464683939,
+        "standard_mse_mean": 0.00187915880815126,
+        "frame_reference_mse_mean": 0.0,
+        "classification": "activation-dominant"
+      },
+      "oracle": {
+        "weight_plain": {
+          "shape": [
+            896,
+            4864
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 2432,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.043662071228027344,
+          "oracle_loss": 0.043662071228027344,
+          "baseline_to_oracle_gap": 0.0,
+          "improved_blocks": 0,
+          "max_block_gap": 0.0
+        },
+        "weight_gram": {
+          "shape": [
+            896,
+            4864
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 2432,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.014025496318936348,
+          "oracle_loss": 0.014025496318936348,
+          "baseline_to_oracle_gap": 0.0,
+          "improved_blocks": 0,
+          "max_block_gap": 0.0
+        },
+        "activation_gram": {
+          "sample_count": 2,
+          "sample_rows": 64,
+          "sample_blocks": 4864,
+          "improved_blocks": 42,
+          "baseline_loss": 23.556084632873535,
+          "oracle_loss": 23.555520057678223,
+          "baseline_to_oracle_gap": 2.376864721944738e-05,
+          "max_block_gap": 0.026798635721206665
+        }
+      }
+    },
+    {
+      "layer": 23,
+      "role": "q",
+      "weight_shape": [
+        896,
+        896
+      ],
+      "state": {
+        "block_smooth_size": 0,
+        "block_smooth_seed": -1,
+        "balance_min": 0.6122307181358337,
+        "balance_max": 2.595059633255005,
+        "balance_condition": 4.2386956214904785
+      },
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.7503026479648349,
+          "weight_perfect": 0.88859146639927,
+          "activation_perfect": 0.8603730257672678,
+          "both_perfect": 0.999999999999913
+        },
+        "weight_side_headroom": 0.13828881843443508,
+        "activation_side_headroom": 0.1100703778024329,
+        "relaxed_both_perfect_headroom": 0.24969735203507804,
+        "standard_mse_mean": 0.023078832775354385,
+        "frame_reference_mse_mean": 2.0088412842188686e-15,
+        "classification": "weight-dominant"
+      },
+      "oracle": {
+        "weight_plain": {
+          "shape": [
+            896,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.04115927964448929,
+          "oracle_loss": 0.04115254059433937,
+          "baseline_to_oracle_gap": 0.00016373100326647424,
+          "improved_blocks": 5,
+          "max_block_gap": 0.30905166268348694
+        },
+        "weight_gram": {
+          "shape": [
+            896,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.01983853057026863,
+          "oracle_loss": 0.019762715324759483,
+          "baseline_to_oracle_gap": 0.003821615983129795,
+          "improved_blocks": 40,
+          "max_block_gap": 0.4097118377685547
+        },
+        "activation_gram": {
+          "sample_count": 2,
+          "sample_rows": 64,
+          "sample_blocks": 896,
+          "improved_blocks": 52,
+          "baseline_loss": 80.86574935913086,
+          "oracle_loss": 80.75648880004883,
+          "baseline_to_oracle_gap": 0.0013282779518744518,
+          "max_block_gap": 0.08434924483299255
+        }
+      }
+    },
+    {
+      "layer": 23,
+      "role": "k",
+      "weight_shape": [
+        128,
+        896
+      ],
+      "state": {
+        "block_smooth_size": 4,
+        "block_smooth_seed": 0,
+        "balance_min": 1.0,
+        "balance_max": 1.0,
+        "balance_condition": 1.0
+      },
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.4942703005600486,
+          "weight_perfect": 0.8735397801431684,
+          "activation_perfect": 0.628252061736232,
+          "both_perfect": 1.0
+        },
+        "weight_side_headroom": 0.37926947958311974,
+        "activation_side_headroom": 0.13398176117618343,
+        "relaxed_both_perfect_headroom": 0.5057296994399514,
+        "standard_mse_mean": 0.02173624513670802,
+        "frame_reference_mse_mean": 0.0,
+        "classification": "weight-dominant"
+      },
+      "oracle": {
+        "weight_plain": {
+          "shape": [
+            128,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.06630229949951172,
+          "oracle_loss": 0.06630229949951172,
+          "baseline_to_oracle_gap": 0.0,
+          "improved_blocks": 0,
+          "max_block_gap": 0.0
+        },
+        "weight_gram": {
+          "shape": [
+            128,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.0028337615076452494,
+          "oracle_loss": 0.0028013428673148155,
+          "baseline_to_oracle_gap": 0.011440144219254546,
+          "improved_blocks": 59,
+          "max_block_gap": 0.21163713932037354
+        },
+        "activation_gram": {
+          "sample_count": 2,
+          "sample_rows": 64,
+          "sample_blocks": 896,
+          "improved_blocks": 54,
+          "baseline_loss": 20.546340942382812,
+          "oracle_loss": 20.396772384643555,
+          "baseline_to_oracle_gap": 0.007350601855795063,
+          "max_block_gap": 0.326094388961792
+        }
+      }
+    },
+    {
+      "layer": 23,
+      "role": "v",
+      "weight_shape": [
+        128,
+        896
+      ],
+      "state": {
+        "block_smooth_size": 4,
+        "block_smooth_seed": 0,
+        "balance_min": 0.5503665208816528,
+        "balance_max": 2.6904213428497314,
+        "balance_condition": 4.888417720794678
+      },
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.7267038839480191,
+          "weight_perfect": 0.9156350751757176,
+          "activation_perfect": 0.8117960113452957,
+          "both_perfect": 0.9999999999941558
+        },
+        "weight_side_headroom": 0.18893119122769853,
+        "activation_side_headroom": 0.08509212739727656,
+        "relaxed_both_perfect_headroom": 0.2732961160461367,
+        "standard_mse_mean": 0.041174789890646935,
+        "frame_reference_mse_mean": 2.405835743840047e-13,
+        "classification": "weight-dominant"
+      },
+      "oracle": {
+        "weight_plain": {
+          "shape": [
+            128,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.10998424887657166,
+          "oracle_loss": 0.10997538268566132,
+          "baseline_to_oracle_gap": 8.061327872765963e-05,
+          "improved_blocks": 1,
+          "max_block_gap": 0.04181049391627312
+        },
+        "weight_gram": {
+          "shape": [
+            128,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.013363759964704514,
+          "oracle_loss": 0.013220527209341526,
+          "baseline_to_oracle_gap": 0.010717998208684118,
+          "improved_blocks": 60,
+          "max_block_gap": 0.3447054922580719
+        },
+        "activation_gram": {
+          "sample_count": 2,
+          "sample_rows": 64,
+          "sample_blocks": 896,
+          "improved_blocks": 117,
+          "baseline_loss": 27.575337409973145,
+          "oracle_loss": 27.359352111816406,
+          "baseline_to_oracle_gap": 0.007967826146545055,
+          "max_block_gap": 0.40423500537872314
+        }
+      }
+    },
+    {
+      "layer": 23,
+      "role": "o",
+      "weight_shape": [
+        896,
+        896
+      ],
+      "state": {
+        "block_smooth_size": 0,
+        "block_smooth_seed": -1,
+        "balance_min": 1.0,
+        "balance_max": 1.0,
+        "balance_condition": 1.0
+      },
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.3139222898083532,
+          "weight_perfect": 0.6585068660946242,
+          "activation_perfect": 0.6544307402304428,
+          "both_perfect": 1.0
+        },
+        "weight_side_headroom": 0.344584576286271,
+        "activation_side_headroom": 0.3405084504220896,
+        "relaxed_both_perfect_headroom": 0.6860777101916469,
+        "standard_mse_mean": 0.003398653119802475,
+        "frame_reference_mse_mean": 0.0,
+        "classification": "transform-coupled"
+      },
+      "oracle": {
+        "weight_plain": {
+          "shape": [
+            896,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.03554248809814453,
+          "oracle_loss": 0.03554248809814453,
+          "baseline_to_oracle_gap": 0.0,
+          "improved_blocks": 0,
+          "max_block_gap": 0.0
+        },
+        "weight_gram": {
+          "shape": [
+            896,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.015977494418621063,
+          "oracle_loss": 0.01592884212732315,
+          "baseline_to_oracle_gap": 0.00304505137183528,
+          "improved_blocks": 1,
+          "max_block_gap": 0.05760149285197258
+        },
+        "activation_gram": {
+          "sample_count": 2,
+          "sample_rows": 64,
+          "sample_blocks": 896,
+          "improved_blocks": 40,
+          "baseline_loss": 48.707223892211914,
+          "oracle_loss": 48.6120662689209,
+          "baseline_to_oracle_gap": 0.0018703483324595865,
+          "max_block_gap": 0.13585389778017998
+        }
+      }
+    },
+    {
+      "layer": 23,
+      "role": "fc_gate",
+      "weight_shape": [
+        4864,
+        896
+      ],
+      "state": {
+        "block_smooth_size": 0,
+        "block_smooth_seed": -1,
+        "balance_min": 1.0,
+        "balance_max": 1.0,
+        "balance_condition": 1.0
+      },
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.42752452120029516,
+          "weight_perfect": 0.5455486302713926,
+          "activation_perfect": 0.8864916332077133,
+          "both_perfect": 1.0
+        },
+        "weight_side_headroom": 0.1180241090710974,
+        "activation_side_headroom": 0.45896711200741813,
+        "relaxed_both_perfect_headroom": 0.5724754787997048,
+        "standard_mse_mean": 0.020031390711665154,
+        "frame_reference_mse_mean": 0.0,
+        "classification": "activation-dominant"
+      },
+      "oracle": {
+        "weight_plain": {
+          "shape": [
+            4864,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.013567924499511719,
+          "oracle_loss": 0.013567924499511719,
+          "baseline_to_oracle_gap": 0.0,
+          "improved_blocks": 0,
+          "max_block_gap": 0.0
+        },
+        "weight_gram": {
+          "shape": [
+            4864,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.02925805002450943,
+          "oracle_loss": 0.02925805002450943,
+          "baseline_to_oracle_gap": 0.0,
+          "improved_blocks": 0,
+          "max_block_gap": 0.0
+        },
+        "activation_gram": {
+          "sample_count": 2,
+          "sample_rows": 64,
+          "sample_blocks": 896,
+          "improved_blocks": 18,
+          "baseline_loss": 1499.7647094726562,
+          "oracle_loss": 1499.5835571289062,
+          "baseline_to_oracle_gap": 0.00012145243508407901,
+          "max_block_gap": 0.03666730038821697
+        }
+      }
+    },
+    {
+      "layer": 23,
+      "role": "fc_up",
+      "weight_shape": [
+        4864,
+        896
+      ],
+      "state": {
+        "block_smooth_size": 0,
+        "block_smooth_seed": -1,
+        "balance_min": 1.0,
+        "balance_max": 1.0,
+        "balance_condition": 1.0
+      },
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.44325893690538076,
+          "weight_perfect": 0.5227972911451847,
+          "activation_perfect": 0.9223514511289651,
+          "both_perfect": 1.0
+        },
+        "weight_side_headroom": 0.07953835423980393,
+        "activation_side_headroom": 0.47909251422358434,
+        "relaxed_both_perfect_headroom": 0.5567410630946192,
+        "standard_mse_mean": 0.018468432128429413,
+        "frame_reference_mse_mean": 0.0,
+        "classification": "activation-dominant"
+      },
+      "oracle": {
+        "weight_plain": {
+          "shape": [
+            4864,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.016933441162109375,
+          "oracle_loss": 0.016933441162109375,
+          "baseline_to_oracle_gap": 0.0,
+          "improved_blocks": 0,
+          "max_block_gap": 0.0
+        },
+        "weight_gram": {
+          "shape": [
+            4864,
+            896
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 448,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.03676443547010422,
+          "oracle_loss": 0.03676443547010422,
+          "baseline_to_oracle_gap": 0.0,
+          "improved_blocks": 0,
+          "max_block_gap": 0.0
+        },
+        "activation_gram": {
+          "sample_count": 2,
+          "sample_rows": 64,
+          "sample_blocks": 896,
+          "improved_blocks": 10,
+          "baseline_loss": 1446.3001708984375,
+          "oracle_loss": 1446.1724243164062,
+          "baseline_to_oracle_gap": 9.003997024669353e-05,
+          "max_block_gap": 0.030305074527859688
+        }
+      }
+    },
+    {
+      "layer": 23,
+      "role": "proj",
+      "weight_shape": [
+        896,
+        4864
+      ],
+      "state": {
+        "block_smooth_size": 0,
+        "block_smooth_seed": -1,
+        "balance_min": 1.0,
+        "balance_max": 1.0,
+        "balance_condition": 1.0
+      },
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.3500552635262709,
+          "weight_perfect": 0.5500522739056959,
+          "activation_perfect": 0.7991350190054155,
+          "both_perfect": 1.0
+        },
+        "weight_side_headroom": 0.19999701037942497,
+        "activation_side_headroom": 0.4490797554791446,
+        "relaxed_both_perfect_headroom": 0.6499447364737291,
+        "standard_mse_mean": 0.03625560738146305,
+        "frame_reference_mse_mean": 0.0,
+        "classification": "activation-dominant"
+      },
+      "oracle": {
+        "weight_plain": {
+          "shape": [
+            896,
+            4864
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 2432,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.046105384826660156,
+          "oracle_loss": 0.046105384826660156,
+          "baseline_to_oracle_gap": 0.0,
+          "improved_blocks": 0,
+          "max_block_gap": 0.0
+        },
+        "weight_gram": {
+          "shape": [
+            896,
+            4864
+          ],
+          "sample_rows": 32,
+          "sample_blocks": 2432,
+          "scale_candidates": 255,
+          "local_offsets": [
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3
+          ],
+          "baseline_loss": 0.016132207587361336,
+          "oracle_loss": 0.016129733994603157,
+          "baseline_to_oracle_gap": 0.00015333256436128617,
+          "improved_blocks": 1,
+          "max_block_gap": 0.0390002503991127
+        },
+        "activation_gram": {
+          "sample_count": 2,
+          "sample_rows": 64,
+          "sample_blocks": 4864,
+          "improved_blocks": 11,
+          "baseline_loss": 641.8470001220703,
+          "oracle_loss": 641.7066040039062,
+          "baseline_to_oracle_gap": 0.00022407447522679975,
+          "max_block_gap": 0.0726381279528141
+        }
+      }
+    }
+  ],
+  "by_layer": {
+    "0": {
+      "count": 7,
+      "arm_gain_mean": {
+        "both_player": 0.6010761248912623,
+        "weight_perfect": 0.7287705170130899,
+        "activation_perfect": 0.8791799377514505,
+        "both_perfect": 0.9999999999976276
+      },
+      "weight_side_headroom": 0.12769439212182773,
+      "activation_side_headroom": 0.27810381286018837,
+      "relaxed_both_perfect_headroom": 0.39892387510636523,
+      "classification": "activation-dominant"
+    },
+    "5": {
+      "count": 7,
+      "arm_gain_mean": {
+        "both_player": 0.48433278999908086,
+        "weight_perfect": 0.6523567729807567,
+        "activation_perfect": 0.8318289439631216,
+        "both_perfect": 0.9999999999990419
+      },
+      "weight_side_headroom": 0.16802398298167584,
+      "activation_side_headroom": 0.34749615396404065,
+      "relaxed_both_perfect_headroom": 0.5156672099999611,
+      "classification": "activation-dominant"
+    },
+    "11": {
+      "count": 7,
+      "arm_gain_mean": {
+        "both_player": 0.5229134067266648,
+        "weight_perfect": 0.7097933748186849,
+        "activation_perfect": 0.8122492682362452,
+        "both_perfect": 0.9999999999985534
+      },
+      "weight_side_headroom": 0.1868799680920201,
+      "activation_side_headroom": 0.2893358615095804,
+      "relaxed_both_perfect_headroom": 0.4770865932718887,
+      "classification": "activation-dominant"
+    },
+    "17": {
+      "count": 7,
+      "arm_gain_mean": {
+        "both_player": 0.5059122753653514,
+        "weight_perfect": 0.7221204283934215,
+        "activation_perfect": 0.7838367550648083,
+        "both_perfect": 0.9999999999985966
+      },
+      "weight_side_headroom": 0.21620815302807,
+      "activation_side_headroom": 0.27792447969945694,
+      "relaxed_both_perfect_headroom": 0.4940877246332451,
+      "classification": "activation-dominant"
+    },
+    "23": {
+      "count": 7,
+      "arm_gain_mean": {
+        "both_player": 0.5008625491304575,
+        "weight_perfect": 0.707810197590722,
+        "activation_perfect": 0.794689991774476,
+        "both_perfect": 0.9999999999991527
+      },
+      "weight_side_headroom": 0.20694764846026437,
+      "activation_side_headroom": 0.2938274426440185,
+      "relaxed_both_perfect_headroom": 0.49913745086869515,
+      "classification": "activation-dominant"
+    }
+  },
+  "by_role": {
+    "q": {
+      "count": 5,
+      "arm_gain_mean": {
+        "both_player": 0.6529590550361082,
+        "weight_perfect": 0.8572133720966588,
+        "activation_perfect": 0.7956584736545865,
+        "both_perfect": 0.9999999999971431
+      },
+      "weight_side_headroom": 0.2042543170605507,
+      "activation_side_headroom": 0.1426994186184784,
+      "relaxed_both_perfect_headroom": 0.347040944961035,
+      "classification": "weight-dominant"
+    },
+    "k": {
+      "count": 5,
+      "arm_gain_mean": {
+        "both_player": 0.6643428325600913,
+        "weight_perfect": 0.9001707230028557,
+        "activation_perfect": 0.7679690612025538,
+        "both_perfect": 0.9999999999943275
+      },
+      "weight_side_headroom": 0.2358278904427645,
+      "activation_side_headroom": 0.10362622864246263,
+      "relaxed_both_perfect_headroom": 0.33565716743423635,
+      "classification": "weight-dominant"
+    },
+    "v": {
+      "count": 5,
+      "arm_gain_mean": {
+        "both_player": 0.5842702993201255,
+        "weight_perfect": 0.7858158092988601,
+        "activation_perfect": 0.7988165209106393,
+        "both_perfect": 0.9999999999988312
+      },
+      "weight_side_headroom": 0.20154550997873458,
+      "activation_side_headroom": 0.21454622159051376,
+      "relaxed_both_perfect_headroom": 0.4157297006787056,
+      "classification": "transform-coupled"
+    },
+    "o": {
+      "count": 5,
+      "arm_gain_mean": {
+        "both_player": 0.5248790855213468,
+        "weight_perfect": 0.7321523789746334,
+        "activation_perfect": 0.7974108515619523,
+        "both_perfect": 0.9999999999999691
+      },
+      "weight_side_headroom": 0.20727329345328652,
+      "activation_side_headroom": 0.2725317660406056,
+      "relaxed_both_perfect_headroom": 0.47512091447862226,
+      "classification": "activation-dominant"
+    },
+    "fc_gate": {
+      "count": 5,
+      "arm_gain_mean": {
+        "both_player": 0.3818039865544206,
+        "weight_perfect": 0.6235235983134159,
+        "activation_perfect": 0.7598538731392731,
+        "both_perfect": 0.9999999999998901
+      },
+      "weight_side_headroom": 0.24171961175899526,
+      "activation_side_headroom": 0.3780498865848525,
+      "relaxed_both_perfect_headroom": 0.6181960134454694,
+      "classification": "activation-dominant"
+    },
+    "fc_up": {
+      "count": 5,
+      "arm_gain_mean": {
+        "both_player": 0.4358110117659783,
+        "weight_perfect": 0.49233485461993476,
+        "activation_perfect": 0.9447037501060895,
+        "both_perfect": 1.0
+      },
+      "weight_side_headroom": 0.05652384285395653,
+      "activation_side_headroom": 0.5088927383401112,
+      "relaxed_both_perfect_headroom": 0.5641889882340216,
+      "classification": "activation-dominant"
+    },
+    "proj": {
+      "count": 5,
+      "arm_gain_mean": {
+        "both_player": 0.417069733799873,
+        "weight_perfect": 0.5379810708089862,
+        "activation_perfect": 0.8780863249310477,
+        "both_perfect": 1.0
+      },
+      "weight_side_headroom": 0.12091133700911319,
+      "activation_side_headroom": 0.4610165911311747,
+      "relaxed_both_perfect_headroom": 0.582930266200127,
+      "classification": "activation-dominant"
+    }
+  },
+  "overall": {
+    "count": 35,
+    "arm_gain_mean": {
+      "both_player": 0.5230194292225634,
+      "weight_perfect": 0.704170258159335,
+      "activation_perfect": 0.8203569793580203,
+      "both_perfect": 0.9999999999985943
+    },
+    "weight_side_headroom": 0.18115082893677162,
+    "activation_side_headroom": 0.29733755013545693,
+    "relaxed_both_perfect_headroom": 0.47698057077603107,
+    "classification": "activation-dominant"
+  },
+  "elapsed_seconds": 103.0018283999525
+}

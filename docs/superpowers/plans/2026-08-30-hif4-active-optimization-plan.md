@@ -168,7 +168,7 @@ Attention 不得掩盖 Linear 回退。Linear 候选先比较 `linear_mean`，pa
 
 ### L0：Linear 上限与误差分解
 
-**状态：pending；下一步。**
+**状态：done（2026-08-30）；L1 已成为下一步。**
 
 **假设**：现有记录只能证明局部候选失败，尚未区分 Weight、Activation、交叉项和坐标投影哪个是主要瓶颈，也没有足以判断 `0.9` 的放宽上界。
 
@@ -196,7 +196,28 @@ Attention 不得掩盖 Linear 回退。Linear 候选先比较 `linear_mean`，pa
 
 **产物**：`artifacts/oracle_dashboard/` JSON、Markdown 汇总、可复现命令和 ceiling 分类：`weight-dominant / activation-dominant / transform-coupled / insufficient-headroom`。
 
-**裁决**：L0 不产生部署 parent。它决定 L1–L4 的预算分配；即使结果不支持 `0.9`，仍继续完成已知实现缺陷 L1，但停止无上限依据的全局网格扩张。
+**实际结果**：五个 Qwen 层位 `{0,5,11,17,23}`、七个 role、两折校准完成；固定 cache、`oracle_rows=32`、255 个合法 E6M2 scale code。整体 arms 为：
+
+| arm | 五层×七 role mean |
+|---|---:|
+| `both_player` | `0.52301943` |
+| `weight_perfect` | `0.70417026` |
+| `activation_perfect` | `0.82035698` |
+| `both_perfect` | `1.00000000` |
+
+权重侧 headroom 为 `0.18115083`，激活侧为 `0.29733755`，因此总体为
+`activation-dominant`；但 q/k 是 `weight-dominant`，v 为 `transform-coupled`，
+`fc_gate/fc_up/proj` 的 activation headroom 最大。255-code oracle 的平均
+weight-plain gap 为 `0.0229%`，weight-Gram gap 为 `0.6065%`，activation-Gram gap
+为 `0.6410%`；scale 轴没有接近 `0.3984` 目标缺口的空间。
+
+证据：[`l0-linear-ceiling-qwen.json`](../../../artifacts/oracle_dashboard/l0-linear-ceiling-qwen.json)、
+[`2026-08-30-l0-linear-ceiling.md`](../../../logs/execution/2026-08-30-l0-linear-ceiling.md)。
+solution LF SHA 为 `617482cee04ff9514a8d41226b651336e4b8b86692673308e835de1091693eba`；
+诊断脚本 LF SHA 为 `c5e20e8f0ae144a9e7593a923123ca64c5ba27c6a18f55c2f3b51f4aef4d63ad`。
+
+**裁决**：L0 不产生部署 parent。单侧无损 arms 仍低于 `0.9`，因此必须联合改善
+Weight 与 Activation；继续 L1 的已知 hierarchy 写回修复，但不再扩大无 oracle 依据的全局 scale 网格。
 
 ### L1：修复 v092 full-hierarchy cross-block Weight-LRH
 
@@ -331,7 +352,7 @@ P=\operatorname{softmax}((QT_Q)(KT_K)^T/\sqrt d),
 | 顺序 | 项目 | 状态 | 进入条件 | 完成产物 |
 |---:|---|---|---|---|
 | 0 | 基线冻结与审计 | `done` | — | v100/v101、SHA、固定 cache |
-| 1 | L0 Linear 上限/误差分解 | `pending` | 立即执行 | ceiling JSON + 报告 |
+| 1 | L0 Linear 上限/误差分解 | `done` | — | ceiling JSON + 报告 |
 | 2 | L1 修复 v092 hierarchy LRH | `pending` | L0 完成 | corrected candidate + full 门禁 |
 | 3 | L2 expansive-FFN CAT/BOAT-2 | `pending` | L1 裁决 | 低自由度结构候选 |
 | 4 | L3 修复 v095 Gram gate | `pending` | L2 裁决 | acceptance diagnostic + 候选 |
@@ -361,4 +382,4 @@ P=\operatorname{softmax}((QT_Q)(KT_K)^T/\sqrt d),
 - 使用 test/holdout/官方输出逐层回退在线 `Q(A)`；
 - 同时堆叠多个尚未独立证明正向的算法。
 
-当前唯一下一步是 **L0：Linear 上限与误差分解**。L0 完成并归档后，严格进入 **L1：修复 v092 full-hierarchy LRH**。
+当前唯一下一步是 **L1：修复 v092 full-hierarchy LRH**。L0 已完成并归档；L1 完成前不得跳到 L2–L5。

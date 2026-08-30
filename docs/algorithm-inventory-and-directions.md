@@ -157,6 +157,28 @@ six-API time      392.423565 s  wall time       424.693400 s   （API 在 420s �
 | **E0-G** | **完整 255 个 E6M2 code 尺度 oracle** | **除 `v` 的 activation Gram（0.6302%）外，各 role 总 gap 均 <0.1%** → 顶层 scale 搜索空间已耗尽 |
 | **D0** | **五模型 layer-1/2/3 全 role dashboard** | 少数层/role 的 activation-Gram 局部 gap 达 2–6%，但跨模型/跨层不稳定；只保留诊断，不部署全局搜索 |
 
+### 3.7 L0 Linear ceiling / error decomposition（2026-08-30）
+
+新增 evaluator-side 五层分层诊断，固定 Qwen `layers={0,5,11,17,23}`、七个 Linear role、
+两折校准和 255 个合法 E6M2 scale code。输出四个 evaluator arms：当前双侧量化、
+权重无损、激活无损和双侧无损；同时记录 weight-plain、weight-Gram、activation-Gram
+的独立 block oracle。完整结果见 [`l0-linear-ceiling-qwen.json`](../artifacts/oracle_dashboard/l0-linear-ceiling-qwen.json)。
+
+| arm / oracle | 五层×七 role mean |
+|---|---:|
+| both player | 0.52301943 |
+| weight perfect | 0.70417026 |
+| activation perfect | 0.82035698 |
+| both perfect | 1.00000000 |
+| weight plain 255-code gap | 0.0229% |
+| weight Gram 255-code gap | 0.6065% |
+| activation Gram 255-code gap | 0.6410% |
+
+L0 的直接结论是：整体 activation-side headroom 大于 weight-side，但 q/k 为
+weight-dominant，v 为 transform-coupled，`fc_gate/fc_up/proj` 的 activation headroom
+最大；scale-code 搜索本身不可能填补 `linear_mean` 到 `0.9` 的大缺口。下一步必须修复
+v092 的完整 hierarchy 写回，随后再测试低自由度 FFN 结构候选；L0 oracle 只作诊断，不进入部署路径。
+
 E0-G 明细：
 
 | role | 侧别 | 改善 blocks | 总相对 gap | 最大单 block |
