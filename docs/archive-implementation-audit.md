@@ -1,7 +1,7 @@
 # 归档算法实现与可复现性审计
 
-> 审计日期：2026-08-30
-> 范围：`solutions/` 下 98 个 v000–v104 候选（排除工具目录 `.mimosa`）、`logs/execution/`、当前根 `solution.py` 以及所有历史计划。
+> 审计日期：2026-08-31
+> 范围：`solutions/` 下 v000–v107 候选（排除工具目录 `.mimosa`）、`logs/execution/`、当前根 `solution.py` 以及所有历史计划。
 > 结论性质：这是实现审计和实验可复现性审计，不是官方成绩承诺。
 
 ## 1. 审计口径
@@ -22,17 +22,17 @@ P = 250 g_L + 200 g_A,
 
 ## 2. 当前根与已确认效果
 
-根目录 `solution.py` 是 v106 的 expansive-FFN CAT balance + B2 PAWV **diag-only** + B1 GQRB 路径；v101 是此前 v100 的五模型确认。当前规范 LF SHA256：
+根目录 `solution.py` 是 v107 的 expansive-FFN CAT balance + B2 PAWV **diag-only** + B1 GQRB + Global Activation-LRH Gram gate 路径；v101 是此前 v100 的五模型确认。当前规范 LF SHA256：
 
-`708081b5281e02da0c2a6e21881027b2e8d31eed423fd3c70e4572424667dd77`
+`cb3e84c019c4be39853c47a65a9f01bac4b4d1e6de2184242fd09ae01470b710`
 
-| 指标 | 当前根 v106 |
+| 指标 | 当前根 v107（precision parent） |
 |---|---:|
-| Qwen Linear mean | 0.503459 |
+| Qwen Linear mean | 0.506997 |
 | Qwen Attention mean | 0.842039 |
-| Qwen shaped panel | **294.272633** |
-| Qwen native total | 419.160200 |
-| Qwen API time | 412.654599 s |
+| Qwen shaped panel | **295.157057** |
+| Qwen native total | 421.537530 |
+| Qwen API time | 481.036527 s |
 | 官方分数 | 尚无提交结果 |
 
 当前正式路径的有效组件是：
@@ -44,7 +44,7 @@ P = 250 g_L + 200 g_A,
 - **B1 GQRB margin**：GQA group-local 正交 Q/K mixing；只在完整部署复评有 margin 时接纳。
 - **B2 PAWV diag-only**：用 attention probability 的 token-row 对角 Hessian 做 V 的离散 refinement；跨 token 低秩项未进入根。
 
-最新正向链为：v086 `267.307909` → v098 `293.793700` → v100 `293.797301` → v106 `294.272633`。其中最大跃迁来自 C86 实验集合重写为 clean 单一路径；v106 的增益只来自 expansive `fc_gate`。
+最新正向链为：v086 `267.307909` → v098 `293.793700` → v100 `293.797301` → v106 `294.272633` → v107 `295.157057`。其中最大跃迁来自 C86 实验集合重写为 clean 单一路径；v106 的增益只来自 expansive `fc_gate`，v107 的增益来自窄输入 q/k/v/o 的 Gram-gated Global-LRH。
 
 ## 3. 归档源码审计结果
 
@@ -89,7 +89,12 @@ keep = refined_error <= initial_error
 实际部署的激活影响是二次型 \(e^T(W^TW)e\)，不是 \(\|e\|_2^2\)。因此 surrogate 可能在 Gram 目标上变好，却被错误的 MSE 接纳；也可能反过来在关键方向变坏而 MSE 仍通过。
 
 **影响**：v095 的 `282.616646` 是“全局 LRH + 错误门禁”的结果，不能单独作为全局 LRH 的最终否定。
-**动作**：用与部署一致的 block-Gram objective 做逐候选 gate，并加入跨 fold/跨模型确认；若修复后仍回退，再把结论升级为算法负结果。
+**动作/结果**：v107 已用部署量化权重的完整 `G_q=W_q.T@W_q` 做逐行 Gram gate；
+五层 screen `0.52894931`，24 层 Linear mean `0.5069966356`、panel `295.157057`，
+相对 v106 分别 `+0.003538` 和 `+0.884423`。Gram/MSE 冲突率 `0.567475`，证明旧
+gate 会改变候选裁决。4-block 版本因此成为当前精度 parent；时间 `481.036527s`
+暂不作为探索期否决，L3 代码/结果归档在
+[`v107 archive`](../solutions/20260830_v107_l3-global-lrh-precision-parent_score295.157057_time481s/)。
 
 ### 3.3 P1：v099 PAWV rank-8 的低秩度量在最终 Q/K 变换前计算
 
@@ -142,7 +147,7 @@ v102/v103 的 GALS 使用校准时浮点 `weight_t` 计算的 `gram64`，而实�
 
 | 算法族 | 已实现并保留 | 已实现但回退 | 当前仍未验证/需要修复 |
 |---|---|---|---|
-| Linear 基础 | BOAT、cross-fold Weight-HSDQ、Gram-hierarchy Activation-HSDQ、**v106 expansive CAT balance**、512-row weight sampling、历史稳定 A@W/JDRQ 组件 | blockwise BOAT-2、全宽/逐块 A@W、大步长 headroom、full-H、**v105 corrected full-hierarchy LRH** 等 | Gram-objective gate 的 Global-LRH、最终权重 Gram + 显式 role 的 GALS、E1 三折/beam 版本 |
+| Linear 基础 | BOAT、cross-fold Weight-HSDQ、Gram-hierarchy Activation-HSDQ、**v106 expansive CAT balance**、**v107 Gram-gated Global-LRH**、512-row weight sampling、历史稳定 A@W/JDRQ 组件 | blockwise BOAT-2、全宽/逐块 A@W、大步长 headroom、full-H、**v105 corrected full-hierarchy LRH** 等 | 最终权重 Gram + 显式 role 的 GALS、E1 三折/beam 版本 |
 | Attention | GQA head-local rotation、MHA K-center、B1 GQRB margin、B2 PAWV diag-only | causal CVaR、全模型 K-center、PAWV rank-8 当前实现 | 最终 Q/K 变换后的 PAWV rank/position bucket、交替 Q/K/V、真正 role-aware 的结构门控 |
 | 变换/CAT | 固定低自由度 CAT/BOAT 子集、共享 Hadamard | R64、CAT β 网格、full-H selector、BOAT-2 | 低自由度新坐标系或外部实现差异对照，尚无可部署候选 |
 | 诊断/工程 | E0-G/D0 scale oracle、C0 五模型确认、clean 单路径重写 | 全局 scale 扩张部署 | 三折合成宽度矩阵、元策略路由、计算预算重分配 |
@@ -160,12 +165,12 @@ v102/v103 的 GALS 使用校准时浮点 `weight_t` 计算的 `gram64`，而实�
 
 ## 7. 审计后的优先级
 
-1. 官方接口恢复后，先提交当前根 v106，获得第一个真实兑换率锚点。
+1. 官方接口恢复后，提交当前精度 parent v107（或 C1 压缩后的等价版本），获得第一个真实兑换率锚点。
 2. L1 的 v105 corrected full-hierarchy LRH 已完成并拒绝；不再扩大其自由度。
-3. 当前下一实验是 active plan 的 L3 v095 **Gram-objective gate** 修复；若仍失败
-   才把 Global-LRH 归入停止清单。
-4. 之后才做最终 Q/K 变换后重建 PAWV rank/position metric；Linear 方向再做
-   final-weight-Gram + 显式 role 的 GALS 小预算复筛。
+3. L3 v107 Gram-objective gate 已完成并产生精度 parent；下一实验是 active plan 的
+   L4 final-weight-Gram/GALS 分拆。
+4. 之后才做最终 Q/K 变换后重建 PAWV rank/position metric；Linear 方向先做
+   final-weight-Gram 消融，再做 GALS 小预算复筛。
 5. 每个实验必须保存完整源和 SHA；只要没有完整源，就标为不可复现，不把结果当作硬上限。
 
 ## 8. 本次可复核检查

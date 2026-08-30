@@ -1,10 +1,10 @@
 # HiF4 唯一活跃优化计划 v2：Linear 结构增益与 0.9 可达性验证
 
 > 状态：**ACTIVE**
-> 建立日期：2026-08-30
+> 建立日期：2026-08-30；最近更新：2026-08-31
 > 适用根：`D:/工作内容/AI竞赛/solution.py`
-> 当前根：v106 L2 expansive-FFN CAT balance
-> 规范 LF SHA256：`708081b5281e02da0c2a6e21881027b2e8d31eed423fd3c70e4572424667dd77`
+> 当前根：v107 L3 Global Activation-LRH Gram-gated precision parent
+> 规范 LF SHA256：`cb3e84c019c4be39853c47a65a9f01bac4b4d1e6de2184242fd09ae01470b710`
 > 主目标：先提高 Qwen full-layer `linear_mean`，同时判断 `0.9` 在当前合法表示族内是否可达；Attention 单独排队。
 
 ## 1. 唯一执行规则
@@ -28,13 +28,13 @@
 
 | 指标 | 当前值 |
 |---|---:|
-| Linear mean | `0.5034589422` |
+| Linear mean | `0.5069966356` |
 | Attention mean | `0.8420394885` |
-| Linear panel | `125.389403` |
+| Linear panel | `126.749159` |
 | Attention panel | `168.407898` |
-| panel total | **`294.272633`** |
-| native total | `419.160200` |
-| API 时间 | `412.654599s` |
+| panel total | **`295.157057`** |
+| native total | `421.537530` |
+| API 时间 | `481.036527s` |
 | 当前根官方成绩 | `NA` |
 
 本地 case gain 定义为
@@ -48,21 +48,21 @@ g=\frac{\operatorname{MSE}_{std}-\operatorname{MSE}_{player}}
 当前 Linear 剩余归一化误差为
 
 \[
-r_L=1-g_L=0.4965410578.
+r_L=1-g_L=0.4930033644.
 \]
 
 若目标为 `linear_mean=0.9`，则还差
 
 \[
-\Delta g_L=0.3965410578,
+\Delta g_L=0.3930033644,
 \qquad
-\frac{\Delta g_L}{1-g_L}=79.8607\%.
+\frac{\Delta g_L}{1-g_L}=79.72\%.
 \]
 
 等价地，必须把当前 Linear MSE 压到现有值的
 
 \[
-\frac{0.1}{0.4965410578}=20.1393\%,
+\frac{0.1}{0.4930033644}=20.2839\%,
 \]
 
 约为五分之一。Attention 不变时，本地 panel 将为
@@ -276,7 +276,7 @@ API `412.654599s < 420s`。收益只来自 `fc_gate`，其余 role 逐项不变�
 
 ### L3：修复 v095 Global Activation-LRH 的 Gram gate
 
-**状态：pending。**
+**状态：done（2026-08-31；v107 accepted as precision parent）。**
 
 **假设**：v095 优化 block/global Gram surrogate，却用元素 MSE 最终 gate，可能错误接受或拒绝候选。
 
@@ -290,9 +290,24 @@ API `412.654599s < 420s`。收益只来自 `fc_gate`，其余 role 逐项不变�
 
 **失败处理**：修复版全层仍不升，则把当前 Global Activation-LRH 加入停止清单；不增加 rank 或 coverage 掩盖无信号。
 
+**实际执行**：实现 rank-8 off-block proposal，候选最多选择 4 个 64-channel
+block；最终离散参数以部署量化权重 `G_q=W_q.T@W_q` 逐行重算 Gram 增量并门控。
+五层七角色 screen 为 `0.52894931`，calibration-only 诊断为 6684 行 proposal、
+4900 行 Gram accepted（`0.733094`），Gram/MSE conflict `0.567475`，两折均有
+接受的 case 为 30/35。触发 full-layer 后 v107 Linear mean `0.5069966356`、
+panel `295.157057`，相对 v106 分别 `+0.0035376934`、`+0.8844233`；Attention
+不变。1-block 对照 v107b1 为 `0.5043033601`，因此保留 4-block 版本作为精度
+parent。API `481.036527s` 超过提交限制，但按用户授权的 accuracy-first 阶段只
+记录，不否决精度 parent；C1 再做压缩。
+
+证据：[`l3-global-lrh-stratified-qwen.json`](../../../artifacts/real_model_suite/l3-global-lrh-stratified-qwen.json)、
+[`l3-global-lrh-diagnostic-qwen.json`](../../../artifacts/real_model_suite/l3-global-lrh-diagnostic-qwen.json)、
+[`v107-l3-global-lrh-qwen-full.json`](../../../artifacts/real_model_suite/v107-l3-global-lrh-qwen-full.json)、
+[`v107 archive`](../../../solutions/20260830_v107_l3-global-lrh-precision-parent_score295.157057_time481s/)。
+
 ### L4：final-weight Gram 与 GALS 分拆验证
 
-**状态：pending；低优先级。**
+**状态：in_progress（2026-08-31；先执行 L4a）。**
 
 L4 不再把“最终权重 Gram”和“显式 role GALS”捆绑成一次实验。
 
@@ -375,8 +390,8 @@ P=\operatorname{softmax}((QT_Q)(KT_K)^T/\sqrt d),
 | 1 | L0 Linear 上限/误差分解 | `done` | — | ceiling JSON + 报告 |
 | 2 | L1 修复 v092 hierarchy LRH | `rejected` | L0 完成 | v105 screen + audit |
 | 3 | L2 expansive-FFN CAT/BOAT-2 | `done` | L1 裁决 | v106 full-layer parent |
-| 4 | L3 修复 v095 Gram gate | `in_progress` | L2 完成 | acceptance diagnostic + 候选 |
-| 5 | L4 final-Gram/GALS 分拆 | `pending` | L0 显示对应 headroom | 小预算消融 |
+| 4 | L3 修复 v095 Gram gate | `done` | L2 完成 | v107 diagnostic + full-layer parent |
+| 5 | L4 final-Gram/GALS 分拆 | `in_progress` | L0 显示对应 headroom | L4a final Gram 消融 |
 | 6 | L5 新结构/外部审计 | `pending` | L1–L4 无足够结构增益 | 新算法族裁决 |
 | 7 | C1 压缩/冻结 | `pending` | 出现新精度 parent | `<420s` submission candidate |
 | A | A1 Attention PAWV | `deferred` | Linear 等待或切换目标 | Attention candidate |
@@ -390,6 +405,7 @@ P=\operatorname{softmax}((QT_Q)(KT_K)^T/\sqrt d),
 |---|---|---:|---:|---:|---:|---:|---|
 | v100/v101 | `617482ce...1693eba` | 0.5015576125 | 0.8420394885 | 293.797301 | 392.42s / 401.13s | NA | previous parent |
 | **v106** | `708081b5...67dd77` | **0.5034589422** | **0.8420394885** | **294.272633** | **412.65s** | NA | **current parent** |
+| **v107** | `cb3e84c0...1470b710` | **0.5069966356** | **0.8420394885** | **295.157057** | 481.04s | NA | **current precision parent** |
 
 ## 9. 明确不再执行
 
@@ -397,12 +413,13 @@ P=\operatorname{softmax}((QT_Q)(KT_K)^T/\sqrt d),
 
 - 全局 E6M2/顶层 scale-code 扩张；
 - 只凭 layer-1 正向直接运行高成本 full-layer；
-- 未修复写回的 v092、MSE gate 的 v095、旧坐标 PAWV rank-8；
+- 未修复写回的 v092、旧 MSE gate 的 v095、旧坐标 PAWV rank-8；
 - 全局 quantized-weight Gram、shape-proxy 冒充显式 role；
 - full-width/full-H、逐块大自由度 CAT β 网格或无上限依据的 sweep/coverage 扩张；
 - 使用 test/holdout/官方输出逐层回退在线 `Q(A)`；
 - 同时堆叠多个尚未独立证明正向的算法。
 
-当前唯一下一步是 **L3：修复 v095 Global Activation-LRH 的 Gram gate**。L0 已完成，
-L1 已正确实现并拒绝，L2 v106 已通过 full-layer 并成为当前 parent；不得回到 L1
-扩大 rank、block 数或 sweep，除非新的 L0/L5 证据改变该裁决。
+当前唯一下一步是 **L4：final-weight Gram 与 GALS 分拆验证**。L0 已完成，L1 已正确
+实现并拒绝，L2 v106 保留为时间 parent，L3 v107 已通过精度 full-layer 并成为当前
+precision parent；不得回到 L1 扩大 rank、block 数或 sweep，除非新的 L0/L5 证据改变
+该裁决。

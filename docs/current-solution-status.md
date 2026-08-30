@@ -1,27 +1,29 @@
 # 当前主版本算法效果与评测状态
 
-> 更新日期：2026-08-30
+> 更新日期：2026-08-31
 > 适用文件：根目录 [`solution.py`](../solution.py)
 > 文档性质：本地可复现实测记录，不是官方成绩承诺。
 
 ## 一句话结论
 
-根目录当前为 BOAT + expansive-FFN CAT balance + cross-fold HSDQ，并加入已通过本地门禁的
-Attention B1 GQRB 与 B2 PAWV diag-only 候选。固定 Qwen2.5-0.5B 缓存、`seq=128`、
-`calib=2`、`test=4`、全 24 层、CPU 的完整运行中，当前主版本 Qwen shaped panel 为
-**294.272633**，正式 API 累计 **412.654599 s**，低于
-`420 s` 限制；该数值用于本地 A/B 排序，不能线性换算为官方排行榜分数。
+根目录当前为 BOAT + expansive-FFN CAT balance + cross-fold HSDQ + Global Activation-LRH
+Gram gate，并保留 Attention B1 GQRB 与 B2 PAWV diag-only。固定 Qwen2.5-0.5B 缓存、
+`seq=128`、`calib=2`、`test=4`、全 24 层、CPU 的完整运行中，当前精度 parent 的
+Qwen shaped panel 为 **295.157057**，Linear mean **0.5069966356**，正式 API
+累计 **481.036527 s**；探索阶段只记录时间，不以 `420 s` 否决精度候选，最终冻结时
+再压缩。该数值用于本地 A/B 排序，不能线性换算为官方排行榜分数。
 
 当前唯一活跃计划是 [`2026-08-30-hif4-active-optimization-plan.md`](superpowers/plans/2026-08-30-hif4-active-optimization-plan.md)；归档候选的写回、目标错位和源码缺失审计见 [`archive-implementation-audit.md`](archive-implementation-audit.md)。
 
-2026-08-30 已按执行计划完成 E0-C、E1→A6、B1、B2、L1 和 L2。Linear 的 E1/A2/A3/A4/A5/A6
-当前运行配置均未超过 stable parent；但归档审计发现 v095 最终 gate 存在问题，仍待后续修复验证。B1 GQRB margin 先把 panel 提升到 `293.793700`，B2
-PAWV diag-only 再提升到 `293.797301`，L2 expansive-FFN CAT balance 将 panel 提升到
-`294.272633`、Linear mean 提升到 `0.503458942243`，API 为 `412.654599 s`，因此当前根
-切换到 v106；随后 C0 五模型确认完成，Qwen 主模型仍通过门禁。官方评测不可用
+2026-08-31 已按执行计划完成 E0-C、E1→A6、B1、B2、L1、L2 和 L3。B1 GQRB margin
+先把 panel 提升到 `293.793700`，B2 PAWV diag-only 再提升到 `293.797301`，L2
+expansive-FFN CAT balance 将 panel 提升到 `294.272633`、Linear mean 提升到
+`0.503458942243`；L3 修复 v095 gate 后，4-block precision parent 的 panel 为
+`295.157057`、Linear mean `0.5069966356`，较 v106 分别 `+0.884423` 和 `+0.003538`。
+官方评测不可用
 期间，所有新候选仍以固定 Qwen panel 为门禁。L1 已完成真正的 scale/lv2/lv3/mantissa
 原子写回与合成测试，但五层×七 role 预筛与 L0 逐条持平（`0.523019429222563`），
-因此候选 v105 已归档；v106 已通过 full-layer 并成为当前 parent，下一步转入 L3。
+因此候选 v105 已归档；v106 是时间 parent，v107 是当前精度 parent，下一步转入 L4。
 
 ## 当前实现
 
@@ -50,29 +52,30 @@ PAWV diag-only 再提升到 `293.797301`，L2 expansive-FFN CAT balance 将 pane
    改善 0.1% 才能替换。B2 PAWV 用 attention probability 的 token-row 对角
    Hessian 做 V 的离散坐标 refinement；V 仍保持独立合法 HiF4 编码。
 
-## 最新全层实测
+## 最新全层实测（当前精度 parent）
 
-报告文件：[`v106-l2-cat-qwen-full.md`](../logs/execution/2026-08-30-v106-l2-cat-qwen-full.md)；
-原始 JSON：[`v106-l2-cat-qwen-full.json`](../artifacts/real_model_suite/v106-l2-cat-qwen-full.json)。
+报告文件：[`v107-l3-global-lrh-qwen-full.md`](../logs/execution/2026-08-30-v107-l3-global-lrh-qwen-full.md)；
+原始 JSON：[`v107-l3-global-lrh-qwen-full.json`](../artifacts/real_model_suite/v107-l3-global-lrh-qwen-full.json)。
+v106 时间 parent 对照：[`v106-l2-cat-qwen-full.md`](../logs/execution/2026-08-30-v106-l2-cat-qwen-full.md)。
 上一 parent 的对照报告：[`b2-pawv-diagonly-qwen-full.md`](../logs/evaluations/b2-pawv-diagonly-qwen-full.md)。
 
 固定输入为 Qwen2.5-0.5B（24 层、hidden 896、14 Q heads、2 KV heads、head dim 64），
 calibration 使用 train 的 2 个窗口，test 使用 validation 的 4 个不重叠窗口。
 
-| 指标 | 当前 v106 | 旧 C86 | 变化 |
+| 指标 | 当前 v107 | v106 | 相对 v106 |
 |---|---:|---:|---:|
-| Linear native mean | **0.503459** | 0.477821 | +0.025638 |
-| Attention native mean | 0.842039 | 0.739264 | +0.102775 |
-| Qwen panel Linear | **125.864736** | 119.455153 | +6.409583 |
-| Qwen panel Attention | 168.407898 | 147.852757 | +20.555141 |
-| Qwen panel total | **294.272633** | 267.307909 | **+26.964724（+10.09%）** |
-| official-flow native total | **419.160200** | 392.064774 | +27.095426 |
-| six-API time | **412.654599 s** | 313.577669 s | +99.076930 s |
-| wall time | 446.069189 s | — | `API <420 s` |
+| Linear native mean | **0.506997** | 0.503459 | **+0.003538** |
+| Attention native mean | 0.842039 | 0.842039 | 0 |
+| Qwen panel Linear | **126.749159** | 125.864736 | **+0.884423** |
+| Qwen panel Attention | 168.407898 | 168.407898 | 0 |
+| Qwen panel total | **295.157057** | 294.272633 | **+0.884423** |
+| official-flow native total | **421.537530** | 419.160200 | **+2.377330** |
+| six-API time | 481.036527 s | **412.654599 s** | +68.381928 s |
+| wall time | 513.190587 s | 446.069189 s | exploratory timing |
 
 五模型 C0 确认报告：[`2026-08-30-c0-b2-pawv-five-model.md`](../logs/evaluations/2026-08-30-c0-b2-pawv-five-model.md)。
-v106 Qwen panel `294.272633`、Linear `0.503459`、Attention `0.842039`、
-API `412.654599s`，仍低于 `420s`；gpt2-small/OPT/Pythia 的旧 parent API 分别为
+v107 Qwen panel `295.157057`、Linear `0.506997`、Attention `0.842039`、
+API `481.036527s`；该精度 parent 暂不满足最终 420s 冻结条件。gpt2-small/OPT/Pythia 的旧 parent API 分别为
 `196.975s/192.776s/193.423s`，gpt2-medium 为 `492.641s`（仅软 guardrail 时间
 超限，未影响 Qwen 主门禁）。五模型 aggregate panel `263.604453` 仅作泛化诊断。
 
@@ -109,9 +112,9 @@ CUDA 会在外部代码的 CPU state / CUDA activation 混用处触发 device mi
 
 | 比较口径 | 当前根 | 外部最高基准 | 当前根领先 |
 |---|---:|---:|---:|
-| Qwen native total | **419.160200** | 369.527269 | **+49.632931（+13.43%）** |
-| Qwen shaped panel | **294.272633** | 250.327102 | **+43.945531（+17.56%）** |
-| panel Linear | **125.864736** | 112.939429 | **+12.925306** |
+| Qwen native total | **421.537530** | 369.527269 | **+52.010261（+14.07%）** |
+| Qwen shaped panel | **295.157057** | 250.327102 | **+44.829955（+17.91%）** |
+| panel Linear | **126.749159** | 112.939429 | **+13.809730** |
 | panel Attention | 168.407898 | 137.387673 | **+31.020225** |
 
 因此，后续本地算法 A/B 应以外部 Qwen `250.327102` 作为第一比较线，
@@ -122,17 +125,17 @@ CUDA 会在外部代码的 CPU state / CUDA activation 混用处触发 device mi
 
 | 组件 | case 数 | gain sum | gain mean | global gain |
 |---|---:|---:|---:|---:|
-| Linear | 672 | 338.324409 | 0.503459 | 0.440481 |
+| Linear | 672 | 340.701739 | 0.506997 | 0.442719 |
 | Attention | 96 | 80.835791 | 0.842039 | 0.857899 |
 | 合计 | 768 | **419.160200** | — | — |
 
 `panel_score` 不是把 768 个 case 复制成 450 个，而是保留组件均值后投影：
 
-$$P_L=250\times0.5034589422=125.864736,$$
+$$P_L=250\times0.5069966356=126.749159,$$
 
 $$P_A=200\times0.8420394885=168.407898,$$
 
-$$P_{total}=P_L+P_A=294.272633.$$
+$$P_{total}=P_L+P_A=295.157057.$$
 
 因此 `official_flow_total` 与 `panel_score.total` 同时出现是设计结果，不是计算冲突。
 
@@ -140,12 +143,12 @@ $$P_{total}=P_L+P_A=294.272633.$$
 
 | 角色 | native mean |
 |---|---:|
-| q | 0.616561 |
-| k | 0.620526 |
-| v | 0.563596 |
-| o | 0.483463 |
-| fc_gate | **0.388435** |
-| fc_up | 0.430255 |
+| q | 0.619369 |
+| k | 0.626984 |
+| v | 0.571105 |
+| o | 0.487739 |
+| fc_gate | **0.391253** |
+| fc_up | 0.431150 |
 | proj | 0.421376 |
 
 `v` 与 `fc_gate` 是当前最弱角色；L2 CAT balance 已改善 fc_gate，但从总体收益看，扩张 FFN 和输出投影仍受跨
@@ -177,6 +180,8 @@ $$P_{total}=P_L+P_A=294.272633.$$
 | B2 PAWV diag-only + B1 GQRB（v100） | 293.797301 | 0.501558 | 392.42s | previous parent |
 | C0 五模型确认（无代码变更） | **293.797301** | **0.501558** | **401.13s（Qwen）** | **confirmed** |
 | **L2 expansive-FFN CAT balance（v106 当前根）** | **294.272633** | **0.503459** | **412.65s** | **active** |
+| **L3 Global Activation-LRH Gram gate（v107 精度 parent）** | **295.157057** | **0.506997** | **481.04s** | **精度采纳；时间暂不作为探索门禁** |
+| L3 1-block 对照（v107b1） | 294.483738 | 0.504303 | 446.29s | 低于 v107，不作为 parent |
 | stable parent | 293.755106 | 0.501558 | 382.15s | baseline |
 
 归档目录：`solutions/20260830_v087...` 至 `solutions/20260830_v106...`；
@@ -194,17 +199,23 @@ $$P_{total}=P_L+P_A=294.272633.$$
 `2026-08-30-a7-quant-weight-gram.md`、`2026-08-30-l1-lrh-stratified.md`、
 `2026-08-30-l1-full-hierarchy-lrh.md`、`2026-08-30-l2-cat-stratified.md`、
 `2026-08-30-l2-expansive-cat.md`、`2026-08-30-v106-l2-cat-qwen-full.md`。
+L3 证据：`2026-08-30-l3-global-lrh-stratified.md`、
+`2026-08-30-l3-global-lrh-diagnostic.md`、
+`2026-08-30-v107-l3-global-lrh-qwen-full.md`、
+`2026-08-30-l3-global-lrh-b1-stratified.md`、
+`2026-08-30-l3-global-lrh-b1-diagnostic.md`、
+`2026-08-30-v107b1-l3-global-lrh-qwen-full.md`。
 
 ## 距离 Linear 0.9 与 36,000
 
-当前 Linear native mean 为 `0.5034589422`。若以本地 panel 的 mean 作为诊断目标：
+当前精度 parent 的 Linear native mean 为 `0.5069966356`。若以本地 panel 的 mean 作为诊断目标：
 
-$$\Delta g_L=0.9-0.5034589422=0.3965410578,$$
+$$\Delta g_L=0.9-0.5069966356=0.3930033644,$$
 
-$$\frac{\Delta g_L}{1-g_L}=\frac{0.3965410578}{0.4965410578}=79.86\%.$$
+$$\frac{\Delta g_L}{1-g_L}=\frac{0.3930033644}{0.4930033644}=79.72\%.$$
 
 也就是还要消除当前 Linear 剩余归一化误差的约 **79.86%**，对应 250-case panel
-仍差 **99.1353** 分。这个数轴不是官方排行榜的绝对分数。
+仍差 **98.2508** 分。这个数轴不是官方排行榜的绝对分数。
 
 官方历史合规锚点为 C66：`22557 / 217.2s`；外部参考 `youxilee/hif4` 为用户提供的
 `24153 / 239s`。从 C66 到 `36000` 的官方分差是 **13443**，但当前本地 panel
@@ -217,10 +228,18 @@ $$\frac{\Delta g_L}{1-g_L}=\frac{0.3965410578}{0.4965410578}=79.86\%.$$
 1. L0：已完成五个分层层位、全 role 的 Linear 单侧误差、合法 oracle 和放宽上限诊断；
 2. L1：已完成原子写回完整 hierarchy 与正确二次型复验；预筛拒绝并归档 v105；
 3. L2：已完成只按合法 expansive shape 路由的低自由度 FFN CAT balance，v106 已采纳；
-4. L3：用部署 Gram 二次型修复 v095 Activation-LRH gate（当前下一步）；
-5. L4：把 final-weight Gram 与 GALS 拆成两个有 oracle 依据的小预算实验；
+4. L3：已完成部署 Gram 二次型修复 v095 Activation-LRH gate，v107 成为当前精度 parent；
+5. L4：把 final-weight Gram 与 GALS 拆成两个有 oracle 依据的小预算实验（当前）；
 6. L5：若前述方向没有结构增益，进入外部逐组件审计和联合坐标—层级离散新路线；
-7. 出现新精度 parent 后再做 `<420s` 压缩。PAWV rank 属于独立 Attention 队列，不插入 Linear 主线。
+7. 所有精度方向完成后再做 `<420s` 压缩。PAWV rank 属于独立 Attention 队列，不插入 Linear 主线。
+
+L3 的正式产物为 [`v107-l3-global-lrh-qwen-full.json`](../artifacts/real_model_suite/v107-l3-global-lrh-qwen-full.json)
+和 [`v107 L3 archive`](../solutions/20260830_v107_l3-global-lrh-precision-parent_score295.157057_time481s/)。
+v107 Linear mean `0.5069966356`、panel `295.1570566`，较 v106 分别提升
+`+0.0035376934`、`+0.8844233`；收益来自窄输入 q/k/v/o 的 global-LRH 候选，
+fc_gate/fc_up/proj 不依赖 global state。Gram/MSE 冲突率为 `0.567475`，说明原
+v095 MSE gate 确实会做出不同裁决。1-block 对照为 `0.5043033601`，低于 4-block，
+因此保留 4-block 作为精度 parent。
 
 L2 的正式产物为 [`v106-l2-cat-qwen-full.json`](../artifacts/real_model_suite/v106-l2-cat-qwen-full.json)
 和 [`2026-08-30-l2-expansive-cat.md`](../logs/execution/2026-08-30-l2-expansive-cat.md)。
@@ -240,23 +259,23 @@ L0 的正式产物为 [`l0-linear-ceiling-qwen.json`](../artifacts/oracle_dashbo
 的 `both_player=0.52301943`、`weight_perfect=0.70417026`、
 `activation_perfect=0.82035698`；整体 activation-side headroom (`0.29733755`)
 大于 weight-side (`0.18115083`)，但 q/k 权重侧更突出，FFN/proj 激活侧更突出。
-这只调整 L1–L4 的优先级，不产生部署 parent，也不替代 v106 当前 24 层 parent `0.5034589422`。
+这只调整 L1–L4 的优先级，不产生部署 parent，也不替代 v107 当前 24 层精度 parent `0.5069966356`。
 
 旧版 active 计划已经归档；官方提交改为接口恢复时触发的外部事件，不阻塞当前本地执行。
 
 ## 时间与合规
 
-- 六个 API 累计：v106 calibration+dynamic `412.654599 s < 420 s`；本地 wall
-  `446.069189 s` 仅作诊断。
+- 六个 API 累计：v107 calibration+dynamic `481.036527 s`；本地 wall
+  `513.190587 s`。探索阶段只记录时间；C1 再以 `<420s` 作为提交门禁。
 - 调用次数：weight calibration 168；attention calibration 24；dynamic activation
   672；Q/K/V 各 96。
 - `activation_state` 只包含 BOAT 逆缩放、静态 Gram、Attention GQRB 正交 mixing、
   PAWV 的静态 token-row diagonal 与旋转整数配置/符号；输出监督只用于离线
   Attention 候选和权重侧选择，不进入在线 `Q(A)`。
 - 当前源码 SHA256（规范 LF 内容）：
-  `708081b5281e02da0c2a6e21881027b2e8d31eed423fd3c70e4572424667dd77`。
-- 发布前检查：`30 passed`，包含 reference HiF4、Linear 合规、ceiling dashboard 和
-  L2 CAT transform 测试；L2 full-layer `valid_submission=true`。
+  `cb3e84c019c4be39853c47a65a9f01bac4b4d1e6de2184242fd09ae01470b710`。
+- 发布前检查：L3 合成/合规/精度门控测试 `18 passed`，另有既有 Linear 合规
+  `15 passed`；v107 full-layer `valid_submission=true`，但 `under_official_runtime_limit=false`。
 
 历史 C86 源码和每次实验结果仍在 `solutions/`、`logs/` 与 Git 历史中，本文只描述
 当前根目录实现；历史记录不应被当作当前代码行为。

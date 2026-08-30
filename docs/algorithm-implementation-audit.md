@@ -1,16 +1,17 @@
 # 算法实现审计：当前根与已归档候选
 
-> 审计日期：2026-08-30
+> 审计日期：2026-08-31
 > 审计对象：根 [`solution.py`](../solution.py)，规范 LF SHA256
-> `617482cee04ff9514a8d41226b651336e4b8b86692673308e835de1091693eba`
+> `cb3e84c019c4be39853c47a65a9f01bac4b4d1e6de2184242fd09ae01470b710`
 > 原则：源码、校准目标、部署解码和评测日志必须逐一对应；不能用旧审计文字替代源码证据。
 
 ## 0. 结论
 
-根目录当前是 v106 的 stable parent：BOAT、expansive-FFN CAT balance、cross-fold
-Weight-HSDQ、Gram-hierarchy Activation-HSDQ、B1 GQRB 和 B2 PAWV diag-only。
-Qwen 固定 cache 的最高已完成 full-layer panel 为 `294.272633`，Linear mean 为
-`0.5034589422`，Attention mean 为 `0.8420394885`，API 时间 `412.654599s`。
+根目录当前是 v107 的 precision parent：BOAT、expansive-FFN CAT balance、cross-fold
+Weight-HSDQ、Gram-hierarchy Activation-HSDQ、Gram-gated Global Activation-LRH、B1
+GQRB 和 B2 PAWV diag-only。Qwen 固定 cache 的最高已完成 full-layer panel 为
+`295.157057`，Linear mean 为 `0.5069966356`，Attention mean 为 `0.8420394885`，
+API 时间 `481.036527s`（探索阶段记录，最终仍需 C1 压缩）。
 
 L1 v105 已实现真正的 full-hierarchy cross-block Weight-LRH（scale/lv2/lv3/
 mantissa 原子写回），并通过 `29 passed` 合成/合规测试；但五层×七 role 的
@@ -67,7 +68,7 @@ q_{r,j}=\frac14 c_{r,j}\,s_r\,u_{r,g(j)},v_{r,h(j)},
 v105 已完成该复验并以 cross-fold 泛化不足为由拒绝，详见
 [`L1 log`](../logs/execution/2026-08-30-l1-full-hierarchy-lrh.md)。
 
-### 2.2 v095 Global Activation-LRH 的 gate 错位
+### 2.2 v095 Global Activation-LRH 的 gate 错位（L3 已修复）
 
 v095 用未加权逐元素 MSE 接受候选，而部署激活误差应使用
 
@@ -76,8 +77,11 @@ J_A(Q)=\|(Q(A)-A)W^T\|_F^2
        =\operatorname{tr}\big((Q(A)-A)W^TW(Q(A)-A)^T\big).
 \]
 
-因此 v095 的负结果不能单独否定“用 Gram 二次型 gate 的 Global-LRH”；该修复仍
-属于 active plan 的 L3，尚未执行。
+因此 v095 的负结果不能单独否定“用 Gram 二次型 gate 的 Global-LRH”。L3 v107
+已将低秩近似限制为候选生成，并用最终量化权重 `G_q` 逐行重算部署 Gram gate；
+五层 screen `0.52894931`，full-layer Linear mean `0.5069966356`、panel
+`295.157057`。具体门禁冲突率和两折稳定性见
+[`L3 diagnostic`](../logs/execution/2026-08-30-l3-global-lrh-diagnostic.md)。
 
 ### 2.3 仍有待验证的低风险问题
 
@@ -93,11 +97,11 @@ J_A(Q)=\|(Q(A)-A)W^T\|_F^2
 | 方向 | 根状态 | 结论/下一步 |
 |---|---|---|
 | BOAT + Weight-HSDQ | 保留 | stable parent；由 active plan 统一门禁 |
-| Gram-hierarchy Activation-HSDQ | 保留 | stable parent；L3 前不改 gate |
+| Gram-hierarchy Activation-HSDQ | 保留 | stable parent；作为 L3 proposal 的局部基座 |
 | expansive-FFN CAT balance | 保留（v106） | `rows > channels`、α=0.25；只改善 fc_gate |
 | v105 full-hierarchy Weight-LRH | 归档 rejected | 正确写回但 screen 无增益；不扩大 rank/block/sweep |
 | expansive-FFN CAT/BOAT-2 进一步变体 | 未执行 | 不恢复全局 block 搜索 |
-| v095 Gram-objective Global-LRH | 未执行修复版 | active plan 当前 L3 |
+| v095 Gram-objective Global-LRH | 已修复并采纳（v107 精度 parent） | 4-block proposal；最终 Gram gate；时间待 C1 压缩 |
 | final-weight Gram + GALS | 未执行 | active plan L4，先做小预算 oracle |
 | Attention PAWV rank/position | deferred | 不插入 Linear 主线 |
 
@@ -106,7 +110,7 @@ J_A(Q)=\|(Q(A)-A)W^T\|_F^2
 唯一可执行计划是 [`2026-08-30-hif4-active-optimization-plan.md`](superpowers/plans/2026-08-30-hif4-active-optimization-plan.md)。
 每个候选必须保存完整源码、规范 LF SHA、固定 cache/命令、合规扫描和结果日志；
 screen/oracle 不能写入最高分账本。L1 v105 已按该规则归档，根目录恢复 v100/v101，
-当前下一步是 L3。计划目录不得同时存在第二份 active 计划。
+当前下一步是 L4。计划目录不得同时存在第二份 active 计划。
 
 本审计只记录源码与执行证据；它不把本地 panel 线性换算为官方分数，也不改变
 历史归档文件内容。

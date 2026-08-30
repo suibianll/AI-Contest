@@ -1,6 +1,6 @@
 # HiF4 Solution Archive
 
-> 数据快照日期：2026-08-30；当前根和候选数字以最新可复现评测记录及 source SHA 为准。
+> 数据快照日期：2026-08-31；当前根和候选数字以最新可复现评测记录及 source SHA 为准。
 
 Root `solution.py` is the only active submission. Archived source files are immutable.
 
@@ -15,22 +15,22 @@ v034、v051、v066 官方列更新为新版结果；其余历史官方列保留�
 
 ## 当前活跃根版本（不属于下方历史版本号）
 
-根目录 `solution.py` 当前为 v106（expansive-FFN CAT balance + B2 PAWV diag-only +
-B1 GQRB）；C0 五模型复测已
+根目录 `solution.py` 当前为 v107 precision parent（expansive-FFN CAT balance +
+Gram-gated Global Activation-LRH + B2 PAWV diag-only + B1 GQRB）；C0 五模型复测已
 确认 v100 的 Qwen 主模型门禁。历史目录（包括 v073–v086/C75–C86）保持不可变；
 下表中的 `active-candidate` 只表示该候选在当时的排序状态，不代表当前根文件。
 
 | Candidate | Source | Qwen Linear mean | Qwen Attention mean | Qwen panel total | Native total | API time | Status |
 |---|---|---:|---:|---:|---:|---:|---|
-| v106 expansive-FFN CAT balance + B2 PAWV diag-only + B1 GQRB | `solution.py` | **0.503459** | 0.842039 | **294.272633** | 419.160200 | **412.654599s** | **active-local** |
+| v107 Global Activation-LRH Gram gate + v106/B1/B2 | `solution.py` | **0.506997** | 0.842039 | **295.157057** | 421.537530 | 481.036527s | **active-precision** |
 
 固定配置为 Qwen2.5-0.5B 全 24 层、`seq=128`、`calib=2`、`test=4`、`amax6`、CPU、
-缓存只读。完整报告见 [`b2-pawv-diagonly-qwen-full.md`](../logs/evaluations/b2-pawv-diagonly-qwen-full.md)，
+缓存只读。完整报告见 [`v107-l3-global-lrh-qwen-full.md`](../logs/execution/2026-08-30-v107-l3-global-lrh-qwen-full.md)，
 五模型确认见 [`2026-08-30-c0-b2-pawv-five-model.md`](../logs/evaluations/2026-08-30-c0-b2-pawv-five-model.md)。
-`official_score` 和 `official_time` 尚无值；294.272633 是本地 Qwen shaped panel，
+`official_score` 和 `official_time` 尚无值；295.157057 是本地 Qwen shaped panel，
 不能换算成官方分数。相对旧 C86 归档，panel 提升 `+26.964724`（`+10.09%`），正式
-API 时间为 `412.654599s`，仍小于 `420s`；相对 v100 panel 提升 `+0.475332`，
-Linear mean 提升 `+0.001901`。
+API 时间为 `481.036527s`，探索阶段只记录；相对 v106 panel 提升 `+0.884423`，
+Linear mean 提升 `+0.003538`。v106 仍作为时间 parent 保留在历史/归档记录中。
 
 | Version | Date | Topic | Local Linear | Local Attention | Local Time | Official Score | Official Time | Delta | Status | Directory |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |
