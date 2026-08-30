@@ -22,17 +22,17 @@ P = 250 g_L + 200 g_A,
 
 ## 2. 当前根与已确认效果
 
-根目录 `solution.py` 是 v100 的 B2 PAWV **diag-only** + B1 GQRB 路径；v101 是同一源码的五模型确认，不是另一套算法。当前规范 LF SHA256：
+根目录 `solution.py` 是 v106 的 expansive-FFN CAT balance + B2 PAWV **diag-only** + B1 GQRB 路径；v101 是此前 v100 的五模型确认。当前规范 LF SHA256：
 
-`617482cee04ff9514a8d41226b651336e4b8b86692673308e835de1091693eba`
+`708081b5281e02da0c2a6e21881027b2e8d31eed423fd3c70e4572424667dd77`
 
-| 指标 | 当前根 v100/v101 |
+| 指标 | 当前根 v106 |
 |---|---:|
-| Qwen Linear mean | 0.501558 |
+| Qwen Linear mean | 0.503459 |
 | Qwen Attention mean | 0.842039 |
-| Qwen shaped panel | **293.797301** |
-| Qwen native total | 417.882506 |
-| Qwen API time | 392.423565 s（C0 复测 401.130873 s） |
+| Qwen shaped panel | **294.272633** |
+| Qwen native total | 419.160200 |
+| Qwen API time | 412.654599 s |
 | 官方分数 | 尚无提交结果 |
 
 当前正式路径的有效组件是：
@@ -40,10 +40,11 @@ P = 250 g_L + 200 g_A,
 - **BOAT**：RMS 对角平衡与 4/8/16/64 signed-Hadamard，属于两侧 operand-local 的等价变换。
 - **cross-fold Weight-HSDQ**：用 `AᵀA` 二阶增量搜索离线权重参数，并用另一折校验。
 - **Gram-hierarchy Activation-HSDQ**：用静态变换后权重的 `WᵀW` 选择激活层级/offset，并限制 block 与 sweep 数。
+- **Expansive-FFN CAT balance**：仅对 `rows > channels` 的结构形状使用固定 α=0.25 RMS 对角 balance；v106 通过 Qwen full-layer。
 - **B1 GQRB margin**：GQA group-local 正交 Q/K mixing；只在完整部署复评有 margin 时接纳。
 - **B2 PAWV diag-only**：用 attention probability 的 token-row 对角 Hessian 做 V 的离散 refinement；跨 token 低秩项未进入根。
 
-最新正向链为：v086 `267.307909` → v098 `293.793700` → v100 `293.797301`。其中最大跃迁来自 C86 实验集合重写为 clean 单一路径，不能简单归因于单个新公式。
+最新正向链为：v086 `267.307909` → v098 `293.793700` → v100 `293.797301` → v106 `294.272633`。其中最大跃迁来自 C86 实验集合重写为 clean 单一路径；v106 的增益只来自 expansive `fc_gate`。
 
 ## 3. 归档源码审计结果
 
@@ -133,6 +134,7 @@ v102/v103 的 GALS 使用校准时浮点 `weight_t` 计算的 `gram64`，而实�
 | v098 B1 GQRB margin | group-local 矩阵保持正交，候选经完整部署复评；结果可作为稳定父版本。 |
 | v100 B2 PAWV diag-only | 对角 token-row 目标与写回路径一致，当前根已通过 Qwen 与五模型确认。 |
 | v104 A7 quantized-weight Gram | 统计替换本身已正确落地；layer-1 正向不能迁移到全层，且 470.58s 超时，按组合算法失败处理。 |
+| v106 expansive-FFN CAT balance | 固定 α=0.25 的结构路由，full-layer `+0.475332` panel，API `412.65s`；仅 fc_gate 改善，作为当前 parent。 |
 
 最近候选的静态/运行时 Linear 合规扫描均为 `violations=0, static=0`；本次没有发现把 `A@W` 输出监督写入在线 `Q(A)` 的新违规。合规通过不等于精度通过，二者分开记录。
 
@@ -140,7 +142,7 @@ v102/v103 的 GALS 使用校准时浮点 `weight_t` 计算的 `gram64`，而实�
 
 | 算法族 | 已实现并保留 | 已实现但回退 | 当前仍未验证/需要修复 |
 |---|---|---|---|
-| Linear 基础 | BOAT、cross-fold Weight-HSDQ、Gram-hierarchy Activation-HSDQ、512-row weight sampling、历史稳定 A@W/JDRQ 组件 | blockwise BOAT-2、全宽/逐块 A@W、大步长 headroom、full-H、**v105 corrected full-hierarchy LRH** 等 | Gram-objective gate 的 Global-LRH、最终权重 Gram + 显式 role 的 GALS、E1 三折/beam 版本 |
+| Linear 基础 | BOAT、cross-fold Weight-HSDQ、Gram-hierarchy Activation-HSDQ、**v106 expansive CAT balance**、512-row weight sampling、历史稳定 A@W/JDRQ 组件 | blockwise BOAT-2、全宽/逐块 A@W、大步长 headroom、full-H、**v105 corrected full-hierarchy LRH** 等 | Gram-objective gate 的 Global-LRH、最终权重 Gram + 显式 role 的 GALS、E1 三折/beam 版本 |
 | Attention | GQA head-local rotation、MHA K-center、B1 GQRB margin、B2 PAWV diag-only | causal CVaR、全模型 K-center、PAWV rank-8 当前实现 | 最终 Q/K 变换后的 PAWV rank/position bucket、交替 Q/K/V、真正 role-aware 的结构门控 |
 | 变换/CAT | 固定低自由度 CAT/BOAT 子集、共享 Hadamard | R64、CAT β 网格、full-H selector、BOAT-2 | 低自由度新坐标系或外部实现差异对照，尚无可部署候选 |
 | 诊断/工程 | E0-G/D0 scale oracle、C0 五模型确认、clean 单路径重写 | 全局 scale 扩张部署 | 三折合成宽度矩阵、元策略路由、计算预算重分配 |
@@ -158,10 +160,10 @@ v102/v103 的 GALS 使用校准时浮点 `weight_t` 计算的 `gram64`，而实�
 
 ## 7. 审计后的优先级
 
-1. 官方接口恢复后，先提交当前根 v100，获得第一个真实兑换率锚点。
+1. 官方接口恢复后，先提交当前根 v106，获得第一个真实兑换率锚点。
 2. L1 的 v105 corrected full-hierarchy LRH 已完成并拒绝；不再扩大其自由度。
-3. 当前下一实验是 active plan 的 L2 expansive-FFN CAT/BOAT-2；随后再做 v095 的
-   **Gram-objective gate** 修复，若仍失败才把 Global-LRH 归入停止清单。
+3. 当前下一实验是 active plan 的 L3 v095 **Gram-objective gate** 修复；若仍失败
+   才把 Global-LRH 归入停止清单。
 4. 之后才做最终 Q/K 变换后重建 PAWV rank/position metric；Linear 方向再做
    final-weight-Gram + 显式 role 的 GALS 小预算复筛。
 5. 每个实验必须保存完整源和 SHA；只要没有完整源，就标为不可复现，不把结果当作硬上限。

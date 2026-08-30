@@ -8,21 +8,22 @@
 
 ## 1. 当前根：算法构成与效果
 
-根 `solution.py`（规范 LF SHA `617482cee04ff9514a8d41226b651336e4b8b86692673308e835de1091693eba`）为 clean 单一路径，并在其上加入 B1 GQRB 与 B2 PAWV diag-only。当前最高版本由 C0 五模型确认（v101）复核；E0-C 的两个 GALS 稀疏变体（v102/v103）、A7 量化后权重 Gram（v104）和 L1 v105 full-hierarchy LRH 均已归档，未进入主线。v095 的最终 gate 仍待修复；v092 的旧写回问题已用 v105 复验并以 cross-fold 泛化不足拒绝，详见 [`归档实现审计`](archive-implementation-audit.md)。
+根 `solution.py`（规范 LF SHA `708081b5281e02da0c2a6e21881027b2e8d31eed423fd3c70e4572424667dd77`）为 clean 单一路径，加入 v106 expansive-FFN CAT balance、B1 GQRB 与 B2 PAWV diag-only。当前最高版本为 v106；E0-C 的两个 GALS 稀疏变体（v102/v103）、A7 量化后权重 Gram（v104）和 L1 v105 full-hierarchy LRH 均已归档，未进入主线。v095 的最终 gate 仍待修复；v092 的旧写回问题已用 v105 复验并以 cross-fold 泛化不足拒绝，详见 [`归档实现审计`](archive-implementation-audit.md)。
 
 | 组件 | 内容 |
 |---|---|
 | **BOAT** | 全层统一对角 alpha + 固定 signed-Hadamard；搜索在合法域内完成，只改变离线 `weight_params` |
 | **cross-fold Weight-HSDQ** | fold 1 生成的候选必须改善 fold 2，最终只改变离线 `weight_params` |
 | **Gram-hierarchy Activation-HSDQ** | 从静态变换后权重计算 64 维 Gram block，先按二次型选层级与 E6M2 offset，再做最多 128 个 block、2 轮坐标扫描；state 只含 CPU 静态 `gram64`、BOAT 逆缩放与整数/符号配置 |
+| **Expansive-FFN CAT balance** | 仅对 `rows > channels` 路由，固定 α=0.25 RMS 对角 balance；v106 仅 fc_gate 正向 |
 | **Attention 输出感知 shortlist** | reciprocal RMS/K-centering/共享 Hadamard + B1 GQRB 2×2/4×4 group-local mixing；B2 PAWV 用 attention probability 的 token-row 对角 Hessian 做 V refinement；V 保持独立合法 HiF4 编码 |
 
 **实测**（Qwen2.5-0.5B 全 24 层，`seq=128/calib=2/test=4/amax6`，缓存只读）：
 
 ```text
-Linear mean       0.501558      Attention mean  0.842039
-Qwen panel        293.797301    native total    417.882506
-six-API time      392.423565 s  wall time       424.693400 s   （API 在 420s 内）
+Linear mean       0.503459      Attention mean  0.842039
+Qwen panel        294.272633    native total    419.160200
+six-API time      412.654599 s  wall time       446.069189 s   （API 在 420s 内）
 ```
 
 分角色 Linear gain：`q 0.6166 / k 0.6205 / v 0.5636 / o 0.4835 / fc_gate 0.3751 / fc_up 0.4303 / proj 0.4214`。
@@ -42,7 +43,8 @@ six-API time      392.423565 s  wall time       424.693400 s   （API 在 420s �
 | v080 / C80 | gram64 全覆盖（ratio 1.0, max 128） | 265.373 | +5.31 |
 | v084 / C84 | gram64 全覆盖 + 5 轮坐标扫描 | 267.290 | +1.92 |
 | v086 / C86 | Attention Q/K 共享 block-Hadamard + v084 | 267.308 | +0.02 |
-| **当前根 v100/v101** | **clean + B1 GQRB + B2 PAWV diag-only** | **293.797** | **+26.49（+9.91%）** |
+| v100/v101 | clean + B1 GQRB + B2 PAWV diag-only | 293.797 | +26.49（+9.91%） |
+| **当前根 v106** | **+ expansive-FFN CAT balance** | **294.273** | **+0.475（+0.16%）** |
 
 **关键观察**：本轮最大的一次跃迁（+9.89%）不是来自新算法，而是**把实验集合重写为 clean 单一路径**——删掉 dormant branch、统一路径后反而大幅变好。
 
@@ -258,7 +260,7 @@ D0 三层均值（weight / activation-Gram）如下，原始 JSON 保存在
 | 方向 | 说明 |
 |---|---|
 | **提交当前根验证兑换率** | 本地领先外部约 +17.37%，但从未提交官方；先校准刻度仍是最高优先级 |
-| **重构 / 简化主路径** | 历史上唯一的大跃迁（+9.89%）来自"重写为 clean 单一路径"，而非新算法。可考虑对当前根再做一轮路径精简与 dead-branch 清理 |
+| **重构 / 简化主路径** | 历史上唯一的大跃迁（+9.89%）来自"重写为 clean 单一路径"，而非新算法；v106 CAT 已保持单一路径，后续只做有证据的精简 |
 | **外部实现的差异审计** | C70 移植失败（Qwen −6.99），但外部能到 24153。需要逐组件比对实现差异（不只是机制名） |
 | **跨模型一致性作为硬门禁** | 九连败中多数是"单模型正向、他模型回退"。应在单层/单模型阶段就用异构模型（OPT 尤其敏感）复筛 |
 
@@ -269,5 +271,5 @@ D0 三层均值（weight / activation-Gram）如下，原始 JSON 保存在
 1. **当前根是强局部最优**：多数结构性方向失败且失败幅度远超噪声；v105 已验证正确的 full-hierarchy 写回在两折上缺乏泛化，v095 的 Gram gate 修复仍未验证。
 2. **历史最大跃迁来自"重写为 clean 单一路径"（+9.89%）**，而不是新算法。这提示下一轮收益可能来自**路径精简与计算重分配**，而非新增机制。
 3. **P0 仍是提交当前根**：本地 +17.37% 的领先从未兑现为官方分；九连败也说明本地 panel 已进入饱和区，更需要真实官方反馈来校准方向。
-4. **本轮未再有已验证的部署空白**：PAWV diag-only 已采纳；GALS-C 两个稀疏变体、A7 量化 Gram 与 v105 full-hierarchy LRH 均已实测并回退，但 final-weight Gram + role-id GALS 仍未验证。后续按唯一活跃计划进入 L2，再做 Gram gate 与小预算 GALS。
+4. **本轮新增一个可部署 parent**：v106 的 expansive-FFN CAT balance 只改善 fc_gate，panel `294.272633` 且 API `412.654599s`；GALS-C 两个稀疏变体、A7 量化 Gram 与 v105 full-hierarchy LRH 均已回退。后续按唯一活跃计划进入 L3，再做 Gram gate 与小预算 GALS。
 5. **警惕跨模型不一致**：这是本工程最主要的失败模式（v044、v061、v071、v091 等）。任何新机制都应在单层阶段就用 OPT / Pythia 复筛，而不是全层跑完再判。

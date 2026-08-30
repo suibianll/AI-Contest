@@ -23,19 +23,19 @@
   的设备混用问题。完整表格见 [`当前主版本算法效果与评测状态`](docs/current-solution-status.md)。
 - 历史 v024 得分为 `16043 / 173.8s`，但其 Linear 输出监督路径把输出信息
   用于激活侧选择；这类 `A@W -> Q(A)` 用法仍不合规，因此不作为后续合规父版本。
-- 当前根 `solution.py` 为 v100 B2 PAWV diag-only + B1 GQRB；Qwen 全 24 层
-  本地实测 native `417.882506`、shaped panel `293.797301`、正式 API
-  `392.423565s`（C0 复测 `401.130873s`，均低于 420s）。逐项结果、归档实现
+- 当前根 `solution.py` 为 v106 expansive-FFN CAT balance + B2 PAWV diag-only +
+  B1 GQRB；Qwen 全 24 层本地实测 native `419.160200`、shaped panel
+  `294.272633`、正式 API `412.654599s`（低于 420s）。逐项结果、归档实现
   审计和复现实验配置见 [`当前主版本算法效果与评测状态`](docs/current-solution-status.md)、
   [`算法全景`](docs/algorithm-inventory-and-directions.md)、
   [`归档实现审计`](docs/archive-implementation-audit.md) 与 [`solutions/README.md`](solutions/README.md)。
   下一步只按 [`唯一活跃优化计划`](docs/superpowers/plans/2026-08-30-hif4-active-optimization-plan.md) 执行。
 - 当前根源码 SHA256：
-  `617482CEE04FF9514A8D41226B651336E4B8B86692673308E835DE1091693EBA`（规范 LF）。
+  `708081B5281E02DA0C2A6E21881027B2E8D31EED423FD3C70E4572424667DD77`（规范 LF）。
 - L1 full-hierarchy Weight-LRH 已完成合成测试与五层×七 role screen，但 screen
-  `both_player=0.523019429222563` 与 L0 逐条持平；候选 v105 已归档，根目录仍为
-  v100/v101 stable parent，当前下一步是 active plan 的 L2 expansive-FFN
-  CAT/BOAT-2。证据见 [`L1 execution log`](logs/execution/2026-08-30-l1-full-hierarchy-lrh.md)。
+  `both_player=0.523019429222563` 与 L0 逐条持平；候选 v105 已归档。L2 固定
+  `α=0.25` 的 expansive-FFN CAT balance 已通过 full-layer，v106 成为当前 parent；
+  当前下一步是 active plan 的 L3 Gram gate 修复。证据见 [`L2 execution log`](logs/execution/2026-08-30-l2-expansive-cat.md)。
 - 旧版本地评测器（单模型 dev 与 frozen holdout）曾因 calibration/test
   文本重叠不能可靠排序合规候选，相关代码（`real_data_eval.py`、
   `holdout_eval.py`、`cap_oracle.py`）已于 2026-08-28 移除；诊断结论见
@@ -108,7 +108,7 @@ git diff --check
 官方与本地均为 `C39 = C41b < C47b < C66`；Qwen 主面板的 Spearman 为
 `1.0000`，五模型 raw sum 为 `0.9487`。这只证明相对排序方向，不证明本地
 分数可以线性换算成官方分数。外部 `youxilee/hif4` 的最高同口径 Qwen panel 为
-`250.327102`，当前根为 `293.797301`，领先 `43.470199`（`17.37%`）；外部
+`250.327102`，当前根为 `294.272633`，领先 `43.945531`（`17.56%`）；外部
 Qwen native `369.527269` 仍作为第二诊断线，五模型合计不作为基准。
 
 ## 修订版官方评测锚点（2026-08-29）
@@ -150,9 +150,10 @@ Qwen native `369.527269` 仍作为第二诊断线，五模型合计不作为基�
 | --- | --- | --- | --- |
 | 1 | Linear | BOAT：RMS 对角平衡 + 4/8/16/64 signed-Hadamard | 先压低两侧 operand-local 误差；不构造 Linear 输出 |
 | 2 | Linear | Cross-fold Weight-HSDQ：`AᵀA` 二阶增量、15 levels、top-2 block、1 sweep | 只更新离线 `weight_params`；跨 fold 验证后才接纳 |
-| 3 | Linear | Gram-hierarchy Activation-HSDQ：静态 `WᵀW`、offset/hierarchy 选择、最多 128 block、2 sweeps | 在线 state 仅含合法静态统计；当前 Linear mean `0.501558` |
-| 4 | Attention | reciprocal RMS、K-centering、GQA 对齐、GQRB、PAWV diag-only | 使用真实 non-causal Attention 输出排序；当前 mean `0.842039` |
-| 5 | 下一步 | L0 已完成 → L1 corrected full-hierarchy LRH 已拒绝 → **L2 expansive-FFN CAT/BOAT-2（当前）** → L3 修复 v095 Gram gate → L4 final-Gram/GALS 分拆 → L5 新结构 | Attention PAWV 独立延后；官方提交为接口恢复时触发的事件；详细门禁只见唯一活跃计划 |
+| 3 | Linear | Gram-hierarchy Activation-HSDQ：静态 `WᵀW`、offset/hierarchy 选择、最多 128 block、2 sweeps | 在线 state 仅含合法静态统计；当前 Linear mean `0.503459` |
+| 4 | Linear | Expansive-FFN CAT balance：`rows > channels`、固定 α=0.25 | v106 仅改善 fc_gate；不增加 state 字段 |
+| 5 | Attention | reciprocal RMS、K-centering、GQA 对齐、GQRB、PAWV diag-only | 使用真实 non-causal Attention 输出排序；当前 mean `0.842039` |
+| 6 | 下一步 | L0 已完成 → L1 corrected full-hierarchy LRH 已拒绝 → L2 expansive-FFN CAT balance 已采纳 → **L3 修复 v095 Gram gate（当前）** → L4 final-Gram/GALS 分拆 → L5 新结构 | Attention PAWV 独立延后；官方提交为接口恢复时触发的事件；详细门禁只见唯一活跃计划 |
 
 优化决策只看同一冻结缓存上的相对增量：Qwen `primary_panel_score_total` 是主
 指标，其他模型用于发现结构性回退。不得用官方分数反向调参，也不设置固定的

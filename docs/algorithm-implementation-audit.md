@@ -7,10 +7,10 @@
 
 ## 0. 结论
 
-根目录当前是 v100/v101 的 stable parent：BOAT、cross-fold Weight-HSDQ、
-Gram-hierarchy Activation-HSDQ、B1 GQRB 和 B2 PAWV diag-only。Qwen 固定 cache
-的最高已完成 full-layer panel 为 `293.797301`，Linear mean 为 `0.5015576125`，
-Attention mean 为 `0.8420394885`，API 时间 `392.423565s`。
+根目录当前是 v106 的 stable parent：BOAT、expansive-FFN CAT balance、cross-fold
+Weight-HSDQ、Gram-hierarchy Activation-HSDQ、B1 GQRB 和 B2 PAWV diag-only。
+Qwen 固定 cache 的最高已完成 full-layer panel 为 `294.272633`，Linear mean 为
+`0.5034589422`，Attention mean 为 `0.8420394885`，API 时间 `412.654599s`。
 
 L1 v105 已实现真正的 full-hierarchy cross-block Weight-LRH（scale/lv2/lv3/
 mantissa 原子写回），并通过 `29 passed` 合成/合规测试；但五层×七 role 的
@@ -94,9 +94,10 @@ J_A(Q)=\|(Q(A)-A)W^T\|_F^2
 |---|---|---|
 | BOAT + Weight-HSDQ | 保留 | stable parent；由 active plan 统一门禁 |
 | Gram-hierarchy Activation-HSDQ | 保留 | stable parent；L3 前不改 gate |
+| expansive-FFN CAT balance | 保留（v106） | `rows > channels`、α=0.25；只改善 fc_gate |
 | v105 full-hierarchy Weight-LRH | 归档 rejected | 正确写回但 screen 无增益；不扩大 rank/block/sweep |
-| expansive-FFN CAT/BOAT-2 | 未执行 | active plan 当前 L2 |
-| v095 Gram-objective Global-LRH | 未执行修复版 | active plan L3 |
+| expansive-FFN CAT/BOAT-2 进一步变体 | 未执行 | 不恢复全局 block 搜索 |
+| v095 Gram-objective Global-LRH | 未执行修复版 | active plan 当前 L3 |
 | final-weight Gram + GALS | 未执行 | active plan L4，先做小预算 oracle |
 | Attention PAWV rank/position | deferred | 不插入 Linear 主线 |
 
@@ -105,7 +106,7 @@ J_A(Q)=\|(Q(A)-A)W^T\|_F^2
 唯一可执行计划是 [`2026-08-30-hif4-active-optimization-plan.md`](superpowers/plans/2026-08-30-hif4-active-optimization-plan.md)。
 每个候选必须保存完整源码、规范 LF SHA、固定 cache/命令、合规扫描和结果日志；
 screen/oracle 不能写入最高分账本。L1 v105 已按该规则归档，根目录恢复 v100/v101，
-当前下一步是 L2。计划目录不得同时存在第二份 active 计划。
+当前下一步是 L3。计划目录不得同时存在第二份 active 计划。
 
 本审计只记录源码与执行证据；它不把本地 panel 线性换算为官方分数，也不改变
 历史归档文件内容。

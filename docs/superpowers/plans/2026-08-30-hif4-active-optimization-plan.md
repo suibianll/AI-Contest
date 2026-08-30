@@ -3,8 +3,8 @@
 > 状态：**ACTIVE**
 > 建立日期：2026-08-30
 > 适用根：`D:/工作内容/AI竞赛/solution.py`
-> 当前根：v100/v101（代码相同）
-> 规范 LF SHA256：`617482cee04ff9514a8d41226b651336e4b8b86692673308e835de1091693eba`
+> 当前根：v106 L2 expansive-FFN CAT balance
+> 规范 LF SHA256：`708081b5281e02da0c2a6e21881027b2e8d31eed423fd3c70e4572424667dd77`
 > 主目标：先提高 Qwen full-layer `linear_mean`，同时判断 `0.9` 在当前合法表示族内是否可达；Attention 单独排队。
 
 ## 1. 唯一执行规则
@@ -28,13 +28,13 @@
 
 | 指标 | 当前值 |
 |---|---:|
-| Linear mean | `0.5015576125` |
+| Linear mean | `0.5034589422` |
 | Attention mean | `0.8420394885` |
 | Linear panel | `125.389403` |
 | Attention panel | `168.407898` |
-| panel total | **`293.797301`** |
-| native total | `417.882506` |
-| API 时间 | `392.423565s`；C0 复测 `401.130873s` |
+| panel total | **`294.272633`** |
+| native total | `419.160200` |
+| API 时间 | `412.654599s` |
 | 当前根官方成绩 | `NA` |
 
 本地 case gain 定义为
@@ -48,21 +48,21 @@ g=\frac{\operatorname{MSE}_{std}-\operatorname{MSE}_{player}}
 当前 Linear 剩余归一化误差为
 
 \[
-r_L=1-g_L=0.4984423875.
+r_L=1-g_L=0.4965410578.
 \]
 
 若目标为 `linear_mean=0.9`，则还差
 
 \[
-\Delta g_L=0.3984423875,
+\Delta g_L=0.3965410578,
 \qquad
-\frac{\Delta g_L}{1-g_L}=79.9375\%.
+\frac{\Delta g_L}{1-g_L}=79.8607\%.
 \]
 
 等价地，必须把当前 Linear MSE 压到现有值的
 
 \[
-\frac{0.1}{0.4984423875}=20.0625\%,
+\frac{0.1}{0.4965410578}=20.1393\%,
 \]
 
 约为五分之一。Attention 不变时，本地 panel 将为
@@ -148,7 +148,7 @@ g^*_{\mathcal C}\le g^*_{\widetilde{\mathcal C}}.
 2. Qwen 五层、全 role、cross-fold 预筛；
 3. OPT/Pythia 只作结构性回退诊断，不要求每个模型、role 都正向；
 4. 预筛总体有正向信号后，最多进行一次 24 层完整评测；
-5. 只有同一冻结 cache 上 full-layer `linear_mean > 0.5015576125` 才允许替换 Linear parent。
+5. 只有同一冻结 cache 上 full-layer `linear_mean > 0.5034589422` 才允许替换 Linear parent。
 
 Attention 不得掩盖 Linear 回退。Linear 候选先比较 `linear_mean`，panel 和 Attention 只作为一致性检查。
 
@@ -157,7 +157,7 @@ Attention 不得掩盖 Linear 回退。Linear 候选先比较 `linear_mean`，pa
 每个 full-layer 候选额外记录目标缺口关闭率：
 
 \[
-\rho_{gap}=\frac{g_{candidate}-0.5015576125}{0.3984423875}.
+\rho_{gap}=\frac{g_{candidate}-0.5034589422}{0.3965410578}.
 \]
 
 小增益可以成为新 parent，但不能被描述成足以达到 `0.9`。连续两个正确实现、完整门禁的同族候选都没有 full-layer 正增益，且放宽 oracle 也没有实质空间时，归档该算法族，不继续扩大自由度。
@@ -168,7 +168,7 @@ Attention 不得掩盖 Linear 回退。Linear 候选先比较 `linear_mean`，pa
 
 ### L0：Linear 上限与误差分解
 
-**状态：done（2026-08-30）；L1 已成为下一步。**
+**状态：done（2026-08-30）；L0 结果已用于完成 L1/L2 的优先级裁决。**
 
 **假设**：现有记录只能证明局部候选失败，尚未区分 Weight、Activation、交叉项和坐标投影哪个是主要瓶颈，也没有足以判断 `0.9` 的放宽上界。
 
@@ -213,7 +213,7 @@ weight-plain gap 为 `0.0229%`，weight-Gram gap 为 `0.6065%`，activation-Gram
 
 证据：[`l0-linear-ceiling-qwen.json`](../../../artifacts/oracle_dashboard/l0-linear-ceiling-qwen.json)、
 [`2026-08-30-l0-linear-ceiling.md`](../../../logs/execution/2026-08-30-l0-linear-ceiling.md)。
-solution LF SHA 为 `617482cee04ff9514a8d41226b651336e4b8b86692673308e835de1091693eba`；
+L0 snapshot 的 solution LF SHA 为 `617482cee04ff9514a8d41226b651336e4b8b86692673308e835de1091693eba`；
 诊断脚本 LF SHA 为 `c5e20e8f0ae144a9e7593a923123ca64c5ba27c6a18f55c2f3b51f4aef4d63ad`。
 
 **裁决**：L0 不产生部署 parent。单侧无损 arms 仍低于 `0.9`，因此必须联合改善
@@ -252,7 +252,7 @@ layout 和 15 个 signed level 已完成合成测试（`29 passed`）。Qwen 层
 
 ### L2：低自由度 expansive-FFN CAT/BOAT-2
 
-**状态：pending。**
+**状态：done（2026-08-30；v106 accepted as new parent）。**
 
 **依据**：v093 全局 CAT/BOAT-2 失败，但完整 full-layer role 结果中 `fc_gate/fc_up` 为正向；这只能作为提出结构假设的证据，不能作为逐层 test 回退门。v093 layer-1 日志的 Linear/Attention/panel 三个数字不自洽，执行前先更正或标记该行不可用。
 
@@ -263,6 +263,16 @@ layout 和 15 个 signed level 已完成合成测试（`29 passed`）。Qwen 层
 **选择目标**：operand-local、cross-fold，冻结变换后重新量化 Weight 和 Activation；完整部署结果用于最终评测，不用于在线 selector。
 
 **门禁**：按第 3.2 节。成功则提升 parent；失败则归档该 FFN 结构候选，不恢复 v093 全局搜索。
+
+**实际执行**：实现固定 `α=0.25` 的 blockwise CAT balance，仅由静态
+`weight_rows > weight_channels` 路由；不增加 permutation/Householder state。
+五层×七 role screen 的 `both_player=0.525228958652`（较 L0 `+0.002209529429`）
+触发一次 Qwen 24 层 full-layer。v106 的 Linear mean 为 `0.503458942243`，
+较 v100/v101 `+0.001901329745`；Attention 不变，panel 为 `294.272633253`，
+API `412.654599s < 420s`。收益只来自 `fc_gate`，其余 role 逐项不变。
+候选源码和完整 JSON/日志归档在 `solutions/20260830_v106_l2-expansive-cat-active_score294.272633_time413s/`。
+证据：[`l2-expansive-cat.md`](../../../logs/execution/2026-08-30-l2-expansive-cat.md)、
+[`v106-l2-cat-qwen-full.json`](../../../artifacts/real_model_suite/v106-l2-cat-qwen-full.json)。
 
 ### L3：修复 v095 Global Activation-LRH 的 Gram gate
 
@@ -353,7 +363,7 @@ P=\operatorname{softmax}((QT_Q)(KT_K)^T/\sqrt d),
 
 **状态：blocked-external；官方接口恢复即触发。**
 
-提交时不临时改代码，记录：提交源 SHA、官方分数、官方时间、日期、规则版本和失败信息。第一次提交优先使用当时已压入 `<420s` 的最高可复现根；若新精度 parent 尚未压缩，则先提交 v100 作为兑换率锚点。
+提交时不临时改代码，记录：提交源 SHA、官方分数、官方时间、日期、规则版本和失败信息。第一次提交优先使用当时已压入 `<420s` 的最高可复现根；当前应提交 v106 作为兑换率锚点。
 
 官方结果只用于校准本地排序可信度和决定是否继续，不允许按隐藏分数逐参数反向调优。
 
@@ -361,11 +371,11 @@ P=\operatorname{softmax}((QT_Q)(KT_K)^T/\sqrt d),
 
 | 顺序 | 项目 | 状态 | 进入条件 | 完成产物 |
 |---:|---|---|---|---|
-| 0 | 基线冻结与审计 | `done` | — | v100/v101、SHA、固定 cache |
+| 0 | 基线冻结与审计 | `done` | — | v100/v101、v106、SHA、固定 cache |
 | 1 | L0 Linear 上限/误差分解 | `done` | — | ceiling JSON + 报告 |
 | 2 | L1 修复 v092 hierarchy LRH | `rejected` | L0 完成 | v105 screen + audit |
-| 3 | L2 expansive-FFN CAT/BOAT-2 | `pending` | L1 裁决 | 低自由度结构候选 |
-| 4 | L3 修复 v095 Gram gate | `pending` | L2 裁决 | acceptance diagnostic + 候选 |
+| 3 | L2 expansive-FFN CAT/BOAT-2 | `done` | L1 裁决 | v106 full-layer parent |
+| 4 | L3 修复 v095 Gram gate | `in_progress` | L2 完成 | acceptance diagnostic + 候选 |
 | 5 | L4 final-Gram/GALS 分拆 | `pending` | L0 显示对应 headroom | 小预算消融 |
 | 6 | L5 新结构/外部审计 | `pending` | L1–L4 无足够结构增益 | 新算法族裁决 |
 | 7 | C1 压缩/冻结 | `pending` | 出现新精度 parent | `<420s` submission candidate |
@@ -378,7 +388,8 @@ P=\operatorname{softmax}((QT_Q)(KT_K)^T/\sqrt d),
 
 | 版本 | 源 SHA | Linear | Attention | panel | API 时间 | 官方 | 状态 |
 |---|---|---:|---:|---:|---:|---:|---|
-| v100/v101 | `617482ce...1693eba` | **0.5015576125** | **0.8420394885** | **293.797301** | 392.42s / 401.13s | NA | current parent |
+| v100/v101 | `617482ce...1693eba` | 0.5015576125 | 0.8420394885 | 293.797301 | 392.42s / 401.13s | NA | previous parent |
+| **v106** | `708081b5...67dd77` | **0.5034589422** | **0.8420394885** | **294.272633** | **412.65s** | NA | **current parent** |
 
 ## 9. 明确不再执行
 
@@ -392,6 +403,6 @@ P=\operatorname{softmax}((QT_Q)(KT_K)^T/\sqrt d),
 - 使用 test/holdout/官方输出逐层回退在线 `Q(A)`；
 - 同时堆叠多个尚未独立证明正向的算法。
 
-当前唯一下一步是 **L2：低自由度 expansive-FFN CAT/BOAT-2**。L0 已完成，L1
-已完成正确实现和预筛但被拒绝；不得回到 L1 扩大 rank、block 数或 sweep，除非
-新的 L0/L5 证据改变该裁决。
+当前唯一下一步是 **L3：修复 v095 Global Activation-LRH 的 Gram gate**。L0 已完成，
+L1 已正确实现并拒绝，L2 v106 已通过 full-layer 并成为当前 parent；不得回到 L1
+扩大 rank、block 数或 sweep，除非新的 L0/L5 证据改变该裁决。
