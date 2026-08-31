@@ -44,12 +44,13 @@ Chinese version: [README.md](README.md)
   final-Gram gates, GALS, block-local permutation, rank-16/wide rank-4 factors,
   `G_64` hierarchy, structured factors, C1a–C1c) were **removed from the root file**;
   they survive only in `solutions/` archives and historical logs. The new
-  `sampled-means-v1` profile (Qwen, 8 layers, 7 roles, 4 windows, 224 Linear + 32
-  Attention cases) measures Linear mean `0.509408`, Attention mean `0.828395`, local
-  API `151.136s`, wall `161.840s`; under the same sampling plan v74 measures
-  `0.440305 / 0.671106 / 218.619s / 229.485s`. These four values are the current
-  local A/B primary results. The v127 full-layer legacy run (`453.102s`) is retained
-  for history only; never map a local 300-second reading onto the official limit.
+  active `sampled-means-v2` profile (Qwen, 112 Linear + 96 Attention cases) measures
+  Linear mean `0.522453`, Attention mean `0.842024`, local API `177.039s`, wall
+  `180.430s`; under the same v2 plan v74 measures `0.452721 / 0.657497 /
+  165.299s / 168.199s`. The old v1 `0.509408 / 0.828395 / 151.136s / 161.840s`
+  values are retained only for historical reproduction. The v127 full-layer legacy
+  run (`453.102s`) is retained for history only; never map a local 300-second reading
+  onto the official limit.
   Itemized results, archive audits, and reproduction configs live in the [current status
   report](docs/current-solution-status.md), the [algorithm inventory](docs/algorithm-inventory-and-directions.md),
   the [archive implementation audit](docs/archive-implementation-audit.md),
@@ -58,24 +59,34 @@ Chinese version: [README.md](README.md)
   C2 low-cost cross-model guardrails, then C3 state/time compression; the trimmed
   mechanisms may only be re-planted afterwards within a viable budget.
 - **Current target (updated 2026-08-31, superseding the old-weight 36000 goal)**:
-  reach **`linear_mean = 0.8`** on the Linear side (v127 measures `0.509408`; about
-  `59.2%` of the remaining normalized error must be removed); push Attention as high
-  as possible (the pawv-fixed family currently caps at `0.828395`); keep the official
+  reach **`linear_mean = 0.8`** on the Linear side (v127 measures `0.522453`; about
+  `58.2%` of the remaining normalized error must be removed); push Attention as high
+  as possible (v127 v2 is `0.842024`; the new-weight official anchor v84 is
+  `0.739172`); keep the official
   end-to-end time below 300s, with the local budget inferred from measured
   official-anchor ratios — the freeze-time local sampled-API budget is **`≤150s`**
-  (observed official/local ratio interval `[0.60, 2.02]`; v84 proves a locally slow
-  candidate can still pass officially). See
+  (observed v2 official/local ratio interval `[1.05, 2.31]`; this is a planning signal,
+  not an official-time conversion). **Composition caveat: v100-pawv-fixed timed
+  out officially (>300s) despite a local `150.25s` — the official panel is 250
+  Linear + 200 Attention (44.4% attention cases vs 12.5% sampled locally) and runs
+  the full 24-layer model on Kunpeng 920B, so attention-heavy candidates (PAWV/GQRB
+  family) are systematically under-counted locally by 2.3–3.6x; that family is now
+  officially time-infeasible and the submission line returns to the v84-proven
+  attention chain.** See
   [current target and local time inference](docs/current-solution-status.md).
 - Current source SHA256:
-  `75F21B7BE3630FFEFEAF2883BB699CE4901DF1BF6C0B39DD6E40F253561E32C0` (normalized LF;
+  `F15E112C7E832D019EE83D707ACD9D72FEF121A306E4CC3B50DBBC2CBB574924` (normalized LF;
   identical to the `solutions/20260831_v127_v106-pawv-variable-length-safe_scoreNA_timeNA/`
   archive snapshot).
-- The active local evaluator is `real_model_suite.py` with the default
-  `sampled-means-v1` profile on Qwen2.5-0.5B: it reports only the sampled
-  Linear/Attention mean gains, writes the full layer/role/window/seed plan into
-  `sample_plan`, and treats other models as explicit, independent guardrails that are
-  never summed. Legacy `official_flow_total`/`panel_score` fields remain in JSON for
-  compatibility but are no longer the primary metrics. See the
+- The active local evaluator is `real_model_suite.py`. The single active
+  `sampled-means-v2` profile on Qwen2.5-0.5B uses one case set for both component
+  means and runtime, while keeping the local Linear/Attention ratio close to the
+  official `250:200` panel. The former `sampled-means-v1` profile is retained
+  only for historical 224/32 reproduction. Both profiles write the complete
+  layer/role/window/seed plan into `sample_plan`; other models are explicit,
+  independent guardrails that are never summed. Legacy
+  `official_flow_total`/`panel_score` fields remain in JSON for compatibility but
+  are no longer the primary metrics. See the
   [local metric calibration](logs/execution/2026-08-31-local-metric-calibration.md)
   for the unified protocol and official-anchor fitting.
 
@@ -133,8 +144,8 @@ clean up the plan directory before running an algorithm experiment.
 ## Does the local evaluator track the official direction?
 
 The following is the legacy Qwen panel compatibility table, kept for historical
-anchor tracing only; current ranking always uses the `sampled-means-v1`
-Linear/Attention means and the corresponding sample plan:
+anchor tracing only; current ranking uses the active `sampled-means-v2`
+Linear/Attention means and the same composition-matched sample plan:
 
 | Candidate | Official score | Qwen panel (local relative score) |
 | --- | ---: | ---: |
@@ -189,7 +200,7 @@ values such as `14613 / 159.2s` remain historical records from the old panel.
 2. **The scoring weights were changed on 2026-08-31 to reduce the weight of
    Linear cases**, so official totals dropped substantially; new-weight totals
    are not comparable with old-weight scores. Local ranking still uses the
-   `sampled-means-v1` Linear/Attention means and is unaffected by the official
+    `sampled-means-v2` Linear/Attention means and is unaffected by the official
    total-weight change.
 3. Produce legal HiF4 fields and keep the API, state, shape, dtype, and device
    behavior valid.
@@ -203,7 +214,13 @@ and implementation to fit the final runtime limit. For the submission-freeze
 stage, the local budget is inferred from official-anchor measurements: the
 historical official/local sampled-API ratio interval is `[0.60, 2.02]`, so the
 local sampled API should be compressed to **`≤150s`** before freezing; the
-`150–450s` range is a gray zone that only an official run can settle.
+`150–450s` range is a gray zone that only an official run can settle. This
+budget implicitly assumes a v84-like time composition: the official panel is
+250 Linear + 200 Attention on a full 24-layer model (Kunpeng 920B), so
+attention-heavy candidates are under-counted locally (v100-pawv-fixed: local
+`150.25s`, official timeout). Evaluate the attention share per-API
+(`timing.api_seconds`); the PAWV/GQRB family is officially time-infeasible
+until proven otherwise.
 
 For the current accuracy-first phase, runtime is recorded but is not an
 acceptance gate. The `<300s` requirement becomes a hard gate again only when a
@@ -312,23 +329,24 @@ mode requires a matching snapshot and never downloads a model implicitly:
 If CUDA is available, change both device flags to `cuda`. If the cache is
 missing, run the capture step below first.
 
-The default daily ranking command uses the fast, reproducible `sampled-means-v1`
-profile:
+The default daily ranking command uses the single active, reproducible
+`sampled-means-v2` profile:
 
 ```powershell
 .\.venv\Scripts\python -u evaluator\real_model_suite.py `
-  --models qwen2.5-0.5b --evaluation-profile sampled-means-v1 `
+  --models qwen2.5-0.5b --evaluation-profile sampled-means-v2 `
   --sample-layers 8 --sample-test-windows 4 --sample-seed 20260831 `
   --device cpu --algorithm-device cpu --cache-mode read `
   --solution solution.py --candidate-name active `
-  --output artifacts\real_model_suite\active-sampled.json `
-  --report logs\execution\active-sampled.md
+  --output artifacts\real_model_suite\active-sampled-v2.json `
+  --report logs\execution\active-sampled-v2.md
 ```
 
-This pins 224 Linear and 32 Attention cases and reports only
-`mean_scores.linear_mean` and `mean_scores.attention_mean`. Changing any
-profile, seed, layer/window count, device, cache, or data revision produces a new
-group that cannot be compared directly with previous results. Key result fields:
+With the current `seq=128/test=4` cache this produces 112 Linear + 96 Attention
+cases (46.2% Attention, versus 44.4% officially) without duplicating cases. The
+same result supplies both `mean_scores` and `timing.api_seconds`; fixed-length
+cache data still does not model the official PAWV calibration lengths
+`[10,128,512,1024,1024]`.
 
 | Field | Purpose |
 | --- | --- |
@@ -434,8 +452,9 @@ historical sources under `solutions/`.
      --report logs\evaluations\active-YYYYMMDD.md
    ```
 
-   The default evaluation is the Qwen `sampled-means-v1` profile; compare only
-   `mean_scores.linear_mean` and `mean_scores.attention_mean`. Every result must
+    The default evaluation is the Qwen `sampled-means-v2` profile; compare
+    `mean_scores.linear_mean`, `mean_scores.attention_mean`, and its timing from
+    the same case set. Every result must
    record the sample seed, layer/window indices, source case counts, Local API,
    Wall, device, and source SHA256. Legacy `panel_score`/`official_flow_total`
    fields exist only for reading historical JSON. The smoke command above

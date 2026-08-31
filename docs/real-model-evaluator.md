@@ -1,18 +1,27 @@
 # 多模型真实模型评估器
 
-> **当前协议 v4（2026-08-31）**：日常评测使用 `sampled-means-v1`，默认 Qwen、
-> 固定 seed 的分层 layer/window 样本；主结果只有 `Linear mean` 和 `Attention mean`。
-> 本文中旧 panel/native/official-flow 段落仅作历史兼容说明，不能与 v4 主表混用。
+> **当前协议 v5（2026-08-31）**：日常评测统一使用活动
+> `sampled-means-v2`，默认 Qwen、固定 seed 的构成匹配 layer/window 样本；同一批
+> 样本同时产生 `Linear mean`、`Attention mean` 和时间分解。旧
+> `sampled-means-v1`（224/32）及 panel/native/official-flow 段落仅作历史兼容说明，
+> 不能与 v5 主表混用。
+
+> **重要边界**：`sampled-means-v2` 是准确率/误差的快速 A/B profile，不是官方
+> 300 秒运行时的复现器。它目前仍使用 `seq=128`、`calib=2` 和缓存读取，因此
+> 不覆盖官方 Attention 校准长度 `[10,128,512,1024,1024]`。在官方形状压力
+> profile 实现并通过 v84 锚点校准前，任何本地 v2 时间都不得作为官方通过或超时
+> 判断。v84/v98/v100 的误差证据与 O(T²) 运行时分析见
+> [`统一运行时分析`](../logs/execution/2026-08-31-v84-v98-v100-runtime-analysis.md)。
 
 ## 目标
 
 `evaluator/real_model_suite.py` 是开发阶段的评估器，用于回答两个问题：
 
 1. 候选算法在真实语言模型激活上两个组件的平均 gain；
-2. 在固定抽样计划下对候选做快速、可复现的 A/B 比较。
+2. 在与官方 Linear/Attention 构成接近的固定抽样计划下，对候选做可复现的 A/B 比较。
 
 它不是官方分数的替代品，也不把官方分数回灌到候选算法中。原始逐 case
-`official_flow_total` 和 `panel_score` 仍保留在 JSON，专门用于兼容回溯；v4
+`official_flow_total` 和 `panel_score` 仍保留在 JSON，专门用于兼容回溯；v5
 报告主指标是 `mean_scores.linear_mean` 与 `mean_scores.attention_mean`。
 
 ## 合规边界
@@ -44,9 +53,10 @@
 权重**，官方总分据此大幅下降；旧权重与新权重总分不可互相换算，本地一律不
 复制 case、不拟合官方绝对分。
 
-本地 v4 默认采用 `--evaluation-profile sampled-means-v1`：Qwen2.5-0.5B、
-固定 seed 分层抽取 8 层、保留全部 7 role、4 个 validation window 和全部
-calibration window，主结果只有抽样 Linear/Attention 的算术均值。需要跨模型
+本地 v5 默认采用 `--evaluation-profile sampled-means-v2`：Qwen2.5-0.5B、
+固定 seed、4 个分层 Linear layer、全部 24 个 Attention layer、保留全部 7 role、
+4 个 validation window 和全部 calibration layer，主结果是同一构成匹配样本上的
+Linear/Attention 算术均值及时间。需要跨模型
 时显式传入 `--models`，各模型独立报告均值，不按层数相加。
 
 已确认的官方锚点：v031/C39-FW `21864 / 161.3s`、v034/C41b
@@ -58,31 +68,35 @@ calibration window，主结果只有抽样 Linear/Attention 的算术均值。�
 仅用于参考，不作为本地评测器的候选输入。任何官方分数都不进入候选校准或锚点
 拟合。
 
-## v4 快速运行与当前配对结果（2026-08-31）
+## v5 构成匹配运行规则（2026-08-31）
 
 ```powershell
 .\.venv\Scripts\python -u evaluator\real_model_suite.py `
-  --models qwen2.5-0.5b --evaluation-profile sampled-means-v1 `
+  --models qwen2.5-0.5b --evaluation-profile sampled-means-v2 `
   --sample-layers 8 --sample-test-windows 4 --sample-seed 20260831 `
   --device cpu --algorithm-device cpu --cache-mode read `
   --solution solution.py --candidate-name active `
-  --output artifacts\real_model_suite\active-sampled.json `
-  --report logs\execution\active-sampled.md
+  --output artifacts\real_model_suite\active-sampled-v2.json `
+  --report logs\execution\active-sampled-v2.md
 ```
 
-该 profile 固定 `224 Linear + 32 Attention` case，报告表只读取
+当前 cache 下该 profile 固定 `112 Linear + 96 Attention` case（Attention 占
+46.2%，官方为 44.4%），报告表读取同一批样本的
 `results[*].mean_scores.linear_mean`、`attention_mean`、`timing.local_api_total_seconds`
-和 `timing.wall_seconds`。当前 v127 与 v74 共用同一 sample plan：
+和 `timing.wall_seconds`。根 v127 与 v74 已在同一 v2 sample plan 下复评：
 
 | 候选 | Linear mean | Attention mean | API(s) | Wall(s) |
 |---|---:|---:|---:|---:|
-| v74 | 0.440305 | 0.671106 | 218.619 | 229.485 |
-| v127 | **0.509408** | **0.828395** | **151.136** | **161.840** |
+| v74 | 0.452721 | 0.657497 | 165.299 | 168.199 |
+| v127 | **0.522453** | **0.842024** | **177.039** | **180.430** |
+
+v84 的旧 v1 CPU 结果仅作历史复现；v84/v98/v100 的同配置复评与长序列运行时差异见
+[v84/v98/v100 运行时分析](../logs/execution/2026-08-31-v84-v98-v100-runtime-analysis.md)。
 
 完整校准、官方锚点和时间解释见
 [`2026-08-31-local-metric-calibration.md`](../logs/execution/2026-08-31-local-metric-calibration.md)。
 
-## 旧 full-layer/panel 结果（legacy，仅兼容）
+## 旧 v1/full-layer/panel 结果（legacy，仅兼容）
 
 根目录 `solution.py` 是重写后的 clean Gram-hierarchy 实现，不是新的官方提交。
 以下结果来自固定缓存 `clean-gram-hierarchy-full`：Qwen2.5-0.5B 全 24 层，
@@ -100,8 +114,9 @@ calibration window，主结果只有抽样 Linear/Attention 的算术均值。�
 报告：[Markdown](../logs/evaluations/clean-gram-hierarchy-full.md)，
 [JSON](../artifacts/real_model_suite/clean-gram-hierarchy-full.json)。当前根的
 `official_score`/`official_time` 为空；`panel_score` 只用于历史相对排序，不能换算
-官方绝对分数。Linear 仍是主要优化缺口：mean 为 `0.501558`，到 `0.9` 还差
-`0.398442`（当前剩余误差的 `79.94%`，即 250-case panel 的 `99.6106` 分）。
+官方绝对分数。Linear 仍是主要优化缺口：活动 v2 根 mean 为 `0.522453`，到
+`0.8` 还差 `0.277547`（剩余归一化误差约 `58.2%`）；旧 full-layer `0.501558`
+仍只作 legacy 诊断。
 
 ## 外部实现的本地最高基准
 
@@ -215,12 +230,12 @@ calibration window，主结果只有抽样 Linear/Attention 的算术均值。�
   --report logs\evaluations\active.md
 ```
 
-v4 报告的唯一排序字段是 `mean_scores.linear_mean` 和
+v5 报告的唯一排序字段是 `mean_scores.linear_mean` 和
 `mean_scores.attention_mean`；`sample_plan` 必须完全一致才能横比。旧报告中的
 `local_primary_panel_order`、`local_official_flow_order` 和 panel/native 字段仅
 作历史诊断。官方锚点拟合不进入评测器，独立结果见校准日志。
 
-## 评分口径（v4 主结果；旧字段兼容保留）
+## 评分口径（v5 主结果；旧字段兼容保留）
 
 每个测试 case 独立计算：
 
@@ -228,11 +243,11 @@ v4 报告的唯一排序字段是 `mean_scores.linear_mean` 和
 case_score = (MSE_STD - MSE_PLAYER) / MSE_STD
 ```
 
-- `mean_scores.linear_mean`：抽样 Linear case 的 `case_score` 算术平均。
-- `mean_scores.attention_mean`：抽样 Attention case 的 `case_score` 算术平均。
+- `mean_scores.linear_mean`：活动 v2 抽样 Linear case 的 `case_score` 算术平均。
+- `mean_scores.attention_mean`：活动 v2 抽样 Attention case 的 `case_score` 算术平均。
 - `mean_scores.*_percent`：对应均值乘 100，仅为显示便利。
 - `official_flow_score` 与 `panel_score`：旧版 raw sum/fixed-panel 字段，只留作
-  兼容回溯，不写入 v4 报告主表。
+  兼容回溯，不写入 v5 报告主表。
 - `timing.local_api_total_seconds`：本地设备六 API 的 calibration+dynamic 累计；
   `timing.wall_seconds` 还包含调度和报告开销。两者都不是 official time。
 - 本地 state/HiF4 参数非法、API 异常、结果缺失或非 finite 才令
@@ -241,7 +256,7 @@ case_score = (MSE_STD - MSE_PLAYER) / MSE_STD
 赛事说明只写明判题器会加载“标准 HiF4 量化函数”，没有附上该函数源码。当前 `reference_hif4.py` 使用工程历史中独立实现的 amax/7 E6M2 与八种合法 lv2/lv3 配置最小 MSE 解；每次报告记录其 SHA256。收到官方标准函数后必须逐位替换并提升评分协议版本，旧协议结果不得与新协议绝对混算。
 
 `linear.global_gain`、`linear.macro_gain` 等全局误差归因仍可在 JSON 查看，但不参与
-v4 主结果。官方分数/时间校准单独记录，不能在评测器内部用 OLS 伪造绝对分数。
+v5 主结果。官方分数/时间校准单独记录，不能在评测器内部用 OLS 伪造绝对分数。
 
 ## 当前协议验证
 

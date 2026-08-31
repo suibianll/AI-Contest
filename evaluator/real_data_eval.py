@@ -374,6 +374,10 @@ def instrument_solution(solution: ModuleType) -> dict:
     Calibration may call a public dynamic API internally.  Only top-level
     evaluator calls contribute to the calibration/dynamic split; nested calls
     are recorded separately so their time is not counted twice.
+
+    Per-API wall seconds are accumulated in ``stats["seconds"]`` so the
+    Linear (weight/activation) and Attention (calibration_attention, q/k/v)
+    cost split can be projected onto the official 250+200 case panel.
     """
 
     stats = {
@@ -383,6 +387,7 @@ def instrument_solution(solution: ModuleType) -> dict:
         "dynamic": 0.0,
         "calls": {name: 0 for name in API_NAMES},
         "nested_calls": {name: 0 for name in API_NAMES},
+        "seconds": {name: 0.0 for name in API_NAMES},
         "depth": 0,
     }
     for name in API_NAMES:
@@ -401,11 +406,13 @@ def instrument_solution(solution: ModuleType) -> dict:
                 stats["depth"] -= 1
                 if top_level:
                     stats["last_end"] = end
+                    elapsed = end - start
                     if _name.startswith("hif4_calibration"):
-                        stats["calibration"] += end - start
+                        stats["calibration"] += elapsed
                     else:
-                        stats["dynamic"] += end - start
+                        stats["dynamic"] += elapsed
                     stats["calls"][_name] += 1
+                    stats["seconds"][_name] += elapsed
                 else:
                     stats["nested_calls"][_name] += 1
 

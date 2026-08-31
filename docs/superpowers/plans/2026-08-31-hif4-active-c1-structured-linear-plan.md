@@ -3,7 +3,7 @@
 > 状态：**ACTIVE**
 > 建立日期：2026-08-31
 > 适用根：`D:/工作内容/AI竞赛/solution.py`
-> 当前根：v127（v106 + PAWV 变长修复）；当前主评测改为 v4 sampled-means
+> 当前根：v127（v106 + PAWV 变长修复）；当前主评测改为 v5 sampled-means-v2
 > C1c structured rank-8 / max-blocks-8 + C1b refresh（sweep2）；
 > v106 仅作为历史 CPU/CUDA 参考；本地时间不再直接与官方 300s 比较。v74 是官方通过
 > 的 Attention 安全基线；它与 v100/v107 共用的 clean Attention
@@ -15,7 +15,7 @@
 > 2026-08-31 晚官方第三次修订：**评分权重减少 Linear 样例权重**，官方总分大幅
 > 下降，新权重官方锚点为 **v84 `16517 / 252.563s`（< 300s）**；旧权重分数不可
 > 与新权重比较。
-> 根 `solution.py` 规范 LF SHA256：`75F21B7BE3630FFEFEAF2883BB699CE4901DF1BF6C0B39DD6E40F253561E32C0`
+> 根 `solution.py` 规范 LF SHA256：`F15E112C7E832D019EE83D707ACD9D72FEF121A306E4CC3B50DBBC2CBB574924`
 > 主目标：保持 v125（继承 v119）的完整部署 `G_q` exact gate 语义，继续验证 Qwen full-layer
 > `linear_mean`；同时把结构化 proposal 的原型实现压缩为可审计的 C1 路径。Attention
 > 只作回归检查，不在本计划中扩展 PAWV。
@@ -25,8 +25,8 @@
 > 以固定 `[10,10]` 累加 `[128,128]` 时崩溃。v126 已按长度分组 diagonal，并让
 > calibration/dynamic V 精确查找当前长度、未命中回退；官方长度模式回归通过。
 > 正式 Linear 提交候选必须以已官方通过的 v74 Attention 完整可达闭包为安全基线；v127
-> 的修复仅代表本地 shape smoke 通过，仍需官方验证。v4 sampled 只用于快速 A/B，不能
-> 取代官方分数/时间。
+> 的修复仅代表本地 shape smoke 通过，仍需官方验证。历史 v1 sampled 只用于旧记录复现；
+> 当前活动 v2 会在同一批构成匹配样本上同时产生均值和时间，仍不能取代官方分数/时间。
 
 ## 1. 唯一执行规则
 
@@ -52,42 +52,48 @@ JSON/日志和官方规则；`docs/superpowers/archive/plans/` 只作历史证�
 
 ### 1.1 评测分层规则（本轮起固定）
 
-为避免每个候选重复消耗数十分钟，精度排序采用 Qwen `sampled-means-v1` 主线：
+为避免每个候选重复消耗数十分钟，精度排序和时间评估统一采用 Qwen
+`sampled-means-v2` 主线；不能继续用 224/32 的旧比例外推：
 
 1. 合成/合规/五层七 role screen 是所有候选的第一道门；
-2. 只有 screen 明确正向且无 role 回退才跑 Qwen2.5-0.5B 的固定分层样本（8 层、7 role、
-   4 windows）；
+2. 只有 screen 明确正向且无 role 回退才跑 Qwen2.5-0.5B 的构成匹配样本
+   (`sampled-means-v2`)；同一批样本同时用于 Linear/Attention 均值和时间记录；
 3. Qwen sampled mean 是本地精度排序的唯一硬门。OPT/Pythia 只在 precision parent 变更后或
    每 2–3 个候选做 3–5 层、少量 role 的软 guardrail，不再对每个候选跑五模型全量；
-4. “Qwen sampled mean 足够”只适用于本地相对排序，不能替代官方提交前的 Attention API smoke、
+4. `sampled-means-v2` 的 Attention 使用全部可用层，Linear 使用
+   使实际 case 比例最接近官方 `250:200` 的分层层子集；当前 `seq=128/test=4` cache
+   为 112 Linear + 96 Attention（1.167:1，Attention 占 46.2%，官方为 44.4%），
+   并对 profile 所需 layer 执行 calibration。该 profile 不复制 case，且同一结果的
+   `timing.api_seconds` 才能用于构成投影；仍不能替代官方变长输入测试。
+5. “Qwen sampled mean 足够”只适用于本地相对排序，不能替代官方提交前的 Attention API smoke、
    state/shape 合规检查和一次跨模型回归。
 
 ## 2. 固定基线、目标和约束
 
-固定评测：Qwen2.5-0.5B、`seq=128`、`calib=2`、`test=4`、`amax6`、CPU、只读 cache
+固定评测：Qwen2.5-0.5B、`seq=128`、`calib=2`、`test=4`、`amax6`、CUDA、只读 cache
 `artifacts/real_model_suite/cache/qwen2.5-0.5b__seq128__calib2__test4__layersall__schema1.pt`；
-v4 sample seed=`20260831`、layers=`[0,1,5,10,13,15,22,23]`、全部 role、4 windows。
+活动 v2 sample seed=`20260831`、4 个分层 Linear layer、全部 24 个 Attention layer、
+全部 role、4 windows，当前计划为 112L+96A。旧 v1 的 8 层/224L+32A 仅保留作历史复现。
 
-| 指标 | v127（v106 + PAWV variable-length fix，v4 sampled） |
+| 指标 | v127（v106 + PAWV variable-length fix，活动 v2 sampled） |
 |---|---:|
-| Linear mean | `0.509408`（224 cases） |
-| Attention mean | `0.828395`（32 cases） |
-| Qwen panel（legacy，仅兼容） | `294.260802` |
-| native total（legacy，仅兼容） | `140.616055` |
-| Local API / Wall | `151.136s / 161.840s`（CPU） |
-| v127 source LF SHA | `75F21B7BE3630FFEFEAF2883BB699CE4901DF1BF6C0B39DD6E40F253561E32C0` |
+| Linear mean | `0.522453`（112 cases） |
+| Attention mean | `0.842024`（96 cases） |
+| Qwen panel（诊断） | `299.017892` |
+| Local API / Wall | `177.039s / 180.430s`（CUDA） |
+| v127 source LF SHA | `F15E112C7E832D019EE83D707ACD9D72FEF121A306E4CC3B50DBBC2CBB574924` |
 
 **当前目标（2026-08-31 更新，取代旧权重 36000 目标）**：
 
-1. Linear 场景本地 `linear_mean` 达到 `0.8`：v127 的 `0.509408` 还需消除剩余
-   归一化误差约 `59.2%`（v121-pawv-fixed `0.516685` 需约 `57.6%`）；这只是本地
+1. Linear 场景本地 `linear_mean` 达到 `0.8`：v127 的 `0.522453` 还需消除剩余
+   归一化误差约 `58.1%`（v121-pawv-fixed `0.516685` 需约 `57.6%`）；这只是本地
    诊断轴，不换算官方绝对分。
-2. Attention 场景尽可能高：pawv-fixed 系当前上限 `0.828395`，继续寻找无损或低
+2. Attention 场景尽可能高：活动 v2 根当前为 `0.842024`，继续寻找无损或低
    时间成本的 Attention 增益。
-3. 官方端到端 `<300s`：按官方锚点候选的本地 sampled API ↔ 官方时间比值区间
-   `[0.60, 2.02]` 推断，**提交冻结前本地 sampled API 预算红线为 `≤150s`**；
-   `150–450s` 为灰区必须官方实测，`>450s` 基本不可行。当前 v127
-   `151.136s` 恰在红线边缘。全部官方候选的 v5 复评覆盖矩阵与完整推断表见
+3. 官方端到端 `<300s`：活动 v2 官方锚点的本地 sampled API ↔ 官方时间比值区间
+   `[1.05, 2.31]`，**提交冻结前本地 sampled API 预算红线约为 `≤125s`**；
+   `125–300s` 为灰区必须官方实测，`>450s` 基本不可行。当前 v127
+   `177.039s` 处于灰区。全部官方候选的 v5 复评覆盖矩阵与完整推断表见
    [`current-solution-status`](../../docs/current-solution-status.md) 的
    「当前目标与本地时间推断」章节。
 

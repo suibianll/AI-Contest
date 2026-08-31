@@ -84,7 +84,7 @@ CACHE_SCHEMA_VERSION = 1
 # Third revision (2026-08-31, late): the organisers changed the scoring
 # weights and reduced the weight of Linear cases, so official totals dropped
 # substantially (v84 16517 / 252.563s under the new weights). Local ranking
-# uses sampled-means-v1 Linear/Attention means and is unaffected by the
+# uses sampled-means-v2 Linear/Attention means and is unaffected by the
 # official total-weight change; old-weight official scores (v66/v72/v74
 # 20k+) are kept for provenance only and are never anchors for calibration.
 SCORING_PROTOCOL_VERSION = 5
@@ -98,8 +98,12 @@ REFERENCE_PANEL_TOTAL_CASES = (
 DEFAULT_PANEL_PROFILE = "qwen-official"
 PANEL_PROFILES = ("qwen-official", "native")
 DEFAULT_PRIMARY_MODEL = "qwen2.5-0.5b"
-EVALUATION_PROFILES = ("sampled-means-v1", "full-legacy")
-DEFAULT_EVALUATION_PROFILE = "sampled-means-v1"
+EVALUATION_PROFILES = (
+    "sampled-means-v2",
+    "sampled-means-v1",  # legacy 224/32 reproduction only
+    "full-legacy",
+)
+DEFAULT_EVALUATION_PROFILE = "sampled-means-v2"
 DEFAULT_SAMPLE_LAYERS = 8
 DEFAULT_SAMPLE_TEST_WINDOWS = 4
 DEFAULT_SAMPLE_SEED = 20260831
@@ -242,6 +246,22 @@ CANDIDATE_SPECS: dict[str, CandidateSpec] = {
         217.2,
         OFFICIAL_PANEL_REVISION,
     ),
+    # v72/v74 are user-confirmed official passes under the preceding scoring
+    # weights.  Keep them in the registry so the same active local profile can
+    # re-evaluate the exact archived source; they are provenance rows, not
+    # current-weight calibration anchors.
+    "v72": CandidateSpec(
+        "v72",
+        ROOT / "solutions" / "20260829_v072_c74-jdrq-hierarchy_scoreNA_timeNA" / "solution.py",
+        22662,
+        226.0,
+    ),
+    "v74": CandidateSpec(
+        "v74",
+        ROOT / "solutions" / "20260829_v074_c75-rowwise-jdrq_scoreNA_timeNA" / "solution.py",
+        22750,
+        239.387,
+    ),
     # v84 (C84) is the first confirmed official anchor under the revised
     # scoring weights (2026-08-31 late: Linear-case weight reduced; total
     # 16517). It is kept as an anchor for provenance and audit only; local
@@ -331,22 +351,78 @@ def build_sample_plan(
     sample_test_windows: int = DEFAULT_SAMPLE_TEST_WINDOWS,
     sample_seed: int = DEFAULT_SAMPLE_SEED,
 ) -> dict[str, Any]:
-    """Build the only sampling decision used by the fast local evaluator."""
+    """Build a reproducible component-aware local sample plan.
+
+    ``sampled-means-v2`` is the single active profile: it reports the component
+    means and measures time on the same case set, with a realized
+    Linear/Attention ratio close to the official 250/200 panel.  The former
+    ``sampled-means-v1`` plan is retained only as a legacy reproduction profile
+    for historical 224/32 JSON files.  Calibration is performed on the union of
+    the selected component layers so the active profile does not silently omit
+    full-layer calibration work.
+    """
     if evaluation_profile not in EVALUATION_PROFILES:
         raise ValueError(
             f"unknown evaluation profile {evaluation_profile!r}; "
             f"choose from {EVALUATION_PROFILES}"
         )
+    all_layers = list(range(data.layers))
+    all_test_indices = list(range(len(data.test_windows)))
+    roles = list(data.roles)
     if evaluation_profile == "full-legacy":
-        layer_indices = list(range(data.layers))
-        test_indices = list(range(len(data.test_windows)))
-    else:
+        layer_indices = all_layers
+        test_indices = all_test_indices
+        linear_layer_indices = all_layers
+        attention_layer_indices = all_layers
+        linear_test_indices = all_test_indices
+        attention_test_indices = all_test_indices
+        calibration_layer_indices = all_layers
+    elif evaluation_profile == "sampled-means-v1":
         layer_indices = _stratified_indices(data.layers, sample_layers, sample_seed)
         test_indices = _stratified_indices(
             len(data.test_windows), sample_test_windows, sample_seed + 1
         )
+        linear_layer_indices = layer_indices
+        attention_layer_indices = layer_indices
+        linear_test_indices = test_indices
+        attention_test_indices = test_indices
+        calibration_layer_indices = layer_indices
+    else:
+        # Active composition-matched profile.  Keep all available Attention layer /
+        # window combinations, then choose the nearest stratified Linear layer
+        # count.  With the current Qwen cache (24 layers, 4 windows, 7 Linear
+        # roles) this is 112 Linear + 96 Attention cases, i.e. 46.2% Attention
+        # versus the official 44.4%; this is the closest non-duplicated plan
+        # available from the cache while retaining every Linear role.
+        linear_test_indices = _stratified_indices(
+            len(data.test_windows), sample_test_windows, sample_seed + 1
+        )
+        attention_test_indices = list(linear_test_indices)
+        attention_layer_indices = all_layers
+        attention_cases = len(attention_layer_indices) * len(attention_test_indices)
+        linear_roles = max(1, len(roles))
+        linear_per_layer = linear_roles * max(1, len(linear_test_indices))
+        target_linear_cases = (
+            REFERENCE_PANEL_LINEAR_CASES
+            * attention_cases
+            / max(REFERENCE_PANEL_ATTENTION_CASES, 1)
+        )
+        target_linear_layers = int(round(target_linear_cases / linear_per_layer))
+        target_linear_layers = max(1, min(data.layers, target_linear_layers))
+        if sample_layers > 0:
+            target_linear_layers = min(target_linear_layers, sample_layers)
+        linear_layer_indices = _stratified_indices(
+            data.layers, target_linear_layers, sample_seed
+        )
+        layer_indices = sorted(
+            set(linear_layer_indices) | set(attention_layer_indices)
+        )
+        test_indices = linear_test_indices
+        # Calibrate every layer needed by the profile.  For this profile the
+        # Attention side uses all layers, so this is full-layer calibration.
+        calibration_layer_indices = layer_indices
+
     calibration_indices = list(range(len(data.calibration_windows)))
-    roles = list(data.roles)
 
     def window_record(window: Window, index: int) -> dict[str, Any]:
         return {
@@ -362,15 +438,29 @@ def build_sample_plan(
     return {
         "profile": evaluation_profile,
         "seed": int(sample_seed),
+        # ``layer_indices``/``test_indices`` remain for readers of older JSON;
+        # the component-specific fields are authoritative for new profiles.
         "layer_indices": layer_indices,
+        "linear_layer_indices": linear_layer_indices,
+        "attention_layer_indices": attention_layer_indices,
+        "calibration_layer_indices": calibration_layer_indices,
         "calibration_indices": calibration_indices,
         "test_indices": test_indices,
+        "linear_test_indices": linear_test_indices,
+        "attention_test_indices": attention_test_indices,
         "roles": roles,
         "source_layers": data.layers,
         "source_calibration_windows": len(data.calibration_windows),
         "source_test_windows": len(data.test_windows),
-        "sampled_linear_cases": len(layer_indices) * len(roles) * len(test_indices),
-        "sampled_attention_cases": len(layer_indices) * len(test_indices),
+        "sampled_linear_cases": len(linear_layer_indices) * len(roles) * len(linear_test_indices),
+        "sampled_attention_cases": len(attention_layer_indices) * len(attention_test_indices),
+        "official_linear_attention_ratio": (
+            REFERENCE_PANEL_LINEAR_CASES / max(REFERENCE_PANEL_ATTENTION_CASES, 1)
+        ),
+        "realized_linear_attention_ratio": (
+            (len(linear_layer_indices) * len(roles) * len(linear_test_indices))
+            / max(len(attention_layer_indices) * len(attention_test_indices), 1)
+        ),
         "calibration_windows": [
             window_record(data.calibration_windows[index], index)
             for index in calibration_indices
@@ -1860,6 +1950,21 @@ def evaluate_candidate(
         if sample_plan is None
         else list(sample_plan["layer_indices"])
     )
+    linear_layer_indices = (
+        list(range(data.layers))
+        if sample_plan is None
+        else list(sample_plan.get("linear_layer_indices", layer_indices))
+    )
+    attention_layer_indices = (
+        list(range(data.layers))
+        if sample_plan is None
+        else list(sample_plan.get("attention_layer_indices", layer_indices))
+    )
+    calibration_layer_indices = (
+        list(range(data.layers))
+        if sample_plan is None
+        else list(sample_plan.get("calibration_layer_indices", layer_indices))
+    )
     calibration_indices = (
         list(range(len(data.calibration_windows)))
         if sample_plan is None
@@ -1870,100 +1975,120 @@ def evaluate_candidate(
         if sample_plan is None
         else list(sample_plan["test_indices"])
     )
+    linear_test_indices = (
+        list(range(len(data.test_windows)))
+        if sample_plan is None
+        else list(sample_plan.get("linear_test_indices", test_indices))
+    )
+    attention_test_indices = (
+        list(range(len(data.test_windows)))
+        if sample_plan is None
+        else list(sample_plan.get("attention_test_indices", test_indices))
+    )
+    linear_layer_set = set(linear_layer_indices)
+    attention_layer_set = set(attention_layer_indices)
+    calibration_layer_set = set(calibration_layer_indices)
+    evaluation_layer_indices = sorted(
+        linear_layer_set | attention_layer_set | calibration_layer_set
+    )
     if algorithm_device.type == "cuda":
         torch.cuda.synchronize(algorithm_device)
     started = time.perf_counter()
-    for layer_index in layer_indices:
-        for role in data.roles:
-            weight_pair = nvfp4_encode(
-                data.weights[layer_index][role].to(algorithm_device), mode
-            )
-            calibration_pairs = [
-                nvfp4_encode(
-                    data.calibration_activations[role][batch][layer_index].to(
-                        algorithm_device
-                    ),
-                    mode,
+    for layer_index in evaluation_layer_indices:
+        if layer_index in calibration_layer_set or layer_index in linear_layer_set:
+            for role in data.roles:
+                weight_pair = nvfp4_encode(
+                    data.weights[layer_index][role].to(algorithm_device), mode
                 )
-                for batch in calibration_indices
-            ]
-            calibrated = solution.hif4_calibration_and_quantize_weight(
-                *weight_pair, calibration_pairs
-            )
-            if not isinstance(calibrated, dict) or not {
-                "weight_params",
-                "activation_state",
-            }.issubset(calibrated):
-                raise ValueError(
-                    "hif4_calibration_and_quantize_weight must return "
-                    "weight_params and activation_state"
+                calibration_pairs = [
+                    nvfp4_encode(
+                        data.calibration_activations[role][batch][layer_index].to(
+                            algorithm_device
+                        ),
+                        mode,
+                    )
+                    for batch in calibration_indices
+                ]
+                calibrated = solution.hif4_calibration_and_quantize_weight(
+                    *weight_pair, calibration_pairs
                 )
-            validate_state(calibrated["activation_state"])
-            test_pairs = [
-                nvfp4_encode(
-                    data.test_activations[role][batch][layer_index].to(
-                        algorithm_device
-                    ),
-                    mode,
-                )
-                for batch in test_indices
-            ]
-            linear_cases[role].append(
-                _linear_detail(
-                    solution,
-                    weight_pair,
-                    test_pairs,
-                    calibrated["activation_state"],
-                    calibrated["weight_params"],
-                )
-            )
+                if not isinstance(calibrated, dict) or not {
+                    "weight_params",
+                    "activation_state",
+                }.issubset(calibrated):
+                    raise ValueError(
+                        "hif4_calibration_and_quantize_weight must return "
+                        "weight_params and activation_state"
+                    )
+                validate_state(calibrated["activation_state"])
+                if layer_index in linear_layer_set:
+                    test_pairs = [
+                        nvfp4_encode(
+                            data.test_activations[role][batch][layer_index].to(
+                                algorithm_device
+                            ),
+                            mode,
+                        )
+                        for batch in linear_test_indices
+                    ]
+                    linear_cases[role].append(
+                        _linear_detail(
+                            solution,
+                            weight_pair,
+                            test_pairs,
+                            calibrated["activation_state"],
+                            calibrated["weight_params"],
+                        )
+                    )
 
-        calibration_qkv = []
-        for batch in calibration_indices:
-            q, k, v = data.calibration_qkv[batch][layer_index]
-            calibration_qkv.append(
-                {
-                    "q": nvfp4_encode(q.to(algorithm_device), mode),
-                    "k": nvfp4_encode(k.to(algorithm_device), mode),
-                    "v": nvfp4_encode(v.to(algorithm_device), mode),
-                }
-            )
-        states = solution.hif4_calibration_attention(
-            calibration_qkv, data.q_heads, data.kv_heads, data.head_dim
-        )
-        if not isinstance(states, dict) or not {
-            "q_state",
-            "k_state",
-            "v_state",
-        }.issubset(states):
-            raise ValueError(
-                "hif4_calibration_attention must return q_state, k_state, and v_state"
-            )
-        validate_state(states["q_state"])
-        validate_state(states["k_state"])
-        validate_state(states["v_state"])
-        test_qkv = []
-        for batch in test_indices:
-            q, k, v = data.test_qkv[batch][layer_index]
-            test_qkv.append(
-                (
-                    nvfp4_encode(q.to(algorithm_device), mode),
-                    nvfp4_encode(k.to(algorithm_device), mode),
-                    nvfp4_encode(v.to(algorithm_device), mode),
+        if layer_index in calibration_layer_set or layer_index in attention_layer_set:
+            calibration_qkv = []
+            for batch in calibration_indices:
+                q, k, v = data.calibration_qkv[batch][layer_index]
+                calibration_qkv.append(
+                    {
+                        "q": nvfp4_encode(q.to(algorithm_device), mode),
+                        "k": nvfp4_encode(k.to(algorithm_device), mode),
+                        "v": nvfp4_encode(v.to(algorithm_device), mode),
+                    }
                 )
+            states = solution.hif4_calibration_attention(
+                calibration_qkv, data.q_heads, data.kv_heads, data.head_dim
             )
-        attention_cases.append(
-            _attention_detail(
-                solution,
-                test_qkv,
-                states["q_state"],
-                states["k_state"],
-                states["v_state"],
-                data.q_heads,
-                data.kv_heads,
-                data.head_dim,
-            )
-        )
+            if not isinstance(states, dict) or not {
+                "q_state",
+                "k_state",
+                "v_state",
+            }.issubset(states):
+                raise ValueError(
+                    "hif4_calibration_attention must return q_state, k_state, and v_state"
+                )
+            validate_state(states["q_state"])
+            validate_state(states["k_state"])
+            validate_state(states["v_state"])
+            if layer_index in attention_layer_set:
+                test_qkv = []
+                for batch in attention_test_indices:
+                    q, k, v = data.test_qkv[batch][layer_index]
+                    test_qkv.append(
+                        (
+                            nvfp4_encode(q.to(algorithm_device), mode),
+                            nvfp4_encode(k.to(algorithm_device), mode),
+                            nvfp4_encode(v.to(algorithm_device), mode),
+                        )
+                    )
+                attention_cases.append(
+                    _attention_detail(
+                        solution,
+                        test_qkv,
+                        states["q_state"],
+                        states["k_state"],
+                        states["v_state"],
+                        data.q_heads,
+                        data.kv_heads,
+                        data.head_dim,
+                    )
+                )
     if algorithm_device.type == "cuda":
         torch.cuda.synchronize(algorithm_device)
     elapsed = time.perf_counter() - started
@@ -2045,6 +2170,15 @@ def evaluate_candidate(
             "local_api_total_seconds": api_total,
             "api_calls": stats["calls"],
             "nested_api_calls": stats["nested_calls"],
+            # Per-API wall seconds (top-level calls only).  The
+            # calibration_attention + q/k/v entries vs the
+            # calibration_and_quantize_weight + dynamic_quantize_activation
+            # entries give the Attention/Linear cost split needed to project
+            # local timings onto the official 250 Linear + 200 Attention
+            # panel (official Kunpeng 920B runtime is composition-sensitive).
+            "api_seconds": (
+                dict(stats["seconds"]) if "seconds" in stats else None
+            ),
             "local_api_under_official_limit_seconds": api_total < OFFICIAL_RUNTIME_LIMIT_SECONDS,
             "under_official_runtime_limit": None,
             "official_runtime_comparable": False,
@@ -2532,12 +2666,19 @@ def write_report(
     plans = [result.get("sample_plan") for result in results if result.get("sample_plan")]
     if plans:
         plan = plans[0]
+        linear_layers = plan.get("linear_layer_indices", plan["layer_indices"])
+        attention_layers = plan.get("attention_layer_indices", plan["layer_indices"])
+        calibration_layers = plan.get("calibration_layer_indices", plan["layer_indices"])
+        linear_windows = plan.get("linear_test_indices", plan["test_indices"])
+        attention_windows = plan.get("attention_test_indices", plan["test_indices"])
         lines.extend(
             [
                 "",
                 "抽样索引（所有候选共用，避免日志间样例漂移）：",
-                f"- layers=`{plan['layer_indices']}`; calibration_windows=`{plan['calibration_indices']}`; test_windows=`{plan['test_indices']}`; roles=`{plan['roles']}`",
+                f"- linear_layers=`{linear_layers}`; attention_layers=`{attention_layers}`; calibration_layers=`{calibration_layers}`",
+                f"- calibration_windows=`{plan['calibration_indices']}`; linear_test_windows=`{linear_windows}`; attention_test_windows=`{attention_windows}`; roles=`{plan['roles']}`",
                 f"- source cases={plan['source_layers']} layers × {len(plan['roles'])} roles × {plan['source_test_windows']} test windows；本次 cases={plan['sampled_linear_cases']} Linear + {plan['sampled_attention_cases']} Attention",
+                f"- realized Linear/Attention case ratio=`{plan.get('realized_linear_attention_ratio', 'n/a')}`; official target ratio=`{plan.get('official_linear_attention_ratio', REFERENCE_PANEL_LINEAR_CASES / REFERENCE_PANEL_ATTENTION_CASES)}`",
             ]
         )
 
@@ -2546,7 +2687,7 @@ def write_report(
             "",
             "## 抽样计划与使用边界",
             "",
-            f"- profile：`{evaluation_profile}`；`sampled-means-v1` 默认按层深分层抽取 {run_metadata.get('sample_layers', DEFAULT_SAMPLE_LAYERS)} 层，保留全部 role，并按窗口位置抽取 {run_metadata.get('sample_test_windows', DEFAULT_SAMPLE_TEST_WINDOWS)} 个 validation window；calibration window 全部保留。",
+            f"- profile：`{evaluation_profile}`；活动 profile `sampled-means-v2` 在同一批构成匹配样本上同时报告组件均值和时间；`sampled-means-v1` 仅作为 224/32 历史复现；profile 所需 layer 均执行 calibration。",
             f"- seed：`{run_metadata.get('sample_seed', DEFAULT_SAMPLE_SEED)}`；每个结果的 `sample_plan` 保存实际 layer/window index 和文档 ID，可逐字复现。",
             "- 默认只评估 Qwen2.5-0.5B；需要跨模型 guardrail 时显式传入 `--models`，但各模型仍分别报告 mean，不相加。",
             "- `official_flow_score`、`panel_score` 仅留在 JSON 兼容字段，不能作为当前主结果；本报告不展示它们。",
@@ -2648,9 +2789,15 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             "case_formula": "(MSE_STD-MSE_PLAYER)/MSE_STD",
             "aggregation": (
                 (
-                    "sampled component means: Linear_mean and Attention_mean"
-                    if args.evaluation_profile == "sampled-means-v1"
-                    else "full component means: Linear_mean and Attention_mean"
+                    (
+                        "legacy sampled component means: Linear_mean and Attention_mean"
+                        if args.evaluation_profile == "sampled-means-v1"
+                        else (
+                            "composition-matched component means: Linear_mean and Attention_mean"
+                            if args.evaluation_profile == "sampled-means-v2"
+                            else "full component means: Linear_mean and Attention_mean"
+                        )
+                    )
                 )
                 if args.panel_profile == "qwen-official"
                 else "sum_all_native_linear_and_attention_cases"
@@ -2721,10 +2868,12 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 flush=True,
             )
             print(
-                f"{model_name}: sampled layers={sample_plan['layer_indices']} "
-                f"test_windows={sample_plan['test_indices']} "
+                f"{model_name}: profile={sample_plan['profile']} "
+                f"linear_layers={sample_plan.get('linear_layer_indices', sample_plan['layer_indices'])} "
+                f"attention_layers={sample_plan.get('attention_layer_indices', sample_plan['layer_indices'])} "
                 f"cases={sample_plan['sampled_linear_cases']}L/"
-                f"{sample_plan['sampled_attention_cases']}A",
+                f"{sample_plan['sampled_attention_cases']}A "
+                f"ratio={sample_plan.get('realized_linear_attention_ratio', float('nan')):.4f}",
                 flush=True,
             )
         except Exception as exc:
@@ -2826,15 +2975,16 @@ def build_parser() -> argparse.ArgumentParser:
         choices=EVALUATION_PROFILES,
         default=DEFAULT_EVALUATION_PROFILE,
         help=(
-            "sampled-means-v1 evaluates stratified layer/window examples and reports "
-            "only component means; full-legacy evaluates every cached layer/window"
+            "sampled-means-v2 is the active component-mean and runtime profile and "
+            "matches the official Linear/Attention case ratio; sampled-means-v1 is "
+            "legacy 224/32 reproduction; full-legacy evaluates every cached layer/window"
         ),
     )
     parser.add_argument(
         "--sample-layers",
         type=int,
         default=DEFAULT_SAMPLE_LAYERS,
-        help="number of stratified layers in sampled-means-v1 (<=0 means all)",
+        help="upper bound for stratified Linear layers in sampled-means-v2 (<=0 means no cap)",
     )
     parser.add_argument(
         "--sample-test-windows",

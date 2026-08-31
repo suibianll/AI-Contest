@@ -4,8 +4,9 @@
 > 适用文件：根目录 [`solution.py`](../solution.py)
 > 文档性质：本地可复现实测记录，不是官方成绩承诺。
 
-> **评测协议 v5（2026-08-31 修订）**：本文的当前主结果只读取
-> `sampled-means-v1` 的 `Linear mean` / `Attention mean`。旧 full-layer、native
+> **评测协议 v5（2026-08-31 修订）**：本文的新当前主结果统一读取活动
+> `sampled-means-v2` 的 `Linear mean` / `Attention mean` 与同一批样本的时间。旧
+> `sampled-means-v1`（224/32）、full-layer、native
 > sum、shaped panel 和本地 `<300s` 判断均为 legacy，不能与 v5 主表混用。统一
 > 口径、官方锚点拟合和时间校准见 [`local metric calibration`](../logs/execution/2026-08-31-local-metric-calibration.md)。
 > 官方评测（2026-08-31 再次修订）不再限制任何 `A@W` 拟合用法，只限制端到端
@@ -13,17 +14,16 @@
 
 ## 一句话结论
 
-根目录当前为 v127：v106 Linear 路径 + PAWV 变长修复。固定 v4 sample plan（Qwen、
-seed `20260831`、层 `[0,1,5,10,13,15,22,23]`、全部 role、4 windows）下，
-Linear mean `0.509408`、Attention mean `0.828395`、Local API `151.136s`、
-Wall `161.840s`；同一计划 v74 为 `0.440305 / 0.671106 / 218.619s / 229.485s`。
-以下 v125 等数字是 legacy precision parent，不覆盖 v4 主结果。算法链为 BOAT +
+根目录当前为 v127：v106 Linear 路径 + PAWV 变长修复。活动 v5/v2 sample plan（Qwen、
+112L+96A）下，Linear mean `0.522453`、Attention mean `0.842024`、Local API
+`177.039s`、Wall `180.430s`；同一 v2 计划 v74 为 `0.452721 / 0.657497 /
+165.299s / 168.199s`。旧 v1 的 `0.509408 / 0.828395 / 151.136s / 161.840s`
+仅用于历史复现。以下 v125 等数字是 legacy precision parent，不覆盖活动 v2 口径。算法链为 BOAT +
 expansive-FFN CAT balance + cross-fold HSDQ + Gram-hierarchy Activation-HSDQ，
 保留 Attention B1 GQRB 与 B2 PAWV diag-only（v127 变长修复）；L3–L6/C1 的实验机制
 已于 2026-08-31 从根文件裁剪，只保留在归档与历史日志中。v125 的全量
-`295.847849 / 2653.580s` 仅作为 legacy precision 证据；v127 的 v4 sampled
-均值才是当前比较口径。v126/v127 的 PAWV 变长修复已通过公开 shape smoke，
-但 v127 尚未官方提交，不能把本地均值写成官方成绩。官方 300s 只由官方平台确认，
+`295.847849 / 2653.580s` 仅作为 legacy precision 证据；v126/v127 的 PAWV 变长修复已通过公开 shape smoke，
+ 但 v127 尚未官方提交，不能把本地均值写成官方成绩。官方 300s 只由官方平台确认，
 本地 CPU/CUDA 时间不作为硬门。
 
 > **2026-08-31 归档修复与 v5 复评**：v099–v125 共 28 个归档 `solution.py` 携带着
@@ -59,6 +59,10 @@ v66 仍为绝对控制组。v74 虽已改变 Attention 共用 helper，但用户
 v107 timeout 已纠错：**v107 官方结果保持 Attention `wrong answer`（非 timeout，
 与 v100 同类）**，其本地 API `481.04s` > 300s 仅作历史风险提示。更新详情见
 [`v98 官方 timeout`](../logs/execution/2026-08-31-v98-official-timeout.md)。
+**v100 pawv-fixed 线最新官方结果为 timeout（>300s）**：原始 v100 官方 WA（早期
+判定短路），变长修复后完整跑通评测即超时。PAWV/GQRB attention 线（v98/v100/
+v107/v121）至此在 300s 限制下全部失败，根因与官方 250+200 case 构成错配分析见
+[`v100 超时根因分析`](../logs/execution/2026-08-31-v100-official-timeout-analysis.md)。
 
 **2026-08-31 晚第三次修订（评分权重变更）**：官方**减少了 Linear 样例的评分权重**，
 官方总分据此大幅下降；新权重下用户确认 **v84 官方通过：`16517 / 252.563s`
@@ -75,9 +79,10 @@ mismatch；任务书没有 calibration sample 等长约束，且规定任一运�
 `size 10 must match size 128 at dimension 1`，因此该根因已被确认，而不再只是高置信度推测。见
 [`v100/v107 Attention WA 根因`](../logs/execution/2026-08-31-v100-v107-attention-wa-root-cause.md)。
 修复实现与验证见 [`v126 PAWV 变长修复`](../logs/execution/2026-08-31-v126-pawv-variable-length-fix.md)。
-v4 sampled 的可比结果见 [`v127 sampled`](../logs/execution/2026-08-31-v127-sampled-means-qwen.md)
-和 [`v74 sampled`](../logs/execution/2026-08-31-v74-sampled-means-qwen.md)；统一统计、
-官方锚点拟合和时间校准见 [`local metric calibration`](../logs/execution/2026-08-31-local-metric-calibration.md)。
+历史 v1 sampled 的可比结果见 [`v127 sampled`](../logs/execution/2026-08-31-v127-sampled-means-qwen.md)
+和 [`v74 sampled`](../logs/execution/2026-08-31-v74-sampled-means-qwen.md)；活动 v2
+统一归档复评已完成，摘要见 [`official archive recheck`](../logs/execution/2026-08-31-official-archive-recheck-v2.md)，
+官方锚点拟合和时间解释见 [`local metric calibration`](../logs/execution/2026-08-31-local-metric-calibration.md)。
 
 2026-08-31 已按执行计划完成 E0-C、E1→A6、B1、B2、L1、L2、L3 和 L4a。B1 GQRB margin
 先把 panel 提升到 `293.793700`，B2 PAWV diag-only 再提升到 `293.797301`，L2
@@ -133,7 +138,7 @@ v106 时间 parent 对照：[`v106-l2-cat-qwen-full.md`](../logs/execution/2026-
 上一 parent 的对照报告：[`b2-pawv-diagonly-qwen-full.md`](../logs/evaluations/b2-pawv-diagonly-qwen-full.md)。
 
 > 下表为 v125（含已裁剪的 L4a/L4b/L5a/L6/C1 机制）在旧 full-layer 口径下的历史数据，
-> 仅作精度上界证据；当前根 v127 的主口径是 v4 sampled-means 的两个均值。
+> 仅作精度上界证据；当前根 v127 的历史 v1 sampled 数字不代表活动 v2 主口径。
 
 固定输入为 Qwen2.5-0.5B（24 层、hidden 896、14 Q heads、2 KV heads、head dim 64），
 calibration 使用 train 的 2 个窗口，test 使用 validation 的 4 个不重叠窗口。
@@ -326,46 +331,64 @@ L3 证据：`2026-08-30-l3-global-lrh-stratified.md`、
 > **目标变更**：官方第三次修订（减少 Linear 样例权重）后，旧权重口径的 `36000`
 > 绝对分目标已废弃。当前唯一目标组合是：
 >
-> 1. **Linear 场景本地 `linear_mean` 达到 `0.8`**（v4 sampled 口径；当前 v127
->    `0.509408`，研究链最高 v121-pawv-fixed `0.516685`）；
-> 2. **Attention 场景尽可能高**（pawv-fixed 系当前上限 `0.828395`，继续寻找无损
+> 1. **Linear 场景本地 `linear_mean` 达到 `0.8`**（活动 v5/v2 sampled 口径；当前
+>    v127 为 `0.522453`，研究链历史 v121-pawv-fixed 为 `0.516685`）；
+> 2. **Attention 场景尽可能高**（活动 v2 根当前为 `0.842024`，新权重官方锚点 v84 为
+>    `0.739172`；继续寻找无损
 >    或低时间成本的 Attention 增益）；
 > 3. **官方端到端时间 `< 300s`**——本地时间预算按下表由已有官方评测结果推断。
 
 ### 本地时间 → 官方时间推断表
 
-同一批有官方记录的候选已在 v4 sampled 口径（224L+32A、CPU、`cache=read`）复评；
-"比值"= 官方端到端时间 ÷ 本地 sampled API 时间。官方 450 case 与本地 256 case 的
-构成差异、鲲鹏 920B 负载波动都会造成比值漂移，因此只给出区间与预算红线：
+官方锚点现已在活动 v2（112L+96A、CUDA、`cache=read`）重新复评；下表的本地时间仅用于
+同一 cache/profile 的工程比较。"比值"= 官方端到端时间 ÷ 本地 sampled API 时间，仍受
+官方硬件、隐藏样例和调度影响，不能作为官方时间承诺：
+
+从本轮起，任何新的均值或时间判断统一使用活动 profile `sampled-means-v2`：Attention
+使用全部可用 layer，Linear 使用受控分层 layer，使本地 case 构成接近官方 `250:200`。
+当前 `seq=128/test=4` cache 的实际计划为 `112L+96A`（Attention 占 46.2%，官方
+44.4%）；历史 `sampled-means-v1` 的 `224L+32A` 只用于旧结果复现，不再属于活动
+评测。计划会在 `sample_plan` 中同时记录 component-specific layer/window、实际比例
+和 calibration layer，报告中的 `timing.api_seconds` 用于拆分 Linear/Attention 时间。
+官方变长 `[10,128,512,1024,1024]` 仍需独立 cache 才能覆盖 PAWV 的长序列成本。
 
 | 候选 | 官方时间 (s) | 本地 sampled API (s) | 比值 |
 |---|---:|---:|---:|
-| v031 / c39 | 161.3 | 80.500 | 2.00 |
-| v034 / c41b | 159.4 | 79.094 | 2.02 |
-| v051 / c47b | 234 | 116.557 | 2.01 |
-| v066 / c66 | 217.2 | 187.353 | 1.16 |
-| v072 / C74 | 226 | 228.777 | 0.99 |
-| v074 / C75 | 239.387 | 218.619 | 1.10 |
-| **v84 / C84** | **252.563** | **422.615** | **0.60** |
+| v031 / c39 | 161.3 | 69.755 | 2.31 |
+| v034 / c41b | 159.4 | 69.537 | 2.29 |
+| v051 / c47b | 234 | 145.918 | 1.60 |
+| v066 / c66 | 217.2 | 144.738 | 1.50 |
+| v072 / C74 | 226 | 154.793 | 1.46 |
+| v074 / C75 | 239.387 | 165.299 | 1.45 |
+| **v84 / C84** | **252.563** | **239.910** | **1.05** |
 | v098 | timeout（>300s） | 219.039 | — |
 
 **推断规则（用于预算规划，不替代官方判定）**：
 
-- 比值观测区间为 **`[0.60, 2.02]`**（v84 证明本地很慢的候选在官方硬件上可能
-  远快于本地；c39 系早期候选官方相对最慢）。按最保守上界 `2.02` 反推，
-  **本地 sampled API `≤ 150s` 是官方 `<300s` 的安全预算红线**（150 × 2.02 ≈ 303s）。
-- 本地 `150–450s` 为灰区：官方通过（v84 `422.6s → 252.6s`）与 timeout
+- 当前 v2 锚点比值观测区间为 **`[1.05, 2.31]`**；按最保守上界 `2.31` 反推，
+  **本地 sampled API `≤ 125s` 才接近官方 `<300s` 的保守预算**。这只是锚点外推，
+  不能代替官方提交。
+- **构成修正（2026-08-31 v100 官方 timeout 后追加）**：此前单比值红线只对
+  linear/calibration-heavy 候选保守有效。官方 panel 为 250 Linear + 200
+  Attention（attention case 占比 44.4%，旧 sampled 抽样仅 12.5%），且官方运行于
+  Kunpeng 920B 全 24 层模型；attention-heavy 候选（B1 GQRB / B2 PAWV 线）
+  的时间被本地系统性低估 2.3–3.6 倍——v100-pawv-fixed 本地 `150.25s` 仍官方
+  timeout。详见 [`v100 超时根因分析`](../logs/execution/2026-08-31-v100-official-timeout-analysis.md)。
+  评测器已支持 per-API 计时（`timing.api_seconds`），提交冻结前须检查
+  attention 分量占比。
+- 本地 `125–300s` 为灰区：官方通过（v84 `239.9s → 252.6s`）与 timeout
   （v098 sampled `219s` 仍官方 timeout）都出现过，必须提交官方实测。
 - 本地 `>450s` 基本不可行（v121-pawv-fixed 本地 `832.9s`，官方 timeout）。
-- 当前 v127 sampled API `151.136s` 恰在安全红线边缘；Linear 0.8 目标允许精度
-  候选先超预算探索，但进入提交冻结前应把 sampled API 压回 `≤150s`，或以最接近的
+- 当前 v127 v2 API `177.039s` 高于保守红线；Linear 0.8 目标允许精度候选先超预算
+  探索，但进入提交冻结前应把 sampled API 压回约 `≤125s`，或以最接近的
   官方已测版本（如 v84）做结构对比后再提交实测。
 - 该推断线只约束提交冻结阶段；探索阶段仍按 accuracy-first 只记录时间。
 
-### 官方记录候选的 v5 复评覆盖矩阵
+### 官方记录候选的历史 v1 复评矩阵（兼容保留）
 
-全部 11 个有官方记录的本仓库候选均已在 v4 sampled 口径（seed `20260831`，
-224 Linear + 32 Attention、CPU、`cache=read`）完成复评：
+已有官方记录或官方失败裁决的归档源码均已按活动 v2（`112L+96A`）复评；完整通过/失败表格和证据链接
+集中在 [`solutions/README.md`](../solutions/README.md) 与
+[`official-archive-recheck-v2.md`](../logs/execution/2026-08-31-official-archive-recheck-v2.md)。
 
 | 候选 | 官方结果 | v5 Linear mean | v5 Attention mean | 本地 API (s) | 复评日志 |
 |---|---|---:|---:|---:|---|
@@ -377,24 +400,36 @@ L3 证据：`2026-08-30-l3-global-lrh-stratified.md`、
 | v074 / C75 | 22750 / 239.387s（旧权重） | 0.440305 | 0.671106 | 218.619 | [`v74-sampled`](../logs/execution/2026-08-31-v74-sampled-means-qwen.md) |
 | **v84 / C84** | **16517 / 252.563s（新权重）** | **0.477266** | **0.709020** | **422.615** | [`v84-sampled`](../logs/execution/2026-08-31-v84-sampled-means-qwen.md) |
 | v098 | timeout | 0.506715 | 0.828323 | 219.039 | [`v098-sampled`](../logs/execution/2026-08-31-v098-sampled.md) |
-| v100 | Attention WA | 0.506715 | 0.828395 | 150.25 | [`v100-pawv-fixed-sampled`](../logs/execution/2026-08-31-v100-pawv-fixed-sampled.md) |
+| v100 | Attention WA（原始版）→ **timeout >300s（pawv-fixed 线最新）** | 0.506715 | 0.828395 | 150.25 | [`v100-pawv-fixed-sampled`](../logs/execution/2026-08-31-v100-pawv-fixed-sampled.md)、[`超时根因`](../logs/execution/2026-08-31-v100-official-timeout-analysis.md) |
 | v107 | Attention WA | 0.512967 | 0.828395 | 241.51 | [`v107-pawv-fixed-sampled`](../logs/execution/2026-08-31-v107-pawv-fixed-sampled.md) |
 | v121 | timeout | 0.516685 | 0.828395 | 832.92 | [`v121-pawv-fixed-sampled`](../logs/execution/2026-08-31-v121-pawv-fixed-sampled.md) |
+
+活动 v2 的统一复评已经完成，当前应以 [`solutions/README.md`](../solutions/README.md) 和
+[`official-archive-recheck-v2.md`](../logs/execution/2026-08-31-official-archive-recheck-v2.md)
+为准：根 v127=`0.522453 / 0.842024 / 177.039s`，v74=`0.452721 / 0.657497 /
+165.299s`，v84=`0.489389 / 0.739172 / 239.910s`；官方失败线 v107=`0.526490 /
+0.842024 / 187.127s`、v121=`0.531834 / 0.842024 / 1571.187s`（顺序为 Linear /
+Attention / API）。
 
 说明：v100/v107/v121 的复评使用 PAWV 变长修复版归档（`-pawv-fixed`），原始归档
 携带变长 bug 不再可运行；v024（`16043/173.8s`，当时规则下不合规）为历史版本，
 不参与复评；外部 `youxilee/hif4` 不属于本仓库提交。**v84 是唯一的新权重官方
-通过锚点，其 v5 基线（`0.477266 / 0.709020`）是新权重口径下最有价值的本地对照**；
-当前 v127（`0.509408 / 0.828395`）两项均值均高于 v84，但尚无官方验证。
+通过锚点**；活动 v2 下 v84=`0.489389 / 0.739172`，根 v127=`0.522453 / 0.842024`，
+但 v127 尚无官方验证。
+
+v84 的另一个历史 v1 结果为 0.477266 / 0.709020 / 422.615s（CPU、224L/32A），
+不能与当前 v2 的 0.489389 / 0.739172 / 239.910s（CUDA、112L/96A）混用。
+v84 通过而 v98/v100 超时的源码级原因和复杂度推导见
+[v84/v98/v100 运行时分析](../logs/execution/2026-08-31-v84-v98-v100-runtime-analysis.md)。
 
 历史方法记录（旧权重口径的 36000 推导）见
 [`当前实验结果与可达性 checkpoint`](../logs/execution/2026-08-31-current-results-target-feasibility.md)
 与 [`36000 潜力研究`](2026-08-30-hif4-36000-potential-and-algorithms.md)；两者均不再
 作为当前目标依据。
 
-按新目标 `linear_mean=0.8` 计算诊断距离：当前 v127 的 `0.509408` 还需消除
+按新目标 `linear_mean=0.8` 计算诊断距离：当前 v127 的 `0.522453` 还需消除
 
-$$\Delta g_L=0.8-0.509408=0.290592,\qquad \frac{\Delta g_L}{1-g_L}=\frac{0.290592}{0.490592}\approx 59.2\%$$
+$$\Delta g_L=0.8-0.522453=0.277547,\qquad \frac{\Delta g_L}{1-g_L}=\frac{0.277547}{0.477547}\approx 58.1\%$$
 
 的剩余归一化 Linear 误差；v121-pawv-fixed（`0.516685`）需消除约 `57.6%`。这是
 本地数轴，不是官方绝对分数。旧权重口径的 36000/0.9 推导已整体移入上文引用的
@@ -596,8 +631,8 @@ L0 的正式产物为 [`l0-linear-ceiling-qwen.json`](../artifacts/oracle_dashbo
 
 ## 时间与合规（v5）
 
-- v127 sampled（224/32）六 API 累计 `151.136s`，本地 wall `161.840s`；同一
-  sample plan 的 v74 为 `218.619s / 229.485s`。v74 当前 CPU full 复测为
+- v127 活动 v2 六 API 累计 `177.039s`，本地 wall `180.430s`；同一
+  sample plan 的 v74 为 `165.299s / 168.199s`。v74 当前 CPU full 复测为
   `658.877s / 690.600s`，但官方实际 `239.387s`，证明本地 `<300s` 不能作为
   官方判定。v125 full `2653.580s` 保留为 legacy。
 - 调用次数：weight calibration 168；attention calibration 24；dynamic activation
@@ -606,7 +641,7 @@ L0 的正式产物为 [`l0-linear-ceiling-qwen.json`](../artifacts/oracle_dashbo
   PAWV 的静态 token-row diagonal 与旋转整数配置/符号；官方 2026-08-31 修订已放开
   `A@W` 信息源限制，候选可按需使用输出或残差优化 `Q(W)` / `Q(A)`。
 - 当前源码 SHA256（规范 LF 内容）：
-  `75F21B7BE3630FFEFEAF2883BB699CE4901DF1BF6C0B39DD6E40F253561E32C0`（与
+  `F15E112C7E832D019EE83D707ACD9D72FEF121A306E4CC3B50DBBC2CBB574924`（与
   `solutions/20260831_v127_v106-pawv-variable-length-safe_scoreNA_timeNA/` 归档一致）。
 - 发布前检查：C1c synthetic/reference-equivalence、合规/精度门控和 v107 Attention
   contract audit 均通过；`guard_solution_file` 为 `violations=[]`、`static_violations=[]`。

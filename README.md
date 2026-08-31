@@ -31,11 +31,12 @@
   合规父版本。**官方评测（2026-08-31 修订）已放开全部 `A@W` 拟合限制，只限制
   端到端运行时间**，旧合规判断不再作为当前约束。
 - 当前根 `solution.py` 为 **v127**：v106 的 Linear 路径 + PAWV 变长 calibration 修复，
-  作为官方 Attention shape 风险的研究候选。新 `sampled-means-v1`（Qwen、8 层、7 role、
-  4 window，224 Linear + 32 Attention）实测 Linear mean `0.509408`、Attention mean
-  `0.828395`、Local API `151.136s`、Wall `161.840s`；同一抽样计划下 v74 为
-  `0.440305 / 0.671106 / 218.619s / 229.485s`。这四个值才是当前本地 A/B 主结果。
-  v127 全量旧口径 `453.102s` 仅作 legacy；不要拿本地 300 秒直接判断官方时间。
+  作为官方 Attention shape 风险的研究候选。活动 `sampled-means-v2`（Qwen、112 Linear +
+  96 Attention）复测为 Linear mean `0.522453`、Attention mean `0.842024`、Local API
+  `177.039s`、Wall `180.430s`；同一 v2 计划下 v74 为 `0.452721 / 0.657497 /
+  165.299s / 168.199s`。旧 `sampled-means-v1`（224/32）的 `0.509408 / 0.828395 /
+  151.136s / 161.840s` 仅作历史复现，不再作为当前 A/B 主结果。不要拿本地 300 秒直接
+  判断官方时间。
   逐项结果、归档实现
   审计和复现实验配置见 [`当前主版本算法效果与评测状态`](docs/current-solution-status.md)、
   [`算法全景`](docs/algorithm-inventory-and-directions.md)、
@@ -50,15 +51,20 @@
   guardrail 与 C3 state/runtime 压缩。  逐版本证据见 [`solutions/README.md`](solutions/README.md)
   与 `logs/execution/`。
 - **当前目标（2026-08-31 更新，取代旧权重 36000 目标）**：Linear 场景本地
-  `linear_mean` 达到 **`0.8`**（当前 v127 `0.509408`，需消除剩余误差约 `59.2%`）；
-  Attention 场景尽可能高（pawv-fixed 系当前上限 `0.828395`）；官方端到端 `<300s`，
-  本地时间预算按官方锚点候选的实测比值推断——提交冻结前本地 sampled API
-  **`≤150s` 红线**（比值观测区间 `[0.60, 2.02]`，v84 实测证明本地超预算也可能
-  官方通过）。完整推断表与全部官方候选的 v5 复评覆盖矩阵见
+  `linear_mean` 达到 **`0.8`**（当前 v127 `0.522453`，需消除剩余误差约 `58.2%`）；
+  Attention 场景尽可能高（活动 v2 根为 `0.842024`；新权重官方锚点 v84 为 `0.739172`）；官方端到端
+  `<300s`。**不再设置通用的本地秒数红线**：此前 `sampled API ≤150s` 的门槛建立
+  在错误的“本地/官方线性映射”假设上，v100 本地约 150s 仍在官方超时，已证明该
+  门槛无效。只有覆盖官方 Attention 变长校准和完整调用结构的 runtime-stress
+  profile 才能用于时间筛选；在该 profile 完成前，本地秒数只能作同机 A/B 记录。
+  **构成修正：官方 panel 为 250 Linear + 200 Attention（Attention 占比 44.4%），
+  而且官方校准长度为 `[10,128,512,1024,1024]`；固定 `seq=128` 的 v2 无法代表
+  PAWV/GQRB 等 attention-heavy 候选。**完整推断表、构成错配
+  分析与全部官方候选的 v5 复评覆盖矩阵见
   [`当前目标与本地时间推断`](docs/current-solution-status.md)。旧权重口径的
   36000 推导仅作历史方法记录：[`可达性 checkpoint`](logs/execution/2026-08-31-current-results-target-feasibility.md)。
 - 当前根源码 SHA256：
-  `75F21B7BE3630FFEFEAF2883BB699CE4901DF1BF6C0B39DD6E40F253561E32C0`（规范 LF，
+  `F15E112C7E832D019EE83D707ACD9D72FEF121A306E4CC3B50DBBC2CBB574924`（规范 LF，
   与 `solutions/20260831_v127_v106-pawv-variable-length-safe_scoreNA_timeNA/` 归档快照一致）。
 - 旧版本地评测器（单模型 dev 与 frozen holdout）曾因 calibration/test
   文本重叠不能可靠排序合规候选；`real_data_eval.py`、`holdout_eval.py`、
@@ -66,12 +72,18 @@
   判断，`synthetic_attention_eval.py` 仅作性质诊断）；诊断结论见
   [C40 官方结果与评测器诊断](logs/candidates/C40-official-evaluator-diagnosis.md)，
   历史版本可从 git 历史恢复。
-- 当前唯一活跃评测器为 `real_model_suite.py`：默认使用 `sampled-means-v1` 和
-  Qwen2.5-0.5B，只输出抽样 Linear/Attention 平均 gain；层、role、window、seed
-  和数据 revision 都写入 `sample_plan`。其他模型必须显式传入，只作独立 guardrail，
-  不相加。旧 `official_flow_total`/`panel_score` 仍在 JSON 中兼容保留，但不再是
+- 当前唯一活跃评测器为 `real_model_suite.py`：使用唯一活动 profile
+  `sampled-means-v2` 和 Qwen2.5-0.5B，在同一批接近官方 `250:200` 构成的样本上
+  同时计算 Linear/Attention 平均 gain 与本地时间。层、role、window、seed 和数据
+  revision 都写入 `sample_plan`。旧 `sampled-means-v1` 仅用于历史结果复现，其他
+  模型必须显式传入，只作独立 guardrail，不相加。旧
+  `official_flow_total`/`panel_score` 仍在 JSON 中兼容保留，但不再是
   报告主指标。完整口径与官方锚点校准见
   [`本地评测统一口径与官方锚点校准`](logs/execution/2026-08-31-local-metric-calibration.md)。
+  **注意：v2 的 `seq=128/calib=2` 只适合误差 A/B，不是官方运行时代理；官方
+  形状压力 profile（`[10,128,512,1024,1024]`）完成前，禁止用 v2 本地秒数判断
+  300s 通过。** v84/v98/v100 的实测反例和修正方案见
+  [`统一运行时分析`](logs/execution/2026-08-31-v84-v98-v100-runtime-analysis.md)。
 - **官方结果档案（按时间序，细节均见对应日志）**：
   v031/v034 `21864`（旧权重合规锚点）→ v051 `22451` → v066 `22557` → **v072 `22662 /
   226s`、v074 `22750 / 239.387s` 通过（旧权重基线，记录见
@@ -111,6 +123,19 @@
   150.3s`、v107-pawv-fixed `0.512967 / 0.828395 / 241.5s`、v121-pawv-fixed
   `0.516685 / 0.828395 / 832.9s`（时间不可行）。官方分类不改变。完整见
   [`pawv 归档修复与 v5 复评`](logs/execution/2026-08-31-pawv-archive-fix-and-v5-reeval.md)。
+- **活动 v2 官方结果归档复评已完成**：通过/失败/超时源码统一使用 `112L+96A`；
+  v98/v100/v107/v121 的本地结果分别为 `0.516969/169.0s`、`0.516969/176.2s`、
+  `0.526490/187.1s`、`0.531834/1571.2s`（Linear mean / API），官方裁决仍分别为
+  timeout、WA→timeout、Attention WA、timeout。完整表格见
+  [`solutions/README.md`](solutions/README.md) 和 [`统一复评摘要`](logs/execution/2026-08-31-official-archive-recheck-v2.md)。
+
+**v84/v98/v100 运行时差异已单独整理**：v84 的旧 sampled-means-v1 CPU 记录
+422.615s 不可与 v2 比较；同一 v2 CUDA 配置下 v84 为
+0.489389 / 0.739172 / 239.910s（独立复测 234.361s）。v84 对候选 Attention
+评估限制 128/256 行，而 v98/v100 对完整 calibration 序列重复执行约 35 次
+QK^T/P@V，v100 还增加 PAWV；官方长度 [10,128,512,1024,1024] 因此放大
+后两者的 O(T^2d) 成本。详见
+[v84/v98/v100 运行时分析](logs/execution/2026-08-31-v84-v98-v100-runtime-analysis.md)。
 
 本地时间和本地分数仅用于同一 profile/device/cache 的候选比较，不冒充官方结果。
 官方 300s 是鲲鹏 920B 上官方 450 case 的端到端限制；本地 API 秒数不能直接判定
@@ -162,8 +187,8 @@ git diff --check
 
 ## 本地评测是否能反映官方方向
 
-以下是旧版 Qwen panel 兼容表，仅用于历史锚点回溯；当前排序请看
-`sampled-means-v1` 的 Linear/Attention mean 表和对应 sample plan：
+以下是旧版 Qwen panel 兼容表，仅用于历史锚点回溯；当前排序请看活动
+`sampled-means-v2` 的 Linear/Attention mean 表和对应 sample plan：
 
 | 候选 | 官方分数 | Qwen panel（本地相对分） |
 | --- | ---: | ---: |
@@ -209,17 +234,19 @@ git diff --check
    `hif4_calibration_and_quantize_weight` 与在线激活量化均可用 `A@W`、输出或残差
    自由优化 `Q(W)` / `Q(A)`，信息源不限。唯一硬约束是端到端运行时间。
 2. **官方评分权重（2026-08-31 晚修订）减少了 Linear 样例的权重**，官方总分据此
-   大幅下降；同一算法在新权重下的官方总分与旧权重分数不可直接比较。本地排序仍以
-   `sampled-means-v1` 的 Linear/Attention mean 为准，不受官方总权重变化影响。
+    大幅下降；同一算法在新权重下的官方总分与旧权重分数不可直接比较。本地排序统一以
+    活动 `sampled-means-v2` 的 Linear/Attention mean 为准，不受官方总权重变化影响。
 3. 输出必须是合法 HiF4 五字段，API、state、shape、dtype 和设备必须符合要求。
 4. 最终官方评测总时间必须严格小于 `300s`（5 分钟）。
 5. 不使用 holdout 或官方分数反向调参。
 
 除上述规则外，不设置固定的增益、coverage、beam、单组件非退化或中间时间门槛。
 开发阶段允许完整扫描和超过 300 秒的诊断实验；发现精度信号后，再通过算法和实现
-优化压入最终时间限制。提交冻结阶段的本地时间预算按官方锚点候选推断：本地
-sampled API 与官方端到端时间的历史比值区间为 `[0.60, 2.02]`，冻结前本地
-sampled API 应压到 **`≤150s`**；`150–450s` 为灰区必须官方实测。
+优化压入最终时间限制。**不再使用通用的本地秒数红线或固定线性换算**：此前
+`sampled API ≤150s` 的经验门槛在 v100（本地约 150s、官方仍 timeout）上失效。
+时间筛选必须使用覆盖官方 Attention 变长校准 `[10,128,512,1024,1024]`、完整候选
+调用结构和 250:200 case 构成的 runtime-stress profile；在该 profile 完成前，
+`timing.api_seconds` 只能用于同一硬件、同一缓存的 A/B 比较，不能判定官方通过。
 
 ## 当前算法
 
@@ -233,7 +260,7 @@ L3–L6/C1 的实验机制全部裁剪出根文件，它们仅保留在归档中
 | 2 | Linear | Cross-fold Weight-HSDQ：`AᵀA` 二阶增量、15 levels、top-2 block、1 sweep | 只更新离线 `weight_params`；跨 fold 验证后才接纳 |
 | 3 | Linear | Gram-hierarchy Activation-HSDQ：静态 `WᵀW`、offset/hierarchy 选择、最多 128 block、2 sweeps | 在线 state 仅含合法静态统计；v4 sampled Linear mean `0.509408` |
 | 4 | Linear | Expansive-FFN CAT balance：`rows > channels`、固定 α=0.25 | v106 仅改善 fc_gate；不增加 state 字段 |
-| 5 | Attention | reciprocal RMS、K-centering、GQA 对齐、GQRB、PAWV diag-only（v127 已按 `seq_len` 分组修复变长 bug） | 使用真实 non-causal Attention 输出排序；v4 sampled Attention mean `0.828395` |
+| 5 | Attention | reciprocal RMS、K-centering、GQA 对齐、GQRB、PAWV diag-only（v127 已按 `seq_len` 分组修复变长 bug） | 使用真实 non-causal Attention 输出排序；历史 v1 sampled Attention mean `0.828395` |
 | 6 | 下一步 | L0–L6、C1a–C1c 已完成并归档（机制已从根文件裁剪）→ **C2 跨模型 guardrail → C3 state/time 压缩**，之后才把裁剪机制以可负担预算回植 | 只参考唯一活跃计划；Attention PAWV 独立延后 |
 
 优化决策只看同一冻结缓存、同一 sample plan 上的两个均值：Qwen
@@ -330,21 +357,25 @@ python -m venv .venv
 若缓存不存在，先执行下方“采集缓存”命令；`read` 模式不会偷偷下载模型或
 改用其他配置。
 
-默认命令使用快速、可复现的 `sampled-means-v1`：
+默认命令使用唯一活动的、构成匹配的 `sampled-means-v2`：
 
 ```powershell
 .\.venv\Scripts\python -u evaluator\real_model_suite.py `
-  --models qwen2.5-0.5b --evaluation-profile sampled-means-v1 `
+  --models qwen2.5-0.5b --evaluation-profile sampled-means-v2 `
   --sample-layers 8 --sample-test-windows 4 --sample-seed 20260831 `
   --device cpu --algorithm-device cpu --cache-mode read `
   --solution solution.py --candidate-name active `
-  --output artifacts\real_model_suite\active-sampled.json `
-  --report logs\execution\active-sampled.md
+  --output artifacts\real_model_suite\active-sampled-v2.json `
+  --report logs\execution\active-sampled-v2.md
 ```
 
-这会固定 224 个 Linear 与 32 个 Attention case，报告只展示
-`mean_scores.linear_mean` 和 `mean_scores.attention_mean`。改变任何 profile、seed、
+当前 `seq=128`、4 个窗口的缓存会选择 4 个分层 Linear layer 和全部 24 个
+Attention layer，得到 112 Linear + 96 Attention，Attention 占比 46.2%，接近官方
+44.4%；不会复制 case，且会对 profile 所需 layer 执行 calibration。改变任何 seed、
 layer/window 数、device、cache 或数据 revision 后，结果必须标记为新的不可直接横比组。
+该 profile 的 `sample_plan` 与 `timing.api_seconds` 同时用于均值和时间判断。若要覆盖官方
+变长 Attention，还需另行采集包含
+`[10,128,512,1024,1024]` 的校准缓存，固定 `seq=128` 的缓存不能代表该成本。
 
 结果字段按下面方式读取：
 
@@ -455,8 +486,8 @@ Attention 合成矩阵：
      --report logs\evaluations\active-YYYYMMDD.md
    ```
 
-    新版默认评测使用 Qwen `sampled-means-v1`，只比较
-    `mean_scores.linear_mean`、`mean_scores.attention_mean`；每份结果必须记录
+    新版默认评测使用 Qwen `sampled-means-v2`，在同一构成匹配样本上比较
+    `mean_scores.linear_mean`、`mean_scores.attention_mean` 并记录时间；每份结果必须记录
     sample seed、layer/window index、source case 数、Local API、Wall、设备和
     source SHA256。旧 `panel_score`/`official_flow_total` 只用于读取历史 JSON。
 

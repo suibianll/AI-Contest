@@ -24,6 +24,7 @@ from real_model_suite import (  # noqa: E402
     audit_official_ranking,
     _stratified_indices,
     build_panel_score,
+    build_sample_plan,
     load_real_windows,
     load_model_cache,
     model_cache_path,
@@ -172,6 +173,31 @@ def test_stratified_sample_has_exact_count_and_endpoints() -> None:
     assert indices[0] == 0
     assert indices[-1] == 23
     assert _stratified_indices(24, 8, 20260831) == indices
+
+
+def test_sampled_means_v2_matches_linear_attention_ratio() -> None:
+    class SampleData:
+        layers = 24
+        roles = ("q", "k", "v", "o", "fc_gate", "fc_up", "proj")
+        calibration_windows = [
+            Window("train", f"train-{index}", 0, 0, 0, 4, (1, 2, 3, 4))
+            for index in range(2)
+        ]
+        test_windows = [
+            Window("validation", f"validation-{index}", 0, 0, 0, 4, (5, 6, 7, 8))
+            for index in range(4)
+        ]
+
+    plan = build_sample_plan(
+        SampleData(), "sampled-means-v2", 8, 4, 20260831
+    )
+    assert plan["sampled_linear_cases"] == 112
+    assert plan["sampled_attention_cases"] == 96
+    assert plan["attention_layer_indices"] == list(range(24))
+    assert len(plan["linear_layer_indices"]) == 4
+    assert plan["calibration_layer_indices"] == list(range(24))
+    assert plan["realized_linear_attention_ratio"] == pytest.approx(112 / 96)
+    assert plan["official_linear_attention_ratio"] == pytest.approx(250 / 200)
 
 
 def test_revised_official_anchor_manifest_is_current_panel_only() -> None:
