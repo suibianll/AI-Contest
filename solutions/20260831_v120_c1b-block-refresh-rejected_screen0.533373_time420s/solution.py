@@ -96,7 +96,7 @@ _ACT_STRUCTURED_LRH_VECTORIZED = True
 # C1b candidate knob.  ``none`` is the accepted v119 equivalent path;
 # ``block`` refreshes the structured proposal after every selected block;
 # ``sweep2`` repeats that refreshed block sweep twice.
-_ACT_STRUCTURED_LRH_REFRESH_MODE = "sweep2"
+_ACT_STRUCTURED_LRH_REFRESH_MODE = "block"
 _L4_FINAL_GRAM_MAX_CHANNELS = 1024
 # Keep the L4a final-weight-Gram ablation isolated from the later GALS
 # candidate.  This switch is flipped only in the L4b candidate snapshot.

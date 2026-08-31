@@ -173,13 +173,49 @@ def test_structured_vectorized_proposal_matches_reference() -> None:
         dense, parent, gram64, deployment_gram, state, max_blocks=2
     )
     vectorized = solution._refine_activation_structured_vectorized(
-        dense, parent, gram64, deployment_gram, state, max_blocks=2
+        dense,
+        parent,
+        gram64,
+        deployment_gram,
+        state,
+        max_blocks=2,
+        refresh_mode="none",
     )
     assert set(reference) == set(vectorized)
     for key in reference:
         torch.testing.assert_close(
             vectorized[key], reference[key], rtol=0.0, atol=1.0e-6
         )
+
+
+def test_structured_gradient_refresh_modes_remain_exactly_gated() -> None:
+    """C1b refresh variants stay finite and non-increasing under full ``G_q``."""
+
+    torch.manual_seed(716)
+    dense = torch.randn(4, 256) * 0.1
+    deployment = torch.randn(96, 256) * 0.05
+    deployment_gram = deployment.t().mm(deployment)
+    gram64 = solution._gram64(deployment)
+    parent = solution._dense_to_hif4(dense, gram64=gram64)
+    structured = solution._structured_activation_lrh(deployment_gram, components=2)
+    assert structured is not None
+    state = {"kernels": structured[0], "coefficients": structured[1]}
+    before = solution._dequantize_hif4(parent).to(torch.float32) - dense
+    before_loss = (before.mm(deployment_gram) * before).sum(dim=1)
+    for mode in ("block", "sweep2"):
+        refined = solution._refine_activation_structured_vectorized(
+            dense,
+            parent,
+            gram64,
+            deployment_gram,
+            state,
+            max_blocks=2,
+            refresh_mode=mode,
+        )
+        after = solution._dequantize_hif4(refined).to(torch.float32) - dense
+        after_loss = (after.mm(deployment_gram) * after).sum(dim=1)
+        assert torch.isfinite(after_loss).all()
+        assert torch.all(after_loss <= before_loss + 1.0e-5)
 
 
 def test_g64_hierarchy_sweep_matches_independent_coordinate_bruteforce() -> None:

@@ -28,20 +28,20 @@ Chinese version: [README.md](README.md)
   path used output information for activation-side selection. That
   `A@W -> Q(A)` use remains non-compliant, so it is not a compliant parent for
   new work.
-- The root `solution.py` is the v119 C1a structured-proposal vectorization parent
+- The root `solution.py` is the v121 C1b structured-gradient-refresh (two-sweep) parent
   on top of v118 L6d, v117 full `G_64` hierarchy, v116 L6b wide rank-4, v115 L6a
   rank-16, v111 block-local permutation, v110 final-Gram GALS, and the B1/B2 path.
-  On the full 24-layer Qwen2.5-0.5B cached run, its native total is `423.287835`,
-  Qwen shaped panel is `295.808212`, Linear mean is `0.5096012555`, and formal API
-  time is `2040.504690s`
+  On the full 24-layer Qwen2.5-0.5B cached run, its native total is `423.296085`,
+  Qwen shaped panel is `295.811281`, Linear mean is `0.5096135327`, and formal API
+  time is `2180.450151s`
   (accuracy-first; C1 must later compress below
   420s). See the [current status
   report](docs/current-solution-status.md), the [algorithm inventory](docs/algorithm-inventory-and-directions.md),
   the [archive implementation audit](docs/archive-implementation-audit.md),
   and [`solutions/README.md`](solutions/README.md). Future work follows the
-  [single active optimization plan](docs/superpowers/plans/2026-08-31-hif4-active-c1-structured-linear-plan.md); C1a is complete and C1b is next.
+  [single active optimization plan](docs/superpowers/plans/2026-08-31-hif4-active-c1-structured-linear-plan.md); C1a and C1b are complete, and C1c is next.
 - Current source SHA256:
-  `C9C45A7911594B4B378D0C5E2769187D76DC587D79B6DA9FA5F5A487E4B7CB11` (normalized LF).
+  `17F99A198C9E13C2CB2518D14B02973BC71336ADFC90E6BF884E89D22717AF7B` (normalized LF).
 - The active local evaluator is Qwen-first: it projects frozen-corpus Linear
   and Attention means onto a fixed 250/200 panel, while other models remain
   soft guardrails. The raw `official_flow_total` is retained for compatibility
@@ -113,8 +113,8 @@ official anchor ordering:
 Both orderings are `C39 = C41b < C47b < C66`; Qwen's panel Spearman is
 `1.0000`, while the five-model raw sum is `0.9487`. This validates relative
 direction only, not a linear conversion to official scores. The external
-`youxilee/hif4` Qwen panel is `250.327102`; the current root v119 is `295.808212`,
-  which is `45.481110` (`18.17%`) higher. Its Qwen native `369.527269` is the
+`youxilee/hif4` Qwen panel is `250.327102`; the current root v121 is `295.811281`,
+  which is `45.484179` (`18.17%`) higher. Its Qwen native `369.527269` is the
 secondary diagnostic line; the five-model sum is never a ranking benchmark.
 
 ## Revised official anchors (2026-08-29)
