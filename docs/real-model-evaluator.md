@@ -1,16 +1,19 @@
 # 多模型真实模型评估器
 
+> **当前协议 v4（2026-08-31）**：日常评测使用 `sampled-means-v1`，默认 Qwen、
+> 固定 seed 的分层 layer/window 样本；主结果只有 `Linear mean` 和 `Attention mean`。
+> 本文中旧 panel/native/official-flow 段落仅作历史兼容说明，不能与 v4 主表混用。
+
 ## 目标
 
 `evaluator/real_model_suite.py` 是开发阶段的评估器，用于回答两个问题：
 
-1. 候选算法在不同模型结构和真实语言模型激活上是否仍然有效；
-2. 以 Qwen 为主、按官方 250 Linear + 200 Attention 形状归一化后，本地排列
-   是否能复现已有官方排列。
+1. 候选算法在真实语言模型激活上两个组件的平均 gain；
+2. 在固定抽样计划下对候选做快速、可复现的 A/B 比较。
 
 它不是官方分数的替代品，也不把官方分数回灌到候选算法中。原始逐 case
-`official_flow_total` 仍保留，专门用于兼容回溯；默认晋级指标是
-`primary_panel_score_total`。
+`official_flow_total` 和 `panel_score` 仍保留在 JSON，专门用于兼容回溯；v4
+报告主指标是 `mean_scores.linear_mean` 与 `mean_scores.attention_mean`。
 
 ## 合规边界
 
@@ -31,18 +34,18 @@
 
 数据文件放在 `data/wikitext-2-raw-v1/`，不入库。中国大陆网络环境下可从 `hf-mirror.com` 下载固定 revision；如果大文件速度不稳定，模型文件可使用 ModelScope 的同名官方模型。
 
-## 官方评测集（2026-08-29 修订）
+## 官方评测集（2026-08-29 修订；2026-08-31 再次修订）
 
-官方评测面板现在包含 **250 个 Linear case 与 200 个 Attention case**。官方
-分数按全部 case 的 `case_score` 直接求和，样例数增加会同时抬高分数总量和
-端到端耗时；因此本地 `--calib 2 --test 4` 多模型 proxy 只能做方向排序，
-不能与新版官方绝对分数直接换算。当前官方时间限制为 **420s（7 分钟）**。
+官方评测面板现在包含 **250 个 Linear case 与 200 个 Attention case**，官方
+分数按全部 case 的百分制 `case_score` 求和；本地不能看到隐藏 case，也不能
+把本地均值换算成官方绝对分数。官方时间限制已于 **2026-08-31 收紧为 300s（5
+分钟）**，且官方不再限制任何 `A@W` 拟合用法，只限制端到端时间；只有官方平台
+实测才能最终确认。
 
-本地默认采用 `--panel-profile qwen-official`：不复制或重复本地 case，而是
-对冻结语料的 Linear/Attention case score 分别取均值，再计算
-`250 * Linear_mean + 200 * Attention_mean`。Qwen2.5-0.5B 是主模型；GPT-2、
-OPT、Pythia 等只作软 guardrail，用于识别结构性回退，不按层数直接加入主分。
-这使模型层数、角色数和 `--test` 窗口数不会改变同一候选的权重。
+本地 v4 默认采用 `--evaluation-profile sampled-means-v1`：Qwen2.5-0.5B、
+固定 seed 分层抽取 8 层、保留全部 7 role、4 个 validation window 和全部
+calibration window，主结果只有抽样 Linear/Attention 的算术均值。需要跨模型
+时显式传入 `--models`，各模型独立报告均值，不按层数相加。
 
 已确认的新版官方锚点：v031/C39-FW `21864 / 161.3s`、v034/C41b
 `21864 / 159.4s`、v051/C47b `22451 / 234s`、v066/C66
@@ -50,9 +53,33 @@ OPT、Pythia 等只作软 guardrail，用于识别结构性回退，不按层数
 `22750 / 239.387s`；外部
 [`youxilee/hif4`](https://github.com/youxilee/hif4) 报告 `24153 / 239s`，
 仅用于参考，不作为本地评测器的候选输入。当前 v74 与外部参考相差 `1403` 分；
-v74 比外部时间多 `0.387s`，二者都低于 420s。
+v74 比外部时间多 `0.387s`，二者都低于最新 300s 限制。
 
-## 当前根版本实测（2026-08-30）
+## v4 快速运行与当前配对结果（2026-08-31）
+
+```powershell
+.\.venv\Scripts\python -u evaluator\real_model_suite.py `
+  --models qwen2.5-0.5b --evaluation-profile sampled-means-v1 `
+  --sample-layers 8 --sample-test-windows 4 --sample-seed 20260831 `
+  --device cpu --algorithm-device cpu --cache-mode read `
+  --solution solution.py --candidate-name active `
+  --output artifacts\real_model_suite\active-sampled.json `
+  --report logs\execution\active-sampled.md
+```
+
+该 profile 固定 `224 Linear + 32 Attention` case，报告表只读取
+`results[*].mean_scores.linear_mean`、`attention_mean`、`timing.local_api_total_seconds`
+和 `timing.wall_seconds`。当前 v127 与 v74 共用同一 sample plan：
+
+| 候选 | Linear mean | Attention mean | API(s) | Wall(s) |
+|---|---:|---:|---:|---:|
+| v74 | 0.440305 | 0.671106 | 218.619 | 229.485 |
+| v127 | **0.509408** | **0.828395** | **151.136** | **161.840** |
+
+完整校准、官方锚点和时间解释见
+[`2026-08-31-local-metric-calibration.md`](../logs/execution/2026-08-31-local-metric-calibration.md)。
+
+## 旧 full-layer/panel 结果（legacy，仅兼容）
 
 根目录 `solution.py` 是重写后的 clean Gram-hierarchy 实现，不是新的官方提交。
 以下结果来自固定缓存 `clean-gram-hierarchy-full`：Qwen2.5-0.5B 全 24 层，
@@ -65,11 +92,11 @@ v74 比外部时间多 `0.387s`，二者都低于 420s。
 | Qwen panel total | **293.755106** | 267.307909 | **+26.447197（+9.89%）** |
 | official-flow native total | 417.862253 | 392.064774 | +25.797479 |
 | formal API time | **382.153528s** | 313.577669s | +68.575859s |
-| wall time | 414.025852s | — | `<420s` |
+| wall time | 414.025852s | — | 超过最新 300s；仅 legacy 记录 |
 
 报告：[Markdown](../logs/evaluations/clean-gram-hierarchy-full.md)，
 [JSON](../artifacts/real_model_suite/clean-gram-hierarchy-full.json)。当前根的
-`official_score`/`official_time` 为空；`panel_score` 只用于相对排序，不能换算
+`official_score`/`official_time` 为空；`panel_score` 只用于历史相对排序，不能换算
 官方绝对分数。Linear 仍是主要优化缺口：mean 为 `0.501558`，到 `0.9` 还差
 `0.398442`（当前剩余误差的 `79.94%`，即 250-case panel 的 `99.6106` 分）。
 
@@ -185,12 +212,12 @@ v74 比外部时间多 `0.387s`，二者都低于 420s。
   --report logs\evaluations\active.md
 ```
 
-报告中的 `local_primary_panel_order`（别名 `local_panel_order`）是默认主排序；
-`local_official_flow_order` 仅为旧协议诊断。官方锚点只用于计算 Spearman 和
-pairwise rank agreement，不用于回归、换算或预测官方绝对分数。旧的 OLS 校准器
-及冻结系数已经从活跃工程删除。
+v4 报告的唯一排序字段是 `mean_scores.linear_mean` 和
+`mean_scores.attention_mean`；`sample_plan` 必须完全一致才能横比。旧报告中的
+`local_primary_panel_order`、`local_official_flow_order` 和 panel/native 字段仅
+作历史诊断。官方锚点拟合不进入评测器，独立结果见校准日志。
 
-## 官方流程评分口径
+## 评分口径（v4 主结果；旧字段兼容保留）
 
 每个测试 case 独立计算：
 
@@ -198,22 +225,20 @@ pairwise rank agreement，不用于回归、换算或预测官方绝对分数。
 case_score = (MSE_STD - MSE_PLAYER) / MSE_STD
 ```
 
-- `official_flow_score.linear`：所有 Linear 测试 case 的 `case_score` 直接求和。
-- `official_flow_score.attention`：所有 Attention 测试 case 的 `case_score` 直接求和；当前按任务书未注明 causal mask 的 `Attn(Q,K,V)` 使用 non-causal 路径。
-- `official_flow_score.total`：Linear sum 与 Attention sum 之和，作为兼容诊断分，
-  不覆盖默认 Qwen shaped-panel 主分。
-- `panel_score.linear` / `panel_score.attention`：在 `qwen-official` 配置下，
-  分别为 native component mean 乘以 250 / 200；`panel_score.total` 是默认主分。
-- `panel_score.source_*_cases` 记录均值的真实来源 case 数；目标 250/200 是固定
-  权重，不是假造的隐藏样例。没有官方用例文件时不做逐 case 复制。
-- `official_api_total_seconds`：单个模型代理的一次完整六 API 调用耗时；主模型
-  必须严格 `<420s`（7 分钟），其他模型时间只作诊断记录。多模型代理是独立
-  诊断运行，不能把它们的时间相加冒充一次官方提交。
-- 主模型 state/HiF4 参数非法、API 异常、结果缺失、非 finite 或超时，`valid_submission=false`；软 guardrail 缺失不会否决 Qwen 主排序。
+- `mean_scores.linear_mean`：抽样 Linear case 的 `case_score` 算术平均。
+- `mean_scores.attention_mean`：抽样 Attention case 的 `case_score` 算术平均。
+- `mean_scores.*_percent`：对应均值乘 100，仅为显示便利。
+- `official_flow_score` 与 `panel_score`：旧版 raw sum/fixed-panel 字段，只留作
+  兼容回溯，不写入 v4 报告主表。
+- `timing.local_api_total_seconds`：本地设备六 API 的 calibration+dynamic 累计；
+  `timing.wall_seconds` 还包含调度和报告开销。两者都不是 official time。
+- 本地 state/HiF4 参数非法、API 异常、结果缺失或非 finite 才令
+  `local_result_valid=false`；本地 API 超过 300s 不再伪装成官方 timeout。
 
 赛事说明只写明判题器会加载“标准 HiF4 量化函数”，没有附上该函数源码。当前 `reference_hif4.py` 使用工程历史中独立实现的 amax/7 E6M2 与八种合法 lv2/lv3 配置最小 MSE 解；每次报告记录其 SHA256。收到官方标准函数后必须逐位替换并提升评分协议版本，旧协议结果不得与新协议绝对混算。
 
-`linear.global_gain`、`linear.macro_gain`、组件均值和 Attention global 指标继续输出，但只做误差归因。它们不得参与候选晋级。评估器只输出 Pearson、Spearman 和 pairwise rank agreement 的排序审计，不再执行 OLS。
+`linear.global_gain`、`linear.macro_gain` 等全局误差归因仍可在 JSON 查看，但不参与
+v4 主结果。官方分数/时间校准单独记录，不能在评测器内部用 OLS 伪造绝对分数。
 
 ## 当前协议验证
 

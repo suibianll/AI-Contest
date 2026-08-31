@@ -92,7 +92,7 @@ L5e 五层七 role 诊断给出：
 - 当前 C1/scale/local-hierarchy 算法族达到 36000：**不可行**；
 - 36000 的全局理论可达性：**未被排除，但缺少合法算法证据**；
 - 固定当前 frame/state 达到 Linear `0.9`：**证据性不可达**；
-- 在 420 秒内同时达到目标：还要完成约 `6.32x` API 压缩和数量级精度跃迁，风险高。
+- 在 300 秒内同时达到目标：还要完成约 `6.32x` API 压缩和数量级精度跃迁，风险高。
 
 ## 4. 下一步的正确顺序
 
@@ -136,7 +136,7 @@ v72 已以 `22662 / 226s` 正常通过；v74 又以 `22750 / 239.387s` 通过，
 4. **FFT/circular convolution 备选**：只有增量刷新仍不够快时，才把 distance-roll 求和
    改为 block 轴 FFT；先证明与 reference 的数值容差和 keep mask 一致。
 5. 完成消融后构建 v100→v106→压缩 precision parent 的精度/时间 Pareto；最终候选必须
-   `<420s`，并通过 Attention contract smoke 和峰值 state 检查。
+   `<300s`，并通过 Attention contract smoke 和峰值 state 检查。
 
 ### P3：C3 完成后新建表示级计划
 

@@ -19,6 +19,18 @@
 4-block 版本相对 v106：Linear `+0.0035376934`，panel `+0.8844233`。
 按当前用户指令暂不以时间否决；`481.036527s` 仍须在最终冻结阶段压缩。
 
+## 官方状态（2026-08-31 更新）
+
+- 官方结果：**Attention `wrong answer`（非 timeout，与 v100 同类）**。此前曾将 v107
+  误记为官方 timeout，已按用户最新确认纠错：v107 官方并非 timeout，真正在新限制下
+  官方判为 timeout 的是 v98。
+- WA 直接根因：B2 PAWV 变长 calibration shape mismatch（官方自测长度
+  `[10,128,512,1024,1024]` 在 `[10,10] += [128,128]` 时抛出 RuntimeError）。
+- 本地旧口径 API `481.04s` > 最新官方 `300s` 限制，仅作历史风险提示；官方未按
+  timeout 归类。
+- 归档状态标签：`archived-parent（official-wrong-answer）`；v107 不再作为提交候选。
+  与 v100 同源，参见 [`v98 官方 timeout`](../../logs/execution/2026-08-31-v98-official-timeout.md)。
+
 ## 门禁证据
 
 - 五层七角色 4-block screen：`both_player=0.52894931`；1-block 对照为

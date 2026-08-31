@@ -11,9 +11,9 @@ four deliberate properties:
 * the evaluator computes the reference outputs only after a candidate has
   returned its quantization state.  The candidate receives weights and
   activations, never an evaluator output, residual, or fitted official score.
-* the default local ranking uses a Qwen-shaped, mean-preserving panel with
-  250 Linear and 200 Attention slots.  Other model families remain soft
-  guardrails instead of being summed by layer count.
+* the default local ranking uses a deterministic stratified sample and reports
+  only the Linear and Attention component means.  Other model families are
+  optional independent guardrails instead of being summed by layer count.
 
 Offline Linear calibration may form ``A @ W`` to optimize the offline weight
 quantizer ``Q(W)``.  A solution must not route that output or residual into
@@ -42,6 +42,7 @@ import dataclasses
 import hashlib
 import json
 import math
+import random
 import re
 import sys
 import time
@@ -77,8 +78,11 @@ WIKITEXT_FILES = {
     "test": "test-00000-of-00001.parquet",
 }
 CACHE_SCHEMA_VERSION = 1
-SCORING_PROTOCOL_VERSION = 3
-OFFICIAL_RUNTIME_LIMIT_SECONDS = 420.0
+# v5: official evaluation changed again (2026-08-31): the runtime limit was
+# cut from 420s to 300s and the organisers removed every A@W fitting
+# restriction - only total runtime is constrained now.
+SCORING_PROTOCOL_VERSION = 5
+OFFICIAL_RUNTIME_LIMIT_SECONDS = 300.0
 OFFICIAL_PANEL_REVISION = "2026-08-29"
 REFERENCE_PANEL_LINEAR_CASES = 250
 REFERENCE_PANEL_ATTENTION_CASES = 200
@@ -88,6 +92,11 @@ REFERENCE_PANEL_TOTAL_CASES = (
 DEFAULT_PANEL_PROFILE = "qwen-official"
 PANEL_PROFILES = ("qwen-official", "native")
 DEFAULT_PRIMARY_MODEL = "qwen2.5-0.5b"
+EVALUATION_PROFILES = ("sampled-means-v1", "full-legacy")
+DEFAULT_EVALUATION_PROFILE = "sampled-means-v1"
+DEFAULT_SAMPLE_LAYERS = 8
+DEFAULT_SAMPLE_TEST_WINDOWS = 4
+DEFAULT_SAMPLE_SEED = 20260831
 EXTERNAL_OFFICIAL_REFERENCES = (
     {
         "name": "youxilee/hif4",
@@ -260,6 +269,100 @@ class ModelData:
     calibration_windows: list[Window]
     test_windows: list[Window]
     metadata: dict[str, Any]
+
+
+def _stratified_indices(total: int, count: int, seed: int) -> list[int]:
+    """Choose reproducible depth/window representatives with end coverage.
+
+    The evaluator intentionally samples *examples*, not score values.  Every
+    bin contributes one index, while the first and last bins are pinned to the
+    endpoints so shallow/deep layers and early/late validation windows are not
+    accidentally omitted.  ``seed`` only resolves choices inside a bin; the
+    selected indices are persisted in every result for exact reproduction.
+    """
+    if total <= 0:
+        return []
+    if count <= 0 or count >= total:
+        return list(range(total))
+    if count == 1:
+        return [total // 2]
+    rng = random.Random(seed)
+    # Reserve both endpoints, then draw exactly ``count - 2`` interior
+    # representatives from disjoint strata.  This avoids the old
+    # endpoint-forcing collision that silently changed an 8-layer request into
+    # 9 layers.
+    selected: set[int] = {0, total - 1}
+    interior_count = count - 2
+    if interior_count:
+        interior_total = total - 2
+        for bin_index in range(interior_count):
+            lo = 1 + (bin_index * interior_total) // interior_count
+            hi = 1 + ((bin_index + 1) * interior_total) // interior_count - 1
+            selected.add(rng.randint(lo, max(lo, hi)))
+        if len(selected) < count:
+            for candidate in range(1, total - 1):
+                if candidate not in selected:
+                    selected.add(candidate)
+                    if len(selected) == count:
+                        break
+    return sorted(selected)
+
+
+def build_sample_plan(
+    data: ModelData,
+    evaluation_profile: str = DEFAULT_EVALUATION_PROFILE,
+    sample_layers: int = DEFAULT_SAMPLE_LAYERS,
+    sample_test_windows: int = DEFAULT_SAMPLE_TEST_WINDOWS,
+    sample_seed: int = DEFAULT_SAMPLE_SEED,
+) -> dict[str, Any]:
+    """Build the only sampling decision used by the fast local evaluator."""
+    if evaluation_profile not in EVALUATION_PROFILES:
+        raise ValueError(
+            f"unknown evaluation profile {evaluation_profile!r}; "
+            f"choose from {EVALUATION_PROFILES}"
+        )
+    if evaluation_profile == "full-legacy":
+        layer_indices = list(range(data.layers))
+        test_indices = list(range(len(data.test_windows)))
+    else:
+        layer_indices = _stratified_indices(data.layers, sample_layers, sample_seed)
+        test_indices = _stratified_indices(
+            len(data.test_windows), sample_test_windows, sample_seed + 1
+        )
+    calibration_indices = list(range(len(data.calibration_windows)))
+    roles = list(data.roles)
+
+    def window_record(window: Window, index: int) -> dict[str, Any]:
+        return {
+            "index": index,
+            "split": window.split,
+            "document_id": window.document_id,
+            "row_start": window.row_start,
+            "row_end": window.row_end,
+            "token_start": window.token_start,
+            "token_end": window.token_end,
+        }
+
+    return {
+        "profile": evaluation_profile,
+        "seed": int(sample_seed),
+        "layer_indices": layer_indices,
+        "calibration_indices": calibration_indices,
+        "test_indices": test_indices,
+        "roles": roles,
+        "source_layers": data.layers,
+        "source_calibration_windows": len(data.calibration_windows),
+        "source_test_windows": len(data.test_windows),
+        "sampled_linear_cases": len(layer_indices) * len(roles) * len(test_indices),
+        "sampled_attention_cases": len(layer_indices) * len(test_indices),
+        "calibration_windows": [
+            window_record(data.calibration_windows[index], index)
+            for index in calibration_indices
+        ],
+        "test_windows": [
+            window_record(data.test_windows[index], index) for index in test_indices
+        ],
+    }
 
 
 class CacheValidationError(RuntimeError):
@@ -1727,6 +1830,7 @@ def evaluate_candidate(
     mode: str,
     algorithm_device_name: str,
     panel_profile: str = DEFAULT_PANEL_PROFILE,
+    sample_plan: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     if not candidate.path.is_file():
         raise FileNotFoundError(f"candidate source does not exist: {candidate.path}")
@@ -1735,10 +1839,25 @@ def evaluate_candidate(
     algorithm_device = torch.device(algorithm_device_name)
     linear_cases: dict[str, list[dict[str, float]]] = {role: [] for role in data.roles}
     attention_cases: list[dict[str, float]] = []
+    layer_indices = (
+        list(range(data.layers))
+        if sample_plan is None
+        else list(sample_plan["layer_indices"])
+    )
+    calibration_indices = (
+        list(range(len(data.calibration_windows)))
+        if sample_plan is None
+        else list(sample_plan["calibration_indices"])
+    )
+    test_indices = (
+        list(range(len(data.test_windows)))
+        if sample_plan is None
+        else list(sample_plan["test_indices"])
+    )
     if algorithm_device.type == "cuda":
         torch.cuda.synchronize(algorithm_device)
     started = time.perf_counter()
-    for layer_index in range(data.layers):
+    for layer_index in layer_indices:
         for role in data.roles:
             weight_pair = nvfp4_encode(
                 data.weights[layer_index][role].to(algorithm_device), mode
@@ -1750,7 +1869,7 @@ def evaluate_candidate(
                     ),
                     mode,
                 )
-                for batch in range(len(data.calibration_windows))
+                for batch in calibration_indices
             ]
             calibrated = solution.hif4_calibration_and_quantize_weight(
                 *weight_pair, calibration_pairs
@@ -1771,7 +1890,7 @@ def evaluate_candidate(
                     ),
                     mode,
                 )
-                for batch in range(len(data.test_windows))
+                for batch in test_indices
             ]
             linear_cases[role].append(
                 _linear_detail(
@@ -1784,7 +1903,7 @@ def evaluate_candidate(
             )
 
         calibration_qkv = []
-        for batch in range(len(data.calibration_windows)):
+        for batch in calibration_indices:
             q, k, v = data.calibration_qkv[batch][layer_index]
             calibration_qkv.append(
                 {
@@ -1808,7 +1927,7 @@ def evaluate_candidate(
         validate_state(states["k_state"])
         validate_state(states["v_state"])
         test_qkv = []
-        for batch in range(len(data.test_windows)):
+        for batch in test_indices:
             q, k, v = data.test_qkv[batch][layer_index]
             test_qkv.append(
                 (
@@ -1860,6 +1979,21 @@ def evaluate_candidate(
         ),
     }
     panel_score = build_panel_score(official_score, panel_profile)
+    mean_scores = {
+        "linear_mean": float(linear_all["official_score_mean"]),
+        "attention_mean": float(attention["official_score_mean"]),
+        "linear_mean_percent": float(linear_all["official_score_mean"] * 100.0),
+        "attention_mean_percent": float(attention["official_score_mean"] * 100.0),
+        "linear_cases": int(linear_all["official_case_count"]),
+        "attention_cases": int(attention["official_case_count"]),
+        "combined_mean": float(
+            (linear_all["official_score_sum"] + attention["official_score_sum"])
+            / max(
+                linear_all["official_case_count"] + attention["official_case_count"],
+                1,
+            )
+        ),
+    }
     api_total = stats["calibration"] + stats["dynamic"]
     return {
         "candidate": candidate.name,
@@ -1873,8 +2007,10 @@ def evaluate_candidate(
         "linear": linear_all,
         "linear_component_macro_gain": component_macro,
         "attention": attention,
+        "mean_scores": mean_scores,
         "official_flow_score": official_score,
         "panel_score": panel_score,
+        "sample_plan": sample_plan,
         "timing": {
             "wall_seconds": elapsed,
             "algorithm_stage_seconds": (
@@ -1885,11 +2021,17 @@ def evaluate_candidate(
             "calibration_seconds": stats["calibration"],
             "dynamic_seconds": stats["dynamic"],
             "official_api_total_seconds": api_total,
+            # This is a local proxy measured on the requested algorithm_device
+            # and local Qwen cache.  It is not comparable to the official
+            # Kunpeng 920B end-to-end runtime.  Keep the old field below as a
+            # nullable compatibility marker rather than asserting a false
+            # official pass/fail decision.
+            "local_api_total_seconds": api_total,
             "api_calls": stats["calls"],
             "nested_api_calls": stats["nested_calls"],
-            "under_official_runtime_limit": (
-                api_total < OFFICIAL_RUNTIME_LIMIT_SECONDS
-            ),
+            "local_api_under_official_limit_seconds": api_total < OFFICIAL_RUNTIME_LIMIT_SECONDS,
+            "under_official_runtime_limit": None,
+            "official_runtime_comparable": False,
             # Kept only as a compatibility diagnostic for pre-revision JSON;
             # it must not decide current submission validity.
             "under_300_seconds": api_total < 300.0,
@@ -2128,7 +2270,7 @@ def audit_official_ranking(
             len(candidate_results) == expected_model_count
             and expected_model_count > 0
         )
-        all_under_official = bool(api_times) and all(
+        all_under_local_official_limit = bool(api_times) and all(
             value < OFFICIAL_RUNTIME_LIMIT_SECONDS for value in api_times
         )
         primary_result = (
@@ -2152,7 +2294,6 @@ def audit_official_ranking(
         primary_panel_finite = math.isfinite(float(primary_panel_total))
         primary_panel_valid = bool(
             primary_evaluated
-            and primary_api_time < OFFICIAL_RUNTIME_LIMIT_SECONDS
             and primary_panel_finite
         )
         # The shaped panel is intentionally Qwen-first: missing/slow soft
@@ -2160,7 +2301,7 @@ def audit_official_ranking(
         valid_submission = (
             primary_panel_valid
             if panel_profile != "native"
-            else complete and all_under_official
+            else complete
         )
         candidate_status[candidate] = {
             "evaluated_models": len(candidate_results),
@@ -2169,7 +2310,9 @@ def audit_official_ranking(
             "errors": candidate_errors,
             "official_api_total_seconds": max(api_times) if api_times else float("nan"),
             "proxy_api_seconds_sum": sum(api_times),
-            "under_official_runtime_limit": complete and all_under_official,
+            "local_api_under_official_limit_seconds": complete and all_under_local_official_limit,
+            "under_official_runtime_limit": None,
+            "official_runtime_comparable": False,
             "primary_model": effective_primary_model,
             "primary_model_requested": primary_model,
             "primary_model_fallback": primary_model_fallback,
@@ -2182,6 +2325,7 @@ def audit_official_ranking(
                 value < 300.0 for value in api_times
             ),
             "valid_submission": valid_submission,
+            "local_result_valid": valid_submission,
         }
 
     ranking_audit: dict[str, Any] = {}
@@ -2310,10 +2454,10 @@ def write_report(
     lines = [
         "# Qwen 主模型本地评测报告",
         "",
-        f"运行时间：{run_metadata['started_at']}（配置 mode={run_metadata['mode']}，seq={run_metadata['sequence_length']}，calib={run_metadata['calibration_samples']}，test={run_metadata['test_samples']}，cache_mode={run_metadata['cache_mode']}）",
+        f"运行时间：{run_metadata['started_at']}（profile={run_metadata.get('evaluation_profile', 'full-legacy')}，mode={run_metadata['mode']}，seq={run_metadata['sequence_length']}，calib={run_metadata['calibration_samples']}，test={run_metadata['test_samples']}，cache_mode={run_metadata['cache_mode']}）",
         "",
-        f"主评测配置：`{panel_profile}`，主模型 `{primary_model}`，参考形状为 {reference_panel.get('linear_cases', REFERENCE_PANEL_LINEAR_CASES)} Linear + {reference_panel.get('attention_cases', REFERENCE_PANEL_ATTENTION_CASES)} Attention。",
-        "本地 shaped panel 只把冻结语料上每个组件的平均 case gain 投影到官方样例数量，不复制 case、不拟合官方绝对分数。官方分数没有进入候选校准状态，也没有传给 `solution.py`。评估器内部的输出矩阵乘法只在候选返回量化结果之后，用作固定参考误差；候选离线校准可以自行用 `A@W` 优化 `Q(W)`，但不得将其用于 `Q(A)` 或写入 `activation_state`。",
+        f"主评测配置：`{panel_profile}`，主模型 `{primary_model}`；本地唯一主指标是抽样 Linear/Attention 的平均 gain。官方参考面板 {reference_panel.get('linear_cases', REFERENCE_PANEL_LINEAR_CASES)}+{reference_panel.get('attention_cases', REFERENCE_PANEL_ATTENTION_CASES)  } 仅作规则背景，不参与本地分数换算。",
+        "本地评测不复制 case、不拟合官方绝对分数。官方分数没有进入候选校准状态，也没有传给 `solution.py`。官方评测（2026-08-31 修订）不再限制任何 `A@W` 拟合用法，只限制端到端运行时间；候选可按需自由使用 `A@W` 优化 `Q(W)` 或 `Q(A)`。",
         "官方上下文：外部 `youxilee/hif4` 用户提供结果为 24153/239s，仅作不可导入的参考；新增 2 个用例呈 Qwen 30B-like 特征，但完整输入尚未公开。",
         "",
         "## 数据与模型完整性",
@@ -2321,7 +2465,7 @@ def write_report(
         f"- 数据集：`Salesforce/wikitext` / `{WIKITEXT_CONFIG}` / revision `{WIKITEXT_REVISION}`。",
         f"- 评分协议：v{run_metadata['scoring_protocol']['version']}；标准 codec SHA256 `{run_metadata['scoring_protocol']['standard_codec_sha256']}`。",
         "- calibration 来自 train，test 来自 validation；每个窗口来自一个文档，禁止环形重复、窗口重叠和跨 split 文档复用。",
-        "- Qwen2.5-0.5B（GQA、RoPE、SwiGLU）承担主排序；其他模型只作为软 guardrail，缺失或轻微回退不会覆盖 Qwen 主分。",
+        "- Qwen2.5-0.5B（GQA、RoPE、SwiGLU）是默认主模型；显式加入的其他模型只作为独立 guardrail，缺失或轻微回退不会覆盖 Qwen 主分。",
         "- 模型状态：",
         "",
             "| 模型 | 状态 | 层数 | hidden | heads / kv-heads | 数据来源 | 说明 |",
@@ -2340,111 +2484,58 @@ def write_report(
                 f"| {status['model']} | skipped | - | - | - | - | {status.get('error', 'unknown error')} |"
             )
 
+    evaluation_profile = run_metadata.get("evaluation_profile", "full-legacy")
     lines.extend(
         [
             "",
-            "## 候选在各模型上的结果",
+            "## 唯一主结果：组件平均得分",
             "",
-            "每个 native case 先计算 `(MSE_STD-MSE_PLAYER)/MSE_STD`。`official_flow_total` 保留原始 case 求和；主排序使用 `panel_score.total = 250*Linear_mean + 200*Attention_mean`，因此不会因模型层数或本地窗口数不同而放大。global-MSE 和组件均值只保留为诊断。",
+            "每个测试 case 的 gain 为 `(MSE_STD-MSE_PLAYER)/MSE_STD`；本表只报告所有抽样 Linear case 的算术平均和所有抽样 Attention case 的算术平均。数值是 0–1 比例，百分比列是同一数值乘 100。",
             "",
-            "| 模型 | 候选 | Native total | Panel total | Panel Linear | Panel Attention | Source cases (L/A) | API time(s) |",
-            "|---|---|---:|---:|---:|---:|---:|---:|",
+            "| 模型 | 候选 | Linear mean | Linear mean (%) | Attention mean | Attention mean (%) | Cases (L/A) | Local API (s) | Wall (s) |",
+            "|---|---|---:|---:|---:|---:|---:|---:|---:|",
         ]
     )
     for result in results:
         timing = result["timing"]
-        score = result["official_flow_score"]
-        panel = _result_panel_score(result, panel_profile)
+        means = result.get("mean_scores")
+        if means is None:
+            score = result["official_flow_score"]
+            linear_mean = score["linear"] / max(score.get("linear_cases", 1), 1)
+            attention_mean = score["attention"] / max(score.get("attention_cases", 1), 1)
+            linear_cases = score.get("linear_cases", 0)
+            attention_cases = score.get("attention_cases", 0)
+        else:
+            linear_mean = means["linear_mean"]
+            attention_mean = means["attention_mean"]
+            linear_cases = means["linear_cases"]
+            attention_cases = means["attention_cases"]
         lines.append(
-            f"| {result['model']} | {result['candidate']} | {score['total']:.6f} | {panel['total']:.6f} | {panel['linear']:.6f} | {panel['attention']:.6f} | {panel['source_linear_cases']}/{panel['source_attention_cases']} | {timing['official_api_total_seconds']:.3f} |"
+            f"| {result['model']} | {result['candidate']} | {linear_mean:.6f} | {linear_mean * 100.0:.3f} | {attention_mean:.6f} | {attention_mean * 100.0:.3f} | {linear_cases}/{attention_cases} | {timing['official_api_total_seconds']:.3f} | {timing['wall_seconds']:.3f} |"
+        )
+    plans = [result.get("sample_plan") for result in results if result.get("sample_plan")]
+    if plans:
+        plan = plans[0]
+        lines.extend(
+            [
+                "",
+                "抽样索引（所有候选共用，避免日志间样例漂移）：",
+                f"- layers=`{plan['layer_indices']}`; calibration_windows=`{plan['calibration_indices']}`; test_windows=`{plan['test_indices']}`; roles=`{plan['roles']}`",
+                f"- source cases={plan['source_layers']} layers × {len(plan['roles'])} roles × {plan['source_test_windows']} test windows；本次 cases={plan['sampled_linear_cases']} Linear + {plan['sampled_attention_cases']} Attention",
+            ]
         )
 
-    official_scores = fit.get("official_anchor_scores", {})
-    if official_scores:
-        anchor_description = "、".join(
-            f"{name.upper()}={score}" for name, score in official_scores.items()
-        )
-        fit_description = (
-            f"官方锚点：{anchor_description}。下表只审计候选排列是否一致，不拟合或预测官方绝对分数。"
-        )
-    else:
-        fit_description = (
-            "本次运行评测的是自定义候选，没有把官方分数传入候选或当次拟合；"
-            "本报告只输出官方流程代理总分，不执行官方绝对分数回归。"
-        )
-    lines.extend(["", "## 与官方锚点的排序审计", "", fit_description])
-    fitted_features = fit.get("ranking_audit", {})
-    if fitted_features:
-        lines.extend(
-            [
-                "",
-                "| 本地特征 | Spearman | pairwise rank agreement | Pearson（诊断） |",
-                "|---|---:|---:|---:|",
-            ]
-        )
-    for feature_name, item in fitted_features.items():
-        lines.append(
-            f"| {feature_name} | {item['spearman']:.4f} | {item['pairwise_rank_agreement']:.4f} | {item['pearson']:.4f} |"
-        )
-    candidate_status = fit.get("candidate_status", {})
-    if candidate_status:
-        lines.extend(
-            [
-                "",
-                "### 时间与有效性预筛",
-                "",
-                "| 候选 | 已评模型 | 主模型 API 时间(s) | 主模型 <420s | 软 guardrail 完整 | 本地提交有效 |",
-                "|---|---:|---:|---|---|---|",
-            ]
-        )
-        for candidate, item in candidate_status.items():
-            lines.append(
-                f"| {candidate} | {item['evaluated_models']}/{item['expected_models']} | {item['primary_api_total_seconds']:.3f} | {item['primary_panel_valid']} | {item['complete']} | {item['valid_submission']} |"
-            )
-    local_order = fit.get("local_primary_panel_order", fit.get("local_panel_order", []))
-    if local_order:
-        lines.extend(
-            [
-                "",
-                "### Qwen 主模型 shaped-panel 排序",
-                "",
-                " > ".join(
-                    f"{item['candidate']} ({item['score']:.6f})"
-                    for item in local_order
-                ),
-            ]
-        )
-    native_order = fit.get("local_official_flow_order", [])
-    if native_order:
-        lines.extend(
-            [
-                "",
-                "### Native 原始分（仅诊断）",
-                "",
-                " > ".join(
-                    f"{item['candidate']} ({item['score']:.6f})"
-                    for item in native_order
-                ),
-            ]
-        )
-    ordering = fit.get("c39_vs_c40", {})
-    if ordering:
-        lines.extend(["", "### C39 / C40 排序", ""])
-    for model_name, item in ordering.items():
-        lines.append(
-            f"- `{model_name}`：C39 official-flow total={item['c39_official_flow_total']:.6f}，C40={item['c40_official_flow_total']:.6f}，C39>C40：`{item['c39_above_c40']}`。"
-        )
     lines.extend(
         [
             "",
-            "## 解释与使用边界",
+            "## 抽样计划与使用边界",
             "",
-            "1. 默认候选晋级看 Qwen 主模型的 `primary_panel_score_total`；Linear/Attention 目标权重固定为 250/200。其他模型的 panel 均值只作软 guardrail 和回归诊断。",
-            "2. `official_flow_total` 仍完整保留，便于和旧报告逐位对比，但不再因模型层数或本地窗口数量差异直接主导排序。",
-            "3. 本地数据不是官方隐藏数据，因此 shaped panel 只能用于相对排序；官方锚点只用于事后审计排序一致率，不能把 panel 分数线性换算成 Official Score。",
-            "4. `synthetic_attention_eval.py` 不由本套件调用；它只能做接口/性质测试，不能用于候选排名。",
-            "5. `cache_mode=read` 时本次结果只来自已保存的模型前向快照，不加载 tokenizer/model，也不读取网络；`cache_mode=write` 才会刷新快照。",
-            "6. 本地时间按每个模型代理的六个正式 API 调用累计；主模型必须严格小于 420 秒，多模型代理时间不相加。",
+            f"- profile：`{evaluation_profile}`；`sampled-means-v1` 默认按层深分层抽取 {run_metadata.get('sample_layers', DEFAULT_SAMPLE_LAYERS)} 层，保留全部 role，并按窗口位置抽取 {run_metadata.get('sample_test_windows', DEFAULT_SAMPLE_TEST_WINDOWS)} 个 validation window；calibration window 全部保留。",
+            f"- seed：`{run_metadata.get('sample_seed', DEFAULT_SAMPLE_SEED)}`；每个结果的 `sample_plan` 保存实际 layer/window index 和文档 ID，可逐字复现。",
+            "- 默认只评估 Qwen2.5-0.5B；需要跨模型 guardrail 时显式传入 `--models`，但各模型仍分别报告 mean，不相加。",
+            "- `official_flow_score`、`panel_score` 仅留在 JSON 兼容字段，不能作为当前主结果；本报告不展示它们。",
+            "- 本地时间只作为同一硬件、同一 cache、同一 shape 和同一抽样计划下的 A/B 指标。官方 300 秒是修订（2026-08-31）后的端到端运行限制，不能由本地 API 秒数直接判定。",
+            "- `cache_mode=read` 只读取已固定的模型前向快照；改变 seq/calib/test/layers 或数据 revision 必须先生成对应新 cache。",
         ]
     )
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -2507,6 +2598,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "capture_only": args.capture_only,
         "layers": args.layers,
         "models": selected_models,
+        "evaluation_profile": args.evaluation_profile,
+        "sample_layers": args.sample_layers,
+        "sample_test_windows": args.sample_test_windows,
+        "sample_seed": args.sample_seed,
         "panel_profile": args.panel_profile,
         "primary_model": primary_model,
         "primary_model_requested": args.primary_model,
@@ -2531,12 +2626,16 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             name: str(candidate_specs[name].path) for name in selected_candidates
         },
         "official_runtime_limit_seconds": OFFICIAL_RUNTIME_LIMIT_SECONDS,
+        "local_runtime_is_officially_comparable": False,
         "scoring_protocol": {
             "version": SCORING_PROTOCOL_VERSION,
             "case_formula": "(MSE_STD-MSE_PLAYER)/MSE_STD",
             "aggregation": (
-                "qwen-primary fixed panel: 250*Linear_mean + "
-                "200*Attention_mean"
+                (
+                    "sampled component means: Linear_mean and Attention_mean"
+                    if args.evaluation_profile == "sampled-means-v1"
+                    else "full component means: Linear_mean and Attention_mean"
+                )
                 if args.panel_profile == "qwen-official"
                 else "sum_all_native_linear_and_attention_cases"
             ),
@@ -2594,8 +2693,22 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                     "metadata": data.metadata,
                 }
             )
+            sample_plan = build_sample_plan(
+                data,
+                args.evaluation_profile,
+                args.sample_layers,
+                args.sample_test_windows,
+                args.sample_seed,
+            )
             print(
                 f"{model_name}: data_source={data_source} cache={cache_path}",
+                flush=True,
+            )
+            print(
+                f"{model_name}: sampled layers={sample_plan['layer_indices']} "
+                f"test_windows={sample_plan['test_indices']} "
+                f"cases={sample_plan['sampled_linear_cases']}L/"
+                f"{sample_plan['sampled_attention_cases']}A",
                 flush=True,
             )
         except Exception as exc:
@@ -2619,16 +2732,15 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                     args.mode,
                     args.algorithm_device or args.device,
                     args.panel_profile,
+                    sample_plan,
                 )
                 results.append(result)
                 persist_partial()
                 print(
                     f"{model_name:14s} {candidate_name:4s} "
-                    f"official-total={result['official_flow_score']['total']:.6f} "
-                    f"panel-total={result['panel_score']['total']:.6f} "
-                    f"linear={result['official_flow_score']['linear']:.6f} "
-                    f"attention={result['official_flow_score']['attention']:.6f} "
-                    f"api={result['timing']['official_api_total_seconds']:.2f}s",
+                    f"linear_mean={result['mean_scores']['linear_mean']:.6f} "
+                    f"attention_mean={result['mean_scores']['attention_mean']:.6f} "
+                    f"local-api={result['timing']['official_api_total_seconds']:.2f}s",
                     flush=True,
                 )
             except Exception as exc:
@@ -2659,10 +2771,14 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     run_metadata["finished_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
     run_metadata["loaded_models"] = [item["model"] for item in model_status if item["status"] == "loaded"]
     run_metadata["result_count"] = len(valid_results)
-    run_metadata["official_flow_valid"] = bool(fit.get("candidate_status")) and all(
-        item["valid_submission"] for item in fit["candidate_status"].values()
+    run_metadata["local_result_valid"] = bool(fit.get("candidate_status")) and all(
+        item["local_result_valid"] for item in fit["candidate_status"].values()
     )
-    run_metadata["panel_valid"] = run_metadata["official_flow_valid"]
+    # Compatibility aliases for existing result readers.  Protocol v4 validity
+    # means the local result is complete/finite; it is not an official runtime
+    # prediction.
+    run_metadata["official_flow_valid"] = run_metadata["local_result_valid"]
+    run_metadata["panel_valid"] = run_metadata["local_result_valid"]
     output = {
         "run": run_metadata,
         "model_status": model_status,
@@ -2683,11 +2799,38 @@ def build_parser() -> argparse.ArgumentParser:
         "--models",
         nargs="+",
         choices=tuple(MODEL_SPECS),
-        default=None,
+        default=[DEFAULT_PRIMARY_MODEL],
         help=(
-            "models to evaluate (default: every manifest model that is available "
-            "locally); Qwen is the primary panel model"
+            "models to evaluate (default: Qwen2.5-0.5B only; add models explicitly "
+            "for optional guardrails)"
         ),
+    )
+    parser.add_argument(
+        "--evaluation-profile",
+        choices=EVALUATION_PROFILES,
+        default=DEFAULT_EVALUATION_PROFILE,
+        help=(
+            "sampled-means-v1 evaluates stratified layer/window examples and reports "
+            "only component means; full-legacy evaluates every cached layer/window"
+        ),
+    )
+    parser.add_argument(
+        "--sample-layers",
+        type=int,
+        default=DEFAULT_SAMPLE_LAYERS,
+        help="number of stratified layers in sampled-means-v1 (<=0 means all)",
+    )
+    parser.add_argument(
+        "--sample-test-windows",
+        type=int,
+        default=DEFAULT_SAMPLE_TEST_WINDOWS,
+        help="number of stratified validation windows (<=0 means all)",
+    )
+    parser.add_argument(
+        "--sample-seed",
+        type=int,
+        default=DEFAULT_SAMPLE_SEED,
+        help="seed recorded with the deterministic stratified sample plan",
     )
     parser.add_argument(
         "--panel-profile",
@@ -2781,7 +2924,7 @@ def main(argv: list[str] | None = None) -> int:
     if min(args.seq, args.calib, args.test) <= 0:
         raise SystemExit("--seq, --calib, and --test must be positive")
     output = run(args)
-    if args.solution is not None and not output["run"]["official_flow_valid"]:
+    if args.solution is not None and not output["run"]["local_result_valid"]:
         return 2
     return 0
 

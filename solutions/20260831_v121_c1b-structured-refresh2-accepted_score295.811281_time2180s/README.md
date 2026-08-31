@@ -11,3 +11,13 @@
 - `official_flow_valid=false` 仅因 API 超过 420s；本地精度字段完整可复现，不可直接当官方分数。
 
 完整 JSON、screen、synthetic 和 full 报告均保存在本目录。
+
+---
+
+> **2026-08-31 归档修复批注**：本目录 `solution.py` 携带 B2 PAWV 变长 calibration bug
+> （官方长度 `[10,128,512,1024,1024]` 触发 `[10,10] += [128,128]` RuntimeError），已在
+> 原文件上按 v127 逻辑修复（按长度分组的 keyed diagonal），并通过官方长度形状复现。
+> 修复后 v5 `sampled-means-v1` 复评：Linear `0.516685`、Attention `0.828395`、
+> Local API `832.920s`（仍远超 300s，不能官方提交）。官方分类不变（timeout）。见
+> [`pawv 归档修复与 v5 复评`](../../logs/execution/2026-08-31-pawv-archive-fix-and-v5-reeval.md) 与
+> [`v121 修复复评`](../../logs/execution/2026-08-31-v121-pawv-fixed-sampled.md)。

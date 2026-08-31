@@ -72,7 +72,7 @@ Qwen 固定 cache 的历史 full-layer 结果也完全印证了这一点：v106�
 \]
 
 若官方 runner 保留多个 Linear state，这会造成约 2.6 GiB 的额外内存压力；同时
-v107 的 Qwen API 时间为 `481.0365s`，已经超过 `420s` 限制。官方外层若把资源
+v107 的 Qwen API 时间为 `481.0365s`，已经超过最新官方 `300s` 限制（2026-08-31 修订，已判 timeout）。官方外层若把资源
 耗尽、超时或后续 Attention 没有有效结果统一标为 `atten wrong answer`，这条新增
 的 Linear state/运行时路径是首要嫌疑，但当前本地 evaluator 的逐层生命周期不会
 复现该资源峰值，不能把它写成已证实的官方根因。

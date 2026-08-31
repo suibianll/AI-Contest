@@ -2,7 +2,7 @@
 
 > 整理日期：2026-08-31
 > 数据来源：`solutions/README.md`（v000–v125）、`docs/current-solution-status.md`、`docs/archive-implementation-audit.md`、`logs/execution/2026-08-30-e0g-scale-oracle.md`、`logs/execution/2026-08-30-e0g-multimodel-dashboard.md`、`logs/execution/2026-08-30-a7-quant-weight-gram.md`、`logs/execution/2026-08-30-l1-full-hierarchy-lrh.md`、`logs/execution/2026-08-31-v110-l4b-gals-final-gated-qwen-full.md`、`logs/execution/2026-08-31-v111-l5a-joint-permutation-qwen-full.md`、`logs/execution/2026-08-31-l5d-external-component-audit.md`、`logs/execution/2026-08-31-l5e-linear-ceiling-v111.md`、`logs/execution/2026-08-31-v115-l6a-rank16-qwen-full.md`、`logs/execution/2026-08-31-v116-l6b-wide-rank4-qwen-full.md`、`logs/execution/2026-08-31-v117-l6c-g64-hierarchy-qwen-full.md`、`logs/execution/2026-08-31-v118-l6d-structured-factor-qwen-full.md`、`logs/execution/2026-08-31-l6e-crossblock-checkpoint.md`、`logs/execution/2026-08-31-v119-c1a-structured-vectorized-qwen-full.md`、`logs/execution/2026-08-31-c1b-structured-refresh-stratified.md`、`logs/execution/2026-08-31-c1b-structured-refresh2-stratified.md`、`logs/execution/2026-08-31-v121-c1b-structured-refresh2-qwen-full.md`、`logs/execution/2026-08-31-v124-c1c-rank8-screen.md`、`logs/execution/2026-08-31-v124-c1c-rank8-qwen-full.md`、`logs/execution/2026-08-31-v125-c1c-block8-qwen-full.md`、`logs/execution/2026-08-31-v107-attention-contract-audit.md`、`logs/execution/2026-08-31-c1b-structured-refresh-synthetic.md`。
-> 口径纪律：本地只能比 **Qwen 同口径 panel**（`250·g_L + 200·g_A`）；五模型合计 `1085.743597` 只用于检查跨模型结构性回退，**禁止**与官方分数做差值。官方评测集为 250 Linear + 200 Attention case，时间上限 **420s**。
+> 口径纪律：本地只能比 **Qwen 同口径 panel**（`250·g_L + 200·g_A`）；五模型合计 `1085.743597` 只用于检查跨模型结构性回退，**禁止**与官方分数做差值。官方评测集为 250 Linear + 200 Attention case；时间上限已于 2026-08-31 修订为 **`300s`**，且不再限制任何 `A@W` 拟合用法。
 
 ---
 
@@ -304,7 +304,7 @@ D0 三层均值（weight / activation-Gram）如下，原始 JSON 保存在
 | C1b structured gradient refresh | 已完成：v120 一次 refresh screen `0.5333730058` 被拒绝；v121 两轮 refresh screen `0.5333964596`、full panel `295.811281` 被采纳 |
 | C1c rank/budget scan | **已完成**：v122 rank-2、v123 max-blocks-2 已拒绝，v124 rank-8 与 v125 `max_blocks=8` 均 full 正向；不再增加 block budget |
 | C2 cross-model audit | 待执行：OPT/Pythia 低成本复筛，检查 `proj` 之外的结构性回退 |
-| C3 state/time checkpoint | 待执行：在精度队列完成后再恢复 `<420s` 最终门禁 |
+| C3 state/time checkpoint | 待执行：在精度队列完成后再恢复 `<300s` 最终门禁 |
 
 ---
 

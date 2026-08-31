@@ -11,11 +11,18 @@ Root `solution.py` is the only active submission. Archived source files are immu
 官方面板现为 **250 个 Linear case + 200 个 Attention case**，分数按全部
 case 求和，因此分数与端到端时间都会高于旧口径。下表已把已确认的 v031、
 v034、v051、v066 官方列更新为新版结果；其余历史官方列保留原提交时的旧口径，
-不可与新版绝对值直接比较。新版时间限制为 **420s（7 分钟）**。
+不可与新版绝对值直接比较。**最新官方时间限制已修订为 300s（5 分钟，2026-08-31），且不再限制任何 `A@W` 拟合用法**。
 
 ## 当前活跃根版本（不属于下方历史版本号）
 
-根目录 `solution.py` 当前为 v126（v125 precision-only parent + PAWV 变长修复；C1c structured rank-8 / `max_blocks=8` + C1b structured gradient refresh×2 + C1a structured proposal vectorization + v118 L6d structured block-circulant factor + v117 L6c full `G_64` hierarchy coordinate sweep + v116 L6b wide rank-4 cross-block factor + v115 L6a rank-16 global LRH + v111 L5a block-local permutation +
+根目录 `solution.py` 当前为 v127（v106 Linear 路径 + PAWV 变长修复；研究候选，不代表
+官方已通过）。v127 的快速主结果统一采用 `sampled-means-v1`：Qwen、seed
+`20260831`、8 层、7 role、4 window，即 `224 Linear + 32 Attention`；同一计划下
+Linear mean `0.509408`、Attention mean `0.828395`、Local API `151.136s`、Wall
+`161.840s`。同口径 v74 为 `0.440305 / 0.671106 / 218.619s / 229.485s`。
+旧 full-layer/panel 表格下面仍保留，但标记为 legacy，不能和 v4 均值直接混比。
+
+历史 precision parent v125（v125 precision-only parent + PAWV 变长修复；C1c structured rank-8 / `max_blocks=8` + C1b structured gradient refresh×2 + C1a structured proposal vectorization + v118 L6d structured block-circulant factor + v117 L6c full `G_64` hierarchy coordinate sweep + v116 L6b wide rank-4 cross-block factor + v115 L6a rank-16 global LRH + v111 L5a block-local permutation +
 expansive-FFN CAT balance + Gram-gated Global Activation-LRH + L4a final deployed-Gram
 row gate + L4b final-Gram GALS + B2 PAWV diag-only + B1 GQRB）；C0 五模型复测已
 确认 v100 的 Qwen 主模型门禁。历史目录（包括 v073–v086/C75–C86）保持不可变；
@@ -35,9 +42,33 @@ row gate + L4b final-Gram GALS + B2 PAWV diag-only + B1 GQRB）；C0 五模型�
 | v123 C1c max-blocks-2 (screen only) | archived source | 0.533352 screen | NA | NA | NA | 429.95s screen | rejected |
 | **v124 C1c structured rank-8** | archived source | **0.509649** | **0.842039** | **295.820229** | **423.320136** | **2323.911178s** | previous-precision |
 | **v125 C1c rank-8 / max-blocks-8** | archived source | **0.509760** | **0.842039** | **295.847849** | **423.394380** | **2653.580314s** | **precision parent; runtime invalid** |
-| **v126 PAWV variable-length fix** | **`solution.py`** | inherited, not rerun | pending | pending | pending | pending | **active-repaired; official not tested** |
+| **v126 PAWV variable-length fix** | archived source | inherited, not rerun | pending | pending | pending | pending | archived-repaired; superseded by v127 |
 
-固定配置为 Qwen2.5-0.5B 全 24 层、`seq=128`、`calib=2`、`test=4`、`amax6`、CPU、
+### v5 sampled-means 主表（2026-08-31 归档代码修复后复评）
+
+| Candidate | Profile / sample | Linear mean | Attention mean | Cases (L/A) | Local API | Wall | Official status / 备注 |
+|---|---|---:|---:|---:|---:|---:|---|
+| c39 (v031) | sampled-means-v1 / seed 20260831 | 0.439775 | 0.667092 | 224/32 | 80.500s CPU | 91.384s | official 21864 / 161.3s；见[锚点复评](logs/execution/2026-08-31-official-anchors-sampled.md) |
+| c41b (v034) | sampled-means-v1 / seed 20260831 | 0.439775 | 0.667092 | 224/32 | 79.094s CPU | 89.803s | official 21864 / 159.4s；同上 |
+| c47b (v051) | sampled-means-v1 / seed 20260831 | 0.433744 | 0.667092 | 224/32 | 116.557s CPU | 126.917s | official 22451 / 234s；同上 |
+| c66 (v066) | sampled-means-v1 / seed 20260831 | 0.432060 | 0.671106 | 224/32 | 187.353s CPU | 197.791s | official 22557 / 217.2s；同上 |
+| v72 | sampled-means-v1 / seed 20260831 | 0.432117 | 0.671106 | 224/32 | 228.777s CPU | 241.17s | official 22662 / 226s；见[v72 复评](logs/execution/2026-08-31-v072-sampled.md) |
+| v74 | sampled-means-v1 / seed 20260831 | 0.440305 | 0.671106 | 224/32 | 218.619s CPU | 229.485s | official 22750 / 239.387s（官方基线） |
+| v98 | sampled-means-v1 / seed 20260831 | 0.506715 | 0.828323 | 224/32 | 219.040s CPU | 232.91s | official timeout；无 PAWV，见[v98 复评](logs/execution/2026-08-31-v098-sampled.md) |
+| **v100-pawv-fixed** | sampled-means-v1 / seed 20260831 | 0.506715 | 0.828395 | 224/32 | 150.251s CPU | 160.99s | official WA→修复 PAWV 后本地通过；见[v100 修复复评](logs/execution/2026-08-31-v100-pawv-fixed-sampled.md) |
+| **v107-pawv-fixed** | sampled-means-v1 / seed 20260831 | 0.512967 | 0.828395 | 224/32 | 241.506s CPU | 255.51s | official WA（非 timeout）→修复 PAWV 后本地通过；见[v107 修复复评](logs/execution/2026-08-31-v107-pawv-fixed-sampled.md) |
+| **v121-pawv-fixed** | sampled-means-v1 / seed 20260831 | 0.516685 | 0.828395 | 224/32 | 832.920s CPU | 844.89s | official timeout→修复 PAWV；本地仍超 300s，不能提交；见[v121 修复复评](logs/execution/2026-08-31-v121-pawv-fixed-sampled.md) |
+| **v127** | sampled-means-v1 / seed 20260831 | **0.509408** | **0.828395** | **224/32** | **151.136s CPU** | **161.840s** | official untested |
+
+> **2026-08-31 归档修复与复评**：v099–v125 共 28 个归档 `solution.py` 存在 B2 PAWV 变长
+> calibration bug（固定 `q_samples[0].shape[0]` token 方阵直接 `+=` 不同长度样本，官方长度
+> `[10,128,512,1024,1024]` 在第二样本即 RuntimeError）。已按 v127 修复逻辑统一改为按长度分组的
+> keyed diagonal（`_build_pawv_metric` 返回 `dict[str, Tensor]`，校准用
+> `row_diagonals.get(str(len))`，动态度查回退），全部 28 个文件通过官方长度形状复现。
+> 上表为修复后按 v5 `sampled-means-v1` 复评结果；v100/v107/v121 的官方分类不受本地通过影响
+> （官方 300s 与格式约束分别由平台判定）。
+
+legacy full-layer 表的固定配置为 Qwen2.5-0.5B 全 24 层、`seq=128`、`calib=2`、`test=4`、`amax6`、CPU、
 缓存只读。完整报告见 [`v125-c1c-block8-qwen-full.md`](../logs/execution/2026-08-31-v125-c1c-block8-qwen-full.md)，
 v107 Attention 合约审计见 [`2026-08-31-v107-attention-contract-audit.md`](../logs/execution/2026-08-31-v107-attention-contract-audit.md)，
 以及 v31/v51/外部/v107 同输入逐输出差分见 [`2026-08-31-v107-v31-v51-external-attention-output-diff.md`](../logs/execution/2026-08-31-v107-v31-v51-external-attention-output-diff.md)。
@@ -46,8 +77,7 @@ v107 Attention 合约审计见 [`2026-08-31-v107-attention-contract-audit.md`](.
 正式通过并成为当前官方基线。
 v72 的 Attention 完整依赖闭包与 v66 语义一致，本地 Qwen native `356.605602`、
 CUDA API `163.41s`；v74 的本地 Qwen native 为 `361.503707`、CUDA API `179.27s`。
-v66 保留为绝对控制组，根 v126
-仍只是 precision-only 研究版本。见 [`v100 官方 WA 边界审计`](../logs/execution/2026-08-31-v100-official-wa-boundary-audit.md)。
+v66 保留为绝对控制组，根 v127 仍只是官方未测试的研究版本。见 [`v100 官方 WA 边界审计`](../logs/execution/2026-08-31-v100-official-wa-boundary-audit.md)。
 v74 官方记录见 [`v74 official pass`](../logs/execution/2026-08-31-v74-official-pass.md)。
 用户另确认 v121 官方显示运行超时；官方精确时间/分数/SHA 未提供。该结果与本地
 `2180.450151s` 一致，见 [`v121 官方 timeout`](../logs/execution/2026-08-31-v121-official-timeout.md)。
@@ -55,15 +85,15 @@ v100/v107 WA 根因已由官方自测确认是 B2 PAWV 的变长 calibration sha
 官方长度 `[10,128,512,1024,1024]` 在 `[10,10] += [128,128]` 时直接 RuntimeError；见
 [`Attention WA 根因`](../logs/execution/2026-08-31-v100-v107-attention-wa-root-cause.md)。
 五模型确认见 [`2026-08-30-c0-b2-pawv-five-model.md`](../logs/evaluations/2026-08-30-c0-b2-pawv-five-model.md)。
-`official_score` 和 `official_time` 尚无值；295.847849 是本地 Qwen shaped panel，
-不能换算成官方分数。相对旧 C86 归档，panel 提升 `+27.268726`（`+10.21%`），正式
+`official_score` 和 `official_time` 尚无值；295.847849 等数值是 legacy 本地 Qwen shaped panel，
+不能换算成官方分数。相对旧 C86 归档，legacy panel 提升 `+27.268726`（`+10.21%`），正式
 v118 API 时间为 `2249.746436s`，v119 在全部分数位保持相同并将 API 降至
 `2040.504690s`（`-9.30%`）。v121 两轮 refresh 将 panel 提升至 `295.811281`，
 v124 rank-8 再提升至 `295.820229`，v125 在 `max_blocks=8` 下再提升至
 `295.847849`，Linear mean `0.5097598050`；v125 较 v124 分别 `+0.027620`、
-`+0.000110482`，但 API `2653.580314s`，不满足官方 `<420s`，只能作为精度证据。
-v106 仍作为时间 parent 保留在历史/归档记录中，v107/v109/v110/v111/v115/v116/v117/v118/v119/v121/v124
-作为前一精度 parent 保留在各自归档；v125 是当前已测 precision parent，v126 是修复后的根；v120、v122、v123 的 screen 均已拒绝归档。
+`+0.000110482`，但 API `2653.580314s`，不满足官方 `<300s`（最新修订），只能作为精度证据。
+v106 仍作为历史 CUDA 时间 parent 保留，v107/v109/v110/v111/v115/v116/v117/v118/v119/v121/v124
+作为前一精度 parent 保留在各自归档；v125 是 legacy precision parent，v126 已归档，v127 是当前根；v120、v122、v123 的 screen 均已拒绝归档。
 L5b/v112、L5c/v113、L5d/v114 均为已归档的 screen 候选，L6、C1a、C1b、C1c 已完成，
 当前 active 计划转入 C2 跨模型低成本 guardrail 与 C3 state/time 压缩。
 计划入口：[`2026-08-31-hif4-active-c1-structured-linear-plan.md`](../docs/superpowers/plans/2026-08-31-hif4-active-c1-structured-linear-plan.md)。
@@ -161,7 +191,7 @@ L5b/v112、L5c/v113、L5d/v114 均为已归档的 screen 候选，L6、C1a、C1b
 | v095 | 2026-08-30 | A6 Global Activation-LRH (rank-8 off-block Gram, 10% energy) | Qwen full-layer `0.457010` | `0.841829` | 373.97s CPU | NA | NA | panel `282.616646`，较 stable parent `−11.138460`；v1/v2 单层门禁失败，v3 全层仍回退 | **archived-rejected** | [archive](20260830_v095_a6-global-activation-lrh-rejected_score282.616646_time374s/) |
 | v096 | 2026-08-30 | B1 GQRB block mixing 初版 | Qwen layer-1 `0.603071` | `0.888174` | 15.22s CPU | NA | NA | layer-1 panel `328.402424`，proxy 覆盖 parent，立即停止 | **archived-rejected** | [archive](20260830_v096_b1-gqrb-blockmix-rejected_score328.402424_time15s/) |
 | v097 | 2026-08-30 | B1 GQRB precision 版（top4 + 全部 baseline） | Qwen full-layer `0.501558` | `0.842398` | 523.37s CPU | NA | NA | panel `293.868932`，精度最高但超时 `103.37s` | **archived-rejected-timeout** | [archive](20260830_v097_b1-gqrb-precision-win-timeout_score293.868932_time523s/) |
-| v098 | 2026-08-30 | B1 GQRB margin 版（原始 baseline top4 + GQRB top4，0.1% gate） | Qwen full-layer `0.501558` | `0.842021` | 406.24s CPU | NA | NA | panel `293.793700`，较 stable parent `+0.038594`，低于 420s；B2 前最高版本 | **archived-baseline** | [archive](20260830_v098_b1-gqrb-margin-active_score293.793700_time406s/) |
+| v098 | 2026-08-30 | B1 GQRB margin 版（原始 baseline top4 + GQRB top4，0.1% gate） | Qwen full-layer `0.501558` | `0.842021` | 406.24s CPU | **timeout** | NA | panel `293.793700`，较 stable parent `+0.038594`；**用户确认官方在最新 300s 限制下判为 timeout**（本地 API `406.24s` > 300s）；B2 前最高版本 | **official-timeout** | [archive](20260830_v098_b1-gqrb-margin-active_score293.793700_time406s/) |
 | v099 | 2026-08-30 | B2 PAWV diag+rank-8 token Hessian | Qwen layer-1 `0.603071` | `0.916670` | 15.84s CPU | NA | NA | layer-1 panel `334.101693`，低秩跨 token 项全层前置验证失败，未跑全层 | **archived-rejected** | [archive](20260830_v099_b2-pawv-lowrank-rejected_score334.101693_time16s/) |
 | v100 | 2026-08-30 | B2 PAWV diag-only + B1 GQRB | Qwen full-layer `0.501558` | `0.842039` | 392.42s CPU | **WA** | NA | 本地 panel `293.797301`；用户确认官方 Attention wrong answer、非 timeout，提交 SHA/时间未提供 | **official-wrong-answer** | [archive](20260830_v100_b2-pawv-diagonly-active_score293.797301_time392s/) |
 | v101 | 2026-08-30 | C0 五模型确认（v100 无代码变更） | Qwen full-layer `0.501558` | `0.842039` | 401.13s CPU（Qwen） | NA | NA | 五模型完整运行；Qwen panel `293.797301`，四个软 guardrail 无精度灾难回退；GPT-2 medium `492.64s` 仅时间超限 | **archived-confirmed-parent** | [archive](20260830_v101_c0-five-model-confirmed_score293.797301_time401s/) |
@@ -169,8 +199,8 @@ L5b/v112、L5c/v113、L5d/v114 均为已归档的 screen 候选，L6、C1a、C1b
 | v103 | 2026-08-30 | E0-C role-aware GALS-C（按 weight shape 仅 attention-shaped activation） | Qwen layer-1 `0.602836` | `0.926347` | 51.70s CPU | NA | NA | panel `335.978356`，比 v100 `−0.058945`；q/k/v 回退，归档 | **archived-rejected** | [archive](20260830_v103_e0c-gals-roleaware-rejected_score335.978356_time52s/) |
 | v104 | 2026-08-30 | A7 量化后权重 Gram `WqᵀWq` 激活 Hessian | Qwen full-layer `0.487275` | `0.842039` | 470.58s CPU | NA | NA | layer-1 panel `336.562922`，但 full panel `290.226694`，比 v100 `−3.570607` 且超时 | **archived-rejected** | [archive](20260830_v104_a7-quant-weight-gram-rejected_score290.226694_time471s/) |
 | v105 | 2026-08-30 | L1 full-hierarchy cross-block Weight-LRH（scale/lv2/lv3/mantissa 原子写回） | Qwen 五层×七 role screen `0.523019` | NA | 265.87s screen | NA | NA | 70 个 fold candidates，仅 1 个 cross-fold admitted；最终 0/35 case 改变 stable parent；未触发 full-layer | **archived-rejected** | [archive](20260830_v105_l1-full-hierarchy-lrh-rejected_screen523019_time266s/) |
-| v106 | 2026-08-30 | L2 expansive-FFN CAT balance（结构 `rows > channels`、α=0.25） | Qwen full-layer `0.503459` | `0.842039` | **412.65s CPU** | NA | NA | panel **294.272633**，较 v100 `+0.475332`；fc_gate +0.013309，API 仍低于 420s；当前最高本地 parent | **active-local** | [archive](20260830_v106_l2-expansive-cat-active_score294.272633_time413s/) |
-| v107 | 2026-08-30 | L3 Global Activation-LRH Gram gate（4-block、部署 `G_q` 精确 gate） | Qwen full-layer `0.506997` | `0.842039` | 481.04s CPU | NA | NA | panel **295.157057**，较 v106 `+0.884423`；精度 parent，时间超限仅作探索记录 | archived-parent | [archive](20260830_v107_l3-global-lrh-precision-parent_score295.157057_time481s/) |
+| v106 | 2026-08-30 | L2 expansive-FFN CAT balance（结构 `rows > channels`、α=0.25） | Qwen full-layer `0.503459` | `0.842039` | **412.65s CPU** | NA | NA | panel **294.272633**，较 v100 `+0.475332`；fc_gate +0.013309，按当时 420s 限制达标；按最新 300s 限制已超 | **active-local** | [archive](20260830_v106_l2-expansive-cat-active_score294.272633_time413s/) |
+| v107 | 2026-08-30 | L3 Global Activation-LRH Gram gate（4-block、部署 `G_q` 精确 gate） | Qwen full-layer `0.506997` | `0.842039` | 481.04s CPU | **WA** | NA | panel **295.157057**，较 v106 `+0.884423`；**用户确认官方 Attention wrong answer、非 timeout**（本地超 300s 仅作历史风险提示） | archived-parent（official-wrong-answer） | [archive](20260830_v107_l3-global-lrh-precision-parent_score295.157057_time481s/) |
 | v108 | 2026-08-31 | L4a 首次 final-weight Gram screen（错误 dynamic shape 路由） | `0.528949` screen | NA | 80.39s screen | NA | NA | **no-op：路由从未触发，与 v107 完全相同；不能作为算法否定证据** | archived-invalid-noop | [archive](20260831_v108_l4a-final-weight-gram-screen-rejected_scoreNA_timeNA/) |
 | v109 | 2026-08-31 | L4a final deployed-Gram row gate（expansive 双候选、完整 `G_q` 逐行门控） | Qwen full-layer **`0.507326`** | `0.842039` | 517.29s CPU | NA | NA | panel **295.239309**，较 v107 `+0.082253`；前一精度 parent，时间仅作探索记录 | archived-parent | [archive](20260831_v109_l4a-final-gram-gated_score295.239309_time517s/) |
 | v110 | 2026-08-31 | L4b final-Gram GALS（解析 offset、4 block、完整 `G_q` 逐行门控） | Qwen full-layer **`0.507340`** | `0.842039` | 701.90s CPU | NA | NA | panel **295.242780**，较 v109 `+0.003470`；历史精度 parent，时间仅作探索记录 | archived-parent | [archive](20260831_v110_l4b-gals-final-gated_score295.242780_time702s/) |
@@ -215,16 +245,20 @@ v003 起允许只有本地结果时立即归档。未提交候选的官方列保
 v013 归档字节一致。
 
 用户于 2026-08-27 确认 v024（C21，提交 `23d1cf7`）官方结果为
-`16043 / 173.8s`。该版本的 Linear 输出监督把 `A@W` 信息用于激活侧选择，
-因此在当前规则下不合规，只保留为历史官方记录。离线校准中用 `A@W`
-优化 `Q(W)` 本身是允许的。v025 / C21-C 是最新合规官方锚点：
+`16043 / 173.8s`。该版本的 Linear 输出监督把 `A@W` 信息用于激活侧选择，按当时规则不合规，
+只保留为历史官方记录。**官方评测（2026-08-31 修订）已放开全部 `A@W` 拟合限制，只限制端到端时间**；
+v024 仍不作为后续父版本（历史裁决）。v025 / C21-C 是最新合规官方锚点：
 `14437 / 166.6s`。
 
 2026-08-29 官方评测集扩大为 250 个 Linear case 与 200 个 Attention case，
-并将时间限制提升至 7 分钟。用户确认新版官方结果：v031/C39-FW 为
+并将时间限制提升至 7 分钟（420s）。用户确认新版官方结果：v031/C39-FW 为
 `21864 / 161.3s`，v034/C41b 为 `21864 / 159.4s`，v051/C47b 为
 `22451 / 234s`，v066/C66 为 `22557 / 217.2s`；这些数值覆盖对应条目的
 旧版 `Official Score/Time`，旧值仍可在各自提交历史中追溯。
+2026-08-31 官方再次修订：时间限制收紧为 **300s（5 分钟）**，取消全部 `A@W`
+限制；用户确认 **v98 官方判为 timeout**（本地 API `406.24s`），见
+[`v98 官方 timeout`](../logs/execution/2026-08-31-v98-official-timeout.md)；
+v107 并非 timeout，官方结果保持 Attention `wrong answer`（非 timeout，与 v100 同类）。
 
 当前根 `solution.py` 不再标记为 v086/C86；当前源码规范 LF SHA256 为
 `47E2E3AB76C6DEAAC8DE47BBCBD8F689CF5989DC8FF9E9081A887EC89E819B08`。
@@ -233,7 +267,7 @@ v013 归档字节一致。
 v086 归档源码仍保留其历史 SHA 与结果。新版面板下 v074/C75（官方 `22750 / 239.387s`）
 是当前本地归档冠军，较 v072 提升 `88` 分并增加 `13.387s`；v031/C39-FW 与
 v034/C41b 均为 `21864`。外部 [`youxilee/hif4`](https://github.com/youxilee/hif4) 的
-`24153 / 239s` 仍高出 `1403` 分，仅作参考，不以根文件位置暗示外部代码已导入；当前本地 Qwen precision-only parent v125 panel `295.847849`，较外部本地 panel `250.327102` 高 `45.520747`，但 v125 本地 API 超过 420s。
+`24153 / 239s` 仍高出 `1403` 分，仅作参考，不以根文件位置暗示外部代码已导入；当前本地 Qwen precision-only parent v125 panel `295.847849`，较外部本地 panel `250.327102` 高 `45.520747`，但 v125 本地 API `2653.58s` 远超最新 300s 限制。
 L5d 外部逐组件审计与 L5e 可达性诊断分别见 [`l5d audit`](../logs/execution/2026-08-31-l5d-external-component-audit.md) 和 [`l5e ceiling`](../logs/execution/2026-08-31-l5e-linear-ceiling-v111.md)。
 
 ## Local-first workflow
@@ -251,7 +285,7 @@ L5d 外部逐组件审计与 L5e 可达性诊断分别见 [`l5d audit`](../logs/
 6. Use `scoreNA_timeNA` while official evaluation is unavailable; copy the exact evaluated source and verify SHA256 equality.
 7. Do not require a fixed minimum gain for exploration; map the accuracy-runtime Pareto and keep stable improvements.
 8. Treat oracle/proxy results as diagnostics, not as substitutes for deployed-path evaluation.
-9. Before submission, enforce compliance, legal state/API behavior, and the official `<420s` runtime limit (7 minutes).
+9. Before submission, enforce compliance, legal state/API behavior, and the official `<300s` runtime limit (5 minutes).
 10. If official results later become available, append the submitted SHA, score, runtime and date without overwriting local evidence.
 
 Use `NA`, `score9000plus`, or `time300plus` when a historical value is unavailable, approximate, or timed out. Never replace an unknown official value with a local estimate.

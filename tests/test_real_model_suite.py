@@ -22,6 +22,7 @@ from real_model_suite import (  # noqa: E402
     Window,
     _aggregate_details,
     audit_official_ranking,
+    _stratified_indices,
     build_panel_score,
     load_real_windows,
     load_model_cache,
@@ -136,6 +137,41 @@ def test_qwen_is_primary_and_other_models_are_soft_guardrails() -> None:
         "a",
     ]
     assert audit["candidate_status"]["a"]["valid_submission"] is True
+
+
+def test_local_runtime_seconds_is_not_treated_as_official_runtime_gate() -> None:
+    row = {
+        "candidate": "slow-local",
+        "model": "qwen2.5-0.5b",
+        "official_flow_score": {
+            "linear": 1.0,
+            "attention": 1.0,
+            "total": 2.0,
+            "linear_cases": 1,
+            "attention_cases": 1,
+        },
+        "linear": {"global_gain": 0.0, "macro_gain": 0.0},
+        "linear_component_macro_gain": 0.0,
+        "attention": {"global_gain": 0.0, "macro_gain": 0.0},
+        "timing": {"official_api_total_seconds": 658.88},
+    }
+    audit = audit_official_ranking(
+        [row], ["slow-local"], {}, ["qwen2.5-0.5b"]
+    )
+    status = audit["candidate_status"]["slow-local"]
+    assert status["local_api_under_official_limit_seconds"] is False
+    assert status["under_official_runtime_limit"] is None
+    assert status["official_runtime_comparable"] is False
+    assert status["local_result_valid"] is True
+
+
+def test_stratified_sample_has_exact_count_and_endpoints() -> None:
+    indices = _stratified_indices(24, 8, 20260831)
+    assert indices == [0, 1, 5, 10, 13, 15, 22, 23]
+    assert len(indices) == 8
+    assert indices[0] == 0
+    assert indices[-1] == 23
+    assert _stratified_indices(24, 8, 20260831) == indices
 
 
 def test_revised_official_anchor_manifest_is_current_panel_only() -> None:

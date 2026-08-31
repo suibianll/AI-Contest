@@ -3,13 +3,16 @@
 > 状态：**ACTIVE**
 > 建立日期：2026-08-31
 > 适用根：`D:/工作内容/AI竞赛/solution.py`
-> 当前根：v126（v125 + PAWV 变长修复）；当前已测精度 parent 仍为 v125
+> 当前根：v127（v106 + PAWV 变长修复）；当前主评测改为 v4 sampled-means
 > C1c structured rank-8 / max-blocks-8 + C1b refresh（sweep2）；
-> 当前本地时间 parent 仍为 v106（`<420s`），但它与 v100/v107 共用的 clean Attention
-> 路径没有官方通过证据；用户确认 v100 与 v107 均为 Attention WA，且 v100 不是 timeout。
+> v106 仅作为历史 CPU/CUDA 参考；本地时间不再直接与官方 300s 比较。v74 是官方通过
+> 的 Attention 安全基线；它与 v100/v107 共用的 clean Attention
+> 路径没有官方通过证据；用户确认 v100/v107 均为 Attention WA（非 timeout），
+> v98 已在最新 300s 限制下官方判为 timeout（本地 API `406.24s` > 300s）。
+> 官方规则（2026-08-31 修订）：端到端时间 `<300s`，不再限制任何 `A@W` 拟合用法。
 > 官方通过基线已更新为 v74：`22750 / 239.387s`；v72 `22662 / 226s` 与
 > v66 `22557 / 217.2s` 保留为控制组。
-> 根 `solution.py` 规范 LF SHA256：`47e2e3ab76c6deaac8de47bbcbd8f689cf5989dc8ff9e9081a887ec89e819b08`
+> 根 `solution.py` 规范 LF SHA256：`F15E112C7E832D019EE83D707ACD9D72FEF121A306E4CC3B50DBBC2CBB574924`
 > 主目标：保持 v125（继承 v119）的完整部署 `G_q` exact gate 语义，继续验证 Qwen full-layer
 > `linear_mean`；同时把结构化 proposal 的原型实现压缩为可审计的 C1 路径。Attention
 > 只作回归检查，不在本计划中扩展 PAWV。
@@ -18,8 +21,9 @@
 > `[10,128,512,1024,1024]`，确认 v100/v107 的 B2 PAWV 在 `_build_pawv_metric`
 > 以固定 `[10,10]` 累加 `[128,128]` 时崩溃。v126 已按长度分组 diagonal，并让
 > calibration/dynamic V 精确查找当前长度、未命中回退；官方长度模式回归通过。
-> 正式 Linear 提交候选必须以已官方通过的 v74 Attention 完整可达闭包为安全基线，v126
-> 的修复作为 PAWV 研究实现，不能在未完成时限与官方复测前取代 v72。
+> 正式 Linear 提交候选必须以已官方通过的 v74 Attention 完整可达闭包为安全基线；v127
+> 的修复仅代表本地 shape smoke 通过，仍需官方验证。v4 sampled 只用于快速 A/B，不能
+> 取代官方分数/时间。
 
 ## 1. 唯一执行规则
 
@@ -37,48 +41,50 @@ JSON/日志和官方规则；`docs/superpowers/archive/plans/` 只作历史证�
    full 只以 Qwen `linear_mean`/panel 晋级，Attention 只防回归；
 4. 每次结果（成功、失败、no-op、超时）先归档完整源码、JSON、日志和 README，再
    更新本计划账本；失败候选不能留在根；
-5. accuracy-first 阶段时间只记录，不因超过 420s 否决精度；C1 最后才恢复官方
-   `<420s` 硬门。任何“加速”候选不得改变 exact deployed-Gram row gate 的数学含义；
+5. accuracy-first 阶段记录本地 API/Wall 和 device，但不把本地 `300s` 当官方硬门；
+   最终是否超时只能由官方平台确认。任何“加速”候选不得改变 exact deployed-Gram row
+   gate 的数学含义；
 6. 本计划的队列完成或连续两个方向无正向后，立即归档本文件，并在同一提交创建
    下一份唯一 active 计划，不能在归档文件追加新的下一步。
 
 ### 1.1 评测分层规则（本轮起固定）
 
-为避免每个候选重复消耗数十分钟，精度排序采用 Qwen 主线：
+为避免每个候选重复消耗数十分钟，精度排序采用 Qwen `sampled-means-v1` 主线：
 
 1. 合成/合规/五层七 role screen 是所有候选的第一道门；
-2. 只有 screen 明确正向且无 role 回退才跑 Qwen2.5-0.5B 全 24 层；
-3. Qwen full 是本地精度排序的唯一硬门。OPT/Pythia 只在 precision parent 变更后或
+2. 只有 screen 明确正向且无 role 回退才跑 Qwen2.5-0.5B 的固定分层样本（8 层、7 role、
+   4 windows）；
+3. Qwen sampled mean 是本地精度排序的唯一硬门。OPT/Pythia 只在 precision parent 变更后或
    每 2–3 个候选做 3–5 层、少量 role 的软 guardrail，不再对每个候选跑五模型全量；
-4. “Qwen full 足够”只适用于本地相对排序，不能替代官方提交前的 Attention API smoke、
+4. “Qwen sampled mean 足够”只适用于本地相对排序，不能替代官方提交前的 Attention API smoke、
    state/shape 合规检查和一次跨模型回归。
 
 ## 2. 固定基线、目标和约束
 
-固定评测：Qwen2.5-0.5B、24 层、`seq=128`、`calib=2`、`test=4`、`amax6`、CPU、
-只读 cache `artifacts/real_model_suite/cache/qwen2.5-0.5b__seq128__calib2__test4__layersall__schema1.pt`。
+固定评测：Qwen2.5-0.5B、`seq=128`、`calib=2`、`test=4`、`amax6`、CPU、只读 cache
+`artifacts/real_model_suite/cache/qwen2.5-0.5b__seq128__calib2__test4__layersall__schema1.pt`；
+v4 sample seed=`20260831`、layers=`[0,1,5,10,13,15,22,23]`、全部 role、4 windows。
 
-| 指标 | v125（C1c rank-8 / max-blocks-8 + C1b sweep2） |
+| 指标 | v127（v106 + PAWV variable-length fix，v4 sampled） |
 |---|---:|
-| screen Linear mean | `0.53358298` |
-| full Linear mean | `0.5097598050` |
-| Attention mean | `0.8420394885` |
-| Qwen panel | `295.8478489516` |
-| native total | `423.3943798775` |
-| API time | `2653.580314s`（runtime invalid） |
-| v125 measured-source LF SHA | `c9b419717e38bcec69d907d1cab6638409f1fa9a3072892dde9494ef9da3cc8e` |
+| Linear mean | `0.509408`（224 cases） |
+| Attention mean | `0.828395`（32 cases） |
+| Qwen panel（legacy，仅兼容） | `294.260802` |
+| native total（legacy，仅兼容） | `140.616055` |
+| Local API / Wall | `151.136s / 161.840s`（CPU） |
+| v127 source LF SHA | `F15E112C7E832D019EE83D707ACD9D72FEF121A306E4CC3B50DBBC2CBB574924` |
 
-到 `linear_mean=0.9` 仍差 `0.3903987445`，需消除当前剩余归一化误差的
-`79.6084%`；这只是本地诊断轴，不能换算官方 36000。所有在线候选必须遵守：
+到 `linear_mean=0.9` 仍差约 `0.390592`，需消除当前剩余归一化误差约
+`79.86%`；这只是本地诊断轴，不能换算官方 36000。所有在线候选必须遵守：
 
-若只在本地诊断轴固定当前 Attention `0.8420394885`，panel 达到 `360` 所需的
+若只在本地诊断轴固定当前 sampled Attention `0.828395`，panel 达到 `360` 所需的
 Linear mean 实际为
 
 \[
-g_L^{360}=\frac{360-200\times0.8420394885}{250}=0.7663684092.
+g_L^{360}=\frac{360-200\times0.828395}{250}\approx0.777284.
 \]
 
-v125 到该值仍需消除 `52.3434%` 的剩余 Linear 误差；`0.9` 是更激进的冗余目标，
+v127 到该值仍需消除约 `54.87%` 的剩余 Linear 误差；`0.9` 是更激进的冗余目标，
 不是 36000 的必要条件。官方隐藏分布未知，以上只用于判断所需算法量级。完整推导见
 [`当前实验结果与可达性 checkpoint`](../../../logs/execution/2026-08-31-current-results-target-feasibility.md)。
 
@@ -87,7 +93,7 @@ v125 到该值仍需消除 `52.3434%` 的剩余 Linear 误差；`0.9` 是更激�
   test/holdout 信息；
 - proposal 可以使用压缩的 `G_q` 近似，但写回前必须用真实部署
   `G_q=W_q^TW_q` 做逐行 gate；
-- 不新增未经压缩的 block-pair Gram，不把 `A@W` 输出监督流入 `Q(A)`。
+- 不新增未经压缩的 block-pair Gram；官方已放开 `A@W` 信息源限制，候选可按需使用输出/残差优化 `Q(W)` / `Q(A)`，但 state 仍须合法。
 
 ## 3. 数学基线
 
@@ -149,7 +155,7 @@ Attention 与除 `proj` 外的 Linear role 不变，故按 accuracy-first 规则
 v121 screen/full 产物位于
 [`v121 archive`](../../../solutions/20260831_v121_c1b-structured-refresh2-accepted_score295.811281_time2180s/)。
 合成单调性、38 项定向测试和 compliance 均通过；full `official_flow_valid=false` 的
-唯一原因是 CPU API `2180.45s` 超过 420s，暂不作为精度否决；用户随后确认 v121
+唯一原因是 CPU API `2180.45s` 超过最新 300s 限制，暂不作为精度否决；用户随后确认 v121
 官方显示 runtime timeout，因此它永久保持 precision-only，不进入提交候选。
 
 ### C1c：结构化 rank / block budget 的精度扫描
@@ -181,7 +187,7 @@ screen Linear `0.53343639`（较 v121 `+0.00003993`），full Linear `0.50964932
 panel `295.8202285103`（较 v121 `+0.0089476344`），7 个 role 均不降，故接替当前
 precision parent；完整源码/JSON/报告见
 [`v124 archive`](../../../solutions/20260831_v124_c1c-rank8-accepted_score295.820229_time2324s/)。
-其 API `2323.911178s` 超过 420s，仅作 accuracy-first 记录。随后固定 `S=8` 测试
+其 API `2323.911178s` 超过最新 300s 限制，仅作 accuracy-first 记录。随后固定 `S=8` 测试
 `max_blocks=8`：screen `0.53358298`，full Linear `0.5097598050`、panel
 `295.8478489516`，较 v124 分别 `+0.0001104818`、`+0.0276204413`；Attention
 逐位不变，但 API `2653.580314s`，因此只保留为 precision-only 证据，不作为提交版本。
@@ -214,7 +220,7 @@ C1c 队列到此停止，不再增加 block budget；下一步按固定分层规
 4. 仍不足时才验证 block 轴 FFT circular convolution；
 5. 输出 v74/v72/v66、v106/v125 和压缩候选的精度、state 峰值和 API Pareto；正式提交线
    必须从 v74 移植 Linear 机制，并保持 v74 Attention 可达函数/常量语义哈希不变。
-   最终恢复 `<420s` 硬门并做 Attention contract smoke；local smoke 不再标记 official-safe。
+   最终恢复 `<300s` 硬门并做 Attention contract smoke；local smoke 不再标记 official-safe。
 
 未经 exact-equivalence 对照的近似不能成为提交 parent。C3 完成后归档本计划；下一份
 唯一 active 计划才进入共享正交 butterfly/Givens frame 和冻结 activation state 后的

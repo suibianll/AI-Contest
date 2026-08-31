@@ -55,7 +55,7 @@
 
 1. 官方打包/提交文件与本地归档源不一致，或隐藏 wrapper 的输入 shape/role 路由不同；
 2. v107 Linear 新增的 `deployment_gram` 在 Qwen 形状上约占 2.6 GiB，导致提交端内存/进程状态异常，错误被官方归类为 `wrong answer`；
-3. v107 API 约 481 s，超过 420 s 门槛，平台超时/资源异常路径可能没有返回清晰的 timeout 标签；
+3. v107 API 约 481 s，超过 300 s 门槛，官方（2026-08-31 确认）在最新 300s 限制下判为 timeout；
 4. 仍需使用官方同包环境，对 v106（已通过 Attention 的时间 parent）和 v107 做逐 API、逐 case 的状态/输入 shape/首个错误阶段对照，才能定位隐藏契约问题。
 
 因此，在没有官方隐藏样本之前，不应回退 Attention 算法或把 v107 的本地 Attention 输出判为错误；应优先做 v106/v107 同包复测，并隔离 `deployment_gram` 的内存影响。

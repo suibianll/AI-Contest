@@ -22,30 +22,31 @@
   Qwen panel 为 `250.327102`（应作为本地最高比较基准）；五模型相加的
   `1085.743597` 仅是诊断量，不能排名或换算官方分数。CUDA 路径还存在外部代码
   的设备混用问题。完整表格见 [`当前主版本算法效果与评测状态`](docs/current-solution-status.md)。
-- 历史 v024 得分为 `16043 / 173.8s`，但其 Linear 输出监督路径把输出信息
-  用于激活侧选择；这类 `A@W -> Q(A)` 用法仍不合规，因此不作为后续合规父版本。
-- 当前根 `solution.py` 为 **v126**：在 v125 C1c structured rank-8 / max-blocks-8 + C1b structured
-  gradient refresh（sweep2）精度 parent；在 v118 L6d 的最多 8 个 `64×64` kernel
-  proposal 上批量化独立 row/block 的 15-level 候选评估。Qwen 全 24 层本地实测
-  native `423.394380`、shaped panel `295.847849`、Linear mean `0.5097598050`、
-  Attention mean `0.8420394885`、正式 API `2653.580314s`；这些 full-layer 数字属于
-  修复前 v125，v126 尚未重跑全量。v125 较 v124 panel
-  `+0.027620`，但 runtime 无效；v106 仍是最近的 `<420s` 时间 parent。当前探索阶段
-  只按精度排序，时间暂作记录；最终冻结时再压缩到 420s 内。逐项结果、归档实现
+- 历史 v024 得分为 `16043 / 173.8s`，其 Linear 输出监督路径把输出信息
+  用于激活侧选择；按当时规则该类 `A@W -> Q(A)` 用法不合规，因此未作为后续
+  合规父版本。**官方评测（2026-08-31 修订）已放开全部 `A@W` 拟合限制，只限制
+  端到端运行时间**，旧合规判断不再作为当前约束。
+- 当前根 `solution.py` 为 **v127**：v106 的 Linear 路径 + PAWV 变长 calibration 修复，
+  作为官方 Attention shape 风险的研究候选。新 `sampled-means-v1`（Qwen、8 层、7 role、
+  4 window，224 Linear + 32 Attention）实测 Linear mean `0.509408`、Attention mean
+  `0.828395`、Local API `151.136s`、Wall `161.840s`；同一抽样计划下 v74 为
+  `0.440305 / 0.671106 / 218.619s / 229.485s`。这四个值才是当前本地 A/B 主结果。
+  v127 全量旧口径 `453.102s` 仅作 legacy；不要拿本地 300 秒直接判断官方时间。
+  逐项结果、归档实现
   审计和复现实验配置见 [`当前主版本算法效果与评测状态`](docs/current-solution-status.md)、
   [`算法全景`](docs/algorithm-inventory-and-directions.md)、
   [`归档实现审计`](docs/archive-implementation-audit.md) 与 [`solutions/README.md`](solutions/README.md)。
   L5d 外部组件审计与 L5e 可达性 checkpoint 已完成；L6a–L6e 已完成并归档；C1a 已完成，
   C1b 的 block-refresh screen（v120）被拒绝，两轮 refresh（v121）已通过，C1c rank-2/block-2
   screen 均被拒绝，rank-8/max-blocks-8（v125）已在 full-layer 取得当前最高精度；由于
-  API 时间远超 420s，下一步转入唯一活跃计划的 C2 低成本跨模型 guardrail 和 C3 state/runtime
+  API 时间远超 300s，下一步转入唯一活跃计划的 C2 低成本跨模型 guardrail 和 C3 state/runtime
   压缩，不再扩大 block budget。C3 已具体化为部署权重因子 exact gate、selected-block
   稀疏增量 exact gate 和 structured gradient 增量刷新；C3 完成并归档后，才启动共享
   正交 butterfly/Givens frame + 冻结 activation state 后完整离散 JDRQ-weight 的新计划。
   36000/Linear 门槛推导见
   [`当前实验结果与可达性 checkpoint`](logs/execution/2026-08-31-current-results-target-feasibility.md)。
 - 当前根源码 SHA256：
-  `47E2E3AB76C6DEAAC8DE47BBCBD8F689CF5989DC8FF9E9081A887EC89E819B08`（规范 LF）。
+  `F15E112C7E832D019EE83D707ACD9D72FEF121A306E4CC3B50DBBC2CBB574924`（规范 LF）。
 - L1 full-hierarchy Weight-LRH 已完成合成测试与五层×七 role screen，但 screen
   `both_player=0.523019429222563` 与 L0 逐条持平；候选 v105 已归档。L2 固定
   `α=0.25` 的 expansive-FFN CAT balance 已通过 full-layer，v106 成为时间 parent；
@@ -54,18 +55,19 @@
   permutation 得到 v111。L5b/v112、L5c/v113、L5d/v114 均已按 screen 归档拒绝，
   L5e 记录固定表示/接口的可达性证据；L6a rank-16、L6b 宽 rank-4 与 L6c 完整
   `G_64` hierarchy 与 L6d 结构化跨 block factor 均已完成，L6 计划已归档；C1c
-  `max_blocks=8` 已在 v125 完成并停止，下一步执行唯一活跃计划的 C2/C3。
+  `max_blocks=8` 已在 v125 完成并停止，v127 负责 PAWV 变长安全修复；下一步执行唯一活跃计划的 C2/C3。
   证据见 [`v111 execution log`](logs/execution/2026-08-31-v111-l5a-joint-permutation-qwen-full.md)。
 - 旧版本地评测器（单模型 dev 与 frozen holdout）曾因 calibration/test
   文本重叠不能可靠排序合规候选，相关代码（`real_data_eval.py`、
   `holdout_eval.py`、`cap_oracle.py`）已于 2026-08-28 移除；诊断结论见
   [C40 官方结果与评测器诊断](logs/candidates/C40-official-evaluator-diagnosis.md)，
   历史代码可从 git 历史恢复。
-- 当前唯一活跃评测器为 `real_model_suite.py`：默认用 Qwen2.5-0.5B 作主模型，
-  将冻结语料上的 Linear/Attention 平均 case gain 投影到官方的 250/200 面板；
-  其他模型只作软 guardrail。`official_flow_total` 原始逐 case 求和仍保留作诊断，
-  但不再按模型层数直接累加主排序。评测仍不能模拟官方隐藏数据分布，只用于
-  A/B 排序。
+- 当前唯一活跃评测器为 `real_model_suite.py`：默认使用 `sampled-means-v1` 和
+  Qwen2.5-0.5B，只输出抽样 Linear/Attention 平均 gain；层、role、window、seed
+  和数据 revision 都写入 `sample_plan`。其他模型必须显式传入，只作独立 guardrail，
+  不相加。旧 `official_flow_total`/`panel_score` 仍在 JSON 中兼容保留，但不再是
+  报告主指标。完整口径与官方锚点校准见
+  [`本地评测统一口径与官方锚点校准`](logs/execution/2026-08-31-local-metric-calibration.md)。
 - v107 官方 `Attention / wrong answer` 已按同一 Qwen cache、同一 NVFP4 codec 与同一
   API 和 v31、v51、归档外部 v002 做逐输出对照；四版本均无 state/shape/finite/五字段
   契约失败，v107 的 Attention MSE mean `0.00169248` 反而低于 v31/v51 的 `0.00382519`
@@ -78,28 +80,43 @@
   它的四个 Attention API、
   45 个递归可达 helper 和相关常量均与官方通过的 v66 语义一致；本地 Qwen native
   `356.605602`，较 v66 `+6.453182`，Attention 同为 `63.119717`，CUDA API `163.41s`。
-  相对 v66 官方提升 `105` 分，且仍有 `194s` 时间余量。随后 **v74 也正式通过，
-  成绩 `22750 / 239.387s`**，成为新的官方基线，仍有 `180.613s` 时间余量。
+  相对 v66 官方提升 `105` 分，按最新 `300s` 限制仍有 `74s` 时间余量。随后 **v74 也正式通过，
+  成绩 `22750 / 239.387s`**，成为新的官方基线，按最新 `300s` 限制仍有 `60.613s` 时间余量。
   官方记录见 [`v74 官方通过`](logs/execution/2026-08-31-v74-official-pass.md)，边界证据见
   [`v100 官方 WA 边界审计`](logs/execution/2026-08-31-v100-official-wa-boundary-audit.md)。
-  根 `solution.py` 现为 v126（v125 + PAWV 变长修复）研究版本，不是官方候选。
+  根 `solution.py` 现为 v127（v106 + PAWV 变长修复）研究版本，不是官方候选。
 - 用户确认 **v121 官方显示运行超时**。这与本地 API `2180.450151s` 的 runtime-invalid
   结论一致，和 v100/v107 的 Attention WA 是两类失败。v121 及更慢的 v124/v125
   只保留精度证据；记录见
   [`v121 官方 timeout`](logs/execution/2026-08-31-v121-official-timeout.md)。
+- **官方评测（2026-08-31 再次修订）**：端到端超时限制从 420s 收紧为 **`300s`（5 分钟）**，
+  且官方不限制任何 `A@W` 拟合用法（`Q(W)`、`Q(A)` 均可自由使用），只限制总运行时间。
+  用户确认 **v98 在该新限制下官方判为超时**（本地 API `406.24s` > 300s）；v98 不再是
+  候选，其官方结果类别更新为 `timeout`。此前将 v107 误记为 timeout，现已纠错：**v107 官方
+  为 Attention `wrong answer`（非 timeout）**，其本地旧口径 API `481.04s` > 300s 仅作历史
+  风险提示。协议版本已升级为 v5，见 [`execution log`](logs/execution/2026-08-31-v98-official-timeout.md)。
 - v100/v107 Attention WA 的直接根因已由官方自测报错确认：B2 PAWV 用第一个 calibration sample
   的 token 数建立固定 `P^TP` 方阵，再直接累加其他样本；官方接口不保证 calibration
   sample 等长。官方 mini sample 的长度为 `[10, 128, 512, 1024, 1024]`，在第二个
   样本就以 `[10,10] += [128,128]` 抛出 shape mismatch；本地 `seq=32/48` 复现与之
   一致。固定 `seq=128` 的本地 cache 因而漏检。
-  v126 已按长度分组 diagonal：校准 V 与在线 V 均按当前行数精确选择统计，未命中
+  v127 已按长度分组 diagonal：校准 V 与在线 V 均按当前行数精确选择统计，未命中
   则回退普通量化；同时删除未使用 low-rank 却仍执行的完整 `P^TP`/`eigh`。官方长度
-  模式与公开 API 回归已通过，见 [`v126 修复日志`](logs/execution/2026-08-31-v126-pawv-variable-length-fix.md)。diag-only 的理论增益仍有限，后续若继续提升 PAWV，
+  模式与公开 API 回归已通过，见 [`v126 修复日志`](logs/execution/2026-08-31-v126-pawv-variable-length-fix.md)。v127 的 v4 采样结果见
+  [`v127 sampled`](logs/execution/2026-08-31-v127-sampled-means-qwen.md)。diag-only 的理论增益仍有限，后续若继续提升 PAWV，
   需要保留 `P^TP` 的非对角耦合并另做变长状态设计。
   完整分析见 [`Attention WA 根因`](logs/execution/2026-08-31-v100-v107-attention-wa-root-cause.md)。
+- **2026-08-31 归档修复与 v5 复评**：v099–v125 共 28 个归档 `solution.py` 携带同样的
+  PAWV 变长 bug，已按 v127 逻辑统一修复（按长度分组的 keyed diagonal），全部通过官方长度
+  `[10,128,512,1024,1024]` 形状复现。修复后 v5 `sampled-means-v1` 复评：c39/c66/v72/v74
+  等官方通过锚点保持 `0.43–0.44 / 0.667–0.671`；v100-pawv-fixed `0.506715 / 0.828395 /
+  150.3s`、v107-pawv-fixed `0.512967 / 0.828395 / 241.5s`、v121-pawv-fixed
+  `0.516685 / 0.828395 / 832.9s`（时间不可行）。官方分类不改变。完整见
+  [`pawv 归档修复与 v5 复评`](logs/execution/2026-08-31-pawv-archive-fix-and-v5-reeval.md)。
 
-本地时间和本地分数仅用于候选比较，不冒充官方结果。任何官方结果都应与
-实际提交 SHA、分数和时间一起归档。
+本地时间和本地分数仅用于同一 profile/device/cache 的候选比较，不冒充官方结果。
+官方 300s 是鲲鹏 920B 上官方 450 case 的端到端限制；本地 API 秒数不能直接判定
+官方超时。任何官方结果都应与实际提交 SHA、分数和时间一起归档。
 
 ## 数据与计划治理（必须遵守）
 
@@ -147,7 +164,8 @@ git diff --check
 
 ## 本地评测是否能反映官方方向
 
-使用已冻结的五模型结果，新的 Qwen 主面板与官方锚点给出相同的相对顺序：
+以下是旧版 Qwen panel 兼容表，仅用于历史锚点回溯；当前排序请看
+`sampled-means-v1` 的 Linear/Attention mean 表和对应 sample plan：
 
 | 候选 | 官方分数 | Qwen panel（本地相对分） |
 | --- | ---: | ---: |
@@ -155,14 +173,11 @@ git diff --check
 | C41b | 21864 | 230.096230 |
 | C47b | 22451 | 237.541351 |
 | C66 | 22557 | 238.282409 |
-| v72 / C74 | 22662 | NA（未按当前 shaped-panel 同口径复测） |
+| v72 / C74 | 22662 | 240.683147 |
 | v74 / C75 | 22750 | 242.505358 |
 
-官方与本地均为 `C39 = C41b < C47b < C66`；Qwen 主面板的 Spearman 为
-`1.0000`，五模型 raw sum 为 `0.9487`。这只证明相对排序方向，不证明本地
-分数不可以线性换算成官方分数。外部 `youxilee/hif4` 的最高同口径 Qwen panel 为
-`250.327102`，当前根为 `295.847849`，领先 `45.520747`（`18.19%`）；外部
-Qwen native `369.527269` 仍作为第二诊断线，五模型合计不作为基准。
+这些 panel 值只证明历史局部排序方向，不是官方绝对分数换算；官方锚点拟合的
+诊断结果和适用边界见 [`local metric calibration`](logs/execution/2026-08-31-local-metric-calibration.md)。
 
 ## 修订版官方评测锚点（2026-08-29）
 
@@ -179,21 +194,21 @@ Qwen native `369.527269` 仍作为第二诊断线，五模型合计不作为基�
 | **v074 / C75** | **22750** | **239.387s** | **当前本地官方冠军；Attention 通过** |
 | `youxilee/hif4` | **24153** | **239s** | 外部官方参考；本地最高 Qwen native `369.527269`、panel `250.327102`；五模型 `1085.743597` 仅诊断 |
 
-新版官方时间限制为 **7 分钟（420 秒）**。历史 `14613 / 159.2s`、
+新版官方时间限制已修订为 **5 分钟（300 秒）**（2026-08-31）；表格中的通过
+版本在修订前的 420s 上限下完成评测，其时间仍低于最新 300s 限制。历史 `14613 / 159.2s`、
 `14437 / 166.6s` 等数值属于旧评测集，仍保留作历史记录，不与上表直接混算。
 
 ## 官方硬约束
 
-1. **离线校准可以使用 `A@W` 优化离线量化器，尤其是 `Q(W)`。** 但不得把
-   `A@W`、其量化输出或输出残差用于拟合、选择或反推在线激活量化器 `Q(A)`，
-   也不得将这类信息写入 `activation_state`。因此规则禁止的是输出监督驱动
-   `Q(A)`，不是一律禁止离线权重量化目标中的 `A@W`。
+1. **官方评测（2026-08-31 修订）不再限制任何 `A@W` 拟合用法**：离线
+   `hif4_calibration_and_quantize_weight` 与在线激活量化均可用 `A@W`、输出或残差
+   自由优化 `Q(W)` / `Q(A)`，信息源不限。当前唯一硬约束是端到端运行时间。
 2. 输出必须是合法 HiF4 五字段，API、state、shape、dtype 和设备必须符合要求。
-3. 最终官方评测总时间必须严格小于 `420s`（7 分钟）。
+3. 最终官方评测总时间必须严格小于 `300s`（5 分钟）。
 4. 不使用 holdout 或官方分数反向调参。
 
 除上述规则外，不设置固定的增益、coverage、beam、单组件非退化或中间时间门槛。
-开发阶段允许完整扫描和超过 420 秒的诊断实验；发现精度信号后，再通过算法和实现
+开发阶段允许完整扫描和超过 300 秒的诊断实验；发现精度信号后，再通过算法和实现
 优化压入最终时间限制。
 
 ## 当前算法
@@ -212,11 +227,12 @@ Qwen native `369.527269` 仍作为第二诊断线，五模型合计不作为基�
 | 7 | Attention | reciprocal RMS、K-centering、GQA 对齐、GQRB、PAWV diag-only | 使用真实 non-causal Attention 输出排序；当前 mean `0.842039` |
 | 8 | 下一步 | L0–L5e、L6a–L6e、C1a、C1b、C1c（v125 `max_blocks=8`）已完成 → **C2 跨模型 guardrail → C3 state/time 压缩** | 只参考唯一活跃计划；Attention PAWV 独立延后 |
 
-优化决策只看同一冻结缓存上的相对增量：Qwen `primary_panel_score_total` 是主
-指标，其他模型用于发现结构性回退。不得用官方分数反向调参，也不设置固定的
+优化决策只看同一冻结缓存、同一 sample plan 上的两个均值：Qwen
+`mean_scores.linear_mean` 和 `mean_scores.attention_mean` 是主指标，其他模型用于
+发现结构性回退。不得用官方分数反向调参，也不设置固定的
 增益、coverage 或“每个模型必须正向”门槛；只有合规、合法性、非 finite 和
-主模型精度方向是当前硬条件。accuracy-first 阶段只记录时间、不因超过 420 秒拒绝；
-进入最终提交压缩阶段后，`<420s` 才恢复为硬约束。
+主模型精度方向是当前硬条件。accuracy-first 阶段只记录时间、不因超过 300 秒拒绝；
+进入最终提交压缩阶段后，`<300s` 才恢复为硬约束。
 
 ### Linear
 
@@ -305,21 +321,39 @@ python -m venv .venv
 若缓存不存在，先执行下方“采集缓存”命令；`read` 模式不会偷偷下载模型或
 改用其他配置。
 
+默认命令使用快速、可复现的 `sampled-means-v1`：
+
+```powershell
+.\.venv\Scripts\python -u evaluator\real_model_suite.py `
+  --models qwen2.5-0.5b --evaluation-profile sampled-means-v1 `
+  --sample-layers 8 --sample-test-windows 4 --sample-seed 20260831 `
+  --device cpu --algorithm-device cpu --cache-mode read `
+  --solution solution.py --candidate-name active `
+  --output artifacts\real_model_suite\active-sampled.json `
+  --report logs\execution\active-sampled.md
+```
+
+这会固定 224 个 Linear 与 32 个 Attention case，报告只展示
+`mean_scores.linear_mean` 和 `mean_scores.attention_mean`。改变任何 profile、seed、
+layer/window 数、device、cache 或数据 revision 后，结果必须标记为新的不可直接横比组。
+
 结果字段按下面方式读取：
 
 | 字段 | 用途 |
 | --- | --- |
-| `results[*].panel_score.total` | 单模型固定面板分；Qwen 主模型使用它参与排序 |
-| `official_ranking_audit.primary_panel_score_total` | 候选主排序特征 |
-| `official_ranking_audit.guardrail_panel_mean_total` | 其他模型的软稳定性诊断 |
-| `results[*].official_flow_score.total` | 旧版 native 逐 case 和，仅用于回溯 |
-| `timing.official_api_total_seconds` | 单个模型六 API 代理耗时；主模型必须 `<420s` |
+| `results[*].mean_scores.linear_mean` | 当前唯一 Linear 主指标（0–1 gain 平均） |
+| `results[*].mean_scores.attention_mean` | 当前唯一 Attention 主指标（0–1 gain 平均） |
+| `results[*].sample_plan` | 实际 layer/window/role/seed，比较前必须完全一致 |
+| `results[*].timing.local_api_total_seconds` | 当前本地设备六 API 累计耗时 |
+| `results[*].timing.wall_seconds` | 本地墙钟时间，含调度/报告开销 |
+| `results[*].official_flow_score` / `panel_score` | 旧版兼容字段，不作为新报告主分 |
 
-带 `--solution` 的命令在主模型非法、非 finite 或超时会返回退出码 `2`，但仍会
-写出 JSON 和 Markdown，便于定位问题；只做锚点比较时不带 `--solution`。
+带 `--solution` 的命令只在本地结果不完整、非法或非 finite 时返回退出码 `2`，
+但仍会写出 JSON 和 Markdown；本地 API 超过 300s 不再伪装成官方 timeout。只做锚点
+比较时不带 `--solution`。
 
-CPU 全量 Qwen 评测可能接近或超过 420 秒，适合诊断；正式时间判断应使用 CUDA
-或先用 `--layers 1 --calib 1 --test 1` 做接口冒烟，再运行完整配置。
+CPU 全量 Qwen 评测可能很慢，旧 full-layer 数字标为 legacy；日常排序使用上述
+sampled profile。官方时间只能以官方平台返回为准，本地 CUDA/CPU 仅能做同机 A/B。
 
 先做不加载模型的环境检查：
 
@@ -411,15 +445,15 @@ Attention 合成矩阵：
      --report logs\evaluations\active-YYYYMMDD.md
    ```
 
-   完整候选比较的默认主排序使用 Qwen shaped panel：
-   `panel_score.total = 250 * Linear_mean + 200 * Attention_mean`。推荐始终配对
-   `--candidates c39 c41b c47b c66`；本地分数只用于 A/B 排序，不填入 Official
-   Score；同时记录完整命令、源 case 数量、目标 250/200 面板、API 总时间和
-   source SHA256。`official_flow_total` 仍写入 JSON，便于与旧报告回溯。
+    新版默认评测使用 Qwen `sampled-means-v1`，只比较
+    `mean_scores.linear_mean`、`mean_scores.attention_mean`；每份结果必须记录
+    sample seed、layer/window index、source case 数、Local API、Wall、设备和
+    source SHA256。旧 `panel_score`/`official_flow_total` 只用于读取历史 JSON。
 
 3. **一次性采集多模型真实前向数据**
 
-   `real_model_suite.py` 默认覆盖 GPT-2 small/medium、OPT-125M、Pythia-160M、Qwen2.5-0.5B，并对已登记的当前修订面板锚点 C39/C41b/C47b/C66 进行比较。Qwen 是主模型，其余模型用于软 guardrail；先采集模型数据，避免每个候选重复执行模型前向：
+    `real_model_suite.py` 默认只评估 Qwen2.5-0.5B；需要 GPT-2/OPT/Pythia
+    guardrail 时显式通过 `--models` 加入。先采集模型数据，避免每个候选重复执行模型前向：
 
    ```powershell
    .\.venv\Scripts\python -u evaluator\real_model_suite.py `
@@ -450,25 +484,29 @@ Attention 合成矩阵：
 
    `read` 模式遇到缺失、版本不一致、配置不一致、窗口泄漏或张量形状错误会直接失败，不会偷偷重新加载模型。`auto` 适合日常使用：有效缓存直接读取，缺失或过期时重新采集；`write` 强制刷新；`off` 不保存缓存。更换 seq、calib、test、层数、模型或固定数据集 revision 后，必须生成对应的新缓存。
 
-5. **检查本地排列是否复现官方排列**
+5. **比较本地组件均值**
 
-   评测器只用官方锚点做 Spearman 和 pairwise 排序审计，不拟合官方绝对分数。默认候选晋级比较同一冻结语料上的 Qwen `primary_panel_score_total`；其他模型的 panel 均值只用于发现结构性回退，不能覆盖主排序。`official_flow_total` 是兼容诊断字段。推荐用 `--candidates c39 c41b c47b c66` 与当前修订官方锚点配对运行。
+   默认只比较同一 sample plan 下的两个均值；官方锚点排序和分数拟合只在独立
+   校准报告中作事后诊断，不参与候选运行或绝对分数换算。评测器内部仍保留旧
+   字段以便读取历史 JSON，但新日志不再把它们写成主分。
 
-   官方流程代理分为：
+   当前主公式为：
 
    ```text
    score(case) = (MSE_STD - MSE_PLAYER) / MSE_STD
-   native official_flow_total = sum(all native Linear case scores) + sum(all native Attention case scores)
-   qwen panel_score.total = 250 * mean(Linear case scores) + 200 * mean(Attention case scores)
+    linear_mean = mean((MSE_STD-MSE_PLAYER)/MSE_STD over sampled Linear cases)
+    attention_mean = mean((MSE_STD-MSE_PLAYER)/MSE_STD over sampled Attention cases)
    ```
 
-   标准 NVFP4/HiF4 反量化、HiF4 参数校验和 state 校验全部由评测器独立完成；候选只需实现赛事规定的六个 API。评分器中的 `A@W` 只在候选返回量化结果后用于计算参考误差，不会作为输出传回候选；候选在离线 `hif4_calibration_and_quantize_weight` 中可以自行使用 `A@W` 优化 `Q(W)`，但不能让它进入 `activation_state` 或在线 `Q(A)` 选择。
+   标准 NVFP4/HiF4 反量化、HiF4 参数校验和 state 校验全部由评测器独立完成；候选只需实现赛事规定的六个 API。评分器中的 `A@W` 只在候选返回量化结果后用于计算参考误差，不会作为输出传回候选；按官方 2026-08-31 修订，候选可自行自由使用 `A@W` 优化 `Q(W)` 与 `Q(A)`，官方不再限制信息源。
 
    赛事说明未附官方“标准 HiF4 量化函数”源码；当前独立标准 codec 使用历史已审计实现并在每份报告记录 SHA256。取得官方函数后必须逐位替换并升级评分协议版本。
 
-6. **确认时间约束**
+6. **记录时间但不伪判官方结果**
 
-   主模型代理的一次完整六 API 评测，其 `official_api_total_seconds` 必须严格小于官方硬限制 `420s`；等于 420 秒也判失败。多模型套件的时间只用于检查各代理，不把多个代理的时间相加冒充一次官方提交；软 guardrail 缺失不会否决 Qwen 主排序。缓存读取只省去模型前向时间，不能掩盖候选算法自身的超时；最终仍需以官方端到端评测确认。
+   `local_api_total_seconds` 是本地设备六 API 累计，`wall_seconds` 是本地墙钟；
+   二者只能在相同硬件、cache、shape 和 sample plan 下做 A/B。官方 `300s` 是
+   鲲鹏 920B 的官方 450 case 端到端限制，只能由官方平台实际返回确认。
 
 ### 候选归档步骤
 
@@ -499,10 +537,10 @@ Attention 合成矩阵：
    - Hypothesis: why this change may improve accuracy
    - Test command: `完整命令`
    - Test config: model/data/cache/mode/layers/algorithm-device
-   - Local official-flow Linear sum / cases: ...
-   - Local official-flow Attention sum / cases: ...
-   - Local official-flow total and paired ordering: ...
-   - Local official API total runtime: ...
+    - Sample profile/seed/layer-window plan: ...
+    - Local Linear mean / cases: ...
+    - Local Attention mean / cases: ...
+    - Local API seconds / Wall seconds / device: ...
    - Cache: filename, schema, dataset revision, model revision
    - Source SHA256: `...`
    - Official score: NA

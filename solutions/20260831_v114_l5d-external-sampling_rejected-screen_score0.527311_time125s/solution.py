@@ -1865,33 +1865,26 @@ def _build_pawv_metric(
     q_heads: int,
     kv_heads: int,
     head_dim: int,
-) -> tuple[torch.Tensor | None, torch.Tensor | None]:
-    """Build diag + positive low-rank approximation of average ``P.T @ P``."""
+) -> dict[str, torch.Tensor]:
+    """Build length-keyed diagonals of the per-sample ``P.T @ P`` metric."""
     if not q_samples or not k_samples:
-        return None, None
-    tokens = int(q_samples[0].shape[0])
-    metric = torch.zeros(tokens, tokens, device=q_samples[0].device, dtype=torch.float32)
+        return {}
+    diagonal_sums: dict[str, torch.Tensor] = {}
+    counts: dict[str, int] = {}
     for q, k in zip(q_samples, k_samples):
         probability = _attention_probability(q, k, q_heads, kv_heads, head_dim)
-        metric += torch.einsum("hij,hik->hjk", probability, probability).mean(dim=0)
-    metric /= float(len(q_samples))
-    diagonal = metric.diagonal().clamp_min(_EPS)
-    off = metric - torch.diag(diagonal)
-    try:
-        eigenvalues, eigenvectors = torch.linalg.eigh(off)
-    except RuntimeError:
-        return diagonal, None
-    positive = eigenvalues > eigenvalues.max().abs().clamp_min(_EPS) * 1.0e-6
-    indices = torch.nonzero(positive, as_tuple=False).flatten()
-    if indices.numel() == 0:
-        return diagonal, None
-    indices = indices[-min(_ATTN_PAWV_RANK, int(indices.numel())) :]
-    values = eigenvalues.index_select(0, indices).clamp_min(0.0)
-    vectors = eigenvectors.index_select(1, indices)
-    lowrank = vectors * values.sqrt()[None, :]
-    return diagonal, lowrank
-
-
+        diagonal = probability.square().sum(dim=1).mean(dim=0).clamp_min(_EPS)
+        key = str(int(k.shape[0]))
+        if key in diagonal_sums:
+            diagonal_sums[key] = diagonal_sums[key] + diagonal
+            counts[key] += 1
+        else:
+            diagonal_sums[key] = diagonal
+            counts[key] = 1
+    return {
+        key: diagonal_sum / float(counts[key])
+        for key, diagonal_sum in diagonal_sums.items()
+    }
 def _refine_v(
     dense: torch.Tensor,
     parent: dict[str, torch.Tensor],
@@ -1972,13 +1965,15 @@ def hif4_calibration_attention(
         _attention_forward(q, k, v, q_num_heads, kv_num_heads, head_dim)
         for q, k, v in zip(q_samples, k_samples, v_samples)
     ]
-    row_diagonal, row_lowrank = _build_pawv_metric(
+    row_diagonals = _build_pawv_metric(
         q_samples, k_samples, q_num_heads, kv_num_heads, head_dim
     )
     v_hats = []
     for v in v_samples:
         v_params = _dense_to_hif4(v, offsets=_ATTN_OFFSETS)
-        v_params = _refine_v(v, v_params, row_diagonal, None)
+        v_params = _refine_v(
+            v, v_params, row_diagonals.get(str(int(v.shape[0]))), None
+        )
         v_hats.append(_dequantize_hif4(v_params).to(torch.float32))
     q_stack = torch.cat(q_samples).reshape(-1, q_num_heads, head_dim)
     k_stack = torch.cat(k_samples).reshape(-1, kv_num_heads, head_dim)
@@ -2165,7 +2160,10 @@ def hif4_calibration_attention(
         "q_state": q_state,
         "k_state": k_state,
         "v_state": {
-            "row_diagonal": None if row_diagonal is None else _cpu_tensor(row_diagonal),
+            "row_diagonals": {
+                key: _cpu_tensor(diagonal)
+                for key, diagonal in row_diagonals.items()
+            },
             "row_lowrank": None,
         },
     }
@@ -2258,7 +2256,12 @@ def hif4_dynamic_quantize_v(
 ) -> dict[str, torch.Tensor]:
     dense = _dequantize_nvfp4_float32(v_quant, v_scale)
     state = v_state if isinstance(v_state, dict) else {}
-    row_diagonal = state.get("row_diagonal")
+    row_diagonals = state.get("row_diagonals")
+    row_diagonal = (
+        row_diagonals.get(str(int(dense.shape[0])))
+        if isinstance(row_diagonals, dict)
+        else state.get("row_diagonal")
+    )
     row_lowrank = state.get("row_lowrank")
     params = _dense_to_hif4(dense, offsets=_ATTN_OFFSETS)
     return _refine_v(

@@ -4,17 +4,35 @@
 > 适用文件：根目录 [`solution.py`](../solution.py)
 > 文档性质：本地可复现实测记录，不是官方成绩承诺。
 
+> **评测协议 v5（2026-08-31 修订）**：本文的当前主结果只读取
+> `sampled-means-v1` 的 `Linear mean` / `Attention mean`。旧 full-layer、native
+> sum、shaped panel 和本地 `<300s` 判断均为 legacy，不能与 v5 主表混用。统一
+> 口径、官方锚点拟合和时间校准见 [`local metric calibration`](../logs/execution/2026-08-31-local-metric-calibration.md)。
+> 官方评测（2026-08-31 再次修订）不再限制任何 `A@W` 拟合用法，只限制端到端
+> 运行时间（`<300s`）。
+
 ## 一句话结论
 
-根目录当前为 v126：v125 C1c structured rank-8 / `max_blocks=8` + v121 C1b structured gradient refresh×2 + C1a structured proposal vectorization + v118 L6d structured block-circulant factor + v117 L6c full `G_64` hierarchy coordinate sweep + v116 L6b wide rank-4 cross-block factor + v115 L6a rank-16 global LRH + v111 L5a block-local permutation + BOAT + expansive-FFN CAT balance +
+根目录当前为 v127：v106 Linear 路径 + PAWV 变长修复。固定 v4 sample plan（Qwen、
+seed `20260831`、层 `[0,1,5,10,13,15,22,23]`、全部 role、4 windows）下，
+Linear mean `0.509408`、Attention mean `0.828395`、Local API `151.136s`、
+Wall `161.840s`；同一计划 v74 为 `0.440305 / 0.671106 / 218.619s / 229.485s`。
+以下 v125 等数字是 legacy precision parent，不覆盖 v4 主结果。算法链仍包含 BOAT + expansive-FFN CAT balance +
 cross-fold HSDQ + Global Activation-LRH Gram gate + L4a final deployed-Gram row gate +
-L4b GALS，并保留 Attention B1 GQRB 与 B2 PAWV diag-only。固定 Qwen2.5-0.5B 缓存、
-`seq=128`、`calib=2`、`test=4`、全 24 层、CPU 的完整运行中，当前精度 parent 的
-Qwen shaped panel 为 **295.847849**，Linear mean **0.5097598050**，正式 API 累计
-**2653.580s**；这些是 v125 的最后一次 full-layer 数据。v126 只修复 Attention 变长
-PAWV，尚未重跑 full-layer，不冒充已有分数。C1c `max_blocks=8` 较 v124 panel 增加 `+0.027620`，探索阶段只记录时间，不以
-`420 s` 否决精度候选，最终冻结时再压缩。该数值用于本地 A/B 排序，不能线性换算为
-官方排行榜分数。
+L4b GALS，并保留 Attention B1 GQRB 与 B2 PAWV diag-only。v125 的全量
+`295.847849 / 2653.580s` 仅作为 legacy precision 证据；v127 的 v4 sampled
+均值才是当前比较口径。v126/v127 的 PAWV 变长修复已通过公开 shape smoke，
+但 v127 尚未官方提交，不能把本地均值写成官方成绩。官方 300s 只由官方平台确认，
+本地 CPU/CUDA 时间不作为硬门。
+
+> **2026-08-31 归档修复与 v5 复评**：v099–v125 共 28 个归档 `solution.py` 携带着
+> B2 PAWV 变长 calibration bug（v100/v107 官方 WA 的直接根因），已按 v127 逻辑批量改为
+> 按长度分组的 keyed diagonal，全部通过官方长度 `[10,128,512,1024,1024]` 形状复现。
+> 修复后按 v5 `sampled-means-v1` 复评：v100-pawv-fixed `0.506715 / 0.828395 / 150.25s`、
+> v107-pawv-fixed `0.512967 / 0.828395 / 241.51s`、v121-pawv-fixed
+> `0.516685 / 0.828395 / 832.92s`；v107/v121 精度高于 v127 但时间不可行。官方分类不改变
+> （v100/v107 官方 WA、v121 官方 timeout）。完整见
+> [`pawv 归档修复与 v5 复评`](../logs/execution/2026-08-31-pawv-archive-fix-and-v5-reeval.md)。
 
 当前唯一活跃计划是 [`2026-08-31-hif4-active-c1-structured-linear-plan.md`](superpowers/plans/2026-08-31-hif4-active-c1-structured-linear-plan.md)；L6、C1a、C1b、C1c 已完成，下一步为 C2 低成本跨模型 guardrail 与 C3 state/time 压缩；归档候选的写回、目标错位和源码缺失审计见 [`archive-implementation-audit.md`](archive-implementation-audit.md)，v107 Attention 合约对照见 [`2026-08-31-v107-attention-contract-audit.md`](../logs/execution/2026-08-31-v107-attention-contract-audit.md)。
 
@@ -28,9 +46,16 @@ PAWV，尚未重跑 full-layer，不冒充已有分数。C1c `max_blocks=8` 较 
 提升 `105` 分并增加 `8.8s`，因此 v72 当时从“增强候选”升级为官方通过基线，
 v66 仍为绝对控制组。v74 虽已改变 Attention 共用 helper，但用户随后确认其官方
 **`22750 / 239.387s`** 正常通过，相对 v72 `+88` 分、`+13.387s`，因此当前安全边界
-进一步前移到 v74。v75 起直接改变 Q/K 路径，尚无官方通过证据；v100/v107 的 PAWV
+进一步前移到 v74。v75 起直接改变 Q/K 路径，尚无官方通过证据；v100 的 PAWV
 旧路径仍为官方 WA。官方结果记录见
 [`v74 official pass`](../logs/execution/2026-08-31-v74-official-pass.md)。
+
+**最新官方裁决（2026-08-31 再次修订）**：官方端到端超时限制收紧为 300s，且不再
+限制任何 `A@W` 拟合用法。用户确认 **v98 在最新限制下官方判为超时**（本地 API
+`406.24s` > 300s），官方结果更新为 `timeout`，v98 不再作为提交候选。此前误记的
+v107 timeout 已纠错：**v107 官方结果保持 Attention `wrong answer`（非 timeout，
+与 v100 同类）**，其本地 API `481.04s` > 300s 仅作历史风险提示。更新详情见
+[`v98 官方 timeout`](../logs/execution/2026-08-31-v98-official-timeout.md)。
 
 进一步按任务书复核并构造变长 calibration list 后，已稳定复现 v100/v107 的直接异常：
 B2 PAWV 的 `_build_pawv_metric` 按首个样本长度建立固定 `tokens×tokens` 矩阵，却直接
@@ -40,6 +65,9 @@ mismatch；任务书没有 calibration sample 等长约束，且规定任一运�
 `size 10 must match size 128 at dimension 1`，因此该根因已被确认，而不再只是高置信度推测。见
 [`v100/v107 Attention WA 根因`](../logs/execution/2026-08-31-v100-v107-attention-wa-root-cause.md)。
 修复实现与验证见 [`v126 PAWV 变长修复`](../logs/execution/2026-08-31-v126-pawv-variable-length-fix.md)。
+v4 sampled 的可比结果见 [`v127 sampled`](../logs/execution/2026-08-31-v127-sampled-means-qwen.md)
+和 [`v74 sampled`](../logs/execution/2026-08-31-v74-sampled-means-qwen.md)；统一统计、
+官方锚点拟合和时间校准见 [`local metric calibration`](../logs/execution/2026-08-31-local-metric-calibration.md)。
 
 2026-08-31 已按执行计划完成 E0-C、E1→A6、B1、B2、L1、L2、L3 和 L4a。B1 GQRB margin
 先把 panel 提升到 `293.793700`，B2 PAWV diag-only 再提升到 `293.797301`，L2
@@ -51,7 +79,7 @@ L4a 精确 final-Gram 行级 gate 再提升到 panel `295.239309`、Linear mean
 期间，所有新候选仍以固定 Qwen panel 为门禁。L1 已完成真正的 scale/lv2/lv3/mantissa
 原子写回与合成测试，但五层×七 role 预筛与 L0 逐条持平（`0.523019429222563`），
 因此候选 v105 已归档；v106 是时间 parent，v107/v109/v110 是前一精度 parent，v111
-是前一精度 parent；v115 L6a、v116 L6b、v117 L6c、v118 L6d、v119 C1a、v121 C1b、v124 C1c 与 v125 C1c/max-blocks=8 均通过 full-layer，v125 成为当前 precision-only parent；其 API 超过 420s，下一步转入 C2/C3，不再增加 C1c block budget。
+是前一精度 parent；v115 L6a、v116 L6b、v117 L6c、v118 L6d、v119 C1a、v121 C1b、v124 C1c 与 v125 C1c/max-blocks=8 均通过 full-layer，v125 成为当前 precision-only parent；其 API 超过 300s（按最新官方限制），下一步转入 C2/C3，不再增加 C1c block budget。
 
 ## 当前实现
 
@@ -120,9 +148,10 @@ calibration 使用 train 的 2 个窗口，test 使用 validation 的 4 个不�
 
 五模型 C0 确认报告：[`2026-08-30-c0-b2-pawv-five-model.md`](../logs/evaluations/2026-08-30-c0-b2-pawv-five-model.md)。
 v125 Qwen panel `295.847849`、Linear `0.509760`、Attention `0.842039`、
-API `2653.580s`；该 precision-only parent 暂不满足最终 420s 冻结条件。相对 v124 的增益来自
-C1c `max_blocks=8`，Attention 与 v100/v106/v107 逐位不变；v107 Attention 合约审计未发现
-数值/字段差异，官方 wrong-answer 仍需用单文件平台复测区分资源与隐藏接口问题。
+API `2653.580s`；该 precision-only parent 暂不满足最终 300s 冻结条件。相对 v124 的增益来自
+C1c `max_blocks=8`，Attention 与 v100/v106/v107 逐位不变；v98 的官方结果已在最新
+300s 限制下确认为 timeout，v107 官方保持 Attention WA（用户确认非 timeout），合约
+审计未发现数值/字段差异的分析保留为历史解释。
 gpt2-small/OPT/Pythia 的旧 parent API 分别为
 `196.975s/192.776s/193.423s`，gpt2-medium 为 `492.641s`（仅软 guardrail 时间
 超限，未影响 Qwen 主门禁）。五模型 aggregate panel `263.604453` 仅作泛化诊断。
@@ -138,8 +167,9 @@ Qwen full；Qwen full 是本地精度排序的唯一硬门。OPT/Pythia 不再�
 
 “只用 Qwen 全量测试”可以作为本地 A/B 排序规则，但不能作为官方发布充分条件：发布前仍需
 Attention API smoke、state/shape/compliance 检查，以及至少一次跨模型回归。v107 的官方
-Attention `wrong answer` 已通过本地函数体/状态/输出差分排除明显数值改动，仍需平台同包
-复测确认是否为 `deployment_gram` 资源、超时或隐藏输入契约问题。
+Attention `wrong answer` 已通过本地函数体/状态/输出差分排除明显数值改动，且用户确认非
+timeout（官方 v98 才是最新 300s 限制下的 timeout，二者是两类失败）；WA 直接根因随后由
+官方自测确认是 B2 PAWV 变长 calibration shape mismatch。
 
 ## 外部代码本地复测与最高基准
 
@@ -229,7 +259,7 @@ $$P_{total}=P_L+P_A=295.847849.$$
 | E0-C GALS-C 稀疏 activation（layer-1） | 335.988995 | 0.602878 | 57.41s | 拒绝；解析召回 oracle `1.0`，部署版回退 `0.048096` |
 | A7 量化后权重 Gram `WqᵀWq`（layer-1/full） | 336.562922 / 290.226694 | 0.605174 / 0.487275 | 24.89s / 470.58s | 拒绝；单层正向不迁移且全层超时 |
 | L1 full-hierarchy cross-block Weight-LRH（v105） | 0.523019（五层×七 role screen） | — | 265.87s screen | 拒绝；70 个 fold 候选仅 1 个 cross-fold admitted，最终 0/35 case 改变 parent；未触发 full-layer |
-| L2 expansive-FFN CAT balance（v106） | **294.272633** | **0.503459** | **412.65s** | **采纳；fc_gate +0.013309，较 v100 panel +0.475332，API 仍 <420s** |
+| L2 expansive-FFN CAT balance（v106） | **294.272633** | **0.503459** | **412.65s** | **采纳；fc_gate +0.013309，较 v100 panel +0.475332，API 按当时 420s 限制达标** |
 | E1 progressive full-hierarchy | 290.923906 | 0.490233 | 693.21s | 拒绝，跨层回退且超时 |
 | A2 expansive sparse-row | 292.831952 | 0.497865 | 385.48s | 拒绝 |
 | A3 rowwise block-leverage | 293.250467 | 0.499539 | 384.83s | 拒绝 |
@@ -327,7 +357,7 @@ $$\frac{\Delta g_L}{1-g_L}=\frac{0.3902401950}{0.4902401950}=79.6000\%.$$
     `max_blocks=8`（v125）full-layer 均正向；v125 作为 precision-only 证据，不再增加
     block budget；
 17. 下一步执行 C2 低成本跨模型 guardrail；再执行 C3 的部署权重因子 exact gate、
-    selected-block 稀疏增量 exact gate 与 structured gradient 增量刷新，最后恢复 `<420s`
+    selected-block 稀疏增量 exact gate 与 structured gradient 增量刷新，最后恢复 `<300s`
     提交硬门。C3 完成后才新建表示级计划，验证共享正交 butterfly/Givens frame 与冻结
     activation state 后的完整离散 JDRQ-weight。PAWV rank 属于独立 Attention 队列，
     不插入 Linear 主线。36000 的量化距离和可达性边界见
@@ -353,7 +383,7 @@ L5a 的正式产物为 [`v111-l5a-joint-permutation-qwen-full.json`](../artifact
 两折门控；选中的单一排列与 `D`、signed-Hadamard 同步作用于 W/A。screen Linear
 mean `0.5318869457`，full-layer Linear mean `0.5082983001`、panel `295.482473`，
 较 v110 分别 `+0.0009587723`、`+0.2396930806`；Attention 未变化。API
-`726.094116s`，仍超 420s，仅作为精度 parent 记录，后续统一 C1 压缩。
+`726.094116s`，远超最新 300s 限制，仅作为精度 parent 记录，后续统一 C1 压缩。
 
 L6a 的正式产物为 [`v115-l6a-rank16-qwen-full.json`](../artifacts/real_model_suite/v115-l6a-rank16-qwen-full.json)
 和 [`v115 L6a archive`](../solutions/20260831_v115_l6a-rank16-accepted_score295.680651_time716s/)。
@@ -415,7 +445,7 @@ block 后刷新 proposal gradient，并对同一 block rank list 做两轮 sweep
 为 `0.5333964596`，full-layer Linear `0.5096135327`、panel `295.8112808759`，较 v119
 分别 `+0.0000122773`、`+0.0030693200`。除 `proj` 从 `0.4222010863` 到 `0.4222870273`
 外，其余 Linear role 和 Attention 均保持不变。API `2180.450151s`、wall
-`2212.661980s`，均超过 420s；用户随后确认 v121 官方显示运行超时，见
+`2212.661980s`，远超最新 300s 限制；用户随后确认 v121 官方显示运行超时，见
 [`v121 官方 timeout`](../logs/execution/2026-08-31-v121-official-timeout.md)。该结果不改变
 本地精度消融，但把 v121 明确排除出提交候选；它只在 accuracy-first 研究链中接替过
 精度 parent。
@@ -434,15 +464,16 @@ C1c `max_blocks=8` 的正式产物为 [`v125-c1c-block8-qwen-full.json`](../arti
 和 [`v125 C1c archive`](../solutions/20260831_v125_c1c-block8-precision-only_score295.847849_time2654s/)。
 v125 screen `0.53358298`，full-layer Linear `0.5097598050`、panel `295.8478489516`，
 较 v124 分别 `+0.0001104818`、`+0.0276204413`；7 个 Linear role 均不降，Attention
-`0.8420394885` 逐位不变。API `2653.580314s`、wall `2686.541758s`，远超 420s，
+`0.8420394885` 逐位不变。API `2653.580314s`、wall `2686.541758s`，远超 300s，
 因此只接受为 precision-only 证据，C1c 队列停止，不再增加 block budget。
 
 v107/v106 Attention 合约审计见 [`2026-08-31-v107-attention-contract-audit.md`](../logs/execution/2026-08-31-v107-attention-contract-audit.md)：
 v100/v106/v107/v107b1 的 Attention 函数体 SHA 和 Qwen Attention case 输出逐位相同，
-独立 5 场景×3 模式合约矩阵与 30 个 Q/K/V 状态校验均为 0 failures；但用户随后确认
-不含完整 `deployment_gram` 的 v100 也得到官方 Attention WA，且不是 timeout。这证明
-本地矩阵缺少官方失败输入；v72、v74 的连续官方通过把安全边界前移到 v74；不再以
-`deployment_gram` 解释 v107 WA，也不再推荐 v100/v106/v107 后代提交。
+独立 5 场景×3 模式合约矩阵与 30 个 Q/K/V 状态校验均为 0 failures；用户随后确认
+不含完整 `deployment_gram` 的 v100 也得到官方 Attention WA，且不是 timeout；v107 同为
+Attention WA（用户确认非 timeout）。这些发现证明本地矩阵缺少官方失败
+输入；v72、v74 的连续官方通过把安全边界前移到 v74，
+不再推荐 v100/v106/v107 后代提交。
 
 L6e checkpoint 见 [`2026-08-31-l6e-crossblock-checkpoint.md`](../logs/execution/2026-08-31-l6e-crossblock-checkpoint.md)：
 在真实 layer-23 `proj(d=4864)` 的 4 个 test window 中，结构化 proposal 共 2048 个
@@ -497,22 +528,25 @@ L0 的正式产物为 [`l0-linear-ceiling-qwen.json`](../artifacts/oracle_dashbo
 
 旧版 active 计划已经归档；官方提交改为接口恢复时触发的外部事件，不阻塞当前本地执行。
 
-## 时间与合规
+## 时间与合规（v5）
 
-- 六个 API 累计：v125 calibration+dynamic `2653.580314 s`；本地 wall
-  `2686.541758 s`。探索阶段只记录时间；C3 再以 `<420s` 作为提交门禁。
+- v127 sampled（224/32）六 API 累计 `151.136s`，本地 wall `161.840s`；同一
+  sample plan 的 v74 为 `218.619s / 229.485s`。v74 当前 CPU full 复测为
+  `658.877s / 690.600s`，但官方实际 `239.387s`，证明本地 `<300s` 不能作为
+  官方判定。v125 full `2653.580s` 保留为 legacy。
 - 调用次数：weight calibration 168；attention calibration 24；dynamic activation
   672；Q/K/V 各 96。
 - `activation_state` 只包含 BOAT 逆缩放、静态 Gram、Attention GQRB 正交 mixing、
-  PAWV 的静态 token-row diagonal 与旋转整数配置/符号；输出监督只用于离线
-  Attention 候选和权重侧选择，不进入在线 `Q(A)`。
+  PAWV 的静态 token-row diagonal 与旋转整数配置/符号；官方 2026-08-31 修订已放开
+  `A@W` 信息源限制，候选可按需使用输出或残差优化 `Q(W)` / `Q(A)`。
 - 当前源码 SHA256（规范 LF 内容）：
-  `47e2e3ab76c6deaac8de47bbcbd8f689cf5989dc8ff9e9081a887ec89e819b08`。
+  `F15E112C7E832D019EE83D707ACD9D72FEF121A306E4CC3B50DBBC2CBB574924`。
 - 发布前检查：C1c synthetic/reference-equivalence、合规/精度门控和 v107 Attention
   contract audit 均通过；`guard_solution_file` 为 `violations=[]`、`static_violations=[]`。
-  v125 full-layer `official_flow_valid=false`，原因是 API `2653.580314s` 超过官方
-  `420s` 时间门槛；官方 v100 与 v107 均已确认 Attention `wrong answer`，且用户明确
-  v100 不是 timeout。后续官方候选以 v74 的完整 Attention 可达闭包为回归基线。
+  v127 的 `local_result_valid=true` 仅表示本地结果完整、finite、接口合法，不表示官方
+  通过；官方 v100/v107 均确认 Attention `wrong answer`（非 timeout），官方 v98 已在最新
+  300s 限制下确认为 timeout。后续官方候选以 v74 的完整 Attention 可达闭包为回归基线，
+  且把 end-to-end `<300s` 作为提交硬门。
 - 当前根定向回归命令（`test_global_activation_lrh.py`、`test_linear_compliance_guard.py`、
   `test_l5a_joint_transform.py`、`test_expansive_cat.py`、`test_linear_error_decomposition.py`）
   为 **38 passed / 6.83s**。另跑 `test_release_candidate.py` 得到 **31 passed、16 failed**；

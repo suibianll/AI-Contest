@@ -82,4 +82,4 @@ exploration queue. The next active plan must keep v118 as its precision parent a
 1. vectorized/sparse structured coordinate proposals with identical exact-gate semantics;
 2. elimination or low-rank replacement of the pre-existing dense deployment-Gram state;
 3. cross-fold and multi-model validation of the `proj` gain before any broader route; and
-4. only after those checks, the C1 `<420s` runtime compression gate.
+4. only after those checks, the C1 `<300s` runtime compression gate.

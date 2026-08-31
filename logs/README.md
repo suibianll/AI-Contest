@@ -31,6 +31,12 @@ native `369.527269`；按固定 250/200 panel 投影后，最高同口径本地�
 v066/C66，官方仍比外部低 `1596` 分；外部 `24153 / 239s` 是用户提供的官方
 参考，不由本地代理推导。
 
+> **2026-08-31 再次修订**：官方端到端限制收紧为 `300s`（5 分钟），且不再限制任何
+> `A@W` 拟合用法；用户确认 **v98 官方判为 timeout**（本地 API `406.24s`），见
+> [`execution/2026-08-31-v98-official-timeout.md`](execution/2026-08-31-v98-official-timeout.md)。
+> v107 并非 timeout，官方结果保持 Attention `wrong answer`（非 timeout）。
+> 上方 420s 表述仅记录 08-29 修订时的口径。
+
 ## 评测器参数约束
 
 `evaluator/real_model_suite.py` 的 `--report` **没有默认值且为必填**，

@@ -4,6 +4,9 @@
 > **已被后续官方结果取代：** 用户于 2026-08-31 确认 v100 同样出现 Attention
 > `wrong answer`，且不是 timeout。本文件保留当时的选择依据，不再产生提交建议。
 > 新裁决见 [`v100 官方 WA 边界审计`](2026-08-31-v100-official-wa-boundary-audit.md)。
+> 2026-08-31 结果纠错：**v107 并非 timeout**，其官方结果仍为 Attention `wrong answer`
+> （与 v100 同类）；真正在新限制下官方判为 timeout 的是 v98（B1 GQRB margin 版），
+> 见 [`v98 官方 timeout`](2026-08-31-v98-official-timeout.md)。
 
 原结论：官方复测首选 `v100`，保留 `v066` 作为已确认通过的控制组；不提交 v107。
 
@@ -17,19 +20,19 @@
 - v107 与 v31、v51、归档外部实现使用同一 Qwen cache、同一 NVFP4 codec 时，state、五字段参数、shape、CPU/finite 校验均为 0 failures；v107 Attention MSE mean `0.00169248`，低于 v31/v51 的 `0.00382519`。
 - 因此没有证据支持“v107 Attention 数值输出本身损坏”。
 
-v107 相对 v106 唯一关键新增是 Linear Global Activation-LRH 及完整 `deployment_gram=W_q^T W_q`。如果官方 runner 同时保留多个 Linear state，Qwen 形状累计额外状态约 2.6 GiB；v107 本地 API `481.04s` 也超过 420s。资源耗尽或超时发生在 Attention 阶段前后、再被平台归类为 `atten wrong answer`，是当前首要解释。
+v107 相对 v106 唯一关键新增是 Linear Global Activation-LRH 及完整 `deployment_gram=W_q^T W_q`。如果官方 runner 同时保留多个 Linear state，Qwen 形状累计额外状态约 2.6 GiB；v107 本地 API `481.04s` 也超过最新官方 `300s` 限制（2026-08-31 修订），但官方实际判定仍为 Attention `wrong answer`（用户确认非 timeout）；本地超时风险仅作历史解释保留。
 
 隐藏输入 shape、提交包与归档源不一致仍不能完全排除，但优先级低于资源原因。
 
 ## 2. 候选比较
 
-| 候选 | Qwen full panel | API | 对 420s 余量 | `deployment_gram` | 官方证据 | 裁决 |
+| 候选 | Qwen full panel | API | 对 300s 余量 | `deployment_gram` | 官方证据 | 裁决 |
 |---|---:|---:|---:|---|---|---|
 | v66 | 旧代理 Qwen `350.152420` | 旧代理 `151.91s` | 大 | 无 | `22557 / 217.2s` 已通过 | 官方控制组 |
-| clean stable parent | `293.755106` | `382.15s` | `37.85s` | 无 | 未提交 | 更保守备用 |
-| **v100** | **`293.797301`** | **`392.42s`** | **`27.58s`** | **无** | 未提交；合约通过 | **首选** |
-| v106 | `294.272633` | `412.65s` | `7.35s` | 无 | 未提交；合约通过 | 分数更高但时间风险偏大 |
-| v107 | `295.157057` | `481.04s` | `-61.04s` | 约 2.6 GiB 累计风险 | 官方 Attention WA | 不提交 |
+| clean stable parent | `293.755106` | `382.15s` | `-82.15s` | 无 | 未提交 | 更保守备用 |
+| **v100** | **`293.797301`** | **`392.42s`** | **`-92.42s`** | **无** | 未提交；合约通过 | **首选** |
+| v106 | `294.272633` | `412.65s` | `-112.65s` | 无 | 未提交；合约通过 | 分数更高但时间风险偏大 |
+| v107 | `295.157057` | `481.04s` | `-181.04s` | 约 2.6 GiB 累计风险 | 官方 Attention WA（非 timeout） | 不提交 |
 
 v100 相比 v106 只损失 `0.475332` panel（约 `0.16%`），换取 `20.23s` API 余量；相比 clean stable parent 只多 `0.042195` panel、增加 `10.27s`。按项目当前以六 API 累计时间为门禁的口径，v100 是精度与通过概率的最佳折中。
 

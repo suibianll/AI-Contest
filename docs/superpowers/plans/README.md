@@ -21,4 +21,4 @@ L6 计划，均已移至 [`../archive/plans/`](../archive/plans/)。它们是历
 
 当前数据数字发生变化时，应同时更新根 README、`solutions/README.md`、当前状态报告和执行日志的日期、配置、分数、时间与 SHA。L5 计划已完成并归档为 [`2026-08-31-hif4-active-l5-structural-optimization-plan-completed.md`](../archive/plans/2026-08-31-hif4-active-l5-structural-optimization-plan-completed.md)，不得再从中读取下一步。
 
-官方边界保持不变：离线校准可以用 `A@W` 优化离线 `Q(W)`，但不得用输出或残差选择在线 `Q(A)`；最终官方时间严格小于 420 秒。探索阶段的 layer-1、oracle 和超时实验只能筛选方向，不能替代完整部署门禁。
+官方边界（2026-08-31 修订）：官方不再限制任何 `A@W` 拟合用法，离线校准与在线激活量化均可自由用 `A@W`、输出或残差优化 `Q(W)`/`Q(A)`；唯一硬约束是端到端运行时间严格小于 `300s`。v98 已在该限制下官方判为 timeout，见 [`2026-08-31-v98-official-timeout.md`](../../../logs/execution/2026-08-31-v98-official-timeout.md)；v107 官方保持 Attention `wrong answer`（非 timeout）。探索阶段的 layer-1、oracle 和超时实验只能筛选方向，不能替代完整部署门禁。

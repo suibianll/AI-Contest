@@ -27,9 +27,11 @@ Chinese version: [README.md](README.md)
   (the local benchmark). The five-model sum `1085.743597` is diagnostic only and
   cannot be converted to the official score.
 - Historical v024 scored `16043 / 173.8s`, but its Linear output-supervision
-  path used output information for activation-side selection. That
-  `A@W -> Q(A)` use remains non-compliant, so it is not a compliant parent for
-  new work.
+  path used output information for activation-side selection. Under the rules
+  in force then, that `A@W -> Q(A)` use was non-compliant, so it was not used as
+  a parent. **The official evaluation (revised 2026-08-31) removed every `A@W`
+  fitting restriction and now constrains only end-to-end runtime**; old
+  compliance rulings no longer apply as current constraints.
 - The root `solution.py` is v126: the v125 C1c structured-rank-8 / `max_blocks=8` + C1b structured-gradient-refresh (two-sweep) precision-only path
   on top of v118 L6d, v117 full `G_64` hierarchy, v116 L6b wide rank-4, v115 L6a
   rank-16, v111 block-local permutation, v110 final-Gram GALS, and the B1/B2 path.
@@ -38,7 +40,7 @@ Chinese version: [README.md](README.md)
   Qwen shaped panel is `295.847849`, Linear mean is `0.5097598050`, and formal API
   time is `2653.580314s`
   (accuracy-only evidence; runtime is invalid until C3 compresses below
-  420s); v126 has not inherited those values without a rerun. It now groups
+  300s); v126 has not inherited those values without a rerun. It now groups
   PAWV diagonals by sequence length, performs exact-length lookup with fallback,
   and removes the unused full `P.T@P` eigendecomposition. The official
   `[10,128,512,1024,1024]` length-pattern regression passes. See the [current status
@@ -135,29 +137,31 @@ secondary diagnostic line; the five-model sum is never a ranking benchmark.
 | v074 / C75 | **22750** | **239.387s** | best local official result; Attention passed |
 | `youxilee/hif4` | **24153** | **239s** | external official reference; local highest Qwen native `369.527269`, panel `250.327102`; five-model `1085.743597` is diagnostic only |
 
-The revised official runtime limit is **7 minutes (420 seconds)**. Legacy values
-such as `14613 / 159.2s` remain historical records from the old panel.
+The official runtime limit has been revised to **5 minutes (300 seconds)**
+(2026-08-31); the passing versions in the table were evaluated under the
+former 420s ceiling, and their times remain below the new 300s limit. Legacy
+values such as `14613 / 159.2s` remain historical records from the old panel.
 
 ## Hard competition constraints
 
-1. **Offline calibration may use `A@W` to optimize an offline quantizer,
-   especially `Q(W)`.** It must not use `A@W`, its quantized output, or an
-   output residual to fit, select, or infer the online activation quantizer
-   `Q(A)`, nor store that information in `activation_state`. The prohibited
-   behavior is output supervision of `Q(A)`, not every offline weight objective
-   that happens to form `A@W`.
+1. **The official evaluation (revised 2026-08-31) imposes no `A@W` fitting
+   restrictions of any kind.** Both offline
+   `hif4_calibration_and_quantize_weight` and online activation quantization
+   may freely use `A@W`, outputs, or residuals to optimize `Q(W)` / `Q(A)`;
+   there is no information-source restriction. The only hard constraint is the
+   end-to-end runtime.
 2. Produce legal HiF4 fields and keep the API, state, shape, dtype, and device
    behavior valid.
-3. Keep the final official evaluation strictly below `420s` (7 minutes).
+3. Keep the final official evaluation strictly below `300s` (5 minutes).
 4. Do not tune from holdout or official-score feedback.
 
 There are no fixed gain, coverage, beam, per-component non-regression, or
 intermediate runtime gates beyond these rules. Diagnostic development runs may
-exceed 420 seconds. Once an accuracy signal is found, optimize the algorithm
+exceed 300 seconds. Once an accuracy signal is found, optimize the algorithm
 and implementation to fit the final runtime limit.
 
 For the current accuracy-first phase, runtime is recorded but is not an
-acceptance gate. The `<420s` requirement becomes a hard gate again only when a
+acceptance gate. The `<300s` requirement becomes a hard gate again only when a
 validated mechanism enters submission compression.
 
 ## Current algorithm
@@ -421,10 +425,9 @@ historical sources under `solutions/`.
    Standard NVFP4/HiF4 dequantization, HiF4 parameter validation, and state
    validation are evaluator-owned. A candidate only needs the six official
    APIs. Evaluator-side `A@W` is formed only after the candidate has returned
-   its quantized result and is never passed back as calibration data. A
-   candidate may form its own `A@W` inside offline
-   `hif4_calibration_and_quantize_weight` for `Q(W)` optimization, but it must
-   not route that result into `activation_state` or online `Q(A)` selection.
+   its quantized result and is never passed back as calibration data. Under the
+   2026-08-31 revisions, the candidate may freely use `A@W` to optimize both
+   `Q(W)` and `Q(A)`; the official side no longer restricts information sources.
 
    The task document does not include the source of the official "standard
    HiF4 quantizer." The current independent codec is the historically audited
@@ -435,8 +438,8 @@ historical sources under `solutions/`.
 6. **Check the runtime constraint**
 
    The primary model's complete six-API run must have
-   `official_api_total_seconds` strictly below the official `420s` limit;
-   exactly 420 seconds fails. Other model proxies are soft guardrails and are
+   `official_api_total_seconds` strictly below the official `300s` limit;
+   exactly 300 seconds fails. Other model proxies are soft guardrails and are
    not added to the submission runtime. Cache reads remove model-forward time
    only and cannot hide a slow candidate. Confirm final end-to-end time with
    the official evaluator.

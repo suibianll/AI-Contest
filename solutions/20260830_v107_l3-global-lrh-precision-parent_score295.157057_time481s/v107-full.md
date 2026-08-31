@@ -44,3 +44,14 @@
 4. `synthetic_attention_eval.py` 不由本套件调用；它只能做接口/性质测试，不能用于候选排名。
 5. `cache_mode=read` 时本次结果只来自已保存的模型前向快照，不加载 tokenizer/model，也不读取网络；`cache_mode=write` 才会刷新快照。
 6. 本地时间按每个模型代理的六个正式 API 调用累计；主模型必须严格小于 420 秒，多模型代理时间不相加。
+
+---
+
+> **2026-08-31 归档修复批注**：本目录 `solution.py` 携带 B2 PAWV 变长 calibration bug
+> （官方长度 `[10,128,512,1024,1024]` 触发 `[10,10] += [128,128]` RuntimeError，是 v107
+> 官方 Attention WA 的直接根因），已在原文件上按 v127 逻辑修复（按长度分组的 keyed
+> diagonal），并通过官方长度形状复现。修复后 v5 `sampled-means-v1` 复评：
+> Linear `0.512967`、Attention `0.828395`、Local API `241.506s`。官方分类不变
+> （Attention `wrong answer`，非 timeout）。见
+> [`pawv 归档修复与 v5 复评`](../../logs/execution/2026-08-31-pawv-archive-fix-and-v5-reeval.md) 与
+> [`v107 修复复评`](../../logs/execution/2026-08-31-v107-pawv-fixed-sampled.md)。
