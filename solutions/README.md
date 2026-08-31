@@ -38,7 +38,8 @@ row gate + L4b final-Gram GALS + B2 PAWV diag-only + B1 GQRB）；C0 五模型�
 
 固定配置为 Qwen2.5-0.5B 全 24 层、`seq=128`、`calib=2`、`test=4`、`amax6`、CPU、
 缓存只读。完整报告见 [`v125-c1c-block8-qwen-full.md`](../logs/execution/2026-08-31-v125-c1c-block8-qwen-full.md)，
-v107 Attention 合约审计见 [`2026-08-31-v107-attention-contract-audit.md`](../logs/execution/2026-08-31-v107-attention-contract-audit.md)。
+v107 Attention 合约审计见 [`2026-08-31-v107-attention-contract-audit.md`](../logs/execution/2026-08-31-v107-attention-contract-audit.md)，
+以及 v31/v51/外部/v107 同输入逐输出差分见 [`2026-08-31-v107-v31-v51-external-attention-output-diff.md`](../logs/execution/2026-08-31-v107-v31-v51-external-attention-output-diff.md)。
 五模型确认见 [`2026-08-30-c0-b2-pawv-five-model.md`](../logs/evaluations/2026-08-30-c0-b2-pawv-five-model.md)。
 `official_score` 和 `official_time` 尚无值；295.847849 是本地 Qwen shaped panel，
 不能换算成官方分数。相对旧 C86 归档，panel 提升 `+27.268726`（`+10.21%`），正式

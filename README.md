@@ -60,6 +60,12 @@
   其他模型只作软 guardrail。`official_flow_total` 原始逐 case 求和仍保留作诊断，
   但不再按模型层数直接累加主排序。评测仍不能模拟官方隐藏数据分布，只用于
   A/B 排序。
+- v107 官方 `Attention / wrong answer` 已按同一 Qwen cache、同一 NVFP4 codec 与同一
+  API 和 v31、v51、归档外部 v002 做逐输出对照；四版本均无 state/shape/finite/五字段
+  契约失败，v107 的 Attention MSE mean `0.00169248` 反而低于 v31/v51 的 `0.00382519`
+  和外部 v002 的 `0.00529873`。详细数字见
+  [`v107 Attention 输出差分日志`](logs/execution/2026-08-31-v107-v31-v51-external-attention-output-diff.md)。
+  该外部数字仅代表本地归档 v002，不等同于最新 v2.7 源码；官方隐藏输入仍需同包复测。
 
 本地时间和本地分数仅用于候选比较，不冒充官方结果。任何官方结果都应与
 实际提交 SHA、分数和时间一起归档。

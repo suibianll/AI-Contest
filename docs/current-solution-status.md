@@ -17,6 +17,8 @@ Qwen shaped panel 为 **295.847849**，Linear mean **0.5097598050**，正式 API
 
 当前唯一活跃计划是 [`2026-08-31-hif4-active-c1-structured-linear-plan.md`](superpowers/plans/2026-08-31-hif4-active-c1-structured-linear-plan.md)；L6、C1a、C1b、C1c 已完成，下一步为 C2 低成本跨模型 guardrail 与 C3 state/time 压缩；归档候选的写回、目标错位和源码缺失审计见 [`archive-implementation-audit.md`](archive-implementation-audit.md)，v107 Attention 合约对照见 [`2026-08-31-v107-attention-contract-audit.md`](../logs/execution/2026-08-31-v107-attention-contract-audit.md)。
 
+针对官方 v107 `Attention / wrong answer` 的同输入对照已完成：[`v107-v31-v51-external-attention-output-diff.md`](../logs/execution/2026-08-31-v107-v31-v51-external-attention-output-diff.md)。在 24 层 Qwen cache、2 calibration、4 test windows、同一 NVFP4 codec 下，v31/v51/归档外部 v002/v107 的 state、五字段 API、shape、CPU/finite 检查均为 0 failures（每版本 72 states、96 batches、288 个 Q/K/V 输出）；Attention MSE mean 分别为 `0.00382519 / 0.00382519 / 0.00529873 / 0.00169248`，v107 反而最低。v31 与 v51 24/24 层逐位相同，v31 与外部 v002 12/24 层相同，v107 因有意新增 Linear 状态而与 v31 0/24 层相同；目前没有证据表明 v107 Attention 输出契约损坏。外部逐输出数字代表本地归档 v002，不等同于最新 v2.7 源码；官方隐藏输入仍需 v106/v107 同包复测。
+
 2026-08-31 已按执行计划完成 E0-C、E1→A6、B1、B2、L1、L2、L3 和 L4a。B1 GQRB margin
 先把 panel 提升到 `293.793700`，B2 PAWV diag-only 再提升到 `293.797301`，L2
 expansive-FFN CAT balance 将 panel 提升到 `294.272633`、Linear mean 提升到
