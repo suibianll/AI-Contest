@@ -8,7 +8,7 @@
 
 ## 1. 当前根：算法构成与效果
 
-根 `solution.py`（规范 LF SHA `c9b419717e38bcec69d907d1cab6638409f1fa9a3072892dde9494ef9da3cc8e`）为 clean 单一路径，加入 C1a structured proposal vectorization、C1b structured gradient refresh×2、C1c structured rank-8 / `max_blocks=8`、L6d structured block-circulant factor、L6c full `G_64` hierarchy coordinate sweep、L6b wide rank-4、L6a rank-16 global LRH、L5a block-local permutation、v106 expansive-FFN CAT balance、B1 GQRB、B2 PAWV diag-only、v107 Gram-gated Global Activation-LRH、v109 L4a final deployed-Gram row gate 和 v110 L4b final-Gram GALS。当前精度最高版本为 v125（precision-only）；v124、v121、v119 保留为前一 precision/time parent，v106 仍是历史时间 parent。E0-C 的两个 GALS 稀疏变体（v102/v103）、A7 量化后权重 Gram（v104）、L1 v105 full-hierarchy LRH、C1b v120 以及 C1c v122/v123 均已归档，详见 [`归档实现审计`](archive-implementation-audit.md)。
+根 `solution.py`（规范 LF SHA `47e2e3ab76c6deaac8de47bbcbd8f689cf5989dc8ff9e9081a887ec89e819b08`）为 v126：在 v125 clean 单一路径上修复 B2 PAWV 变长 calibration，按 `seq_len` 分组 diagonal，并删除未使用的 full `P^TP/eigh`。当前完整精度最高的已测版本仍为 v125（precision-only）；v126 通过变长合成/API 回归但尚未重跑 full-layer。其余 C1/L6/L5/Linear 组件保持不变，详见 [`归档实现审计`](archive-implementation-audit.md)。
 
 | 组件 | 内容 |
 |---|---|
@@ -72,7 +72,8 @@ six-API time      2653.580314 s wall time       2686.541758 s   （探索阶段�
 | v031 / C39-FW | 21864 | 161.3s |
 | v034 / C41b | 21864 | 159.4s |
 | v051 / C47b | 22451 | 234s |
-| **v066 / C66** | **22557** | **217.2s** |
+| v066 / C66 | 22557 | 217.2s |
+| **v072 / C74** | **22662** | **226s** |
 | 外部 youxilee/hif4 v2.7 | **24153** | 239s |
 
 旧口径（不可直接比较）：v024/C21 `16043`、v025/C21-C `14437`、v030/C38 `14092`、v032/C40 `14432`。
@@ -121,7 +122,8 @@ six-API time      2653.580314 s wall time       2686.541758 s   （探索阶段�
 | v069 / C69 | 激活二次项 Gram-8 覆盖上限 12% | 采纳（+0.0038） |
 | v076 / C77 | all-shape gram64 激活精修 | 采纳（+1.22） |
 | v080 / C80、v084 / C84 | gram64 全覆盖、5 轮坐标扫描 | 采纳（+5.31、+1.92） |
-| v066 / C66 | 动态激活损失覆盖目标 1.0 | **官方 22557**（本地归档冠军） |
+| v066 / C66 | 动态激活损失覆盖目标 1.0 | 官方 22557（前一控制组） |
+| **v072 / C74** | **JDRQ fixed-Q(A) hierarchy residual** | **官方 22662（当前本地归档冠军）** |
 | v104 / A7 | 用量化后权重 `WqᵀWq` 替换浮点 `WᵀW` | **拒绝**：layer-1 `+0.525831`，full `−3.570607` 且 API `470.58s` |
 
 ### 3.4 坐标变换 / CAT 系

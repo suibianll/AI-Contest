@@ -1,7 +1,7 @@
 # 归档算法实现与可复现性审计
 
 > 审计日期：2026-08-31
-> 范围：`solutions/` 下 v000–v125 候选（排除工具目录 `.mimosa`）、`logs/execution/`、当前根 `solution.py` 以及所有历史计划。
+> 范围：`solutions/` 下 v000–v126 候选（排除工具目录 `.mimosa`）、`logs/execution/`、当前根 `solution.py` 以及所有历史计划。
 > 结论性质：这是实现审计和实验可复现性审计，不是官方成绩承诺。
 
 ## 1. 审计口径
@@ -22,11 +22,11 @@ P = 250 g_L + 200 g_A,
 
 ## 2. 当前根与已确认效果
 
-根目录 `solution.py` 是 v125 C1c rank-8 / `max_blocks=8` + v121 C1b structured gradient refresh×2 + v119 C1a structured proposal vectorization + v118 L6d structured block-circulant factor + v117 L6c full `G_64` hierarchy coordinate sweep + v116 L6b wide rank-4 cross-block factor + v115 L6a rank-16 global-LRH + v111 L5a block-local permutation + expansive-FFN CAT balance + B2 PAWV **diag-only** + B1 GQRB + Global Activation-LRH Gram gate + L4a final deployed-Gram row gate + L4b final-Gram GALS 路径；v101 是此前 v100 的五模型确认。当前规范 LF SHA256：
+根目录 `solution.py` 是 v126：在 v125 全部 Linear/Attention 机制上修复 B2 PAWV 的变长 calibration，以长度字符串分组 diagonal，校准与动态 V 精确匹配当前行数，未命中回退；同时删除未使用 low-rank 时仍执行的 full `P^TP/eigh`。当前规范 LF SHA256：
 
-`c9b419717e38bcec69d907d1cab6638409f1fa9a3072892dde9494ef9da3cc8e`
+`47e2e3ab76c6deaac8de47bbcbd8f689cf5989dc8ff9e9081a887ec89e819b08`
 
-| 指标 | 当前根 v125（precision-only parent） |
+| 指标 | v125 已测 precision parent；v126 未重跑 full |
 |---|---:|
 | Qwen Linear mean | 0.509760 |
 | Qwen Attention mean | 0.842039 |
@@ -147,6 +147,7 @@ v109 已归档为当前精度 parent；API `517.285773s` 只作为探索期时�
 
 - v031 目录名仍为 `score14613_time159.2s`，但修订官方口径为 `21864 / 161.3s`。
 - v066 目录名为 `scoreNA_timeNA`，但修订官方口径为 `22557 / 217.2s`。
+- v072 目录名仍为 `scoreNA_timeNA`，但用户最新确认官方为 `22662 / 226s`。
 
 这不是算法实现 bug，但容易让脚本或读者误把旧目录名当成最终成绩。后续不改写不可变目录，统一在 `solutions/README.md` 和审计表中以 canonical result 字段为准。
 
@@ -177,7 +178,7 @@ v109 已归档为当前精度 parent；API `517.285773s` 只作为探索期时�
 | v124 C1c structured rank-8 | screen `0.53343639`；full panel `295.820229`、Linear `0.509649`，较 v121 `+0.008948`；26 项核心测试/compliance 通过，API `2323.911s` 超时但 accuracy-first 接受。 |
 | v125 C1c rank-8 / max-blocks-8 | screen `0.53358298`；full panel `295.847849`、Linear `0.509760`，较 v124 `+0.027620`；Attention `0.842039` 逐位不变；API `2653.580s`，仅作 precision-only 证据，runtime invalid。 |
 
-最近候选的静态/运行时 Linear 合规扫描均为 `violations=0, static=0`；本次没有发现把 `A@W` 输出监督写入在线 `Q(A)` 的新违规。v107 Attention 合约专项审计（见 [`2026-08-31-v107-attention-contract-audit.md`](../logs/execution/2026-08-31-v107-attention-contract-audit.md)）显示 v100/v106/v107/v107b1 的 Attention 函数体 SHA、随机 MHA/GQA 状态和 Qwen 历史 full Attention 输出均逐位一致，独立 5 场景×3 模式合规矩阵及 30 个 Q/K/V 状态校验均 0 failures。进一步的 v31/v51/外部/v107 同输入逐输出对照（见 [`2026-08-31-v107-v31-v51-external-attention-output-diff.md`](../logs/execution/2026-08-31-v107-v31-v51-external-attention-output-diff.md)）在 24 层×4 test windows 上对四个候选均得到 0 state/contract/shape/finite failures，且 v107 Attention MSE mean `0.00169248` 低于 v31/v51 `0.00382519` 和归档外部 v002 `0.00529873`。后续用户确认不含完整 `deployment_gram` 的 v100 也为官方 Attention WA，且不是 timeout，因此资源/时间不再是首要解释；本地合约矩阵被证明没有覆盖官方失败输入。新的边界审计把提交安全线前移到 Attention 完整调用闭包与官方通过 v66 语义一致的 v72，详见 [`v100 官方 WA 边界审计`](../logs/execution/2026-08-31-v100-official-wa-boundary-audit.md)。合规通过不等于官方通过，二者分开记录。
+最近候选的静态/运行时 Linear 合规扫描均为 `violations=0, static=0`；本次没有发现把 `A@W` 输出监督写入在线 `Q(A)` 的新违规。v107 Attention 合约专项审计（见 [`2026-08-31-v107-attention-contract-audit.md`](../logs/execution/2026-08-31-v107-attention-contract-audit.md)）曾在固定 `seq=128` 下通过，但官方变长 mini sample 已确认 v100/v107 的 `_build_pawv_metric` 会发生 shape mismatch。v72 随后以 `22662 / 226s` 官方通过，确认 v66/v72 Attention 闭包是安全边界。v126 已按长度分组修复 PAWV，并通过 `[10,128,512,1024,1024]` 完整公开 calibration API；合规、本地 smoke 和官方通过仍分开记录。
 
 ## 5. 已实现、已验证、未验证的方向矩阵
 
@@ -201,7 +202,7 @@ v109 已归档为当前精度 parent；API `517.285773s` 只作为探索期时�
 
 ## 7. 审计后的优先级
 
-1. 官方接口恢复后，先提交仍低于 420s 的 v106 时间 parent 做接口 smoke；精度提交候选为 v125，但必须先通过 C3 压缩或证明平台资源可承受，再获得第一个真实兑换率锚点。
+1. 正式提交线从已通过的 v72 `22662 / 226s` 出发，只移植 Linear 变化并冻结其 Attention 闭包；v125/v126 必须先通过 C3 压缩与完整复测，不能直接提交。
 2. L1 的 v105 corrected full-hierarchy LRH 已完成并拒绝；不再扩大其自由度。
 3. L3 v107、L4a v109、L4b v110、L5a v111、L6a v115、L6b v116、L6c v117、L6d v118、C1a v119、C1b v121、C1c v124/v125 均已完成并产生精度/time parent；v120、v122、v123、L5b/v112、
    L5c/v113、L5d/v114 已按 screen 归档拒绝，L5e 已完成可达性 checkpoint。

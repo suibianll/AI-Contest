@@ -3,14 +3,23 @@
 > 状态：**ACTIVE**
 > 建立日期：2026-08-31
 > 适用根：`D:/工作内容/AI竞赛/solution.py`
-> 当前精度 parent：v125 C1c structured rank-8 / max-blocks-8 + C1b refresh（sweep2）；
+> 当前根：v126（v125 + PAWV 变长修复）；当前已测精度 parent 仍为 v125
+> C1c structured rank-8 / max-blocks-8 + C1b refresh（sweep2）；
 > 当前本地时间 parent 仍为 v106（`<420s`），但它与 v100/v107 共用的 clean Attention
 > 路径没有官方通过证据；用户确认 v100 与 v107 均为 Attention WA，且 v100 不是 timeout。
-> 官方增强候选改为 v72（Attention 完整调用闭包与官方通过 v66 语义一致），保底为 v66。
-> 根 `solution.py` 规范 LF SHA256：`c9b419717e38bcec69d907d1cab6638409f1fa9a3072892dde9494ef9da3cc8e`
+> 官方通过基线已更新为 v72：`22662 / 226s`，Attention 完整调用闭包与 v66 语义一致；
+> v66 `22557 / 217.2s` 保留为控制组。
+> 根 `solution.py` 规范 LF SHA256：`47e2e3ab76c6deaac8de47bbcbd8f689cf5989dc8ff9e9081a887ec89e819b08`
 > 主目标：保持 v125（继承 v119）的完整部署 `G_q` exact gate 语义，继续验证 Qwen full-layer
 > `linear_mean`；同时把结构化 proposal 的原型实现压缩为可审计的 C1 路径。Attention
 > 只作回归检查，不在本计划中扩展 PAWV。
+
+> 2026-08-31 官方反馈 checkpoint：官方 mini sample 的 calibration 长度为
+> `[10,128,512,1024,1024]`，确认 v100/v107 的 B2 PAWV 在 `_build_pawv_metric`
+> 以固定 `[10,10]` 累加 `[128,128]` 时崩溃。v126 已按长度分组 diagonal，并让
+> calibration/dynamic V 精确查找当前长度、未命中回退；官方长度模式回归通过。
+> 正式 Linear 提交候选仍必须以已官方通过的 v72 Attention 闭包为安全基线，v126
+> 的修复作为 PAWV 研究实现，不能在未完成时限与官方复测前取代 v72。
 
 ## 1. 唯一执行规则
 
@@ -57,7 +66,7 @@ JSON/日志和官方规则；`docs/superpowers/archive/plans/` 只作历史证�
 | Qwen panel | `295.8478489516` |
 | native total | `423.3943798775` |
 | API time | `2653.580314s`（runtime invalid） |
-| LF SHA | `c9b419717e38bcec69d907d1cab6638409f1fa9a3072892dde9494ef9da3cc8e` |
+| v125 measured-source LF SHA | `c9b419717e38bcec69d907d1cab6638409f1fa9a3072892dde9494ef9da3cc8e` |
 
 到 `linear_mean=0.9` 仍差 `0.3903987445`，需消除当前剩余归一化误差的
 `79.6084%`；这只是本地诊断轴，不能换算官方 36000。所有在线候选必须遵守：
@@ -228,6 +237,7 @@ C1c 队列到此停止，不再增加 block budget；下一步按固定分层规
 | v123 | NA（screen `0.53335171`） | NA | NA | 429.95s screen | C1c max_blocks-2 rejected |
 | **v124** | **0.5096493233** | **0.8420394885** | **295.820229** | **2323.91s** | 前一 precision parent；C1c rank-8 |
 | **v125** | **0.5097598050** | **0.8420394885** | **295.847849** | **2653.58s** | **precision-only accepted；runtime invalid** |
+| **v126** | inherited；未重跑 | pending | pending | targeted test 3.28s | **PAWV 变长修复完成；official 未测** |
 
 ## 6. 完成条件
 

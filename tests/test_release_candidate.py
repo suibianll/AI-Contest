@@ -419,6 +419,56 @@ def test_synthetic_attention_states_and_params_are_legal() -> None:
             assert failures == []
 
 
+def test_attention_calibration_supports_variable_sequence_lengths() -> None:
+    solution = load_module("attention_variable_lengths", ROOT / "solution.py")
+    torch.manual_seed(72100)
+    q_heads, kv_heads, head_dim = 1, 1, 64
+
+    # This is the official mini-sample length pattern that exposed the old
+    # fixed-size P.T@P accumulator.  Test the metric builder directly so the
+    # 1024-token coverage does not repeat the full attention candidate search.
+    official_lengths = (10, 128, 512, 1024, 1024)
+    q_samples = [torch.randn(length, head_dim) for length in official_lengths]
+    k_samples = [torch.randn(length, head_dim) for length in official_lengths]
+    diagonals = solution._build_pawv_metric(
+        q_samples, k_samples, q_heads, kv_heads, head_dim
+    )
+    assert set(diagonals) == {str(length) for length in set(official_lengths)}
+    for length in set(official_lengths):
+        diagonal = diagonals[str(length)]
+        assert diagonal.shape == (length,)
+        assert torch.isfinite(diagonal).all()
+        assert torch.all(diagonal > 0)
+
+    # Exercise the public calibration/dynamic integration on two unequal
+    # lengths, then verify exact-length lookup and unseen-length fallback.
+    calibration = []
+    for length in (10, 32):
+        sample = {
+            "q": nvfp4_encode(torch.randn(length, q_heads * head_dim)),
+            "k": nvfp4_encode(torch.randn(length, kv_heads * head_dim)),
+            "v": nvfp4_encode(torch.randn(length, kv_heads * head_dim)),
+        }
+        calibration.append(sample)
+    states = solution.hif4_calibration_attention(
+        calibration, q_heads, kv_heads, head_dim
+    )
+    validate_state(states)
+    assert set(states["v_state"]["row_diagonals"]) == {"10", "32"}
+
+    for sample in calibration:
+        params = solution.hif4_dynamic_quantize_v(
+            *sample["v"], kv_heads, head_dim, states["v_state"]
+        )
+        assert torch.isfinite(solution._dequantize_hif4(params)).all()
+
+    unseen_v = nvfp4_encode(torch.randn(24, kv_heads * head_dim))
+    unseen_params = solution.hif4_dynamic_quantize_v(
+        *unseen_v, kv_heads, head_dim, states["v_state"]
+    )
+    assert torch.isfinite(solution._dequantize_hif4(unseen_params)).all()
+
+
 def test_synthetic_case_generation_is_deterministic() -> None:
     first = generate_case_data("heavy_tail", 4, 2, 128, 32, 2)
     second = generate_case_data("heavy_tail", 4, 2, 128, 32, 2)

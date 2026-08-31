@@ -6,12 +6,13 @@
 
 ## 一句话结论
 
-根目录当前为 v125 C1c structured rank-8 / `max_blocks=8` + v121 C1b structured gradient refresh×2 + C1a structured proposal vectorization + v118 L6d structured block-circulant factor + v117 L6c full `G_64` hierarchy coordinate sweep + v116 L6b wide rank-4 cross-block factor + v115 L6a rank-16 global LRH + v111 L5a block-local permutation + BOAT + expansive-FFN CAT balance +
+根目录当前为 v126：v125 C1c structured rank-8 / `max_blocks=8` + v121 C1b structured gradient refresh×2 + C1a structured proposal vectorization + v118 L6d structured block-circulant factor + v117 L6c full `G_64` hierarchy coordinate sweep + v116 L6b wide rank-4 cross-block factor + v115 L6a rank-16 global LRH + v111 L5a block-local permutation + BOAT + expansive-FFN CAT balance +
 cross-fold HSDQ + Global Activation-LRH Gram gate + L4a final deployed-Gram row gate +
 L4b GALS，并保留 Attention B1 GQRB 与 B2 PAWV diag-only。固定 Qwen2.5-0.5B 缓存、
 `seq=128`、`calib=2`、`test=4`、全 24 层、CPU 的完整运行中，当前精度 parent 的
 Qwen shaped panel 为 **295.847849**，Linear mean **0.5097598050**，正式 API 累计
-**2653.580s**；C1c `max_blocks=8` 较 v124 panel 增加 `+0.027620`，探索阶段只记录时间，不以
+**2653.580s**；这些是 v125 的最后一次 full-layer 数据。v126 只修复 Attention 变长
+PAWV，尚未重跑 full-layer，不冒充已有分数。C1c `max_blocks=8` 较 v124 panel 增加 `+0.027620`，探索阶段只记录时间，不以
 `420 s` 否决精度候选，最终冻结时再压缩。该数值用于本地 A/B 排序，不能线性换算为
 官方排行榜分数。
 
@@ -23,15 +24,20 @@ Qwen shaped panel 为 **295.847849**，Linear mean **0.5097598050**，正式 API
 不是 timeout。新的 [`v100 官方 WA 边界审计`](../logs/execution/2026-08-31-v100-official-wa-boundary-audit.md)
 表明 v72 的四个 Attention API、45 个递归可达 helper 和相关常量均与官方通过的 v66
 语义一致；v72 本地 Qwen native `356.605602`、Attention `63.119717`、CUDA API
-`163.41s`，因此成为新的增强候选，v66 仍为绝对保底。v73/v74 已改变 Attention 共用
+`163.41s`。用户随后确认 v72 官方运行成功，成绩 **`22662 / 226s`**，相对 v66
+提升 `105` 分并增加 `8.8s`，因此 v72 已从“增强候选”升级为当前官方通过基线，
+v66 仍为绝对控制组。v73/v74 已改变 Attention 共用
 helper，v75 起直接改变 Q/K 路径；v100/v107 及后代均不再视为官方安全候选。
+官方结果记录见 [`v72 official pass`](../logs/execution/2026-08-31-v72-official-pass.md)。
 
 进一步按任务书复核并构造变长 calibration list 后，已稳定复现 v100/v107 的直接异常：
 B2 PAWV 的 `_build_pawv_metric` 按首个样本长度建立固定 `tokens×tokens` 矩阵，却直接
 累加不同长度样本的 `P^TP`。`seq=32/48` 时 v72/v98 通过，v100/v107 均报 shape
 mismatch；任务书没有 calibration sample 等长约束，且规定任一运行异常即提交失败。
-因此这是当前最高置信度根因，见
+官方自测进一步给出 calibration 长度 `[10,128,512,1024,1024]` 和精确异常
+`size 10 must match size 128 at dimension 1`，因此该根因已被确认，而不再只是高置信度推测。见
 [`v100/v107 Attention WA 根因`](../logs/execution/2026-08-31-v100-v107-attention-wa-root-cause.md)。
+修复实现与验证见 [`v126 PAWV 变长修复`](../logs/execution/2026-08-31-v126-pawv-variable-length-fix.md)。
 
 2026-08-31 已按执行计划完成 E0-C、E1→A6、B1、B2、L1、L2、L3 和 L4a。B1 GQRB margin
 先把 panel 提升到 `293.793700`，B2 PAWV diag-only 再提升到 `293.797301`，L2
@@ -80,11 +86,14 @@ L4a 精确 final-Gram 行级 gate 再提升到 panel `295.239309`、Linear mean
    `rows > channels` 且 `channels <= 1024` 的 expansive FFN 上，同时生成 v107
    parent 与最终 `G_q=W_q^T W_q` 候选；用完整 `G_q` 逐行比较二次型，只写回不变差
    的候选行。它不增加公开 API 字段，state 只保存静态部署 Gram。
-7. **Attention 输出感知 shortlist**：搜索 reciprocal RMS 平衡、K-centering、
+7. **Attention 输出感知 shortlist（仅研究根；不属于当前官方基线）**：搜索 reciprocal RMS 平衡、K-centering、
    16/32/64 维共享 signed-Hadamard，以及 B1 GQRB 的 2×2/4×4 group-local
    orthogonal mixing；保留 parent 的原始四候选，并要求 mixing exact loss 至少
    改善 0.1% 才能替换。B2 PAWV 用 attention probability 的 token-row 对角
-   Hessian 做 V 的离散坐标 refinement；V 仍保持独立合法 HiF4 编码。
+   Hessian 做 V 的离散坐标 refinement；V 仍保持独立合法 HiF4 编码。B2 PAWV
+   diag-only 的旧实现已确认存在变长崩溃。v126 改为逐样本直接计算 diagonal、按
+   `seq_len` 分组平均，校准/在线 V 精确查找当前长度，无匹配则回退；并删除无用的
+   full `P^TP` 与 `eigh`。该修复解决正确性与复杂度问题，完整精度仍待重测。
 
 ## 最新全层实测（当前精度 parent）
 
@@ -288,8 +297,9 @@ $$\frac{\Delta g_L}{1-g_L}=\frac{0.3902401950}{0.4902401950}=79.6000\%.$$
 也就是还要消除当前 Linear 剩余归一化误差的约 **79.6000%**，对应 250-case panel
 仍差 **97.560049** 分。这个数轴不是官方排行榜的绝对分数。
 
-官方历史合规锚点为 C66：`22557 / 217.2s`；外部参考 `youxilee/hif4` 为用户提供的
-`24153 / 239s`。从 C66 到 `36000` 的官方分差是 **13443**，但当前本地 panel
+当前官方合规锚点为 v72：`22662 / 226s`；前一控制组 C66 为 `22557 / 217.2s`；外部参考 `youxilee/hif4` 为用户提供的
+`24153 / 239s`。从 v72 到 `36000` 的官方分差是 **13338**，到外部参考还差
+**1491** 分；但当前本地 panel
 不做官方绝对分回归，因此不能声称当前版本对应某个官方分数或已经接近 `36000`。
 
 ## 当前唯一后续计划
@@ -495,7 +505,7 @@ L0 的正式产物为 [`l0-linear-ceiling-qwen.json`](../artifacts/oracle_dashbo
   PAWV 的静态 token-row diagonal 与旋转整数配置/符号；输出监督只用于离线
   Attention 候选和权重侧选择，不进入在线 `Q(A)`。
 - 当前源码 SHA256（规范 LF 内容）：
-  `c9b419717e38bcec69d907d1cab6638409f1fa9a3072892dde9494ef9da3cc8e`。
+  `47e2e3ab76c6deaac8de47bbcbd8f689cf5989dc8ff9e9081a887ec89e819b08`。
 - 发布前检查：C1c synthetic/reference-equivalence、合规/精度门控和 v107 Attention
   contract audit 均通过；`guard_solution_file` 为 `violations=[]`、`static_violations=[]`。
   v125 full-layer `official_flow_valid=false`，原因是 API `2653.580314s` 超过官方

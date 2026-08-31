@@ -12,8 +12,9 @@
 
 - 官方评测集已更新为 **250 个 Linear case + 200 个 Attention case**；逐
   case 求和的分数和端到端时间都会高于旧口径，旧分数不能与新分数直接比较。
-- 当前归档候选中，修订评测集下的合规官方冠军为 v066 / C66，
-  `22557 / 217.2s`；此前 v051 / C47b 为 `22451 / 234s`，v031 / C39-FW
+- 当前归档候选中，修订评测集下的合规官方冠军已更新为 **v072 / C74，
+  `22662 / 226s`**；相对 v066 / C66 的 `22557 / 217.2s` 提升 `105` 分、增加
+  `8.8s`。此前 v051 / C47b 为 `22451 / 234s`，v031 / C39-FW
   与 v034 / C41b 均为 `21864`，时间分别为 `161.3s` 与 `159.4s`。
 - 外部参考：[`youxilee/hif4`](https://github.com/youxilee/hif4) 当前公开代码据
   用户提供的同口径官方结果为 `24153 / 239s`；未导入本仓库。未修改的 v2.7
@@ -23,11 +24,12 @@
   的设备混用问题。完整表格见 [`当前主版本算法效果与评测状态`](docs/current-solution-status.md)。
 - 历史 v024 得分为 `16043 / 173.8s`，但其 Linear 输出监督路径把输出信息
   用于激活侧选择；这类 `A@W -> Q(A)` 用法仍不合规，因此不作为后续合规父版本。
-- 当前根 `solution.py` 为 v125 C1c structured rank-8 / max-blocks-8 + C1b structured
+- 当前根 `solution.py` 为 **v126**：在 v125 C1c structured rank-8 / max-blocks-8 + C1b structured
   gradient refresh（sweep2）精度 parent；在 v118 L6d 的最多 8 个 `64×64` kernel
   proposal 上批量化独立 row/block 的 15-level 候选评估。Qwen 全 24 层本地实测
   native `423.394380`、shaped panel `295.847849`、Linear mean `0.5097598050`、
-  Attention mean `0.8420394885`、正式 API `2653.580314s`。v125 较 v124 panel
+  Attention mean `0.8420394885`、正式 API `2653.580314s`；这些 full-layer 数字属于
+  修复前 v125，v126 尚未重跑全量。v125 较 v124 panel
   `+0.027620`，但 runtime 无效；v106 仍是最近的 `<420s` 时间 parent。当前探索阶段
   只按精度排序，时间暂作记录；最终冻结时再压缩到 420s 内。逐项结果、归档实现
   审计和复现实验配置见 [`当前主版本算法效果与评测状态`](docs/current-solution-status.md)、
@@ -43,7 +45,7 @@
   36000/Linear 门槛推导见
   [`当前实验结果与可达性 checkpoint`](logs/execution/2026-08-31-current-results-target-feasibility.md)。
 - 当前根源码 SHA256：
-  `C9B419717E38BCEC69D907D1CAB6638409F1FA9A3072892DDE9494EF9DA3CC8E`（规范 LF）。
+  `47E2E3AB76C6DEAAC8DE47BBCBD8F689CF5989DC8FF9E9081A887EC89E819B08`（规范 LF）。
 - L1 full-hierarchy Weight-LRH 已完成合成测试与五层×七 role screen，但 screen
   `both_player=0.523019429222563` 与 L0 逐条持平；候选 v105 已归档。L2 固定
   `α=0.25` 的 expansive-FFN CAT balance 已通过 full-layer，v106 成为时间 parent；
@@ -72,20 +74,27 @@
   该外部数字仅代表本地归档 v002，不等同于最新 v2.7 源码；官方隐藏输入仍需同包复测。
 - 用户确认 **v100 官方同样为 Attention `wrong answer`，且不是 timeout**。因此
   `deployment_gram` 不再是 v107 WA 的首要解释，v100/v106/v107 及其 clean Attention
-  后代全部降级为本地研究版本。新的增强提交候选是 **v72**：它的四个 Attention API、
+  后代全部降级为本地研究版本。**v72 已正式通过官方评测，成绩 `22662 / 226s`**：
+  它的四个 Attention API、
   45 个递归可达 helper 和相关常量均与官方通过的 v66 语义一致；本地 Qwen native
   `356.605602`，较 v66 `+6.453182`，Attention 同为 `63.119717`，CUDA API `163.41s`。
-  绝对保底仍是 v66。边界证据见
+  相对 v66 官方提升 `105` 分，且仍有 `194s` 时间余量。v66 继续作为绝对控制组。官方记录见
+  [`v72 官方通过`](logs/execution/2026-08-31-v72-official-pass.md)，边界证据见
   [`v100 官方 WA 边界审计`](logs/execution/2026-08-31-v100-official-wa-boundary-audit.md)。
   根 `solution.py` 仍为 v125 precision-only 研究版本，不是官方候选。
 - 用户确认 **v121 官方显示运行超时**。这与本地 API `2180.450151s` 的 runtime-invalid
   结论一致，和 v100/v107 的 Attention WA 是两类失败。v121 及更慢的 v124/v125
   只保留精度证据；记录见
   [`v121 官方 timeout`](logs/execution/2026-08-31-v121-official-timeout.md)。
-- v100/v107 Attention WA 已找到高置信度直接根因：B2 PAWV 用第一个 calibration sample
+- v100/v107 Attention WA 的直接根因已由官方自测报错确认：B2 PAWV 用第一个 calibration sample
   的 token 数建立固定 `P^TP` 方阵，再直接累加其他样本；官方接口不保证 calibration
-  sample 等长。合法的 `seq=32/48` 两样本复现中，v72/v98 通过，v100/v107 均在
-  Attention calibration 抛出 shape mismatch。固定 `seq=128` 的本地 cache 因而漏检。
+  sample 等长。官方 mini sample 的长度为 `[10, 128, 512, 1024, 1024]`，在第二个
+  样本就以 `[10,10] += [128,128]` 抛出 shape mismatch；本地 `seq=32/48` 复现与之
+  一致。固定 `seq=128` 的本地 cache 因而漏检。
+  v126 已按长度分组 diagonal：校准 V 与在线 V 均按当前行数精确选择统计，未命中
+  则回退普通量化；同时删除未使用 low-rank 却仍执行的完整 `P^TP`/`eigh`。官方长度
+  模式与公开 API 回归已通过，见 [`v126 修复日志`](logs/execution/2026-08-31-v126-pawv-variable-length-fix.md)。diag-only 的理论增益仍有限，后续若继续提升 PAWV，
+  需要保留 `P^TP` 的非对角耦合并另做变长状态设计。
   完整分析见 [`Attention WA 根因`](logs/execution/2026-08-31-v100-v107-attention-wa-root-cause.md)。
 
 本地时间和本地分数仅用于候选比较，不冒充官方结果。任何官方结果都应与
@@ -145,6 +154,7 @@ git diff --check
 | C41b | 21864 | 230.096230 |
 | C47b | 22451 | 237.541351 |
 | C66 | 22557 | 238.282409 |
+| v72 / C74 | 22662 | NA（未按当前 shaped-panel 同口径复测） |
 
 官方与本地均为 `C39 = C41b < C47b < C66`；Qwen 主面板的 Spearman 为
 `1.0000`，五模型 raw sum 为 `0.9487`。这只证明相对排序方向，不证明本地
@@ -162,7 +172,8 @@ Qwen native `369.527269` 仍作为第二诊断线，五模型合计不作为基�
 | v031 / C39-FW | 21864 | 161.3s | 合规归档锚点 |
 | v034 / C41b | 21864 | 159.4s | 合规归档锚点 |
 | v051 / C47b | 22451 | 234s | 此前本地官方冠军 |
-| v066 / C66 | **22557** | **217.2s** | 当前本地官方冠军 |
+| v066 / C66 | 22557 | 217.2s | 前一官方冠军/控制组 |
+| **v072 / C74** | **22662** | **226s** | **当前本地官方冠军；Attention 官方通过** |
 | `youxilee/hif4` | **24153** | **239s** | 外部官方参考；本地最高 Qwen native `369.527269`、panel `250.327102`；五模型 `1085.743597` 仅诊断 |
 
 新版官方时间限制为 **7 分钟（420 秒）**。历史 `14613 / 159.2s`、

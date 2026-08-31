@@ -35,7 +35,7 @@ v100/v107 在 B2 PAWV `_build_pawv_metric` 抛出 shape mismatch。最新根因�
 |---|---|---|---|---|
 | v66 | 基线 | 基线 | `22557 / 217.2s` 通过 | 官方控制组 |
 | v67–v68 | 与 v66 相同 | 与 v66 相同 | 未提交 | 低风险，但本地增益不足/被拒绝 |
-| **v72** | **与 v66 相同** | **45 个可达函数及相关常量均与 v66 语义一致** | 未提交 | **新的增强候选首选** |
+| **v72** | **与 v66 相同** | **45 个可达函数及相关常量均与 v66 语义一致** | **`22662 / 226s` 通过** | **当前官方通过基线** |
 | v73–v74 | 公共 API 与 v66 相同 | 共享 `_nvfp4_to_hif4`/`_dense_to_hif4` 及 Gram/source helper 已改变 | 未提交 | 本地 Attention 相同，但隐藏输入仍有新增风险 |
 | v75–v84 | Q/K calibration/dynamic 已改变 | 新增 GQA rotation | 未提交 | 首个明确 Attention 变更边界 |
 | v86 | 再次改变 Q/K 路径 | block-Hadamard final selector | 未提交 | 更高风险 |
@@ -48,7 +48,8 @@ v72 的 Attention 闭包等价判断比“同一 Qwen 输出相等”更强：�
 
 ### 绝对保底
 
-- v66：已有官方 `22557 / 217.2s`。
+- v66：已有官方 `22557 / 217.2s`，保留为控制组。
+- v72：用户确认官方 `22662 / 226s`，相对 v66 `+105` 分、`+8.8s`。
 - 源码：`solutions/20260829_v066_c66-activation-ratio100_scoreNA_timeNA/solution.py`。
 
 ### 分数尽量高且最可能通过

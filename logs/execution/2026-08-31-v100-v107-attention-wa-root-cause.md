@@ -2,7 +2,8 @@
 
 > 日期：2026-08-31  
 > 官方反馈：v100、v107 均在 Attention 场景 `wrong answer`；用户明确 v100 不是 timeout。
-> 结论：已在本地构造官方接口允许的变长校准集，稳定复现 v100/v107 的直接运行异常。
+> 官方确认：v72 `22662 / 226s` 正常通过；官方 mini sample 在 Attention 校准阶段
+> 报出与本地复现完全一致的 shape mismatch。v100/v107 的直接 WA 根因现已确认。
 
 ## 1. 官方要求中的关键边界
 
@@ -66,6 +67,14 @@ v107 的 Attention 函数体与 v100 相同，所以继承同一缺陷；Linear
 这也解释了为什么此前本地 Qwen、五场景 contract matrix 和 24 层逐输出审计全部通过：
 本地 cache 将每个窗口统一裁成 `seq=128`，从未覆盖 calibration list 内的变长样本。
 
+官方 mini sample 的长度为 `[10,128,512,1024,1024]`。旧代码先建立 `[10,10]`
+metric，第二个样本产生 `[128,128]` 后精确报错：
+
+```text
+RuntimeError: The size of tensor a (10) must match the size of tensor b (128)
+at non-singleton dimension 1
+```
+
 ## 4. 其他怀疑项的裁决
 
 ### Q/K 等价旋转不是直接违规
@@ -96,10 +105,28 @@ v66/v72 和 v100 的内部校准 forward 都默认单个 sample 内 `len(Q)=len(
 任务书没有明确保证矩形 decode Attention；不过 v66 已通过当前官方集，所以这不是
 v100 相对 v66 新出现 WA 的解释。后续测试仍应覆盖 `L_q != L_k=L_v`，避免评测集扩展。
 
-## 5. 根因置信度与下一步
+## 5. v126 修复
+
+v126 不再构造跨样本固定方阵，而是对每个样本直接计算
+
+\[
+d_j=\frac1H\sum_h\sum_i P_{hij}^2
+=\operatorname{diag}\left(\frac1H\sum_hP_h^TP_h\right)_j.
+\]
+
+随后按 `str(seq_len)` 分组求平均。校准 V 与在线 V 都按当前 `V.shape[0]` 精确查找
+diagonal；在线长度没有对应 calibration 组时回退普通 HiF4 量化。state 的 key 保持为
+官方允许的字符串。旧代码虽只使用 diagonal，却仍构造完整 `P^TP` 并执行 `eigh`；
+v126 一并删除这两项无用计算，把 metric 部分从额外的立方/方阵开销降为直接对
+probability 求平方和。
+
+回归覆盖官方长度模式 `[10,128,512,1024,1024]`、公开 calibration API 的 `10/32`
+变长输入、匹配长度动态 V 和未见长度回退，均通过。
+
+## 6. 根因结论与下一步
 
 综合证据，B2 PAWV 的跨 calibration sample 固定 token 维假设是 v100/v107 官方
-Attention WA 的**高置信度直接根因**：
+Attention WA 的**已确认直接根因**：
 
 - 时间线吻合：v98→v100 首次加入该代码；v107 继承；
 - 失败类别吻合：发生在 Attention calibration 的直接 RuntimeError；
@@ -107,15 +134,11 @@ Attention WA 的**高置信度直接根因**：
 - 本地漏检原因吻合：所有缓存窗口固定 `seq=128`；
 - 对照版本吻合：v72/v98 对同一变长输入通过，v100/v107 同时失败。
 
-在没有官方逐 case traceback 的情况下不能声称形式上的 100% 证明，但该解释已比
-`deployment_gram`、超时或普通精度回退更强。
-
 后续纪律：
 
-1. 官方候选继续使用 v72/v66，不提交 v100+ clean Attention 路径。
-2. 若未来重启 PAWV，metric 必须是与长度无关的统计（例如按样本独立使用/按位置 bucket
-   聚合/归一化谱摘要），不得直接平均不同 shape 的 `P^TP`。
+1. 当前官方基线继续使用已通过的 v72；v126 修复在完成时限与官方复测前不替代它。
+2. PAWV state 必须按长度分组或采用另经验证的长度无关统计，不得直接平均不同 shape
+   的 `P^TP`。
 3. Attention 发布矩阵必须加入 calibration-list 变长、动态长度变化、MHA/GQA、
    `head_dim=64/128`、以及矩形 `L_q != L_k=L_v`。
 4. local contract pass 只能记作本地通过，不能再表述为官方安全。
-

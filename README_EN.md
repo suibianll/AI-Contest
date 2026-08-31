@@ -15,7 +15,8 @@ Chinese version: [README.md](README.md)
   cases**. Because scores are summed per case, both scores and runtimes are
   higher than under the legacy panel and must not be compared directly.
 - On the revised panel, the best official result among archived submissions is
-  v066 / C66 at `22557 / 217.2s`; the previous v051 / C47b result was
+  v072 / C74 at `22662 / 226s`; it improves on v066 / C66 (`22557 / 217.2s`)
+  by 105 points at an additional 8.8s. The previous v051 / C47b result was
   `22451 / 234s`. v031 / C39-FW and v034 / C41b both scored `21864`, at
   `161.3s` and `159.4s`, respectively.
 - External reference: the public [`youxilee/hif4`](https://github.com/youxilee/hif4)
@@ -28,20 +29,24 @@ Chinese version: [README.md](README.md)
   path used output information for activation-side selection. That
   `A@W -> Q(A)` use remains non-compliant, so it is not a compliant parent for
   new work.
-- The root `solution.py` is the v125 C1c structured-rank-8 / `max_blocks=8` + C1b structured-gradient-refresh (two-sweep) precision-only parent
+- The root `solution.py` is v126: the v125 C1c structured-rank-8 / `max_blocks=8` + C1b structured-gradient-refresh (two-sweep) precision-only path
   on top of v118 L6d, v117 full `G_64` hierarchy, v116 L6b wide rank-4, v115 L6a
   rank-16, v111 block-local permutation, v110 final-Gram GALS, and the B1/B2 path.
-  On the full 24-layer Qwen2.5-0.5B cached run, its native total is `423.394380`,
+  plus the variable-length PAWV fix. On the full 24-layer Qwen2.5-0.5B cached
+  v125 run, its native total is `423.394380`,
   Qwen shaped panel is `295.847849`, Linear mean is `0.5097598050`, and formal API
   time is `2653.580314s`
   (accuracy-only evidence; runtime is invalid until C3 compresses below
-  420s). See the [current status
+  420s); v126 has not inherited those values without a rerun. It now groups
+  PAWV diagonals by sequence length, performs exact-length lookup with fallback,
+  and removes the unused full `P.T@P` eigendecomposition. The official
+  `[10,128,512,1024,1024]` length-pattern regression passes. See the [current status
   report](docs/current-solution-status.md), the [algorithm inventory](docs/algorithm-inventory-and-directions.md),
   the [archive implementation audit](docs/archive-implementation-audit.md),
   and [`solutions/README.md`](solutions/README.md). Future work follows the
   [single active optimization plan](docs/superpowers/plans/2026-08-31-hif4-active-c1-structured-linear-plan.md); C1a/C1b/C1c are complete, and C2 cross-model guardrails followed by C3 state/time compression are next.
 - Current source SHA256:
-  `C9B419717E38BCEC69D907D1CAB6638409F1FA9A3072892DDE9494EF9DA3CC8E` (normalized LF).
+  `47E2E3AB76C6DEAAC8DE47BBCBD8F689CF5989DC8FF9E9081A887EC89E819B08` (normalized LF).
 - The active local evaluator is Qwen-first: it projects frozen-corpus Linear
   and Attention means onto a fixed 250/200 panel, while other models remain
   soft guardrails. The raw `official_flow_total` is retained for compatibility
@@ -113,7 +118,7 @@ official anchor ordering:
 Both orderings are `C39 = C41b < C47b < C66`; Qwen's panel Spearman is
 `1.0000`, while the five-model raw sum is `0.9487`. This validates relative
 direction only, not a linear conversion to official scores. The external
-`youxilee/hif4` Qwen panel is `250.327102`; the current root v125 is `295.847849`,
+`youxilee/hif4` Qwen panel is `250.327102`; the measured v125 precision parent is `295.847849`,
   which is `45.484179` (`18.17%`) higher. Its Qwen native `369.527269` is the
 secondary diagnostic line; the five-model sum is never a ranking benchmark.
 
@@ -124,7 +129,8 @@ secondary diagnostic line; the five-model sum is never a ranking benchmark.
 | v031 / C39-FW | 21864 | 161.3s | compliant archive |
 | v034 / C41b | 21864 | 159.4s | compliant archive |
 | v051 / C47b | 22451 | 234s | previous local official result |
-| v066 / C66 | **22557** | **217.2s** | best local official result |
+| v066 / C66 | 22557 | 217.2s | previous official control |
+| v072 / C74 | **22662** | **226s** | best local official result; Attention passed |
 | `youxilee/hif4` | **24153** | **239s** | external official reference; local highest Qwen native `369.527269`, panel `250.327102`; five-model `1085.743597` is diagnostic only |
 
 The revised official runtime limit is **7 minutes (420 seconds)**. Legacy values

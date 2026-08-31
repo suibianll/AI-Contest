@@ -5,6 +5,8 @@
   transformed teacher products only to search legal E6M2/lv2/lv3/mantissa
   updates for static Q(W); no product tensor enters `activation_state`.
 - Root/archive SHA256: `61C216BEE1ECA9DB6185BCD49C679A34B684F540451CD5562A2008D0DA4B2AD9`
+- Official result (user-confirmed 2026-08-31): **`22662 / 226s`**, successful;
+  Attention passed. The uploaded-package SHA was not reported separately.
 - Full dual/block ridge target is implemented but remains disabled by default
   until its calibration-to-hidden migration gap is reduced.
 
