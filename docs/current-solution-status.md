@@ -19,6 +19,8 @@ Qwen shaped panel 为 **295.847849**，Linear mean **0.5097598050**，正式 API
 
 针对官方 v107 `Attention / wrong answer` 的同输入对照已完成：[`v107-v31-v51-external-attention-output-diff.md`](../logs/execution/2026-08-31-v107-v31-v51-external-attention-output-diff.md)。在 24 层 Qwen cache、2 calibration、4 test windows、同一 NVFP4 codec 下，v31/v51/归档外部 v002/v107 的 state、五字段 API、shape、CPU/finite 检查均为 0 failures（每版本 72 states、96 batches、288 个 Q/K/V 输出）；Attention MSE mean 分别为 `0.00382519 / 0.00382519 / 0.00529873 / 0.00169248`，v107 反而最低。v31 与 v51 24/24 层逐位相同，v31 与外部 v002 12/24 层相同，v107 因有意新增 Linear 状态而与 v31 0/24 层相同；目前没有证据表明 v107 Attention 输出契约损坏。外部逐输出数字代表本地归档 v002，不等同于最新 v2.7 源码；官方隐藏输入仍需 v106/v107 同包复测。
 
+官方复测候选裁决见 [`2026-08-31-v107-wa-safe-submission-selection.md`](../logs/execution/2026-08-31-v107-wa-safe-submission-selection.md)：首选 v100（panel `293.797301`、API `392.42s`），不提交 v107。v100 没有约 2.6 GiB 累计风险的完整 `deployment_gram`，比 v106 多 `20.23s` API 余量；同缓存 layer-0 与官方已通过的 c66 同场复核时，两者均通过 evaluator 有效性预筛，v100 panel/API `336.037091 / 18.559s`，c66 为 `314.731294 / 25.196s`。v66 保留为官方控制组；本裁决不改变当前 v125 precision-only 根文件。
+
 2026-08-31 已按执行计划完成 E0-C、E1→A6、B1、B2、L1、L2、L3 和 L4a。B1 GQRB margin
 先把 panel 提升到 `293.793700`，B2 PAWV diag-only 再提升到 `293.797301`，L2
 expansive-FFN CAT balance 将 panel 提升到 `294.272633`、Linear mean 提升到

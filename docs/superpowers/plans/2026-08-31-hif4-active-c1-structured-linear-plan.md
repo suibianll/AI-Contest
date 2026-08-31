@@ -4,7 +4,8 @@
 > 建立日期：2026-08-31
 > 适用根：`D:/工作内容/AI竞赛/solution.py`
 > 当前精度 parent：v125 C1c structured rank-8 / max-blocks-8 + C1b refresh（sweep2）；
-> 当前提交/时间 parent 仍为 v106（`<420s`）
+> 当前本地时间 parent 仍为 v106（`<420s`）；v107 官方 Attention WA 后，官方 smoke
+> 首选改为 v100（`392.42s`，比 v106 多 `20.23s` API 余量且无完整 `deployment_gram`）
 > 根 `solution.py` 规范 LF SHA256：`c9b419717e38bcec69d907d1cab6638409f1fa9a3072892dde9494ef9da3cc8e`
 > 主目标：保持 v125（继承 v119）的完整部署 `G_q` exact gate 语义，继续验证 Qwen full-layer
 > `linear_mean`；同时把结构化 proposal 的原型实现压缩为可审计的 C1 路径。Attention
