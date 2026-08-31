@@ -6,12 +6,16 @@ Root `solution.py` is the only active submission. Archived source files are immu
 
 顺序实验索引见 [progressive candidate ledger](../logs/execution/2026-08-27-progressive-candidate-ledger.md)。
 
-## 官方评测集修订（2026-08-29）
+## 官方评测集修订（2026-08-29；2026-08-31 更换评分权重）
 
 官方面板现为 **250 个 Linear case + 200 个 Attention case**，分数按全部
 case 求和，因此分数与端到端时间都会高于旧口径。下表已把已确认的 v031、
 v034、v051、v066 官方列更新为新版结果；其余历史官方列保留原提交时的旧口径，
-不可与新版绝对值直接比较。**最新官方时间限制已修订为 300s（5 分钟，2026-08-31），且不再限制任何 `A@W` 拟合用法**。
+不可与新版绝对值直接比较。**最新官方时间限制为 300s（5 分钟），且不再限制任何
+`A@W` 拟合用法**。**2026-08-31 晚官方再次更换评分权重：减少 Linear 样例的权重**，
+因此 v031–v074 等 2 万+ 官方分数均为旧权重口径；新权重下已确认 **v84 官方通过
+`16517 / 252.563s`（< 300s）**，两套权重不可互相换算，详见
+[`v84 官方结果`](../logs/execution/2026-08-31-v84-official-result.md)。
 
 ## 当前活跃根版本（不属于下方历史版本号）
 
@@ -178,7 +182,7 @@ L5b/v112、L5c/v113、L5d/v114 均为已归档的 screen 候选，L6、C1a、C1b
 | v075 | 2026-08-30 | C76.4 GQA head-local signed Hadamard H16/H32/H64 rotation | Qwen `298.383991`; MHA unchanged from v074 | `21.306236` / `70.960519` (Qwen) | 188.06s CUDA (Qwen) | NA | NA | Qwen native total `369.344509`、panel proxy `258.840363`；Attention `70.960519` vs v074 `63.119717`；GQA-only structural gate | **active-candidate** | [archive](20260830_v075_c76-gqa-rotation_scoreNA_timeNA/) |
 | v076 | 2026-08-30 | C77 all-shape gram64 activation refinement + C76.4 GQA rotation | Qwen `301.663157`; GPT-2 `138.467995`; OPT `67.600512`; Pythia `141.512514` | `70.960519` (Qwen) / `21.306236` (MHA) | 207.72s CUDA (Qwen) | NA | NA | Qwen native `372.623675`, panel `260.060290`；四模型均高于 v075；all-shape `WᵀW` 仅保留合法 CPU gram64 state | **active-candidate** | [archive](20260830_v076_c77-gram64-all-shape_scoreNA_timeNA/) |
 | v080 | 2026-08-30 | C80 full gram64 coverage (ratio 1.0, max 128) + C76.4 GQA rotation | Qwen `315.942615`; GPT-2 `142.914968`; OPT `71.957801`; Pythia `148.047600` | `70.960519` (Qwen) / `21.306236` (MHA) | 208.70s CUDA (Qwen) | NA | NA | Qwen native `386.903134`, panel `265.372589`；相对 v076 native `+5.558080`；四模型均正向；中间 16/32/64 覆盖分别由 `877db7d`/`07cf5f6`/`50782a8` 提交 | **active-candidate** | [archive](20260830_v080_c80-gram64-full-coverage_scoreNA_timeNA/) |
-| v084 | 2026-08-30 | C84 full gram64 coverage + 5 coordinate sweeps (`ratio=1.0`, `max_blocks=128`) + C76.4 GQA rotation | Qwen `321.095451`; GPT-2 `145.743266`; OPT `73.201252`; Pythia `149.630088` | `70.960519` (Qwen) / `21.306236` (MHA) | 309.09s CUDA (Qwen) | NA | NA | Qwen native `392.055970`, panel `267.289567`；相对 v080 native `+5.152836`、panel `+1.916978`；sweep2/3/4/5 逐级正向，四模型均正向；Qwen 距 420s 余量约 110.91s | **active-candidate** | [archive](20260830_v084_c84-gram64-sweep5_scoreNA_timeNA/) |
+| v084 | 2026-08-30 | C84 full gram64 coverage + 5 coordinate sweeps (`ratio=1.0`, `max_blocks=128`) + C76.4 GQA rotation | Qwen `321.095451`; GPT-2 `145.743266`; OPT `73.201252`; Pythia `149.630088` | `70.960519` (Qwen) / `21.306236` (MHA) | 309.09s CUDA (Qwen) | **16517** | **252.563s** | Qwen native `392.055970`, panel `267.289567`；相对 v080 native `+5.152836`、panel `+1.916978`；sweep2/3/4/5 逐级正向，四模型均正向；**用户确认官方在新评分权重（减少 Linear 权重）下通过，`16517 / 252.563s`（< 300s），为新权重官方锚点** | **official-compliant（新权重）** | [archive](20260830_v084_c84-gram64-sweep5_scoreNA_timeNA/) |
 | v086 | 2026-08-30 | C86 attention Q/K shared block-Hadamard (4/8/16, final offset/refinement scorer) + v084 | Qwen `321.095451`; GPT-2 `145.743266`; OPT `73.201252`; Pythia `149.630088` | `70.969323` (Qwen) / `24.086283` (GPT-2) / `19.378433` (OPT) / `40.609788` (Pythia) | 313.58s CUDA (Qwen) | NA | NA | Qwen native `392.064774`, panel `267.307909`；相对 v084 panel `+0.018342`；GPT-2 Attention 明显提升，OPT 小幅回退，Pythia 近持平；主模型仍低于 420s | **active-candidate** | [archive](20260830_v086_c86-attn-block-final_scoreNA_timeNA/) |
 | v087 | 2026-08-30 | E1 progressive full-hierarchy HSDQ | Qwen full-layer `0.490233` | `0.841829` | 693.21s CPU | NA | NA | 一层 panel `338.627176`，全层 panel `290.923906`，较 clean parent `−2.831200`；q/v/proj 回退，超 420s | **archived-rejected** | [archive](20260830_v087_e1-progressive-hierarchy-rejected_scoreNA_time693s/) |
 | v088 | 2026-08-30 | A2 expansive FFN sparse-row HSDQ (1%/2%/5%) | Qwen full-layer `0.497865` | `0.841829` | 385.48s CPU | NA | NA | panel `292.831952`，较 stable parent `−0.923153`；fc_gate/fc_up 均回退，精度门禁失败 | **archived-rejected** | [archive](20260830_v088_a2-expansive-sparse-hsdq-rejected_score292.831952_time385s/) |

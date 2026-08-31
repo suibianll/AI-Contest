@@ -4,7 +4,8 @@
 - Parent: v106 / `solutions/20260830_v106_l2-expansive-cat-active_score294.272633_time413s/`
 - Change: replace fixed-size PAWV token Gram accumulation with per-sequence-length
   diagonal states; retain v106 Linear path.
-- Source SHA256: `F15E112C7E832D019EE83D707ACD9D72FEF121A306E4CC3B50DBBC2CBB574924`
+- Source SHA256: `75F21B7BE3630FFEFEAF2883BB699CE4901DF1BF6C0B39DD6E40F253561E32C0`
+  (normalized LF; matches the archived `solution.py` snapshot in this directory)
 - Official score/runtime: `NA / NA` (not submitted).
 
 ## Canonical v4 sampled result

@@ -17,9 +17,10 @@
 seed `20260831`、层 `[0,1,5,10,13,15,22,23]`、全部 role、4 windows）下，
 Linear mean `0.509408`、Attention mean `0.828395`、Local API `151.136s`、
 Wall `161.840s`；同一计划 v74 为 `0.440305 / 0.671106 / 218.619s / 229.485s`。
-以下 v125 等数字是 legacy precision parent，不覆盖 v4 主结果。算法链仍包含 BOAT + expansive-FFN CAT balance +
-cross-fold HSDQ + Global Activation-LRH Gram gate + L4a final deployed-Gram row gate +
-L4b GALS，并保留 Attention B1 GQRB 与 B2 PAWV diag-only。v125 的全量
+以下 v125 等数字是 legacy precision parent，不覆盖 v4 主结果。算法链为 BOAT +
+expansive-FFN CAT balance + cross-fold HSDQ + Gram-hierarchy Activation-HSDQ，
+保留 Attention B1 GQRB 与 B2 PAWV diag-only（v127 变长修复）；L3–L6/C1 的实验机制
+已于 2026-08-31 从根文件裁剪，只保留在归档与历史日志中。v125 的全量
 `295.847849 / 2653.580s` 仅作为 legacy precision 证据；v127 的 v4 sampled
 均值才是当前比较口径。v126/v127 的 PAWV 变长修复已通过公开 shape smoke，
 但 v127 尚未官方提交，不能把本地均值写成官方成绩。官方 300s 只由官方平台确认，
@@ -42,13 +43,15 @@ L4b GALS，并保留 Attention B1 GQRB 与 B2 PAWV diag-only。v125 的全量
 不是 timeout。新的 [`v100 官方 WA 边界审计`](../logs/execution/2026-08-31-v100-official-wa-boundary-audit.md)
 表明 v72 的四个 Attention API、45 个递归可达 helper 和相关常量均与官方通过的 v66
 语义一致；v72 本地 Qwen native `356.605602`、Attention `63.119717`、CUDA API
-`163.41s`。用户随后确认 v72 官方运行成功，成绩 **`22662 / 226s`**，相对 v66
+`163.41s`。用户随后确认 v72 官方运行成功，成绩 **`22662 / 226s`（旧权重口径）**，相对 v66
 提升 `105` 分并增加 `8.8s`，因此 v72 当时从“增强候选”升级为官方通过基线，
 v66 仍为绝对控制组。v74 虽已改变 Attention 共用 helper，但用户随后确认其官方
-**`22750 / 239.387s`** 正常通过，相对 v72 `+88` 分、`+13.387s`，因此当前安全边界
+**`22750 / 239.387s`（旧权重口径）** 正常通过，相对 v72 `+88` 分、`+13.387s`，因此当时安全边界
 进一步前移到 v74。v75 起直接改变 Q/K 路径，尚无官方通过证据；v100 的 PAWV
 旧路径仍为官方 WA。官方结果记录见
 [`v74 official pass`](../logs/execution/2026-08-31-v74-official-pass.md)。
+注：v72/v74 官方分数均为**旧评分权重**；2026-08-31 晚新权重官方锚点为 v84
+`16517 / 252.563s`（见 [`v84 官方结果`](../logs/execution/2026-08-31-v84-official-result.md)）。
 
 **最新官方裁决（2026-08-31 再次修订）**：官方端到端超时限制收紧为 300s，且不再
 限制任何 `A@W` 拟合用法。用户确认 **v98 在最新限制下官方判为超时**（本地 API
@@ -56,6 +59,13 @@ v66 仍为绝对控制组。v74 虽已改变 Attention 共用 helper，但用户
 v107 timeout 已纠错：**v107 官方结果保持 Attention `wrong answer`（非 timeout，
 与 v100 同类）**，其本地 API `481.04s` > 300s 仅作历史风险提示。更新详情见
 [`v98 官方 timeout`](../logs/execution/2026-08-31-v98-official-timeout.md)。
+
+**2026-08-31 晚第三次修订（评分权重变更）**：官方**减少了 Linear 样例的评分权重**，
+官方总分据此大幅下降；新权重下用户确认 **v84 官方通过：`16517 / 252.563s`
+（< 300s）**，是新评分权重的当前官方锚点。v72/v74 等旧权重官方分数（2 万+）仅作
+历史参考，与新权重不可互相换算；官方未提供两项权重系数，本地不复制 case 拟合
+官方绝对分。详见
+[`v84 官方结果`](../logs/execution/2026-08-31-v84-official-result.md)。
 
 进一步按任务书复核并构造变长 calibration list 后，已稳定复现 v100/v107 的直接异常：
 B2 PAWV 的 `_build_pawv_metric` 按首个样本长度建立固定 `tokens×tokens` 矩阵，却直接
@@ -83,17 +93,14 @@ L4a 精确 final-Gram 行级 gate 再提升到 panel `295.239309`、Linear mean
 
 ## 当前实现
 
-`solution.py` 只保留六个正式 API 和必要的 codec/优化原语：
+`solution.py`（v127）只保留六个正式 API 和必要的 codec/优化原语：
 
-1. **BOAT + L5a block-local permutation**：用激活/权重各自的 RMS 构造对角平衡
-   `D`，在每个 64 维层级块内以独立 `amax/rms` pressure 搜索至多一个固定排列，
-   再搜索 4/8/16/64 维 signed-Hadamard 块和两个确定性 seed。连续
-   乘积保持不变：
+1. **BOAT**：用激活/权重各自的 RMS 构造对角平衡 `D`，再搜索 4/8/16/64 维
+   signed-Hadamard 块和两个确定性 seed。连续乘积保持不变：
 
-   $$X'=XD^{-1}PR,\qquad W'=W D P R,\qquad X'W'^T=XW^T.$$
+   $$X'=XD^{-1}R,\qquad W'=W D R,\qquad X'W'^T=XW^T.$$
 
-   排列只有在两折 operand-local HiF4 重建误差均不变差时才写入 state；不构造
-   Linear 输出，因此固定参数可以安全写入 `activation_state`。
+   不构造 Linear 输出，因此固定参数可以安全写入 `activation_state`。
 2. **Cross-fold Weight-HSDQ**：对满足宽度/形状条件的权重块使用校准激活
    `A_f^T A_f` 的低秩 Hessian，对 HiF4 的 15 个 signed levels 做精确二次增量
    搜索；fold 1 生成的候选必须改善 fold 2，最终只改变离线 `weight_params`。
@@ -103,34 +110,30 @@ L4a 精确 final-Gram 行级 gate 再提升到 panel `295.239309`、Linear mean
 4. **Expansive-FFN CAT balance**：只对 `weight_rows > weight_channels` 的结构形状，
    使用固定 `α=0.25` 的 RMS 对角 balance；不依赖 role-id/模型名，不增加 state 字段，
    operand-local proxy 不优于 BOAT 时回退 parent。
-5. **Global Activation-LRH（L3/L6a/L6b）**：窄输入使用 rank-16、宽输入（`d>1024`
-   且 `d<=8192`）使用 rank-4 off-block factor；所有 proposal 最终都由部署
-   `G_q=W_q^T W_q` 逐行精确门控。v116 的正向增益来自 `proj(d=4864)`。
-6. **L6c full `G_64` hierarchy + L6d structured factor + C1a/C1b/C1c**：固定 E6M2 scale，对每行最多 4 个高损 block
-   依次尝试合法 `lv2/lv3`，每次按完整 64×64 二次型增量更新并重编码，最终仍用
-   部署 `G_q` 行级 gate；L6d 用 4 个 `64×64` kernel 近似跨 block proposal；C1a 批量化
-   独立 row/block 的 15-level 评估；C1b 在每个 selected block 后刷新 structured gradient，
-   并重复两轮；C1c 将 kernel rank 提至 8，并在 v125 将 `max_blocks` 从 4 提至 8；
-   v125 7 个 Linear role 均不降，proj 从 v124 的 `0.422538` 继续提升。
-6. **L4a final deployed-Gram row gate（Linear 基座）**：在
-   `rows > channels` 且 `channels <= 1024` 的 expansive FFN 上，同时生成 v107
-   parent 与最终 `G_q=W_q^T W_q` 候选；用完整 `G_q` 逐行比较二次型，只写回不变差
-   的候选行。它不增加公开 API 字段，state 只保存静态部署 Gram。
-7. **Attention 输出感知 shortlist（仅研究根；不属于当前官方基线）**：搜索 reciprocal RMS 平衡、K-centering、
+5. **Attention 输出感知 shortlist**：搜索 reciprocal RMS 平衡、K-centering、
    16/32/64 维共享 signed-Hadamard，以及 B1 GQRB 的 2×2/4×4 group-local
    orthogonal mixing；保留 parent 的原始四候选，并要求 mixing exact loss 至少
    改善 0.1% 才能替换。B2 PAWV 用 attention probability 的 token-row 对角
    Hessian 做 V 的离散坐标 refinement；V 仍保持独立合法 HiF4 编码。B2 PAWV
-   diag-only 的旧实现已确认存在变长崩溃。v126 改为逐样本直接计算 diagonal、按
-   `seq_len` 分组平均，校准/在线 V 精确查找当前长度，无匹配则回退；并删除无用的
+   diag-only 的旧实现已确认存在变长崩溃。v126/v127 改为逐样本直接计算 diagonal、
+   按 `seq_len` 分组平均，校准/在线 V 精确查找当前长度，无匹配则回退；并删除无用的
    full `P^TP` 与 `eigh`。该修复解决正确性与复杂度问题，完整精度仍待重测。
 
-## 最新全层实测（当前精度 parent）
+> **已裁剪机制（2026-08-31）**：L3 Global Activation-LRH、L4a final deployed-Gram
+> row gate、L4b GALS、L5a block-local permutation、L6a–L6d（rank-16 / wide rank-4 /
+> `G_64` hierarchy / structured factor）与 C1a–C1c（向量化、refresh×2、rank-8）已全部
+> 从根 `solution.py` 移除，仅保留在 `solutions/` 归档与下文历史记录中；它们作为
+> C2/C3 压缩阶段的精度上界证据，不代表当前根文件行为。
+
+## 最新全层实测（legacy precision parent v125，非当前根行为）
 
 报告文件：[`2026-08-31-v125-c1c-block8-qwen-full.md`](../logs/execution/2026-08-31-v125-c1c-block8-qwen-full.md)；
 原始 JSON：[`v125-c1c-block8-qwen-full.json`](../artifacts/real_model_suite/v125-c1c-block8-qwen-full.json)。
 v106 时间 parent 对照：[`v106-l2-cat-qwen-full.md`](../logs/execution/2026-08-30-v106-l2-cat-qwen-full.md)。
 上一 parent 的对照报告：[`b2-pawv-diagonly-qwen-full.md`](../logs/evaluations/b2-pawv-diagonly-qwen-full.md)。
+
+> 下表为 v125（含已裁剪的 L4a/L4b/L5a/L6/C1 机制）在旧 full-layer 口径下的历史数据，
+> 仅作精度上界证据；当前根 v127 的主口径是 v4 sampled-means 的两个均值。
 
 固定输入为 Qwen2.5-0.5B（24 层、hidden 896、14 Q heads、2 KV heads、head dim 64），
 calibration 使用 train 的 2 个窗口，test 使用 validation 的 4 个不重叠窗口。
@@ -318,7 +321,11 @@ L3 证据：`2026-08-30-l3-global-lrh-stratified.md`、
 `2026-08-30-l3-global-lrh-b1-diagnostic.md`、
 `2026-08-30-v107b1-l3-global-lrh-qwen-full.md`。
 
-## 距离 Linear 0.9 与 36,000
+## 距离 Linear 0.9 与 36,000（旧权重口径，待按 v84 重校准）
+
+> **权重变更提示（2026-08-31 晚）**：官方已减少 Linear 样例的评分权重，`36000`
+> 与 v72/v74 的 2 万+ 分数均属**旧权重口径**；新权重官方锚点为 v84 `16517 / 252.563s`。
+> 本节的分差与目标推导保留为历史方法记录，用于新目标前必须按新权重锚点重新校准。
 
 当前 precision-only parent v125 的 Linear native mean 为 `0.5097598050`。若以本地 panel 的 mean 作为诊断目标：
 
@@ -540,18 +547,20 @@ L0 的正式产物为 [`l0-linear-ceiling-qwen.json`](../artifacts/oracle_dashbo
   PAWV 的静态 token-row diagonal 与旋转整数配置/符号；官方 2026-08-31 修订已放开
   `A@W` 信息源限制，候选可按需使用输出或残差优化 `Q(W)` / `Q(A)`。
 - 当前源码 SHA256（规范 LF 内容）：
-  `F15E112C7E832D019EE83D707ACD9D72FEF121A306E4CC3B50DBBC2CBB574924`。
+  `75F21B7BE3630FFEFEAF2883BB699CE4901DF1BF6C0B39DD6E40F253561E32C0`（与
+  `solutions/20260831_v127_v106-pawv-variable-length-safe_scoreNA_timeNA/` 归档一致）。
 - 发布前检查：C1c synthetic/reference-equivalence、合规/精度门控和 v107 Attention
   contract audit 均通过；`guard_solution_file` 为 `violations=[]`、`static_violations=[]`。
   v127 的 `local_result_valid=true` 仅表示本地结果完整、finite、接口合法，不表示官方
   通过；官方 v100/v107 均确认 Attention `wrong answer`（非 timeout），官方 v98 已在最新
   300s 限制下确认为 timeout。后续官方候选以 v74 的完整 Attention 可达闭包为回归基线，
   且把 end-to-end `<300s` 作为提交硬门。
-- 当前根定向回归命令（`test_global_activation_lrh.py`、`test_linear_compliance_guard.py`、
-  `test_l5a_joint_transform.py`、`test_expansive_cat.py`、`test_linear_error_decomposition.py`）
-  为 **38 passed / 6.83s**。另跑 `test_release_candidate.py` 得到 **31 passed、16 failed**；
-  失败均来自已删除的历史内部 helper、旧 release flag 或本机未安装 `transformers`，不是
-  当前 v125 full 评测路径的失败，不能把它们计入当前算法分数。
+- 当前根定向回归命令（`test_expansive_cat.py`、`test_linear_compliance_guard.py`、
+  `test_linear_error_decomposition.py`）为 **21 passed / 3.55s**（2026-08-31 裁剪后实测）。
+  `test_global_activation_lrh.py`、`test_l5a_joint_transform.py`、`test_release_candidate.py`
+  等针对已裁剪 L4a/L4b/L5a/L6/C1 机制与旧 release flag 的历史断言共 **17 failed**；它们不是
+  当前 v127 根文件的发布门禁，不能计入当前算法分数。若重启这些方向，先按当前 API/state
+  重新编写测试，再把测试加入发布命令。
 
 历史 C86 源码和每次实验结果仍在 `solutions/`、`logs/` 与 Git 历史中，本文只描述
 当前根目录实现；历史记录不应被当作当前代码行为。

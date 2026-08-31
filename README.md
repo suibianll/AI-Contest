@@ -10,14 +10,18 @@
 
 ## 当前状态
 
-- 官方评测集已更新为 **250 个 Linear case + 200 个 Attention case**；逐
-  case 求和的分数和端到端时间都会高于旧口径，旧分数不能与新分数直接比较。
-- 当前归档候选中，修订评测集下的合规官方冠军已更新为 **v074 / C75，
-  `22750 / 239.387s`**；相对 v072 的 `22662 / 226s` 提升 `88` 分、增加
-  `13.387s`，相对 v066 / C66 提升 `193` 分。此前 v051 / C47b 为 `22451 / 234s`，v031 / C39-FW
-  与 v034 / C41b 均为 `21864`，时间分别为 `161.3s` 与 `159.4s`。
+- **官方评测（2026-08-31 第三次修订）**：官方评分**更换了权重，减少了 Linear 样例的
+  评分权重**，因此官方总分大幅下降；官方不限制任何 `A@W` 拟合用法，只限制端到端
+  运行总时间 **`< 300s`**。当前确认的官方锚点为 **v84：`16517 / 252.563s`（官方通过，
+  < 300s）**。新权重总分不能与旧权重分数（v66/v72/v74 的 2 万+）直接比较。见
+  [`v84 官方结果`](logs/execution/2026-08-31-v84-official-result.md)。
+- 旧权重口径下的官方记录（仅供历史参考，不可与新权重比较）：v074 / C75 `22750 /
+  239.387s`、v072 `22662 / 226s`、v066 / C66 `22557 / 217.2s`、v051 / C47b `22451 /
+  234s`、v031 / C39-FW 与 v034 / C41b 均 `21864`（`161.3s` / `159.4s`）。
+- 官方评测集仍为 **250 个 Linear case + 200 个 Attention case**；官方绝对分数随
+  权重方案变化，本地一律不复制 case、不拟合官方绝对分。
 - 外部参考：[`youxilee/hif4`](https://github.com/youxilee/hif4) 当前公开代码据
-  用户提供的同口径官方结果为 `24153 / 239s`；未导入本仓库。未修改的 v2.7
+  用户提供的旧权重官方结果为 `24153 / 239s`；未导入本仓库。未修改的 v2.7
   源码在本地 CPU 代理上复测后，最高单模型是 Qwen native `369.527269`，同口径
   Qwen panel 为 `250.327102`（应作为本地最高比较基准）；五模型相加的
   `1085.743597` 仅是诊断量，不能排名或换算官方分数。CUDA 路径还存在外部代码
@@ -36,65 +40,53 @@
   审计和复现实验配置见 [`当前主版本算法效果与评测状态`](docs/current-solution-status.md)、
   [`算法全景`](docs/algorithm-inventory-and-directions.md)、
   [`归档实现审计`](docs/archive-implementation-audit.md) 与 [`solutions/README.md`](solutions/README.md)。
-  L5d 外部组件审计与 L5e 可达性 checkpoint 已完成；L6a–L6e 已完成并归档；C1a 已完成，
-  C1b 的 block-refresh screen（v120）被拒绝，两轮 refresh（v121）已通过，C1c rank-2/block-2
-  screen 均被拒绝，rank-8/max-blocks-8（v125）已在 full-layer 取得当前最高精度；由于
-  API 时间远超 300s，下一步转入唯一活跃计划的 C2 低成本跨模型 guardrail 和 C3 state/runtime
-  压缩，不再扩大 block budget。C3 已具体化为部署权重因子 exact gate、selected-block
-  稀疏增量 exact gate 和 structured gradient 增量刷新；C3 完成并归档后，才启动共享
-  正交 butterfly/Givens frame + 冻结 activation state 后完整离散 JDRQ-weight 的新计划。
-  36000/Linear 门槛推导见
-  [`当前实验结果与可达性 checkpoint`](logs/execution/2026-08-31-current-results-target-feasibility.md)。
+- **实验史摘要（已归档，不再属于根文件）**：L0–L2（诊断/LRH/CAT）产出 v105/v106/v107；
+  L3–L4（Gram gate/GALS）产出 v109/v110；L5–L6（permutation、rank-16、wide rank-4、
+  `G_64` hierarchy、structured factor）产出 v111–v118；C1a–C1c（向量化、refresh×2、
+  rank-8/`max_blocks=8`）产出 v119–v125，v125 为 legacy precision-only 最高精度
+  （panel `295.847849`，API `2653.58s` 不可提交）。**2026-08-31 起 L3–L6/C1 机制已全部
+  从根 `solution.py` 裁剪**，根文件回到 v106 Linear 链 + PAWV 变长修复（v127）；这些
+  机制只作为 C2/C3 压缩阶段的历史证据保留。下一步执行唯一活跃计划的 C2 低成本跨模型
+  guardrail 与 C3 state/runtime 压缩。逐版本证据见 [`solutions/README.md`](solutions/README.md)
+  与 `logs/execution/`；旧权重口径的 36000 目标推导见
+  [`当前实验结果与可达性 checkpoint`](logs/execution/2026-08-31-current-results-target-feasibility.md)，
+  该推导基于旧评分权重，需按 v84 新权重锚点（`16517`）重新校准后方可用于新目标。
 - 当前根源码 SHA256：
-  `F15E112C7E832D019EE83D707ACD9D72FEF121A306E4CC3B50DBBC2CBB574924`（规范 LF）。
-- L1 full-hierarchy Weight-LRH 已完成合成测试与五层×七 role screen，但 screen
-  `both_player=0.523019429222563` 与 L0 逐条持平；候选 v105 已归档。L2 固定
-  `α=0.25` 的 expansive-FFN CAT balance 已通过 full-layer，v106 成为时间 parent；
-  L3 Gram-gated Global Activation-LRH 在只看精度的 full-layer 得到 v107；L4a final
-  deployed-Gram row gate 得到 v109；L4b final-Gram GALS 得到 v110；L5a block-local
-  permutation 得到 v111。L5b/v112、L5c/v113、L5d/v114 均已按 screen 归档拒绝，
-  L5e 记录固定表示/接口的可达性证据；L6a rank-16、L6b 宽 rank-4 与 L6c 完整
-  `G_64` hierarchy 与 L6d 结构化跨 block factor 均已完成，L6 计划已归档；C1c
-  `max_blocks=8` 已在 v125 完成并停止，v127 负责 PAWV 变长安全修复；下一步执行唯一活跃计划的 C2/C3。
-  证据见 [`v111 execution log`](logs/execution/2026-08-31-v111-l5a-joint-permutation-qwen-full.md)。
+  `75F21B7BE3630FFEFEAF2883BB699CE4901DF1BF6C0B39DD6E40F253561E32C0`（规范 LF，
+  与 `solutions/20260831_v127_v106-pawv-variable-length-safe_scoreNA_timeNA/` 归档快照一致）。
 - 旧版本地评测器（单模型 dev 与 frozen holdout）曾因 calibration/test
-  文本重叠不能可靠排序合规候选，相关代码（`real_data_eval.py`、
-  `holdout_eval.py`、`cap_oracle.py`）已于 2026-08-28 移除；诊断结论见
+  文本重叠不能可靠排序合规候选；`real_data_eval.py`、`holdout_eval.py`、
+  `cap_oracle.py` 已于 2026-08-28 **弃用**（文件保留但不再用于任何排序或发布
+  判断，`synthetic_attention_eval.py` 仅作性质诊断）；诊断结论见
   [C40 官方结果与评测器诊断](logs/candidates/C40-official-evaluator-diagnosis.md)，
-  历史代码可从 git 历史恢复。
+  历史版本可从 git 历史恢复。
 - 当前唯一活跃评测器为 `real_model_suite.py`：默认使用 `sampled-means-v1` 和
   Qwen2.5-0.5B，只输出抽样 Linear/Attention 平均 gain；层、role、window、seed
   和数据 revision 都写入 `sample_plan`。其他模型必须显式传入，只作独立 guardrail，
   不相加。旧 `official_flow_total`/`panel_score` 仍在 JSON 中兼容保留，但不再是
   报告主指标。完整口径与官方锚点校准见
   [`本地评测统一口径与官方锚点校准`](logs/execution/2026-08-31-local-metric-calibration.md)。
-- v107 官方 `Attention / wrong answer` 已按同一 Qwen cache、同一 NVFP4 codec 与同一
-  API 和 v31、v51、归档外部 v002 做逐输出对照；四版本均无 state/shape/finite/五字段
-  契约失败，v107 的 Attention MSE mean `0.00169248` 反而低于 v31/v51 的 `0.00382519`
-  和外部 v002 的 `0.00529873`。详细数字见
-  [`v107 Attention 输出差分日志`](logs/execution/2026-08-31-v107-v31-v51-external-attention-output-diff.md)。
-  该外部数字仅代表本地归档 v002，不等同于最新 v2.7 源码；官方隐藏输入仍需同包复测。
-- 用户确认 **v100 官方同样为 Attention `wrong answer`，且不是 timeout**。因此
-  `deployment_gram` 不再是 v107 WA 的首要解释，v100/v106/v107 及其 clean Attention
-  后代全部降级为本地研究版本。**v72 已正式通过官方评测，成绩 `22662 / 226s`**：
-  它的四个 Attention API、
-  45 个递归可达 helper 和相关常量均与官方通过的 v66 语义一致；本地 Qwen native
-  `356.605602`，较 v66 `+6.453182`，Attention 同为 `63.119717`，CUDA API `163.41s`。
-  相对 v66 官方提升 `105` 分，按最新 `300s` 限制仍有 `74s` 时间余量。随后 **v74 也正式通过，
-  成绩 `22750 / 239.387s`**，成为新的官方基线，按最新 `300s` 限制仍有 `60.613s` 时间余量。
-  官方记录见 [`v74 官方通过`](logs/execution/2026-08-31-v74-official-pass.md)，边界证据见
-  [`v100 官方 WA 边界审计`](logs/execution/2026-08-31-v100-official-wa-boundary-audit.md)。
+- **官方结果档案（按时间序，细节均见对应日志）**：
+  v031/v034 `21864`（旧权重合规锚点）→ v051 `22451` → v066 `22557` → **v072 `22662 /
+  226s`、v074 `22750 / 239.387s` 通过（旧权重基线，记录见
+  [`v74 官方通过`](logs/execution/2026-08-31-v74-official-pass.md)）** →
+  **v84 `16517 / 252.563s` 通过（新权重锚点）**。失败类：v100/v107 官方 Attention
+  `wrong answer`（非 timeout；根因为 B2 PAWV 变长 bug，输出差分与边界审计见
+  [`v107 输出差分`](logs/execution/2026-08-31-v107-v31-v51-external-attention-output-diff.md)
+  与 [`v100 WA 边界审计`](logs/execution/2026-08-31-v100-official-wa-boundary-audit.md)）；
+  v98、v121 官方 timeout（v121 记录见
+  [`v121 官方 timeout`](logs/execution/2026-08-31-v121-official-timeout.md)）。
   根 `solution.py` 现为 v127（v106 + PAWV 变长修复）研究版本，不是官方候选。
-- 用户确认 **v121 官方显示运行超时**。这与本地 API `2180.450151s` 的 runtime-invalid
-  结论一致，和 v100/v107 的 Attention WA 是两类失败。v121 及更慢的 v124/v125
-  只保留精度证据；记录见
-  [`v121 官方 timeout`](logs/execution/2026-08-31-v121-official-timeout.md)。
-- **官方评测（2026-08-31 再次修订）**：端到端超时限制从 420s 收紧为 **`300s`（5 分钟）**，
+- **官方评测历史修订（2026-08-31）**：端到端超时限制从 420s 收紧为 **`300s`（5 分钟）**，
   且官方不限制任何 `A@W` 拟合用法（`Q(W)`、`Q(A)` 均可自由使用），只限制总运行时间。
-  用户确认 **v98 在该新限制下官方判为超时**（本地 API `406.24s` > 300s）；v98 不再是
-  候选，其官方结果类别更新为 `timeout`。此前将 v107 误记为 timeout，现已纠错：**v107 官方
-  为 Attention `wrong answer`（非 timeout）**，其本地旧口径 API `481.04s` > 300s 仅作历史
-  风险提示。协议版本已升级为 v5，见 [`execution log`](logs/execution/2026-08-31-v98-official-timeout.md)。
+  用户确认 **v98 在该限制下官方判为超时**（本地 API `406.24s` > 300s）；v98 不再是
+  候选。此前将 v107 误记为 timeout 已纠错：**v107 官方为 Attention `wrong answer`
+  （非 timeout）**，本地旧口径 API `481.04s` > 300s 仅作历史风险提示。
+  **第三次修订（2026-08-31 晚）**：官方**更换了评分权重，减少 Linear 样例的权重**，
+  官方总分据此大幅下降；新权重下确认 **v84 官方通过：`16517 / 252.563s`（< 300s）**。
+  新权重总分与旧权重分数（v66/v72/v74 等 2 万+）不可直接比较。协议已升级为 v5，
+  详见 [`v98 官方超时`](logs/execution/2026-08-31-v98-official-timeout.md) 与
+  [`v84 官方结果`](logs/execution/2026-08-31-v84-official-result.md)。
 - v100/v107 Attention WA 的直接根因已由官方自测报错确认：B2 PAWV 用第一个 calibration sample
   的 token 数建立固定 `P^TP` 方阵，再直接累加其他样本；官方接口不保证 calibration
   sample 等长。官方 mini sample 的长度为 `[10, 128, 512, 1024, 1024]`，在第二个
@@ -179,20 +171,27 @@ git diff --check
 这些 panel 值只证明历史局部排序方向，不是官方绝对分数换算；官方锚点拟合的
 诊断结果和适用边界见 [`local metric calibration`](logs/execution/2026-08-31-local-metric-calibration.md)。
 
-## 修订版官方评测锚点（2026-08-29）
+## 修订版官方评测锚点（2026-08-29；2026-08-31 更换评分权重）
 
-以下结果按新版 `250 Linear + 200 Attention` 样例统计；前三项为用户确认的本
-地归档提交结果，最后一项是外部仓库参考，不属于本仓库提交：
+以下结果按新版 `250 Linear + 200 Attention` 样例统计；**v031–v074 均为旧评分权重
+口径**（2026-08-31 晚官方减少 Linear 样例权重后，总分不可与 v84 新权重分数直接比较）。
+前三项为用户确认的本地归档提交结果，最后一项是外部仓库参考，不属于本仓库提交：
 
 | 方案 | 分数 | 时间 | 备注 |
 | --- | ---: | ---: | --- |
-| v031 / C39-FW | 21864 | 161.3s | 合规归档锚点 |
-| v034 / C41b | 21864 | 159.4s | 合规归档锚点 |
-| v051 / C47b | 22451 | 234s | 此前本地官方冠军 |
-| v066 / C66 | 22557 | 217.2s | 前一官方冠军/控制组 |
-| v072 / C74 | 22662 | 226s | 前一官方冠军；Attention 通过 |
-| **v074 / C75** | **22750** | **239.387s** | **当前本地官方冠军；Attention 通过** |
-| `youxilee/hif4` | **24153** | **239s** | 外部官方参考；本地最高 Qwen native `369.527269`、panel `250.327102`；五模型 `1085.743597` 仅诊断 |
+| v031 / C39-FW | 21864 | 161.3s | 合规归档锚点（旧权重） |
+| v034 / C41b | 21864 | 159.4s | 合规归档锚点（旧权重） |
+| v051 / C47b | 22451 | 234s | 此前本地官方冠军（旧权重） |
+| v066 / C66 | 22557 | 217.2s | 前一官方冠军/控制组（旧权重） |
+| v072 / C74 | 22662 | 226s | 前一官方冠军；Attention 通过（旧权重） |
+| v074 / C75 | 22750 | 239.387s | 旧权重官方基线；Attention 通过 |
+| **v84 / C84** | **16517** | **252.563s** | **新评分权重（减少 Linear 权重）下官方通过；< 300s** |
+| `youxilee/hif4` | 24153 | 239s | 外部旧权重官方参考；本地最高 Qwen native `369.527269`、panel `250.327102`；五模型 `1085.743597` 仅诊断 |
+
+> **权重变更说明（2026-08-31）**：官方减少 Linear 样例的评分权重，导致总分大幅
+> 下降（v84 `16517` < 旧权重 v74 `22750` 即为例证）。两套权重不能互相换算；官方未
+> 提供两项权重系数，本地不复制 case 拟合官方绝对分。v84 官方记录见
+> [`v84 官方结果`](logs/execution/2026-08-31-v84-official-result.md)。
 
 新版官方时间限制已修订为 **5 分钟（300 秒）**（2026-08-31）；表格中的通过
 版本在修订前的 420s 上限下完成评测，其时间仍低于最新 300s 限制。历史 `14613 / 159.2s`、
@@ -202,10 +201,13 @@ git diff --check
 
 1. **官方评测（2026-08-31 修订）不再限制任何 `A@W` 拟合用法**：离线
    `hif4_calibration_and_quantize_weight` 与在线激活量化均可用 `A@W`、输出或残差
-   自由优化 `Q(W)` / `Q(A)`，信息源不限。当前唯一硬约束是端到端运行时间。
-2. 输出必须是合法 HiF4 五字段，API、state、shape、dtype 和设备必须符合要求。
-3. 最终官方评测总时间必须严格小于 `300s`（5 分钟）。
-4. 不使用 holdout 或官方分数反向调参。
+   自由优化 `Q(W)` / `Q(A)`，信息源不限。唯一硬约束是端到端运行时间。
+2. **官方评分权重（2026-08-31 晚修订）减少了 Linear 样例的权重**，官方总分据此
+   大幅下降；同一算法在新权重下的官方总分与旧权重分数不可直接比较。本地排序仍以
+   `sampled-means-v1` 的 Linear/Attention mean 为准，不受官方总权重变化影响。
+3. 输出必须是合法 HiF4 五字段，API、state、shape、dtype 和设备必须符合要求。
+4. 最终官方评测总时间必须严格小于 `300s`（5 分钟）。
+5. 不使用 holdout 或官方分数反向调参。
 
 除上述规则外，不设置固定的增益、coverage、beam、单组件非退化或中间时间门槛。
 开发阶段允许完整扫描和超过 300 秒的诊断实验；发现精度信号后，再通过算法和实现
@@ -213,19 +215,18 @@ git diff --check
 
 ## 当前算法
 
-当前根是重写后的 clean Gram-hierarchy + B1/B2 + L5a + L6a + L6b + L6c + L6d + C1a + C1b + C1c rank-8 版本；v086/C86 仍是不可变历史归档。
+当前根为 **v127：v106 Linear 链 + Attention B1/B2 + PAWV 变长修复**（2026-08-31 已把
+L3–L6/C1 的实验机制全部裁剪出根文件，它们仅保留在归档中）；v086/C86 仍是不可变历史归档。
 评测和优化优先级如下：
 
 | 优先级 | 组件 | 当前机制 | 作用/状态 |
 | --- | --- | --- | --- |
 | 1 | Linear | BOAT：RMS 对角平衡 + 4/8/16/64 signed-Hadamard | 先压低两侧 operand-local 误差；不构造 Linear 输出 |
 | 2 | Linear | Cross-fold Weight-HSDQ：`AᵀA` 二阶增量、15 levels、top-2 block、1 sweep | 只更新离线 `weight_params`；跨 fold 验证后才接纳 |
-| 3 | Linear | Gram-hierarchy Activation-HSDQ：静态 `WᵀW`、offset/hierarchy 选择、最多 128 block、2 sweeps | 在线 state 仅含合法静态统计；v106 基线 Linear mean `0.503459` |
+| 3 | Linear | Gram-hierarchy Activation-HSDQ：静态 `WᵀW`、offset/hierarchy 选择、最多 128 block、2 sweeps | 在线 state 仅含合法静态统计；v4 sampled Linear mean `0.509408` |
 | 4 | Linear | Expansive-FFN CAT balance：`rows > channels`、固定 α=0.25 | v106 仅改善 fc_gate；不增加 state 字段 |
-| 5 | Linear | Global Activation-LRH：窄输入 rank-16、宽输入 rank-4 off-block proposal，逐行 exact deployed-Gram gate | v125 Linear mean `0.509760`；L6a–L6d 均通过 |
-| 6 | Linear | L6d + C1a + C1b/C1c structured factor：8 个 `64×64` kernel，批量 proposal，block refresh×2，完整 `G_q` gate | v125 panel `295.847849`；较 v124 `+0.027620`，API `2653.58s`（runtime invalid） |
-| 7 | Attention | reciprocal RMS、K-centering、GQA 对齐、GQRB、PAWV diag-only | 使用真实 non-causal Attention 输出排序；当前 mean `0.842039` |
-| 8 | 下一步 | L0–L5e、L6a–L6e、C1a、C1b、C1c（v125 `max_blocks=8`）已完成 → **C2 跨模型 guardrail → C3 state/time 压缩** | 只参考唯一活跃计划；Attention PAWV 独立延后 |
+| 5 | Attention | reciprocal RMS、K-centering、GQA 对齐、GQRB、PAWV diag-only（v127 已按 `seq_len` 分组修复变长 bug） | 使用真实 non-causal Attention 输出排序；v4 sampled Attention mean `0.828395` |
+| 6 | 下一步 | L0–L6、C1a–C1c 已完成并归档（机制已从根文件裁剪）→ **C2 跨模型 guardrail → C3 state/time 压缩**，之后才把裁剪机制以可负担预算回植 | 只参考唯一活跃计划；Attention PAWV 独立延后 |
 
 优化决策只看同一冻结缓存、同一 sample plan 上的两个均值：Qwen
 `mean_scores.linear_mean` 和 `mean_scores.attention_mean` 是主指标，其他模型用于
@@ -401,7 +402,8 @@ Attention 合成矩阵：
   tests/test_real_model_suite.py --basetemp=.tmp_pytest\clean-root
 ```
 
-当前环境结果为 **34 passed**。`test_jdrq.py`、`test_weight_cross64.py`、
+当前环境结果为 **36 passed**（2026-08-31 加入 sampled-means 测试后实测）。
+`test_jdrq.py`、`test_weight_cross64.py`、
 `test_weight_full64.py` 和 `test_release_candidate.py` 中仍有针对已删除 C86/JDRQ
 私有 helper、实验开关或旧 state schema 的历史断言；它们不再是 clean 根版本的发布
 门禁，不能用整库 `pytest -q` 的失败数评价当前算法效果。若重启这些方向，先按
@@ -573,7 +575,8 @@ Attention 合成矩阵：
 - 当前优化事实以根 `solution.py`、最新执行日志和可复现评测输出为准。
 - 历史版本及其结论见 [solutions/README.md](solutions/README.md)。
 - 最新执行记录见
-  [2026-08-26-optimization-execution-log.md](logs/execution/2026-08-26-optimization-execution-log.md)。
+  [本地评测统一口径与官方锚点校准](logs/execution/2026-08-31-local-metric-calibration.md)
+  与 [`v84 官方结果`](logs/execution/2026-08-31-v84-official-result.md)。
 - 候选归档流程见
   [2026-08-26-solution-archive-workflow.md](docs/superpowers/archive/plans/2026-08-26-solution-archive-workflow.md)。
 - 归档实现问题与不可复现候选见

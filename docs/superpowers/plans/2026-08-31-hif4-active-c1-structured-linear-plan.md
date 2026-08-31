@@ -10,9 +10,12 @@
 > 路径没有官方通过证据；用户确认 v100/v107 均为 Attention WA（非 timeout），
 > v98 已在最新 300s 限制下官方判为 timeout（本地 API `406.24s` > 300s）。
 > 官方规则（2026-08-31 修订）：端到端时间 `<300s`，不再限制任何 `A@W` 拟合用法。
-> 官方通过基线已更新为 v74：`22750 / 239.387s`；v72 `22662 / 226s` 与
+> 官方通过基线（旧权重）为 v74：`22750 / 239.387s`；v72 `22662 / 226s` 与
 > v66 `22557 / 217.2s` 保留为控制组。
-> 根 `solution.py` 规范 LF SHA256：`F15E112C7E832D019EE83D707ACD9D72FEF121A306E4CC3B50DBBC2CBB574924`
+> 2026-08-31 晚官方第三次修订：**评分权重减少 Linear 样例权重**，官方总分大幅
+> 下降，新权重官方锚点为 **v84 `16517 / 252.563s`（< 300s）**；旧权重分数不可
+> 与新权重比较。
+> 根 `solution.py` 规范 LF SHA256：`75F21B7BE3630FFEFEAF2883BB699CE4901DF1BF6C0B39DD6E40F253561E32C0`
 > 主目标：保持 v125（继承 v119）的完整部署 `G_q` exact gate 语义，继续验证 Qwen full-layer
 > `linear_mean`；同时把结构化 proposal 的原型实现压缩为可审计的 C1 路径。Attention
 > 只作回归检查，不在本计划中扩展 PAWV。
@@ -72,7 +75,7 @@ v4 sample seed=`20260831`、layers=`[0,1,5,10,13,15,22,23]`、全部 role、4 wi
 | Qwen panel（legacy，仅兼容） | `294.260802` |
 | native total（legacy，仅兼容） | `140.616055` |
 | Local API / Wall | `151.136s / 161.840s`（CPU） |
-| v127 source LF SHA | `F15E112C7E832D019EE83D707ACD9D72FEF121A306E4CC3B50DBBC2CBB574924` |
+| v127 source LF SHA | `75F21B7BE3630FFEFEAF2883BB699CE4901DF1BF6C0B39DD6E40F253561E32C0` |
 
 到 `linear_mean=0.9` 仍差约 `0.390592`，需消除当前剩余归一化误差约
 `79.86%`；这只是本地诊断轴，不能换算官方 36000。所有在线候选必须遵守：

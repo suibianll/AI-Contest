@@ -11,17 +11,23 @@ Chinese version: [README.md](README.md)
 
 ## Current status
 
-- The official panel has been revised to **250 Linear cases + 200 Attention
-  cases**. Because scores are summed per case, both scores and runtimes are
-  higher than under the legacy panel and must not be compared directly.
-- On the revised panel, the best official result among archived submissions is
-  v074 / C75 at `22750 / 239.387s`; it improves on v072 (`22662 / 226s`) by
-  88 points at an additional 13.387s, and on v066 / C66 (`22557 / 217.2s`)
-  by 193 points. The previous v051 / C47b result was
-  `22451 / 234s`. v031 / C39-FW and v034 / C41b both scored `21864`, at
-  `161.3s` and `159.4s`, respectively.
+- **Official evaluation (third revision, 2026-08-31): the organisers changed the
+  scoring weights and reduced the weight of Linear cases**, so official totals
+  have dropped substantially. `A@W` fitting remains unrestricted; the only hard
+  constraint is the end-to-end runtime **below 300 seconds**. The current
+  confirmed official anchor is **v84: `16517 / 252.563s` (official pass,
+  < 300s)**. New-weight totals must not be compared directly with old-weight
+  scores (the 20k+ v66/v72/v74 numbers). See
+  [`v84 official result`](logs/execution/2026-08-31-v84-official-result.md).
+- Old-weight official records (historical reference only, not comparable to the
+  new weight): v074 / C75 `22750 / 239.387s`, v072 `22662 / 226s`,
+  v066 / C66 `22557 / 217.2s`, v051 / C47b `22451 / 234s`, and v031 / C39-FW plus
+  v034 / C41b both at `21864` (`161.3s` / `159.4s`).
+- The official panel remains **250 Linear cases + 200 Attention cases**; official
+  absolute scores vary with the weight scheme, and local runs never duplicate
+  cases or fit official absolute scores.
 - External reference: the public [`youxilee/hif4`](https://github.com/youxilee/hif4)
-  repository reports `24153 / 239s` under the same user-confirmed protocol. Its
+  repository reports `24153 / 239s` under the old user-confirmed protocol. Its
   code is not imported; an exact v2.7 CPU diagnostic run has a highest single-model
   Qwen native total of `369.527269` and a like-for-like Qwen panel of `250.327102`
   (the local benchmark). The five-model sum `1085.743597` is diagnostic only and
@@ -32,28 +38,37 @@ Chinese version: [README.md](README.md)
   a parent. **The official evaluation (revised 2026-08-31) removed every `A@W`
   fitting restriction and now constrains only end-to-end runtime**; old
   compliance rulings no longer apply as current constraints.
-- The root `solution.py` is v126: the v125 C1c structured-rank-8 / `max_blocks=8` + C1b structured-gradient-refresh (two-sweep) precision-only path
-  on top of v118 L6d, v117 full `G_64` hierarchy, v116 L6b wide rank-4, v115 L6a
-  rank-16, v111 block-local permutation, v110 final-Gram GALS, and the B1/B2 path.
-  plus the variable-length PAWV fix. On the full 24-layer Qwen2.5-0.5B cached
-  v125 run, its native total is `423.394380`,
-  Qwen shaped panel is `295.847849`, Linear mean is `0.5097598050`, and formal API
-  time is `2653.580314s`
-  (accuracy-only evidence; runtime is invalid until C3 compresses below
-  300s); v126 has not inherited those values without a rerun. It now groups
-  PAWV diagonals by sequence length, performs exact-length lookup with fallback,
-  and removes the unused full `P.T@P` eigendecomposition. The official
-  `[10,128,512,1024,1024]` length-pattern regression passes. See the [current status
+- The root `solution.py` is **v127: the v106 Linear path + the variable-length PAWV
+  calibration fix**, kept as a research candidate against the official Attention shape
+  risk. On 2026-08-31 the L3–L6/C1 experimental mechanisms (Global Activation-LRH,
+  final-Gram gates, GALS, block-local permutation, rank-16/wide rank-4 factors,
+  `G_64` hierarchy, structured factors, C1a–C1c) were **removed from the root file**;
+  they survive only in `solutions/` archives and historical logs. The new
+  `sampled-means-v1` profile (Qwen, 8 layers, 7 roles, 4 windows, 224 Linear + 32
+  Attention cases) measures Linear mean `0.509408`, Attention mean `0.828395`, local
+  API `151.136s`, wall `161.840s`; under the same sampling plan v74 measures
+  `0.440305 / 0.671106 / 218.619s / 229.485s`. These four values are the current
+  local A/B primary results. The v127 full-layer legacy run (`453.102s`) is retained
+  for history only; never map a local 300-second reading onto the official limit.
+  Itemized results, archive audits, and reproduction configs live in the [current status
   report](docs/current-solution-status.md), the [algorithm inventory](docs/algorithm-inventory-and-directions.md),
   the [archive implementation audit](docs/archive-implementation-audit.md),
-  and [`solutions/README.md`](solutions/README.md). Future work follows the
-  [single active optimization plan](docs/superpowers/plans/2026-08-31-hif4-active-c1-structured-linear-plan.md); C1a/C1b/C1c are complete, and C2 cross-model guardrails followed by C3 state/time compression are next.
+  and [`solutions/README.md`](solutions/README.md). Next steps follow the
+  [single active optimization plan](docs/superpowers/plans/2026-08-31-hif4-active-c1-structured-linear-plan.md):
+  C2 low-cost cross-model guardrails, then C3 state/time compression; the trimmed
+  mechanisms may only be re-planted afterwards within a viable budget.
 - Current source SHA256:
-  `47E2E3AB76C6DEAAC8DE47BBCBD8F689CF5989DC8FF9E9081A887EC89E819B08` (normalized LF).
-- The active local evaluator is Qwen-first: it projects frozen-corpus Linear
-  and Attention means onto a fixed 250/200 panel, while other models remain
-  soft guardrails. The raw `official_flow_total` is retained for compatibility
-  diagnostics, but model layer counts no longer determine the primary ranking.
+  `75F21B7BE3630FFEFEAF2883BB699CE4901DF1BF6C0B39DD6E40F253561E32C0` (normalized LF;
+  identical to the `solutions/20260831_v127_v106-pawv-variable-length-safe_scoreNA_timeNA/`
+  archive snapshot).
+- The active local evaluator is `real_model_suite.py` with the default
+  `sampled-means-v1` profile on Qwen2.5-0.5B: it reports only the sampled
+  Linear/Attention mean gains, writes the full layer/role/window/seed plan into
+  `sample_plan`, and treats other models as explicit, independent guardrails that are
+  never summed. Legacy `official_flow_total`/`panel_score` fields remain in JSON for
+  compatibility but are no longer the primary metrics. See the
+  [local metric calibration](logs/execution/2026-08-31-local-metric-calibration.md)
+  for the unified protocol and official-anchor fitting.
 
 Local time and scores are for paired candidate comparison only and are never
 reported as official results. Every official result must be archived together
@@ -108,8 +123,9 @@ clean up the plan directory before running an algorithm experiment.
 
 ## Does the local evaluator track the official direction?
 
-On the frozen five-model evidence, the Qwen primary panel reproduces the revised
-official anchor ordering:
+The following is the legacy Qwen panel compatibility table, kept for historical
+anchor tracing only; current ranking always uses the `sampled-means-v1`
+Linear/Attention means and the corresponding sample plan:
 
 | Candidate | Official score | Qwen panel (local relative score) |
 | --- | ---: | ---: |
@@ -117,25 +133,36 @@ official anchor ordering:
 | C41b | 21864 | 230.096230 |
 | C47b | 22451 | 237.541351 |
 | C66 | 22557 | 238.282409 |
+| v72 / C74 | 22662 | 240.683147 |
+| v74 / C75 | 22750 | 242.505358 |
 
-Both orderings are `C39 = C41b < C47b < C66`; Qwen's panel Spearman is
-`1.0000`, while the five-model raw sum is `0.9487`. This validates relative
-direction only, not a linear conversion to official scores. The external
-`youxilee/hif4` Qwen panel is `250.327102`; the measured v125 precision parent is `295.847849`,
-  which is `45.484179` (`18.17%`) higher. Its Qwen native `369.527269` is the
-secondary diagnostic line; the five-model sum is never a ranking benchmark.
+These panel values only demonstrate historical local ordering direction, not a
+conversion to official absolute scores; the official-anchor fitting diagnostics and
+their applicability bounds are in the
+[local metric calibration](logs/execution/2026-08-31-local-metric-calibration.md).
+The external `youxilee/hif4` Qwen panel reference is `250.327102`; the legacy v125
+precision parent measured `295.847849` on the old full-layer panel (accuracy upper
+bound evidence only — those mechanisms are no longer in the root file, and all these
+scores predate the 2026-08-31 official weight change).
 
-## Revised official anchors (2026-08-29)
+## Revised official anchors (2026-08-29; weights changed 2026-08-31)
 
 | Submission | Score | Runtime | Status |
 | --- | ---: | ---: | --- |
-| v031 / C39-FW | 21864 | 161.3s | compliant archive |
-| v034 / C41b | 21864 | 159.4s | compliant archive |
-| v051 / C47b | 22451 | 234s | previous local official result |
-| v066 / C66 | 22557 | 217.2s | previous official control |
-| v072 / C74 | 22662 | 226s | previous official result; Attention passed |
-| v074 / C75 | **22750** | **239.387s** | best local official result; Attention passed |
-| `youxilee/hif4` | **24153** | **239s** | external official reference; local highest Qwen native `369.527269`, panel `250.327102`; five-model `1085.743597` is diagnostic only |
+| v031 / C39-FW | 21864 | 161.3s | compliant archive (old weight) |
+| v034 / C41b | 21864 | 159.4s | compliant archive (old weight) |
+| v051 / C47b | 22451 | 234s | previous local official result (old weight) |
+| v066 / C66 | 22557 | 217.2s | previous official control (old weight) |
+| v072 / C74 | 22662 | 226s | previous official result; Attention passed (old weight) |
+| v074 / C75 | 22750 | 239.387s | old-weight official baseline; Attention passed |
+| **v84 / C84** | **16517** | **252.563s** | **official pass under the new scoring weights (Linear weight reduced); < 300s** |
+| `youxilee/hif4` | 24153 | 239s | external old-weight official reference; local highest Qwen native `369.527269`, panel `250.327102`; five-model `1085.743597` is diagnostic only |
+
+> **Weight change (2026-08-31)**：the organisers reduced the weight of Linear
+> cases, so the official total dropped sharply (v84 `16517` vs old-weight v74
+> `22750`). The two weight schemes cannot be converted into each other; the
+> exact coefficients were not disclosed, and local runs never fit official
+> absolute scores. See [`v84 official result`](logs/execution/2026-08-31-v84-official-result.md).
 
 The official runtime limit has been revised to **5 minutes (300 seconds)**
 (2026-08-31); the passing versions in the table were evaluated under the
@@ -150,10 +177,15 @@ values such as `14613 / 159.2s` remain historical records from the old panel.
    may freely use `A@W`, outputs, or residuals to optimize `Q(W)` / `Q(A)`;
    there is no information-source restriction. The only hard constraint is the
    end-to-end runtime.
-2. Produce legal HiF4 fields and keep the API, state, shape, dtype, and device
+2. **The scoring weights were changed on 2026-08-31 to reduce the weight of
+   Linear cases**, so official totals dropped substantially; new-weight totals
+   are not comparable with old-weight scores. Local ranking still uses the
+   `sampled-means-v1` Linear/Attention means and is unaffected by the official
+   total-weight change.
+3. Produce legal HiF4 fields and keep the API, state, shape, dtype, and device
    behavior valid.
-3. Keep the final official evaluation strictly below `300s` (5 minutes).
-4. Do not tune from holdout or official-score feedback.
+4. Keep the final official evaluation strictly below `300s` (5 minutes).
+5. Do not tune from holdout or official-score feedback.
 
 There are no fixed gain, coverage, beam, per-component non-regression, or
 intermediate runtime gates beyond these rules. Diagnostic development runs may
@@ -166,8 +198,10 @@ validated mechanism enters submission compression.
 
 ## Current algorithm
 
-The root is the rewritten clean Gram-hierarchy version; v086/C86 remains an
-immutable historical archive.
+The root is **v127: the v106 Linear chain + Attention B1/B2 + the variable-length
+PAWV fix**. The L3–L6/C1 experimental mechanisms were trimmed from the root file on
+2026-08-31 and survive only in archives; v086/C86 remains an immutable historical
+archive.
 
 ### Linear
 
@@ -181,6 +215,8 @@ immutable historical archive.
 4. Online Activation-HSDQ uses static transformed-weight Gram blocks to choose
    hierarchy/offset and refine at most 128 blocks for two sweeps. Only static
    Gram and legal BOAT configuration are stored in `activation_state`.
+5. The expansive-FFN CAT balance (`rows > channels`, fixed `α=0.25`) improves
+   `fc_gate` without adding state fields.
 
 ### Attention
 
@@ -261,9 +297,40 @@ mode requires a matching snapshot and never downloads a model implicitly:
 ```
 
 If CUDA is available, change both device flags to `cuda`. If the cache is
-missing, run the capture step below first. The main ranking field is
-`official_ranking_audit.primary_panel_score_total`; other models are soft
-guardrails, while `official_flow_total` is retained for diagnostics.
+missing, run the capture step below first.
+
+The default daily ranking command uses the fast, reproducible `sampled-means-v1`
+profile:
+
+```powershell
+.\.venv\Scripts\python -u evaluator\real_model_suite.py `
+  --models qwen2.5-0.5b --evaluation-profile sampled-means-v1 `
+  --sample-layers 8 --sample-test-windows 4 --sample-seed 20260831 `
+  --device cpu --algorithm-device cpu --cache-mode read `
+  --solution solution.py --candidate-name active `
+  --output artifacts\real_model_suite\active-sampled.json `
+  --report logs\execution\active-sampled.md
+```
+
+This pins 224 Linear and 32 Attention cases and reports only
+`mean_scores.linear_mean` and `mean_scores.attention_mean`. Changing any
+profile, seed, layer/window count, device, cache, or data revision produces a new
+group that cannot be compared directly with previous results. Key result fields:
+
+| Field | Purpose |
+| --- | --- |
+| `results[*].mean_scores.linear_mean` | the only Linear primary metric (0–1 gain mean) |
+| `results[*].mean_scores.attention_mean` | the only Attention primary metric (0–1 gain mean) |
+| `results[*].sample_plan` | actual layer/window/role/seed; must match exactly before comparing |
+| `results[*].timing.local_api_total_seconds` | local six-API cumulative time |
+| `results[*].timing.wall_seconds` | local wall time including scheduling/reporting |
+| `results[*].official_flow_score` / `panel_score` | legacy compatibility fields, not primary metrics |
+
+Commands with `--solution` exit with code `2` only when local results are
+incomplete, illegal, or non-finite; they still write JSON and Markdown. A local
+API time above 300s is never reported as an official timeout. Old full-layer
+numbers are legacy; use the sampled profile for daily ranking, and confirm
+official time only through the official platform.
 
 Single-model quick evaluation (gpt2-small, cache-first):
 
@@ -305,7 +372,8 @@ real-model evaluator):
   tests/test_real_model_suite.py --basetemp=.tmp_pytest\clean-root
 ```
 
-The current environment reports **34 passed**. `test_jdrq.py`,
+The current environment reports **36 passed** (re-measured 2026-08-31 after the
+sampled-means tests were added). `test_jdrq.py`,
 `test_weight_cross64.py`, `test_weight_full64.py`, and `test_release_candidate.py`
 still contain historical assertions for removed C86/JDRQ helpers, experiment
 flags, or state schemas. They are not clean-root release gates; do not use the
@@ -353,13 +421,15 @@ historical sources under `solutions/`.
      --report logs\evaluations\active-YYYYMMDD.md
    ```
 
-   For full candidate comparisons, the primary score is
-   `250 * Linear_mean + 200 * Attention_mean` on the Qwen-shaped panel. The
-   smoke command above explicitly uses gpt2-small; local scores are only for
-   paired A/B ranking and must not be entered as Official Score. Pair promotion
-   runs with `--candidates c39 c41b c47b c66`, and record the full command,
+   The default evaluation is the Qwen `sampled-means-v1` profile; compare only
+   `mean_scores.linear_mean` and `mean_scores.attention_mean`. Every result must
+   record the sample seed, layer/window indices, source case counts, Local API,
+   Wall, device, and source SHA256. Legacy `panel_score`/`official_flow_total`
+   fields exist only for reading historical JSON. The smoke command above
+   explicitly uses gpt2-small; local scores are only for paired A/B ranking and
+   must not be entered as Official Score. Pair promotion runs with
+   `--candidates c39 c41b c47b c66`, and record the full command,
    source/target case counts, total API time, and source SHA256.
-   `official_flow_total` remains in JSON for rollback comparisons.
 
 3. **Capture real multi-model forward data once**
 
@@ -405,21 +475,20 @@ historical sources under `solutions/`.
    reads nor writes. Changing sequence length, calibration/test counts, layer
    cap, model, or the pinned dataset revision requires a new cache.
 
-5. **Check whether local ordering reproduces official ordering**
+5. **Compare local component means**
 
-   Official anchors are used only for Spearman and pairwise ranking audits;
-   the evaluator does not fit absolute official scores. Candidate promotion
-   compares Qwen's `primary_panel_score_total` on the same frozen corpus;
-   guardrail means, native sums, and Pearson are diagnostics and cannot
-   override the primary ordering. Use `--candidates c39 c41b c47b c66` beside
-   the revised official anchors.
+   Compare only the two means under the same sample plan; official-anchor
+   ordering and score fitting are post-hoc diagnostics in a separate calibration
+   report and never participate in candidate runs or absolute score conversion.
+   The evaluator keeps legacy fields so historical JSON remains readable, but
+   new reports no longer present them as primary scores.
 
-   The official-flow proxy is:
+   The current primary formula is:
 
    ```text
    score(case) = (MSE_STD - MSE_PLAYER) / MSE_STD
-   native official_flow_total = sum(all native Linear case scores) + sum(all native Attention case scores)
-   qwen panel_score.total = 250 * mean(Linear case scores) + 200 * mean(Attention case scores)
+    linear_mean = mean((MSE_STD-MSE_PLAYER)/MSE_STD over sampled Linear cases)
+    attention_mean = mean((MSE_STD-MSE_PLAYER)/MSE_STD over sampled Attention cases)
    ```
 
    Standard NVFP4/HiF4 dequantization, HiF4 parameter validation, and state
@@ -435,14 +504,13 @@ historical sources under `solutions/`.
    bit-for-bit and bump the protocol version when the official function is
    available.
 
-6. **Check the runtime constraint**
+6. **Record time but never fake official verdicts**
 
-   The primary model's complete six-API run must have
-   `official_api_total_seconds` strictly below the official `300s` limit;
-   exactly 300 seconds fails. Other model proxies are soft guardrails and are
-   not added to the submission runtime. Cache reads remove model-forward time
-   only and cannot hide a slow candidate. Confirm final end-to-end time with
-   the official evaluator.
+   `local_api_total_seconds` is the local six-API cumulative time and
+   `wall_seconds` is the local wall clock; both support A/B only on identical
+   hardware, cache, shapes, and sample plan. The official `300s` is the
+   end-to-end limit over the official 450 cases on Kunpeng 920B hardware and
+   can only be confirmed by the official platform.
 
 ### Candidate archiving steps
 
@@ -486,10 +554,10 @@ out. Do not keep only improvements. Before archiving, freeze the root
    - Hypothesis: why this change may improve accuracy
    - Test command: `full command`
    - Test config: model/data/cache/mode/layers/algorithm-device
-   - Local official-flow Linear sum / cases: ...
-   - Local official-flow Attention sum / cases: ...
-   - Local official-flow total and paired ordering: ...
-   - Local official API total runtime: ...
+   - Sample profile/seed/layer-window plan: ...
+   - Local Linear mean / cases: ...
+   - Local Attention mean / cases: ...
+   - Local API seconds / Wall seconds / device: ...
    - Cache: filename, schema, dataset revision, model revision
    - Source SHA256: `...`
    - Official score: NA
@@ -527,8 +595,9 @@ out. Do not keep only improvements. Before archiving, freeze the root
   reproducible evaluator output.
 - Historical versions and decisions are indexed in
   [solutions/README.md](solutions/README.md).
-- The latest execution history is in
-  [2026-08-26-optimization-execution-log.md](logs/execution/2026-08-26-optimization-execution-log.md).
+- The latest execution records are the
+  [local metric calibration](logs/execution/2026-08-31-local-metric-calibration.md)
+  and the [`v84 official result`](logs/execution/2026-08-31-v84-official-result.md).
 - Candidate archiving follows
   [2026-08-26-solution-archive-workflow.md](docs/superpowers/archive/plans/2026-08-26-solution-archive-workflow.md).
 - The archive implementation audit is in

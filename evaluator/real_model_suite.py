@@ -81,6 +81,12 @@ CACHE_SCHEMA_VERSION = 1
 # v5: official evaluation changed again (2026-08-31): the runtime limit was
 # cut from 420s to 300s and the organisers removed every A@W fitting
 # restriction - only total runtime is constrained now.
+# Third revision (2026-08-31, late): the organisers changed the scoring
+# weights and reduced the weight of Linear cases, so official totals dropped
+# substantially (v84 16517 / 252.563s under the new weights). Local ranking
+# uses sampled-means-v1 Linear/Attention means and is unaffected by the
+# official total-weight change; old-weight official scores (v66/v72/v74
+# 20k+) are kept for provenance only and are never anchors for calibration.
 SCORING_PROTOCOL_VERSION = 5
 OFFICIAL_RUNTIME_LIMIT_SECONDS = 300.0
 OFFICIAL_PANEL_REVISION = "2026-08-29"
@@ -235,6 +241,16 @@ CANDIDATE_SPECS: dict[str, CandidateSpec] = {
         22557,
         217.2,
         OFFICIAL_PANEL_REVISION,
+    ),
+    # v84 (C84) is the first confirmed official anchor under the revised
+    # scoring weights (2026-08-31 late: Linear-case weight reduced; total
+    # 16517). It is kept as an anchor for provenance and audit only; local
+    # ranking and calibration never use official absolute scores.
+    "v84": CandidateSpec(
+        "v84",
+        ROOT / "solutions" / "20260830_v084_c84-gram64-sweep5_scoreNA_timeNA" / "solution.py",
+        16517,
+        252.563,
     ),
 }
 
