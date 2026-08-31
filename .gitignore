@@ -14,12 +14,20 @@ artifacts/real_model_suite/cache/
 # 评测运行生成的 JSON/partial 输出（保留在本地，不入库）
 /artifacts/real_model_suite/
 
+# Official-shape-v1 cache is several GB; protocol JSON and Markdown reports are
+# intentionally kept as reviewable, versioned evidence.
+/artifacts/official_eval/cache/
+
 # 校准与合成测试生成的文本输出（脚本仍可入库）
 /artifacts/calibration/*.txt
 /artifacts/synthetic_attention/*.txt
 
 # 多模型评测报告（由运行结果生成，结论归档在 solutions/ 与 logs/execution/）
 /logs/evaluations/
+
+# Moved legacy outputs are local recovery copies, not active evidence.
+/artifacts/archive/
+/logs/archive/
 
 # WorkBuddy 项目数据（会话记忆等本地工作数据）
 .workbuddy/

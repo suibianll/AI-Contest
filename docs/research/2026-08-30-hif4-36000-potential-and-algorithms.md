@@ -1435,8 +1435,8 @@ capture_{local}=
 - C75 project-only Gram64：`solutions/20260829_v073_c75-source-aware-gram64_scoreNA_timeNA/result.md`
 - Qwen JDRQ D0：`artifacts/jdrq/d0-qwen-proj.json`
 - GPT-2 JDRQ D0：`artifacts/jdrq/d0-gpt2-proj-v3.json`
-- 最新 wide hierarchy64：`logs/evaluations/2026-08-30-c75-wide-hierarchy64-b8-o9-qwen.md`
-- 最新 wide JDRQ coordinate 回退：`logs/evaluations/2026-08-30-c75-wide-jdrq-b8-qwen.md`
+- 最新 wide hierarchy64：旧 `logs/evaluations/` 报告已移入本地 legacy archive，不能作为当前结果。
+- 最新 wide JDRQ coordinate 回退：旧 `logs/evaluations/` 报告已移入本地 legacy archive，不能作为当前结果。
 - 文献调研底稿：`docs/research/2026-08-28-hif4-algorithm-literature/report.md`
 
 ---
@@ -1849,7 +1849,7 @@ e_L=1-g_L=0.4984424
 可以可靠陈述的是：相对本地 C86 的代理质量提升约 `9.89%`，但 Linear 0.9
 仍有巨大结构性差距；在没有新官方提交点前，不能声称已经达到或接近 36,000。
 
-## 27. 评测分数的逐项来源（对应 evaluator/real_model_suite.py）
+## 27. 历史评测分数的逐项来源（旧 evaluator；已退役）
 
 ### 27.1 输入、参考值和三条计算路径
 

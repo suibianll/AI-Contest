@@ -1,0 +1,813 @@
+{
+  "protocol": "official-shape-v1",
+  "created_at": "2026-09-01 02:39:25",
+  "data_source": "cache",
+  "capture_seconds": 13.275184900034219,
+  "cache": "D:\\工作内容\\AI竞赛\\artifacts\\official_eval\\cache\\qwen2.5-0.5b-official-shape-v1.pt",
+  "protocol_config": {
+    "model": "qwen2.5-0.5b",
+    "calibration_lengths": [
+      10,
+      128,
+      512,
+      1024,
+      1024
+    ],
+    "test_length": 128,
+    "test_windows": 9,
+    "linear_cases": 250,
+    "attention_cases": 200,
+    "runtime_limit_seconds": 300.0,
+    "score_formula": "(MSE_STD-MSE_PLAYER)/MSE_STD per case; official total is the sum of case scores",
+    "runtime_measurement": "sum of elapsed six-API calls; wall_seconds is reported separately and is not the official timer"
+  },
+  "data_metadata": {
+    "protocol": "official-shape-v1",
+    "model": "qwen2.5-0.5b",
+    "model_path": "D:\\工作内容\\AI竞赛\\models\\qwen2.5-0.5b",
+    "model_revision": "Qwen/Qwen2.5-0.5B@060db6499f32faf8b98477b0a26969ef7d8b9987",
+    "dataset": "Salesforce/wikitext",
+    "dataset_config": "wikitext-2-raw-v1",
+    "dataset_revision": "b08601e04326c79dfdd32d625aee71d232d685c3",
+    "calibration_lengths": [
+      10,
+      128,
+      512,
+      1024,
+      1024
+    ],
+    "test_length": 128,
+    "test_window_count": 9,
+    "capture_device": "cuda",
+    "weights_dtype": "float32",
+    "data_sha256": {
+      "train": "e83889baabc497075506f91975be5fac0d45c5290b6b20582c8cd1e853d0c9f7",
+      "validation": "204929b7ff9d6184953f867dedb860e40aa69c078fc1e54b3baaa8fb28511c4c"
+    },
+    "linear_case_count": 250,
+    "attention_case_count": 200,
+    "nvfp4_mode": "amax6"
+  },
+  "results": [
+    {
+      "candidate": "v001",
+      "source": "D:\\工作内容\\AI竞赛\\solutions\\20260826_v001_current-baseline_score10250_time127s\\solution.py",
+      "source_sha256": "4acc1b8a4e751a75a68158efa19b2ee44f9d5a9e8821a05659d7425723f90ed5",
+      "score": {
+        "linear_sum": 78.87479837590118,
+        "attention_sum": 89.9922850962645,
+        "total_sum": 168.8670834721657,
+        "linear_mean": 0.3154991935036047,
+        "attention_mean": 0.44996142548132245,
+        "equal_weight_45000_scale": 16886.70834721657,
+        "linear_cases": 250,
+        "attention_cases": 200
+      },
+      "timing": {
+        "api_seconds": {
+          "hif4_calibration_and_quantize_weight": 16.258181699784473,
+          "hif4_dynamic_quantize_activation": 3.814398600719869,
+          "hif4_calibration_attention": 13.461187099921517,
+          "hif4_dynamic_quantize_q": 1.3592315005371347,
+          "hif4_dynamic_quantize_k": 1.0789801991777495,
+          "hif4_dynamic_quantize_v": 0.8958217004546896
+        },
+        "api_total_seconds": 36.86780080059543,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 168,
+          "hif4_dynamic_quantize_activation": 250,
+          "hif4_calibration_attention": 24,
+          "hif4_dynamic_quantize_q": 200,
+          "hif4_dynamic_quantize_k": 200,
+          "hif4_dynamic_quantize_v": 200
+        },
+        "wall_seconds": 59.581670099985786,
+        "local_api_under_300_indicator": true,
+        "wall_under_300_indicator": true
+      },
+      "protocol": "official-shape-v1",
+      "official": {
+        "score": 10250,
+        "time_seconds": 127.0,
+        "status": "pass"
+      },
+      "status": "ok"
+    },
+    {
+      "candidate": "v002",
+      "source": "D:\\工作内容\\AI竞赛\\solutions\\20260826_v002_youxilee-hif4_score15000plus_timeNA\\solution.py",
+      "source_sha256": "e126b23a7992e28fbb8e5973521b49ae40a930b76522265a6f36f641eb133a4b",
+      "official": {
+        "score": 15313,
+        "time_seconds": 137.0,
+        "status": "pass"
+      },
+      "status": "error",
+      "error": "RuntimeError: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu!"
+    },
+    {
+      "candidate": "v013",
+      "source": "D:\\工作内容\\AI竞赛\\solutions\\20260827_v013_c10-wide-activation-quadratic_score15799_time144s\\solution.py",
+      "source_sha256": "dd8587257299626718a24eb89013447da9105e8884f391104a6b350607399e44",
+      "score": {
+        "linear_sum": 109.41681832665986,
+        "attention_sum": 127.84120927244957,
+        "total_sum": 237.25802759910943,
+        "linear_mean": 0.43766727330663946,
+        "attention_mean": 0.6392060463622479,
+        "equal_weight_45000_scale": 23725.80275991094,
+        "linear_cases": 250,
+        "attention_cases": 200
+      },
+      "timing": {
+        "api_seconds": {
+          "hif4_calibration_and_quantize_weight": 43.83306369977072,
+          "hif4_dynamic_quantize_activation": 6.5312898001866415,
+          "hif4_calibration_attention": 15.304040700080805,
+          "hif4_dynamic_quantize_q": 2.4758387012407184,
+          "hif4_dynamic_quantize_k": 1.7209147996036336,
+          "hif4_dynamic_quantize_v": 1.568000200088136
+        },
+        "api_total_seconds": 71.43314790097065,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 168,
+          "hif4_dynamic_quantize_activation": 250,
+          "hif4_calibration_attention": 24,
+          "hif4_dynamic_quantize_q": 200,
+          "hif4_dynamic_quantize_k": 200,
+          "hif4_dynamic_quantize_v": 200
+        },
+        "wall_seconds": 95.07553239993285,
+        "local_api_under_300_indicator": true,
+        "wall_under_300_indicator": true
+      },
+      "protocol": "official-shape-v1",
+      "official": {
+        "score": 15799,
+        "time_seconds": 144.0,
+        "status": "pass"
+      },
+      "status": "ok"
+    },
+    {
+      "candidate": "v024",
+      "source": "D:\\工作内容\\AI竞赛\\solutions\\20260827_v024_c21-gated-exact-cross-selection_score16043_time174s\\solution.py",
+      "source_sha256": "40f4d17c12f976f83856b9641be9a3951867bc8979992d773c60c0c1c3e8066a",
+      "score": {
+        "linear_sum": 112.51863857844126,
+        "attention_sum": 127.84120927244957,
+        "total_sum": 240.35984785089084,
+        "linear_mean": 0.45007455431376503,
+        "attention_mean": 0.6392060463622479,
+        "equal_weight_45000_scale": 24035.984785089084,
+        "linear_cases": 250,
+        "attention_cases": 200
+      },
+      "timing": {
+        "api_seconds": {
+          "hif4_calibration_and_quantize_weight": 48.003247098764405,
+          "hif4_dynamic_quantize_activation": 7.434086199034937,
+          "hif4_calibration_attention": 15.110398099757731,
+          "hif4_dynamic_quantize_q": 2.4000710004474968,
+          "hif4_dynamic_quantize_k": 1.6598282983759418,
+          "hif4_dynamic_quantize_v": 1.5401526007335633
+        },
+        "api_total_seconds": 76.14778329711407,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 168,
+          "hif4_dynamic_quantize_activation": 250,
+          "hif4_calibration_attention": 24,
+          "hif4_dynamic_quantize_q": 200,
+          "hif4_dynamic_quantize_k": 200,
+          "hif4_dynamic_quantize_v": 200
+        },
+        "wall_seconds": 99.19231889990624,
+        "local_api_under_300_indicator": true,
+        "wall_under_300_indicator": true
+      },
+      "protocol": "official-shape-v1",
+      "official": {
+        "score": 16043,
+        "time_seconds": 173.8,
+        "status": "pass"
+      },
+      "status": "ok"
+    },
+    {
+      "candidate": "v025",
+      "source": "D:\\工作内容\\AI竞赛\\solutions\\20260827_v025_c21c-compliance-baseline\\solution.py",
+      "source_sha256": "83ab4864254f80d221bb491bdef89f8c9ab8e83534fd62d4dd5e0c1c292fea12",
+      "score": {
+        "linear_sum": 96.78637808064917,
+        "attention_sum": 127.84120927244957,
+        "total_sum": 224.62758735309876,
+        "linear_mean": 0.3871455123225967,
+        "attention_mean": 0.6392060463622479,
+        "equal_weight_45000_scale": 22462.758735309875,
+        "linear_cases": 250,
+        "attention_cases": 200
+      },
+      "timing": {
+        "api_seconds": {
+          "hif4_calibration_and_quantize_weight": 49.940084000932984,
+          "hif4_dynamic_quantize_activation": 6.466513399849646,
+          "hif4_calibration_attention": 15.830880499677733,
+          "hif4_dynamic_quantize_q": 2.360510901431553,
+          "hif4_dynamic_quantize_k": 1.6581651999149472,
+          "hif4_dynamic_quantize_v": 1.558668099809438
+        },
+        "api_total_seconds": 77.8148221016163,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 168,
+          "hif4_dynamic_quantize_activation": 250,
+          "hif4_calibration_attention": 24,
+          "hif4_dynamic_quantize_q": 200,
+          "hif4_dynamic_quantize_k": 200,
+          "hif4_dynamic_quantize_v": 200
+        },
+        "wall_seconds": 101.034247100004,
+        "local_api_under_300_indicator": true,
+        "wall_under_300_indicator": true
+      },
+      "protocol": "official-shape-v1",
+      "official": {
+        "score": 14437,
+        "time_seconds": 166.6,
+        "status": "pass"
+      },
+      "status": "ok"
+    },
+    {
+      "candidate": "v030",
+      "source": "D:\\工作内容\\AI竞赛\\solutions\\20260828_v030_c38-beam2-fullcov-official14092_time170.6s\\solution.py",
+      "source_sha256": "648a27b3560ef7f5d939cd409301e445e5065047cbd5438c1a73a013730e467f",
+      "score": {
+        "linear_sum": 66.33031851424377,
+        "attention_sum": 127.84120927244957,
+        "total_sum": 194.17152778669333,
+        "linear_mean": 0.2653212740569751,
+        "attention_mean": 0.6392060463622479,
+        "equal_weight_45000_scale": 19417.152778669333,
+        "linear_cases": 250,
+        "attention_cases": 200
+      },
+      "timing": {
+        "api_seconds": {
+          "hif4_calibration_and_quantize_weight": 65.10041600000113,
+          "hif4_dynamic_quantize_activation": 7.7264816999668255,
+          "hif4_calibration_attention": 14.796293799998239,
+          "hif4_dynamic_quantize_q": 2.2682986995205283,
+          "hif4_dynamic_quantize_k": 1.6206287996610627,
+          "hif4_dynamic_quantize_v": 1.4930117999901995
+        },
+        "api_total_seconds": 93.00513079913799,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 168,
+          "hif4_dynamic_quantize_activation": 250,
+          "hif4_calibration_attention": 24,
+          "hif4_dynamic_quantize_q": 200,
+          "hif4_dynamic_quantize_k": 200,
+          "hif4_dynamic_quantize_v": 200
+        },
+        "wall_seconds": 116.10021209996194,
+        "local_api_under_300_indicator": true,
+        "wall_under_300_indicator": true
+      },
+      "protocol": "official-shape-v1",
+      "official": {
+        "score": 14092,
+        "time_seconds": 170.57,
+        "status": "pass"
+      },
+      "status": "ok"
+    },
+    {
+      "candidate": "v031",
+      "source": "D:\\工作内容\\AI竞赛\\solutions\\20260828_v031_c39-fw-official14613_time159.2s\\solution.py",
+      "source_sha256": "b8c9f2a4eb6553367dd17e73d30836ac8911dbef33759fa8cf95e8c629317a71",
+      "score": {
+        "linear_sum": 93.66270283263094,
+        "attention_sum": 127.84120927244957,
+        "total_sum": 221.50391210508053,
+        "linear_mean": 0.37465081133052375,
+        "attention_mean": 0.6392060463622479,
+        "equal_weight_45000_scale": 22150.391210508053,
+        "linear_cases": 250,
+        "attention_cases": 200
+      },
+      "timing": {
+        "api_seconds": {
+          "hif4_calibration_and_quantize_weight": 61.17691130016465,
+          "hif4_dynamic_quantize_activation": 6.080234299879521,
+          "hif4_calibration_attention": 14.38453859987203,
+          "hif4_dynamic_quantize_q": 2.32169209967833,
+          "hif4_dynamic_quantize_k": 1.5824355987133458,
+          "hif4_dynamic_quantize_v": 1.4618697001133114
+        },
+        "api_total_seconds": 87.00768159842119,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 168,
+          "hif4_dynamic_quantize_activation": 250,
+          "hif4_calibration_attention": 24,
+          "hif4_dynamic_quantize_q": 200,
+          "hif4_dynamic_quantize_k": 200,
+          "hif4_dynamic_quantize_v": 200
+        },
+        "wall_seconds": 109.641763899941,
+        "local_api_under_300_indicator": true,
+        "wall_under_300_indicator": true
+      },
+      "protocol": "official-shape-v1",
+      "official": {
+        "score": 21864,
+        "time_seconds": 161.3,
+        "status": "pass"
+      },
+      "status": "ok"
+    },
+    {
+      "candidate": "v032",
+      "source": "D:\\工作内容\\AI竞赛\\solutions\\20260828_v032_c40-robust-blockldlq_official-score14432_time216.667s\\solution.py",
+      "source_sha256": "d24bc94f513907cbe97b43865973d1498133d8b9264faf12661836ff65aab656",
+      "score": {
+        "linear_sum": 89.08452603104173,
+        "attention_sum": 127.84120927244957,
+        "total_sum": 216.9257353034913,
+        "linear_mean": 0.35633810412416694,
+        "attention_mean": 0.6392060463622479,
+        "equal_weight_45000_scale": 21692.57353034913,
+        "linear_cases": 250,
+        "attention_cases": 200
+      },
+      "timing": {
+        "api_seconds": {
+          "hif4_calibration_and_quantize_weight": 117.21950770006515,
+          "hif4_dynamic_quantize_activation": 6.325712299672887,
+          "hif4_calibration_attention": 14.188455100171268,
+          "hif4_dynamic_quantize_q": 2.3121481998823583,
+          "hif4_dynamic_quantize_k": 1.6104502003872767,
+          "hif4_dynamic_quantize_v": 1.4705087998881936
+        },
+        "api_total_seconds": 143.12678230006713,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 168,
+          "hif4_dynamic_quantize_activation": 250,
+          "hif4_calibration_attention": 24,
+          "hif4_dynamic_quantize_q": 200,
+          "hif4_dynamic_quantize_k": 200,
+          "hif4_dynamic_quantize_v": 200
+        },
+        "wall_seconds": 165.3483208999969,
+        "local_api_under_300_indicator": true,
+        "wall_under_300_indicator": true
+      },
+      "protocol": "official-shape-v1",
+      "official": {
+        "score": 14432,
+        "time_seconds": 216.667,
+        "status": "pass"
+      },
+      "status": "ok"
+    },
+    {
+      "candidate": "v034",
+      "source": "D:\\工作内容\\AI竞赛\\solutions\\20260829_v034_c41b-mha-k-center_scoreNA_timeNA\\solution.py",
+      "source_sha256": "c1e68a5ba9ed798a582618758e45261ccd7c1426ce8f0b8b02c235664ed859c6",
+      "score": {
+        "linear_sum": 93.66270283263094,
+        "attention_sum": 127.84120927244957,
+        "total_sum": 221.50391210508053,
+        "linear_mean": 0.37465081133052375,
+        "attention_mean": 0.6392060463622479,
+        "equal_weight_45000_scale": 22150.391210508053,
+        "linear_cases": 250,
+        "attention_cases": 200
+      },
+      "timing": {
+        "api_seconds": {
+          "hif4_calibration_and_quantize_weight": 61.06859010003973,
+          "hif4_dynamic_quantize_activation": 6.777193300658837,
+          "hif4_calibration_attention": 14.536910499911755,
+          "hif4_dynamic_quantize_q": 2.3415866004070267,
+          "hif4_dynamic_quantize_k": 1.5770898992195725,
+          "hif4_dynamic_quantize_v": 1.4283815997187048
+        },
+        "api_total_seconds": 87.72975199995562,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 168,
+          "hif4_dynamic_quantize_activation": 250,
+          "hif4_calibration_attention": 24,
+          "hif4_dynamic_quantize_q": 200,
+          "hif4_dynamic_quantize_k": 200,
+          "hif4_dynamic_quantize_v": 200
+        },
+        "wall_seconds": 109.92634920007549,
+        "local_api_under_300_indicator": true,
+        "wall_under_300_indicator": true
+      },
+      "protocol": "official-shape-v1",
+      "official": {
+        "score": 21864,
+        "time_seconds": 159.4,
+        "status": "pass"
+      },
+      "status": "ok"
+    },
+    {
+      "candidate": "v051",
+      "source": "D:\\工作内容\\AI竞赛\\solutions\\20260829_v051_c47b-grouping-threshold005_scoreNA_timeNA\\solution.py",
+      "source_sha256": "a209cf4f65ecca65a73b71a26ed519a31a6f6f8360d06861a6c765601ca639bb",
+      "score": {
+        "linear_sum": 88.77414142850346,
+        "attention_sum": 127.84120927244957,
+        "total_sum": 216.61535070095303,
+        "linear_mean": 0.3550965657140138,
+        "attention_mean": 0.6392060463622479,
+        "equal_weight_45000_scale": 21661.535070095302,
+        "linear_cases": 250,
+        "attention_cases": 200
+      },
+      "timing": {
+        "api_seconds": {
+          "hif4_calibration_and_quantize_weight": 137.44581140019,
+          "hif4_dynamic_quantize_activation": 6.495173898991197,
+          "hif4_calibration_attention": 14.25532390002627,
+          "hif4_dynamic_quantize_q": 2.2821634997380897,
+          "hif4_dynamic_quantize_k": 1.5649278005585074,
+          "hif4_dynamic_quantize_v": 1.4410946991993114
+        },
+        "api_total_seconds": 163.48449519870337,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 168,
+          "hif4_dynamic_quantize_activation": 250,
+          "hif4_calibration_attention": 24,
+          "hif4_dynamic_quantize_q": 200,
+          "hif4_dynamic_quantize_k": 200,
+          "hif4_dynamic_quantize_v": 200
+        },
+        "wall_seconds": 185.50247790000867,
+        "local_api_under_300_indicator": true,
+        "wall_under_300_indicator": true
+      },
+      "protocol": "official-shape-v1",
+      "official": {
+        "score": 22451,
+        "time_seconds": 234.0,
+        "status": "pass"
+      },
+      "status": "ok"
+    },
+    {
+      "candidate": "v066",
+      "source": "D:\\工作内容\\AI竞赛\\solutions\\20260829_v066_c66-activation-ratio100_scoreNA_timeNA\\solution.py",
+      "source_sha256": "f37084d0dff548d9c6a8d57d87c77b0cfeeb4c6976e95a24f797427c32a16b26",
+      "score": {
+        "linear_sum": 89.47984499605111,
+        "attention_sum": 127.84846231278568,
+        "total_sum": 217.3283073088368,
+        "linear_mean": 0.3579193799842045,
+        "attention_mean": 0.6392423115639284,
+        "equal_weight_45000_scale": 21732.83073088368,
+        "linear_cases": 250,
+        "attention_cases": 200
+      },
+      "timing": {
+        "api_seconds": {
+          "hif4_calibration_and_quantize_weight": 139.28372219996527,
+          "hif4_dynamic_quantize_activation": 6.893821299658157,
+          "hif4_calibration_attention": 14.342665600357577,
+          "hif4_dynamic_quantize_q": 2.321025401353836,
+          "hif4_dynamic_quantize_k": 1.531065899063833,
+          "hif4_dynamic_quantize_v": 1.4291745998198166
+        },
+        "api_total_seconds": 165.8014750002185,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 168,
+          "hif4_dynamic_quantize_activation": 250,
+          "hif4_calibration_attention": 24,
+          "hif4_dynamic_quantize_q": 200,
+          "hif4_dynamic_quantize_k": 200,
+          "hif4_dynamic_quantize_v": 200
+        },
+        "wall_seconds": 187.88063419994432,
+        "local_api_under_300_indicator": true,
+        "wall_under_300_indicator": true
+      },
+      "protocol": "official-shape-v1",
+      "official": {
+        "score": 22557,
+        "time_seconds": 217.2,
+        "status": "pass"
+      },
+      "status": "ok"
+    },
+    {
+      "candidate": "v072",
+      "source": "D:\\工作内容\\AI竞赛\\solutions\\20260829_v072_c74-jdrq-hierarchy_scoreNA_timeNA\\solution.py",
+      "source_sha256": "61c216bee1eca9db6185bcd49c679a34b684f540451cd5562a2008d0da4b2ad9",
+      "score": {
+        "linear_sum": 91.39678038587027,
+        "attention_sum": 127.84846231278568,
+        "total_sum": 219.24524269865594,
+        "linear_mean": 0.3655871215434811,
+        "attention_mean": 0.6392423115639284,
+        "equal_weight_45000_scale": 21924.524269865593,
+        "linear_cases": 250,
+        "attention_cases": 200
+      },
+      "timing": {
+        "api_seconds": {
+          "hif4_calibration_and_quantize_weight": 139.84199140011333,
+          "hif4_dynamic_quantize_activation": 6.496764698531479,
+          "hif4_calibration_attention": 13.949016800499521,
+          "hif4_dynamic_quantize_q": 2.336857099318877,
+          "hif4_dynamic_quantize_k": 1.5548706010449678,
+          "hif4_dynamic_quantize_v": 1.4363561993231997
+        },
+        "api_total_seconds": 165.61585679883137,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 168,
+          "hif4_dynamic_quantize_activation": 250,
+          "hif4_calibration_attention": 24,
+          "hif4_dynamic_quantize_q": 200,
+          "hif4_dynamic_quantize_k": 200,
+          "hif4_dynamic_quantize_v": 200
+        },
+        "wall_seconds": 187.54534369998146,
+        "local_api_under_300_indicator": true,
+        "wall_under_300_indicator": true
+      },
+      "protocol": "official-shape-v1",
+      "official": {
+        "score": 22662,
+        "time_seconds": 226.0,
+        "status": "pass"
+      },
+      "status": "ok"
+    },
+    {
+      "candidate": "v074",
+      "source": "D:\\工作内容\\AI竞赛\\solutions\\20260829_v074_c75-rowwise-jdrq_scoreNA_timeNA\\solution.py",
+      "source_sha256": "7789a0487915ee1860eeca2736311bdd1e357bf86e5528805472182f51b944cc",
+      "score": {
+        "linear_sum": 93.18464713864086,
+        "attention_sum": 127.84846231278568,
+        "total_sum": 221.03310945142653,
+        "linear_mean": 0.37273858855456343,
+        "attention_mean": 0.6392423115639284,
+        "equal_weight_45000_scale": 22103.310945142654,
+        "linear_cases": 250,
+        "attention_cases": 200
+      },
+      "timing": {
+        "api_seconds": {
+          "hif4_calibration_and_quantize_weight": 151.7770752996439,
+          "hif4_dynamic_quantize_activation": 9.400113799492829,
+          "hif4_calibration_attention": 14.065969699877314,
+          "hif4_dynamic_quantize_q": 2.3220139995682985,
+          "hif4_dynamic_quantize_k": 1.5513891006121412,
+          "hif4_dynamic_quantize_v": 1.4091382009210065
+        },
+        "api_total_seconds": 180.5257001001155,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 168,
+          "hif4_dynamic_quantize_activation": 250,
+          "hif4_calibration_attention": 24,
+          "hif4_dynamic_quantize_q": 200,
+          "hif4_dynamic_quantize_k": 200,
+          "hif4_dynamic_quantize_v": 200
+        },
+        "wall_seconds": 202.57631360006053,
+        "local_api_under_300_indicator": true,
+        "wall_under_300_indicator": true
+      },
+      "protocol": "official-shape-v1",
+      "official": {
+        "score": 22750,
+        "time_seconds": 239.387,
+        "status": "pass"
+      },
+      "status": "ok"
+    },
+    {
+      "candidate": "v084",
+      "source": "D:\\工作内容\\AI竞赛\\solutions\\20260830_v084_c84-gram64-sweep5_scoreNA_timeNA\\solution.py",
+      "source_sha256": "a8a4427dba95723570fbdebcda1e4eddbf152a3693cc851e30a87368a02ca284",
+      "score": {
+        "linear_sum": 101.6670536241872,
+        "attention_sum": 143.6213978342369,
+        "total_sum": 245.2884514584241,
+        "linear_mean": 0.40666821449674884,
+        "attention_mean": 0.7181069891711844,
+        "equal_weight_45000_scale": 24528.84514584241,
+        "linear_cases": 250,
+        "attention_cases": 200
+      },
+      "timing": {
+        "api_seconds": {
+          "hif4_calibration_and_quantize_weight": 194.23641589994077,
+          "hif4_dynamic_quantize_activation": 35.85448260011617,
+          "hif4_calibration_attention": 43.817172300303355,
+          "hif4_dynamic_quantize_q": 2.246105299331248,
+          "hif4_dynamic_quantize_k": 1.5945866017136723,
+          "hif4_dynamic_quantize_v": 1.4422749994555488
+        },
+        "api_total_seconds": 279.19103770086076,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 168,
+          "hif4_dynamic_quantize_activation": 250,
+          "hif4_calibration_attention": 24,
+          "hif4_dynamic_quantize_q": 200,
+          "hif4_dynamic_quantize_k": 200,
+          "hif4_dynamic_quantize_v": 200
+        },
+        "wall_seconds": 300.8480809000321,
+        "local_api_under_300_indicator": true,
+        "wall_under_300_indicator": false
+      },
+      "protocol": "official-shape-v1",
+      "official": {
+        "score": 16517,
+        "time_seconds": 252.563,
+        "status": "pass"
+      },
+      "status": "ok"
+    },
+    {
+      "candidate": "v098",
+      "source": "D:\\工作内容\\AI竞赛\\solutions\\20260830_v098_b1-gqrb-margin-active_score293.793700_time406s\\solution.py",
+      "source_sha256": "9252d2ca287f6173b887159898bcaa5b7fb534817aa92bba2170ba998cf575e9",
+      "score": {
+        "linear_sum": 116.41378065342546,
+        "attention_sum": 166.7146166209579,
+        "total_sum": 283.12839727438336,
+        "linear_mean": 0.46565512261370184,
+        "attention_mean": 0.8335730831047896,
+        "equal_weight_45000_scale": 28312.839727438335,
+        "linear_cases": 250,
+        "attention_cases": 200
+      },
+      "timing": {
+        "api_seconds": {
+          "hif4_calibration_and_quantize_weight": 60.42578519997187,
+          "hif4_dynamic_quantize_activation": 16.155127000412904,
+          "hif4_calibration_attention": 294.87633320037276,
+          "hif4_dynamic_quantize_q": 16.80774289916735,
+          "hif4_dynamic_quantize_k": 16.865073300316,
+          "hif4_dynamic_quantize_v": 1.5514165991917253
+        },
+        "api_total_seconds": 406.6814781994326,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 168,
+          "hif4_dynamic_quantize_activation": 250,
+          "hif4_calibration_attention": 24,
+          "hif4_dynamic_quantize_q": 200,
+          "hif4_dynamic_quantize_k": 200,
+          "hif4_dynamic_quantize_v": 200
+        },
+        "wall_seconds": 429.284861800028,
+        "local_api_under_300_indicator": false,
+        "wall_under_300_indicator": false
+      },
+      "protocol": "official-shape-v1",
+      "official": {
+        "score": null,
+        "time_seconds": null,
+        "status": "timeout"
+      },
+      "status": "ok"
+    },
+    {
+      "candidate": "v100",
+      "source": "D:\\工作内容\\AI竞赛\\solutions\\20260830_v100_b2-pawv-diagonly-active_score293.797301_time392s\\solution.py",
+      "source_sha256": "338ffb2683cb21a3c4ab6219971b9aa2d5b7d11f66461fc24162b22a9ba91d20",
+      "score": {
+        "linear_sum": 116.41378065342546,
+        "attention_sum": 166.72345010765417,
+        "total_sum": 283.13723076107965,
+        "linear_mean": 0.46565512261370184,
+        "attention_mean": 0.8336172505382708,
+        "equal_weight_45000_scale": 28313.723076107966,
+        "linear_cases": 250,
+        "attention_cases": 200
+      },
+      "timing": {
+        "api_seconds": {
+          "hif4_calibration_and_quantize_weight": 61.387054098187946,
+          "hif4_dynamic_quantize_activation": 15.90192690177355,
+          "hif4_calibration_attention": 296.27093239990063,
+          "hif4_dynamic_quantize_q": 16.679906900273636,
+          "hif4_dynamic_quantize_k": 16.878090900136158,
+          "hif4_dynamic_quantize_v": 10.629195699002594
+        },
+        "api_total_seconds": 417.7471068992745,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 168,
+          "hif4_dynamic_quantize_activation": 250,
+          "hif4_calibration_attention": 24,
+          "hif4_dynamic_quantize_q": 200,
+          "hif4_dynamic_quantize_k": 200,
+          "hif4_dynamic_quantize_v": 200
+        },
+        "wall_seconds": 439.89636110002175,
+        "local_api_under_300_indicator": false,
+        "wall_under_300_indicator": false
+      },
+      "protocol": "official-shape-v1",
+      "official": {
+        "score": null,
+        "time_seconds": null,
+        "status": "wrong-answer/timeout"
+      },
+      "status": "ok"
+    },
+    {
+      "candidate": "v107",
+      "source": "D:\\工作内容\\AI竞赛\\solutions\\20260830_v107_l3-global-lrh-precision-parent_score295.157057_time481s\\solution.py",
+      "source_sha256": "3f431e49b15a81821e2abd3e5d40d2a93d339f9dbc5ee204e78eda11534f6eef",
+      "score": {
+        "linear_sum": 117.30275970435652,
+        "attention_sum": 166.72345010765417,
+        "total_sum": 284.0262098120107,
+        "linear_mean": 0.4692110388174261,
+        "attention_mean": 0.8336172505382708,
+        "equal_weight_45000_scale": 28402.620981201067,
+        "linear_cases": 250,
+        "attention_cases": 200
+      },
+      "timing": {
+        "api_seconds": {
+          "hif4_calibration_and_quantize_weight": 63.63590110093355,
+          "hif4_dynamic_quantize_activation": 32.153402899741195,
+          "hif4_calibration_attention": 297.4043982999865,
+          "hif4_dynamic_quantize_q": 16.618155200732872,
+          "hif4_dynamic_quantize_k": 16.45747940056026,
+          "hif4_dynamic_quantize_v": 10.44976310012862
+        },
+        "api_total_seconds": 436.719100002083,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 168,
+          "hif4_dynamic_quantize_activation": 250,
+          "hif4_calibration_attention": 24,
+          "hif4_dynamic_quantize_q": 200,
+          "hif4_dynamic_quantize_k": 200,
+          "hif4_dynamic_quantize_v": 200
+        },
+        "wall_seconds": 459.72727669996675,
+        "local_api_under_300_indicator": false,
+        "wall_under_300_indicator": false
+      },
+      "protocol": "official-shape-v1",
+      "official": {
+        "score": null,
+        "time_seconds": null,
+        "status": "wrong-answer"
+      },
+      "status": "ok"
+    },
+    {
+      "candidate": "v121",
+      "source": "D:\\工作内容\\AI竞赛\\solutions\\20260831_v121_c1b-structured-refresh2-accepted_score295.811281_time2180s\\solution.py",
+      "source_sha256": "caf1bc17e17cb160921bb4afd8ba679d8cbdaa8bb825e45b116fbf4af6fd4077",
+      "score": {
+        "linear_sum": 118.04944074785988,
+        "attention_sum": 166.72345010765417,
+        "total_sum": 284.77289085551405,
+        "linear_mean": 0.4721977629914395,
+        "attention_mean": 0.8336172505382708,
+        "equal_weight_45000_scale": 28477.289085551405,
+        "linear_cases": 250,
+        "attention_cases": 200
+      },
+      "timing": {
+        "api_seconds": {
+          "hif4_calibration_and_quantize_weight": 102.24404810124543,
+          "hif4_dynamic_quantize_activation": 2953.814784899587,
+          "hif4_calibration_attention": 303.8353673001984,
+          "hif4_dynamic_quantize_q": 16.833095099660568,
+          "hif4_dynamic_quantize_k": 16.89731380075682,
+          "hif4_dynamic_quantize_v": 10.744668600033037
+        },
+        "api_total_seconds": 3404.369277801481,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 168,
+          "hif4_dynamic_quantize_activation": 250,
+          "hif4_calibration_attention": 24,
+          "hif4_dynamic_quantize_q": 200,
+          "hif4_dynamic_quantize_k": 200,
+          "hif4_dynamic_quantize_v": 200
+        },
+        "wall_seconds": 3429.645134899998,
+        "local_api_under_300_indicator": false,
+        "wall_under_300_indicator": false
+      },
+      "protocol": "official-shape-v1",
+      "official": {
+        "score": null,
+        "time_seconds": null,
+        "status": "timeout"
+      },
+      "status": "ok"
+    }
+  ]
+}

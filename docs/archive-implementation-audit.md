@@ -1,8 +1,13 @@
 # 归档算法实现与可复现性审计
 
-> 审计日期：2026-08-31
+> 审计日期：2026-09-01
 > 范围：`solutions/` 下 v000–v126 候选（排除工具目录 `.mimosa`）、`logs/execution/`、当前根 `solution.py` 以及所有历史计划。
 > 结论性质：这是实现审计和实验可复现性审计，不是官方成绩承诺。
+
+> **评测迁移**：旧 `real_model_suite`/holdout 评测器及其结果已移出活动路径；当前统一
+> 复测由 [`evaluator/official_eval.py`](../evaluator/official_eval.py) 的
+> `official-shape-v1` 生成。本文中旧 panel、full-layer 和 sampled 数字只保留作算法
+> 历史证据，不可与新 JSON 混排。
 
 ## 1. 审计口径
 
@@ -12,7 +17,7 @@
 2. **实现或指标问题**：结果不能直接用于否定算法，因为写回路径、门禁目标或统计对象存在明显错位；需要修复后重跑。
 3. **不可复现结果**：归档只有结果而没有被评估的源码，或者缺少源 SHA；可以保留为历史线索，但不能作为严格的算法结论。
 
-本地主指标仍然是 Qwen2.5-0.5B 同口径 panel：
+历史本地主指标曾使用 Qwen2.5-0.5B 同口径 panel（**legacy，不再活动**）：
 
 \[
 P = 250 g_L + 200 g_A,
@@ -199,19 +204,15 @@ v109 已归档为当前精度 parent；API `517.285773s` 只作为探索期时�
 - 计划中把 v 的 GALS 正向 oracle 当作部署机会，但 v102/v103 已证明当前 sparse/shape-proxy 组合不稳定；v109/v110 已完成无 role-id 的 final-weight-Gram 与 GALS 复验，下一阶段转向 L5 结构路线。
 - 官方提交/兑换率校准从未完成，不能用本地 panel 推断官方 36000 距离。
 
-治理动作：L6、C1 计划主体已完成；当前唯一 active 计划仍是 [`2026-08-31-hif4-active-c1-structured-linear-plan.md`](superpowers/plans/2026-08-31-hif4-active-c1-structured-linear-plan.md)，下一步为 C2/C3；其余实施计划和流程文档均位于 [`docs/superpowers/archive/plans/`](superpowers/archive/plans/)。`plans/README.md` 与归档索引只描述导航及历史性质，不产生下一步指令。
+治理动作：L6、C1 计划主体已完成并归档；当前唯一 active 计划是 [`2026-09-01-hif4-linear-0.8-under-300s-plan.md`](superpowers/plans/2026-09-01-hif4-linear-0.8-under-300s-plan.md)，目标为 Linear `0.8` 与官方总时间 `<300s`；其余实施计划和流程文档均位于 [`docs/superpowers/archive/plans/`](superpowers/archive/plans/)。`plans/README.md` 与归档索引只描述导航及历史性质，不产生下一步指令。
 
 ## 7. 审计后的优先级
 
-1. 正式提交线从已通过的 v74 `22750 / 239.387s` 出发，只移植 Linear 变化并冻结其完整 Attention 可达闭包；v125/v126 必须先通过 C3 压缩与完整复测，不能直接提交。
-2. L1 的 v105 corrected full-hierarchy LRH 已完成并拒绝；不再扩大其自由度。
-3. L3 v107、L4a v109、L4b v110、L5a v111、L6a v115、L6b v116、L6c v117、L6d v118、C1a v119、C1b v121、C1c v124/v125 均已完成并产生精度/time parent；v120、v122、v123、L5b/v112、
-   L5c/v113、L5d/v114 已按 screen 归档拒绝，L5e 已完成可达性 checkpoint。
-4. 当前只执行唯一活跃计划的 C2/C3 structured Linear 路线；Linear 不回到已否决的 sampler、
-   joint residual、H32/H64 或 group-only solver，先完成跨模型审计，再做最终 state/time
-   checkpoint。Attention PAWV rank/position
-   metric 继续独立延后。
-5. 每个实验必须保存完整源和 SHA；只要没有完整源，就标为不可复现，不把结果当作硬上限。
+1. 当前只执行 Linear `0.8` 与官方时间 `<300s` 的唯一活跃计划，不再从历史 C1/C2/C3 文字生成新任务。
+2. Attention 先改成固定预算候选搜索，保留有效 GQRB，消除 v98/v100 在完整长序列上重复执行 Attention 的超时结构。
+3. Linear 全面使用 `AW` 教师输出，联合优化合法 `Q(A)`、`Q(W)`、等价变换和压缩输出目标。
+4. v105–v125 只作为局部 Gram/LRH 收益递减和时间成本的历史证据，不作为当前实现父版本。
+5. 每个实验保存完整源、SHA、精度和时间；最终选择只由精度提升与官方总时间 `<300s` 决定。
 
 ## 8. 本次可复核检查
 

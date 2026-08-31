@@ -1,13 +1,13 @@
 # 算法实现审计：当前根与已归档候选
 
-> 审计日期：2026-08-31
+> 审计日期：2026-09-01
 > 审计对象：根 [`solution.py`](../solution.py)，规范 LF SHA256
-> `17f99a198c9e13c2cb2518d14b02973bc71336adfc90e6bf884e89d22717af7b`
+> `F15E112C7E832D019EE83D707ACD9D72FEF121A306E4CC3B50DBBC2CBB574924`
 > 原则：源码、校准目标、部署解码和评测日志必须逐一对应；不能用旧审计文字替代源码证据。
 
 ## 0. 结论
 
-根目录当前是 v124 的 precision parent：C1c structured rank-8、C1b structured gradient refresh×2、C1a structured proposal vectorization、v118 L6d structured block-circulant factor、L6c full `G_64` hierarchy coordinate sweep、L6b wide rank-4 cross-block factor、L6a rank-16 global-LRH、L5a block-local permutation、BOAT、expansive-FFN CAT balance、cross-fold
+根目录当前是 v127（v106 Linear 路径 + 变长 PAWV 安全修复）：C1c structured rank-8、C1b structured gradient refresh×2、C1a structured proposal vectorization、v118 L6d structured block-circulant factor、L6c full `G_64` hierarchy coordinate sweep、L6b wide rank-4 cross-block factor、L6a rank-16 global-LRH、L5a block-local permutation、BOAT、expansive-FFN CAT balance、cross-fold
 Weight-HSDQ、Gram-hierarchy Activation-HSDQ、Gram-gated Global Activation-LRH、L4a
 final deployed-Gram row gate、L4b final-Gram GALS、B1 GQRB 和 B2 PAWV diag-only。Qwen
 固定 cache 的最高已完成 full-layer panel 为 `295.820229`，Linear mean 为
@@ -153,7 +153,7 @@ panel `+0.0030693200`，故接替精度 parent。代价是 API `2180.450151s`，
 
 ## 4. 计划与证据治理
 
-唯一可执行计划是 [`2026-08-31-hif4-active-c1-structured-linear-plan.md`](superpowers/plans/2026-08-31-hif4-active-c1-structured-linear-plan.md)。
+唯一可执行计划是 [`2026-09-01-hif4-linear-0.8-under-300s-plan.md`](superpowers/plans/2026-09-01-hif4-linear-0.8-under-300s-plan.md)。
 每个候选必须保存完整源码、规范 LF SHA、固定 cache/命令、合规扫描和结果日志；
 screen/oracle 不能写入最高分账本。L1 v105、v108 no-op 和其余失败候选均按该
 规则归档；当前根为 v124，L6/C1a/C1b 已完成，C1c rank=8 已采纳，下一步是 C1c max-blocks=8。计划目录不得同时存在第二份 active 计划。
