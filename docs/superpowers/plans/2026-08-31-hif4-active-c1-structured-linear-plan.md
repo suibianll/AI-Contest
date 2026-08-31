@@ -127,7 +127,12 @@ v121 screen/full 产物位于
 \]
 
 计算；screen 只保留超过 v118 的组合，full 只跑最高 screen 组合。若两个连续组合
-无增益，停止该族。
+ 无增益，停止该族。
+
+已完成第一项 rank 扫描：v122 固定 `max_blocks=4`、`refresh_mode=sweep2`，仅将
+`S=4→2`，screen Linear `0.53336284`（较 v121 `−0.00003362`，也低于 v118），
+因此拒绝并保留 v121；完整源码/JSON/报告见
+[`v122 archive`](../../../solutions/20260831_v122_c1c-rank2-rejected_screen0.533363_time426s/)。
 
 ### C2：跨 fold / 多模型泛化审计
 
@@ -160,6 +165,7 @@ exact gate 的路线：批量使用现有 dense `G_q`，或离线保存可证明
 | v119 | 0.5096012555 | 0.8420394885 | 295.808212 | 2040.50s | C1a 等价时间 parent |
 | v120 | NA（screen `0.5333730058`） | NA | NA | 419.63s screen | C1b block refresh rejected |
 | **v121** | **0.5096135327** | **0.8420394885** | **295.811281** | **2180.45s** | **当前 parent；C1b completed** |
+| v122 | NA（screen `0.53336284`） | NA | NA | 425.70s screen | C1c rank-2 rejected |
 
 ## 6. 完成条件
 
