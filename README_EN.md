@@ -28,20 +28,20 @@ Chinese version: [README.md](README.md)
   path used output information for activation-side selection. That
   `A@W -> Q(A)` use remains non-compliant, so it is not a compliant parent for
   new work.
-- The root `solution.py` is the v121 C1b structured-gradient-refresh (two-sweep) parent
+- The root `solution.py` is the v124 C1c structured-rank-8 + C1b structured-gradient-refresh (two-sweep) parent
   on top of v118 L6d, v117 full `G_64` hierarchy, v116 L6b wide rank-4, v115 L6a
   rank-16, v111 block-local permutation, v110 final-Gram GALS, and the B1/B2 path.
-  On the full 24-layer Qwen2.5-0.5B cached run, its native total is `423.296085`,
-  Qwen shaped panel is `295.811281`, Linear mean is `0.5096135327`, and formal API
-  time is `2180.450151s`
+  On the full 24-layer Qwen2.5-0.5B cached run, its native total is `423.320136`,
+  Qwen shaped panel is `295.820229`, Linear mean is `0.5096493233`, and formal API
+  time is `2323.911178s`
   (accuracy-first; C1 must later compress below
   420s). See the [current status
   report](docs/current-solution-status.md), the [algorithm inventory](docs/algorithm-inventory-and-directions.md),
   the [archive implementation audit](docs/archive-implementation-audit.md),
   and [`solutions/README.md`](solutions/README.md). Future work follows the
-  [single active optimization plan](docs/superpowers/plans/2026-08-31-hif4-active-c1-structured-linear-plan.md); C1a and C1b are complete, and C1c is next.
+  [single active optimization plan](docs/superpowers/plans/2026-08-31-hif4-active-c1-structured-linear-plan.md); C1a/C1b are complete, C1c rank-8 is accepted, and max-blocks=8 is next.
 - Current source SHA256:
-  `17F99A198C9E13C2CB2518D14B02973BC71336ADFC90E6BF884E89D22717AF7B` (normalized LF).
+  `4AD7B1219CF73F6570690E3C919A2CDB1777402F2E99AE4A21F1162EA838B690` (normalized LF).
 - The active local evaluator is Qwen-first: it projects frozen-corpus Linear
   and Attention means onto a fixed 250/200 panel, while other models remain
   soft guardrails. The raw `official_flow_total` is retained for compatibility

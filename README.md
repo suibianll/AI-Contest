@@ -23,20 +23,21 @@
   的设备混用问题。完整表格见 [`当前主版本算法效果与评测状态`](docs/current-solution-status.md)。
 - 历史 v024 得分为 `16043 / 173.8s`，但其 Linear 输出监督路径把输出信息
   用于激活侧选择；这类 `A@W -> Q(A)` 用法仍不合规，因此不作为后续合规父版本。
-- 当前根 `solution.py` 为 v121 C1b structured gradient refresh（sweep2） parent，
+- 当前根 `solution.py` 为 v124 C1c structured rank-8 + C1b structured gradient refresh（sweep2） parent，
   在 v118 L6d 的最多 4 个 `64×64` kernel proposal 上批量化独立 row/block 的 15-level
-  候选评估；Qwen 全 24 层本地实测 native `423.296085`、shaped panel `295.811281`、
-  Linear mean `0.5096135327`、正式 API `2180.450151s`。
+  候选评估；Qwen 全 24 层本地实测 native `423.320136`、shaped panel `295.820229`、
+  Linear mean `0.5096493233`、正式 API `2323.911178s`。
   当前探索阶段只按精度排序，时间暂作
   记录；最终冻结时再压缩到 420s 内。逐项结果、归档实现
   审计和复现实验配置见 [`当前主版本算法效果与评测状态`](docs/current-solution-status.md)、
   [`算法全景`](docs/algorithm-inventory-and-directions.md)、
   [`归档实现审计`](docs/archive-implementation-audit.md) 与 [`solutions/README.md`](solutions/README.md)。
   L5d 外部组件审计与 L5e 可达性 checkpoint 已完成；L6a–L6e 已完成并归档；C1a 已完成，
-  C1b 的 block-refresh screen（v120）被拒绝，两轮 refresh（v121）已在 full-layer 取得当前最高 panel；
-  下一步只按 [`唯一活跃优化计划`](docs/superpowers/plans/2026-08-31-hif4-active-c1-structured-linear-plan.md) 执行 C1c。
+  C1b 的 block-refresh screen（v120）被拒绝，两轮 refresh（v121）已通过，C1c rank-2/block-2
+  screen 均被拒绝，rank-8（v124）已在 full-layer 取得当前最高 panel；下一步只按
+  [`唯一活跃优化计划`](docs/superpowers/plans/2026-08-31-hif4-active-c1-structured-linear-plan.md) 测试 C1c max-blocks=8。
 - 当前根源码 SHA256：
-  `17F99A198C9E13C2CB2518D14B02973BC71336ADFC90E6BF884E89D22717AF7B`（规范 LF）。
+  `4AD7B1219CF73F6570690E3C919A2CDB1777402F2E99AE4A21F1162EA838B690`（规范 LF）。
 - L1 full-hierarchy Weight-LRH 已完成合成测试与五层×七 role screen，但 screen
   `both_player=0.523019429222563` 与 L0 逐条持平；候选 v105 已归档。L2 固定
   `α=0.25` 的 expansive-FFN CAT balance 已通过 full-layer，v106 成为时间 parent；
@@ -119,7 +120,7 @@ git diff --check
 官方与本地均为 `C39 = C41b < C47b < C66`；Qwen 主面板的 Spearman 为
 `1.0000`，五模型 raw sum 为 `0.9487`。这只证明相对排序方向，不证明本地
 分数不可以线性换算成官方分数。外部 `youxilee/hif4` 的最高同口径 Qwen panel 为
-`250.327102`，当前根为 `295.811281`，领先 `45.484179`（`18.17%`）；外部
+`250.327102`，当前根为 `295.820229`，领先 `45.493127`（`18.17%`）；外部
 Qwen native `369.527269` 仍作为第二诊断线，五模型合计不作为基准。
 
 ## 修订版官方评测锚点（2026-08-29）
@@ -154,7 +155,7 @@ Qwen native `369.527269` 仍作为第二诊断线，五模型合计不作为基�
 
 ## 当前算法
 
-当前根是重写后的 clean Gram-hierarchy + B1/B2 + L5a + L6a + L6b + L6c + L6d + C1a + C1b 版本；v086/C86 仍是不可变历史归档。
+当前根是重写后的 clean Gram-hierarchy + B1/B2 + L5a + L6a + L6b + L6c + L6d + C1a + C1b + C1c rank-8 版本；v086/C86 仍是不可变历史归档。
 评测和优化优先级如下：
 
 | 优先级 | 组件 | 当前机制 | 作用/状态 |
@@ -163,10 +164,10 @@ Qwen native `369.527269` 仍作为第二诊断线，五模型合计不作为基�
 | 2 | Linear | Cross-fold Weight-HSDQ：`AᵀA` 二阶增量、15 levels、top-2 block、1 sweep | 只更新离线 `weight_params`；跨 fold 验证后才接纳 |
 | 3 | Linear | Gram-hierarchy Activation-HSDQ：静态 `WᵀW`、offset/hierarchy 选择、最多 128 block、2 sweeps | 在线 state 仅含合法静态统计；v106 基线 Linear mean `0.503459` |
 | 4 | Linear | Expansive-FFN CAT balance：`rows > channels`、固定 α=0.25 | v106 仅改善 fc_gate；不增加 state 字段 |
-| 5 | Linear | Global Activation-LRH：窄输入 rank-16、宽输入 rank-4 off-block proposal，逐行 exact deployed-Gram gate | v121 Linear mean `0.509614`；L6a–L6d 均通过 |
-| 6 | Linear | L6d + C1a + C1b structured factor：4 个 `64×64` kernel，批量 proposal，block refresh×2，完整 `G_q` gate | v121 panel `295.811281`；较 v119 `+0.003069`，API `2180.45s` |
+| 5 | Linear | Global Activation-LRH：窄输入 rank-16、宽输入 rank-4 off-block proposal，逐行 exact deployed-Gram gate | v124 Linear mean `0.509649`；L6a–L6d 均通过 |
+| 6 | Linear | L6d + C1a + C1b/C1c structured factor：8 个 `64×64` kernel，批量 proposal，block refresh×2，完整 `G_q` gate | v124 panel `295.820229`；较 v121 `+0.008948`，API `2323.91s` |
 | 7 | Attention | reciprocal RMS、K-centering、GQA 对齐、GQRB、PAWV diag-only | 使用真实 non-causal Attention 输出排序；当前 mean `0.842039` |
-| 8 | 下一步 | L0–L5e、L6a–L6e、C1a、C1b 已完成（v121 为当前 precision parent）→ **C1c rank/block budget scan（当前）** | 只参考唯一活跃计划；C1c–C3 按 active 计划执行；Attention PAWV 独立延后 |
+| 8 | 下一步 | L0–L5e、L6a–L6e、C1a、C1b 已完成，C1c rank=8 已通过（v124）→ **C1c max_blocks=8（当前）** | 只参考唯一活跃计划；C1c–C3 按 active 计划执行；Attention PAWV 独立延后 |
 
 优化决策只看同一冻结缓存上的相对增量：Qwen `primary_panel_score_total` 是主
 指标，其他模型用于发现结构性回退。不得用官方分数反向调参，也不设置固定的

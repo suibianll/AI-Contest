@@ -3,8 +3,8 @@
 > 状态：**ACTIVE**
 > 建立日期：2026-08-31
 > 适用根：`D:/工作内容/AI竞赛/solution.py`
-> 当前精度 parent：v121 C1b structured gradient refresh（sweep2）
-> 根 `solution.py` 规范 LF SHA256：`17f99a198c9e13c2cb2518d14b02973bc71336adfc90e6bf884e89d22717af7b`
+> 当前精度 parent：v124 C1c structured rank-8 + C1b refresh（sweep2）
+> 根 `solution.py` 规范 LF SHA256：`4ad7b1219cf73f6570690e3c919a2cdb1777402f2e99ae4a21f1162ea838b690`
 > 主目标：保持 v119（继承 v118）的完整部署 `G_q` exact gate 语义，继续提升 Qwen full-layer
 > `linear_mean`；同时把结构化 proposal 的原型实现压缩为可审计的 C1 路径。Attention
 > 只作回归检查，不在本计划中扩展 PAWV。
@@ -33,15 +33,15 @@ JSON/日志和官方规则；`docs/superpowers/archive/plans/` 只作历史证�
 固定评测：Qwen2.5-0.5B、24 层、`seq=128`、`calib=2`、`test=4`、`amax6`、CPU、
 只读 cache `artifacts/real_model_suite/cache/qwen2.5-0.5b__seq128__calib2__test4__layersall__schema1.pt`。
 
-| 指标 | v121（C1b sweep2） |
+| 指标 | v124（C1c rank-8 + C1b sweep2） |
 |---|---:|
-| screen Linear mean | `0.53339646` |
-| full Linear mean | `0.5096135327` |
+| screen Linear mean | `0.53343639` |
+| full Linear mean | `0.5096493233` |
 | Attention mean | `0.8420394885` |
-| Qwen panel | `295.8112808759` |
-| native total | `423.2960848901` |
-| API time | `2180.450151s` |
-| LF SHA | `17f99a198c9e13c2cb2518d14b02973bc71336adfc90e6bf884e89d22717af7b` |
+| Qwen panel | `295.8202285103` |
+| native total | `423.3201361314` |
+| API time | `2323.911178s` |
+| LF SHA | `4ad7b1219cf73f6570690e3c919a2cdb1777402f2e99ae4a21f1162ea838b690` |
 
 到 `linear_mean=0.9` 仍差 `0.3903987445`，需消除当前剩余归一化误差的
 `79.6084%`；这只是本地诊断轴，不能换算官方 36000。所有在线候选必须遵守：
@@ -134,6 +134,19 @@ v121 screen/full 产物位于
 因此拒绝并保留 v121；完整源码/JSON/报告见
 [`v122 archive`](../../../solutions/20260831_v122_c1c-rank2-rejected_screen0.533363_time426s/)。
 
+第二项 block budget 扫描：v123 固定 `S=4`、`refresh_mode=sweep2`，仅将
+`max_blocks=4→2`，screen Linear `0.53335171`（较 v121 `−0.00004475`），因此拒绝；
+完整源码/JSON/报告见
+[`v123 archive`](../../../solutions/20260831_v123_c1c-block2-rejected_screen0.533352_time430s/)。
+
+第三项 rank 扫描：v124 固定 `max_blocks=4`、`refresh_mode=sweep2`，仅将 `S=4→8`，
+screen Linear `0.53343639`（较 v121 `+0.00003993`），full Linear `0.5096493233`、
+panel `295.8202285103`（较 v121 `+0.0089476344`），7 个 role 均不降，故接替当前
+precision parent；完整源码/JSON/报告见
+[`v124 archive`](../../../solutions/20260831_v124_c1c-rank8-accepted_score295.820229_time2324s/)。
+其 API `2323.911178s` 超过 420s，仅作 accuracy-first 记录；下一项只测试
+`max_blocks=8`，仍固定 `S=8`，不同时改变两个旋钮。
+
 ### C2：跨 fold / 多模型泛化审计
 
 **状态：pending。**
@@ -166,6 +179,8 @@ exact gate 的路线：批量使用现有 dense `G_q`，或离线保存可证明
 | v120 | NA（screen `0.5333730058`） | NA | NA | 419.63s screen | C1b block refresh rejected |
 | **v121** | **0.5096135327** | **0.8420394885** | **295.811281** | **2180.45s** | **当前 parent；C1b completed** |
 | v122 | NA（screen `0.53336284`） | NA | NA | 425.70s screen | C1c rank-2 rejected |
+| v123 | NA（screen `0.53335171`） | NA | NA | 429.95s screen | C1c max_blocks-2 rejected |
+| **v124** | **0.5096493233** | **0.8420394885** | **295.820229** | **2323.91s** | **当前 parent；C1c rank-8 accepted** |
 
 ## 6. 完成条件
 

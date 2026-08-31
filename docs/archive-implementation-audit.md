@@ -22,17 +22,17 @@ P = 250 g_L + 200 g_A,
 
 ## 2. 当前根与已确认效果
 
-根目录 `solution.py` 是 v121 C1b structured gradient refresh×2 + v119 C1a structured proposal vectorization + v118 L6d structured block-circulant factor + v117 L6c full `G_64` hierarchy coordinate sweep + v116 L6b wide rank-4 cross-block factor + v115 L6a rank-16 global-LRH + v111 L5a block-local permutation + expansive-FFN CAT balance + B2 PAWV **diag-only** + B1 GQRB + Global Activation-LRH Gram gate + L4a final deployed-Gram row gate + L4b final-Gram GALS 路径；v101 是此前 v100 的五模型确认。当前规范 LF SHA256：
+根目录 `solution.py` 是 v124 C1c structured rank-8 + v121 C1b structured gradient refresh×2 + v119 C1a structured proposal vectorization + v118 L6d structured block-circulant factor + v117 L6c full `G_64` hierarchy coordinate sweep + v116 L6b wide rank-4 cross-block factor + v115 L6a rank-16 global-LRH + v111 L5a block-local permutation + expansive-FFN CAT balance + B2 PAWV **diag-only** + B1 GQRB + Global Activation-LRH Gram gate + L4a final deployed-Gram row gate + L4b final-Gram GALS 路径；v101 是此前 v100 的五模型确认。当前规范 LF SHA256：
 
 `17f99a198c9e13c2cb2518d14b02973bc71336adfc90e6bf884e89d22717af7b`
 
 | 指标 | 当前根 v121（precision parent） |
 |---|---:|
-| Qwen Linear mean | 0.509614 |
+| Qwen Linear mean | 0.509649 |
 | Qwen Attention mean | 0.842039 |
-| Qwen shaped panel | **295.811281** |
-| Qwen native total | 423.296085 |
-| Qwen API time | 2180.450151 s |
+| Qwen shaped panel | **295.820229** |
+| Qwen native total | 423.320136 |
+| Qwen API time | 2323.911178 s |
 | 官方分数 | 尚无提交结果 |
 
 当前正式路径的有效组件是：
@@ -172,6 +172,9 @@ v109 已归档为当前精度 parent；API `517.285773s` 只作为探索期时�
 | v119 C1a structured proposal vectorization | 与 v118 全部 score 字段逐位相同；reference/vectorized `atol=1e-6`，API `2040.505s`（`−9.30%`），当前 precision/time parent。 |
 | v120 C1b block refresh | 一次 refresh screen `0.5333730058`，低于 v118 screen，已拒绝；完整源码已归档。 |
 | v121 C1b structured gradient refresh×2 | 两轮 refresh；screen `0.5333964596`，full panel `295.811281`、Linear `0.509614`，较 v119 `+0.003069`；38 项测试/compliance 通过，API `2180.450s` 超时但 accuracy-first 接受。 |
+| v122 C1c rank-2 | screen `0.53336284`，低于 v118/v121；完整源码已归档，未跑 full-layer。 |
+| v123 C1c max-blocks-2 | screen `0.53335171`，低于 v118/v121；完整源码已归档，未跑 full-layer。 |
+| v124 C1c structured rank-8 | screen `0.53343639`；full panel `295.820229`、Linear `0.509649`，较 v121 `+0.008948`；26 项核心测试/compliance 通过，API `2323.911s` 超时但 accuracy-first 接受。 |
 
 最近候选的静态/运行时 Linear 合规扫描均为 `violations=0, static=0`；本次没有发现把 `A@W` 输出监督写入在线 `Q(A)` 的新违规。合规通过不等于精度通过，二者分开记录。
 
@@ -179,7 +182,7 @@ v109 已归档为当前精度 parent；API `517.285773s` 只作为探索期时�
 
 | 算法族 | 已实现并保留 | 已实现但回退 | 当前仍未验证/需要修复 |
 |---|---|---|---|
-| Linear 基础 | BOAT、**v111 L5a block-local permutation**、cross-fold Weight-HSDQ、Gram-hierarchy Activation-HSDQ、**v106 expansive CAT balance**、**v107 Gram-gated Global-LRH**、**v109 final deployed-Gram row gate**、**v110 final-Gram GALS**、**v115 L6a rank-16**、**v116 L6b wide rank-4**、**v117 L6c full `G_64` hierarchy**、**v118 L6d structured factor**、**v119 C1a vectorization**、**v121 C1b refresh×2**、512-row weight sampling、历史稳定 A@W/JDRQ 组件 | blockwise BOAT-2、全宽/逐块 A@W、大步长 headroom、full-H、**v105 corrected full-hierarchy LRH** 等 | 稀疏 Schur、统计元路由、外部差异审计、C1c/C2/C3 结构化扫描/压缩 |
+| Linear 基础 | BOAT、**v111 L5a block-local permutation**、cross-fold Weight-HSDQ、Gram-hierarchy Activation-HSDQ、**v106 expansive CAT balance**、**v107 Gram-gated Global-LRH**、**v109 final deployed-Gram row gate**、**v110 final-Gram GALS**、**v115 L6a rank-16**、**v116 L6b wide rank-4**、**v117 L6c full `G_64` hierarchy**、**v118 L6d structured factor**、**v119 C1a vectorization**、**v121 C1b refresh×2**、**v124 C1c rank-8**、512-row weight sampling、历史稳定 A@W/JDRQ 组件 | blockwise BOAT-2、全宽/逐块 A@W、大步长 headroom、full-H、**v105 corrected full-hierarchy LRH** 等 | 稀疏 Schur、统计元路由、外部差异审计、C1c max-blocks-8/C2/C3 结构化扫描/压缩 |
 | Attention | GQA head-local rotation、MHA K-center、B1 GQRB margin、B2 PAWV diag-only | causal CVaR、全模型 K-center、PAWV rank-8 当前实现 | 最终 Q/K 变换后的 PAWV rank/position bucket、交替 Q/K/V、真正 role-aware 的结构门控 |
 | 变换/CAT | 固定低自由度 CAT/BOAT 子集、共享 Hadamard | R64、CAT β 网格、full-H selector、BOAT-2 | 低自由度新坐标系或外部实现差异对照，尚无可部署候选 |
 | 诊断/工程 | E0-G/D0 scale oracle、C0 五模型确认、clean 单路径重写 | 全局 scale 扩张部署 | 三折合成宽度矩阵、元策略路由、计算预算重分配 |
@@ -197,9 +200,9 @@ v109 已归档为当前精度 parent；API `517.285773s` 只作为探索期时�
 
 ## 7. 审计后的优先级
 
-1. 官方接口恢复后，提交当前 precision parent v121（或后续 C1 压缩后的等价版本），获得第一个真实兑换率锚点。
+1. 官方接口恢复后，提交当前 precision parent v124（或后续 C1 压缩后的等价版本），获得第一个真实兑换率锚点。
 2. L1 的 v105 corrected full-hierarchy LRH 已完成并拒绝；不再扩大其自由度。
-3. L3 v107、L4a v109、L4b v110、L5a v111、L6a v115、L6b v116、L6c v117、L6d v118、C1a v119、C1b v121 均已完成并产生精度/time parent；v120、L5b/v112、
+3. L3 v107、L4a v109、L4b v110、L5a v111、L6a v115、L6b v116、L6c v117、L6d v118、C1a v119、C1b v121、C1c v124 均已完成并产生精度/time parent；v120、v122、v123、L5b/v112、
    L5c/v113、L5d/v114 已按 screen 归档拒绝，L5e 已完成可达性 checkpoint。
 4. 当前只执行唯一活跃计划的 C1 structured Linear 路线；Linear 不回到已否决的 sampler、
    joint residual、H32/H64 或 group-only solver，先完成 rank/budget 和跨模型审计，再做最终

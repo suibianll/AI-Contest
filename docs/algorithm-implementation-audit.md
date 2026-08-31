@@ -7,11 +7,11 @@
 
 ## 0. 结论
 
-根目录当前是 v121 的 precision parent：C1b structured gradient refresh×2、C1a structured proposal vectorization、v118 L6d structured block-circulant factor、L6c full `G_64` hierarchy coordinate sweep、L6b wide rank-4 cross-block factor、L6a rank-16 global-LRH、L5a block-local permutation、BOAT、expansive-FFN CAT balance、cross-fold
+根目录当前是 v124 的 precision parent：C1c structured rank-8、C1b structured gradient refresh×2、C1a structured proposal vectorization、v118 L6d structured block-circulant factor、L6c full `G_64` hierarchy coordinate sweep、L6b wide rank-4 cross-block factor、L6a rank-16 global-LRH、L5a block-local permutation、BOAT、expansive-FFN CAT balance、cross-fold
 Weight-HSDQ、Gram-hierarchy Activation-HSDQ、Gram-gated Global Activation-LRH、L4a
 final deployed-Gram row gate、L4b final-Gram GALS、B1 GQRB 和 B2 PAWV diag-only。Qwen
-固定 cache 的最高已完成 full-layer panel 为 `295.811281`，Linear mean 为
-`0.5096135327`，Attention mean 为 `0.8420394885`，API 时间 `2180.450151s`（探索阶段
+固定 cache 的最高已完成 full-layer panel 为 `295.820229`，Linear mean 为
+`0.5096493233`，Attention mean 为 `0.8420394885`，API 时间 `2323.911178s`（探索阶段
 记录，最终仍需 C1 压缩）。
 
 L1 v105 已实现真正的 full-hierarchy cross-block Weight-LRH（scale/lv2/lv3/
@@ -148,6 +148,7 @@ panel `+0.0030693200`，故接替精度 parent。代价是 API `2180.450151s`，
 | L6d structured block-circulant factor | 已采纳（v118 前一 parent） | 宽输入最多 4 个 `64×64` kernel 的 proposal，36 项定向测试、screen/full-layer 正向；`proj` 正向；完整部署 `G_q` gate，state/compliance 无违规 |
 | C1a structured proposal vectorization | 已采纳（v119 时间 parent） | 批量独立 row/block 的 15-level proposal；37 项定向测试与 reference `atol=1e-6` 对照；分数逐位等于 v118，API `−9.30%`，exact gate/compliance 无变化 |
 | C1b structured gradient refresh×2 | 已采纳（v121 当前 precision parent） | 每个 selected block 后重算 structured gradient，并对 rank list 扫两轮；v120 一次 refresh screen 回退，v121 screen/full 正向；38 项定向测试、合成单调性与 compliance 无违规；API `2180.45s`，仅时间超限 |
+| C1c structured rank/budget | 已采纳（v124 当前 precision parent，rank=8） | rank=2（v122）与 max-blocks=2（v123）screen 回退；rank=8（v124）screen/full 正向，`proj` `+0.0002505`，其余 role 不变；26 项核心测试/compliance 无违规；API `2323.91s`，仅时间超限；max-blocks=8 待验证 |
 | Attention PAWV rank/position | deferred | 不插入 Linear 主线 |
 
 ## 4. 计划与证据治理
@@ -155,7 +156,7 @@ panel `+0.0030693200`，故接替精度 parent。代价是 API `2180.450151s`，
 唯一可执行计划是 [`2026-08-31-hif4-active-c1-structured-linear-plan.md`](superpowers/plans/2026-08-31-hif4-active-c1-structured-linear-plan.md)。
 每个候选必须保存完整源码、规范 LF SHA、固定 cache/命令、合规扫描和结果日志；
 screen/oracle 不能写入最高分账本。L1 v105、v108 no-op 和其余失败候选均按该
-规则归档；当前根为 v121，L6 已完成归档，C1a/C1b 已完成，下一步是 C1c rank/block budget scan。计划目录不得同时存在第二份 active 计划。
+规则归档；当前根为 v124，L6/C1a/C1b 已完成，C1c rank=8 已采纳，下一步是 C1c max-blocks=8。计划目录不得同时存在第二份 active 计划。
 
 本审计只记录源码与执行证据；它不把本地 panel 线性换算为官方分数，也不改变
 历史归档文件内容。
