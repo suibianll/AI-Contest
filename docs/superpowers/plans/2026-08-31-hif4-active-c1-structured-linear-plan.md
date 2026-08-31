@@ -4,8 +4,9 @@
 > 建立日期：2026-08-31
 > 适用根：`D:/工作内容/AI竞赛/solution.py`
 > 当前精度 parent：v125 C1c structured rank-8 / max-blocks-8 + C1b refresh（sweep2）；
-> 当前本地时间 parent 仍为 v106（`<420s`）；v107 官方 Attention WA 后，官方 smoke
-> 首选改为 v100（`392.42s`，比 v106 多 `20.23s` API 余量且无完整 `deployment_gram`）
+> 当前本地时间 parent 仍为 v106（`<420s`），但它与 v100/v107 共用的 clean Attention
+> 路径没有官方通过证据；用户确认 v100 与 v107 均为 Attention WA，且 v100 不是 timeout。
+> 官方增强候选改为 v72（Attention 完整调用闭包与官方通过 v66 语义一致），保底为 v66。
 > 根 `solution.py` 规范 LF SHA256：`c9b419717e38bcec69d907d1cab6638409f1fa9a3072892dde9494ef9da3cc8e`
 > 主目标：保持 v125（继承 v119）的完整部署 `G_q` exact gate 语义，继续验证 Qwen full-layer
 > `linear_mean`；同时把结构化 proposal 的原型实现压缩为可审计的 C1 路径。Attention
@@ -199,8 +200,9 @@ C1c 队列到此停止，不再增加 block budget；下一步按固定分层规
 3. structured sweep2 接受一个 block 后增量更新 circular kernel gradient，不再对完整
    row/block tensor 重跑 `_structured_gram_matmul`；
 4. 仍不足时才验证 block 轴 FFT circular convolution；
-5. 输出 v100/v106/v125/压缩候选的精度、state 峰值和 API Pareto，最终恢复 `<420s`
-   硬门并做 Attention contract smoke。
+5. 输出 v72/v66、v106/v125 和压缩候选的精度、state 峰值和 API Pareto；正式提交线
+   必须从 v72/v66 移植 Linear 机制，并保持 v66 Attention 可达函数/常量语义哈希不变。
+   最终恢复 `<420s` 硬门并做 Attention contract smoke；local smoke 不再标记 official-safe。
 
 未经 exact-equivalence 对照的近似不能成为提交 parent。C3 完成后归档本计划；下一份
 唯一 active 计划才进入共享正交 butterfly/Givens frame 和冻结 activation state 后的

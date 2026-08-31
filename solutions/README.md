@@ -40,7 +40,10 @@ row gate + L4b final-Gram GALS + B2 PAWV diag-only + B1 GQRB）；C0 五模型�
 缓存只读。完整报告见 [`v125-c1c-block8-qwen-full.md`](../logs/execution/2026-08-31-v125-c1c-block8-qwen-full.md)，
 v107 Attention 合约审计见 [`2026-08-31-v107-attention-contract-audit.md`](../logs/execution/2026-08-31-v107-attention-contract-audit.md)，
 以及 v31/v51/外部/v107 同输入逐输出差分见 [`2026-08-31-v107-v31-v51-external-attention-output-diff.md`](../logs/execution/2026-08-31-v107-v31-v51-external-attention-output-diff.md)。
-官方复测首选为 v100，原因与 v66 同场复核见 [`2026-08-31-v107-wa-safe-submission-selection.md`](../logs/execution/2026-08-31-v107-wa-safe-submission-selection.md)；v66 保留为已通过控制组，根 v125 不变。
+用户确认 v100 官方同样为 Attention `wrong answer`，且不是 timeout；旧的 v100 首选裁决
+已失效。新的增强候选为 v72：其 Attention API 完整依赖闭包与官方通过的 v66 语义一致，
+本地 Qwen native `356.605602`、CUDA API `163.41s`；v66 保留为绝对控制组，根 v125
+仍只是 precision-only 研究版本。见 [`v100 官方 WA 边界审计`](../logs/execution/2026-08-31-v100-official-wa-boundary-audit.md)。
 五模型确认见 [`2026-08-30-c0-b2-pawv-five-model.md`](../logs/evaluations/2026-08-30-c0-b2-pawv-five-model.md)。
 `official_score` 和 `official_time` 尚无值；295.847849 是本地 Qwen shaped panel，
 不能换算成官方分数。相对旧 C86 归档，panel 提升 `+27.268726`（`+10.21%`），正式
@@ -150,7 +153,7 @@ L5b/v112、L5c/v113、L5d/v114 均为已归档的 screen 候选，L6、C1a、C1b
 | v097 | 2026-08-30 | B1 GQRB precision 版（top4 + 全部 baseline） | Qwen full-layer `0.501558` | `0.842398` | 523.37s CPU | NA | NA | panel `293.868932`，精度最高但超时 `103.37s` | **archived-rejected-timeout** | [archive](20260830_v097_b1-gqrb-precision-win-timeout_score293.868932_time523s/) |
 | v098 | 2026-08-30 | B1 GQRB margin 版（原始 baseline top4 + GQRB top4，0.1% gate） | Qwen full-layer `0.501558` | `0.842021` | 406.24s CPU | NA | NA | panel `293.793700`，较 stable parent `+0.038594`，低于 420s；B2 前最高版本 | **archived-baseline** | [archive](20260830_v098_b1-gqrb-margin-active_score293.793700_time406s/) |
 | v099 | 2026-08-30 | B2 PAWV diag+rank-8 token Hessian | Qwen layer-1 `0.603071` | `0.916670` | 15.84s CPU | NA | NA | layer-1 panel `334.101693`，低秩跨 token 项全层前置验证失败，未跑全层 | **archived-rejected** | [archive](20260830_v099_b2-pawv-lowrank-rejected_score334.101693_time16s/) |
-| v100 | 2026-08-30 | B2 PAWV diag-only + B1 GQRB | Qwen full-layer `0.501558` | `0.842039` | 392.42s CPU | NA | NA | panel `293.797301`，较 B1 `+0.003601`、较 stable parent `+0.042195`，低于 420s；v106 前 parent | **archived-parent** | [archive](20260830_v100_b2-pawv-diagonly-active_score293.797301_time392s/) |
+| v100 | 2026-08-30 | B2 PAWV diag-only + B1 GQRB | Qwen full-layer `0.501558` | `0.842039` | 392.42s CPU | **WA** | NA | 本地 panel `293.797301`；用户确认官方 Attention wrong answer、非 timeout，提交 SHA/时间未提供 | **official-wrong-answer** | [archive](20260830_v100_b2-pawv-diagonly-active_score293.797301_time392s/) |
 | v101 | 2026-08-30 | C0 五模型确认（v100 无代码变更） | Qwen full-layer `0.501558` | `0.842039` | 401.13s CPU（Qwen） | NA | NA | 五模型完整运行；Qwen panel `293.797301`，四个软 guardrail 无精度灾难回退；GPT-2 medium `492.64s` 仅时间超限 | **archived-confirmed-parent** | [archive](20260830_v101_c0-five-model-confirmed_score293.797301_time401s/) |
 | v102 | 2026-08-30 | E0-C GALS-C 稀疏 activation 部署（前 4 高损 block） | Qwen layer-1 `0.602878` | `0.926347` | 57.41s CPU | NA | NA | 解析候选对全 255-code oracle 召回率 `1.0`，但部署 layer-1 panel `335.988995` 比 v100 `−0.048096` 且慢 `41.37s`，回退 | **archived-rejected** | [archive](20260830_v102_e0c-gals-sparse-rejected_score335.988995_time57s/) |
 | v103 | 2026-08-30 | E0-C role-aware GALS-C（按 weight shape 仅 attention-shaped activation） | Qwen layer-1 `0.602836` | `0.926347` | 51.70s CPU | NA | NA | panel `335.978356`，比 v100 `−0.058945`；q/k/v 回退，归档 | **archived-rejected** | [archive](20260830_v103_e0c-gals-roleaware-rejected_score335.978356_time52s/) |

@@ -19,7 +19,12 @@ Qwen shaped panel 为 **295.847849**，Linear mean **0.5097598050**，正式 API
 
 针对官方 v107 `Attention / wrong answer` 的同输入对照已完成：[`v107-v31-v51-external-attention-output-diff.md`](../logs/execution/2026-08-31-v107-v31-v51-external-attention-output-diff.md)。在 24 层 Qwen cache、2 calibration、4 test windows、同一 NVFP4 codec 下，v31/v51/归档外部 v002/v107 的 state、五字段 API、shape、CPU/finite 检查均为 0 failures（每版本 72 states、96 batches、288 个 Q/K/V 输出）；Attention MSE mean 分别为 `0.00382519 / 0.00382519 / 0.00529873 / 0.00169248`，v107 反而最低。v31 与 v51 24/24 层逐位相同，v31 与外部 v002 12/24 层相同，v107 因有意新增 Linear 状态而与 v31 0/24 层相同；目前没有证据表明 v107 Attention 输出契约损坏。外部逐输出数字代表本地归档 v002，不等同于最新 v2.7 源码；官方隐藏输入仍需 v106/v107 同包复测。
 
-官方复测候选裁决见 [`2026-08-31-v107-wa-safe-submission-selection.md`](../logs/execution/2026-08-31-v107-wa-safe-submission-selection.md)：首选 v100（panel `293.797301`、API `392.42s`），不提交 v107。v100 没有约 2.6 GiB 累计风险的完整 `deployment_gram`，比 v106 多 `20.23s` API 余量；同缓存 layer-0 与官方已通过的 c66 同场复核时，两者均通过 evaluator 有效性预筛，v100 panel/API `336.037091 / 18.559s`，c66 为 `314.731294 / 25.196s`。v66 保留为官方控制组；本裁决不改变当前 v125 precision-only 根文件。
+后续官方反馈已推翻上述候选裁决：用户确认 v100 同样为 Attention `wrong answer`，且
+不是 timeout。新的 [`v100 官方 WA 边界审计`](../logs/execution/2026-08-31-v100-official-wa-boundary-audit.md)
+表明 v72 的四个 Attention API、45 个递归可达 helper 和相关常量均与官方通过的 v66
+语义一致；v72 本地 Qwen native `356.605602`、Attention `63.119717`、CUDA API
+`163.41s`，因此成为新的增强候选，v66 仍为绝对保底。v73/v74 已改变 Attention 共用
+helper，v75 起直接改变 Q/K 路径；v100/v107 及后代均不再视为官方安全候选。
 
 2026-08-31 已按执行计划完成 E0-C、E1→A6、B1、B2、L1、L2、L3 和 L4a。B1 GQRB margin
 先把 panel 提升到 `293.793700`，B2 PAWV diag-only 再提升到 `293.797301`，L2
@@ -412,10 +417,10 @@ v125 screen `0.53358298`，full-layer Linear `0.5097598050`、panel `295.8478489
 
 v107/v106 Attention 合约审计见 [`2026-08-31-v107-attention-contract-audit.md`](../logs/execution/2026-08-31-v107-attention-contract-audit.md)：
 v100/v106/v107/v107b1 的 Attention 函数体 SHA 和 Qwen Attention case 输出逐位相同，
-独立 5 场景×3 模式合约矩阵与 30 个 Q/K/V 状态校验均为 0 failures。v107 新增的主要风险
-是 Linear `deployment_gram` 在 Qwen 形状上约 2.6 GiB 的额外静态状态和 481.04s API；
-官方 `wrong answer` 尚不能仅凭本地结果归因于 Attention 数值，下一步须做 v106/v107
-单文件同环境复测并记录错误阶段、峰值内存和输入 shape。
+独立 5 场景×3 模式合约矩阵与 30 个 Q/K/V 状态校验均为 0 failures；但用户随后确认
+不含完整 `deployment_gram` 的 v100 也得到官方 Attention WA，且不是 timeout。这证明
+本地矩阵缺少官方失败输入，并把安全边界前移到 v66/v72 Attention 闭包；不再以
+`deployment_gram` 解释 v107 WA，也不再推荐 v100/v106/v107 后代提交。
 
 L6e checkpoint 见 [`2026-08-31-l6e-crossblock-checkpoint.md`](../logs/execution/2026-08-31-l6e-crossblock-checkpoint.md)：
 在真实 layer-23 `proj(d=4864)` 的 4 个 test window 中，结构化 proposal 共 2048 个
@@ -484,7 +489,8 @@ L0 的正式产物为 [`l0-linear-ceiling-qwen.json`](../artifacts/oracle_dashbo
 - 发布前检查：C1c synthetic/reference-equivalence、合规/精度门控和 v107 Attention
   contract audit 均通过；`guard_solution_file` 为 `violations=[]`、`static_violations=[]`。
   v125 full-layer `official_flow_valid=false`，原因是 API `2653.580314s` 超过官方
-  `420s` 时间门槛；官方 v107 `wrong answer` 仍待平台同包复测。
+  `420s` 时间门槛；官方 v100 与 v107 均已确认 Attention `wrong answer`，且用户明确
+  v100 不是 timeout。后续官方候选必须保持 v66/v72 Attention 调用闭包不变。
 - 当前根定向回归命令（`test_global_activation_lrh.py`、`test_linear_compliance_guard.py`、
   `test_l5a_joint_transform.py`、`test_expansive_cat.py`、`test_linear_error_decomposition.py`）
   为 **38 passed / 6.83s**。另跑 `test_release_candidate.py` 得到 **31 passed、16 failed**；

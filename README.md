@@ -70,12 +70,14 @@
   和外部 v002 的 `0.00529873`。详细数字见
   [`v107 Attention 输出差分日志`](logs/execution/2026-08-31-v107-v31-v51-external-attention-output-diff.md)。
   该外部数字仅代表本地归档 v002，不等同于最新 v2.7 源码；官方隐藏输入仍需同包复测。
-- 官方复测候选已收敛为 **v100**：full Qwen panel `293.797301`、API `392.42s`，无
-  v107 的完整 `deployment_gram` 状态；相对 v106 仅损失 `0.475332` panel，但增加
-  `20.23s` 时间余量。v66/v100 同缓存 layer-0 复核均通过，v100 panel/API 为
-  `336.037091 / 18.559s`，c66 为 `314.731294 / 25.196s`。裁决见
-  [`v107 WA 安全提交候选选择`](logs/execution/2026-08-31-v107-wa-safe-submission-selection.md)。
-  根 `solution.py` 仍为 v125 precision-only 研究版本，本次未替换 active 算法。
+- 用户确认 **v100 官方同样为 Attention `wrong answer`，且不是 timeout**。因此
+  `deployment_gram` 不再是 v107 WA 的首要解释，v100/v106/v107 及其 clean Attention
+  后代全部降级为本地研究版本。新的增强提交候选是 **v72**：它的四个 Attention API、
+  45 个递归可达 helper 和相关常量均与官方通过的 v66 语义一致；本地 Qwen native
+  `356.605602`，较 v66 `+6.453182`，Attention 同为 `63.119717`，CUDA API `163.41s`。
+  绝对保底仍是 v66。边界证据见
+  [`v100 官方 WA 边界审计`](logs/execution/2026-08-31-v100-official-wa-boundary-audit.md)。
+  根 `solution.py` 仍为 v125 precision-only 研究版本，不是官方候选。
 
 本地时间和本地分数仅用于候选比较，不冒充官方结果。任何官方结果都应与
 实际提交 SHA、分数和时间一起归档。
