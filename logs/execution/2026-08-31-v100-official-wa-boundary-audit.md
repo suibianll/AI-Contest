@@ -16,6 +16,10 @@ v100 不包含 v107 的完整 Linear `deployment_gram`，但仍得到同类 Atte
 本地 Qwen/synthetic 合约矩阵没有复现错误，只能说明当前本地 evaluator 未覆盖官方
 失败输入，不能覆盖官方结果。
 
+后续已用 calibration list 内 `seq=32/48` 的合法变长输入稳定复现：v72/v98 通过，
+v100/v107 在 B2 PAWV `_build_pawv_metric` 抛出 shape mismatch。最新根因报告见
+[`v100/v107 Attention WA 根因`](2026-08-31-v100-v107-attention-wa-root-cause.md)。
+
 ## 2. v66→v100 的 Attention 实现边界
 
 对归档源码做 AST 语义哈希和调用闭包检查，以以下四个官方 API 为根：

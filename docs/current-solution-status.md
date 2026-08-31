@@ -26,6 +26,13 @@ Qwen shaped panel 为 **295.847849**，Linear mean **0.5097598050**，正式 API
 `163.41s`，因此成为新的增强候选，v66 仍为绝对保底。v73/v74 已改变 Attention 共用
 helper，v75 起直接改变 Q/K 路径；v100/v107 及后代均不再视为官方安全候选。
 
+进一步按任务书复核并构造变长 calibration list 后，已稳定复现 v100/v107 的直接异常：
+B2 PAWV 的 `_build_pawv_metric` 按首个样本长度建立固定 `tokens×tokens` 矩阵，却直接
+累加不同长度样本的 `P^TP`。`seq=32/48` 时 v72/v98 通过，v100/v107 均报 shape
+mismatch；任务书没有 calibration sample 等长约束，且规定任一运行异常即提交失败。
+因此这是当前最高置信度根因，见
+[`v100/v107 Attention WA 根因`](../logs/execution/2026-08-31-v100-v107-attention-wa-root-cause.md)。
+
 2026-08-31 已按执行计划完成 E0-C、E1→A6、B1、B2、L1、L2、L3 和 L4a。B1 GQRB margin
 先把 panel 提升到 `293.793700`，B2 PAWV diag-only 再提升到 `293.797301`，L2
 expansive-FFN CAT balance 将 panel 提升到 `294.272633`、Linear mean 提升到

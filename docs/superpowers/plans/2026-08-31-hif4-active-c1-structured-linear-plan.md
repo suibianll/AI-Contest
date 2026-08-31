@@ -20,7 +20,9 @@ JSON/日志和官方规则；`docs/superpowers/archive/plans/` 只作历史证�
 每个候选严格按以下顺序执行：
 
 1. 先保存 parent SHA 和工作树快照；合成测试必须覆盖合法五字段、二次型增量、
-   structured matmul 方向、finite fallback、CPU state 和 state 节点 `<4096`；
+   structured matmul 方向、finite fallback、CPU state 和 state 节点 `<4096`；Attention
+   发布 smoke 必须额外覆盖 calibration list 内变长 `seq_len`，防止重现 v100/v107
+   B2 PAWV 的固定 token 方阵 shape mismatch；
 2. 先跑 Qwen 五层 `{0,5,11,17,23}` × 七 role screen，固定 cache、至少两折 calibration；
 3. screen 只有在 Linear mean/panel 明确高于 parent 且无 role 回退时才进入 full-layer；
    full 只以 Qwen `linear_mean`/panel 晋级，Attention 只防回归；

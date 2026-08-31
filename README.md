@@ -82,6 +82,11 @@
   结论一致，和 v100/v107 的 Attention WA 是两类失败。v121 及更慢的 v124/v125
   只保留精度证据；记录见
   [`v121 官方 timeout`](logs/execution/2026-08-31-v121-official-timeout.md)。
+- v100/v107 Attention WA 已找到高置信度直接根因：B2 PAWV 用第一个 calibration sample
+  的 token 数建立固定 `P^TP` 方阵，再直接累加其他样本；官方接口不保证 calibration
+  sample 等长。合法的 `seq=32/48` 两样本复现中，v72/v98 通过，v100/v107 均在
+  Attention calibration 抛出 shape mismatch。固定 `seq=128` 的本地 cache 因而漏检。
+  完整分析见 [`Attention WA 根因`](logs/execution/2026-08-31-v100-v107-attention-wa-root-cause.md)。
 
 本地时间和本地分数仅用于候选比较，不冒充官方结果。任何官方结果都应与
 实际提交 SHA、分数和时间一起归档。

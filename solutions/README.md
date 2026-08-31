@@ -46,6 +46,9 @@ v107 Attention 合约审计见 [`2026-08-31-v107-attention-contract-audit.md`](.
 仍只是 precision-only 研究版本。见 [`v100 官方 WA 边界审计`](../logs/execution/2026-08-31-v100-official-wa-boundary-audit.md)。
 用户另确认 v121 官方显示运行超时；官方精确时间/分数/SHA 未提供。该结果与本地
 `2180.450151s` 一致，见 [`v121 官方 timeout`](../logs/execution/2026-08-31-v121-official-timeout.md)。
+v100/v107 WA 的高置信度根因已复现为 B2 PAWV 的变长 calibration shape mismatch：
+`seq=32/48` 时 v72/v98 通过、v100/v107 直接 RuntimeError；见
+[`Attention WA 根因`](../logs/execution/2026-08-31-v100-v107-attention-wa-root-cause.md)。
 五模型确认见 [`2026-08-30-c0-b2-pawv-five-model.md`](../logs/evaluations/2026-08-30-c0-b2-pawv-five-model.md)。
 `official_score` 和 `official_time` 尚无值；295.847849 是本地 Qwen shaped panel，
 不能换算成官方分数。相对旧 C86 归档，panel 提升 `+27.268726`（`+10.21%`），正式
