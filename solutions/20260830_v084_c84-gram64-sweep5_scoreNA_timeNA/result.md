@@ -51,3 +51,14 @@
 > 评分权重）下的官方总分，与旧权重口径（v66/v72/v74 等 2 万+）不可直接比较。
 > 上传包 SHA 未单独回传。见
 > [`v84 官方结果`](../../logs/execution/2026-08-31-v84-official-result.md)。
+
+---
+
+> **2026-08-31 v5 sampled 复评追加**：官方第三次修订（限制 300s、取消 A@W 拟合
+> 限制、Linear 样例降权）后，v84 在 `sampled-means-v1` 口径（seed `20260831`、
+> 8 层、全 7 role、4 test window、224 Linear + 32 Attention cases）完成补测：
+> **Linear mean `0.477266` / Attention mean `0.709020`**，本地 API `422.615s`
+> （Wall `433.624s`）。官方 `252.563s` / 本地 `422.615s` → **官方/本地时间比值
+> `0.60`**，为现有观测区间 `[0.60, 2.02]` 的下界。v84 是唯一带新权重官方记录的
+> 候选，本条为当前新权重基线。见
+> [`v84 sampled 日志`](../../logs/execution/2026-08-31-v84-sampled-means-qwen.md)。

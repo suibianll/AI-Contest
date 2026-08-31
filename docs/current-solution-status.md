@@ -321,25 +321,84 @@ L3 证据：`2026-08-30-l3-global-lrh-stratified.md`、
 `2026-08-30-l3-global-lrh-b1-diagnostic.md`、
 `2026-08-30-v107b1-l3-global-lrh-qwen-full.md`。
 
-## 距离 Linear 0.9 与 36,000（旧权重口径，待按 v84 重校准）
+## 当前目标与本地时间推断（2026-08-31 更新）
 
-> **权重变更提示（2026-08-31 晚）**：官方已减少 Linear 样例的评分权重，`36000`
-> 与 v72/v74 的 2 万+ 分数均属**旧权重口径**；新权重官方锚点为 v84 `16517 / 252.563s`。
-> 本节的分差与目标推导保留为历史方法记录，用于新目标前必须按新权重锚点重新校准。
+> **目标变更**：官方第三次修订（减少 Linear 样例权重）后，旧权重口径的 `36000`
+> 绝对分目标已废弃。当前唯一目标组合是：
+>
+> 1. **Linear 场景本地 `linear_mean` 达到 `0.8`**（v4 sampled 口径；当前 v127
+>    `0.509408`，研究链最高 v121-pawv-fixed `0.516685`）；
+> 2. **Attention 场景尽可能高**（pawv-fixed 系当前上限 `0.828395`，继续寻找无损
+>    或低时间成本的 Attention 增益）；
+> 3. **官方端到端时间 `< 300s`**——本地时间预算按下表由已有官方评测结果推断。
 
-当前 precision-only parent v125 的 Linear native mean 为 `0.5097598050`。若以本地 panel 的 mean 作为诊断目标：
+### 本地时间 → 官方时间推断表
 
-$$\Delta g_L=0.9-0.5097598050=0.3902401950,$$
+同一批有官方记录的候选已在 v4 sampled 口径（224L+32A、CPU、`cache=read`）复评；
+"比值"= 官方端到端时间 ÷ 本地 sampled API 时间。官方 450 case 与本地 256 case 的
+构成差异、鲲鹏 920B 负载波动都会造成比值漂移，因此只给出区间与预算红线：
 
-$$\frac{\Delta g_L}{1-g_L}=\frac{0.3902401950}{0.4902401950}=79.6000\%.$$
+| 候选 | 官方时间 (s) | 本地 sampled API (s) | 比值 |
+|---|---:|---:|---:|
+| v031 / c39 | 161.3 | 80.500 | 2.00 |
+| v034 / c41b | 159.4 | 79.094 | 2.02 |
+| v051 / c47b | 234 | 116.557 | 2.01 |
+| v066 / c66 | 217.2 | 187.353 | 1.16 |
+| v072 / C74 | 226 | 228.777 | 0.99 |
+| v074 / C75 | 239.387 | 218.619 | 1.10 |
+| **v84 / C84** | **252.563** | **422.615** | **0.60** |
+| v098 | timeout（>300s） | 219.039 | — |
 
-也就是还要消除当前 Linear 剩余归一化误差的约 **79.6000%**，对应 250-case panel
-仍差 **97.560049** 分。这个数轴不是官方排行榜的绝对分数。
+**推断规则（用于预算规划，不替代官方判定）**：
 
-当前官方合规锚点为 v74：`22750 / 239.387s`；v72 为 `22662 / 226s`，控制组 C66
-为 `22557 / 217.2s`；外部参考 `youxilee/hif4` 为用户提供的 `24153 / 239s`。
-从 v74 到 `36000` 的官方分差是 **13250**，到外部参考还差 **1403** 分；但当前本地 panel
-不做官方绝对分回归，因此不能声称当前版本对应某个官方分数或已经接近 `36000`。
+- 比值观测区间为 **`[0.60, 2.02]`**（v84 证明本地很慢的候选在官方硬件上可能
+  远快于本地；c39 系早期候选官方相对最慢）。按最保守上界 `2.02` 反推，
+  **本地 sampled API `≤ 150s` 是官方 `<300s` 的安全预算红线**（150 × 2.02 ≈ 303s）。
+- 本地 `150–450s` 为灰区：官方通过（v84 `422.6s → 252.6s`）与 timeout
+  （v098 sampled `219s` 仍官方 timeout）都出现过，必须提交官方实测。
+- 本地 `>450s` 基本不可行（v121-pawv-fixed 本地 `832.9s`，官方 timeout）。
+- 当前 v127 sampled API `151.136s` 恰在安全红线边缘；Linear 0.8 目标允许精度
+  候选先超预算探索，但进入提交冻结前应把 sampled API 压回 `≤150s`，或以最接近的
+  官方已测版本（如 v84）做结构对比后再提交实测。
+- 该推断线只约束提交冻结阶段；探索阶段仍按 accuracy-first 只记录时间。
+
+### 官方记录候选的 v5 复评覆盖矩阵
+
+全部 11 个有官方记录的本仓库候选均已在 v4 sampled 口径（seed `20260831`，
+224 Linear + 32 Attention、CPU、`cache=read`）完成复评：
+
+| 候选 | 官方结果 | v5 Linear mean | v5 Attention mean | 本地 API (s) | 复评日志 |
+|---|---|---:|---:|---:|---|
+| v031 / c39 | 21864（旧权重） | 0.439775 | 0.667092 | 80.500 | [`official-anchors-sampled`](../logs/execution/2026-08-31-official-anchors-sampled.md) |
+| v034 / c41b | 21864（旧权重） | 0.439775 | 0.667092 | 79.094 | 同上 |
+| v051 / c47b | 22451（旧权重） | 0.433744 | 0.667092 | 116.557 | 同上 |
+| v066 / c66 | 22557（旧权重） | 0.432060 | 0.671106 | 187.353 | 同上 |
+| v072 / C74 | 22662 / 226s（旧权重） | 0.432117 | 0.671106 | 228.777 | [`v072-sampled`](../logs/execution/2026-08-31-v072-sampled.md) |
+| v074 / C75 | 22750 / 239.387s（旧权重） | 0.440305 | 0.671106 | 218.619 | [`v74-sampled`](../logs/execution/2026-08-31-v74-sampled-means-qwen.md) |
+| **v84 / C84** | **16517 / 252.563s（新权重）** | **0.477266** | **0.709020** | **422.615** | [`v84-sampled`](../logs/execution/2026-08-31-v84-sampled-means-qwen.md) |
+| v098 | timeout | 0.506715 | 0.828323 | 219.039 | [`v098-sampled`](../logs/execution/2026-08-31-v098-sampled.md) |
+| v100 | Attention WA | 0.506715 | 0.828395 | 150.25 | [`v100-pawv-fixed-sampled`](../logs/execution/2026-08-31-v100-pawv-fixed-sampled.md) |
+| v107 | Attention WA | 0.512967 | 0.828395 | 241.51 | [`v107-pawv-fixed-sampled`](../logs/execution/2026-08-31-v107-pawv-fixed-sampled.md) |
+| v121 | timeout | 0.516685 | 0.828395 | 832.92 | [`v121-pawv-fixed-sampled`](../logs/execution/2026-08-31-v121-pawv-fixed-sampled.md) |
+
+说明：v100/v107/v121 的复评使用 PAWV 变长修复版归档（`-pawv-fixed`），原始归档
+携带变长 bug 不再可运行；v024（`16043/173.8s`，当时规则下不合规）为历史版本，
+不参与复评；外部 `youxilee/hif4` 不属于本仓库提交。**v84 是唯一的新权重官方
+通过锚点，其 v5 基线（`0.477266 / 0.709020`）是新权重口径下最有价值的本地对照**；
+当前 v127（`0.509408 / 0.828395`）两项均值均高于 v84，但尚无官方验证。
+
+历史方法记录（旧权重口径的 36000 推导）见
+[`当前实验结果与可达性 checkpoint`](../logs/execution/2026-08-31-current-results-target-feasibility.md)
+与 [`36000 潜力研究`](2026-08-30-hif4-36000-potential-and-algorithms.md)；两者均不再
+作为当前目标依据。
+
+按新目标 `linear_mean=0.8` 计算诊断距离：当前 v127 的 `0.509408` 还需消除
+
+$$\Delta g_L=0.8-0.509408=0.290592,\qquad \frac{\Delta g_L}{1-g_L}=\frac{0.290592}{0.490592}\approx 59.2\%$$
+
+的剩余归一化 Linear 误差；v121-pawv-fixed（`0.516685`）需消除约 `57.6%`。这是
+本地数轴，不是官方绝对分数。旧权重口径的 36000/0.9 推导已整体移入上文引用的
+历史文档，不再在此重复。
 
 ## 当前唯一后续计划
 
@@ -364,11 +423,11 @@ $$\frac{\Delta g_L}{1-g_L}=\frac{0.3902401950}{0.4902401950}=79.6000\%.$$
     `max_blocks=8`（v125）full-layer 均正向；v125 作为 precision-only 证据，不再增加
     block budget；
 17. 下一步执行 C2 低成本跨模型 guardrail；再执行 C3 的部署权重因子 exact gate、
-    selected-block 稀疏增量 exact gate 与 structured gradient 增量刷新，最后恢复 `<300s`
-    提交硬门。C3 完成后才新建表示级计划，验证共享正交 butterfly/Givens frame 与冻结
-    activation state 后的完整离散 JDRQ-weight。PAWV rank 属于独立 Attention 队列，
-    不插入 Linear 主线。36000 的量化距离和可达性边界见
-    [`2026-08-31 checkpoint`](../logs/execution/2026-08-31-current-results-target-feasibility.md)。
+    selected-block 稀疏增量 exact gate 与 structured gradient 增量刷新，最后恢复
+    提交冻结（本地 sampled API `≤150s` 预算红线，官方 `<300s` 硬门）。C3 完成后才新建
+    表示级计划，验证共享正交 butterfly/Givens frame 与冻结 activation state 后的完整
+    离散 JDRQ-weight。PAWV rank 属于独立 Attention 队列，不插入 Linear 主线。
+    当前目标与时间推断见上文「当前目标与本地时间推断」章节。
 
 L4b 的正式产物为 [`v110-l4b-gals-final-gated-qwen-full.json`](../artifacts/real_model_suite/v110-l4b-gals-final-gated-qwen-full.json)
 和 [`v110 L4b archive`](../solutions/20260831_v110_l4b-gals-final-gated_score295.242780_time702s/)。

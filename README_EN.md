@@ -57,6 +57,15 @@ Chinese version: [README.md](README.md)
   [single active optimization plan](docs/superpowers/plans/2026-08-31-hif4-active-c1-structured-linear-plan.md):
   C2 low-cost cross-model guardrails, then C3 state/time compression; the trimmed
   mechanisms may only be re-planted afterwards within a viable budget.
+- **Current target (updated 2026-08-31, superseding the old-weight 36000 goal)**:
+  reach **`linear_mean = 0.8`** on the Linear side (v127 measures `0.509408`; about
+  `59.2%` of the remaining normalized error must be removed); push Attention as high
+  as possible (the pawv-fixed family currently caps at `0.828395`); keep the official
+  end-to-end time below 300s, with the local budget inferred from measured
+  official-anchor ratios — the freeze-time local sampled-API budget is **`≤150s`**
+  (observed official/local ratio interval `[0.60, 2.02]`; v84 proves a locally slow
+  candidate can still pass officially). See
+  [current target and local time inference](docs/current-solution-status.md).
 - Current source SHA256:
   `75F21B7BE3630FFEFEAF2883BB699CE4901DF1BF6C0B39DD6E40F253561E32C0` (normalized LF;
   identical to the `solutions/20260831_v127_v106-pawv-variable-length-safe_scoreNA_timeNA/`
@@ -190,7 +199,11 @@ values such as `14613 / 159.2s` remain historical records from the old panel.
 There are no fixed gain, coverage, beam, per-component non-regression, or
 intermediate runtime gates beyond these rules. Diagnostic development runs may
 exceed 300 seconds. Once an accuracy signal is found, optimize the algorithm
-and implementation to fit the final runtime limit.
+and implementation to fit the final runtime limit. For the submission-freeze
+stage, the local budget is inferred from official-anchor measurements: the
+historical official/local sampled-API ratio interval is `[0.60, 2.02]`, so the
+local sampled API should be compressed to **`≤150s`** before freezing; the
+`150–450s` range is a gray zone that only an official run can settle.
 
 For the current accuracy-first phase, runtime is recorded but is not an
 acceptance gate. The `<300s` requirement becomes a hard gate again only when a

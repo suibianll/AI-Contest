@@ -47,10 +47,16 @@
   （panel `295.847849`，API `2653.58s` 不可提交）。**2026-08-31 起 L3–L6/C1 机制已全部
   从根 `solution.py` 裁剪**，根文件回到 v106 Linear 链 + PAWV 变长修复（v127）；这些
   机制只作为 C2/C3 压缩阶段的历史证据保留。下一步执行唯一活跃计划的 C2 低成本跨模型
-  guardrail 与 C3 state/runtime 压缩。逐版本证据见 [`solutions/README.md`](solutions/README.md)
-  与 `logs/execution/`；旧权重口径的 36000 目标推导见
-  [`当前实验结果与可达性 checkpoint`](logs/execution/2026-08-31-current-results-target-feasibility.md)，
-  该推导基于旧评分权重，需按 v84 新权重锚点（`16517`）重新校准后方可用于新目标。
+  guardrail 与 C3 state/runtime 压缩。  逐版本证据见 [`solutions/README.md`](solutions/README.md)
+  与 `logs/execution/`。
+- **当前目标（2026-08-31 更新，取代旧权重 36000 目标）**：Linear 场景本地
+  `linear_mean` 达到 **`0.8`**（当前 v127 `0.509408`，需消除剩余误差约 `59.2%`）；
+  Attention 场景尽可能高（pawv-fixed 系当前上限 `0.828395`）；官方端到端 `<300s`，
+  本地时间预算按官方锚点候选的实测比值推断——提交冻结前本地 sampled API
+  **`≤150s` 红线**（比值观测区间 `[0.60, 2.02]`，v84 实测证明本地超预算也可能
+  官方通过）。完整推断表与全部官方候选的 v5 复评覆盖矩阵见
+  [`当前目标与本地时间推断`](docs/current-solution-status.md)。旧权重口径的
+  36000 推导仅作历史方法记录：[`可达性 checkpoint`](logs/execution/2026-08-31-current-results-target-feasibility.md)。
 - 当前根源码 SHA256：
   `75F21B7BE3630FFEFEAF2883BB699CE4901DF1BF6C0B39DD6E40F253561E32C0`（规范 LF，
   与 `solutions/20260831_v127_v106-pawv-variable-length-safe_scoreNA_timeNA/` 归档快照一致）。
@@ -211,7 +217,9 @@ git diff --check
 
 除上述规则外，不设置固定的增益、coverage、beam、单组件非退化或中间时间门槛。
 开发阶段允许完整扫描和超过 300 秒的诊断实验；发现精度信号后，再通过算法和实现
-优化压入最终时间限制。
+优化压入最终时间限制。提交冻结阶段的本地时间预算按官方锚点候选推断：本地
+sampled API 与官方端到端时间的历史比值区间为 `[0.60, 2.02]`，冻结前本地
+sampled API 应压到 **`≤150s`**；`150–450s` 为灰区必须官方实测。
 
 ## 当前算法
 

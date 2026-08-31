@@ -1,5 +1,11 @@
 # HiF4 Linear / Attention 优化潜力、36,000 分差距与具体算法
 
+> **状态（2026-08-31）**：官方第三次修订（减少 Linear 样例权重、不限 `A@W`、
+> `<300s`）后，36,000 旧权重目标与本文的 `<420s`、Linear `A@W` 合规边界均已失效。
+> 当前目标为 Linear `0.8` / Attention 尽量高 / 官方 `<300s`（本地 sampled API
+> 预算 `≤150s`），见 [`current-solution-status.md`](../current-solution-status.md)。
+> 本文整体保留为历史方法记录，不再作为当前目标依据。
+
 > 日期：2026-08-30  
 > 适用工程：2026 华为算法大赛 NVFP4 → HiF4 赛题  
 > 分析对象：当前根 `solution.py`（clean Gram-hierarchy）、C66 官方冠军、C72–C75 JDRQ/Gram64 研究分支

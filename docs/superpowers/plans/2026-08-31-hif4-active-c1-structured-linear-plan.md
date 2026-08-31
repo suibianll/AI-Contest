@@ -77,19 +77,21 @@ v4 sample seed=`20260831`、layers=`[0,1,5,10,13,15,22,23]`、全部 role、4 wi
 | Local API / Wall | `151.136s / 161.840s`（CPU） |
 | v127 source LF SHA | `75F21B7BE3630FFEFEAF2883BB699CE4901DF1BF6C0B39DD6E40F253561E32C0` |
 
-到 `linear_mean=0.9` 仍差约 `0.390592`，需消除当前剩余归一化误差约
-`79.86%`；这只是本地诊断轴，不能换算官方 36000。所有在线候选必须遵守：
+**当前目标（2026-08-31 更新，取代旧权重 36000 目标）**：
 
-若只在本地诊断轴固定当前 sampled Attention `0.828395`，panel 达到 `360` 所需的
-Linear mean 实际为
+1. Linear 场景本地 `linear_mean` 达到 `0.8`：v127 的 `0.509408` 还需消除剩余
+   归一化误差约 `59.2%`（v121-pawv-fixed `0.516685` 需约 `57.6%`）；这只是本地
+   诊断轴，不换算官方绝对分。
+2. Attention 场景尽可能高：pawv-fixed 系当前上限 `0.828395`，继续寻找无损或低
+   时间成本的 Attention 增益。
+3. 官方端到端 `<300s`：按官方锚点候选的本地 sampled API ↔ 官方时间比值区间
+   `[0.60, 2.02]` 推断，**提交冻结前本地 sampled API 预算红线为 `≤150s`**；
+   `150–450s` 为灰区必须官方实测，`>450s` 基本不可行。当前 v127
+   `151.136s` 恰在红线边缘。全部官方候选的 v5 复评覆盖矩阵与完整推断表见
+   [`current-solution-status`](../../docs/current-solution-status.md) 的
+   「当前目标与本地时间推断」章节。
 
-\[
-g_L^{360}=\frac{360-200\times0.828395}{250}\approx0.777284.
-\]
-
-v127 到该值仍需消除约 `54.87%` 的剩余 Linear 误差；`0.9` 是更激进的冗余目标，
-不是 36000 的必要条件。官方隐藏分布未知，以上只用于判断所需算法量级。完整推导见
-[`当前实验结果与可达性 checkpoint`](../../../logs/execution/2026-08-31-current-results-target-feasibility.md)。
+所有在线候选必须遵守：
 
 - 输出仍是 HiF4 五字段 `scale_factor/scale_lv2/scale_lv3/sign/mant`；
 - state 只含 calibration/offline 生成的 CPU finite 静态统计，不含 token、输出或
