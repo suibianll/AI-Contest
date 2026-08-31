@@ -1,0 +1,869 @@
+{
+  "schema": 1,
+  "diagnostic": "candidate-stratified-linear-candidate-screen",
+  "cache": "D:\\工作内容\\AI竞赛\\artifacts\\real_model_suite\\cache\\qwen2.5-0.5b__seq128__calib2__test4__layersall__schema1.pt",
+  "solution": "D:\\工作内容\\AI竞赛\\solution.py",
+  "mode": "amax6",
+  "layers": [
+    0,
+    5,
+    11,
+    17,
+    23
+  ],
+  "roles": [
+    "q",
+    "k",
+    "v",
+    "o",
+    "fc_gate",
+    "fc_up",
+    "proj"
+  ],
+  "sha256": {
+    "cache_raw": "ff40b5e0ce9568faae6582004f23f4f9b1f3f28a913671b9cd1fd40397f65aea",
+    "solution_lf": "b498a6d5cf025b58807c9751d0e98e237f0ea9d5bdf2a11fc5be8f2aa7ae1801",
+    "screen_script_lf": "73e10298e29d2a7434fca5246c6746dba2cf1db5a96d326bc93a533c92a9a48d"
+  },
+  "records": [
+    {
+      "layer": 0,
+      "role": "q",
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.8268391192383663,
+          "weight_perfect": 0.9580905514840722,
+          "activation_perfect": 0.8705175790740309,
+          "both_perfect": 0.9999999999927673
+        },
+        "weight_side_headroom": 0.1312514322457059,
+        "activation_side_headroom": 0.04367845983566465,
+        "relaxed_both_perfect_headroom": 0.17316088075440106,
+        "standard_mse_mean": 0.00204511359333992,
+        "frame_reference_mse_mean": 1.4762743478908516e-14,
+        "classification": "weight-dominant"
+      }
+    },
+    {
+      "layer": 0,
+      "role": "k",
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.8397788977860136,
+          "weight_perfect": 0.9703773645819327,
+          "activation_perfect": 0.8723912290295393,
+          "both_perfect": 0.999999999990625
+        },
+        "weight_side_headroom": 0.13059846679591913,
+        "activation_side_headroom": 0.032612331243525694,
+        "relaxed_both_perfect_headroom": 0.1602211022046115,
+        "standard_mse_mean": 0.0019860461470671,
+        "frame_reference_mse_mean": 1.870732826866851e-14,
+        "classification": "weight-dominant"
+      }
+    },
+    {
+      "layer": 0,
+      "role": "v",
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.7326996455524566,
+          "weight_perfect": 0.8333264583248057,
+          "activation_perfect": 0.9009631089257084,
+          "both_perfect": 1.0
+        },
+        "weight_side_headroom": 0.10062681277234908,
+        "activation_side_headroom": 0.16826346337325182,
+        "relaxed_both_perfect_headroom": 0.2673003544475434,
+        "standard_mse_mean": 2.2681942027702462e-05,
+        "frame_reference_mse_mean": 0.0,
+        "classification": "activation-dominant"
+      }
+    },
+    {
+      "layer": 0,
+      "role": "o",
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.6344706240221246,
+          "weight_perfect": 0.7725537892029705,
+          "activation_perfect": 0.8841156767874452,
+          "both_perfect": 1.0
+        },
+        "weight_side_headroom": 0.13808316518084585,
+        "activation_side_headroom": 0.24964505276532056,
+        "relaxed_both_perfect_headroom": 0.3655293759778754,
+        "standard_mse_mean": 8.639106710006672e-07,
+        "frame_reference_mse_mean": 0.0,
+        "classification": "activation-dominant"
+      }
+    },
+    {
+      "layer": 0,
+      "role": "fc_gate",
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.42436937803069313,
+          "weight_perfect": 0.6971408274182884,
+          "activation_perfect": 0.7371756324490786,
+          "both_perfect": 0.9999999999999051
+        },
+        "weight_side_headroom": 0.2727714493875953,
+        "activation_side_headroom": 0.31280625441838544,
+        "relaxed_both_perfect_headroom": 0.575630621969212,
+        "standard_mse_mean": 0.0033368412405252457,
+        "frame_reference_mse_mean": 3.1654715102535244e-16,
+        "classification": "transform-coupled"
+      }
+    },
+    {
+      "layer": 0,
+      "role": "fc_up",
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.4381448843228748,
+          "weight_perfect": 0.4878284974564825,
+          "activation_perfect": 0.9525936351428796,
+          "both_perfect": 1.0
+        },
+        "weight_side_headroom": 0.049683613133607696,
+        "activation_side_headroom": 0.5144487508200049,
+        "relaxed_both_perfect_headroom": 0.5618551156771252,
+        "standard_mse_mean": 0.0017300895997323096,
+        "frame_reference_mse_mean": 0.0,
+        "classification": "activation-dominant"
+      }
+    },
+    {
+      "layer": 0,
+      "role": "proj",
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.4316808834083661,
+          "weight_perfect": 0.5657625068273802,
+          "activation_perfect": 0.8703651989672893,
+          "both_perfect": 1.0
+        },
+        "weight_side_headroom": 0.13408162341901408,
+        "activation_side_headroom": 0.4386843155589232,
+        "relaxed_both_perfect_headroom": 0.5683191165916339,
+        "standard_mse_mean": 0.0002618588841869496,
+        "frame_reference_mse_mean": 0.0,
+        "classification": "activation-dominant"
+      }
+    },
+    {
+      "layer": 5,
+      "role": "q",
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.42721876269741904,
+          "weight_perfect": 0.7594221671987853,
+          "activation_perfect": 0.6663732034980673,
+          "both_perfect": 1.0
+        },
+        "weight_side_headroom": 0.33220340450136626,
+        "activation_side_headroom": 0.23915444080064824,
+        "relaxed_both_perfect_headroom": 0.5727812373025809,
+        "standard_mse_mean": 0.010219191899523139,
+        "frame_reference_mse_mean": 0.0,
+        "classification": "weight-dominant"
+      }
+    },
+    {
+      "layer": 5,
+      "role": "k",
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.645932801167435,
+          "weight_perfect": 0.8785419565511989,
+          "activation_perfect": 0.7674286776810236,
+          "both_perfect": 0.9999999999935736
+        },
+        "weight_side_headroom": 0.23260915538376392,
+        "activation_side_headroom": 0.12149587651358862,
+        "relaxed_both_perfect_headroom": 0.3540671988261386,
+        "standard_mse_mean": 0.014737096382305026,
+        "frame_reference_mse_mean": 9.45021682706871e-14,
+        "classification": "weight-dominant"
+      }
+    },
+    {
+      "layer": 5,
+      "role": "v",
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.5371670973853204,
+          "weight_perfect": 0.6106025517498279,
+          "activation_perfect": 0.9326085564449764,
+          "both_perfect": 1.0
+        },
+        "weight_side_headroom": 0.07343545436450749,
+        "activation_side_headroom": 0.395441459059656,
+        "relaxed_both_perfect_headroom": 0.4628329026146796,
+        "standard_mse_mean": 0.0056549375876784325,
+        "frame_reference_mse_mean": 0.0,
+        "classification": "activation-dominant"
+      }
+    },
+    {
+      "layer": 5,
+      "role": "o",
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.5162441230662426,
+          "weight_perfect": 0.6034360900839211,
+          "activation_perfect": 0.9096821561852683,
+          "both_perfect": 1.0
+        },
+        "weight_side_headroom": 0.0871919670176785,
+        "activation_side_headroom": 0.3934380331190257,
+        "relaxed_both_perfect_headroom": 0.48375587693375743,
+        "standard_mse_mean": 0.0002130084358213935,
+        "frame_reference_mse_mean": 0.0,
+        "classification": "activation-dominant"
+      }
+    },
+    {
+      "layer": 5,
+      "role": "fc_gate",
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.4172555359947165,
+          "weight_perfect": 0.7564449571059894,
+          "activation_perfect": 0.6604085773864963,
+          "both_perfect": 0.9999999999997196
+        },
+        "weight_side_headroom": 0.33918942111127287,
+        "activation_side_headroom": 0.2431530413917798,
+        "relaxed_both_perfect_headroom": 0.582744464005003,
+        "standard_mse_mean": 0.018145956564694643,
+        "frame_reference_mse_mean": 5.08520761510387e-15,
+        "classification": "weight-dominant"
+      }
+    },
+    {
+      "layer": 5,
+      "role": "fc_up",
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.44262837715376374,
+          "weight_perfect": 0.4743065752044215,
+          "activation_perfect": 0.9703481884122068,
+          "both_perfect": 1.0
+        },
+        "weight_side_headroom": 0.031678198050657747,
+        "activation_side_headroom": 0.5277198112584431,
+        "relaxed_both_perfect_headroom": 0.5573716228462362,
+        "standard_mse_mean": 0.006377591984346509,
+        "frame_reference_mse_mean": 0.0,
+        "classification": "activation-dominant"
+      }
+    },
+    {
+      "layer": 5,
+      "role": "proj",
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.4246351207248242,
+          "weight_perfect": 0.5201963043830444,
+          "activation_perfect": 0.9021315024297736,
+          "both_perfect": 1.0
+        },
+        "weight_side_headroom": 0.09556118365822025,
+        "activation_side_headroom": 0.4774963817049494,
+        "relaxed_both_perfect_headroom": 0.5753648792751758,
+        "standard_mse_mean": 0.0006807489698985592,
+        "frame_reference_mse_mean": 0.0,
+        "classification": "activation-dominant"
+      }
+    },
+    {
+      "layer": 11,
+      "role": "q",
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.7038900119069368,
+          "weight_perfect": 0.8782173836501512,
+          "activation_perfect": 0.8269482542534984,
+          "both_perfect": 0.9999999999965652
+        },
+        "weight_side_headroom": 0.17432737174321444,
+        "activation_side_headroom": 0.1230582423465616,
+        "relaxed_both_perfect_headroom": 0.2961099880896284,
+        "standard_mse_mean": 0.01797379180788994,
+        "frame_reference_mse_mean": 6.170395818643273e-14,
+        "classification": "weight-dominant"
+      }
+    },
+    {
+      "layer": 11,
+      "role": "k",
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.7532554822701876,
+          "weight_perfect": 0.9249917253342004,
+          "activation_perfect": 0.829664040044348,
+          "both_perfect": 0.9999999999934072
+        },
+        "weight_side_headroom": 0.1717362430640128,
+        "activation_side_headroom": 0.07640855777416045,
+        "relaxed_both_perfect_headroom": 0.2467445177232196,
+        "standard_mse_mean": 0.03219477413222194,
+        "frame_reference_mse_mean": 2.118922103207764e-13,
+        "classification": "weight-dominant"
+      }
+    },
+    {
+      "layer": 11,
+      "role": "v",
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.5085223057228745,
+          "weight_perfect": 0.8175335250103362,
+          "activation_perfect": 0.6883288383730118,
+          "both_perfect": 1.0
+        },
+        "weight_side_headroom": 0.30901121928746167,
+        "activation_side_headroom": 0.17980653265013735,
+        "relaxed_both_perfect_headroom": 0.4914776942771255,
+        "standard_mse_mean": 0.009777280734851956,
+        "frame_reference_mse_mean": 0.0,
+        "classification": "weight-dominant"
+      }
+    },
+    {
+      "layer": 11,
+      "role": "o",
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.5423105213629832,
+          "weight_perfect": 0.8095152300456478,
+          "activation_perfect": 0.7335057611084153,
+          "both_perfect": 0.9999999999999016
+        },
+        "weight_side_headroom": 0.26720470868266466,
+        "activation_side_headroom": 0.19119523974543207,
+        "relaxed_both_perfect_headroom": 0.45768947863691845,
+        "standard_mse_mean": 0.0002732414286583662,
+        "frame_reference_mse_mean": 2.6683905643013894e-17,
+        "classification": "weight-dominant"
+      }
+    },
+    {
+      "layer": 11,
+      "role": "fc_gate",
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.3612579361933427,
+          "weight_perfect": 0.5514231500357761,
+          "activation_perfect": 0.8033365001741513,
+          "both_perfect": 1.0
+        },
+        "weight_side_headroom": 0.19016521384243346,
+        "activation_side_headroom": 0.4420785639808086,
+        "relaxed_both_perfect_headroom": 0.6387420638066573,
+        "standard_mse_mean": 0.004908513510599732,
+        "frame_reference_mse_mean": 0.0,
+        "classification": "activation-dominant"
+      }
+    },
+    {
+      "layer": 11,
+      "role": "fc_up",
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.43890620294886135,
+          "weight_perfect": 0.5087126509628278,
+          "activation_perfect": 0.9281594093389093,
+          "both_perfect": 1.0
+        },
+        "weight_side_headroom": 0.06980644801396646,
+        "activation_side_headroom": 0.48925320639004793,
+        "relaxed_both_perfect_headroom": 0.5610937970511387,
+        "standard_mse_mean": 0.0037642703391611576,
+        "frame_reference_mse_mean": 0.0,
+        "classification": "activation-dominant"
+      }
+    },
+    {
+      "layer": 11,
+      "role": "proj",
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.39385447860430267,
+          "weight_perfect": 0.5233157017365767,
+          "activation_perfect": 0.8669097390020172,
+          "both_perfect": 1.0
+        },
+        "weight_side_headroom": 0.12946122313227404,
+        "activation_side_headroom": 0.4730552603977145,
+        "relaxed_both_perfect_headroom": 0.6061455213956973,
+        "standard_mse_mean": 0.0004890825002803467,
+        "frame_reference_mse_mean": 0.0,
+        "classification": "activation-dominant"
+      }
+    },
+    {
+      "layer": 17,
+      "role": "q",
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.57144841287134,
+          "weight_perfect": 0.8169606864436376,
+          "activation_perfect": 0.7540803056800685,
+          "both_perfect": 0.9999999999964703
+        },
+        "weight_side_headroom": 0.24551227357229766,
+        "activation_side_headroom": 0.1826318928087285,
+        "relaxed_both_perfect_headroom": 0.4285515871251303,
+        "standard_mse_mean": 0.014840081101283431,
+        "frame_reference_mse_mean": 5.243038737000848e-14,
+        "classification": "weight-dominant"
+      }
+    },
+    {
+      "layer": 17,
+      "role": "k",
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.6191751064448532,
+          "weight_perfect": 0.880277200996636,
+          "activation_perfect": 0.7421092975216265,
+          "both_perfect": 0.9999999999940322
+        },
+        "weight_side_headroom": 0.2611020945517828,
+        "activation_side_headroom": 0.12293419107677328,
+        "relaxed_both_perfect_headroom": 0.38082489354917903,
+        "standard_mse_mean": 0.016762842889875174,
+        "frame_reference_mse_mean": 1.0005143008572429e-13,
+        "classification": "weight-dominant"
+      }
+    },
+    {
+      "layer": 17,
+      "role": "v",
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.4588321944758954,
+          "weight_perfect": 0.7961766782525665,
+          "activation_perfect": 0.6603860894642042,
+          "both_perfect": 1.0
+        },
+        "weight_side_headroom": 0.33734448377667114,
+        "activation_side_headroom": 0.20155389498830878,
+        "relaxed_both_perfect_headroom": 0.5411678055241046,
+        "standard_mse_mean": 0.011714699910953641,
+        "frame_reference_mse_mean": 0.0,
+        "classification": "weight-dominant"
+      }
+    },
+    {
+      "layer": 17,
+      "role": "o",
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.654667105373764,
+          "weight_perfect": 0.8497135877501981,
+          "activation_perfect": 0.8047590913640384,
+          "both_perfect": 0.9999999999999434
+        },
+        "weight_side_headroom": 0.19504648237643407,
+        "activation_side_headroom": 0.1500919859902744,
+        "relaxed_both_perfect_headroom": 0.34533289462617933,
+        "standard_mse_mean": 0.0006460403965320438,
+        "frame_reference_mse_mean": 3.6664736810840486e-17,
+        "classification": "weight-dominant"
+      }
+    },
+    {
+      "layer": 17,
+      "role": "fc_gate",
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.3847196264029673,
+          "weight_perfect": 0.742759732348788,
+          "activation_perfect": 0.6416641692845604,
+          "both_perfect": 0.9999999999997303
+        },
+        "weight_side_headroom": 0.3580401059458207,
+        "activation_side_headroom": 0.2569445428815931,
+        "relaxed_both_perfect_headroom": 0.615280373596763,
+        "standard_mse_mean": 0.01860941620543599,
+        "frame_reference_mse_mean": 5.0176041156384916e-15,
+        "classification": "weight-dominant"
+      }
+    },
+    {
+      "layer": 17,
+      "role": "fc_up",
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.42848426506850795,
+          "weight_perfect": 0.47529009897521635,
+          "activation_perfect": 0.9526982024862054,
+          "both_perfect": 1.0
+        },
+        "weight_side_headroom": 0.046805833906708394,
+        "activation_side_headroom": 0.5242139374176975,
+        "relaxed_both_perfect_headroom": 0.5715157349314921,
+        "standard_mse_mean": 0.010359152918681502,
+        "frame_reference_mse_mean": 0.0,
+        "classification": "activation-dominant"
+      }
+    },
+    {
+      "layer": 17,
+      "role": "proj",
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.4640911031443187,
+          "weight_perfect": 0.5268764754842319,
+          "activation_perfect": 0.9337922656316742,
+          "both_perfect": 1.0
+        },
+        "weight_side_headroom": 0.06278537233991321,
+        "activation_side_headroom": 0.4697011624873555,
+        "relaxed_both_perfect_headroom": 0.5359088968556813,
+        "standard_mse_mean": 0.00187915880815126,
+        "frame_reference_mse_mean": 0.0,
+        "classification": "activation-dominant"
+      }
+    },
+    {
+      "layer": 23,
+      "role": "q",
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.7532003643850619,
+          "weight_perfect": 0.8916886849388306,
+          "activation_perfect": 0.8603730257672678,
+          "both_perfect": 0.999999999999913
+        },
+        "weight_side_headroom": 0.1384883205537687,
+        "activation_side_headroom": 0.10717266138220594,
+        "relaxed_both_perfect_headroom": 0.24679963561485108,
+        "standard_mse_mean": 0.023078832775354385,
+        "frame_reference_mse_mean": 2.0088412842188686e-15,
+        "classification": "weight-dominant"
+      }
+    },
+    {
+      "layer": 23,
+      "role": "k",
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.5047267281794162,
+          "weight_perfect": 0.8831297796009606,
+          "activation_perfect": 0.628252061736232,
+          "both_perfect": 1.0
+        },
+        "weight_side_headroom": 0.3784030514215444,
+        "activation_side_headroom": 0.12352533355681583,
+        "relaxed_both_perfect_headroom": 0.4952732718205838,
+        "standard_mse_mean": 0.02173624513670802,
+        "frame_reference_mse_mean": 0.0,
+        "classification": "weight-dominant"
+      }
+    },
+    {
+      "layer": 23,
+      "role": "v",
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.7327694007985704,
+          "weight_perfect": 0.9211696324678532,
+          "activation_perfect": 0.8117960113452957,
+          "both_perfect": 0.9999999999941558
+        },
+        "weight_side_headroom": 0.18840023166928277,
+        "activation_side_headroom": 0.07902661054672522,
+        "relaxed_both_perfect_headroom": 0.26723059919558534,
+        "standard_mse_mean": 0.041174789890646935,
+        "frame_reference_mse_mean": 2.405835743840047e-13,
+        "classification": "weight-dominant"
+      }
+    },
+    {
+      "layer": 23,
+      "role": "o",
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.3930623444653658,
+          "weight_perfect": 0.7021163599724632,
+          "activation_perfect": 0.6864793671004089,
+          "both_perfect": 1.0
+        },
+        "weight_side_headroom": 0.30905401550709743,
+        "activation_side_headroom": 0.2934170226350431,
+        "relaxed_both_perfect_headroom": 0.6069376555346342,
+        "standard_mse_mean": 0.003398653119802475,
+        "frame_reference_mse_mean": 0.0,
+        "classification": "transform-coupled"
+      }
+    },
+    {
+      "layer": 23,
+      "role": "fc_gate",
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.4457828014168606,
+          "weight_perfect": 0.5604917404027885,
+          "activation_perfect": 0.8882811119810478,
+          "both_perfect": 1.0
+        },
+        "weight_side_headroom": 0.11470893898592788,
+        "activation_side_headroom": 0.44249831056418715,
+        "relaxed_both_perfect_headroom": 0.5542171985831394,
+        "standard_mse_mean": 0.020031390711665154,
+        "frame_reference_mse_mean": 0.0,
+        "classification": "activation-dominant"
+      }
+    },
+    {
+      "layer": 23,
+      "role": "fc_up",
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.4632121909258661,
+          "weight_perfect": 0.5410728067502206,
+          "activation_perfect": 0.9234059673872226,
+          "both_perfect": 1.0
+        },
+        "weight_side_headroom": 0.07786061582435455,
+        "activation_side_headroom": 0.4601937764613565,
+        "relaxed_both_perfect_headroom": 0.5367878090741339,
+        "standard_mse_mean": 0.018468432128429413,
+        "frame_reference_mse_mean": 0.0,
+        "classification": "activation-dominant"
+      }
+    },
+    {
+      "layer": 23,
+      "role": "proj",
+      "arms": {
+        "case_count": 4,
+        "arm_gain_mean": {
+          "both_player": 0.3520761394801568,
+          "weight_perfect": 0.5522846739683831,
+          "activation_perfect": 0.7991350190054155,
+          "both_perfect": 1.0
+        },
+        "weight_side_headroom": 0.2002085344882263,
+        "activation_side_headroom": 0.4470588795252587,
+        "relaxed_both_perfect_headroom": 0.6479238605198432,
+        "standard_mse_mean": 0.03625560738146305,
+        "frame_reference_mse_mean": 0.0,
+        "classification": "activation-dominant"
+      }
+    }
+  ],
+  "by_layer": {
+    "0": {
+      "count": 7,
+      "arm_gain_mean": {
+        "both_player": 0.6182833474801279,
+        "weight_perfect": 0.7550114278994189,
+        "activation_perfect": 0.869731722910853,
+        "both_perfect": 0.999999999997614
+      },
+      "weight_side_headroom": 0.136728080419291,
+      "activation_side_headroom": 0.2514483754307252,
+      "relaxed_both_perfect_headroom": 0.3817166525174861,
+      "classification": "activation-dominant"
+    },
+    "5": {
+      "count": 7,
+      "arm_gain_mean": {
+        "both_player": 0.48729740259853166,
+        "weight_perfect": 0.6575643717538842,
+        "activation_perfect": 0.8298544088625446,
+        "both_perfect": 0.9999999999990419
+      },
+      "weight_side_headroom": 0.17026696915535244,
+      "activation_side_headroom": 0.342557006264013,
+      "relaxed_both_perfect_headroom": 0.5127025974005102,
+      "classification": "activation-dominant"
+    },
+    "11": {
+      "count": 7,
+      "arm_gain_mean": {
+        "both_player": 0.5288567055727841,
+        "weight_perfect": 0.7162441952536451,
+        "activation_perfect": 0.8109789346134787,
+        "both_perfect": 0.9999999999985534
+      },
+      "weight_side_headroom": 0.18738748968086108,
+      "activation_side_headroom": 0.28212222904069467,
+      "relaxed_both_perfect_headroom": 0.4711432944257693,
+      "classification": "activation-dominant"
+    },
+    "17": {
+      "count": 7,
+      "arm_gain_mean": {
+        "both_player": 0.511631116254521,
+        "weight_perfect": 0.7268649228930393,
+        "activation_perfect": 0.7842127744903397,
+        "both_perfect": 0.9999999999985966
+      },
+      "weight_side_headroom": 0.21523380663851827,
+      "activation_side_headroom": 0.27258165823581876,
+      "relaxed_both_perfect_headroom": 0.48836888374407567,
+      "classification": "activation-dominant"
+    },
+    "23": {
+      "count": 7,
+      "arm_gain_mean": {
+        "both_player": 0.5206899956644712,
+        "weight_perfect": 0.7217076683002143,
+        "activation_perfect": 0.7996746520461271,
+        "both_perfect": 0.9999999999991527
+      },
+      "weight_side_headroom": 0.20101767263574313,
+      "activation_side_headroom": 0.2789846563816561,
+      "relaxed_both_perfect_headroom": 0.47931000433468157,
+      "classification": "activation-dominant"
+    }
+  },
+  "by_role": {
+    "q": {
+      "count": 5,
+      "arm_gain_mean": {
+        "both_player": 0.6565193342198248,
+        "weight_perfect": 0.8608758947430953,
+        "activation_perfect": 0.7956584736545865,
+        "both_perfect": 0.9999999999971431
+      },
+      "weight_side_headroom": 0.2043565605232706,
+      "activation_side_headroom": 0.13913913943476178,
+      "relaxed_both_perfect_headroom": 0.34348066577731834,
+      "classification": "weight-dominant"
+    },
+    "k": {
+      "count": 5,
+      "arm_gain_mean": {
+        "both_player": 0.6725738031695812,
+        "weight_perfect": 0.9074636054129858,
+        "activation_perfect": 0.7679690612025538,
+        "both_perfect": 0.9999999999943275
+      },
+      "weight_side_headroom": 0.23488980224340458,
+      "activation_side_headroom": 0.09539525803297277,
+      "relaxed_both_perfect_headroom": 0.3274261968247465,
+      "classification": "weight-dominant"
+    },
+    "v": {
+      "count": 5,
+      "arm_gain_mean": {
+        "both_player": 0.5939981287870235,
+        "weight_perfect": 0.7957617691610779,
+        "activation_perfect": 0.7988165209106393,
+        "both_perfect": 0.9999999999988312
+      },
+      "weight_side_headroom": 0.20176364037405445,
+      "activation_side_headroom": 0.20481839212361583,
+      "relaxed_both_perfect_headroom": 0.4060018712118077,
+      "classification": "transform-coupled"
+    },
+    "o": {
+      "count": 5,
+      "arm_gain_mean": {
+        "both_player": 0.548150943658096,
+        "weight_perfect": 0.7474670114110402,
+        "activation_perfect": 0.8037084105091152,
+        "both_perfect": 0.9999999999999691
+      },
+      "weight_side_headroom": 0.1993160677529441,
+      "activation_side_headroom": 0.25555746685101915,
+      "relaxed_both_perfect_headroom": 0.45184905634187295,
+      "classification": "activation-dominant"
+    },
+    "fc_gate": {
+      "count": 5,
+      "arm_gain_mean": {
+        "both_player": 0.40667705560771605,
+        "weight_perfect": 0.6616520814623261,
+        "activation_perfect": 0.7461731982550669,
+        "both_perfect": 0.999999999999871
+      },
+      "weight_side_headroom": 0.25497502585461007,
+      "activation_side_headroom": 0.3394961426473508,
+      "relaxed_both_perfect_headroom": 0.5933229443921549,
+      "classification": "activation-dominant"
+    },
+    "fc_up": {
+      "count": 5,
+      "arm_gain_mean": {
+        "both_player": 0.4422751840839748,
+        "weight_perfect": 0.4974421258698338,
+        "activation_perfect": 0.9454410805534847,
+        "both_perfect": 1.0
+      },
+      "weight_side_headroom": 0.05516694178585897,
+      "activation_side_headroom": 0.50316589646951,
+      "relaxed_both_perfect_headroom": 0.5577248159160252,
+      "classification": "activation-dominant"
+    },
+    "proj": {
+      "count": 5,
+      "arm_gain_mean": {
+        "both_player": 0.4132675450723937,
+        "weight_perfect": 0.5376871324799233,
+        "activation_perfect": 0.874466745007234,
+        "both_perfect": 1.0
+      },
+      "weight_side_headroom": 0.12441958740752956,
+      "activation_side_headroom": 0.46119919993484026,
+      "relaxed_both_perfect_headroom": 0.5867324549276063,
+      "classification": "activation-dominant"
+    }
+  },
+  "overall": {
+    "count": 35,
+    "arm_gain_mean": {
+      "both_player": 0.5333517135140872,
+      "weight_perfect": 0.7154785172200403,
+      "activation_perfect": 0.8188904985846687,
+      "both_perfect": 0.9999999999985917
+    },
+    "weight_side_headroom": 0.1821268037059532,
+    "activation_side_headroom": 0.2855387850705815,
+    "relaxed_both_perfect_headroom": 0.46664828648450457,
+    "classification": "activation-dominant"
+  },
+  "elapsed_seconds": 429.9493164999876
+}
