@@ -59,6 +59,17 @@ JSON/日志和官方规则；`docs/superpowers/archive/plans/` 只作历史证�
 到 `linear_mean=0.9` 仍差 `0.3903987445`，需消除当前剩余归一化误差的
 `79.6084%`；这只是本地诊断轴，不能换算官方 36000。所有在线候选必须遵守：
 
+若只在本地诊断轴固定当前 Attention `0.8420394885`，panel 达到 `360` 所需的
+Linear mean 实际为
+
+\[
+g_L^{360}=\frac{360-200\times0.8420394885}{250}=0.7663684092.
+\]
+
+v125 到该值仍需消除 `52.3434%` 的剩余 Linear 误差；`0.9` 是更激进的冗余目标，
+不是 36000 的必要条件。官方隐藏分布未知，以上只用于判断所需算法量级。完整推导见
+[`当前实验结果与可达性 checkpoint`](../../../logs/execution/2026-08-31-current-results-target-feasibility.md)。
+
 - 输出仍是 HiF4 五字段 `scale_factor/scale_lv2/scale_lv3/sign/mant`；
 - state 只含 calibration/offline 生成的 CPU finite 静态统计，不含 token、输出或
   test/holdout 信息；
@@ -178,10 +189,22 @@ C1c 队列到此停止，不再增加 block budget；下一步按固定分层规
 
 **状态：pending。**
 
-汇总 C1/C2 的 precision、recall、`J_64`、state bytes 和 API 时间，评估两条保持
-exact gate 的路线：批量使用现有 dense `G_q`，或离线保存可证明上界的 block-row
-压缩统计。未经 exact gate 证明的近似不能成为提交 parent。只有 checkpoint 后才把
-`<420s` 恢复为最终官方硬门。
+汇总 C1/C2 的 precision、recall、`J_64`、state bytes 和 API 时间。按单变量顺序执行：
+
+1. 用 `e^TG_qe=||eW_q^T||^2` 的部署权重因子替代宽投影的 dense `G_q`，要求 keep
+   mask/五字段与 reference 一致；
+2. 对 selected-block sparse `delta` 使用
+   `2e^TG_q delta + delta^TG_q delta` 做增量 exact gate，避免 parent/candidate 两次
+   dense quadratic form；
+3. structured sweep2 接受一个 block 后增量更新 circular kernel gradient，不再对完整
+   row/block tensor 重跑 `_structured_gram_matmul`；
+4. 仍不足时才验证 block 轴 FFT circular convolution；
+5. 输出 v100/v106/v125/压缩候选的精度、state 峰值和 API Pareto，最终恢复 `<420s`
+   硬门并做 Attention contract smoke。
+
+未经 exact-equivalence 对照的近似不能成为提交 parent。C3 完成后归档本计划；下一份
+唯一 active 计划才进入共享正交 butterfly/Givens frame 和冻结 activation state 后的
+完整离散 JDRQ-weight，不在本计划继续增加 rank/block/offset。
 
 ## 5. 候选账本
 

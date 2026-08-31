@@ -302,8 +302,12 @@ $$\frac{\Delta g_L}{1-g_L}=\frac{0.3902401950}{0.4902401950}=79.6000\%.$$
 16. C1c：rank-2（v122）与 max-blocks-2（v123）screen 拒绝，rank-8（v124）与
     `max_blocks=8`（v125）full-layer 均正向；v125 作为 precision-only 证据，不再增加
     block budget；
-17. 下一步执行 C2 低成本跨模型 guardrail，再执行 C3 state/time 压缩，最后恢复 `<420s`
-    提交硬门。PAWV rank 属于独立 Attention 队列，不插入 Linear 主线。
+17. 下一步执行 C2 低成本跨模型 guardrail；再执行 C3 的部署权重因子 exact gate、
+    selected-block 稀疏增量 exact gate 与 structured gradient 增量刷新，最后恢复 `<420s`
+    提交硬门。C3 完成后才新建表示级计划，验证共享正交 butterfly/Givens frame 与冻结
+    activation state 后的完整离散 JDRQ-weight。PAWV rank 属于独立 Attention 队列，
+    不插入 Linear 主线。36000 的量化距离和可达性边界见
+    [`2026-08-31 checkpoint`](../logs/execution/2026-08-31-current-results-target-feasibility.md)。
 
 L4b 的正式产物为 [`v110-l4b-gals-final-gated-qwen-full.json`](../artifacts/real_model_suite/v110-l4b-gals-final-gated-qwen-full.json)
 和 [`v110 L4b archive`](../solutions/20260831_v110_l4b-gals-final-gated_score295.242780_time702s/)。

@@ -37,7 +37,11 @@
   C1b 的 block-refresh screen（v120）被拒绝，两轮 refresh（v121）已通过，C1c rank-2/block-2
   screen 均被拒绝，rank-8/max-blocks-8（v125）已在 full-layer 取得当前最高精度；由于
   API 时间远超 420s，下一步转入唯一活跃计划的 C2 低成本跨模型 guardrail 和 C3 state/runtime
-  压缩，不再扩大 block budget。
+  压缩，不再扩大 block budget。C3 已具体化为部署权重因子 exact gate、selected-block
+  稀疏增量 exact gate 和 structured gradient 增量刷新；C3 完成并归档后，才启动共享
+  正交 butterfly/Givens frame + 冻结 activation state 后完整离散 JDRQ-weight 的新计划。
+  36000/Linear 门槛推导见
+  [`当前实验结果与可达性 checkpoint`](logs/execution/2026-08-31-current-results-target-feasibility.md)。
 - 当前根源码 SHA256：
   `C9B419717E38BCEC69D907D1CAB6638409F1FA9A3072892DDE9494EF9DA3CC8E`（规范 LF）。
 - L1 full-hierarchy Weight-LRH 已完成合成测试与五层×七 role screen，但 screen
