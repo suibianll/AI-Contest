@@ -1,11 +1,12 @@
-# HiF4 唯一活跃优化计划 v5：v118 结构化 Linear 精度与可压缩路径
+# HiF4 唯一活跃优化计划 v5：v125 结构化 Linear 跨模型审计与可压缩路径
 
 > 状态：**ACTIVE**
 > 建立日期：2026-08-31
 > 适用根：`D:/工作内容/AI竞赛/solution.py`
-> 当前精度 parent：v124 C1c structured rank-8 + C1b refresh（sweep2）
-> 根 `solution.py` 规范 LF SHA256：`4ad7b1219cf73f6570690e3c919a2cdb1777402f2e99ae4a21f1162ea838b690`
-> 主目标：保持 v119（继承 v118）的完整部署 `G_q` exact gate 语义，继续提升 Qwen full-layer
+> 当前精度 parent：v125 C1c structured rank-8 / max-blocks-8 + C1b refresh（sweep2）；
+> 当前提交/时间 parent 仍为 v106（`<420s`）
+> 根 `solution.py` 规范 LF SHA256：`c9b419717e38bcec69d907d1cab6638409f1fa9a3072892dde9494ef9da3cc8e`
+> 主目标：保持 v125（继承 v119）的完整部署 `G_q` exact gate 语义，继续验证 Qwen full-layer
 > `linear_mean`；同时把结构化 proposal 的原型实现压缩为可审计的 C1 路径。Attention
 > 只作回归检查，不在本计划中扩展 PAWV。
 
@@ -28,20 +29,31 @@ JSON/日志和官方规则；`docs/superpowers/archive/plans/` 只作历史证�
 6. 本计划的队列完成或连续两个方向无正向后，立即归档本文件，并在同一提交创建
    下一份唯一 active 计划，不能在归档文件追加新的下一步。
 
+### 1.1 评测分层规则（本轮起固定）
+
+为避免每个候选重复消耗数十分钟，精度排序采用 Qwen 主线：
+
+1. 合成/合规/五层七 role screen 是所有候选的第一道门；
+2. 只有 screen 明确正向且无 role 回退才跑 Qwen2.5-0.5B 全 24 层；
+3. Qwen full 是本地精度排序的唯一硬门。OPT/Pythia 只在 precision parent 变更后或
+   每 2–3 个候选做 3–5 层、少量 role 的软 guardrail，不再对每个候选跑五模型全量；
+4. “Qwen full 足够”只适用于本地相对排序，不能替代官方提交前的 Attention API smoke、
+   state/shape 合规检查和一次跨模型回归。
+
 ## 2. 固定基线、目标和约束
 
 固定评测：Qwen2.5-0.5B、24 层、`seq=128`、`calib=2`、`test=4`、`amax6`、CPU、
 只读 cache `artifacts/real_model_suite/cache/qwen2.5-0.5b__seq128__calib2__test4__layersall__schema1.pt`。
 
-| 指标 | v124（C1c rank-8 + C1b sweep2） |
+| 指标 | v125（C1c rank-8 / max-blocks-8 + C1b sweep2） |
 |---|---:|
-| screen Linear mean | `0.53343639` |
-| full Linear mean | `0.5096493233` |
+| screen Linear mean | `0.53358298` |
+| full Linear mean | `0.5097598050` |
 | Attention mean | `0.8420394885` |
-| Qwen panel | `295.8202285103` |
-| native total | `423.3201361314` |
-| API time | `2323.911178s` |
-| LF SHA | `4ad7b1219cf73f6570690e3c919a2cdb1777402f2e99ae4a21f1162ea838b690` |
+| Qwen panel | `295.8478489516` |
+| native total | `423.3943798775` |
+| API time | `2653.580314s`（runtime invalid） |
+| LF SHA | `c9b419717e38bcec69d907d1cab6638409f1fa9a3072892dde9494ef9da3cc8e` |
 
 到 `linear_mean=0.9` 仍差 `0.3903987445`，需消除当前剩余归一化误差的
 `79.6084%`；这只是本地诊断轴，不能换算官方 36000。所有在线候选必须遵守：
@@ -117,7 +129,7 @@ v121 screen/full 产物位于
 
 ### C1c：结构化 rank / block budget 的精度扫描
 
-**状态：in_progress（以 v121 为 parent）。**
+**状态：completed（v125 precision-only；runtime invalid）。**
 
 在 C1a/b 的最佳实现上逐变量扫描 `S∈{2,4,8}`、`max_blocks∈{2,4,8}`，不同时
 改变两个旋钮。state 成本按
@@ -144,8 +156,13 @@ screen Linear `0.53343639`（较 v121 `+0.00003993`），full Linear `0.50964932
 panel `295.8202285103`（较 v121 `+0.0089476344`），7 个 role 均不降，故接替当前
 precision parent；完整源码/JSON/报告见
 [`v124 archive`](../../../solutions/20260831_v124_c1c-rank8-accepted_score295.820229_time2324s/)。
-其 API `2323.911178s` 超过 420s，仅作 accuracy-first 记录；下一项只测试
-`max_blocks=8`，仍固定 `S=8`，不同时改变两个旋钮。
+其 API `2323.911178s` 超过 420s，仅作 accuracy-first 记录。随后固定 `S=8` 测试
+`max_blocks=8`：screen `0.53358298`，full Linear `0.5097598050`、panel
+`295.8478489516`，较 v124 分别 `+0.0001104818`、`+0.0276204413`；Attention
+逐位不变，但 API `2653.580314s`，因此只保留为 precision-only 证据，不作为提交版本。
+完整源码、screen/full JSON、报告和结论见
+[`v125 archive`](../../../solutions/20260831_v125_c1c-block8-precision-only_score295.847849_time2654s/)。
+C1c 队列到此停止，不再增加 block budget；下一步按固定分层规则进入 C2/C3。
 
 ### C2：跨 fold / 多模型泛化审计
 
@@ -180,7 +197,8 @@ exact gate 的路线：批量使用现有 dense `G_q`，或离线保存可证明
 | **v121** | **0.5096135327** | **0.8420394885** | **295.811281** | **2180.45s** | **当前 parent；C1b completed** |
 | v122 | NA（screen `0.53336284`） | NA | NA | 425.70s screen | C1c rank-2 rejected |
 | v123 | NA（screen `0.53335171`） | NA | NA | 429.95s screen | C1c max_blocks-2 rejected |
-| **v124** | **0.5096493233** | **0.8420394885** | **295.820229** | **2323.91s** | **当前 parent；C1c rank-8 accepted** |
+| **v124** | **0.5096493233** | **0.8420394885** | **295.820229** | **2323.91s** | 前一 precision parent；C1c rank-8 |
+| **v125** | **0.5097598050** | **0.8420394885** | **295.847849** | **2653.58s** | **precision-only accepted；runtime invalid** |
 
 ## 6. 完成条件
 

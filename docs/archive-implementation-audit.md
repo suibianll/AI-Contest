@@ -1,7 +1,7 @@
 # 归档算法实现与可复现性审计
 
 > 审计日期：2026-08-31
-> 范围：`solutions/` 下 v000–v121 候选（排除工具目录 `.mimosa`）、`logs/execution/`、当前根 `solution.py` 以及所有历史计划。
+> 范围：`solutions/` 下 v000–v125 候选（排除工具目录 `.mimosa`）、`logs/execution/`、当前根 `solution.py` 以及所有历史计划。
 > 结论性质：这是实现审计和实验可复现性审计，不是官方成绩承诺。
 
 ## 1. 审计口径
@@ -22,17 +22,17 @@ P = 250 g_L + 200 g_A,
 
 ## 2. 当前根与已确认效果
 
-根目录 `solution.py` 是 v124 C1c structured rank-8 + v121 C1b structured gradient refresh×2 + v119 C1a structured proposal vectorization + v118 L6d structured block-circulant factor + v117 L6c full `G_64` hierarchy coordinate sweep + v116 L6b wide rank-4 cross-block factor + v115 L6a rank-16 global-LRH + v111 L5a block-local permutation + expansive-FFN CAT balance + B2 PAWV **diag-only** + B1 GQRB + Global Activation-LRH Gram gate + L4a final deployed-Gram row gate + L4b final-Gram GALS 路径；v101 是此前 v100 的五模型确认。当前规范 LF SHA256：
+根目录 `solution.py` 是 v125 C1c rank-8 / `max_blocks=8` + v121 C1b structured gradient refresh×2 + v119 C1a structured proposal vectorization + v118 L6d structured block-circulant factor + v117 L6c full `G_64` hierarchy coordinate sweep + v116 L6b wide rank-4 cross-block factor + v115 L6a rank-16 global-LRH + v111 L5a block-local permutation + expansive-FFN CAT balance + B2 PAWV **diag-only** + B1 GQRB + Global Activation-LRH Gram gate + L4a final deployed-Gram row gate + L4b final-Gram GALS 路径；v101 是此前 v100 的五模型确认。当前规范 LF SHA256：
 
-`17f99a198c9e13c2cb2518d14b02973bc71336adfc90e6bf884e89d22717af7b`
+`c9b419717e38bcec69d907d1cab6638409f1fa9a3072892dde9494ef9da3cc8e`
 
-| 指标 | 当前根 v121（precision parent） |
+| 指标 | 当前根 v125（precision-only parent） |
 |---|---:|
-| Qwen Linear mean | 0.509649 |
+| Qwen Linear mean | 0.509760 |
 | Qwen Attention mean | 0.842039 |
-| Qwen shaped panel | **295.820229** |
-| Qwen native total | 423.320136 |
-| Qwen API time | 2323.911178 s |
+| Qwen shaped panel | **295.847849** |
+| Qwen native total | 423.394380 |
+| Qwen API time | 2653.580314 s |
 | 官方分数 | 尚无提交结果 |
 
 当前正式路径的有效组件是：
@@ -51,7 +51,7 @@ P = 250 g_L + 200 g_A,
   W/A；两折 operand-local gate 不通过则回退 identity。该等价坐标变换 full-layer
   panel `295.482473`，Linear `0.508298`。
 
-最新正向链为：v086 `267.307909` → v098 `293.793700` → v100 `293.797301` → v106 `294.272633` → v107 `295.157057` → v109 `295.239309` → v110 `295.242780` → v111 `295.482473` → v115 `295.680651` → v116 `295.734045` → v117 `295.785829` → v118 `295.808212` → v121 `295.811281`。C1a v119 不改变分数，只把 API 时间从 `2249.746s` 降至 `2040.505s`；C1b v121 两轮 refresh 再增加 `0.003069` panel，但 API 回升至 `2180.450s`。其中最大跃迁来自 C86 实验集合重写为 clean 单一路径；v106 的增益只来自 expansive `fc_gate`，v107 的增益来自窄输入 q/k/v/o 的 Gram-gated Global-LRH，v109 的增益来自 expansive FFN final-Gram row gate，v110 再来自其上 GALS 小预算，v111 来自 block-local 等价排列，v115 来自窄输入 rank-16 off-block factor，v116 来自宽 `proj(d=4864)` rank-4 off-block factor，v117 来自 full `G_64` hierarchy coordinate sweep，v118/v121 来自结构化 block-circulant proposal 及其 gradient refresh + 完整部署 Gram gate。
+最新正向链为：v086 `267.307909` → v098 `293.793700` → v100 `293.797301` → v106 `294.272633` → v107 `295.157057` → v109 `295.239309` → v110 `295.242780` → v111 `295.482473` → v115 `295.680651` → v116 `295.734045` → v117 `295.785829` → v118 `295.808212` → v121 `295.811281` → v124 `295.820229` → v125 `295.847849`。C1a v119 不改变分数，只把 API 时间从 `2249.746s` 降至 `2040.505s`；C1b v121 两轮 refresh 再增加 `0.003069` panel，但 API 回升至 `2180.450s`；v125 `max_blocks=8` 再增加 `0.027620` panel，但 API 升至 `2653.580s`。其中最大跃迁来自 C86 实验集合重写为 clean 单一路径；v106 的增益只来自 expansive `fc_gate`，v107 的增益来自窄输入 q/k/v/o 的 Gram-gated Global-LRH，v109 的增益来自 expansive FFN final-Gram row gate，v110 再来自其上 GALS 小预算，v111 来自 block-local 等价排列，v115 来自窄输入 rank-16 off-block factor，v116 来自宽 `proj(d=4864)` rank-4 off-block factor，v117 来自 full `G_64` hierarchy coordinate sweep，v118/v121/v124/v125 来自结构化 block-circulant proposal、gradient refresh、rank 与 block budget 扫描及完整部署 Gram gate。
 
 ## 3. 归档源码审计结果
 
@@ -175,14 +175,15 @@ v109 已归档为当前精度 parent；API `517.285773s` 只作为探索期时�
 | v122 C1c rank-2 | screen `0.53336284`，低于 v118/v121；完整源码已归档，未跑 full-layer。 |
 | v123 C1c max-blocks-2 | screen `0.53335171`，低于 v118/v121；完整源码已归档，未跑 full-layer。 |
 | v124 C1c structured rank-8 | screen `0.53343639`；full panel `295.820229`、Linear `0.509649`，较 v121 `+0.008948`；26 项核心测试/compliance 通过，API `2323.911s` 超时但 accuracy-first 接受。 |
+| v125 C1c rank-8 / max-blocks-8 | screen `0.53358298`；full panel `295.847849`、Linear `0.509760`，较 v124 `+0.027620`；Attention `0.842039` 逐位不变；API `2653.580s`，仅作 precision-only 证据，runtime invalid。 |
 
-最近候选的静态/运行时 Linear 合规扫描均为 `violations=0, static=0`；本次没有发现把 `A@W` 输出监督写入在线 `Q(A)` 的新违规。合规通过不等于精度通过，二者分开记录。
+最近候选的静态/运行时 Linear 合规扫描均为 `violations=0, static=0`；本次没有发现把 `A@W` 输出监督写入在线 `Q(A)` 的新违规。v107 Attention 合约专项审计（见 [`2026-08-31-v107-attention-contract-audit.md`](../logs/execution/2026-08-31-v107-attention-contract-audit.md)）显示 v100/v106/v107/v107b1 的 Attention 函数体 SHA、随机 MHA/GQA 状态和 Qwen 历史 full Attention 输出均逐位一致，独立 5 场景×3 模式合规矩阵及 30 个 Q/K/V 状态校验均 0 failures。因此官方 v107 `wrong answer` 目前不能归因于 Attention 数值改动；更可疑的是 v107 新增约 2.6 GiB 的 Qwen `deployment_gram` 状态、API 超时或提交包装/隐藏输入契约，需平台同包复测验证。合规通过不等于精度通过，二者分开记录。
 
 ## 5. 已实现、已验证、未验证的方向矩阵
 
 | 算法族 | 已实现并保留 | 已实现但回退 | 当前仍未验证/需要修复 |
 |---|---|---|---|
-| Linear 基础 | BOAT、**v111 L5a block-local permutation**、cross-fold Weight-HSDQ、Gram-hierarchy Activation-HSDQ、**v106 expansive CAT balance**、**v107 Gram-gated Global-LRH**、**v109 final deployed-Gram row gate**、**v110 final-Gram GALS**、**v115 L6a rank-16**、**v116 L6b wide rank-4**、**v117 L6c full `G_64` hierarchy**、**v118 L6d structured factor**、**v119 C1a vectorization**、**v121 C1b refresh×2**、**v124 C1c rank-8**、512-row weight sampling、历史稳定 A@W/JDRQ 组件 | blockwise BOAT-2、全宽/逐块 A@W、大步长 headroom、full-H、**v105 corrected full-hierarchy LRH** 等 | 稀疏 Schur、统计元路由、外部差异审计、C1c max-blocks-8/C2/C3 结构化扫描/压缩 |
+| Linear 基础 | BOAT、**v111 L5a block-local permutation**、cross-fold Weight-HSDQ、Gram-hierarchy Activation-HSDQ、**v106 expansive CAT balance**、**v107 Gram-gated Global-LRH**、**v109 final deployed-Gram row gate**、**v110 final-Gram GALS**、**v115 L6a rank-16**、**v116 L6b wide rank-4**、**v117 L6c full `G_64` hierarchy**、**v118 L6d structured factor**、**v119 C1a vectorization**、**v121 C1b refresh×2**、**v124 C1c rank-8**、**v125 C1c max-blocks-8**、512-row weight sampling、历史稳定 A@W/JDRQ 组件 | blockwise BOAT-2、全宽/逐块 A@W、大步长 headroom、full-H、**v105 corrected full-hierarchy LRH** 等 | 稀疏 Schur、统计元路由、外部差异审计、C2/C3 跨模型与 state/time 压缩 |
 | Attention | GQA head-local rotation、MHA K-center、B1 GQRB margin、B2 PAWV diag-only | causal CVaR、全模型 K-center、PAWV rank-8 当前实现 | 最终 Q/K 变换后的 PAWV rank/position bucket、交替 Q/K/V、真正 role-aware 的结构门控 |
 | 变换/CAT | 固定低自由度 CAT/BOAT 子集、共享 Hadamard | R64、CAT β 网格、full-H selector、BOAT-2 | 低自由度新坐标系或外部实现差异对照，尚无可部署候选 |
 | 诊断/工程 | E0-G/D0 scale oracle、C0 五模型确认、clean 单路径重写 | 全局 scale 扩张部署 | 三折合成宽度矩阵、元策略路由、计算预算重分配 |
@@ -196,17 +197,17 @@ v109 已归档为当前精度 parent；API `517.285773s` 只作为探索期时�
 - 计划中把 v 的 GALS 正向 oracle 当作部署机会，但 v102/v103 已证明当前 sparse/shape-proxy 组合不稳定；v109/v110 已完成无 role-id 的 final-weight-Gram 与 GALS 复验，下一阶段转向 L5 结构路线。
 - 官方提交/兑换率校准从未完成，不能用本地 panel 推断官方 36000 距离。
 
-治理动作：L6 计划已完成并移入归档；当前唯一 active 计划是 [`2026-08-31-hif4-active-c1-structured-linear-plan.md`](superpowers/plans/2026-08-31-hif4-active-c1-structured-linear-plan.md)，其余实施计划和流程文档均位于 [`docs/superpowers/archive/plans/`](superpowers/archive/plans/)。`plans/README.md` 与归档索引只描述导航及历史性质，不产生下一步指令。
+治理动作：L6、C1 计划主体已完成；当前唯一 active 计划仍是 [`2026-08-31-hif4-active-c1-structured-linear-plan.md`](superpowers/plans/2026-08-31-hif4-active-c1-structured-linear-plan.md)，下一步为 C2/C3；其余实施计划和流程文档均位于 [`docs/superpowers/archive/plans/`](superpowers/archive/plans/)。`plans/README.md` 与归档索引只描述导航及历史性质，不产生下一步指令。
 
 ## 7. 审计后的优先级
 
-1. 官方接口恢复后，提交当前 precision parent v124（或后续 C1 压缩后的等价版本），获得第一个真实兑换率锚点。
+1. 官方接口恢复后，先提交仍低于 420s 的 v106 时间 parent 做接口 smoke；精度提交候选为 v125，但必须先通过 C3 压缩或证明平台资源可承受，再获得第一个真实兑换率锚点。
 2. L1 的 v105 corrected full-hierarchy LRH 已完成并拒绝；不再扩大其自由度。
-3. L3 v107、L4a v109、L4b v110、L5a v111、L6a v115、L6b v116、L6c v117、L6d v118、C1a v119、C1b v121、C1c v124 均已完成并产生精度/time parent；v120、v122、v123、L5b/v112、
+3. L3 v107、L4a v109、L4b v110、L5a v111、L6a v115、L6b v116、L6c v117、L6d v118、C1a v119、C1b v121、C1c v124/v125 均已完成并产生精度/time parent；v120、v122、v123、L5b/v112、
    L5c/v113、L5d/v114 已按 screen 归档拒绝，L5e 已完成可达性 checkpoint。
-4. 当前只执行唯一活跃计划的 C1 structured Linear 路线；Linear 不回到已否决的 sampler、
-   joint residual、H32/H64 或 group-only solver，先完成 rank/budget 和跨模型审计，再做最终
-   state/time checkpoint。Attention PAWV rank/position
+4. 当前只执行唯一活跃计划的 C2/C3 structured Linear 路线；Linear 不回到已否决的 sampler、
+   joint residual、H32/H64 或 group-only solver，先完成跨模型审计，再做最终 state/time
+   checkpoint。Attention PAWV rank/position
    metric 继续独立延后。
 5. 每个实验必须保存完整源和 SHA；只要没有完整源，就标为不可复现，不把结果当作硬上限。
 

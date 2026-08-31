@@ -4,7 +4,7 @@
 
 本目录只保留一份活跃计划。执行优化时只读取下面这份文件、根 `solution.py`、最新可复现评测和官方规则；归档目录中的计划不具有指令效力。
 
-- [`2026-08-31-hif4-active-c1-structured-linear-plan.md`](2026-08-31-hif4-active-c1-structured-linear-plan.md)：当前唯一有效的 v5 Linear 队列，基于 v124 C1c rank-8 parent 继续验证 max-blocks=8、跨模型泛化与 C1 压缩；L6、C1a、C1b 已完成并归档。
+- [`2026-08-31-hif4-active-c1-structured-linear-plan.md`](2026-08-31-hif4-active-c1-structured-linear-plan.md)：当前唯一有效的 v5 Linear 队列，v125 已完成 C1c `max_blocks=8` 精度验证；下一步只执行 C2 低成本跨模型 guardrail 与 C3 state/time 压缩，L6/C1 已完成并记录。
 
 旧的 v2 active、grid、consolidated、accuracy-first、Linear、JDRQ 计划以及已完成的
 L6 计划，均已移至 [`../archive/plans/`](../archive/plans/)。它们是历史决策记录，

@@ -15,7 +15,7 @@ v034、v051、v066 官方列更新为新版结果；其余历史官方列保留�
 
 ## 当前活跃根版本（不属于下方历史版本号）
 
-根目录 `solution.py` 当前为 v124 precision parent（C1c structured rank-8 + C1b structured gradient refresh×2 + C1a structured proposal vectorization + v118 L6d structured block-circulant factor + v117 L6c full `G_64` hierarchy coordinate sweep + v116 L6b wide rank-4 cross-block factor + v115 L6a rank-16 global LRH + v111 L5a block-local permutation +
+根目录 `solution.py` 当前为 v125 precision-only parent（C1c structured rank-8 / `max_blocks=8` + C1b structured gradient refresh×2 + C1a structured proposal vectorization + v118 L6d structured block-circulant factor + v117 L6c full `G_64` hierarchy coordinate sweep + v116 L6b wide rank-4 cross-block factor + v115 L6a rank-16 global LRH + v111 L5a block-local permutation +
 expansive-FFN CAT balance + Gram-gated Global Activation-LRH + L4a final deployed-Gram
 row gate + L4b final-Gram GALS + B2 PAWV diag-only + B1 GQRB）；C0 五模型复测已
 确认 v100 的 Qwen 主模型门禁。历史目录（包括 v073–v086/C75–C86）保持不可变；
@@ -28,25 +28,29 @@ row gate + L4b final-Gram GALS + B2 PAWV diag-only + B1 GQRB）；C0 五模型�
 | v116 L6b wide rank-4 factor + v115 | archived source | **0.509305** | 0.842039 | **295.734045** | 423.088475 | 739.424609s | previous-precision |
 | v117 L6c full `G_64` hierarchy + v116 | archived source | **0.509512** | 0.842039 | **295.785829** | 423.227671 | 2019.475204s | previous-precision |
 | v118 L6d structured factor + v117 | archived source | **0.509601** | 0.842039 | **295.808212** | 423.287835 | 2249.746436s | previous-precision |
-| **v119 C1a vectorized proposal + v118** | `solution.py` | **0.509601** | 0.842039 | **295.808212** | 423.287835 | **2040.504690s** | **active-precision/time** |
+| **v119 C1a vectorized proposal + v118** | archived source | **0.509601** | 0.842039 | **295.808212** | 423.287835 | **2040.504690s** | previous-precision/time |
 | v120 C1b block refresh (screen only) | archived source | 0.533373 screen | NA | NA | NA | 419.63s screen | rejected |
 | v121 C1b structured refresh×2 | archived source | 0.509614 | 0.842039 | 295.811281 | 423.296085 | 2180.450151s | previous-precision |
 | v122 C1c rank-2 (screen only) | archived source | 0.533363 screen | NA | NA | NA | 425.70s screen | rejected |
 | v123 C1c max-blocks-2 (screen only) | archived source | 0.533352 screen | NA | NA | NA | 429.95s screen | rejected |
-| **v124 C1c structured rank-8** | **`solution.py`** | **0.509649** | **0.842039** | **295.820229** | **423.320136** | **2323.911178s** | **active-precision** |
+| **v124 C1c structured rank-8** | archived source | **0.509649** | **0.842039** | **295.820229** | **423.320136** | **2323.911178s** | previous-precision |
+| **v125 C1c rank-8 / max-blocks-8** | **`solution.py`** | **0.509760** | **0.842039** | **295.847849** | **423.394380** | **2653.580314s** | **active-precision-only; runtime invalid** |
 
 固定配置为 Qwen2.5-0.5B 全 24 层、`seq=128`、`calib=2`、`test=4`、`amax6`、CPU、
-缓存只读。完整报告见 [`v121-c1b-structured-refresh2-qwen-full.md`](../logs/execution/2026-08-31-v121-c1b-structured-refresh2-qwen-full.md)，
+缓存只读。完整报告见 [`v125-c1c-block8-qwen-full.md`](../logs/execution/2026-08-31-v125-c1c-block8-qwen-full.md)，
+v107 Attention 合约审计见 [`2026-08-31-v107-attention-contract-audit.md`](../logs/execution/2026-08-31-v107-attention-contract-audit.md)。
 五模型确认见 [`2026-08-30-c0-b2-pawv-five-model.md`](../logs/evaluations/2026-08-30-c0-b2-pawv-five-model.md)。
-`official_score` 和 `official_time` 尚无值；295.820229 是本地 Qwen shaped panel，
+`official_score` 和 `official_time` 尚无值；295.847849 是本地 Qwen shaped panel，
 不能换算成官方分数。相对旧 C86 归档，panel 提升 `+27.268726`（`+10.21%`），正式
 v118 API 时间为 `2249.746436s`，v119 在全部分数位保持相同并将 API 降至
 `2040.504690s`（`-9.30%`）。v121 两轮 refresh 将 panel 提升至 `295.811281`，
-v124 rank-8 再提升至 `295.820229`，Linear mean `0.5096493233`，较 v121 分别
-`+0.008948`、`+0.0000357905`。相对 v117 panel 提升 `+0.034399`。v106 仍作为时间 parent 保留在历史/归档记录中，
-v107/v109/v110/v111/v115/v116/v117/v118/v119/v121 作为前一精度 parent 保留在各自归档，v124 为当前 precision parent；v120、v122、v123 的 screen 均已拒绝归档。
-L5b/v112、L5c/v113、L5d/v114 均为已归档的 screen 候选，当前 active 计划已切换为
-L6 计划已完成并归档，C1a/C1b 已完成，当前转入 C1c 结构化 rank/block budget 扫描。
+v124 rank-8 再提升至 `295.820229`，v125 在 `max_blocks=8` 下再提升至
+`295.847849`，Linear mean `0.5097598050`；v125 较 v124 分别 `+0.027620`、
+`+0.000110482`，但 API `2653.580314s`，不满足官方 `<420s`，只能作为精度证据。
+v106 仍作为时间 parent 保留在历史/归档记录中，v107/v109/v110/v111/v115/v116/v117/v118/v119/v121/v124
+作为前一精度 parent 保留在各自归档；v125 是当前 precision-only 根；v120、v122、v123 的 screen 均已拒绝归档。
+L5b/v112、L5c/v113、L5d/v114 均为已归档的 screen 候选，L6、C1a、C1b、C1c 已完成，
+当前 active 计划转入 C2 跨模型低成本 guardrail 与 C3 state/time 压缩。
 计划入口：[`2026-08-31-hif4-active-c1-structured-linear-plan.md`](../docs/superpowers/plans/2026-08-31-hif4-active-c1-structured-linear-plan.md)。
 
 | Version | Date | Topic | Local Linear | Local Attention | Local Time | Official Score | Official Time | Delta | Status | Directory |
@@ -177,7 +181,7 @@ L6 计划已完成并归档，C1a/C1b 已完成，当前转入 C1c 结构化 ran
 五模型 `official_flow_total` 合计为 `1085.743597`，其中 Qwen2.5-0.5B 的
 `369.527269` 是最高单模型 native；按本地固定 250/200 panel 投影后，最高同口径
 比较线是 Qwen `250.327102`。五模型合计不能作为“最高分”，也不能换算官方
-`24153`。当前根 v124 Qwen panel `295.820229` 比该外部 panel 高 `45.493127`
+`24153`。当前根 v125 Qwen panel `295.847849` 比该外部 panel 高 `45.520747`
 （`18.17%`），native 高 `53.792867`（`14.55%`）。分数和时间为用户提供的
 同口径结果，仓库页面本身未给出可独立核验的官方排行榜记录。
 
@@ -207,13 +211,13 @@ v013 归档字节一致。
 旧版 `Official Score/Time`，旧值仍可在各自提交历史中追溯。
 
 当前根 `solution.py` 不再标记为 v086/C86；当前源码规范 LF SHA256 为
-`4AD7B1219CF73F6570690E3C919A2CDB1777402F2E99AE4A21F1162EA838B690`。
+`C9B419717E38BCEC69D907D1CAB6638409F1FA9A3072892DDE9494EF9DA3CC8E`。
 归档源码缺失、层级写回、目标 gate 和统计坐标问题见
 [`归档实现审计`](../docs/archive-implementation-audit.md)；这些问题会影响部分负结果的可证伪程度，但不会修改不可变历史目录。
 v086 归档源码仍保留其历史 SHA 与结果。新版面板下 v066/C66（官方 `22557 / 217.2s`）是本地归档冠军，较此前
 v051/C47b 提升 `106` 分并减少 `16.8s`；v031/C39-FW 与 v034/C41b 均为
 `21864`。外部 [`youxilee/hif4`](https://github.com/youxilee/hif4) 的
-`24153 / 239s` 仍高出 `1596` 分，仅作参考，不以根文件位置暗示外部代码已导入；当前本地 Qwen parent v124 panel `295.820229`，较外部本地 panel `250.327102` 高 `45.493127`。
+`24153 / 239s` 仍高出 `1596` 分，仅作参考，不以根文件位置暗示外部代码已导入；当前本地 Qwen precision-only parent v125 panel `295.847849`，较外部本地 panel `250.327102` 高 `45.520747`，但 v125 本地 API 超过 420s。
 L5d 外部逐组件审计与 L5e 可达性诊断分别见 [`l5d audit`](../logs/execution/2026-08-31-l5d-external-component-audit.md) 和 [`l5e ceiling`](../logs/execution/2026-08-31-l5e-linear-ceiling-v111.md)。
 
 ## Local-first workflow
