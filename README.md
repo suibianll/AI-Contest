@@ -78,6 +78,10 @@
   绝对保底仍是 v66。边界证据见
   [`v100 官方 WA 边界审计`](logs/execution/2026-08-31-v100-official-wa-boundary-audit.md)。
   根 `solution.py` 仍为 v125 precision-only 研究版本，不是官方候选。
+- 用户确认 **v121 官方显示运行超时**。这与本地 API `2180.450151s` 的 runtime-invalid
+  结论一致，和 v100/v107 的 Attention WA 是两类失败。v121 及更慢的 v124/v125
+  只保留精度证据；记录见
+  [`v121 官方 timeout`](logs/execution/2026-08-31-v121-official-timeout.md)。
 
 本地时间和本地分数仅用于候选比较，不冒充官方结果。任何官方结果都应与
 实际提交 SHA、分数和时间一起归档。

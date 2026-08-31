@@ -171,7 +171,7 @@ v109 已归档为当前精度 parent；API `517.285773s` 只作为探索期时�
 | v118 L6d structured block-circulant factor | 宽输入最多 4 个 `64×64` kernel 生成跨 block proposal，full-layer panel `295.808212`、Linear `0.509601`，较 v117 `+0.022382` panel；API `2249.746s`，前一精度 parent。 |
 | v119 C1a structured proposal vectorization | 与 v118 全部 score 字段逐位相同；reference/vectorized `atol=1e-6`，API `2040.505s`（`−9.30%`），当前 precision/time parent。 |
 | v120 C1b block refresh | 一次 refresh screen `0.5333730058`，低于 v118 screen，已拒绝；完整源码已归档。 |
-| v121 C1b structured gradient refresh×2 | 两轮 refresh；screen `0.5333964596`，full panel `295.811281`、Linear `0.509614`，较 v119 `+0.003069`；38 项测试/compliance 通过，API `2180.450s` 超时但 accuracy-first 接受。 |
+| v121 C1b structured gradient refresh×2 | 两轮 refresh；screen `0.5333964596`，full panel `295.811281`、Linear `0.509614`，较 v119 `+0.003069`；38 项测试/compliance 通过，API `2180.450s`；用户确认官方 runtime timeout，仅按 accuracy-first 精度证据保留。 |
 | v122 C1c rank-2 | screen `0.53336284`，低于 v118/v121；完整源码已归档，未跑 full-layer。 |
 | v123 C1c max-blocks-2 | screen `0.53335171`，低于 v118/v121；完整源码已归档，未跑 full-layer。 |
 | v124 C1c structured rank-8 | screen `0.53343639`；full panel `295.820229`、Linear `0.509649`，较 v121 `+0.008948`；26 项核心测试/compliance 通过，API `2323.911s` 超时但 accuracy-first 接受。 |

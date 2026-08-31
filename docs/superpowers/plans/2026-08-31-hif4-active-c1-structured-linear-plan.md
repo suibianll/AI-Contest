@@ -138,7 +138,8 @@ Attention 与除 `proj` 外的 Linear role 不变，故按 accuracy-first 规则
 v121 screen/full 产物位于
 [`v121 archive`](../../../solutions/20260831_v121_c1b-structured-refresh2-accepted_score295.811281_time2180s/)。
 合成单调性、38 项定向测试和 compliance 均通过；full `official_flow_valid=false` 的
-唯一原因是 CPU API `2180.45s` 超过 420s，暂不作为精度否决。
+唯一原因是 CPU API `2180.45s` 超过 420s，暂不作为精度否决；用户随后确认 v121
+官方显示 runtime timeout，因此它永久保持 precision-only，不进入提交候选。
 
 ### C1c：结构化 rank / block budget 的精度扫描
 
@@ -220,7 +221,7 @@ C1c 队列到此停止，不再增加 block budget；下一步按固定分层规
 | v118 | 0.5096012555 | 0.8420394885 | 295.808212 | 2249.75s | L6d precision parent |
 | v119 | 0.5096012555 | 0.8420394885 | 295.808212 | 2040.50s | C1a 等价时间 parent |
 | v120 | NA（screen `0.5333730058`） | NA | NA | 419.63s screen | C1b block refresh rejected |
-| **v121** | **0.5096135327** | **0.8420394885** | **295.811281** | **2180.45s** | **当前 parent；C1b completed** |
+| **v121** | **0.5096135327** | **0.8420394885** | **295.811281** | **2180.45s** | **precision parent；official-timeout** |
 | v122 | NA（screen `0.53336284`） | NA | NA | 425.70s screen | C1c rank-2 rejected |
 | v123 | NA（screen `0.53335171`） | NA | NA | 429.95s screen | C1c max_blocks-2 rejected |
 | **v124** | **0.5096493233** | **0.8420394885** | **295.820229** | **2323.91s** | 前一 precision parent；C1c rank-8 |

@@ -30,7 +30,7 @@ row gate + L4b final-Gram GALS + B2 PAWV diag-only + B1 GQRB）；C0 五模型�
 | v118 L6d structured factor + v117 | archived source | **0.509601** | 0.842039 | **295.808212** | 423.287835 | 2249.746436s | previous-precision |
 | **v119 C1a vectorized proposal + v118** | archived source | **0.509601** | 0.842039 | **295.808212** | 423.287835 | **2040.504690s** | previous-precision/time |
 | v120 C1b block refresh (screen only) | archived source | 0.533373 screen | NA | NA | NA | 419.63s screen | rejected |
-| v121 C1b structured refresh×2 | archived source | 0.509614 | 0.842039 | 295.811281 | 423.296085 | 2180.450151s | previous-precision |
+| v121 C1b structured refresh×2 | archived source | 0.509614 | 0.842039 | 295.811281 | 423.296085 | 2180.450151s | **precision-only; official-timeout** |
 | v122 C1c rank-2 (screen only) | archived source | 0.533363 screen | NA | NA | NA | 425.70s screen | rejected |
 | v123 C1c max-blocks-2 (screen only) | archived source | 0.533352 screen | NA | NA | NA | 429.95s screen | rejected |
 | **v124 C1c structured rank-8** | archived source | **0.509649** | **0.842039** | **295.820229** | **423.320136** | **2323.911178s** | previous-precision |
@@ -44,6 +44,8 @@ v107 Attention 合约审计见 [`2026-08-31-v107-attention-contract-audit.md`](.
 已失效。新的增强候选为 v72：其 Attention API 完整依赖闭包与官方通过的 v66 语义一致，
 本地 Qwen native `356.605602`、CUDA API `163.41s`；v66 保留为绝对控制组，根 v125
 仍只是 precision-only 研究版本。见 [`v100 官方 WA 边界审计`](../logs/execution/2026-08-31-v100-official-wa-boundary-audit.md)。
+用户另确认 v121 官方显示运行超时；官方精确时间/分数/SHA 未提供。该结果与本地
+`2180.450151s` 一致，见 [`v121 官方 timeout`](../logs/execution/2026-08-31-v121-official-timeout.md)。
 五模型确认见 [`2026-08-30-c0-b2-pawv-five-model.md`](../logs/evaluations/2026-08-30-c0-b2-pawv-five-model.md)。
 `official_score` 和 `official_time` 尚无值；295.847849 是本地 Qwen shaped panel，
 不能换算成官方分数。相对旧 C86 归档，panel 提升 `+27.268726`（`+10.21%`），正式

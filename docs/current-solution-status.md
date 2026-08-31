@@ -235,7 +235,7 @@ $$P_{total}=P_L+P_A=295.847849.$$
 | **L6d structured block-circulant factor（v118 前一 parent）** | **295.808212** | **0.509601** | **2249.75s** | **精度采纳；已被 C1a 语义等价版本超越** |
 | **C1a structured proposal vectorization（v119）** | **295.808212** | **0.509601** | **2040.50s** | **精度逐位等价 v118；API −9.30%；已被 v121 超越** |
 | C1b block refresh（v120 screen） | 0.533373 screen | 0.533373 screen | 419.63s screen | rejected；低于 v118 screen `0.5333753185` |
-| **C1b structured refresh×2（v121）** | **295.811281** | **0.509614** | **2180.45s** | **full-layer 正向；较 v119 panel `+0.003069`；已被 v124 超越** |
+| **C1b structured refresh×2（v121）** | **295.811281** | **0.509614** | **2180.45s** | **full-layer 正向；用户确认官方 runtime timeout；仅保留精度证据** |
 | C1c rank-2（v122 screen） | 0.533363 screen | 0.533363 screen | 425.70s screen | rejected；低于 v118 screen |
 | C1c max-blocks-2（v123 screen） | 0.533352 screen | 0.533352 screen | 429.95s screen | rejected；低于 v118 screen |
 | **C1c rank-8 / max-blocks-8（v125 当前 precision-only）** | **295.847849** | **0.509760** | **2653.58s** | **full-layer 正向；较 v124 panel `+0.027620`；runtime invalid** |
@@ -396,7 +396,10 @@ block 后刷新 proposal gradient，并对同一 block rank list 做两轮 sweep
 为 `0.5333964596`，full-layer Linear `0.5096135327`、panel `295.8112808759`，较 v119
 分别 `+0.0000122773`、`+0.0030693200`。除 `proj` 从 `0.4222010863` 到 `0.4222870273`
 外，其余 Linear role 和 Attention 均保持不变。API `2180.450151s`、wall
-`2212.661980s`，仍超过 420s；依据 accuracy-first 规则先接替精度 parent，C3 再压缩。
+`2212.661980s`，均超过 420s；用户随后确认 v121 官方显示运行超时，见
+[`v121 官方 timeout`](../logs/execution/2026-08-31-v121-official-timeout.md)。该结果不改变
+本地精度消融，但把 v121 明确排除出提交候选；它只在 accuracy-first 研究链中接替过
+精度 parent。
 
 C1c rank-8 的正式产物为 [`v124-c1c-rank8-qwen-full.json`](../artifacts/real_model_suite/v124-c1c-rank8-qwen-full.json)
 和 [`v124 C1c archive`](../solutions/20260831_v124_c1c-rank8-accepted_score295.820229_time2324s/)。
