@@ -15,8 +15,9 @@ Chinese version: [README.md](README.md)
   cases**. Because scores are summed per case, both scores and runtimes are
   higher than under the legacy panel and must not be compared directly.
 - On the revised panel, the best official result among archived submissions is
-  v072 / C74 at `22662 / 226s`; it improves on v066 / C66 (`22557 / 217.2s`)
-  by 105 points at an additional 8.8s. The previous v051 / C47b result was
+  v074 / C75 at `22750 / 239.387s`; it improves on v072 (`22662 / 226s`) by
+  88 points at an additional 13.387s, and on v066 / C66 (`22557 / 217.2s`)
+  by 193 points. The previous v051 / C47b result was
   `22451 / 234s`. v031 / C39-FW and v034 / C41b both scored `21864`, at
   `161.3s` and `159.4s`, respectively.
 - External reference: the public [`youxilee/hif4`](https://github.com/youxilee/hif4)
@@ -130,7 +131,8 @@ secondary diagnostic line; the five-model sum is never a ranking benchmark.
 | v034 / C41b | 21864 | 159.4s | compliant archive |
 | v051 / C47b | 22451 | 234s | previous local official result |
 | v066 / C66 | 22557 | 217.2s | previous official control |
-| v072 / C74 | **22662** | **226s** | best local official result; Attention passed |
+| v072 / C74 | 22662 | 226s | previous official result; Attention passed |
+| v074 / C75 | **22750** | **239.387s** | best local official result; Attention passed |
 | `youxilee/hif4` | **24153** | **239s** | external official reference; local highest Qwen native `369.527269`, panel `250.327102`; five-model `1085.743597` is diagnostic only |
 
 The revised official runtime limit is **7 minutes (420 seconds)**. Legacy values

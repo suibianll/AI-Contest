@@ -148,6 +148,7 @@ v109 已归档为当前精度 parent；API `517.285773s` 只作为探索期时�
 - v031 目录名仍为 `score14613_time159.2s`，但修订官方口径为 `21864 / 161.3s`。
 - v066 目录名为 `scoreNA_timeNA`，但修订官方口径为 `22557 / 217.2s`。
 - v072 目录名仍为 `scoreNA_timeNA`，但用户最新确认官方为 `22662 / 226s`。
+- v074 目录名仍为 `scoreNA_timeNA`，但用户最新确认官方为 `22750 / 239.387s`。
 
 这不是算法实现 bug，但容易让脚本或读者误把旧目录名当成最终成绩。后续不改写不可变目录，统一在 `solutions/README.md` 和审计表中以 canonical result 字段为准。
 
@@ -178,7 +179,7 @@ v109 已归档为当前精度 parent；API `517.285773s` 只作为探索期时�
 | v124 C1c structured rank-8 | screen `0.53343639`；full panel `295.820229`、Linear `0.509649`，较 v121 `+0.008948`；26 项核心测试/compliance 通过，API `2323.911s` 超时但 accuracy-first 接受。 |
 | v125 C1c rank-8 / max-blocks-8 | screen `0.53358298`；full panel `295.847849`、Linear `0.509760`，较 v124 `+0.027620`；Attention `0.842039` 逐位不变；API `2653.580s`，仅作 precision-only 证据，runtime invalid。 |
 
-最近候选的静态/运行时 Linear 合规扫描均为 `violations=0, static=0`；本次没有发现把 `A@W` 输出监督写入在线 `Q(A)` 的新违规。v107 Attention 合约专项审计（见 [`2026-08-31-v107-attention-contract-audit.md`](../logs/execution/2026-08-31-v107-attention-contract-audit.md)）曾在固定 `seq=128` 下通过，但官方变长 mini sample 已确认 v100/v107 的 `_build_pawv_metric` 会发生 shape mismatch。v72 随后以 `22662 / 226s` 官方通过，确认 v66/v72 Attention 闭包是安全边界。v126 已按长度分组修复 PAWV，并通过 `[10,128,512,1024,1024]` 完整公开 calibration API；合规、本地 smoke 和官方通过仍分开记录。
+最近候选的静态/运行时 Linear 合规扫描均为 `violations=0, static=0`；本次没有发现把 `A@W` 输出监督写入在线 `Q(A)` 的新违规。v107 Attention 合约专项审计（见 [`2026-08-31-v107-attention-contract-audit.md`](../logs/execution/2026-08-31-v107-attention-contract-audit.md)）曾在固定 `seq=128` 下通过，但官方变长 mini sample 已确认 v100/v107 的 `_build_pawv_metric` 会发生 shape mismatch。v72 以 `22662 / 226s` 官方通过，v74 又以 `22750 / 239.387s` 通过，把当前安全边界推进到 v74。v126 已按长度分组修复 PAWV，并通过 `[10,128,512,1024,1024]` 完整公开 calibration API；合规、本地 smoke 和官方通过仍分开记录。
 
 ## 5. 已实现、已验证、未验证的方向矩阵
 
@@ -202,7 +203,7 @@ v109 已归档为当前精度 parent；API `517.285773s` 只作为探索期时�
 
 ## 7. 审计后的优先级
 
-1. 正式提交线从已通过的 v72 `22662 / 226s` 出发，只移植 Linear 变化并冻结其 Attention 闭包；v125/v126 必须先通过 C3 压缩与完整复测，不能直接提交。
+1. 正式提交线从已通过的 v74 `22750 / 239.387s` 出发，只移植 Linear 变化并冻结其完整 Attention 可达闭包；v125/v126 必须先通过 C3 压缩与完整复测，不能直接提交。
 2. L1 的 v105 corrected full-hierarchy LRH 已完成并拒绝；不再扩大其自由度。
 3. L3 v107、L4a v109、L4b v110、L5a v111、L6a v115、L6b v116、L6c v117、L6d v118、C1a v119、C1b v121、C1c v124/v125 均已完成并产生精度/time parent；v120、v122、v123、L5b/v112、
    L5c/v113、L5d/v114 已按 screen 归档拒绝，L5e 已完成可达性 checkpoint。

@@ -25,10 +25,12 @@ PAWV，尚未重跑 full-layer，不冒充已有分数。C1c `max_blocks=8` 较 
 表明 v72 的四个 Attention API、45 个递归可达 helper 和相关常量均与官方通过的 v66
 语义一致；v72 本地 Qwen native `356.605602`、Attention `63.119717`、CUDA API
 `163.41s`。用户随后确认 v72 官方运行成功，成绩 **`22662 / 226s`**，相对 v66
-提升 `105` 分并增加 `8.8s`，因此 v72 已从“增强候选”升级为当前官方通过基线，
-v66 仍为绝对控制组。v73/v74 已改变 Attention 共用
-helper，v75 起直接改变 Q/K 路径；v100/v107 及后代均不再视为官方安全候选。
-官方结果记录见 [`v72 official pass`](../logs/execution/2026-08-31-v72-official-pass.md)。
+提升 `105` 分并增加 `8.8s`，因此 v72 当时从“增强候选”升级为官方通过基线，
+v66 仍为绝对控制组。v74 虽已改变 Attention 共用 helper，但用户随后确认其官方
+**`22750 / 239.387s`** 正常通过，相对 v72 `+88` 分、`+13.387s`，因此当前安全边界
+进一步前移到 v74。v75 起直接改变 Q/K 路径，尚无官方通过证据；v100/v107 的 PAWV
+旧路径仍为官方 WA。官方结果记录见
+[`v74 official pass`](../logs/execution/2026-08-31-v74-official-pass.md)。
 
 进一步按任务书复核并构造变长 calibration list 后，已稳定复现 v100/v107 的直接异常：
 B2 PAWV 的 `_build_pawv_metric` 按首个样本长度建立固定 `tokens×tokens` 矩阵，却直接
@@ -297,9 +299,9 @@ $$\frac{\Delta g_L}{1-g_L}=\frac{0.3902401950}{0.4902401950}=79.6000\%.$$
 也就是还要消除当前 Linear 剩余归一化误差的约 **79.6000%**，对应 250-case panel
 仍差 **97.560049** 分。这个数轴不是官方排行榜的绝对分数。
 
-当前官方合规锚点为 v72：`22662 / 226s`；前一控制组 C66 为 `22557 / 217.2s`；外部参考 `youxilee/hif4` 为用户提供的
-`24153 / 239s`。从 v72 到 `36000` 的官方分差是 **13338**，到外部参考还差
-**1491** 分；但当前本地 panel
+当前官方合规锚点为 v74：`22750 / 239.387s`；v72 为 `22662 / 226s`，控制组 C66
+为 `22557 / 217.2s`；外部参考 `youxilee/hif4` 为用户提供的 `24153 / 239s`。
+从 v74 到 `36000` 的官方分差是 **13250**，到外部参考还差 **1403** 分；但当前本地 panel
 不做官方绝对分回归，因此不能声称当前版本对应某个官方分数或已经接近 `36000`。
 
 ## 当前唯一后续计划
@@ -439,7 +441,7 @@ v107/v106 Attention 合约审计见 [`2026-08-31-v107-attention-contract-audit.m
 v100/v106/v107/v107b1 的 Attention 函数体 SHA 和 Qwen Attention case 输出逐位相同，
 独立 5 场景×3 模式合约矩阵与 30 个 Q/K/V 状态校验均为 0 failures；但用户随后确认
 不含完整 `deployment_gram` 的 v100 也得到官方 Attention WA，且不是 timeout。这证明
-本地矩阵缺少官方失败输入，并把安全边界前移到 v66/v72 Attention 闭包；不再以
+本地矩阵缺少官方失败输入；v72、v74 的连续官方通过把安全边界前移到 v74；不再以
 `deployment_gram` 解释 v107 WA，也不再推荐 v100/v106/v107 后代提交。
 
 L6e checkpoint 见 [`2026-08-31-l6e-crossblock-checkpoint.md`](../logs/execution/2026-08-31-l6e-crossblock-checkpoint.md)：
@@ -510,7 +512,7 @@ L0 的正式产物为 [`l0-linear-ceiling-qwen.json`](../artifacts/oracle_dashbo
   contract audit 均通过；`guard_solution_file` 为 `violations=[]`、`static_violations=[]`。
   v125 full-layer `official_flow_valid=false`，原因是 API `2653.580314s` 超过官方
   `420s` 时间门槛；官方 v100 与 v107 均已确认 Attention `wrong answer`，且用户明确
-  v100 不是 timeout。后续官方候选必须保持 v66/v72 Attention 调用闭包不变。
+  v100 不是 timeout。后续官方候选以 v74 的完整 Attention 可达闭包为回归基线。
 - 当前根定向回归命令（`test_global_activation_lrh.py`、`test_linear_compliance_guard.py`、
   `test_l5a_joint_transform.py`、`test_expansive_cat.py`、`test_linear_error_decomposition.py`）
   为 **38 passed / 6.83s**。另跑 `test_release_candidate.py` 得到 **31 passed、16 failed**；

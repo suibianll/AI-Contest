@@ -17,3 +17,6 @@ v72 的 Attention 完整调用闭包与 v66 语义一致，官方通过确认此
 
 同次反馈中的官方 mini sample shape mismatch 进一步确认 v100/v107 的 PAWV 变长 bug；
 修复记录见 [`v126 PAWV 变长修复`](2026-08-31-v126-pawv-variable-length-fix.md)。
+
+后续更新：v74 已以 `22750 / 239.387s` 通过并取代 v72 成为当前官方基线；本文件仍
+保留 v72 的历史结果。见 [`v74 官方通过`](2026-08-31-v74-official-pass.md)。

@@ -35,8 +35,9 @@ v100/v107 在 B2 PAWV `_build_pawv_metric` 抛出 shape mismatch。最新根因�
 |---|---|---|---|---|
 | v66 | 基线 | 基线 | `22557 / 217.2s` 通过 | 官方控制组 |
 | v67–v68 | 与 v66 相同 | 与 v66 相同 | 未提交 | 低风险，但本地增益不足/被拒绝 |
-| **v72** | **与 v66 相同** | **45 个可达函数及相关常量均与 v66 语义一致** | **`22662 / 226s` 通过** | **当前官方通过基线** |
-| v73–v74 | 公共 API 与 v66 相同 | 共享 `_nvfp4_to_hif4`/`_dense_to_hif4` 及 Gram/source helper 已改变 | 未提交 | 本地 Attention 相同，但隐藏输入仍有新增风险 |
+| v72 | 与 v66 相同 | 45 个可达函数及相关常量均与 v66 语义一致 | `22662 / 226s` 通过 | 前一官方基线 |
+| v73 | 公共 API 与 v66 相同 | 共享 `_nvfp4_to_hif4`/`_dense_to_hif4` 及 Gram/source helper 已改变 | 未提交 | 尚无官方结论 |
+| **v74** | **公共 API 与 v66 相同** | **共享 helper 已改变** | **`22750 / 239.387s` 通过** | **当前官方通过基线** |
 | v75–v84 | Q/K calibration/dynamic 已改变 | 新增 GQA rotation | 未提交 | 首个明确 Attention 变更边界 |
 | v86 | 再次改变 Q/K 路径 | block-Hadamard final selector | 未提交 | 更高风险 |
 | v100+ | clean Attention 重写 | B1 GQRB、B2 PAWV、Gram refine 等新闭包 | v100/v107 均 WA | 官方无效，停止推荐 |
@@ -50,22 +51,23 @@ v72 的 Attention 闭包等价判断比“同一 Qwen 输出相等”更强：�
 
 - v66：已有官方 `22557 / 217.2s`，保留为控制组。
 - v72：用户确认官方 `22662 / 226s`，相对 v66 `+105` 分、`+8.8s`。
+- v74：用户确认官方 `22750 / 239.387s`，相对 v72 `+88` 分、`+13.387s`。
 - 源码：`solutions/20260829_v066_c66-activation-ratio100_scoreNA_timeNA/solution.py`。
 
-### 分数尽量高且最可能通过
+### 分数尽量高且已通过
 
-- v72 / C74 JDRQ fixed-Q(A) hierarchy residual。
-- 源码：`solutions/20260829_v072_c74-jdrq-hierarchy_scoreNA_timeNA/solution.py`。
-- SHA256：`61c216bee1eca9db6185bcd49c679a34b684f540451cd5562a2008d0da4b2ad9`。
-- 本地 Qwen native：`356.605602`，较 v66 的 `350.152420` 提升 `+6.453182`。
-- 本地 Qwen Attention：`63.119717`，与 v66 相同。
-- Qwen CUDA API：`163.41s`；四模型记录均 `<420s`。
+- v74 / C75 rowwise JDRQ + wide gram64 hierarchy。
+- 源码：`solutions/20260829_v074_c75-rowwise-jdrq_scoreNA_timeNA/solution.py`。
+- SHA256：`7789a0487915ee1860eeca2736311bdd1e357bf86e5528805472182f51b944cc`。
+- 本地 Qwen native：`361.503707`，较 v72 提升 `+4.898105`。
+- 本地 Qwen Attention：`63.119717`，与 v66/v72 相同。
+- Qwen CUDA API：`179.27s`；四模型记录均 `<420s`。
 - 机制只在冻结 activation state 后用 calibration 产品残差优化静态 `Q(W)`；不把
   输出监督写入 Attention 或 activation state。
 
-v74 的本地 Qwen native 更高（`361.503707`），但它已经修改 Attention 共用量化 helper；
-在 v100 已确认隐藏 WA 后，不再把“本地输出相同”当作足够的官方安全证据，因此优先级
-低于 v72。
+v74 已修改 Attention 共用量化 helper。此前在没有官方结果时将其排在 v72 之后是合理
+的风险控制；现在官方成功证明这些改动在当前评测集合法可运行，首选排序更新为
+`v74 > v72 > v66`。
 
 ### 当前 evaluator 同场冒烟
 
@@ -83,8 +85,8 @@ v74 的本地 Qwen native 更高（`361.503707`），但它已经修改 Attentio
 
 ## 4. 后续实现纪律
 
-1. 官方提交线从 v72 或 v66 开始，不从 v100/v125 回退式修补。
-2. Linear 优化必须移植到 v72，并保持 v66 Attention 调用闭包的语义哈希不变。
+1. 官方提交线从 v74 开始，v72/v66 作为控制组，不从 v100/v125 回退式修补。
+2. Linear 优化必须移植到 v74，并保持 v74 Attention 调用闭包的语义哈希不变。
 3. 每次只移植一个 Linear 机制；若任何 Attention 可达 helper/常量变化，候选自动降级为
    研究版本，除非获得新的官方通过结果。
 4. 本地新增 hidden-shape fuzz 只能提高发现率，不能再把 local pass 写成 official-safe。

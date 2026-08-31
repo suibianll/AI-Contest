@@ -5,7 +5,8 @@
 - Date: 2026-08-30
 - Parent: v073 source-aware activation + project-only gram64
 - Root/archive SHA256: `7789A0487915EE1860EECA2736311BDD1E357BF86E5528805472182F51B944CC`
-- Official score/time: `NA` (no official submission for this snapshot)
+- Official score/time (user-confirmed 2026-08-31): **`22750 / 239.387s`**;
+  successful, including Attention. Uploaded-package SHA was not separately reported.
 - Local run: CUDA, `amax6`, `seq128`, `calib2`, `test4`, cache read
 
 ## Active changes
