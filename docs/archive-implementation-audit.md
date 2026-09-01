@@ -204,7 +204,7 @@ v109 已归档为当前精度 parent；API `517.285773s` 只作为探索期时�
 - 计划中把 v 的 GALS 正向 oracle 当作部署机会，但 v102/v103 已证明当前 sparse/shape-proxy 组合不稳定；v109/v110 已完成无 role-id 的 final-weight-Gram 与 GALS 复验，下一阶段转向 L5 结构路线。
 - 官方提交/兑换率校准从未完成，不能用本地 panel 推断官方 36000 距离。
 
-治理动作：L6、C1 计划主体已完成并归档；当前唯一 active 计划是 [`2026-09-01-hif4-linear-0.8-under-300s-plan.md`](superpowers/plans/2026-09-01-hif4-linear-0.8-under-300s-plan.md)，目标为 Linear `0.8` 与官方总时间 `<300s`；其余实施计划和流程文档均位于 [`docs/superpowers/archive/plans/`](superpowers/archive/plans/)。`plans/README.md` 与归档索引只描述导航及历史性质，不产生下一步指令。
+治理动作：L6、C1 与 17816-anchor 计划主体均已归档；当前唯一 active 计划是 [`2026-09-01-hif4-hierarchy-encoder-and-analytic-attention-plan.md`](superpowers/plans/2026-09-01-hif4-hierarchy-encoder-and-analytic-attention-plan.md)，目标为 Linear `0.8` 与官方总时间 `<300s`；其余实施计划和流程文档均位于 [`docs/superpowers/archive/plans/`](superpowers/archive/plans/)。`plans/README.md` 与归档索引只描述导航及历史性质，不产生下一步指令。
 
 ## 7. 审计后的优先级
 

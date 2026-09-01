@@ -161,7 +161,7 @@ panel `+0.0030693200`，故接替精度 parent。代价是 API `2180.450151s`，
 
 ## 4. 计划与证据治理
 
-唯一可执行计划是 [`2026-09-01-hif4-linear-0.8-under-300s-plan.md`](superpowers/plans/2026-09-01-hif4-linear-0.8-under-300s-plan.md)。
+唯一可执行计划是 [`2026-09-01-hif4-hierarchy-encoder-and-analytic-attention-plan.md`](superpowers/plans/2026-09-01-hif4-hierarchy-encoder-and-analytic-attention-plan.md)。
 每个候选必须保存完整源码、规范 LF SHA、固定 cache/命令、合规扫描和结果日志；
 screen/oracle 不能写入最高分账本。L1 v105、v108 no-op 和其余失败候选均按该
 规则归档；当前根为 v124，L6/C1a/C1b 已完成，C1c rank=8 已采纳，下一步是 C1c max-blocks=8。计划目录不得同时存在第二份 active 计划。

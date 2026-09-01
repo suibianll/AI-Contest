@@ -18,19 +18,22 @@
 新提交的版本号、源码 SHA、官方运行时间以及对应 Attention 配置尚未提供，因此当前只把
 **17816 记为用户确认的官方精度锚点**，不伪造时间结论，也暂不建立源码归档。完整理论分析和
 后续执行顺序见
-[`活动计划`](superpowers/plans/2026-09-01-hif4-linear-0.8-under-300s-plan.md)。
+[`活动计划`](superpowers/plans/2026-09-01-hif4-hierarchy-encoder-and-analytic-attention-plan.md)。
 
 ## 1. 版本结论
 
 - **旧仓库内官方基线：v86，16744 分 / 222.7s。** 新的用户确认最高分为 17816，但源码与
   官方时间尚未同步到仓库。
-- 根目录 [`solution.py`](../solution.py) 当前仍是 v140 实验代码，SHA256
-  `52521F1B996BF67641C22A90132ED7A7BCA477976D8A05BEC411CC9E04AA7C90`；它只比 v138
-  本地 Linear 高 `0.00003513`，官方回传为 `15838 / 207s`，虽通过但低于 v86，不再称为“当前最优”。
+- 根目录 [`solution.py`](../solution.py) 当前是 v140 Linear + v86 Attention + 一轮额外 A3
+  的单文件组合，SHA256 `44E37709A02B962CDAEDFC57E3AD999B2C9A2C0606B8B9DB7E4E81DC4DC92672`。
+  最近完整同行为结果为 Linear `0.5100503237`、Attention `0.7196960689`、API
+  `300.3507s`；官方分数和时间未登记。它不是 17816 源码，也不能沿用 v140 的官方
+  `15838 / 207s` 结论。
 - v138/v139 虽在官方 `<300s` 内通过，但只有 `15715/15716`，比 v86 低约 1029 分；
   v138–v145 这条“压缩 Attention 后继续叠 Linear 局部模块”的路线已经失败并关闭。
-- 下一阶段不从 v140 继续调参；拿到 17816 源码后，以它作为新 Linear 父版本，并冻结该提交
-  对应的 Attention 做单变量归因。
+- 下一阶段不从 v140/A3 继续调参，也不等待 17816 源码才开始。先恢复可信 pre-A3 对照并完成
+  role 归因；第一正式机制是 Activation-only Decoupled HiF4 Encoder，Attention 固定 v86。
+  17816 源码若后续到位，再作为独立官方快照归档和对照，不倒推或覆盖当前证据。
 
 ## 2. 评测口径
 
@@ -114,17 +117,21 @@ v86 的部分 scale-aware/output-aware 机制。此前把它描述为“v86 级�
 ## 6. 新的理论算法主线
 
 新的唯一活动计划是
-[`2026-09-01-hif4-linear-0.8-under-300s-plan.md`](superpowers/plans/2026-09-01-hif4-linear-0.8-under-300s-plan.md)。核心顺序为：
+[`2026-09-01-hif4-hierarchy-encoder-and-analytic-attention-plan.md`](superpowers/plans/2026-09-01-hif4-hierarchy-encoder-and-analytic-attention-plan.md)。核心顺序为：
 
-1. 先对 17816 框架做结构消融，拆分等价变换、Weight GPTQ、Activation GPTQ 和 HiF4
-   层级 refine 的真实贡献。
-2. 将 GPTQ 改成以完整 64-channel HiF4 block 为原子的 block-Schur 求解。
-3. 用低秩+块对角 Hessian/Woodbury 形式保留跨块 Activation GPTQ，同时降低动态复杂度。
-4. 固定两轮联合 Weight–Activation 优化，直接控制
-   `E_AW^T + AE_W^T - E_AE_W^T`。
-5. 用相同部署 stage 数的学习型 butterfly 扩展固定 Hadamard，而不叠加第二套变换。
-6. 让 scale/lv2/lv3/mantissa 作为完整层级状态参与 block oracle。
-7. 在这套已被官方验证的新框架上重新测 Joint oracle，判断 `linear_mean=0.8` 可达性。
+1. 先恢复可信的 pre-A3 单文件父版本，修复 v147 源码/JSON 混淆，并按 role 归因当前第二次
+   `_crossfold_weight_output` 的收益与约 `78.1s` 新增代价。
+2. Linear 第一正式机制改为 Activation-only Decoupled HiF4 Encoder：编码尺度只决定 code，
+   最终仍保存合法 E6M2/lv2/lv3/mantissa/sign。
+3. 用解析式 2×2 Hierarchical Matrix Balance 替换候选式 Smooth/Permutation/Hadamard，保持
+   `XR(WR^{-T})^T=XW^T` 且不叠加动态算子。
+4. 把 calibration 合法输出 oracle 编译成阈值/LUT 型固定复杂度 Activation encoder，删除在线
+   candidate/coordinate loop。
+5. 只有 Activation 路线验证有效后，才把同一 decoupled encoder 应用到 Weight；block-Schur
+   和双侧残差降为一次性后期残差步骤。
+6. Linear 稳定后才独立研究 Attention：解析 Matrix-Smooth Q/K、量化感知 K 公共平移、
+   Q/K/V decoupled encoder 和静态 Fisher importance；禁止 Gram dynamic sweep、PAWV 和随序列
+   增长的候选搜索。
 
 ## 7. 归档现状与待整理项
 

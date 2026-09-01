@@ -4,9 +4,10 @@
 > **17816**。它将 Smooth/Permutation/block-Hadamard 等价变换、Weight GPTQ、Activation
 > GPTQ 与 HiF4 quadratic hierarchy refine 组合为统一输出重构流程。该结果表明 v138–v145
 > 失败的是局部调参路线，而不是 Linear 的结构性提升空间。新源码、版本号和官方时间尚未同步；
-> 后续算法以
-> [`活动计划`](superpowers/plans/2026-09-01-hif4-linear-0.8-under-300s-plan.md)
-> 中的 block-Schur GPTQ、低秩+块对角动态 Hessian 和联合双侧残差优化为主。
+> 17816 源码仍未同步，因此它只保留为官方精度事实，不能作为可复现代码父版本。后续算法以
+> [`活动计划`](superpowers/plans/2026-09-01-hif4-hierarchy-encoder-and-analytic-attention-plan.md)
+> 中的 Activation-first decoupled HiF4 encoder、解析式层级矩阵平衡和 oracle-to-encoder
+> 编译为主；block-Schur 与双侧残差降为后期一次性残差步骤。
 
 > **评测迁移（2026-09-01）**：本索引中的旧 sampled/full-layer 数字是历史算法证据，
 > 不再用于当前排名。当前统一复测由 [`evaluator/official_eval.py`](../evaluator/official_eval.py)
@@ -31,10 +32,10 @@
 > Linear `+0.000035`，没有官方结果，不再视为算法最优。v138/v139 官方只有
 > `15715/15716`，均明显低于 v86；v138–v145 路线关闭。
 
-> **新策略（2026-09-01）**：17816 源码同步后作为新 Linear 父版本，冻结该提交对应的
-> Attention。先拆分等价变换、Weight GPTQ、Activation GPTQ 和层级 refine 的贡献，再研究
-> block-Schur GPTQ、低秩+块对角动态 Hessian、联合残差和相同复杂度的学习型 butterfly；
-> 停止局部参数扫描。
+> **新策略（2026-09-01）**：先恢复可信 pre-A3 对照并修复归档证据，再优先重构 Activation
+> 的合法 HiF4 code assignment；用解析式 2×2 matrix balance 替代候选式 D/P/H，把输出 oracle
+> 编译成固定复杂度动态编码规则。Attention 后续只允许同复杂度或更低复杂度的解析 Q/K 不变量
+> 和固定编码；停止局部参数扫描。
 
 > 整理日期：2026-08-31
 > 数据来源：`solutions/README.md`（v000–v125）、`docs/current-solution-status.md`、`docs/archive-implementation-audit.md`、`logs/execution/2026-08-30-e0g-scale-oracle.md`、`logs/execution/2026-08-30-e0g-multimodel-dashboard.md`、`logs/execution/2026-08-30-a7-quant-weight-gram.md`、`logs/execution/2026-08-30-l1-full-hierarchy-lrh.md`、`logs/execution/2026-08-31-v110-l4b-gals-final-gated-qwen-full.md`、`logs/execution/2026-08-31-v111-l5a-joint-permutation-qwen-full.md`、`logs/execution/2026-08-31-l5d-external-component-audit.md`、`logs/execution/2026-08-31-l5e-linear-ceiling-v111.md`、`logs/execution/2026-08-31-v115-l6a-rank16-qwen-full.md`、`logs/execution/2026-08-31-v116-l6b-wide-rank4-qwen-full.md`、`logs/execution/2026-08-31-v117-l6c-g64-hierarchy-qwen-full.md`、`logs/execution/2026-08-31-v118-l6d-structured-factor-qwen-full.md`、`logs/execution/2026-08-31-l6e-crossblock-checkpoint.md`、`logs/execution/2026-08-31-v119-c1a-structured-vectorized-qwen-full.md`、`logs/execution/2026-08-31-c1b-structured-refresh-stratified.md`、`logs/execution/2026-08-31-c1b-structured-refresh2-stratified.md`、`logs/execution/2026-08-31-v121-c1b-structured-refresh2-qwen-full.md`、`logs/execution/2026-08-31-v124-c1c-rank8-screen.md`、`logs/execution/2026-08-31-v124-c1c-rank8-qwen-full.md`、`logs/execution/2026-08-31-v125-c1c-block8-qwen-full.md`、`logs/execution/2026-08-31-v107-attention-contract-audit.md`、`logs/execution/2026-08-31-c1b-structured-refresh-synthetic.md`。
@@ -44,9 +45,10 @@
 
 ## 1. 当前代码与官方基线
 
-根文件当前是 v140，便于审计最后一次实验，但下一算法实现不从它继续。官方基线恢复为 v86；
+根文件当前是 v140 Linear + v86 Attention + 一轮额外 A3 的单文件组合，但下一算法实现不从
+这轮重复 output pass 继续。官方基线恢复为 v86；
 完整判定见 [`当前状态`](current-solution-status.md) 与
-[`活动计划`](superpowers/plans/2026-09-01-hif4-linear-0.8-under-300s-plan.md)。下表保留历史组件，
+[`活动计划`](superpowers/plans/2026-09-01-hif4-hierarchy-encoder-and-analytic-attention-plan.md)。下表保留历史组件，
 不表示它们仍属于下一实现父版本。
 
 | 组件 | 内容 |
@@ -64,15 +66,18 @@
 | **L2 Linear 输出监督 activation cross64（v134）** | 校准阶段缓存 `Q(W)^T W` 与 `Q(W)^T W_t` 的连续 64×64 block；在线以 `Hq-Da` 作为激活梯度，并用 batched block matmul 避免完整 channel Gram |
 | **L9 BDLR-JAQ（v141–v145，已关闭）** | rank-4 选列跨块 `H/D` 修正；锚点冻结、仅动态激活和阻尼 `0.02/0.005` 均未超过 v140，源码目录已清理，JSON/日志保留证据，不再调参 |
 
-17816 出现后，下一阶段的理论方向更新为：
+重新核对当前误差预算、源码和 API 热点后，下一阶段的理论方向更新为：
 
 | 新方向 | 数学依据 | 主要适用 role |
 |---|---|---|
-| Block-Schur HiF4 GPTQ | 把完整 64-channel 合法码字作为原子变量，按 Schur 补传播误差 | 全 role |
-| 低秩+块对角 Activation GPTQ | `H_W≈B+UU^T`，用 Woodbury 保留跨块主方向并降低动态复杂度 | down/proj 优先 |
-| 双侧联合残差优化 | 直接控制 `E_AW^T+AE_W^T-E_AE_W^T`，固定两轮交替优化 | 全 role |
-| 学习型结构变换 | 在保持乘积和部署 stage 数不变时，用 butterfly/Givens 扩展固定 Hadamard | q/o 优先 |
-| HiF4 层级 block oracle | 联合选择 scale/lv2/lv3/mantissa，而不是分开扫描 | 全 role |
+| Activation Decoupled HiF4 Encoder | 编码尺度只决定 code，最终解码仍使用合法 E6M2/lv2/lv3；攻击 stored-scale oracle 未覆盖的 code assignment | 全 role，优先 fc_gate/fc_up/proj |
+| Hierarchical Matrix Balance | 解析求解 `SAS=B`，以 2×2 pair transform 同时平衡 X/W，并保持连续输出不变 | 全 role |
+| Oracle-to-Encoder Compilation | 把完整输出 metric 下的合法 teacher 决策编译成动态阈值/LUT，替代在线候选/坐标循环 | Activation 全 role |
+| Weight Decoupled HiF4 Encoder | 在变换后 `H_X` 下闭式更新 stored scale，不重复完整 output oracle | 全 role |
+| Analytic Matrix-Smooth Q/K | 用 GQA group-local `QM/KM^{-T}` 替代 Attention alpha/seed/angle/block 搜索 | Attention q/k |
+
+Block-Schur、低秩+块对角 Activation GPTQ、双侧联合残差和学习型 rotation 均降为后期备选；
+只有新的表示/解析框架先证明正向后才重新评估。
 
 **实测**（Qwen2.5-0.5B 全 24 层，`seq=128/calib=2/test=4/amax6`，缓存只读）：
 

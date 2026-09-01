@@ -4,12 +4,13 @@
 
 本目录保存已经结束、合并或被新计划取代的历史计划。它们保留当时的假设、参数、实验顺序和停止理由，不是当前执行指令；执行算法时不得把这里的文字当作计划来源。
 
-当前唯一活跃计划是 [`../../plans/2026-09-01-hif4-linear-0.8-under-300s-plan.md`](../../plans/2026-09-01-hif4-linear-0.8-under-300s-plan.md)。当前实现、分数和实现缺陷审计见 [`../../../archive-implementation-audit.md`](../../../archive-implementation-audit.md)。所有历史计划中的评测命令均已废止，当前只能使用 `evaluator/official_eval.py` 的 `official-shape-v1`。
+当前唯一活跃计划是 [`../../plans/2026-09-01-hif4-hierarchy-encoder-and-analytic-attention-plan.md`](../../plans/2026-09-01-hif4-hierarchy-encoder-and-analytic-attention-plan.md)。当前实现、分数和实现缺陷审计见 [`../../../archive-implementation-audit.md`](../../../archive-implementation-audit.md)。所有历史计划中的评测命令均已废止，当前只能使用 `evaluator/official_eval.py` 的 `official-shape-v1`。
 
 归档规则：计划一旦完成、被替换、停止或连续阻塞，立即移动到本目录，并在同一提交更新 active 计划、`plans/README.md`、根 README 和状态文档。不改写历史实验结论；若目录名中的旧 score/time 与修订官方口径冲突，以 `solutions/README.md` 的 canonical result 和最新日志为准；新候选必须包含完整源码、规范化 SHA、参数、结果和 parent。
 
 ## 归档文件
 
+- `2026-09-01-hif4-linear-0.8-under-300s-plan.md`（17816-anchor / block-Schur-first 历史计划；因 17816 源码未同步、当前 A3 实现与文字不符、单侧 oracle 指向 Activation-first 而被新计划取代）
 - `2026-08-31-hif4-active-c1-structured-linear-plan-superseded.md`（v119–v125 structured Linear/C1 历史计划；被 Linear 0.8 + 300 秒双目标计划取代）
 - `2026-08-30-hif4-active-optimization-plan-v1-superseded.md`（首版 active 计划；因公式、门禁和 API 假设问题被 v2 取代）
 - `2026-08-30-hif4-active-optimization-plan-v2-completed.md`（L0–L4 完成；v107/v109/v110 精度链；转入 v3 L5）
