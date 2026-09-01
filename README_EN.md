@@ -46,6 +46,8 @@ fixed-A comparison v138/v139/v140 gives official deltas `+1/+123`, while v84/v86
 identical and gain `+227` from Attention. Therefore later Linear work freezes v86 Attention;
 public local means cannot be converted into official Linear/Attention weights. See
 [`the attribution record`](docs/evaluation-attribution-2026-09-01.md).
+The v147 attribution control now combines v140 Linear with v86 Attention: local means are
+`0.5073546371 / 0.7196960689`, API time is `222.227s`, and no official score is inferred.
 The v141-v145 rank-4 selected-column BDLR trials (anchor freeze, dynamic-only, and two damping
 values) returned Linear means `0.281760/0.282559/0.361154/0.506418/0.506256`, all below v140;
 that direction is closed. Their source snapshots were deleted to keep the archive compact; per-run
