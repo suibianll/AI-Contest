@@ -20,6 +20,9 @@ The v130 output-supervised-weight candidate was likewise confirmed to time out (
 despite a local API total of `295.437s`.  This is evidence that local seconds do not map
 monotonically to the official runtime; the v86 static Attention path remains the time-safe
 reference.
+The v131 Q(W)-Gram follow-up was also confirmed to time out (`>300s`).  v129-v131 share
+the same high-cost Attention family, so the timeout does not isolate the Linear Q(W)-Gram
+change as the cause.
 The v134 block output-supervised activation cross terms raise the local Linear mean to
 `0.5073195`, but v130's official timeout shows that local API seconds are not a safe
 runtime proxy.  The active root is now v138: it retains the v134 Linear path while

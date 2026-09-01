@@ -15,7 +15,9 @@
   v98/v121 为 timeout，v100/v107 为 Attention 相关失败；v128 fixed-attn-budget 已由用户
   确认官方 timeout（`>300 s`，分数未返回）；v129 fixed-attn-budget-sweep1 也已确认官方
   timeout（`>300 s`，分数未返回）；v130 输出监督 W 版本同样已确认官方 timeout
-  （`>300 s`，分数未返回）。
+  （`>300 s`，分数未返回）；v131 Q(W)-Gram 版本也已确认官方 timeout（`>300 s`，
+  分数未返回）。v129–v131 均使用高复杂度 Attention 路径，不能把 timeout 单独归因于
+  Linear 改动。
 - 本地报告只回答两个问题：固定公开数据上的 `linear_mean`、`attention_mean` 如何变化，
   以及六个官方 API 在同一台机器上的耗时如何变化。官方分数和鲲鹏 920B 时间只保留为
   独立历史字段，绝不伪造映射。

@@ -60,6 +60,7 @@ silently assigned a score.
 | v128 | `20260901_v128_fixed-attn-budget_scoreNA_timeNA` | — | >300 s | **timeout (official, user confirmed)** |
 | v129 | `20260901_v129_fixed-attn-budget-sweep1_scoreNA_timeNA` | — | >300 s | **timeout (official, user confirmed)** |
 | v130 | `20260901_v130_output-weight_scoreNA_timeNA` | — | >300 s | **timeout (official, user confirmed)** |
+| v131 | `20260901_v131_output-weight-qwgram_scoreNA_timeNA` | — | >300 s | **timeout (official, user confirmed)** |
 
 ## 2026-09-01 official-shape-v1 local candidates
 
@@ -73,11 +74,12 @@ directories follow the same immutable naming rule as the historical archive:
 | v128 | `20260901_v128_fixed-attn-budget_scoreNA_timeNA` | 0.465655 | 0.837789 | 310.732 s | **official timeout (user confirmed)** |
 | v129 | `20260901_v129_fixed-attn-budget-sweep1_scoreNA_timeNA` | 0.465655 | 0.836579 | 248.363 s | **official timeout (user confirmed)** |
 | v130 | `20260901_v130_output-weight_scoreNA_timeNA` | 0.471837 | 0.836579 | 295.437 s | **official timeout (user confirmed); Attention-time risk** |
-| v131 | `20260901_v131_output-weight-qwgram_scoreNA_timeNA` | 0.473131 | 0.836579 | 294.835 s | Q(W)-Gram parent |
+| v131 | `20260901_v131_output-weight-qwgram_scoreNA_timeNA` | 0.473131 | 0.836579 | 294.835 s | **official timeout; high-cost Attention family** |
 | v132 | `20260901_v132_output-weight-qwgram-dynsweep2_scoreNA_timeNA` | 0.473131 | 0.834256 | 290.936 s | historical parent; 2 idle runs API<300 |
 | v133 | `20260901_v133_output-weight-qwgram-gain_scoreNA_timeNA` | 0.483610 | 0.834256 | 287.941 s | historical parent |
 | v134 | `20260901_v134_linear-output-activation-cross64_scoreNA_timeNA` | 0.507320 | 0.834256 | 289.042/289.832 s | Linear precision parent; Attention-time risk |
 | v138 | `20260901_v138_attention-static-v86-budget_scoreNA_timeNA` | **0.507320** | 0.715942 | **192.996/187.935 s** | **active root; v86-level static Attention time parent** |
+| v139 | `20260901_v139_linear-output-aware-gain_scoreNA_timeNA` | 0.507278 | 0.715942 | 193.389 s | rejected; output-aware continuous gain regressed |
 
 \* The later temporary gain+adyn2 run reported `365.818 s`, but the machine was concurrently busy;
 its timing is excluded from runtime ranking. The persisted v133 archive was rerun idle at `291.275 s`;
