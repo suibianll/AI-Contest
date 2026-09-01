@@ -42,8 +42,9 @@
 ## 2. 评测口径
 
 本地统一使用 [`evaluator/official_eval.py`](../evaluator/official_eval.py) 的
-`proxy-v2`：Qwen2.5-0.5B、24 层、默认枚举全部已捕获的真实 W/A（Linear 为每层每 role 每个
-holdout 窗口，Attention 为每层每个 holdout 窗口；窗口本身是固定、可复现的 holdout capture）、Attention calibration 长度
+`proxy-v2`：Qwen2.5-0.5B、24 层、默认使用固定分层真实 W/A panel（Linear 为每层每 role 一个
+真实窗口，共 168 cases；Attention 为每层五个官方长度，共 120 cases；窗口本身是固定、可复现的
+holdout capture），Attention calibration 长度
 `[10,128,512,1024,1024]`，validation/test 交替 holdout。主字段是
 `linear_mean`、`attention_mean`、`overall_mean`、六 API `api_total_seconds` 和
 `wall_seconds`。旧 `official-shape-v1` 只保留为不可迁移的历史证据。
@@ -52,6 +53,7 @@ holdout 窗口，Attention 为每层每个 holdout 窗口；窗口本身是固�
 的新权重。因此它只用于算法诊断和同机耗时记录，不能继续作为官方排序器，也不能把本地时间换算为
 鲲鹏时间。校准状态按官方调用图共享：168 个 layer/role Weight state、24 个 Attention state；
 `trend_diagnostics` 仅对同一官方权重 cohort 做顺序一致性检查，发现反转时必须停止用本地分数晋级。
+`--full-cases` 可额外展开 2016 Linear + 288 Attention 做 stress，但不能与默认 panel 混排。
 
 当前评测还默认输出 evaluator-only 的误差源分解：Linear 的 `E00/E10/E01/E11` 四臂（标准、
 W-only、A-only、W+A）以及 role/layer/shape/length/split 聚合；Attention 的 Q-only、K-only、
@@ -63,11 +65,11 @@ E0 修复记录：旧 v1 的 E4M3 scale 忽略 subnormal、窗口集中在少数
 放进每个 case。proxy-v2 已修正这三点；共享校准版本将在下一次开发复测中核对
 `168/25/24/20/20/20` 的 API 调用图。此前 per-case 校准复测中，v138 相对 v86 的本地顺序仍为
 反转；因此该问题被记录为 `inversion_detected`，不得再把 proxy 分数当晋级依据；现已取消比例与
-case 上限，下一次按全量真实 W/A 重新评测，再判断是否仍需 stress panel。
+case 上限，下一次按固定分层真实 W/A panel 重新评测；完整笛卡尔集只作为显式 stress，不用于快速迭代。
 
 ## 3. 历史 v1 结果表（不可与 proxy-v2 混用）
 
-下表保留旧 `official-shape-v1` 的同机数字，仅用于审计此前的失真；proxy-v2 全真实 W/A
+下表保留旧 `official-shape-v1` 的同机数字，仅用于审计此前的失真；当前 proxy-v2 分层 panel
 复测不覆盖这些历史值。
 
 | 版本 | Linear mean | Attention mean | API(s) | Wall(s) | 官方结果 | 状态 |

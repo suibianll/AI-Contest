@@ -27,17 +27,18 @@ immutable historical evidence only:
 
 The protocol fixes Qwen2.5-0.5B, the five Attention calibration lengths
 `[10,128,512,1024,1024]`, validation/test holdout windows, independent HiF4 validation, and the
-public relative-MSE case score. The default panel enumerates all captured W/A tensors; counts can
-be reduced only by an explicit smoke-test flag. Calibration still follows the judge graph: 168
-shared layer/role Weight states and 24 shared Attention states, followed by one dynamic call per
-selected case. The authoritative local fields are `linear_mean`, `attention_mean`, and the
-unweighted `overall_mean`; no Linear:Attention ratio or official-score fit is applied. Each result
-also contains evaluator-only error-source controls in `decomposition` and per-case
-`case_scores`: Linear W/A four-arm output MSE, Attention Q/K/V/QK controls, and logits/softmax
-metrics. These controls reuse candidate outputs and do not change API call counts; use
-`--no-decomposition` only for a fast smoke run. Local seconds are same-machine A/B data, not an
-official-time conversion; `trend_diagnostics` reports known same-cohort ordering inversions without
-fitting them.
+public relative-MSE case score. The default panel is a deterministic stratified real-W/A panel:
+168 Linear cases cover every layer/role once and 120 Attention cases cover every layer at each of
+the five official lengths. `--full-cases` expands all captured windows for stress; case limits are
+still smoke-only. Calibration follows the judge graph: 168 shared layer/role Weight states and 24
+shared Attention states, followed by one dynamic call per selected case. The authoritative local
+fields are `linear_mean`, `attention_mean`, and the unweighted `overall_mean`; no Linear:Attention
+ratio or official-score fit is applied. Each result also contains evaluator-only error-source
+controls in `decomposition` and per-case `case_scores`: Linear W/A four-arm output MSE, Attention
+Q/K/V/QK controls, and logits/softmax metrics. These controls reuse candidate outputs and do not
+change API call counts; use `--no-decomposition` only for a fast smoke run. Local seconds are
+same-machine A/B data, not an official-time conversion; `trend_diagnostics` reports known same-
+cohort ordering inversions without fitting them.
 
 The completed 2026-09-01 **historical v1** archive run is in
 [`artifacts/official_eval/archive-official-shape-v1.json`](../artifacts/official_eval/archive-official-shape-v1.json)

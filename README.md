@@ -16,7 +16,7 @@
   `16579 / 211s`，时间通过但分数低于 v86，因此归档已改为 `_rejected`；由于该目录源码曾被
   替换，官方提交 SHA 仍未确认。
 - 已知官方面板曾使用 **250 Linear + 200 Attention**，总运行时间要求严格小于 **300 s**。
-  本地 `proxy-v2` 不再人为限制数量或比例，默认直接枚举捕获到的全部真实 W/A；官方最近
+  本地 `proxy-v2` 不再人为限制分数比例，默认使用固定分层的真实 W/A panel；官方最近
   减少了 Linear 评分权重但没有公开新权重，因此本地不能从代理分数换算官方绝对分。
 - 官方历史锚点：v74 `22750 / 239.387 s`（旧权重），v84 `16517 / 252.563 s`、
   v86 **`16744 / 222.7 s`**（新权重，通过；在 17816 新框架出现前是仓库内最高通过点）。
@@ -72,7 +72,7 @@
 | Attention calibration | **`[10, 128, 512, 1024, 1024]`**，每个 Q/K/V 样本保持自己的序列长度 |
 | Linear calibration | 每个 layer/role 只校准一次，使用前两折；动态 case 共享该状态 |
 | Test windows | 12 个互不重复的 validation/test 文档窗口，长度按 `[10,128,512,1024,1024,10,128,512,1024,1024,128,512]` 轮换 |
-| 用例 | 默认全量枚举真实 W/A；`--linear-cases/--attention-cases` 仅可显式用于 smoke，不能用于排名 |
+| 用例 | 默认 168 Linear + 120 Attention 的分层真实 W/A panel；`--full-cases` 才展开 2016 + 288 stress；`--linear-cases/--attention-cases` 仅用于 smoke |
 | API | 六个赛事接口，顺序和参数形状与 `赛事说明书.txt` 一致 |
 | 参数校验 | 独立校验 E6M2、`scale_lv2/lv3`、sign、mant、state 深度/节点数和 CPU tensor 规则 |
 | 标准基线 | `evaluator/reference_hif4.py` 的固定标准 codec；候选代码不能改变分母 |
@@ -144,8 +144,10 @@ layer/length 聚合。逐 case 结果在 JSON 的 `case_scores`，聚合结果�
 ```
 
 `--cache-mode read` 缺少或不符合协议的快照会直接失败，不会悄悄切换数据或形状。
-默认命令会枚举全部捕获的真实 W/A，可能明显慢于旧 250/200 代理；只有定位接口或格式问题时
-才显式加 `--linear-cases 1 --attention-cases 1` 做 smoke，smoke 结果不能用于算法排名。
+默认命令使用 168 Linear + 120 Attention 的固定分层 panel，覆盖所有 layer/role 和五个官方
+Attention 长度；它保留真实 W/A，同时避免 12 个窗口与所有 layer/role 的笛卡尔展开。只有做
+压力测试时才显式加 `--full-cases`；定位接口或格式问题时使用 `--linear-cases 1
+--attention-cases 1`，两类结果都不能与默认 panel 混排。
 缓存必须记录模型、数据 revision、五个 Attention 长度、SHA256 和权重原生
 `[out_features, in_features]` 布局。没有 CUDA 时可以把 `--algorithm-device` 改为 `cpu`，
 但 CPU 秒数只适合 CPU 内部 A/B。
@@ -195,7 +197,7 @@ layer/length 聚合。逐 case 结果在 JSON 的 `case_scores`，聚合结果�
 |---|---|---|---|
 | 官方旧权重分数 | 官方回传（旧权重时期，panel 数次修订） | v001–v074 | 历史事实，仅存档 |
 | 官方新权重分数 | 官方回传（历史上 250 Linear + 200 Attention） | v084/v086/v098/v100/v107/v121/v128–v131/v138–v140/v147 | 当前官方口径 |
-| 本地协议分 | proxy-v2 全真实 W/A 复测（`linear_mean`/`attention_mean`/`overall_mean`） | 当前活动候选 | 仅同机 A/B，不换算官方分 |
+| 本地协议分 | proxy-v2 分层真实 W/A 复测（`linear_mean`/`attention_mean`/`overall_mean`） | 当前活动候选 | 仅同机 A/B，不换算官方分 |
 | 旧协议分（已废弃） | real_model_suite / sampled-means-v1/v2 / oracle dashboard | v000–v127 时期 | 已全部归档，禁止再用于排序或调参 |
 
 注意：`solutions/` 目录名中的数字字段**不是统一口径**——v001–v032 的 `score`/`official`

@@ -4,8 +4,8 @@
 hidden judge can be reproduced.  It preserves the published per-case score
 formula and API contract while fixing the old proxy's two largest biases:
 
-* the default panel enumerates every captured layer/role/window tensor (no
-  Linear:Attention weighting or prefix sampling);
+* the default panel is a deterministic stratified coverage of captured
+  layer/role/window tensors (no Linear:Attention weighting or hash sampling);
 * calibration state lifetime follows the judge call graph: one state per
   layer/role (Linear) and one per layer (Attention), while cases only vary the
   dynamic inputs.  This prevents a per-case calibration oracle.
@@ -61,12 +61,19 @@ CALIBRATION_LENGTHS = (10, 128, 512, 1024, 1024)
 TEST_LENGTH = 128
 TEST_LENGTHS = (10, 128, 512, 1024, 1024, 10, 128, 512, 1024, 1024, 128, 512)
 TEST_WINDOW_COUNT = 12
-# No artificial Linear:Attention weighting is applied.  By default the case
-# design expands to every captured W/A tensor: 24*7*windows for Linear and
-# 24*windows for Attention on Qwen.  The CLI limits below are opt-in smoke
-# overrides only; they are recorded and must not be used for ranking.
+# No artificial Linear:Attention weighting is applied.  The default case design
+# is a deterministic stratified panel over real captured tensors: every
+# layer/role appears once for Linear (the five holdout lengths rotate across
+# the layer/role grid), and every layer appears once for each of the five
+# official holdout lengths for Attention.  The full Cartesian expansion is
+# still available with ``--full-cases`` as an explicit stress run.  The CLI
+# limits below are opt-in smoke overrides only; they are recorded and must not
+# be used for ranking.
 LINEAR_CASE_COUNT: int | None = None
 ATTENTION_CASE_COUNT: int | None = None
+PANEL_WINDOW_INDICES = (0, 1, 2, 3, 4)
+DEFAULT_CASE_DESIGN = "stratified-real-wa-panel-v1"
+FULL_CASE_DESIGN = "full-cartesian-real-wa-v3"
 OFFICIAL_RUNTIME_LIMIT = 300.0
 NVFP4_MODE = "amax6"
 NVFP4_INPUT_CODEC = "e4m3-subnormal-ceil-v1"
@@ -678,31 +685,57 @@ def _choose_cases(
     pack: RawPack,
     linear_count: int | None = LINEAR_CASE_COUNT,
     attention_count: int | None = ATTENTION_CASE_COUNT,
+    full_cases: bool = False,
 ) -> tuple[list[LinearCase], list[AttentionCase]]:
-    """Enumerate real captured tensors; optional limits are smoke-only.
+    """Select a deterministic real-W/A panel; optional limits are smoke-only.
 
-    The default is the Cartesian product of every layer, role and holdout
-    window.  This makes the local score a property of the captured model
-    tensors rather than a hash-prefix sample.  ``linear_count`` and
-    ``attention_count`` are explicit development overrides and are never
-    described as a ranking panel.
+    The default covers every Linear layer/role exactly once, with the five
+    official holdout lengths rotated across the grid, and every Attention
+    layer once for each of those five lengths.  ``full_cases`` explicitly
+    expands to every layer/role/window tuple for stress testing.  Both modes
+    use captured tensors; ``linear_count`` and ``attention_count`` are only
+    development prefix limits and are never a ranking panel.
     """
     if len(pack.test_windows) == 0 or len(pack.calibration_windows) == 0:
         raise RuntimeError("case pool has no calibration/test windows")
     linear_calibration_indices = tuple(range(min(2, len(pack.calibration_windows))))
     if not linear_calibration_indices:
         raise RuntimeError("case pool has no Linear calibration windows")
-    linear_pool = [
-        (layer, role, test_window)
-        for test_window in range(len(pack.test_windows))
-        for layer in range(pack.layers)
-        for role in ROLES
-    ]
-    attention_pool = [
-        (layer, test_window)
-        for test_window in range(len(pack.test_windows))
-        for layer in range(pack.layers)
-    ]
+    if full_cases:
+        linear_pool = [
+            (layer, role, test_window)
+            for test_window in range(len(pack.test_windows))
+            for layer in range(pack.layers)
+            for role in ROLES
+        ]
+        attention_pool = [
+            (layer, test_window)
+            for test_window in range(len(pack.test_windows))
+            for layer in range(pack.layers)
+        ]
+    else:
+        panel_windows = tuple(
+            index for index in PANEL_WINDOW_INDICES if index < len(pack.test_windows)
+        )
+        if not panel_windows:
+            raise RuntimeError("case pool has no windows in the default panel")
+        # Each layer sees the same length coverage, while the role-to-window
+        # assignment rotates with layer index.  This avoids coupling one role
+        # permanently to one document/split and avoids hash-based sampling.
+        linear_pool = [
+            (
+                layer,
+                role,
+                panel_windows[(layer + role_index) % len(panel_windows)],
+            )
+            for layer in range(pack.layers)
+            for role_index, role in enumerate(ROLES)
+        ]
+        attention_pool = [
+            (layer, test_window)
+            for test_window in panel_windows
+            for layer in range(pack.layers)
+        ]
     if linear_count is not None:
         if linear_count <= 0:
             raise ValueError("linear_count must be positive when supplied")
@@ -730,6 +763,7 @@ def prepare_pack(
     raw: RawPack,
     linear_count: int | None = LINEAR_CASE_COUNT,
     attention_count: int | None = ATTENTION_CASE_COUNT,
+    full_cases: bool = False,
 ) -> PreparedPack:
     weights = [{role: _pair(value) for role, value in per_layer.items()} for per_layer in raw.weights]
     # Keep every calibration window available for Attention.  Linear follows
@@ -745,14 +779,24 @@ def prepare_pack(
     test_act = {role: [[_pair(raw.test_activations[role][sample][layer]) for layer in range(raw.layers)] for sample in range(len(raw.test_windows))] for role in ROLES}
     cal_qkv = [[{"q": _pair(q), "k": _pair(k), "v": _pair(v)} for q, k, v in per_layer] for per_layer in raw.calibration_qkv]
     test_qkv = [[(_pair(q), _pair(k), _pair(v)) for q, k, v in per_layer] for per_layer in raw.test_qkv]
-    linear_cases, attention_cases = _choose_cases(raw, linear_count, attention_count)
+    linear_cases, attention_cases = _choose_cases(
+        raw, linear_count, attention_count, full_cases=full_cases
+    )
     metadata = dict(raw.metadata)
     metadata.update({
         "linear_case_count": len(linear_cases),
         "attention_case_count": len(attention_cases),
         "nvfp4_mode": NVFP4_MODE,
         "input_codec": NVFP4_INPUT_CODEC,
-        "case_design": "full-cartesian-real-wa-v3" if linear_count is None and attention_count is None else "explicit-smoke-prefix-v3",
+        "case_design": (
+            FULL_CASE_DESIGN
+            if full_cases and linear_count is None and attention_count is None
+            else DEFAULT_CASE_DESIGN
+            if not full_cases and linear_count is None and attention_count is None
+            else "explicit-smoke-prefix-v4"
+        ),
+        "panel_window_indices": list(PANEL_WINDOW_INDICES),
+        "full_cases": full_cases,
         "linear_case_limit": linear_count,
         "attention_case_limit": attention_count,
         "linear_calibration_indices": list(linear_calibration_indices),
@@ -1428,7 +1472,7 @@ def _write_report(path: Path, result: Mapping[str, Any], pack: PreparedPack) -> 
         "本报告是本地 proxy；隐藏官方数据和鲲鹏硬件不可本地复制。",
         "",
         f"- calibration lengths: `{list(CALIBRATION_LENGTHS)}`",
-        f"- cases: `{score['linear_cases']} Linear + {score['attention_cases']} Attention` (full captured W/A by default)",
+        f"- cases: `{score['linear_cases']} Linear + {score['attention_cases']} Attention` (stratified real-W/A panel by default)",
         f"- calibration calls: `{timing['api_calls'].get('hif4_calibration_and_quantize_weight', 0)} weight + {timing['api_calls'].get('hif4_calibration_attention', 0)} attention` (shared state)",
         f"- input codec: `{pack.metadata.get('input_codec', NVFP4_INPUT_CODEC)}` / mode `{NVFP4_MODE}`",
         f"- test splits: `{pack.metadata.get('test_splits', [])}`",
@@ -1620,8 +1664,9 @@ def _archive_output(
             "test_windows": TEST_WINDOW_COUNT,
             "linear_cases": len(prepared.linear_cases),
             "attention_cases": len(prepared.attention_cases),
-            "case_design_scope": "all captured W/A tensors by default; optional CLI limits are smoke-only",
-            "case_design": prepared.metadata.get("case_design", "full-cartesian-real-wa-v3"),
+            "case_design_scope": "stratified all-layer/role real-W/A panel by default; --full-cases enables Cartesian stress; optional CLI limits are smoke-only",
+            "case_design": prepared.metadata.get("case_design", DEFAULT_CASE_DESIGN),
+            "panel_window_indices": prepared.metadata.get("panel_window_indices", list(PANEL_WINDOW_INDICES)),
             "calibration_call_graph": prepared.metadata.get(
                 "calibration_call_graph", "all-layer-role-once; attention-layer-once"
             ),
@@ -1658,7 +1703,7 @@ def _write_archive_report(
         f"- data source: `{data_source}`",
         f"- capture seconds: `{capture_seconds:.3f}`",
         f"- calibration lengths: `{list(CALIBRATION_LENGTHS)}`",
-        f"- case counts: `{linear_count} Linear + {attention_count} Attention` (all captured W/A by default)",
+        f"- case counts: `{linear_count} Linear + {attention_count} Attention` (stratified real-W/A panel by default)",
         f"- official trend audit: `{trend['status']}` ({trend['concordant_pairs']} concordant / {trend['inverted_pairs']} inverted / {trend['tied_pairs']} tied pairs)",
         "- trend audit is a same-cohort diagnostic only; it never changes a proxy score",
         "- error-source decomposition is stored per candidate in JSON `decomposition`/`case_scores`; archive table remains score-only",
@@ -1702,6 +1747,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         raw,
         linear_count=args.linear_cases,
         attention_count=args.attention_cases,
+        full_cases=args.full_cases,
     )
     capture_seconds = time.perf_counter() - capture_started
     if args.archive:
@@ -1790,13 +1836,18 @@ def build_parser() -> argparse.ArgumentParser:
         "--linear-cases",
         type=int,
         default=LINEAR_CASE_COUNT,
-        help="optional Linear case limit for smoke only; default enumerates every captured W/A tensor",
+        help="optional Linear case prefix limit for smoke only; default uses 168-case stratified real-W/A panel",
     )
     parser.add_argument(
         "--attention-cases",
         type=int,
         default=ATTENTION_CASE_COUNT,
-        help="optional Attention case limit for smoke only; default enumerates every captured W/A tensor",
+        help="optional Attention case prefix limit for smoke only; default uses 120-case five-length panel",
+    )
+    parser.add_argument(
+        "--full-cases",
+        action="store_true",
+        help="expand every captured layer/role/window tuple for stress only; default uses the stratified real-W/A panel",
     )
     parser.add_argument("--capture-device", default="cuda" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--algorithm-device", default="cuda" if torch.cuda.is_available() else "cpu")

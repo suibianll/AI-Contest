@@ -28,9 +28,10 @@
 
 - train 只做 calibration；validation/test 交替做 holdout，窗口来自不同文档并使用固定哈希
   offset，Attention 长度保持 `[10,128,512,1024,1024]` 的轮换扩展；
-- 默认枚举捕获到的全部真实 W/A：24 层×7 role×全部 holdout 窗口的 Linear，以及 24 层×全部
-  holdout 窗口的 Attention；不施加 Linear:Attention 比例。case 数只能通过显式 CLI 参数缩小
-  做 smoke，不能改变校准状态生命周期；
+- 默认使用固定分层真实 W/A panel：Linear 覆盖 24 层×7 role、每个 layer/role 一个真实窗口
+  （168 cases），Attention 覆盖 24 层×五个官方 holdout 长度（120 cases）；不施加
+  Linear:Attention 权重。`--full-cases` 才展开全部窗口做 stress，case 数 CLI 限制仍只能用于
+  smoke，不能改变校准状态生命周期；
 - E4M3 scale 使用包含 subnormal 的 `e4m3-subnormal-ceil-v1`，标准 HiF4 分母仍由评测器
   独立冻结；
 - Linear 每个 layer/role 只调用一次 calibration（前两折），Attention 每层只调用一次
@@ -41,8 +42,8 @@
 **E0 验收：**
 
 1. `tests/test_official_eval.py`、codec/合法性检查和 cache 协议检查通过；
-2. v86、v138/v140/v147 使用同一 proxy-v2 cache 重跑，报告全量真实 W/A、实际 API calls、逐 role/layer
-   结果和趋势审计；
+2. v86、v138/v140/v147 使用同一 proxy-v2 cache 重跑，报告分层真实 W/A panel、实际 API calls、逐
+   role/layer 结果和趋势审计；必要时另行记录 `--full-cases` stress；
 3. 若锚点顺序仍反转，记录为 `inversion_detected`，继续扩充数据/模型 stress panel；不得
    调权重或硬编码分数把反转“修正”为通过；
 4. E0 完成前，L0–L4 只做代码审计和单层 smoke，不据此晋级新算法。
@@ -88,7 +89,8 @@ probability MSE 和 `KL(reference || estimate)`。结果按 layer、长度和 sp
 **当前实现与使用：** `evaluate_solution(..., decomposition=True)` 默认开启；CLI 的
 `--no-decomposition` 仅用于快速 smoke。JSON 新增 `decomposition.linear`、
 `decomposition.attention` 和 `diagnostic_config`，Markdown 报告新增 W/A/Q/K/V 控制臂表。
-没有额外候选 API 调用，主 `score` 字段保持原始未加权 full-real-W/A 定义。
+没有额外候选 API 调用，主 `score` 字段保持原始未加权真实 panel 定义；`--full-cases` 的分数
+只能作为 stress 记录，不能与默认 panel 混排。
 
 **决策顺序：** 先用固定 v86 Attention 做 Linear 四臂归因，再冻结 Linear 做 Attention 六臂
 归因；只有定位到具体 role/layer/length 的误差源后，才进入 L1–L4 或 Attention 独立实验。
@@ -138,8 +140,9 @@ oracle 编译成低复杂度部署规则”。Block-Schur 和双侧残差只保�
 
 - 唯一本地主评测器是 `evaluator/official_eval.py`，当前协议为 `proxy-v2`；旧
   `official-shape-v1` 只作 immutable 历史诊断。
-- 模型/数据固定为 Qwen2.5-0.5B、全量真实 W/A、Attention calibration lengths
-  `[10,128,512,1024,1024]`、validation/test holdout 和同一只读 proxy-v2 cache。
+- 模型/数据固定为 Qwen2.5-0.5B、分层真实 W/A panel、Attention calibration lengths
+  `[10,128,512,1024,1024]`、validation/test holdout 和同一只读 proxy-v2 cache；
+  `--full-cases` 仅用于额外 stress。
 - 校准调用保持官方状态图：168 个 layer/role Weight state、24 个 Attention state，动态
   case 复用 state；不能按 case 重新校准。默认全量 case 不使用任何 5:4 或其它人为权重。
 - 本地只比较同机 A/B 的 `linear_mean`、`attention_mean`、逐 role/case 和六 API 分解。

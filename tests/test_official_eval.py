@@ -13,8 +13,10 @@ sys.path.insert(0, str(ROOT / "evaluator"))
 from official_eval import (  # noqa: E402
     ATTENTION_CASE_COUNT,
     CALIBRATION_LENGTHS,
+    DEFAULT_CASE_DESIGN,
     LINEAR_CASE_COUNT,
     NVFP4_INPUT_CODEC,
+    PANEL_WINDOW_INDICES,
     PROTOCOL,
     REQUIRED_APIS,
     TEST_LENGTH,
@@ -35,7 +37,7 @@ from reference_hif4 import encode_standard_hif4, decode_standard_hif4, validate_
 from nvfp4_sim import e4m3_round_up  # noqa: E402
 
 
-def test_protocol_uses_full_real_wa_by_default() -> None:
+def test_protocol_uses_stratified_real_wa_panel_by_default() -> None:
     assert PROTOCOL == "proxy-v2"
     assert NVFP4_INPUT_CODEC == "e4m3-subnormal-ceil-v1"
     assert CALIBRATION_LENGTHS == (10, 128, 512, 1024, 1024)
@@ -43,6 +45,8 @@ def test_protocol_uses_full_real_wa_by_default() -> None:
     assert TEST_LENGTHS == (10, 128, 512, 1024, 1024, 10, 128, 512, 1024, 1024, 128, 512)
     assert LINEAR_CASE_COUNT is None
     assert ATTENTION_CASE_COUNT is None
+    assert DEFAULT_CASE_DESIGN == "stratified-real-wa-panel-v1"
+    assert PANEL_WINDOW_INDICES == (0, 1, 2, 3, 4)
 
 
 def test_case_selection_is_deterministic_and_has_no_duplicate_tuples() -> None:
@@ -60,13 +64,18 @@ def test_case_selection_is_deterministic_and_has_no_duplicate_tuples() -> None:
     assert attention_a == attention_b
     assert LINEAR_CASE_COUNT is None
     assert ATTENTION_CASE_COUNT is None
-    assert len(linear_a) == pack.layers * 7 * len(pack.test_windows)
-    assert len(attention_a) == pack.layers * len(pack.test_windows)
+    assert len(linear_a) == pack.layers * 7
+    assert len(attention_a) == pack.layers * len(PANEL_WINDOW_INDICES)
     assert len({(case.layer, case.role, case.test_window) for case in linear_a}) == len(linear_a)
     assert len({(case.layer, case.test_window) for case in attention_a}) == len(attention_a)
     assert {case.layer for case in linear_a} == set(range(pack.layers))
     assert {case.layer for case in attention_a} == set(range(pack.layers))
     assert {case.role for case in linear_a} == {"q", "k", "v", "o", "fc_gate", "fc_up", "proj"}
+    assert {case.test_window for case in attention_a} == set(PANEL_WINDOW_INDICES)
+    assert all(
+        {case.test_window for case in linear_a if case.layer == layer} == set(PANEL_WINDOW_INDICES)
+        for layer in range(pack.layers)
+    )
     assert all(len(case.calibration_indices) == 2 for case in linear_a)
     assert {tuple(case.calibration_indices) for case in linear_a} == {(0, 1)}
     assert all(tuple(case.calibration_indices) == tuple(range(5)) for case in attention_a)
@@ -84,6 +93,20 @@ def test_case_limits_are_explicit_smoke_only() -> None:
     linear, attention = _choose_cases(pack, linear_count=5, attention_count=4)
     assert len(linear) == 5
     assert len(attention) == 4
+
+
+def test_full_case_expansion_is_explicit_stress_only() -> None:
+    pack = SimpleNamespace(
+        layers=2,
+        calibration_windows=[None] * len(CALIBRATION_LENGTHS),
+        test_windows=[
+            Window("validation", f"doc-{i}", 0, 0, 0, TEST_LENGTH, tuple(range(TEST_LENGTH)))
+            for i in range(6)
+        ],
+    )
+    linear, attention = _choose_cases(pack, full_cases=True)
+    assert len(linear) == pack.layers * 7 * len(pack.test_windows)
+    assert len(attention) == pack.layers * len(pack.test_windows)
 
 
 def test_trend_diagnostics_does_not_fit_or_rewrite_scores() -> None:
