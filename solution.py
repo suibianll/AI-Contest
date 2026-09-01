@@ -894,12 +894,19 @@ def hif4_calibration_and_quantize_weight(
     weight_params = _dense_to_hif4(weight_t, offsets=_BASE_OFFSETS)
     weight_params = _crossfold_weight_hsdq(weight_t, weight_params, activation_t)
 
+    deployed_weight = _dequantize_hif4(weight_params).to(torch.float32)
+    output_gain = (
+        (weight_t * deployed_weight).sum(dim=0)
+        / deployed_weight.square().sum(dim=0).clamp_min(_EPS)
+    )
+    output_gain = torch.nan_to_num(output_gain, nan=1.0, posinf=2.0, neginf=0.5)
+    output_gain = output_gain.clamp(0.5, 2.0)
+
     gram_tensor = None
     if int(weight_t.shape[1]) <= _ACT_GRAM_MAX_CHANNELS:
         # The online activation objective is evaluated after this weight has
         # been quantized.  Use the deployed Q(W) curvature instead of the
         # raw-W curvature so the block HSDQ step follows the real operator.
-        deployed_weight = _dequantize_hif4(weight_params).to(torch.float32)
         gram_tensor = _gram64(deployed_weight)
     # Recreate the activation tensor that the online API will deploy, then
     # use it as the left operand of an output-supervised W refinement.  The
@@ -907,11 +914,12 @@ def hif4_calibration_and_quantize_weight(
     # compensate the fixed activation error instead of merely fitting W_t.
     deployed_calibration: list[torch.Tensor] = []
     for sample in activation_t:
+        quant_dense = sample * output_gain.reshape(1, -1)
         activation_params = _dense_to_hif4(
-            sample, offsets=_BASE_OFFSETS, gram64=gram_tensor
+            quant_dense, offsets=_BASE_OFFSETS, gram64=gram_tensor
         )
         activation_params = _refine_activation(
-            sample, activation_params, gram_tensor
+            quant_dense, activation_params, gram_tensor
         )
         deployed_calibration.append(
             _dequantize_hif4(activation_params).to(torch.float32)
@@ -928,6 +936,7 @@ def hif4_calibration_and_quantize_weight(
         "block_smooth_size": int(block_size),
         "block_smooth_seed": int(seed),
         "gram64": gram_state,
+        "output_gain": _cpu_tensor(output_gain),
         "version": 1,
     }
     return {"weight_params": weight_params, "activation_state": state}
@@ -948,6 +957,11 @@ def hif4_dynamic_quantize_activation(
     block_size = int(state.get("block_smooth_size", 0))
     if block_size > 0:
         dense = _apply_boat_rotation(dense, seed, block_size)
+    output_gain = state.get("output_gain")
+    if torch.is_tensor(output_gain):
+        gain = output_gain.to(dense.device, dtype=torch.float32).reshape(1, -1)
+        if int(gain.shape[1]) == int(dense.shape[1]):
+            dense = dense * gain
     gram = state.get("gram64")
     gram_tensor = gram if torch.is_tensor(gram) else None
     if gram_tensor is not None:

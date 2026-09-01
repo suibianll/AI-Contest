@@ -28,14 +28,14 @@ s=(MSE_{STD}-MSE_{PLAYER})/MSE_{STD},
 
 ## 活动根版本
 
-根代码目前是 v132（固定预算 Attention + 输出监督 W + Q(W)-Gram），SHA256 为
-`7C4884A710F17F44904E8C1C8EA1AC89667711A5B0162497AEAC4D5DAD389F3E`。实现保留：
+根代码目前是 v133（固定预算 Attention + 输出监督 W + Q(W)-Gram + output gain），SHA256 为
+`4046BB3AC3B5B130DC59D81307D00863BAC759474D3A6E91D4B4520A4753CFB0`。实现保留：
 
 1. BOAT 对角平衡与 signed-Hadamard 等价变换，满足 `X'W'^T=XW^T`；
 2. Cross-fold Weight-HSDQ，在 64 通道块上使用校准激活统计做合法 HiF4 离散搜索；
 3. Gram-hierarchy Activation-HSDQ，使用最终部署 Q(W) 的静态 Gram 做有限预算激活候选筛选；
 4. Expansive-FFN CAT balance，仅在 `rows>channels` 的形状启用并失败回退；
-5. `Q(A)`/`A@W` 输出监督的分块权重精修；
+5. `Q(A)`/`A@W` 输出监督的分块权重精修，以及按部署权重投影得到的 output gain；
 6. Attention 的 reciprocal balance、K-centering、rotation、GQRB shortlist，候选在
    128-token proxy/256-token shortlist 上评分，动态 Q/K 使用 2 sweep；dense PAWV 已移除。
 
@@ -75,20 +75,23 @@ row gate、GALS、block-local permutation、L6 rank/factor 系列和 C1 refresh/
 | v129 | 0.465655 | 0.837789 | 310.732 | 332.557 | 固定预算，仍超代理 |
 | v130 | 0.465655 | 0.836579 | 248.363 | 270.606 | 固定预算 sweep1 |
 | v131 | 0.471837 | 0.836579 | 295.437 | 317.607 | 输出监督 W |
-| v132 | **0.473131** | **0.834256** | **290.936** | 314.251 | **当前根，空闲重测 API<300** |
+| v132 | 0.473131 | 0.834256 | 290.936 | 314.251 | 两次空闲重测，历史父版本 |
+| v133 | **0.483610** | **0.834256** | **287.941** | 310.621 | **当前根直接重测 API<300** |
 
 本轮统一复测中，旧归档**最高本地等权显示**为 v121：`linear_mean=0.472197763`、
 `attention_mean=0.833617251`、`equal_weight_45000_scale=28477.289`，但 API/Wall 均远超
-300 s，且官方历史裁决为 timeout；它不是可提交版本。当前根 v132 两次空闲机器重测结果
-均为 Linear `0.473131`、Attention `0.834256`，API 分别为 `290.936s` 和 `289.318s`
-（均值 `290.127s`，保守取最大值 `290.936s`），均满足 `<300s`。完整字段以[第一轮 JSON](../artifacts/official_eval/root-v132-idle-rerun-20260901-official-shape-v1.json)
-和[第二轮 JSON](../artifacts/official_eval/root-v132-idle-rerun2-20260901-official-shape-v1.json)为准；
+300 s，且官方历史裁决为 timeout；它不是可提交版本。v132 两次空闲机器重测 API 为
+`290.936s` 和 `289.318s`，仅作历史父版本记录。当前根 v133 直接空闲重测为 Linear
+`0.483610`、Attention `0.834256`、API `287.941s`、wall `310.621s`，API 满足 `<300s`；
+同代码归档等价副本复测为 `291.275s`，同样满足限制。完整字段以[v133 根重测 JSON](../artifacts/official_eval/v133-active-root-rerun-20260901-official-shape-v1.json)、
+[v133 归档等价重测 JSON](../artifacts/official_eval/v133-gain-adyn2-equivalent-idle-rerun-20260901-official-shape-v1.json)为准；
 wall 字段仅作诊断，不作为官方计时。
 
 时间质量更正：最后一次 `root-v127-output-weight-qwgram-gain-adyn2` 运行时有其他程序同时
 占用机器，报告的 `365.818s` API / `397.341s` wall 是受干扰观测，不作为超时判定；原始
 JSON 保留，详见 [`时间质量更正`](../logs/execution/2026-09-01-timing-quality-correction.md)。
-随后已在无其他 Python/评测进程的机器状态下连续重测 v132 两次，API 均低于 `300s`。
+随后已在无其他 Python/评测进程的机器状态下连续重测 v132 两次，并分别重测 v133 根文件与
+归档等价候选，API 均低于 `300s`。
 v86 官方结果为 **`16744 / 222.7s`，新权重下通过**。
 
 官方历史锚点（独立于本地代理）：v74 `22750 / 239.387s`（旧权重，通过）；v84
@@ -105,7 +108,7 @@ Attention 改动本身。
 ## 下一步
 
 当前 active 计划是 [`2026-09-01-hif4-linear-0.8-under-300s-plan.md`](superpowers/plans/2026-09-01-hif4-linear-0.8-under-300s-plan.md)。它只允许在
-`official-shape-v1` 上比较 Linear/Attention 均值和 API 时间；当前根 v132 已完成完整 450-case
+`official-shape-v1` 上比较 Linear/Attention 均值和 API 时间；当前根 v133 已完成完整 450-case
 复测。任何新版本必须保留源码 SHA、统一命名归档和可复现 JSON。
 
 ## 归档规则

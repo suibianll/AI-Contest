@@ -2,7 +2,7 @@
 
 用户确认最后一次 `root-v127-output-weight-qwgram-gain-adyn2` 运行时有其他程序同时占用
 机器资源。因此该次报告中的 API `365.818s`、wall `397.341s` 只能作为受干扰观测，不能
-作为算法的超时结论，也不能用于和 v132 做运行时间排序。原始 JSON 保留不改写，避免把
+作为算法的超时结论，也不能用于和 v132/v133 做运行时间排序。原始 JSON 保留不改写，避免把
 实验记录伪装成无干扰重测。
 
 随后在无其他 Python/评测进程的机器状态下连续完成两次 v132 空闲重测，精度完全一致：
@@ -16,7 +16,21 @@ API 范围 `289.318–290.936s`、均值 `290.127s`，均低于本地 `300s` 代
 `290.936s` 作为当前根的保守时间记录。wall 不是官方计时字段。两份原始结果分别写入
 `artifacts/official_eval/root-v132-idle-rerun-20260901-official-shape-v1.json` 和
 `artifacts/official_eval/root-v132-idle-rerun2-20260901-official-shape-v1.json`，取代此前
-`285.929s` 作为当前根的有效本地时间记录。
+`285.929s` 作为 v132 历史父版本的有效本地时间记录。
+
+## gain+adyn2 归档等价候选重测
+
+此前临时源码 SHA `4d78f4e3188e6199f29e30a15133c4c6594cf9e7555a97ed4c9b0e876d8a2751`
+未被持久化，不能声称已对同一字节文件复测。已对持久化 v133（SHA
+`59EB07683D12ECA26A4CA1892E7A03C477C5871F5C1C76A822A209202EA6CF05`）执行同口径空闲
+重测：Linear `0.4836104004`、Attention `0.8342562656`、API `291.2752035s`、wall
+`314.0047424s`。该源码包含 output gain 与 Attention dynamic sweep2，是当前可复现的
+gain+adyn2 归档等价候选，API 低于 `300s`。
+
+随后对已提升为活动根的 `D:/工作内容/AI竞赛/solution.py` 直接重测（SHA
+`4046BB3AC3B5B130DC59D81307D00863BAC759474D3A6E91D4B4520A4753CFB0`）：Linear
+`0.4836104004`、Attention `0.8342562656`、API `287.9413881s`、wall `310.6208377s`。
+这是当前提交文件的直接证据，API 低于 `300s`。
 
 ## 官方锚点
 

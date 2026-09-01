@@ -9,6 +9,10 @@
 > 这是当前官方通过锚点；本地 `v086` 复测时间受机器并发干扰，不替代该官方时间。最后一次
 > gain+adyn2 本地运行同样受其他程序干扰，其 `365.818s` 仅保留为原始观测，不用于时间排序。
 
+> **活动根更新（2026-09-01）**：当前根已提升为 v133（output gain + Attention dynamic
+> sweep2）；根文件直接空闲重测为 Linear `0.483610`、Attention `0.834256`、API
+> `287.941s`（`<300s`），归档等价源码复测为 `291.275s`。
+
 > 整理日期：2026-08-31
 > 数据来源：`solutions/README.md`（v000–v125）、`docs/current-solution-status.md`、`docs/archive-implementation-audit.md`、`logs/execution/2026-08-30-e0g-scale-oracle.md`、`logs/execution/2026-08-30-e0g-multimodel-dashboard.md`、`logs/execution/2026-08-30-a7-quant-weight-gram.md`、`logs/execution/2026-08-30-l1-full-hierarchy-lrh.md`、`logs/execution/2026-08-31-v110-l4b-gals-final-gated-qwen-full.md`、`logs/execution/2026-08-31-v111-l5a-joint-permutation-qwen-full.md`、`logs/execution/2026-08-31-l5d-external-component-audit.md`、`logs/execution/2026-08-31-l5e-linear-ceiling-v111.md`、`logs/execution/2026-08-31-v115-l6a-rank16-qwen-full.md`、`logs/execution/2026-08-31-v116-l6b-wide-rank4-qwen-full.md`、`logs/execution/2026-08-31-v117-l6c-g64-hierarchy-qwen-full.md`、`logs/execution/2026-08-31-v118-l6d-structured-factor-qwen-full.md`、`logs/execution/2026-08-31-l6e-crossblock-checkpoint.md`、`logs/execution/2026-08-31-v119-c1a-structured-vectorized-qwen-full.md`、`logs/execution/2026-08-31-c1b-structured-refresh-stratified.md`、`logs/execution/2026-08-31-c1b-structured-refresh2-stratified.md`、`logs/execution/2026-08-31-v121-c1b-structured-refresh2-qwen-full.md`、`logs/execution/2026-08-31-v124-c1c-rank8-screen.md`、`logs/execution/2026-08-31-v124-c1c-rank8-qwen-full.md`、`logs/execution/2026-08-31-v125-c1c-block8-qwen-full.md`、`logs/execution/2026-08-31-v107-attention-contract-audit.md`、`logs/execution/2026-08-31-c1b-structured-refresh-synthetic.md`。
 > 口径纪律：本地只能比 **Qwen 同口径 panel**（`250·g_L + 200·g_A`）；五模型合计 `1085.743597` 只用于检查跨模型结构性回退，**禁止**与官方分数做差值。官方评测集为 250 Linear + 200 Attention case；时间上限已于 2026-08-31 修订为 **`300s`**，且不再限制任何 `A@W` 拟合用法。
@@ -17,7 +21,8 @@
 
 ## 1. 当前根：算法构成与效果
 
-根 `solution.py`（规范 LF SHA `47e2e3ab76c6deaac8de47bbcbd8f689cf5989dc8ff9e9081a887ec89e819b08`）为 v126：在 v125 clean 单一路径上修复 B2 PAWV 变长 calibration，按 `seq_len` 分组 diagonal，并删除未使用的 full `P^TP/eigh`。当前完整精度最高的已测版本仍为 v125（precision-only）；v126 通过变长合成/API 回归但尚未重跑 full-layer。其余 C1/L6/L5/Linear 组件保持不变，详见 [`归档实现审计`](archive-implementation-audit.md)。
+下方历史算法构成段仍以 v126 为基准；活动根已更新为 v133，新增 output gain，完整结果见
+[`当前状态`](current-solution-status.md) 与 [`v133 重测 JSON`](../artifacts/official_eval/v133-gain-adyn2-equivalent-idle-rerun-20260901-official-shape-v1.json)。
 
 | 组件 | 内容 |
 |---|---|
