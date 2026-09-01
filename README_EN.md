@@ -48,6 +48,8 @@ public local means cannot be converted into official Linear/Attention weights. S
 [`the attribution record`](docs/evaluation-attribution-2026-09-01.md).
 The v147 attribution control now combines v140 Linear with v86 Attention: local means are
 `0.5073546371 / 0.7196960689`, API time is `222.227s`, and no official score is inferred.
+The v148 fixed A3 alternating round raised local Linear to `0.5097287173` but took `369.038s`
+API time, so it is rejected; the next work is complexity reuse, not parameter tuning.
 The v141-v145 rank-4 selected-column BDLR trials (anchor freeze, dynamic-only, and two damping
 values) returned Linear means `0.281760/0.282559/0.361154/0.506418/0.506256`, all below v140;
 that direction is closed. Their source snapshots were deleted to keep the archive compact; per-run
