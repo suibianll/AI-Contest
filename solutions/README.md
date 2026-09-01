@@ -57,10 +57,10 @@ silently assigned a score.
 | v100 | `20260830_v100_b2-pawv-diagonly-active_score293.797301_time392s` | — | >300 s | Attention WA / timeout |
 | v107 | `20260830_v107_l3-global-lrh-precision-parent_score295.157057_time481s` | — | — | Attention WA |
 | v121 | `20260831_v121_c1b-structured-refresh2-accepted_score295.811281_time2180s` | — | >300 s | timeout |
-| v128 | `20260901_v128_fixed-attn-budget_scoreNA_timeNA` | — | >300 s | **timeout (official, user confirmed)** |
-| v129 | `20260901_v129_fixed-attn-budget-sweep1_scoreNA_timeNA` | — | >300 s | **timeout (official, user confirmed)** |
-| v130 | `20260901_v130_output-weight_scoreNA_timeNA` | — | >300 s | **timeout (official, user confirmed)** |
-| v131 | `20260901_v131_output-weight-qwgram_scoreNA_timeNA` | — | >300 s | **timeout (official, user confirmed)** |
+| v128 | `20260901_v128_fixed-attn-budget_timeout` | — | >300 s | **timeout (official, user confirmed)** |
+| v129 | `20260901_v129_fixed-attn-budget-sweep1_timeout` | — | >300 s | **timeout (official, user confirmed)** |
+| v130 | `20260901_v130_output-weight_timeout` | — | >300 s | **timeout (official, user confirmed)** |
+| v131 | `20260901_v131_output-weight-qwgram_timeout` | — | >300 s | **timeout (official, user confirmed)** |
 | v138 | `20260901_v138_attention-static-v86-budget_scoreNA_timeNA` | **15715** | **208 s** | **pass (official, user reported)** |
 | v139 | `20260901_v139_linear-output-aware-gain_scoreNA_timeNA` | **15716** | **202 s** | **pass (official, user reported)** |
 
@@ -73,16 +73,17 @@ directories follow the same immutable naming rule as the historical archive:
 | Version | Source directory | Linear mean | Attention mean | API total | Decision |
 |---|---|---:|---:|---:|---|
 | v086 (idle rerun) | `20260830_v086_c86-attn-block-final_scoreNA_timeNA` | 0.406668 | 0.719696 | 299.302 s | clean rerun; official 16744/222.7 s pass |
-| v128 | `20260901_v128_fixed-attn-budget_scoreNA_timeNA` | 0.465655 | 0.837789 | 310.732 s | **official timeout (user confirmed)** |
-| v129 | `20260901_v129_fixed-attn-budget-sweep1_scoreNA_timeNA` | 0.465655 | 0.836579 | 248.363 s | **official timeout (user confirmed)** |
-| v130 | `20260901_v130_output-weight_scoreNA_timeNA` | 0.471837 | 0.836579 | 295.437 s | **official timeout (user confirmed); Attention-time risk** |
-| v131 | `20260901_v131_output-weight-qwgram_scoreNA_timeNA` | 0.473131 | 0.836579 | 294.835 s | **official timeout; high-cost Attention family** |
+| v128 | `20260901_v128_fixed-attn-budget_timeout` | 0.465655 | 0.837789 | 310.732 s | **official timeout (user confirmed)** |
+| v129 | `20260901_v129_fixed-attn-budget-sweep1_timeout` | 0.465655 | 0.836579 | 248.363 s | **official timeout (user confirmed)** |
+| v130 | `20260901_v130_output-weight_timeout` | 0.471837 | 0.836579 | 295.437 s | **official timeout (user confirmed); Attention-time risk** |
+| v131 | `20260901_v131_output-weight-qwgram_timeout` | 0.473131 | 0.836579 | 294.835 s | **official timeout; high-cost Attention family** |
 | v132 | `20260901_v132_output-weight-qwgram-dynsweep2_scoreNA_timeNA` | 0.473131 | 0.834256 | 290.936 s | historical parent; 2 idle runs API<300 |
 | v133 | `20260901_v133_output-weight-qwgram-gain_scoreNA_timeNA` | 0.483610 | 0.834256 | 287.941 s | historical parent |
 | v134 | `20260901_v134_linear-output-activation-cross64_scoreNA_timeNA` | 0.507320 | 0.834256 | 289.042/289.832 s | Linear precision parent; Attention-time risk |
+| v135–v137 | three directories explicitly suffixed `_rejected` | 0.500132–0.507163 | 0.834256 | 287.816–296.755 s | **rejected Jacobi/sweep variants** |
 | v138 | `20260901_v138_attention-static-v86-budget_scoreNA_timeNA` | **0.507320** | 0.715942 | **192.996/187.935 s** | **official 15715/208 s pass; time parent** |
 | v139 | `20260901_v139_linear-output-aware-gain_scoreNA_timeNA` | 0.507278 | 0.715942 | 193.389 s | **official 15716/202 s pass; retained official-result archive** |
-| v140 | `20260901_v140_linear-roab-pair_scoreNA_timeNA` | **0.507355** | 0.715942 | **205.365 s** | **active root; ROAB-P2 positive Linear candidate** |
+| v140 | `20260901_v140_linear-roab-pair_rejected` | 0.507355 | 0.715942 | 205.365 s | **rejected; local-only `+0.000035`** |
 | v141–v145 (BDLR family) | — (source snapshots deleted; logs/artifacts retained) | 0.281760–0.506256 | 0.715942 | 204.681–211.460 s | **rejected family; selected-column BDLR closed** |
 
 \* The later temporary gain+adyn2 run reported `365.818 s`, but the machine was concurrently busy;
@@ -92,9 +93,10 @@ output-supervised activation cross term; its two complete runs are recorded in
 [`v134 first JSON`](../artifacts/official_eval/v134-linear-output-activation-cross64-official-shape-v1.json)
 and [`v134 idle rerun JSON`](../artifacts/official_eval/v134-linear-output-activation-cross64-rerun2-official-shape-v1.json).
 
-v140 is the current time-safe root candidate: it keeps the v138 static Attention path and adds
-the ROAB-P2 reciprocal pair transform to the Linear path. v138 disables the per-call Attention
-Gram refinement and shrinks the static candidate set. Two v138 runs are recorded in
+The root file currently contains v140 for audit, but the next implementation baseline is the exact
+v86 source. v140 keeps the v138 reduced Attention path and adds the ROAB-P2 reciprocal pair
+transform to Linear; its local gain is only `0.000035` and has no official evidence. v138 disables
+the per-call Attention Gram refinement and shrinks the static candidate set. Two v138 runs are recorded in
 [`v138 first JSON`](../artifacts/official_eval/v138-attention-static-v86-budget-official-shape-v1.json)
 and [`v138 idle rerun JSON`](../artifacts/official_eval/v138-attention-static-v86-budget-rerun2-official-shape-v1.json).
 The v138 official result was reported as **`15715 / 208 s` (pass)** and v139 as **`15716 / 202 s`
@@ -105,8 +107,8 @@ The BDLR-JAQ trials v141–v145 are recorded as a rejected family summary. Their
 were `0.281760`, `0.282559`, `0.361154`, `0.506418`, and `0.506256`; all kept Attention at
 `0.715942` and stayed below the local time proxy, but none improved v140. Their source snapshots
 were deleted to keep the archive compact; the per-run JSON and execution logs remain as evidence.
-The selected-column BDLR direction is closed; v140 remains the active root while the next search
-moves to symmetric joint code-domain updates.
+The selected-column BDLR direction is closed. The next work starts from v86, builds legal structural
+oracles, and then tests null-space shaping and subspace-embedded joint vector rounding.
 
 \* The earlier v086 local `462.239 s` observation was also concurrent-load affected. The clean
 idle rerun is `299.302 s` API / `321.996 s` wall; see
@@ -114,16 +116,15 @@ idle rerun is `299.302 s` API / `321.996 s` wall; see
 
 ## Recording rules
 
-1. Allocate a new version directory before changing the active root; never overwrite a snapshot.
-2. Unknown official values stay `scoreNA_timeNA`. Local JSON values belong in the local report,
-   not in the directory name or Official fields.
+1. Parameter sweeps stay in one unnumbered workbench and one summary log. Allocate a version only
+   for a new mathematical algorithm, an official submission, or one representative failure.
+2. Final directory names include `retained`, `rejected`, or `timeout`. Unknown official values
+   stay `scoreNA_timeNA`; local JSON values never enter Official fields.
 3. `result.md` records parent, one algorithm change, exact command/protocol, data/model revisions,
    both means, API/Wall time, source SHA256, an explicit `Status` (`RETAINED`, `REJECTED`,
    `TIMEOUT`, or `ERROR`), official outcome, and next decision.
 4. When the official judge changes weights or limits, start a new protocol label and keep old
    outcomes as history; never mix their absolute scores.
-5. Small parameter sweeps are grouped under one experiment log and one summary result. A new
-   archive directory is created only for a materially different algorithm, a materially different
-   runtime path, or the single selected candidate from a sweep; rejected micro-variants remain in
-   the summary rather than being archived one-by-one. Rejected source snapshots may be deleted
-   after their JSON and execution logs are retained; the summary must identify the deleted range.
+5. Small parameter sweeps are grouped under one experiment log and one summary result. Rejected
+   micro-variants are not archived one-by-one; their source snapshots may be deleted after JSON and
+   execution evidence is retained. Version identifiers are globally unique.

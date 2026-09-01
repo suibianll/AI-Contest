@@ -1,5 +1,7 @@
 # v128 / fixed-attn-budget
 
+Status: **TIMEOUT / OFFICIAL FAILURE (user-confirmed)**.
+
 - Date: 2026-09-01
 - Parent: v127 / root-v127-fixed-attn-budget
 - Source SHA256: `0D4A0E91F6D076A9B694390DAE3D63A931D3D759AB609252AB3B54366F22F638`

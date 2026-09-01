@@ -1,5 +1,7 @@
 # v137 result
 
+Status: **REJECTED** (additional calibration sweep regressed Linear versus v134).
+
 - Parent: v134
 - Change: one additional output-supervised activation coordinate sweep during
   calibration only; online activation remains at the v134 two-sweep budget.

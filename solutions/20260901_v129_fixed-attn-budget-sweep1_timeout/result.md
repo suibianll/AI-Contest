@@ -1,5 +1,7 @@
 # v129 / fixed-attn-budget-sweep1
 
+Status: **TIMEOUT / OFFICIAL FAILURE (user-confirmed)**.
+
 - Date: 2026-09-01
 - Parent: v128 / fixed-attn-budget
 - Source SHA256: `7319F00E5259FE15E7C5ECA99E214A8F7482CF5CF066D6E3025E86C92D9095EC`

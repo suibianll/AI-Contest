@@ -1,5 +1,7 @@
 # v135 result
 
+Status: **REJECTED** (Linear regressed versus v134).
+
 - Parent: v134
 - Change: L3 diagonal Newton/Jacobi warm start applied during both Linear
   calibration and online activation refinement, using the cached block output

@@ -1,5 +1,7 @@
 # v130 official update
 
+Status: **TIMEOUT / OFFICIAL FAILURE (user-confirmed)**.
+
 - Change: first `Q(A)`/`A@W` output-supervised weight refinement.
 - Local `official-shape-v1`: Linear `0.471837`, Attention `0.836579`, API
   `295.437s`, wall `317.607s`.

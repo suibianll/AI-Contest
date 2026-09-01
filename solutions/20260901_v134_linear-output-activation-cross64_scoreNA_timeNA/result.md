@@ -1,5 +1,7 @@
 # v134 result
 
+Status: **RETAINED / LOCAL RESEARCH PARENT (official untested)**.
+
 - Parent: v133 (`output-weight-qwgram-gain`)
 - Change: L2 block output-supervised activation refinement.  The calibration path
   stores the contiguous 64x64 blocks of `Q(W)^T W`; online `Q(A)` uses the

@@ -6,7 +6,7 @@
 > `[10,128,512,1024,1024]`）；新结果见 [`artifacts/official_eval/`](../artifacts/official_eval/)。
 
 > **官方事实更正（2026-09-01）**：v86 官方结果为 **`16744 / 222.7s`，新权重下通过**，
-> 这是当前官方通过锚点；本地 `v086` 复测时间受机器并发干扰，不替代该官方时间。最后一次
+> 这是当前官方最优和下一实现基线；本地 `v086` 复测时间不替代该官方时间。最后一次
 > gain+adyn2 本地运行同样受其他程序干扰，其 `365.818s` 仅保留为原始观测，不用于时间排序。
 
 > **重测与超时更新（2026-09-01）**：v86 在空闲机器按 `official-shape-v1` 重测为
@@ -19,13 +19,13 @@
 > 与 v86 本地 `299.302s`、官方 `222.7s` 通过的反差表明本地秒数不能推出官方通过，
 > 需要按 Attention 算子/调用复杂度建立更保守的时间父版本。
 
-> **活动根更新（2026-09-01）**：当前根已提升为 v140（v138 static Attention +
-> ROAB-P2 reciprocal pair transform）；完整复测为 Linear `0.5073546`、Attention
-> `0.715942`，API `205.365s`、wall `229.337s`。v138 保留为时间父版本。
+> **路线重置（2026-09-01）**：根文件仍是 v140 实验代码，但 v140 相对 v138 只有本地
+> Linear `+0.000035`，没有官方结果，不再视为算法最优。v138/v139 官方只有
+> `15715/15716`，均明显低于 v86；v138–v145 路线关闭。
 
-> **时间策略更新（2026-09-01）**：v130 官方 timeout 后，Attention calibration 与动态
-> Q/K/V 被列为首要风险；v138 已复现 v86 的静态低复杂度 Attention，v140 在其上保留
-> Linear 输出监督路径并加入 ROAB-P2。后续 Linear 优化均以 v140 为父版本。
+> **新策略（2026-09-01）**：后续从原样 v86 开始，Linear 阶段逐字节冻结 v86 Attention。
+> 先完成合法码域 Structural Oracle，再研究零空间误差整形、子空间嵌入联合舍入、广义特征
+> 乘积保持 butterfly 和 HiF4 层级整体量化；停止局部参数扫描。
 
 > 整理日期：2026-08-31
 > 数据来源：`solutions/README.md`（v000–v125）、`docs/current-solution-status.md`、`docs/archive-implementation-audit.md`、`logs/execution/2026-08-30-e0g-scale-oracle.md`、`logs/execution/2026-08-30-e0g-multimodel-dashboard.md`、`logs/execution/2026-08-30-a7-quant-weight-gram.md`、`logs/execution/2026-08-30-l1-full-hierarchy-lrh.md`、`logs/execution/2026-08-31-v110-l4b-gals-final-gated-qwen-full.md`、`logs/execution/2026-08-31-v111-l5a-joint-permutation-qwen-full.md`、`logs/execution/2026-08-31-l5d-external-component-audit.md`、`logs/execution/2026-08-31-l5e-linear-ceiling-v111.md`、`logs/execution/2026-08-31-v115-l6a-rank16-qwen-full.md`、`logs/execution/2026-08-31-v116-l6b-wide-rank4-qwen-full.md`、`logs/execution/2026-08-31-v117-l6c-g64-hierarchy-qwen-full.md`、`logs/execution/2026-08-31-v118-l6d-structured-factor-qwen-full.md`、`logs/execution/2026-08-31-l6e-crossblock-checkpoint.md`、`logs/execution/2026-08-31-v119-c1a-structured-vectorized-qwen-full.md`、`logs/execution/2026-08-31-c1b-structured-refresh-stratified.md`、`logs/execution/2026-08-31-c1b-structured-refresh2-stratified.md`、`logs/execution/2026-08-31-v121-c1b-structured-refresh2-qwen-full.md`、`logs/execution/2026-08-31-v124-c1c-rank8-screen.md`、`logs/execution/2026-08-31-v124-c1c-rank8-qwen-full.md`、`logs/execution/2026-08-31-v125-c1c-block8-qwen-full.md`、`logs/execution/2026-08-31-v107-attention-contract-audit.md`、`logs/execution/2026-08-31-c1b-structured-refresh-synthetic.md`。
@@ -33,11 +33,12 @@
 
 ---
 
-## 1. 当前根：算法构成与效果
+## 1. 当前代码与官方基线
 
-下方历史算法构成段仍以 v126 为基准；活动根已更新为 v140，新增 output gain、L2
-输出监督 activation cross64，完整结果见 [`当前状态`](current-solution-status.md) 与
-[`v140 JSON`](../artifacts/official_eval/v140-linear-roab-pair-official-shape-v1.json)。
+根文件当前是 v140，便于审计最后一次实验，但下一算法实现不从它继续。官方基线恢复为 v86；
+完整判定见 [`当前状态`](current-solution-status.md) 与
+[`活动计划`](superpowers/plans/2026-09-01-hif4-linear-0.8-under-300s-plan.md)。下表保留历史组件，
+不表示它们仍属于下一实现父版本。
 
 | 组件 | 内容 |
 |---|---|
@@ -50,9 +51,19 @@
 | **L6d/C1a/C1b/C1c structured factor** | 宽输入最多 8 个 `64×64` kernel + 距离系数生成跨 block proposal；C1b 每个 selected block 后刷新梯度并扫两轮；C1c rank=8、`max_blocks=8`；最终完整 `G_q` 行级 gate；v125 `proj(d=4864)` 正向 |
 | **C1 proposal path** | C1a 批量独立 row/block 的 15-level proposal；C1b block refresh×2；C1c rank 4→8、`max_blocks=4→8`；coordinate 顺序与 exact `G_q` gate 不变；v125 panel `295.847849` |
 | **L4a final deployed-Gram row gate** | 仅 expansive `rows > channels` 且 `channels <=1024`；v107 parent 与 final-Gram 候选用完整 `G_q` 逐行比较，v109 精度正向 |
-| **Attention v138 时间安全 shortlist** | reciprocal RMS/K-centering + 少量 block-Hadamard/GQRB 静态候选；128-token view；关闭动态 Q/K Gram sweep 与 dense PAWV，保持独立合法 HiF4 编码 |
+| **Attention v138 缩减 shortlist（已关闭）** | 128-token view 和缩减候选使本地 Attention 从 v86 `0.719696` 降至 `0.715942`；官方 v138 比 v86 低 1029 分，不能再作为时间父版本 |
 | **L2 Linear 输出监督 activation cross64（v134）** | 校准阶段缓存 `Q(W)^T W` 与 `Q(W)^T W_t` 的连续 64×64 block；在线以 `Hq-Da` 作为激活梯度，并用 batched block matmul 避免完整 channel Gram |
 | **L9 BDLR-JAQ（v141–v145，已关闭）** | rank-4 选列跨块 `H/D` 修正；锚点冻结、仅动态激活和阻尼 `0.02/0.005` 均未超过 v140，源码目录已清理，JSON/日志保留证据，不再调参 |
+
+下一阶段的理论方向不是上述组件调参，而是：
+
+| 新方向 | 数学依据 | 主要适用 role |
+|---|---|---|
+| NRES 零空间误差整形 | `e∈ker(W) => eW^T=0`，把合法舍入误差推入输出不可见空间 | k/v/proj |
+| SE-JVR 子空间嵌入联合舍入 | 用 SRHT/CountSketch 近似保持完整输出范数，替代无保证的选列 Gram | 全 role |
+| GE-BT 广义特征 butterfly | `AT^{-1}(WT^T)^T=AW^T`，在保持连续输出时重构量化坐标系 | q/o/gate/up 优先 |
+| HATQ 层级整体量化 | 共同选择 scale/lv2/lv3/mantissa，匹配 HiF4 的真实耦合码域 | 全 role |
+| R-JAQ 联合残差抵消 | 直接控制 `E_AW^T+AE_W^T-E_AE_W^T` | oracle 证明可达后组合 |
 
 **实测**（Qwen2.5-0.5B 全 24 层，`seq=128/calib=2/test=4/amax6`，缓存只读）：
 

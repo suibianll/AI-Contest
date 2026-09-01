@@ -1,5 +1,7 @@
 # v136 result
 
+Status: **REJECTED** (Linear regressed versus v134).
+
 - Parent: v134
 - Change: the same L3 diagonal Newton/Jacobi warm start as v135, but enabled
   only in online activation calls; calibration and output-supervised weight

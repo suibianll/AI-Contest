@@ -1,5 +1,7 @@
 # v131 official update
 
+Status: **TIMEOUT / OFFICIAL FAILURE (user-confirmed)**.
+
 - Parent: v130
 - Change: use the final deployed `Q(W)^T Q(W)` block Gram for online Linear
   activation refinement.

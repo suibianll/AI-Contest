@@ -25,18 +25,19 @@ the same high-cost Attention family, so the timeout does not isolate the Linear 
 change as the cause.
 The v134 block output-supervised activation cross terms raise the local Linear mean to
 `0.5073195`, but v130's official timeout shows that local API seconds are not a safe
-runtime proxy. The active root is now v140: it keeps the v138 v86-level static Attention
-path and adds ROAB-P2 to Linear (`0.5073546 / 0.7159420`, `205.365s` local API,
-`229.337s` wall). No official result has been registered yet.
+runtime proxy. The root file still contains the v140 experiment, but its local Linear gain over
+v138 is only `0.000035` and it has no official result. It is no longer treated as the best
+candidate; the next implementation baseline is the exact v86 source.
 The user has now reported v138's official result as **`15715 / 208s` (pass)**; its local
 proxy values remain separate from that official result. v86 remains the known official best
 at `16744 / 222.7s`.
-The user has now also reported v139's official result as **`15716 / 202s` (pass)**. v139 is
-retained as an official-result archive, while v140 remains the active local root.
+The user has now also reported v139's official result as **`15716 / 202s` (pass)**. Both v138
+and v139 remain roughly 1,029 points below v86, so the v138-v145 lineage is closed.
 The v141-v145 rank-4 selected-column BDLR trials (anchor freeze, dynamic-only, and two damping
 values) returned Linear means `0.281760/0.282559/0.361154/0.506418/0.506256`, all below v140;
-that direction is closed and the next search moves to symmetric joint code-domain updates. Their
-source snapshots were deleted to keep the archive compact; per-run JSON and execution logs remain.
+that direction is closed. Their source snapshots were deleted to keep the archive compact; per-run
+JSON and execution logs remain. The new plan first builds legal joint oracles, then studies
+null-space error shaping, subspace-embedded vector rounding, and product-preserving transforms.
 
 Capture the pinned public data pack once:
 
