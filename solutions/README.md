@@ -105,6 +105,10 @@ directories follow the same immutable naming rule as the historical archive:
 | v141–v145 (BDLR family) | — (source snapshots deleted; logs/artifacts retained) | 0.281760–0.506256 | 0.715942 | 204.681–211.460 s | **rejected family; selected-column BDLR closed** |
 | v147 | `20260901_v147_v86-attention-v140-linear_rejected` | **0.507355 / 0.510050†** | **0.719696** | **222.227 / 300.351 s†** | **official 16579/211s; rejected below v86; submitted SHA unconfirmed** |
 | v148 | `20260901_v148_joint-wa-v86-attention-v140-linear_rejected` | **0.509729** | **0.719696** | **369.038 s** | **rejected; A3 precision gain but local time over 300 s** |
+| v151 | `20260902_v151_proj-roab-off_rejected` | **0.582528 (targeted)** | **0.942927 (targeted)** | **193.213 s** | **rejected; Qwen role panel no-op, GPT-2 proj-only gain** |
+| v152 | `20260902_v152_fc-cat-off_rejected` | **0.583139 / 0.542553 (14/56-case)** | **0.942927** | **199.578/200.432 s** | **rejected; small mixed-sign fc gain** |
+| v153 | `20260902_v153_fc-decoupled-activation_rejected` | **0.568754 (targeted)** | **0.942927** | **197.656 s** | **rejected; direct s_q assignment regresses fc** |
+| v154 | `20260902_v154_fc-decoupled-scale-fit_rejected` | **0.568754 (targeted)** | **0.942927** | **198.098 s** | **rejected; fitted s_d is a no-op after v153** |
 
 † The first v147 values come from the original pre-A3 JSON (SHA `9B3EA5...B656`); the second come
 from the later direct-merge A3 JSON (SHA `25C245...9C1B`). The archive was modified in place before
@@ -159,6 +163,28 @@ BOAT is harmful (`.5107` to `.4599`). The next Linear work therefore freezes q/k
 proj ROAB-off first, and redesigns fc's expansive encoder/scale while retaining BOAT. This is a
 role diagnostic, not an official-score claim; the full evidence and protocol caveats are in
 [`role attribution log`](../logs/execution/2026-09-01-hif4-external-role-attribution-v140-v86.md).
+
+The first follow-up control, v151, disabled ROAB only for native `rows < channels` (`proj/down`)
+matrices while removing the over-budget A3 pass. On the canonical Qwen `proxy-v2` targeted panel,
+all seven static Linear role means were identical to the pre-A3 parent (`0.582528` Linear,
+`0.942927` Attention); the external four-layer GPT-2 smoke improved only `proj` (`.5029→.5658`).
+It is archived as `REJECTED` and remains a cross-model control rather than a new root parent. See
+[`v151 execution log`](../logs/execution/2026-09-02-v151-proj-roab-off.md).
+
+The next fc controls were also kept out of root. v152 disabled only expansive CAT (BOAT retained):
+Qwen Linear moved `0.582528→0.583139` on the 14-case smoke but only
+`0.542366→0.542553` on the paired 56-case panel, with mixed fc layer signs; external GPT-2 moved
+fc `.5658→.5709`. v153 then tried the first L1 decoupled encoder, using BF16 `s_q` directly for
+fc code assignment without fitting `s_d`, and regressed Qwen Linear to `0.568754` (fc family
+`0.334432`). Both are archived as `REJECTED`; the failure points to the planned closed-form stored
+scale fit, not another CAT/ROAB switch. See
+[`v152/v153 execution log`](../logs/execution/2026-09-02-v152-v153-fc-followups.md).
+
+v154 added the planned fixed-code `s_d` fit in the deployed `Q(W)` Gram metric, but its Qwen role
+means were exactly v153 (`fc=.334432`, Linear `0.568754`). It is archived as `REJECTED`; direct
+decoupled-scale variants are paused until an oracle diagnostic identifies code assignments with
+recoverable margin. The next step is bounded L3 teacher-to-encoder analysis, not another scale
+parameter.
 
 \* The earlier v086 local `462.239 s` observation was also concurrent-load affected. The clean
 idle rerun is `299.302 s` API / `321.996 s` wall; see

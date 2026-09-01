@@ -172,6 +172,45 @@ case；单候选 JSON 仍保留原有 `decomposition`，不会改变主分数、
 主评测器负责同 cache 的 role 差分，hif4 外部脚本负责跨结构/私有机制探针，官方回传负责最终
 排序。
 
+## 2.5 v151 proj ROAB-off 控制（已归档）
+
+v151 按 E0.7 的顺序只关闭 `rows < channels` 的 proj/down ROAB，并移除当前根中额外的 A3
+残差 pass，以便与 pre-A3 v147 父版本处于同一时间边界。它没有修改 v86 Attention，也没有
+改动 q/k/v/o 或 fc 的路由。
+
+在同一只读 Qwen `proxy-v2` cache 上，14 个 Linear case（两层覆盖七个静态 role）和 1 个
+Attention case 的结果完全不变：父版本 `Linear=0.582528216 / Attention=0.942927486 / API
+=201.258s`，v151 为 `0.582528216 / 0.942927486 / 193.213s`；q/k/v/o/fc_gate/fc_up/proj
+逐 role 均相同，约 8 秒差异不作为计时结论。外部 hif4 GPT-2 四层因果 smoke 只在 proj 上
+从 `.5029` 到 `.5658`，其余 role 与 Attention 不变，因此 v151 标记 `REJECTED`，不能晋级
+为 root 或后续父版本。证据见 [`v151 result`](../solutions/20260902_v151_proj-roab-off_rejected/result.md)
+和 [`v151 execution log`](../logs/execution/2026-09-02-v151-proj-roab-off.md)。
+
+这次 no-op 反而缩小了搜索空间：proj 的外部收益不转移到 Qwen，下一步不再继续调整 proj
+ROAB；按计划转向 `fc_gate/fc_up` 的 expansive 编码/scale 机制，保留 BOAT，并继续冻结
+q/k/v/o 与 v86 Attention。所有新候选仍必须先报告静态 role/family、动态 Attention Q/K/V、
+逐层最差 case 和六 API 时间，再决定是否跑完整 panel。
+
+## 2.6 v152/v153 fc 递进实验（已归档）
+
+v152 只关闭 expansive fc 的 CAT、保留 BOAT。Qwen 14-case targeted panel 的 Linear 从
+`0.582528216` 到 `0.583139209`，但同口径 56-case 配对 panel 只有
+`0.542366307→0.542552798`；fc family 的 signed delta 仅 `+0.000653` 且层间正负混合，
+所以不能把短 panel 的小增益当成晋级信号。外部 GPT-2 四层 fc 为 `.5658→.5709`，仅作方向
+证据。v152 已标记 `REJECTED`。
+
+v153 按 L1 首版尝试只对 fc Activation 使用 BF16 `s_q=a_max/7` 做层级/码字分配，存储仍为
+合法 E6M2，但没有在固定 code 后重新拟合 `s_d`。Qwen 14-case 中 Linear
+`0.582528216→0.568753650`，fc_gate `0.396959→0.350049`、fc_up
+`0.368327→0.318816`，q/k/v/o/proj 和 Attention 均不变，明确拒绝。这个失败精确指出当前
+实现缺的是“固定 code 后的部署尺度闭式回归”，而不是继续切换 CAT/ROAB。
+
+两个快照、命令、SHA 和完整 role 结果见 [`fc follow-up log`](../logs/execution/2026-09-02-v152-v153-fc-followups.md)。
+v154 已按该要求在同一 `s_q` code 下用最终 `Q(W)` Gram/输出度量求 `s_d` 闭式解并投影到
+合法 E6M2，但 Qwen role 均与 v153 完全相同（fc family `0.334432`），没有恢复 v153 的
+回归，因此也标记 `REJECTED`。当前结论是：直接 s_q/s_d 变体先暂停，下一步改做有明确
+recoverable margin 输出的 L3 teacher/oracle 诊断，不再试 CAT/ROAB 或 scale 参数。
+
 ## 3. 历史 v1 结果表（不可与 proxy-v2 混用）
 
 下表保留旧 `official-shape-v1` 的同机数字，仅用于审计此前的失真；当前 proxy-v2 分层 panel

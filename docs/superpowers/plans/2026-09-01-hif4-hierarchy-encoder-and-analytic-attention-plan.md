@@ -180,6 +180,35 @@ Attention 的 Q/K/V。
    Q/K/V 的控制臂，明确标注二者不是同一层级，不能把 qkv 投影退化误报为 Attention Q/K/V
    问题。
 
+### L0 当前结果（v151，已拒绝）
+
+按上述顺序完成了第一个 local-only role control：v151 只对 `rows < channels` 的 proj/down
+矩阵关闭 ROAB，并删除额外 A3 pass，父版本为可复现的 pre-A3 v147 固定组合。Qwen
+`proxy-v2` 两层七 role targeted panel 与父版本逐项相同（Linear `0.582528216`、Attention
+`0.942927486`）；外部 hif4 GPT-2 四层 causal smoke 只改善 proj（`.5029→.5658`）。因此已
+归档 `solutions/20260902_v151_proj-roab-off_rejected/` 并判为 `REJECTED`，不改变 root，也不
+把外部单模型收益当成官方趋势。下一步进入 L1 前的 fc 专属控制：保留 BOAT，只验证一个有
+理论/外部证据支持的 expansive CAT/scale 机制；若 Qwen role panel 无改善则立即关闭该支路，
+转入计划中的 decoupled encoder teacher，而不做参数网格试探。
+
+### L1 早期结果（v152/v153，均已拒绝）
+
+v152 的 expansive CAT-off 控制在 14-case Qwen panel 上有 `+0.000611` Linear 信号，但扩大到
+56-case 后仅有 `+0.000187`，fc family signed delta `+0.000653` 且正负层混合；它与外部
+GPT-2 的 `.5658→.5709` 方向一致，却不足以晋级。v153 的直接 `s_q` 版本把 fc family 从
+`0.382643` 降到 `0.334432`，证明只改编码分母而不拟合 `s_d` 会把 code assignment 推离
+部署最优点。两者均已完整归档为 `_rejected`，root 仍不变。
+
+因此 L1 的下一版严格按计划的固定-code步骤实现：先用最终 `Q(W)` block Gram（必要时输出
+交叉项）对 `s_d` 求闭式标量，再投影到最近合法 E6M2；不增加 `s_q` 网格，不修改 BOAT、
+ROAB 或 Attention。验收仍以两个 fold 的 fc_gate/fc_up signed delta 和最差层为准。
+
+v154 已实现这一步，但 Qwen role 结果与 v153 完全相同（fc family `0.334432`，Linear
+`0.568753650`），没有回收直接 `s_q` 版本的损失，故同样归档为 `_rejected`。这意味着当前
+表示族的问题在 code assignment 本身，而不只是 stored-scale 投影；L1 暂停扩大，转入 L3
+的 bounded teacher/oracle 诊断，先测哪些 block 的离散 code 有稳定可压缩 margin，再决定是否
+值得重新编译一个动态 encoder。
+
 ## 0. 本计划替代什么
 
 旧活动计划
