@@ -21,8 +21,13 @@ from official_eval import (  # noqa: E402
     TEST_LENGTHS,
     Window,
     _attention,
+    _attention_trace,
+    _attention_decomposition_summary,
     _choose_cases,
+    _linear_decomposition_summary,
+    _linear_error_source_details,
     _trend_diagnostics,
+    build_parser,
     load_pack,
     load_solution,
 )
@@ -112,6 +117,78 @@ def test_attention_kernel_accepts_each_official_sequence_length(tokens: int) -> 
     result = _attention(q[None], k[None], v[None], q_heads=8, kv_heads=2, head_dim=4)
     assert result.shape == (1, tokens, 8 * 4)
     assert torch.isfinite(result).all()
+
+
+def test_attention_trace_exposes_logits_and_probabilities() -> None:
+    q = torch.randn(1, 5, 8 * 4)
+    k = torch.randn(1, 5, 2 * 4)
+    v = torch.randn(1, 5, 2 * 4)
+    output, logits, probabilities = _attention_trace(q, k, v, 8, 2, 4)
+    assert output.shape == (1, 5, 8 * 4)
+    assert logits.shape == (1, 8, 5, 5)
+    assert probabilities.shape == logits.shape
+    assert torch.allclose(probabilities.sum(dim=-1), torch.ones_like(probabilities[..., 0]))
+
+
+def test_linear_decomposition_reports_operand_and_interaction_sources() -> None:
+    reference = torch.eye(2)
+    standard = reference + 0.50
+    weight_only = reference + 0.25
+    activation_only = reference + 0.125
+    both = reference + 0.10
+    ref_weight = torch.eye(2)
+    ref_activation = torch.eye(2)
+    details = _linear_error_source_details(
+        standard,
+        weight_only,
+        activation_only,
+        both,
+        reference,
+        ref_weight,
+        ref_weight,
+        ref_weight,
+        ref_activation,
+        ref_activation,
+        ref_activation,
+    )
+    assert details["gain_a_only"] > details["gain_w_only"]
+    assert details["gain_both"] > details["gain_a_only"]
+    assert details["interaction_gain"] < 0.0
+    summary = _linear_decomposition_summary([details])
+    assert summary["case_count"] == 1
+    assert summary["gain"]["w_only"] == details["gain_w_only"]
+
+
+def test_attention_decomposition_summary_contains_intermediate_sources() -> None:
+    item = {
+        "mse_standard": 2.0,
+        "mse_q_only": 1.8,
+        "mse_k_only": 1.7,
+        "mse_v_only": 1.6,
+        "mse_qk_only": 1.4,
+        "mse_both": 1.2,
+        "gain_q_only": 0.1,
+        "gain_k_only": 0.15,
+        "gain_v_only": 0.2,
+        "gain_qk_only": 0.3,
+        "gain_both": 0.4,
+        "qk_interaction_gain": 0.05,
+        "qkv_interaction_gain": 0.07,
+        "logit_mse_standard": 0.03,
+        "logit_mse_player": 0.02,
+        "probability_mse_standard": 0.01,
+        "probability_mse_player": 0.005,
+        "probability_kl_standard_to_reference": 0.004,
+        "probability_kl_player_to_reference": 0.002,
+    }
+    summary = _attention_decomposition_summary([item])
+    assert summary["gain"]["qk_interaction"] == 0.05
+    assert summary["intermediate"]["probability_mse_player"] == 0.005
+
+
+def test_decomposition_is_enabled_by_default_and_can_be_disabled() -> None:
+    assert build_parser().parse_args([]).decomposition is True
+    assert build_parser().parse_args(["--no-decomposition"]).decomposition is False
 
 
 def test_solution_loader_finds_the_six_public_apis() -> None:

@@ -31,9 +31,13 @@ public relative-MSE case score. The default panel enumerates all captured W/A te
 be reduced only by an explicit smoke-test flag. Calibration still follows the judge graph: 168
 shared layer/role Weight states and 24 shared Attention states, followed by one dynamic call per
 selected case. The authoritative local fields are `linear_mean`, `attention_mean`, and the
-unweighted `overall_mean`; no Linear:Attention ratio or official-score fit is applied. Local
-seconds are same-machine A/B data, not an official-time conversion; `trend_diagnostics` reports
-known same-cohort ordering inversions without fitting them.
+unweighted `overall_mean`; no Linear:Attention ratio or official-score fit is applied. Each result
+also contains evaluator-only error-source controls in `decomposition` and per-case
+`case_scores`: Linear W/A four-arm output MSE, Attention Q/K/V/QK controls, and logits/softmax
+metrics. These controls reuse candidate outputs and do not change API call counts; use
+`--no-decomposition` only for a fast smoke run. Local seconds are same-machine A/B data, not an
+official-time conversion; `trend_diagnostics` reports known same-cohort ordering inversions without
+fitting them.
 
 The completed 2026-09-01 **historical v1** archive run is in
 [`artifacts/official_eval/archive-official-shape-v1.json`](../artifacts/official_eval/archive-official-shape-v1.json)

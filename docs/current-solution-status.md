@@ -53,6 +53,12 @@ holdout 窗口，Attention 为每层每个 holdout 窗口；窗口本身是固�
 鲲鹏时间。校准状态按官方调用图共享：168 个 layer/role Weight state、24 个 Attention state；
 `trend_diagnostics` 仅对同一官方权重 cohort 做顺序一致性检查，发现反转时必须停止用本地分数晋级。
 
+当前评测还默认输出 evaluator-only 的误差源分解：Linear 的 `E00/E10/E01/E11` 四臂（标准、
+W-only、A-only、W+A）以及 role/layer/shape/length/split 聚合；Attention 的 Q-only、K-only、
+V-only、QK-only、QKV 五个控制臂，以及 logits MSE、softmax probability MSE、KL 和
+layer/length 聚合。细分结果位于每个 JSON 的 `decomposition` 和 `case_scores`，不会改变主
+`score` 或候选 API 调用数；只有快速 smoke 才使用 `--no-decomposition`。
+
 E0 修复记录：旧 v1 的 E4M3 scale 忽略 subnormal、窗口集中在少数文档，且曾误把 calibration
 放进每个 case。proxy-v2 已修正这三点；共享校准版本将在下一次开发复测中核对
 `168/25/24/20/20/20` 的 API 调用图。此前 per-case 校准复测中，v138 相对 v86 的本地顺序仍为

@@ -97,6 +97,13 @@ calibration；每个动态 case 只调用一次相应动态 API。报告中的 `
 官方权重 cohort 的已知版本之间做 pairwise 顺序检查；它只标记反转，绝不把官方分数反向拟合
 进候选分数。
 
+默认评测还输出误差源分解，不参与主分数：Linear 用 `E00/E10/E01/E11` 分离 W-only、A-only、
+W+A 以及交互项，并按 role/layer/shape/length/split 聚合；Attention 用 Q-only、K-only、
+V-only、QK-only、QKV 控制臂，同时报告 logits MSE、softmax probability MSE、KL 和
+layer/length 聚合。逐 case 结果在 JSON 的 `case_scores`，聚合结果在 `decomposition`；
+这些控制臂复用已产生的候选输出，不增加候选 API 调用。仅在快速 smoke 时使用
+`--no-decomposition`。
+
 计时同时保存：
 
 - `timing.api_total_seconds`：六个候选 API 调用耗时之和，是最接近赛事“量化函数执行时间”

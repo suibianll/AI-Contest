@@ -798,6 +798,32 @@ def _attention(q: torch.Tensor, k: torch.Tensor, v: torch.Tensor, q_heads: int, 
     return (probabilities @ vh).transpose(1, 2).reshape(batch, tokens, q_heads * head_dim)
 
 
+def _attention_trace(
+    q: torch.Tensor,
+    k: torch.Tensor,
+    v: torch.Tensor,
+    q_heads: int,
+    kv_heads: int,
+    head_dim: int,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    """Return attention output plus logits and probabilities for diagnostics.
+
+    The public score only needs the output.  Keeping the intermediate tensors
+    behind this small helper lets the evaluator identify whether a candidate
+    loses information in Q/K logits, softmax probabilities, or V/output
+    reconstruction without changing any candidate API call.
+    """
+    batch, tokens, _ = q.shape
+    qh = q.reshape(batch, tokens, q_heads, head_dim).transpose(1, 2)
+    group = q_heads // kv_heads
+    kh = k.reshape(batch, tokens, kv_heads, head_dim).transpose(1, 2).repeat_interleave(group, dim=1)
+    vh = v.reshape(batch, tokens, kv_heads, head_dim).transpose(1, 2).repeat_interleave(group, dim=1)
+    logits = qh @ kh.transpose(-1, -2) / math.sqrt(head_dim)
+    probabilities = torch.softmax(logits, dim=-1)
+    output = (probabilities @ vh).transpose(1, 2).reshape(batch, tokens, q_heads * head_dim)
+    return output, logits, probabilities
+
+
 def _score(standard: torch.Tensor, player: torch.Tensor, reference: torch.Tensor) -> float:
     return _score_details(standard, player, reference)["gain"]
 
@@ -825,11 +851,204 @@ def _score_details(
     }
 
 
+def _mse(value: torch.Tensor, reference: torch.Tensor) -> float:
+    result = float((value - reference).square().mean())
+    if not math.isfinite(result):
+        raise ValueError("diagnostic MSE must be finite")
+    return result
+
+
+def _relative_mse(value: torch.Tensor, reference: torch.Tensor) -> float:
+    energy = float(reference.square().mean())
+    if not math.isfinite(energy) or energy <= 0.0:
+        raise ValueError("diagnostic reference energy must be finite and positive")
+    return _mse(value, reference) / energy
+
+
+def _linear_error_source_details(
+    standard: torch.Tensor,
+    weight_only: torch.Tensor,
+    activation_only: torch.Tensor,
+    both: torch.Tensor,
+    reference: torch.Tensor,
+    ref_weight: torch.Tensor,
+    standard_weight: torch.Tensor,
+    player_weight: torch.Tensor,
+    ref_activation: torch.Tensor,
+    standard_activation: torch.Tensor,
+    player_activation: torch.Tensor,
+) -> dict[str, float]:
+    """Four-arm Linear output decomposition.
+
+    ``standard`` is the fixed legal reference codec, ``both`` is the submitted
+    pair, and the two middle arms replace exactly one operand.  The interaction
+    term is reported in the conventional error sign and as a gain where a
+    positive value means the two candidate encoders provide super-additive
+    complementarity; a negative value means overlapping or diminishing returns.
+    """
+    details = _score_details(standard, both, reference)
+    e00 = details["mse_standard"]
+    e10 = _mse(weight_only, reference)
+    e01 = _mse(activation_only, reference)
+    e11 = details["mse_player"]
+    details.update({
+        "mse_w_only": e10,
+        "mse_a_only": e01,
+        "mse_both": e11,
+        "gain_w_only": (e00 - e10) / e00,
+        "gain_a_only": (e00 - e01) / e00,
+        "gain_both": (e00 - e11) / e00,
+        "interaction_mse": e11 - e10 - e01 + e00,
+        "interaction_gain": (e10 + e01 - e00 - e11) / e00,
+        "weight_relative_mse": _relative_mse(player_weight, ref_weight),
+        "activation_relative_mse": _relative_mse(player_activation, ref_activation),
+        "standard_weight_relative_mse": _relative_mse(standard_weight, ref_weight),
+        "standard_activation_relative_mse": _relative_mse(standard_activation, ref_activation),
+    })
+    return details
+
+
+def _attention_error_source_details(
+    standard: torch.Tensor,
+    q_only: torch.Tensor,
+    k_only: torch.Tensor,
+    v_only: torch.Tensor,
+    qk_only: torch.Tensor,
+    both: torch.Tensor,
+    reference: torch.Tensor,
+    reference_logits: torch.Tensor,
+    standard_logits: torch.Tensor,
+    player_logits: torch.Tensor,
+    reference_probabilities: torch.Tensor,
+    standard_probabilities: torch.Tensor,
+    player_probabilities: torch.Tensor,
+) -> dict[str, float]:
+    """Attention Q/K/V output and intermediate decomposition."""
+    details = _score_details(standard, both, reference)
+    e000 = details["mse_standard"]
+    e100 = _mse(q_only, reference)
+    e010 = _mse(k_only, reference)
+    e001 = _mse(v_only, reference)
+    e110 = _mse(qk_only, reference)
+    e111 = details["mse_player"]
+    eps = torch.finfo(reference_probabilities.dtype).tiny
+    ref_prob = reference_probabilities.clamp_min(eps)
+    player_prob = player_probabilities.clamp_min(eps)
+    standard_prob = standard_probabilities.clamp_min(eps)
+    details.update({
+        "mse_q_only": e100,
+        "mse_k_only": e010,
+        "mse_v_only": e001,
+        "mse_qk_only": e110,
+        "mse_both": e111,
+        "gain_q_only": (e000 - e100) / e000,
+        "gain_k_only": (e000 - e010) / e000,
+        "gain_v_only": (e000 - e001) / e000,
+        "gain_qk_only": (e000 - e110) / e000,
+        "gain_both": (e000 - e111) / e000,
+        "qk_interaction_mse": e110 - e100 - e010 + e000,
+        "qk_interaction_gain": (e100 + e010 - e000 - e110) / e000,
+        "qkv_interaction_mse": e111 - e110 - e001 + e000,
+        "qkv_interaction_gain": (e110 + e001 - e000 - e111) / e000,
+        "logit_mse_standard": _mse(standard_logits, reference_logits),
+        "logit_mse_player": _mse(player_logits, reference_logits),
+        "probability_mse_standard": _mse(standard_probabilities, reference_probabilities),
+        "probability_mse_player": _mse(player_probabilities, reference_probabilities),
+        "probability_kl_standard_to_reference": float(
+            (ref_prob * (ref_prob.log() - standard_prob.log())).mean()
+        ),
+        "probability_kl_player_to_reference": float(
+            (ref_prob * (ref_prob.log() - player_prob.log())).mean()
+        ),
+    })
+    return details
+
+
+def _mean_metric(items: Sequence[Mapping[str, Any]], key: str) -> float:
+    values = [float(item[key]) for item in items if key in item]
+    return sum(values) / max(1, len(values))
+
+
+def _linear_decomposition_summary(items: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    return {
+        "case_count": len(items),
+        "mse": {
+            "standard": _mean_metric(items, "mse_standard"),
+            "w_only": _mean_metric(items, "mse_w_only"),
+            "a_only": _mean_metric(items, "mse_a_only"),
+            "both": _mean_metric(items, "mse_both"),
+        },
+        "gain": {
+            "w_only": _mean_metric(items, "gain_w_only"),
+            "a_only": _mean_metric(items, "gain_a_only"),
+            "both": _mean_metric(items, "gain_both"),
+            "interaction": _mean_metric(items, "interaction_gain"),
+        },
+        "operand_relative_mse": {
+            "weight": _mean_metric(items, "weight_relative_mse"),
+            "activation": _mean_metric(items, "activation_relative_mse"),
+            "standard_weight": _mean_metric(items, "standard_weight_relative_mse"),
+            "standard_activation": _mean_metric(items, "standard_activation_relative_mse"),
+        },
+    }
+
+
+def _attention_decomposition_summary(items: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    return {
+        "case_count": len(items),
+        "mse": {
+            "standard": _mean_metric(items, "mse_standard"),
+            "q_only": _mean_metric(items, "mse_q_only"),
+            "k_only": _mean_metric(items, "mse_k_only"),
+            "v_only": _mean_metric(items, "mse_v_only"),
+            "qk_only": _mean_metric(items, "mse_qk_only"),
+            "both": _mean_metric(items, "mse_both"),
+        },
+        "gain": {
+            "q_only": _mean_metric(items, "gain_q_only"),
+            "k_only": _mean_metric(items, "gain_k_only"),
+            "v_only": _mean_metric(items, "gain_v_only"),
+            "qk_only": _mean_metric(items, "gain_qk_only"),
+            "both": _mean_metric(items, "gain_both"),
+            "qk_interaction": _mean_metric(items, "qk_interaction_gain"),
+            "qkv_interaction": _mean_metric(items, "qkv_interaction_gain"),
+        },
+        "intermediate": {
+            "logit_mse_standard": _mean_metric(items, "logit_mse_standard"),
+            "logit_mse_player": _mean_metric(items, "logit_mse_player"),
+            "probability_mse_standard": _mean_metric(items, "probability_mse_standard"),
+            "probability_mse_player": _mean_metric(items, "probability_mse_player"),
+            "probability_kl_standard_to_reference": _mean_metric(
+                items, "probability_kl_standard_to_reference"
+            ),
+            "probability_kl_player_to_reference": _mean_metric(
+                items, "probability_kl_player_to_reference"
+            ),
+        },
+    }
+
+
+def _group_summary(
+    items: Sequence[Mapping[str, Any]],
+    key: str,
+    summary_fn: Any,
+) -> dict[str, Any]:
+    groups: dict[str, list[Mapping[str, Any]]] = {}
+    for item in items:
+        groups.setdefault(str(item[key]), []).append(item)
+    return {name: summary_fn(group) for name, group in sorted(groups.items())}
+
+
 def _cpu_params(params: Mapping[str, torch.Tensor]) -> dict[str, torch.Tensor]:
     return {name: value.detach().to("cpu") for name, value in params.items()}
 
 
-def evaluate_solution(path: Path, pack: PreparedPack, algorithm_device_name: str) -> dict[str, Any]:
+def evaluate_solution(
+    path: Path,
+    pack: PreparedPack,
+    algorithm_device_name: str,
+    decomposition: bool = True,
+) -> dict[str, Any]:
     solution = load_solution(path)
     label = path.parent.name
     device = torch.device(algorithm_device_name)
@@ -920,7 +1139,24 @@ def evaluate_solution(path: Path, pack: PreparedPack, algorithm_device_name: str
         reference = ref_activation @ ref_weight.T
         standard = standard_activation @ standard_weight.T
         player = player_activation @ player_weight.T
-        details = _score_details(standard, player, reference)
+        if decomposition:
+            weight_only = standard_activation @ player_weight.T
+            activation_only = player_activation @ standard_weight.T
+            details = _linear_error_source_details(
+                standard,
+                weight_only,
+                activation_only,
+                player,
+                reference,
+                ref_weight,
+                standard_weight,
+                player_weight,
+                ref_activation,
+                standard_activation,
+                player_activation,
+            )
+        else:
+            details = _score_details(standard, player, reference)
         details.update({
             "case_id": case.case_id,
             "layer": case.layer,
@@ -928,6 +1164,18 @@ def evaluate_solution(path: Path, pack: PreparedPack, algorithm_device_name: str
             "calibration_indices": list(case.calibration_indices),
             "test_window": case.test_window,
             "test_split": pack.test_windows[case.test_window].split,
+            "test_length": len(pack.test_windows[case.test_window].input_ids),
+            "input_width": int(ref_activation.shape[-1]),
+            "output_width": int(ref_weight.shape[0]),
+            "shape_bucket": (
+                "hidden_to_hidden"
+                if int(ref_activation.shape[-1]) == pack.hidden_size and int(ref_weight.shape[0]) == pack.hidden_size
+                else "hidden_to_wide"
+                if int(ref_activation.shape[-1]) == pack.hidden_size
+                else "wide_to_hidden"
+                if int(ref_weight.shape[0]) == pack.hidden_size
+                else "other"
+            ),
         })
         linear_details.append(details)
     print(f"[{label}] Attention scoring: {len(pack.attention_cases)} cases", flush=True)
@@ -961,10 +1209,54 @@ def evaluate_solution(path: Path, pack: PreparedPack, algorithm_device_name: str
         player_q = dequantize_hif4(_cpu_params(q_params), ref_q.shape).to(torch.float32)
         player_k = dequantize_hif4(_cpu_params(k_params), ref_k.shape).to(torch.float32)
         player_v = dequantize_hif4(_cpu_params(v_params), ref_v.shape).to(torch.float32)
-        reference = _attention(ref_q[None], ref_k[None], ref_v[None], pack.q_heads, pack.kv_heads, pack.head_dim)
-        standard = _attention(std_q[None], std_k[None], std_v[None], pack.q_heads, pack.kv_heads, pack.head_dim)
-        player = _attention(player_q[None], player_k[None], player_v[None], pack.q_heads, pack.kv_heads, pack.head_dim)
-        details = _score_details(standard, player, reference)
+        if decomposition:
+            reference, reference_logits, reference_probabilities = _attention_trace(
+                ref_q[None], ref_k[None], ref_v[None], pack.q_heads, pack.kv_heads, pack.head_dim
+            )
+            standard, standard_logits, standard_probabilities = _attention_trace(
+                std_q[None], std_k[None], std_v[None], pack.q_heads, pack.kv_heads, pack.head_dim
+            )
+            player, player_logits, player_probabilities = _attention_trace(
+                player_q[None], player_k[None], player_v[None], pack.q_heads, pack.kv_heads, pack.head_dim
+            )
+            q_only = _attention(
+                player_q[None], std_k[None], std_v[None], pack.q_heads, pack.kv_heads, pack.head_dim
+            )
+            k_only = _attention(
+                std_q[None], player_k[None], std_v[None], pack.q_heads, pack.kv_heads, pack.head_dim
+            )
+            v_only = _attention(
+                std_q[None], std_k[None], player_v[None], pack.q_heads, pack.kv_heads, pack.head_dim
+            )
+            qk_only = _attention(
+                player_q[None], player_k[None], std_v[None], pack.q_heads, pack.kv_heads, pack.head_dim
+            )
+            details = _attention_error_source_details(
+                standard,
+                q_only,
+                k_only,
+                v_only,
+                qk_only,
+                player,
+                reference,
+                reference_logits,
+                standard_logits,
+                player_logits,
+                reference_probabilities,
+                standard_probabilities,
+                player_probabilities,
+            )
+        else:
+            reference = _attention(
+                ref_q[None], ref_k[None], ref_v[None], pack.q_heads, pack.kv_heads, pack.head_dim
+            )
+            standard = _attention(
+                std_q[None], std_k[None], std_v[None], pack.q_heads, pack.kv_heads, pack.head_dim
+            )
+            player = _attention(
+                player_q[None], player_k[None], player_v[None], pack.q_heads, pack.kv_heads, pack.head_dim
+            )
+            details = _score_details(standard, player, reference)
         details.update({
             "case_id": case.case_id,
             "layer": case.layer,
@@ -993,6 +1285,35 @@ def evaluate_solution(path: Path, pack: PreparedPack, algorithm_device_name: str
         / max(1, sum(item["layer"] == layer for item in attention_details))
         for layer in sorted({item["layer"] for item in attention_details})
     }
+    if decomposition:
+        linear_decomposition: dict[str, Any] = {
+            "enabled": True,
+            "formula": {
+                "arms": "E00=standard W+standard A; E10=candidate W+standard A; E01=standard W+candidate A; E11=candidate W+candidate A",
+                "interaction_gain": "(E10+E01-E00-E11)/E00; positive means super-additive complementarity, negative means overlapping/diminishing returns",
+            },
+            "overall": _linear_decomposition_summary(linear_details),
+            "by_role": _group_summary(linear_details, "role", _linear_decomposition_summary),
+            "by_layer": _group_summary(linear_details, "layer", _linear_decomposition_summary),
+            "by_shape": _group_summary(linear_details, "shape_bucket", _linear_decomposition_summary),
+            "by_test_length": _group_summary(linear_details, "test_length", _linear_decomposition_summary),
+            "by_split": _group_summary(linear_details, "test_split", _linear_decomposition_summary),
+        }
+        attention_decomposition: dict[str, Any] = {
+            "enabled": True,
+            "formula": {
+                "arms": "E000=standard Q/K/V; E100=candidate Q; E010=candidate K; E001=candidate V; E110=candidate Q+K; E111=candidate Q+K+V",
+                "qk_interaction_gain": "(E100+E010-E000-E110)/E000; positive means super-additive complementarity",
+                "qkv_interaction_gain": "(E110+E001-E000-E111)/E000; positive means super-additive complementarity",
+            },
+            "overall": _attention_decomposition_summary(attention_details),
+            "by_layer": _group_summary(attention_details, "layer", _attention_decomposition_summary),
+            "by_test_length": _group_summary(attention_details, "test_length", _attention_decomposition_summary),
+            "by_split": _group_summary(attention_details, "test_split", _attention_decomposition_summary),
+        }
+    else:
+        linear_decomposition = {"enabled": False}
+        attention_decomposition = {"enabled": False}
     return {
         "candidate": path.stem,
         "source": str(path.resolve()),
@@ -1029,6 +1350,15 @@ def evaluate_solution(path: Path, pack: PreparedPack, algorithm_device_name: str
         "case_scores": {
             "linear": linear_details,
             "attention": attention_details,
+        },
+        "decomposition": {
+            "linear": linear_decomposition,
+            "attention": attention_decomposition,
+        },
+        "diagnostic_config": {
+            "error_source_decomposition": decomposition,
+            "score_unchanged": True,
+            "candidate_api_calls_unchanged": True,
         },
         "protocol": PROTOCOL,
     }
@@ -1069,6 +1399,7 @@ def _write_json(path: Path, value: Any) -> None:
 def _write_report(path: Path, result: Mapping[str, Any], pack: PreparedPack) -> None:
     score = result["score"]
     timing = result["timing"]
+    decomposition = result.get("decomposition", {})
     lines = [
         f"# {result['candidate']} — {PROTOCOL}",
         "",
@@ -1092,8 +1423,88 @@ def _write_report(path: Path, result: Mapping[str, Any], pack: PreparedPack) -> 
         f"| Candidate wall | {timing['wall_seconds']:.3f}s |",
         f"| Candidate API total | {timing['api_total_seconds']:.3f}s |",
         "",
-        "官方成绩只保留为独立历史字段，不参与本地 proxy 评分或时间换算。",
+        "## 误差源分解（evaluator-only）",
+        "",
+        "控制臂只在评测器内重算，不增加六个候选 API 调用，也不改变主分数。gain 为相对标准输出误差的改善；interaction 为正表示超加性互补，负表示收益重叠或递减。",
     ]
+    linear_decomposition = decomposition.get("linear", {})
+    if linear_decomposition.get("enabled"):
+        lines.extend([
+            "",
+            "### Linear：W / A / 交互",
+            "",
+            "| 分组 | cases | W-only gain | A-only gain | Both gain | interaction | W operand rel-MSE | A operand rel-MSE |",
+            "|---|---:|---:|---:|---:|---:|---:|---:|",
+        ])
+        linear_rows = [("overall", linear_decomposition.get("overall", {}))]
+        linear_rows.extend(
+            (f"role:{role}", value)
+            for role, value in linear_decomposition.get("by_role", {}).items()
+        )
+        linear_rows.extend(
+            (f"shape:{shape}", value)
+            for shape, value in linear_decomposition.get("by_shape", {}).items()
+        )
+        for name, value in linear_rows:
+            gains = value.get("gain", {})
+            operands = value.get("operand_relative_mse", {})
+            lines.append(
+                f"| {name} | {value.get('case_count', 0)} | {gains.get('w_only', 0.0):.6f} | "
+                f"{gains.get('a_only', 0.0):.6f} | {gains.get('both', 0.0):.6f} | "
+                f"{gains.get('interaction', 0.0):.6f} | {operands.get('weight', 0.0):.6e} | "
+                f"{operands.get('activation', 0.0):.6e} |"
+            )
+        lines.extend([
+            "",
+            "Linear 的完整 layer/role/window 结果位于 JSON 的 `decomposition.linear` 和 `case_scores.linear`；优先查看 role 与 shape 行，再定位对应 layer/case。",
+        ])
+    else:
+        lines.extend(["", "Linear 分解：已通过 `--no-decomposition` 关闭。"])
+
+    attention_decomposition = decomposition.get("attention", {})
+    if attention_decomposition.get("enabled"):
+        lines.extend([
+            "",
+            "### Attention：Q / K / V / softmax",
+            "",
+            "| 分组 | cases | Q-only | K-only | V-only | QK-only | Both | QK interaction | QKV interaction |",
+            "|---|---:|---:|---:|---:|---:|---:|---:|---:|",
+        ])
+        attention_rows = [("overall", attention_decomposition.get("overall", {}))]
+        attention_rows.extend(
+            (f"layer:{layer}", value)
+            for layer, value in attention_decomposition.get("by_layer", {}).items()
+        )
+        attention_rows.extend(
+            (f"length:{length}", value)
+            for length, value in attention_decomposition.get("by_test_length", {}).items()
+        )
+        for name, value in attention_rows:
+            gains = value.get("gain", {})
+            lines.append(
+                f"| {name} | {value.get('case_count', 0)} | {gains.get('q_only', 0.0):.6f} | "
+                f"{gains.get('k_only', 0.0):.6f} | {gains.get('v_only', 0.0):.6f} | "
+                f"{gains.get('qk_only', 0.0):.6f} | {gains.get('both', 0.0):.6f} | "
+                f"{gains.get('qk_interaction', 0.0):.6f} | {gains.get('qkv_interaction', 0.0):.6f} |"
+            )
+        intermediate = attention_decomposition.get("overall", {}).get("intermediate", {})
+        lines.extend([
+            "",
+            "| Attention 中间量（overall） | standard | player |",
+            "|---|---:|---:|",
+            f"| logit MSE vs reference | {intermediate.get('logit_mse_standard', 0.0):.6e} | {intermediate.get('logit_mse_player', 0.0):.6e} |",
+            f"| probability MSE vs reference | {intermediate.get('probability_mse_standard', 0.0):.6e} | {intermediate.get('probability_mse_player', 0.0):.6e} |",
+            f"| probability KL(reference || estimate) | {intermediate.get('probability_kl_standard_to_reference', 0.0):.6e} | {intermediate.get('probability_kl_player_to_reference', 0.0):.6e} |",
+            "",
+            "Attention 的完整 layer/length/window 结果位于 JSON 的 `decomposition.attention` 和 `case_scores.attention`。",
+        ])
+    else:
+        lines.extend(["", "Attention 分解：已通过 `--no-decomposition` 关闭。"])
+
+    lines.extend([
+        "",
+        "官方成绩只保留为独立历史字段，不参与本地 proxy 评分或时间换算。",
+    ])
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
@@ -1196,6 +1607,7 @@ def _archive_output(
             "runtime_limit_seconds": OFFICIAL_RUNTIME_LIMIT,
             "score_formula": "proxy gain=(MSE_STD-MSE_PLAYER)/MSE_STD per case; means are unweighted over actual captured cases",
             "runtime_measurement": "sum of elapsed six-API calls; wall_seconds is reported separately and neither is official time",
+            "error_source_decomposition": "candidate API outputs are reused in evaluator-only Linear W/A and Attention Q/K/V control arms; it does not alter proxy means or API call counts",
             "trend_validation": "same-cohort pairwise ordering against user-confirmed anchors; diagnostic-only",
         },
         "data_metadata": prepared.metadata,
@@ -1227,6 +1639,7 @@ def _write_archive_report(
         f"- case counts: `{linear_count} Linear + {attention_count} Attention` (all captured W/A by default)",
         f"- official trend audit: `{trend['status']}` ({trend['concordant_pairs']} concordant / {trend['inverted_pairs']} inverted / {trend['tied_pairs']} tied pairs)",
         "- trend audit is a same-cohort diagnostic only; it never changes a proxy score",
+        "- error-source decomposition is stored per candidate in JSON `decomposition`/`case_scores`; archive table remains score-only",
         "",
         "| Candidate | Status | Linear mean | Attention mean | Overall mean | API total(s) | API calls | Wall(s) | Official status |",
         "|---|---|---:|---:|---:|---:|---:|---:|---|",
@@ -1298,7 +1711,12 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         source = (ROOT / item["path"]).resolve()
         print(f"[{name}] evaluating {source}", flush=True)
         try:
-            result = evaluate_solution(source, prepared, args.algorithm_device)
+            result = evaluate_solution(
+                source,
+                prepared,
+                args.algorithm_device,
+                decomposition=args.decomposition,
+            )
             result["candidate"] = name
             result["official"] = {
                 "score": item.get("official_score"),
@@ -1360,6 +1778,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--capture-device", default="cuda" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--algorithm-device", default="cuda" if torch.cuda.is_available() else "cpu")
+    parser.add_argument(
+        "--no-decomposition",
+        dest="decomposition",
+        action="store_false",
+        help="disable evaluator-only W/A and Q/K/V error-source diagnostics for a fast smoke run",
+    )
+    parser.set_defaults(decomposition=True)
     parser.add_argument("--output", type=Path, default=ROOT / "artifacts" / "official_eval" / "archive.json")
     parser.add_argument("--report", type=Path, default=ROOT / "logs" / "official_eval" / "archive.md")
     return parser

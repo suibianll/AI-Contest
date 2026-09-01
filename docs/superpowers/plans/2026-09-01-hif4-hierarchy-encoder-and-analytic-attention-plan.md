@@ -50,6 +50,50 @@
 E0 产物是 `evaluator/official_eval.py`、`evaluator/nvfp4_sim.py`、测试和一份执行日志；旧
 `official-shape-v1` JSON/cache 保持 immutable，只能标为历史诊断。
 
+## E0.5. 把误差源直接写进评测结果（当前优化入口）
+
+**目的：** 主分数只回答“候选整体是否变好”，不能指导下一步改哪一侧。评测器必须在同一份
+真实 W/A、同一 calibration state 和同一动态输出上给出可复现的控制臂；这些控制臂只在
+evaluator 内重算，不改变六个 API 的调用图、主分数或官方时间代理。
+
+**Linear 四臂：**
+
+```text
+E00 = standard W + standard A
+E10 = candidate W + standard A
+E01 = standard W + candidate A
+E11 = candidate W + candidate A
+```
+
+每个 case 记录四个输出 MSE、W/A operand relative-MSE、W-only/A-only/Both gain，以及
+`interaction_gain=(E10+E01-E00-E11)/E00`。结果同时按 role、layer、shape、test length、split
+聚合；`case_scores.linear` 保留逐 case 定位信息。正 interaction 表示超加性互补，负值表示
+收益重叠或递减，不能把它误读为独立 W/A 增益。
+
+**Attention 六臂与中间量：**
+
+```text
+E000 = standard Q/K/V
+E100 = candidate Q only
+E010 = candidate K only
+E001 = candidate V only
+E110 = candidate Q+K
+E111 = candidate Q+K+V
+```
+
+每个 case 记录 Q/K/V/QK/Both 输出 MSE、QK 与 QKV interaction，并记录 logits MSE、softmax
+probability MSE 和 `KL(reference || estimate)`。结果按 layer、长度和 split 聚合，重点对比
+`10/128/512/1024` 长度桶，区分 logits、softmax 和 V/output 的误差传播。
+
+**当前实现与使用：** `evaluate_solution(..., decomposition=True)` 默认开启；CLI 的
+`--no-decomposition` 仅用于快速 smoke。JSON 新增 `decomposition.linear`、
+`decomposition.attention` 和 `diagnostic_config`，Markdown 报告新增 W/A/Q/K/V 控制臂表。
+没有额外候选 API 调用，主 `score` 字段保持原始未加权 full-real-W/A 定义。
+
+**决策顺序：** 先用固定 v86 Attention 做 Linear 四臂归因，再冻结 Linear 做 Attention 六臂
+归因；只有定位到具体 role/layer/length 的误差源后，才进入 L1–L4 或 Attention 独立实验。
+若 W-only、A-only 和 Both 的方向不一致，优先检查坐标变换/部署状态交互，不继续盲调参数。
+
 ## 0. 本计划替代什么
 
 旧活动计划
