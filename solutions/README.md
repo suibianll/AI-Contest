@@ -137,6 +137,17 @@ were deleted to keep the archive compact; the per-run JSON and execution logs re
 The selected-column BDLR direction is closed. The next work starts from v86, builds legal structural
 oracles, and then tests null-space shaping and subspace-embedded joint vector rounding.
 
+## External hif4 GPT-2 cross-check
+
+The upstream [youxilee/hif4](https://github.com/youxilee/hif4) `real_data_eval.py` was also run
+on the v84/v86/v140/v147 snapshots with one fixed 12-layer GPT-2 configuration
+(`amax6`, `seq=128`, `calib=2`, `test=2`, `config=current`). Its Linear/Attention means were
+`0.586733/0.4477`, `0.586733/0.4727`, `0.599617/0.4661`, and `0.599617/0.4713`, respectively.
+This is a diagnostic only: the script repeats a built-in synthetic text when short and obtains
+the standard baseline from candidate-private codec functions, so its ordering does not replace
+the canonical `proxy-v2` evaluator or official results. See the full
+[`external run log`](../logs/execution/2026-09-01-hif4-external-gpt2-v84-v86-v140-v147.md).
+
 \* The earlier v086 local `462.239 s` observation was also concurrent-load affected. The clean
 idle rerun is `299.302 s` API / `321.996 s` wall; see
 [`v086 idle rerun`](../artifacts/official_eval/v086-idle-rerun-20260901-official-shape-v1.json).

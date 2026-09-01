@@ -105,6 +105,27 @@ Q-only `-25.810`、K-only `-28.547`、V-only `0.016`、QK-only `0.389`、Both `0
 `paired_qk_coupling_likely`。这支持下一步继续拆分 Linear 的坐标/双侧编码和 Attention 的
 Q/K 配对，而不是围绕 Qwen 特有的 GQA/RoPE 参数继续调参。
 
+## 2.2 hif4 外部评测器复测（已完成）
+
+按用户要求，使用 [youxilee/hif4](https://github.com/youxilee/hif4) 的
+`real_data_eval.py` 对本地 v84/v86/v140/v147 快照做了统一的 GPT-2 12 层全层复测：
+`amax6 / seq128 / calib2 / test2 / config=current`。结果为：
+
+| 候选 | Linear q/k/v/o/fc/proj | Linear mean | Attention |
+|---|---|---:|---:|
+| v84 | 0.6221 / 0.6341 / 0.6133 / 0.5578 / 0.5558 / 0.5373 | 0.586733 | 0.4477 |
+| v86 | 0.6221 / 0.6341 / 0.6133 / 0.5578 / 0.5558 / 0.5373 | 0.586733 | 0.4727 |
+| v140 | 0.6630 / 0.7241 / 0.6218 / 0.5560 / 0.5107 / 0.5221 | 0.599617 | 0.4661 |
+| v147† | 0.6630 / 0.7241 / 0.6218 / 0.5560 / 0.5107 / 0.5221 | 0.599617 | 0.4713 |
+
+该脚本使用内置 synthetic text、重复不足 token，且标准基线来自候选私有 codec；因此它是
+跨模型结构探针，不是官方复刻。外部等权排序为 `v147 > v140 > v86 > v84`，仍与官方
+`v86 > v147 > v140` 不同；但 v84→v86 的“Linear 不变、Attention 上升”及 v140/v147
+的逐 role 分化提供了有用的结构归因。完整命令、SHA 和外部 `test_solution.py` 私有接口
+不兼容记录见 [`hif4 外部复测日志`](../logs/execution/2026-09-01-hif4-external-gpt2-v84-v86-v140-v147.md)。
+
+† v147 为当前归档含 A3 源码，官方提交 SHA 尚未确认。
+
 ## 3. 历史 v1 结果表（不可与 proxy-v2 混用）
 
 下表保留旧 `official-shape-v1` 的同机数字，仅用于审计此前的失真；当前 proxy-v2 分层 panel

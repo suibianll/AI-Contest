@@ -112,6 +112,14 @@ QKV、12×64 MHA、绝对位置编码和单一 GELU FFN 上评测，使用独立
 测试，不是官方分数；当前 v86/v147/v140 的 GPT-2 顺序为 `v140 > v147 > v86`，与官方
 `v86 > v147 > v140` 完全相反，详见 `docs/current-solution-status.md` 的跨模型小节。
 
+另外按要求直接运行了外部仓库 [youxilee/hif4](https://github.com/youxilee/hif4) 的
+`real_data_eval.py`，对 v84/v86/v140/v147 使用相同 GPT-2 12 层、`amax6 / seq128 /
+calib2 / test2 / current` 配置。其结果（Linear mean / Attention）依次为
+`v84 0.586733/0.4477`、`v86 0.586733/0.4727`、`v140 0.599617/0.4661`、
+`v147 0.599617/0.4713`；完整逐 role 表、源码 SHA 和限制见
+[`外部复测日志`](logs/execution/2026-09-01-hif4-external-gpt2-v84-v86-v140-v147.md)。
+该脚本的标准 codec 由候选私有实现提供，不能替换本地主评测器或官方趋势判断。
+
 计时同时保存：
 
 - `timing.api_total_seconds`：六个候选 API 调用耗时之和，是最接近赛事“量化函数执行时间”
