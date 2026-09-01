@@ -2,19 +2,22 @@
 
 > 审计日期：2026-09-01
 > 审计对象：根 [`solution.py`](../solution.py)，规范 LF SHA256
-> `4046BB3AC3B5B130DC59D81307D00863BAC759474D3A6E91D4B4520A4753CFB0`
+> `5837E765E478B1A16A5E3170ACE40FBADB670871E47C5EE2C8C748102A30478D`
 > 原则：源码、校准目标、部署解码和评测日志必须逐一对应；不能用旧审计文字替代源码证据。
 
-> **状态更正**：本文件中的旧根 v127/v132 描述属于审计历史。当前根为 v133；官方锚点 v86
+> **状态更正**：本文件中的旧根 v127/v132/v133 描述属于审计历史。当前根为 v134；官方锚点 v86
 > 的真实结果是 **`16744 / 222.7s`（新权重，通过）**。本地最近一次 gain+adyn2 运行有
 > 并发程序干扰，`365.818s` 不作为时间结论；已用可复现的 v133 根文件直接空闲重测为
-> `0.483610 / 0.834256 / 287.941s`，归档等价源码复测为 `291.275s`。
+> `0.483610 / 0.834256 / 287.941s`，归档等价源码复测为 `291.275s`。v134 在此基础上
+> 加入 L2 block output-supervised activation cross64，两次完整复测为
+> `0.5073195 / 0.8342565 / 289.042s` 与 `289.832s`。
 
 ## 0. 结论
 
-根目录当前是 v133（v106 Linear 路径 + 变长 PAWV 安全修复）：C1c structured rank-8、C1b structured gradient refresh×2、C1a structured proposal vectorization、v118 L6d structured block-circulant factor、L6c full `G_64` hierarchy coordinate sweep、L6b wide rank-4 cross-block factor、L6a rank-16 global-LRH、L5a block-local permutation、BOAT、expansive-FFN CAT balance、cross-fold
+根目录当前是 v134（v133 Linear 路径 + L2 输出监督 activation cross64）：C1c structured rank-8、C1b structured gradient refresh×2、C1a structured proposal vectorization、v118 L6d structured block-circulant factor、L6c full `G_64` hierarchy coordinate sweep、L6b wide rank-4 cross-block factor、L6a rank-16 global-LRH、L5a block-local permutation、BOAT、expansive-FFN CAT balance、cross-fold
 Weight-HSDQ、Gram-hierarchy Activation-HSDQ、Gram-gated Global Activation-LRH、L4a
-final deployed-Gram row gate、L4b final-Gram GALS、B1 GQRB 和 B2 PAWV diag-only。Qwen
+final deployed-Gram row gate、L4b final-Gram GALS、B1 GQRB 和 B2 PAWV diag-only。v134 additionally
+stores block `Q(W)^T W`/`Q(W)^T W_t` cross statistics for output-supervised activation refinement. Qwen
 固定 cache 的最高已完成 full-layer panel 为 `295.820229`，Linear mean 为
 `0.5096493233`，Attention mean 为 `0.8420394885`，API 时间 `2323.911178s`（探索阶段
 记录，最终仍需 C1 压缩）。

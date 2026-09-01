@@ -74,11 +74,15 @@ directories follow the same immutable naming rule as the historical archive:
 | v130 | `20260901_v130_output-weight_scoreNA_timeNA` | 0.471837 | 0.836579 | 295.437 s | output W parent |
 | v131 | `20260901_v131_output-weight-qwgram_scoreNA_timeNA` | 0.473131 | 0.836579 | 294.835 s | Q(W)-Gram parent |
 | v132 | `20260901_v132_output-weight-qwgram-dynsweep2_scoreNA_timeNA` | 0.473131 | 0.834256 | 290.936 s | historical parent; 2 idle runs API<300 |
-| v133 | `20260901_v133_output-weight-qwgram-gain_scoreNA_timeNA` | **0.483610** | **0.834256** | **287.941 s** | **active root; direct idle rerun API<300** |
+| v133 | `20260901_v133_output-weight-qwgram-gain_scoreNA_timeNA` | 0.483610 | 0.834256 | 287.941 s | historical parent |
+| v134 | `20260901_v134_linear-output-activation-cross64_scoreNA_timeNA` | **0.507320** | **0.834256** | **289.042/289.832 s** | **active root; two identical idle reruns, API<300** |
 
 \* The later temporary gain+adyn2 run reported `365.818 s`, but the machine was concurrently busy;
 its timing is excluded from runtime ranking. The persisted v133 archive was rerun idle at `291.275 s`;
-the active root file was then rerun directly at `287.941 s`.
+the active root file was then rerun directly at `287.941 s`.  v134 adds the
+output-supervised activation cross term; its two complete runs are recorded in
+[`v134 first JSON`](../artifacts/official_eval/v134-linear-output-activation-cross64-official-shape-v1.json)
+and [`v134 idle rerun JSON`](../artifacts/official_eval/v134-linear-output-activation-cross64-rerun2-official-shape-v1.json).
 
 \* The earlier v086 local `462.239 s` observation was also concurrent-load affected. The clean
 idle rerun is `299.302 s` API / `321.996 s` wall; see

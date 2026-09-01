@@ -16,6 +16,9 @@ revised-weight official result so far: `+227` score and `29.863s` faster than v8
 The later v128 fixed-attn-budget candidate was confirmed by the user to time out on the
 official evaluator (`>300s`; no official score returned).
 The v129 fixed-attn-budget-sweep1 follow-up was also confirmed to time out (`>300s`).
+The active root is now v134: block output-supervised activation cross terms raise the
+local Linear mean to `0.5073195` while two idle full-panel runs remain under the local
+API proxy (`289.042/289.832s`); no official result has been registered yet.
 
 Capture the pinned public data pack once:
 

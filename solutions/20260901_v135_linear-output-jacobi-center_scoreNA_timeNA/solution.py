@@ -65,6 +65,11 @@ _OUTPUT_WEIGHT_HSDQ_MIN_GAIN = 1.0e-5
 _ACT_HSDQ_BLOCKS = 128
 _ACT_HSDQ_SWEEPS = 2
 _ACT_GRAM_MAX_CHANNELS = 8192
+# L3: initialize the output-supervised activation search with one diagonal
+# Newton/Jacobi step.  This uses the already cached block H/D statistics and
+# adds no state or matrix inverse; the regular coordinate sweep still performs
+# the final legal-code selection.
+_ACT_OUTPUT_JACOBI_BLEND = 1.0
 
 _ATTN_OFFSETS = (-2, -1, 0, 1, 2)
 _ATTN_ROTATION_SIZES = (0, 16, 32, 64)
@@ -890,6 +895,24 @@ def _refine_activation(
         cross_work = cross.index_select(0, block_ids)
     levels = torch.as_tensor(_SIGNED_LEVELS, device=dense.device)
     diagonal = h_work.diagonal(dim1=-2, dim2=-1).clamp_min(_EPS)
+    if output_mode and target_work is not None and cross_work is not None:
+        # A diagonal Newton step moves the legal-code search toward the
+        # continuous minimizer of ||q Wq^T - a W^T|| on each 64-d block.
+        # Quantize the warm start before the coordinate loop so its residual
+        # and subsequent gradient updates remain consistent with a legal q.
+        gradient = torch.einsum("nij,nj->ni", h_work, q_work) - torch.bmm(
+            cross_work, target_work.unsqueeze(-1)
+        ).squeeze(-1)
+        center = q_work - gradient / diagonal
+        blend = float(_ACT_OUTPUT_JACOBI_BLEND)
+        if blend != 1.0:
+            center = q_work + blend * (center - q_work)
+        q_work = (
+            torch.round(center * 4.0 / den_work.clamp_min(_EPS))
+            .clamp(-7.0, 7.0)
+            * den_work
+            / 4.0
+        )
     for _ in range(max(1, int(sweeps))):
         gradient = torch.einsum("nij,nj->ni", h_work, q_work)
         if output_mode and target_work is not None and cross_work is not None:

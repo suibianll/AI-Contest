@@ -65,6 +65,9 @@ _OUTPUT_WEIGHT_HSDQ_MIN_GAIN = 1.0e-5
 _ACT_HSDQ_BLOCKS = 128
 _ACT_HSDQ_SWEEPS = 2
 _ACT_GRAM_MAX_CHANNELS = 8192
+# L3: diagonal Newton/Jacobi warm start, tested only on online activations so
+# the cross-fold weight calibration remains identical to the v134 parent.
+_ACT_OUTPUT_JACOBI_BLEND = 1.0
 
 _ATTN_OFFSETS = (-2, -1, 0, 1, 2)
 _ATTN_ROTATION_SIZES = (0, 16, 32, 64)
@@ -838,6 +841,7 @@ def _refine_activation(
     sweeps: int = _ACT_HSDQ_SWEEPS,
     output_cross64: torch.Tensor | None = None,
     output_target: torch.Tensor | None = None,
+    output_jacobi: bool = False,
 ) -> dict[str, torch.Tensor]:
     if gram64 is None or dense.ndim != 2:
         return parent
@@ -890,6 +894,25 @@ def _refine_activation(
         cross_work = cross.index_select(0, block_ids)
     levels = torch.as_tensor(_SIGNED_LEVELS, device=dense.device)
     diagonal = h_work.diagonal(dim1=-2, dim2=-1).clamp_min(_EPS)
+    if (
+        output_mode
+        and output_jacobi
+        and target_work is not None
+        and cross_work is not None
+    ):
+        gradient = torch.einsum("nij,nj->ni", h_work, q_work) - torch.bmm(
+            cross_work, target_work.unsqueeze(-1)
+        ).squeeze(-1)
+        center = q_work - gradient / diagonal
+        blend = float(_ACT_OUTPUT_JACOBI_BLEND)
+        if blend != 1.0:
+            center = q_work + blend * (center - q_work)
+        q_work = (
+            torch.round(center * 4.0 / den_work.clamp_min(_EPS))
+            .clamp(-7.0, 7.0)
+            * den_work
+            / 4.0
+        )
     for _ in range(max(1, int(sweeps))):
         gradient = torch.einsum("nij,nj->ni", h_work, q_work)
         if output_mode and target_work is not None and cross_work is not None:
@@ -989,6 +1012,7 @@ def hif4_calibration_and_quantize_weight(
             gram_tensor,
             output_cross64=output_cross_tensor,
             output_target=sample,
+            output_jacobi=False,
         )
         deployed_calibration.append(
             _dequantize_hif4(activation_params).to(torch.float32)
@@ -1064,6 +1088,7 @@ def hif4_dynamic_quantize_activation(
         gram_tensor,
         output_cross64=output_cross_tensor,
         output_target=teacher_dense,
+        output_jacobi=True,
     )
 
 

@@ -16,9 +16,10 @@
 > v129 fixed-attn-budget-sweep1 虽有本地 API `248.363s`，也已由用户确认官方 timeout
 > （`>300s`，分数未返回）；本地低于 300 秒不能推出官方通过。
 
-> **活动根更新（2026-09-01）**：当前根已提升为 v133（output gain + Attention dynamic
-> sweep2）；根文件直接空闲重测为 Linear `0.483610`、Attention `0.834256`、API
-> `287.941s`（`<300s`），归档等价源码复测为 `291.275s`。
+> **活动根更新（2026-09-01）**：当前根已提升为 v134（output gain + L2 block
+> output-supervised activation cross64 + Attention dynamic sweep2）；归档副本两次完整
+> 空闲复测均为 Linear `0.5073195`、Attention `0.8342565`，API `289.042/289.832s`
+>（均低于本地 `300s` 代理）。
 
 > 整理日期：2026-08-31
 > 数据来源：`solutions/README.md`（v000–v125）、`docs/current-solution-status.md`、`docs/archive-implementation-audit.md`、`logs/execution/2026-08-30-e0g-scale-oracle.md`、`logs/execution/2026-08-30-e0g-multimodel-dashboard.md`、`logs/execution/2026-08-30-a7-quant-weight-gram.md`、`logs/execution/2026-08-30-l1-full-hierarchy-lrh.md`、`logs/execution/2026-08-31-v110-l4b-gals-final-gated-qwen-full.md`、`logs/execution/2026-08-31-v111-l5a-joint-permutation-qwen-full.md`、`logs/execution/2026-08-31-l5d-external-component-audit.md`、`logs/execution/2026-08-31-l5e-linear-ceiling-v111.md`、`logs/execution/2026-08-31-v115-l6a-rank16-qwen-full.md`、`logs/execution/2026-08-31-v116-l6b-wide-rank4-qwen-full.md`、`logs/execution/2026-08-31-v117-l6c-g64-hierarchy-qwen-full.md`、`logs/execution/2026-08-31-v118-l6d-structured-factor-qwen-full.md`、`logs/execution/2026-08-31-l6e-crossblock-checkpoint.md`、`logs/execution/2026-08-31-v119-c1a-structured-vectorized-qwen-full.md`、`logs/execution/2026-08-31-c1b-structured-refresh-stratified.md`、`logs/execution/2026-08-31-c1b-structured-refresh2-stratified.md`、`logs/execution/2026-08-31-v121-c1b-structured-refresh2-qwen-full.md`、`logs/execution/2026-08-31-v124-c1c-rank8-screen.md`、`logs/execution/2026-08-31-v124-c1c-rank8-qwen-full.md`、`logs/execution/2026-08-31-v125-c1c-block8-qwen-full.md`、`logs/execution/2026-08-31-v107-attention-contract-audit.md`、`logs/execution/2026-08-31-c1b-structured-refresh-synthetic.md`。
@@ -28,8 +29,9 @@
 
 ## 1. 当前根：算法构成与效果
 
-下方历史算法构成段仍以 v126 为基准；活动根已更新为 v133，新增 output gain，完整结果见
-[`当前状态`](current-solution-status.md) 与 [`v133 重测 JSON`](../artifacts/official_eval/v133-gain-adyn2-equivalent-idle-rerun-20260901-official-shape-v1.json)。
+下方历史算法构成段仍以 v126 为基准；活动根已更新为 v134，新增 output gain 与 L2
+输出监督 activation cross64，完整结果见 [`当前状态`](current-solution-status.md) 与
+[`v134 首次 JSON`](../artifacts/official_eval/v134-linear-output-activation-cross64-official-shape-v1.json)。
 
 | 组件 | 内容 |
 |---|---|
@@ -43,6 +45,7 @@
 | **C1 proposal path** | C1a 批量独立 row/block 的 15-level proposal；C1b block refresh×2；C1c rank 4→8、`max_blocks=4→8`；coordinate 顺序与 exact `G_q` gate 不变；v125 panel `295.847849` |
 | **L4a final deployed-Gram row gate** | 仅 expansive `rows > channels` 且 `channels <=1024`；v107 parent 与 final-Gram 候选用完整 `G_q` 逐行比较，v109 精度正向 |
 | **Attention 输出感知 shortlist** | reciprocal RMS/K-centering/共享 Hadamard + B1 GQRB 2×2/4×4 group-local mixing；B2 PAWV 用 attention probability 的 token-row 对角 Hessian 做 V refinement；V 保持独立合法 HiF4 编码 |
+| **L2 Linear 输出监督 activation cross64（v134）** | 校准阶段缓存 `Q(W)^T W` 与 `Q(W)^T W_t` 的连续 64×64 block；在线以 `Hq-Da` 作为激活梯度，并用 batched block matmul 避免完整 channel Gram |
 
 **实测**（Qwen2.5-0.5B 全 24 层，`seq=128/calib=2/test=4/amax6`，缓存只读）：
 
