@@ -34,13 +34,18 @@ change as the cause.
 The v134 block output-supervised activation cross terms raise the local Linear mean to
 `0.5073195`, but v130's official timeout shows that local API seconds are not a safe
 runtime proxy. The root file still contains the v140 experiment, but its local Linear gain over
-v138 is only `0.000035` and it has no official result. It is no longer treated as the best
-candidate. Once synchronized, the 17816 source becomes the next Linear implementation baseline.
+v138 is only `0.000035`; the user reported **`15838 / 207s`** officially. It passed the time
+limit but is rejected because it is below v86, and is no longer treated as the best candidate.
+Once synchronized, the 17816 source becomes the next Linear implementation baseline.
 The user has now reported v138's official result as **`15715 / 208s` (pass)**; its local
 proxy values remain separate from that official result. v86 remains the best timed official
 source currently present in this repository; the reported 17816 source and runtime are not yet present.
 The user has now also reported v139's official result as **`15716 / 202s` (pass)**. Both v138
-and v139 remain roughly 1,029 points below v86, so the v138-v145 lineage is closed.
+and v139 remain roughly 1,029 points below v86, so the v138-v145 lineage is closed. The existing
+fixed-A comparison v138/v139/v140 gives official deltas `+1/+123`, while v84/v86 keep Linear
+identical and gain `+227` from Attention. Therefore later Linear work freezes v86 Attention;
+public local means cannot be converted into official Linear/Attention weights. See
+[`the attribution record`](docs/evaluation-attribution-2026-09-01.md).
 The v141-v145 rank-4 selected-column BDLR trials (anchor freeze, dynamic-only, and two damping
 values) returned Linear means `0.281760/0.282559/0.361154/0.506418/0.506256`, all below v140;
 that direction is closed. Their source snapshots were deleted to keep the archive compact; per-run

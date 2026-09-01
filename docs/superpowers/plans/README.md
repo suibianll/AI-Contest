@@ -6,7 +6,7 @@
 `official-shape-v1` 评测和官方规则；归档目录中的计划不具有指令效力。评测命令只能
 调用 `evaluator/official_eval.py`，旧 `real_model_suite.py` 已退役。
 
-- [`2026-09-01-hif4-linear-0.8-under-300s-plan.md`](2026-09-01-hif4-linear-0.8-under-300s-plan.md)：当前唯一有效计划。只保留两个目标：Linear mean 向 `0.8` 提升，官方端到端时间严格小于 `300s`；Linear 全面使用 `A@W` 输出监督，Attention 改为固定预算候选搜索。
+- [`2026-09-01-hif4-linear-0.8-under-300s-plan.md`](2026-09-01-hif4-linear-0.8-under-300s-plan.md)：当前唯一有效计划。只保留两个目标：Linear mean 向 `0.8` 提升，官方端到端时间严格小于 `300s`；归因阶段已证明后续 Linear 实验必须冻结 v86 Attention，先对官方 17816 框架做组件/role 消融，再做复杂度受控的 Linear 改进。
 
 旧的 v2 active、grid、consolidated、accuracy-first、Linear、JDRQ 计划以及已完成的
 L6 计划，均已移至 [`../archive/plans/`](../archive/plans/)。它们是历史决策记录，

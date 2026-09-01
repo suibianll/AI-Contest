@@ -69,6 +69,7 @@ silently assigned a score.
 | v131 | `20260901_v131_output-weight-qwgram_timeout` | — | >300 s | **timeout (official, user confirmed)** |
 | v138 | `20260901_v138_attention-static-v86-budget_scoreNA_timeNA` | **15715** | **208 s** | **pass (official, user reported)** |
 | v139 | `20260901_v139_linear-output-aware-gain_scoreNA_timeNA` | **15716** | **202 s** | **pass (official, user reported)** |
+| v140 | `20260901_v140_linear-roab-pair_rejected` | **15838** | **207 s** | **pass, but rejected: below v86 and 17816** |
 
 ## 2026-09-01 official-shape-v1 local candidates
 
@@ -89,7 +90,7 @@ directories follow the same immutable naming rule as the historical archive:
 | v135–v137 | three directories explicitly suffixed `_rejected` | 0.500132–0.507163 | 0.834256 | 287.816–296.755 s | **rejected Jacobi/sweep variants** |
 | v138 | `20260901_v138_attention-static-v86-budget_scoreNA_timeNA` | **0.507320** | 0.715942 | **192.996/187.935 s** | **official 15715/208 s pass; time parent** |
 | v139 | `20260901_v139_linear-output-aware-gain_scoreNA_timeNA` | 0.507278 | 0.715942 | 193.389 s | **official 15716/202 s pass; retained official-result archive** |
-| v140 | `20260901_v140_linear-roab-pair_rejected` | 0.507355 | 0.715942 | 205.365 s | **rejected; local-only `+0.000035`** |
+| v140 | `20260901_v140_linear-roab-pair_rejected` | 0.507355 | 0.715942 | 205.365 s | **rejected; official 15838/207 s, local-only gain `+0.000035`** |
 | v141–v145 (BDLR family) | — (source snapshots deleted; logs/artifacts retained) | 0.281760–0.506256 | 0.715942 | 204.681–211.460 s | **rejected family; selected-column BDLR closed** |
 
 \* The later temporary gain+adyn2 run reported `365.818 s`, but the machine was concurrently busy;
@@ -101,12 +102,14 @@ and [`v134 idle rerun JSON`](../artifacts/official_eval/v134-linear-output-activ
 
 The root file currently contains v140 for audit, but the next implementation baseline is the exact
 v86 source. v140 keeps the v138 reduced Attention path and adds the ROAB-P2 reciprocal pair
-transform to Linear; its local gain is only `0.000035` and has no official evidence. v138 disables
+transform to Linear; its local gain is only `0.000035`, and its official result is `15838 / 207 s`
+(below v86), so it is rejected. v138 disables
 the per-call Attention Gram refinement and shrinks the static candidate set. Two v138 runs are recorded in
 [`v138 first JSON`](../artifacts/official_eval/v138-attention-static-v86-budget-official-shape-v1.json)
 and [`v138 idle rerun JSON`](../artifacts/official_eval/v138-attention-static-v86-budget-rerun2-official-shape-v1.json).
-The v138 official result was reported as **`15715 / 208 s` (pass)** and v139 as **`15716 / 202 s`
-(pass)**. The v140 full run is recorded in [`v140 JSON`](../artifacts/official_eval/v140-linear-roab-pair-official-shape-v1.json);
+The v138 official result was reported as **`15715 / 208 s` (pass)**, v139 as **`15716 / 202 s` (pass)**,
+and v140 as **`15838 / 207 s` (pass but rejected as inferior)**. The v140 full run is recorded in
+[`v140 JSON`](../artifacts/official_eval/v140-linear-roab-pair-official-shape-v1.json);
 it gives Linear `0.5073546371`, unchanged Attention `0.7159419612`, and API `205.365 s`.
 
 The BDLR-JAQ trials v141–v145 are recorded as a rejected family summary. Their local Linear means
