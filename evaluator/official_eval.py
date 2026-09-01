@@ -1052,6 +1052,11 @@ def evaluate_solution(
     solution = load_solution(path)
     label = path.parent.name
     device = torch.device(algorithm_device_name)
+    # Candidate APIs and evaluator control-arm matmuls use the same selected
+    # device when CUDA is available.  The captured pack remains CPU-resident;
+    # only the current case (and cached per-role weights) is moved, so the
+    # diagnostics do not require duplicating the multi-GB cache on the GPU.
+    score_device = device if device.type == "cuda" else torch.device("cpu")
     if device.type == "cuda":
         torch.cuda.synchronize(device)
     wall_start = time.perf_counter()
@@ -1114,6 +1119,7 @@ def evaluate_solution(
     linear_details: list[dict[str, Any]] = []
     attention_details: list[dict[str, Any]] = []
     standard_weight_cache: dict[tuple[int, str], tuple[torch.Tensor, torch.Tensor]] = {}
+    score_weight_cache: dict[tuple[int, str], tuple[torch.Tensor, torch.Tensor]] = {}
     print(f"[{label}] Linear scoring: {len(pack.linear_cases)} cases", flush=True)
     for case in pack.linear_cases:
         state, weight_params = weight_states[(case.layer, case.role)]
@@ -1136,12 +1142,19 @@ def evaluate_solution(
         standard_activation = decode_standard_hif4(encode_standard_hif4(ref_activation)).to(torch.float32)
         player_activation = dequantize_hif4(_cpu_params(activation_params), ref_activation.shape).to(torch.float32)
         player_weight = dequantize_hif4(weight_params, ref_weight.shape).to(torch.float32)
-        reference = ref_activation @ ref_weight.T
-        standard = standard_activation @ standard_weight.T
-        player = player_activation @ player_weight.T
+        if cache_key not in score_weight_cache:
+            score_weight_cache[cache_key] = (ref_weight.to(score_device), standard_weight.to(score_device))
+        score_ref_weight, score_standard_weight = score_weight_cache[cache_key]
+        score_ref_activation = ref_activation.to(score_device)
+        score_standard_activation = standard_activation.to(score_device)
+        score_player_activation = player_activation.to(score_device)
+        score_player_weight = player_weight.to(score_device)
+        reference = score_ref_activation @ score_ref_weight.T
+        standard = score_standard_activation @ score_standard_weight.T
+        player = score_player_activation @ score_player_weight.T
         if decomposition:
-            weight_only = standard_activation @ player_weight.T
-            activation_only = player_activation @ standard_weight.T
+            weight_only = score_standard_activation @ score_player_weight.T
+            activation_only = score_player_activation @ score_standard_weight.T
             details = _linear_error_source_details(
                 standard,
                 weight_only,
@@ -1209,27 +1222,36 @@ def evaluate_solution(
         player_q = dequantize_hif4(_cpu_params(q_params), ref_q.shape).to(torch.float32)
         player_k = dequantize_hif4(_cpu_params(k_params), ref_k.shape).to(torch.float32)
         player_v = dequantize_hif4(_cpu_params(v_params), ref_v.shape).to(torch.float32)
+        score_ref_q = ref_q.to(score_device)
+        score_ref_k = ref_k.to(score_device)
+        score_ref_v = ref_v.to(score_device)
+        score_std_q = std_q.to(score_device)
+        score_std_k = std_k.to(score_device)
+        score_std_v = std_v.to(score_device)
+        score_player_q = player_q.to(score_device)
+        score_player_k = player_k.to(score_device)
+        score_player_v = player_v.to(score_device)
         if decomposition:
             reference, reference_logits, reference_probabilities = _attention_trace(
-                ref_q[None], ref_k[None], ref_v[None], pack.q_heads, pack.kv_heads, pack.head_dim
+                score_ref_q[None], score_ref_k[None], score_ref_v[None], pack.q_heads, pack.kv_heads, pack.head_dim
             )
             standard, standard_logits, standard_probabilities = _attention_trace(
-                std_q[None], std_k[None], std_v[None], pack.q_heads, pack.kv_heads, pack.head_dim
+                score_std_q[None], score_std_k[None], score_std_v[None], pack.q_heads, pack.kv_heads, pack.head_dim
             )
             player, player_logits, player_probabilities = _attention_trace(
-                player_q[None], player_k[None], player_v[None], pack.q_heads, pack.kv_heads, pack.head_dim
+                score_player_q[None], score_player_k[None], score_player_v[None], pack.q_heads, pack.kv_heads, pack.head_dim
             )
             q_only = _attention(
-                player_q[None], std_k[None], std_v[None], pack.q_heads, pack.kv_heads, pack.head_dim
+                score_player_q[None], score_std_k[None], score_std_v[None], pack.q_heads, pack.kv_heads, pack.head_dim
             )
             k_only = _attention(
-                std_q[None], player_k[None], std_v[None], pack.q_heads, pack.kv_heads, pack.head_dim
+                score_std_q[None], score_player_k[None], score_std_v[None], pack.q_heads, pack.kv_heads, pack.head_dim
             )
             v_only = _attention(
-                std_q[None], std_k[None], player_v[None], pack.q_heads, pack.kv_heads, pack.head_dim
+                score_std_q[None], score_std_k[None], score_player_v[None], pack.q_heads, pack.kv_heads, pack.head_dim
             )
             qk_only = _attention(
-                player_q[None], player_k[None], std_v[None], pack.q_heads, pack.kv_heads, pack.head_dim
+                score_player_q[None], score_player_k[None], score_std_v[None], pack.q_heads, pack.kv_heads, pack.head_dim
             )
             details = _attention_error_source_details(
                 standard,
@@ -1248,13 +1270,13 @@ def evaluate_solution(
             )
         else:
             reference = _attention(
-                ref_q[None], ref_k[None], ref_v[None], pack.q_heads, pack.kv_heads, pack.head_dim
+                score_ref_q[None], score_ref_k[None], score_ref_v[None], pack.q_heads, pack.kv_heads, pack.head_dim
             )
             standard = _attention(
-                std_q[None], std_k[None], std_v[None], pack.q_heads, pack.kv_heads, pack.head_dim
+                score_std_q[None], score_std_k[None], score_std_v[None], pack.q_heads, pack.kv_heads, pack.head_dim
             )
             player = _attention(
-                player_q[None], player_k[None], player_v[None], pack.q_heads, pack.kv_heads, pack.head_dim
+                score_player_q[None], score_player_k[None], score_player_v[None], pack.q_heads, pack.kv_heads, pack.head_dim
             )
             details = _score_details(standard, player, reference)
         details.update({
