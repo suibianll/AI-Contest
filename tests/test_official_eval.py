@@ -180,6 +180,7 @@ def test_linear_decomposition_reports_operand_and_interaction_sources() -> None:
     summary = _linear_decomposition_summary([details])
     assert summary["case_count"] == 1
     assert summary["gain"]["w_only"] == details["gain_w_only"]
+    assert summary["interpretation"] == "activation_dominant"
 
 
 def test_attention_decomposition_summary_contains_intermediate_sources() -> None:
@@ -207,6 +208,7 @@ def test_attention_decomposition_summary_contains_intermediate_sources() -> None
     summary = _attention_decomposition_summary([item])
     assert summary["gain"]["qk_interaction"] == 0.05
     assert summary["intermediate"]["probability_mse_player"] == 0.005
+    assert summary["interpretation"] == "qk_dominant"
 
 
 def test_decomposition_is_enabled_by_default_and_can_be_disabled() -> None:

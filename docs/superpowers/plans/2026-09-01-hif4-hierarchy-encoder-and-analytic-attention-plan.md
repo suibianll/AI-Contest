@@ -69,7 +69,8 @@ E11 = candidate W + candidate A
 每个 case 记录四个输出 MSE、W/A operand relative-MSE、W-only/A-only/Both gain，以及
 `interaction_gain=(E10+E01-E00-E11)/E00`。结果同时按 role、layer、shape、test length、split
 聚合；`case_scores.linear` 保留逐 case 定位信息。正 interaction 表示超加性互补，负值表示
-收益重叠或递减，不能把它误读为独立 W/A 增益。
+收益重叠或递减，不能把它误读为独立 W/A 增益；若两侧单独都恶化而 Both 改善，结果标为
+`paired_coordinate_coupling_likely`，应优先优化等价变换与双侧配对。
 
 **Attention 六臂与中间量：**
 
@@ -84,7 +85,8 @@ E111 = candidate Q+K+V
 
 每个 case 记录 Q/K/V/QK/Both 输出 MSE、QK 与 QKV interaction，并记录 logits MSE、softmax
 probability MSE 和 `KL(reference || estimate)`。结果按 layer、长度和 split 聚合，重点对比
-`10/128/512/1024` 长度桶，区分 logits、softmax 和 V/output 的误差传播。
+`10/128/512/1024` 长度桶，区分 logits、softmax 和 V/output 的误差传播；若 Q/K 单独恶化而
+QK 改善，结果标为 `paired_qk_coupling_likely`，不把单侧控制臂当作独立可部署算法。
 
 **当前实现与使用：** `evaluate_solution(..., decomposition=True)` 默认开启；CLI 的
 `--no-decomposition` 仅用于快速 smoke。JSON 新增 `decomposition.linear`、

@@ -67,6 +67,14 @@ E0 修复记录：旧 v1 的 E4M3 scale 忽略 subnormal、窗口集中在少数
 反转；因此该问题被记录为 `inversion_detected`，不得再把 proxy 分数当晋级依据；现已取消比例与
 case 上限，下一次按固定分层真实 W/A panel 重新评测；完整笛卡尔集只作为显式 stress，不用于快速迭代。
 
+2026-09-01 的四版本分层 panel 复测（v84/v86/v140/v147）记录在
+[`proxy-v2-stratified-trend-v84-v86-v140-v147.md`](../logs/execution/2026-09-01-proxy-v2-stratified-trend-v84-v86-v140-v147.md)：
+v84→v86 与官方同向，但四个官方锚点 pairwise 只有 3/6 同向、3/6 反转，整体状态仍为
+`inversion_detected`。v140/v147 的本地 Linear 分数比 v86 高约 `0.122`，而官方分数反而低
+`906/165`；这项反转集中在 Linear 耦合坐标变换，不能用本地 overall_mean 晋级。v84/v86 的
+Attention 变化与官方方向一致；Q/K 单侧控制恶化而 QK 配对改善，V 基本中性，说明 Attention
+应继续按 Q/K 配对和 logits/softmax 归因。
+
 ## 3. 历史 v1 结果表（不可与 proxy-v2 混用）
 
 下表保留旧 `official-shape-v1` 的同机数字，仅用于审计此前的失真；当前 proxy-v2 分层 panel

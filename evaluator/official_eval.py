@@ -1014,7 +1014,7 @@ def _mean_metric(items: Sequence[Mapping[str, Any]], key: str) -> float:
 
 
 def _linear_decomposition_summary(items: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
-    return {
+    summary = {
         "case_count": len(items),
         "mse": {
             "standard": _mean_metric(items, "mse_standard"),
@@ -1035,10 +1035,20 @@ def _linear_decomposition_summary(items: Sequence[Mapping[str, Any]]) -> dict[st
             "standard_activation": _mean_metric(items, "standard_activation_relative_mse"),
         },
     }
+    gains = summary["gain"]
+    if gains["w_only"] < 0.0 and gains["a_only"] < 0.0 and gains["both"] > 0.0:
+        summary["interpretation"] = "paired_coordinate_coupling_likely"
+    elif gains["w_only"] > gains["a_only"]:
+        summary["interpretation"] = "weight_dominant"
+    elif gains["a_only"] > gains["w_only"]:
+        summary["interpretation"] = "activation_dominant"
+    else:
+        summary["interpretation"] = "mixed_or_neutral"
+    return summary
 
 
 def _attention_decomposition_summary(items: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
-    return {
+    summary = {
         "case_count": len(items),
         "mse": {
             "standard": _mean_metric(items, "mse_standard"),
@@ -1070,6 +1080,16 @@ def _attention_decomposition_summary(items: Sequence[Mapping[str, Any]]) -> dict
             ),
         },
     }
+    gains = summary["gain"]
+    if gains["q_only"] < 0.0 and gains["k_only"] < 0.0 and gains["qk_only"] > 0.0:
+        summary["interpretation"] = "paired_qk_coupling_likely"
+    elif gains["qk_only"] > gains["v_only"]:
+        summary["interpretation"] = "qk_dominant"
+    elif gains["v_only"] > max(gains["q_only"], gains["k_only"]):
+        summary["interpretation"] = "v_dominant"
+    else:
+        summary["interpretation"] = "mixed_or_neutral"
+    return summary
 
 
 def _group_summary(
@@ -1522,6 +1542,7 @@ def _write_report(path: Path, result: Mapping[str, Any], pack: PreparedPack) -> 
             )
         lines.extend([
             "",
+            f"Linear overall interpretation: `{linear_decomposition.get('overall', {}).get('interpretation', 'unknown')}`.",
             "Linear 的完整 layer/role/window 结果位于 JSON 的 `decomposition.linear` 和 `case_scores.linear`；优先查看 role 与 shape 行，再定位对应 layer/case。",
         ])
     else:
@@ -1562,6 +1583,7 @@ def _write_report(path: Path, result: Mapping[str, Any], pack: PreparedPack) -> 
             f"| probability MSE vs reference | {intermediate.get('probability_mse_standard', 0.0):.6e} | {intermediate.get('probability_mse_player', 0.0):.6e} |",
             f"| probability KL(reference || estimate) | {intermediate.get('probability_kl_standard_to_reference', 0.0):.6e} | {intermediate.get('probability_kl_player_to_reference', 0.0):.6e} |",
             "",
+            f"Attention overall interpretation: `{attention_decomposition.get('overall', {}).get('interpretation', 'unknown')}`.",
             "Attention 的完整 layer/length/window 结果位于 JSON 的 `decomposition.attention` 和 `case_scores.attention`。",
         ])
     else:
@@ -1728,8 +1750,49 @@ def _write_archive_report(
             f"{linear_mean} | {attention_mean} | {overall_mean} | {api_total} | {api_calls} | {wall} | "
             f"{result.get('official', {}).get('status', '')} |"
         )
+    diagnostic_results = [
+        result for result in results
+        if result.get("status") == "ok"
+        and result.get("decomposition", {}).get("linear", {}).get("enabled")
+        and result.get("decomposition", {}).get("attention", {}).get("enabled")
+    ]
+    if diagnostic_results:
+        lines.extend([
+            "",
+            "## Error-source overall (evaluator-only)",
+            "",
+            "| Candidate | Linear W-only | Linear A-only | Linear Both | Linear interaction | Attention QK-only | Attention V-only | Attention Both |",
+            "|---|---:|---:|---:|---:|---:|---:|---:|",
+        ])
+        for result in diagnostic_results:
+            linear = result["decomposition"]["linear"]["overall"]["gain"]
+            attention = result["decomposition"]["attention"]["overall"]["gain"]
+            lines.append(
+                f"| {result['candidate']} | {linear['w_only']:.6f} | {linear['a_only']:.6f} | "
+                f"{linear['both']:.6f} | {linear['interaction']:.6f} | {attention['qk_only']:.6f} | "
+                f"{attention['v_only']:.6f} | {attention['both']:.6f} |"
+            )
+        lines.extend([
+            "",
+            "逐 role/layer/shape/length 细分仍位于各候选 JSON 的 `decomposition` 字段。",
+        ])
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def _write_run_report(
+    path: Path,
+    data_source: str,
+    capture_seconds: float,
+    results: Sequence[Mapping[str, Any]],
+    prepared: PreparedPack,
+    archive: bool,
+) -> None:
+    """Write detailed diagnostics for a single run and compact archive output otherwise."""
+    if not archive and len(results) == 1 and results[0].get("status") == "ok":
+        _write_report(path, results[0], prepared)
+    else:
+        _write_archive_report(path, data_source, capture_seconds, results, prepared)
 
 
 def run(args: argparse.Namespace) -> dict[str, Any]:
@@ -1817,11 +1880,11 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         # inspectable if a process is interrupted.
         _write_json(args.output, _archive_output(data_source, capture_seconds, cache_path, prepared, results))
         if args.report:
-            _write_archive_report(args.report, data_source, capture_seconds, results, prepared)
+            _write_run_report(args.report, data_source, capture_seconds, results, prepared, args.archive)
     output = _archive_output(data_source, capture_seconds, cache_path, prepared, results)
     _write_json(args.output, output)
     if args.report:
-        _write_archive_report(args.report, data_source, capture_seconds, results, prepared)
+        _write_run_report(args.report, data_source, capture_seconds, results, prepared, args.archive)
     return output
 
 
