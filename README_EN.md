@@ -16,6 +16,10 @@ revised-weight official result so far: `+227` score and `29.863s` faster than v8
 The later v128 fixed-attn-budget candidate was confirmed by the user to time out on the
 official evaluator (`>300s`; no official score returned).
 The v129 fixed-attn-budget-sweep1 follow-up was also confirmed to time out (`>300s`).
+The v130 output-supervised-weight candidate was likewise confirmed to time out (`>300s`),
+despite a local API total of `295.437s`.  This is evidence that local seconds do not map
+monotonically to the official runtime; the v86 static Attention path remains the time-safe
+reference.
 The active root is now v134: block output-supervised activation cross terms raise the
 local Linear mean to `0.5073195` while two idle full-panel runs remain under the local
 API proxy (`289.042/289.832s`); no official result has been registered yet.

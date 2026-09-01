@@ -14,12 +14,18 @@
 > `462.239/501.257s` 只保留为受干扰上界。v128 fixed-attn-budget 已由用户确认在官方
 > 评测中 timeout（`>300s`，分数未返回）；其本地 `310.732s` 不能替代官方裁决。
 > v129 fixed-attn-budget-sweep1 虽有本地 API `248.363s`，也已由用户确认官方 timeout
-> （`>300s`，分数未返回）；本地低于 300 秒不能推出官方通过。
+> （`>300s`，分数未返回）；v130 本地 API `295.437s` 也已确认官方 timeout；v129/v130
+> 与 v86 本地 `299.302s`、官方 `222.7s` 通过的反差表明本地秒数不能推出官方通过，
+> 需要按 Attention 算子/调用复杂度建立更保守的时间父版本。
 
 > **活动根更新（2026-09-01）**：当前根已提升为 v134（output gain + L2 block
 > output-supervised activation cross64 + Attention dynamic sweep2）；归档副本两次完整
 > 空闲复测均为 Linear `0.5073195`、Attention `0.8342565`，API `289.042/289.832s`
 >（均低于本地 `300s` 代理）。
+
+> **时间策略更新（2026-09-01）**：v130 官方 timeout 后，Attention calibration 与动态
+> Q/K/V 被列为首要风险；下一版本先复现 v86 的静态低复杂度 Attention，再将 v134 的
+> Linear 输出监督路径叠加回去。
 
 > 整理日期：2026-08-31
 > 数据来源：`solutions/README.md`（v000–v125）、`docs/current-solution-status.md`、`docs/archive-implementation-audit.md`、`logs/execution/2026-08-30-e0g-scale-oracle.md`、`logs/execution/2026-08-30-e0g-multimodel-dashboard.md`、`logs/execution/2026-08-30-a7-quant-weight-gram.md`、`logs/execution/2026-08-30-l1-full-hierarchy-lrh.md`、`logs/execution/2026-08-31-v110-l4b-gals-final-gated-qwen-full.md`、`logs/execution/2026-08-31-v111-l5a-joint-permutation-qwen-full.md`、`logs/execution/2026-08-31-l5d-external-component-audit.md`、`logs/execution/2026-08-31-l5e-linear-ceiling-v111.md`、`logs/execution/2026-08-31-v115-l6a-rank16-qwen-full.md`、`logs/execution/2026-08-31-v116-l6b-wide-rank4-qwen-full.md`、`logs/execution/2026-08-31-v117-l6c-g64-hierarchy-qwen-full.md`、`logs/execution/2026-08-31-v118-l6d-structured-factor-qwen-full.md`、`logs/execution/2026-08-31-l6e-crossblock-checkpoint.md`、`logs/execution/2026-08-31-v119-c1a-structured-vectorized-qwen-full.md`、`logs/execution/2026-08-31-c1b-structured-refresh-stratified.md`、`logs/execution/2026-08-31-c1b-structured-refresh2-stratified.md`、`logs/execution/2026-08-31-v121-c1b-structured-refresh2-qwen-full.md`、`logs/execution/2026-08-31-v124-c1c-rank8-screen.md`、`logs/execution/2026-08-31-v124-c1c-rank8-qwen-full.md`、`logs/execution/2026-08-31-v125-c1c-block8-qwen-full.md`、`logs/execution/2026-08-31-v107-attention-contract-audit.md`、`logs/execution/2026-08-31-c1b-structured-refresh-synthetic.md`。
