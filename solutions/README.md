@@ -70,8 +70,13 @@ directories follow the same immutable naming rule as the historical archive:
 | v129 | `20260901_v129_fixed-attn-budget-sweep1_scoreNA_timeNA` | 0.465655 | 0.836579 | 248.363 s | time parent |
 | v130 | `20260901_v130_output-weight_scoreNA_timeNA` | 0.471837 | 0.836579 | 295.437 s | output W parent |
 | v131 | `20260901_v131_output-weight-qwgram_scoreNA_timeNA` | 0.473131 | 0.836579 | 294.835 s | Q(W)-Gram parent |
-| v132 | `20260901_v132_output-weight-qwgram-dynsweep2_scoreNA_timeNA` | **0.473131** | **0.834256** | **285.929 s** | **active root** |
-| v133 | `20260901_v133_output-weight-qwgram-gain_scoreNA_timeNA` | 0.483610 | 0.834256 | 317.507 s | precision probe, over time |
+| v132 | `20260901_v132_output-weight-qwgram-dynsweep2_scoreNA_timeNA` | **0.473131** | **0.834256** | **285.929 s†** | **active root** |
+| v133 | `20260901_v133_output-weight-qwgram-gain_scoreNA_timeNA` | 0.483610 | 0.834256 | 317.507 s | precision probe; over local API budget, not root |
+
+† v132's `285.929 s` is a pre-correction local A/B observation and still needs an idle-machine rerun.
+
+\* The later gain+adyn2 run reported `365.818 s`, but the machine was concurrently busy;
+its timing is explicitly excluded from runtime ranking until an idle-machine rerun.
 
 ## Recording rules
 
