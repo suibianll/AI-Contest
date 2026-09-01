@@ -81,6 +81,11 @@ directories follow the same immutable naming rule as the historical archive:
 | v138 | `20260901_v138_attention-static-v86-budget_scoreNA_timeNA` | **0.507320** | 0.715942 | **192.996/187.935 s** | **active root; v86-level static Attention time parent** |
 | v139 | `20260901_v139_linear-output-aware-gain_scoreNA_timeNA` | 0.507278 | 0.715942 | 193.389 s | rejected; output-aware continuous gain regressed |
 | v140 | `20260901_v140_linear-roab-pair_scoreNA_timeNA` | **0.507355** | 0.715942 | **205.365 s** | **active root; ROAB-P2 positive Linear candidate** |
+| v141 | `20260901_v141_linear-bdlr-jaq-r4_scoreNA_timeNA` | 0.281760 | 0.715942 | 204.681 s | rejected; undamped selected-column BDLR regressed |
+| v142 | `20260901_v142_linear-bdlr-jaq-r4-anchorfreeze_scoreNA_timeNA` | 0.282559 | 0.715942 | 211.460 s | rejected; anchor freeze did not recover precision |
+| v143 | `20260901_v143_linear-bdlr-jaq-r4-dynamic-only_scoreNA_timeNA` | 0.361154 | 0.715942 | 207.445 s | rejected; dynamic-only BDLR regressed |
+| v144 | `20260901_v144_linear-bdlr-jaq-r4-damped02_scoreNA_timeNA` | 0.506418 | 0.715942 | 208.414 s | rejected; damping 0.02 regressed |
+| v145 | `20260901_v145_linear-bdlr-jaq-r4-damped005_scoreNA_timeNA` | 0.506256 | 0.715942 | 208.513 s | rejected; damping 0.005 regressed |
 
 \* The later temporary gain+adyn2 run reported `365.818 s`, but the machine was concurrently busy;
 its timing is excluded from runtime ranking. The persisted v133 archive was rerun idle at `291.275 s`;
@@ -96,6 +101,12 @@ Gram refinement and shrinks the static candidate set. Two v138 runs are recorded
 and [`v138 idle rerun JSON`](../artifacts/official_eval/v138-attention-static-v86-budget-rerun2-official-shape-v1.json).
 The v140 full run is recorded in [`v140 JSON`](../artifacts/official_eval/v140-linear-roab-pair-official-shape-v1.json);
 it gives Linear `0.5073546371`, unchanged Attention `0.7159419612`, and API `205.365 s`.
+
+The BDLR-JAQ trials v141–v145 are retained as rejected immutable snapshots. Their local Linear
+means were `0.281760`, `0.282559`, `0.361154`, `0.506418`, and `0.506256`; all kept Attention
+at `0.715942` and stayed below the local time proxy, but none improved v140. The selected-column
+BDLR direction is closed; v140 remains the active root while the next search moves to symmetric
+joint code-domain updates.
 
 \* The earlier v086 local `462.239 s` observation was also concurrent-load affected. The clean
 idle rerun is `299.302 s` API / `321.996 s` wall; see

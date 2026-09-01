@@ -50,12 +50,6 @@ _ROAB_PAIR_RIDGE = 1.0e-6
 _ROAB_MAX_SINGULAR = 4.0
 _ROAB_MIN_SINGULAR = 0.25
 _ROAB_MAX_SCORE_ROWS = 128
-# L9 BDLR-JAQ: retain a fixed number of calibration-selected cross-block
-# columns.  The factors are C x r rather than a dense C x C Gram, so the
-# online correction is one rank-r matrix product and does not add sweeps.
-_BDLR_RANK = 4
-_BDLR_MAX_CHANNELS = 8192
-_BDLR_STRENGTH = 0.005
 
 # L2: a single low-degree CAT balance for expansive FFN shapes.  The route is
 # structural (rows > channels), not a role/model identifier; no permutation or
@@ -971,62 +965,6 @@ def _block_cross64(
     )
 
 
-def _bdlr_cross_columns(
-    deployed_weight: torch.Tensor,
-    target_weight: torch.Tensor,
-    *,
-    rank: int = _BDLR_RANK,
-) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor] | None:
-    """Build a fixed-rank cross-block ``H/D`` sketch for activation JAQ.
-
-    ``H=Q(W)^TQ(W)`` and ``D=Q(W)^TW`` are only needed through their
-    off-block action.  Selecting one high-energy channel from each of the
-    highest-energy blocks gives a deterministic rank-r column sketch.  The
-    within-block entries are explicitly zeroed because those entries are
-    already represented exactly by ``gram64``/``output_cross64``.  Constructing
-    the selected columns costs two tall-skinny products, never a dense
-    channels-by-channels matrix.
-    """
-
-    if (
-        deployed_weight.ndim != 2
-        or target_weight.ndim != 2
-        or tuple(deployed_weight.shape) != tuple(target_weight.shape)
-    ):
-        return None
-    rows, channels = map(int, deployed_weight.shape)
-    if (
-        channels % _BLOCK != 0
-        or channels > _BDLR_MAX_CHANNELS
-        or channels <= _BLOCK
-        or rows <= 0
-    ):
-        return None
-    rank = min(max(1, int(rank)), channels // _BLOCK)
-    try:
-        q_weight = deployed_weight.to(torch.float32)
-        raw_weight = target_weight.to(torch.float32)
-        energy = q_weight.square().sum(dim=0) + raw_weight.square().sum(dim=0)
-        blocks = channels // _BLOCK
-        block_energy = energy.reshape(blocks, _BLOCK).mean(dim=1)
-        block_ids = torch.topk(block_energy, k=rank, sorted=True).indices
-        local = energy.reshape(blocks, _BLOCK).index_select(0, block_ids)
-        local_ids = local.argmax(dim=1)
-        indices = block_ids * _BLOCK + local_ids
-        h_columns = q_weight.transpose(0, 1).mm(q_weight.index_select(1, indices))
-        d_columns = q_weight.transpose(0, 1).mm(raw_weight.index_select(1, indices))
-        row_blocks = torch.arange(channels, device=q_weight.device) // _BLOCK
-        col_blocks = torch.div(indices, _BLOCK, rounding_mode="floor")
-        off_block = row_blocks[:, None].ne(col_blocks[None, :])
-        h_columns = torch.where(off_block, h_columns, torch.zeros_like(h_columns))
-        d_columns = torch.where(off_block, d_columns, torch.zeros_like(d_columns))
-        if not bool(torch.isfinite(h_columns).all() and torch.isfinite(d_columns).all()):
-            return None
-        return h_columns.contiguous(), d_columns.contiguous(), indices.to(torch.int64).contiguous()
-    except (RuntimeError, ValueError, FloatingPointError):
-        return None
-
-
 def _refine_activation(
     dense: torch.Tensor,
     parent: dict[str, torch.Tensor],
@@ -1036,9 +974,6 @@ def _refine_activation(
     sweeps: int = _ACT_HSDQ_SWEEPS,
     output_cross64: torch.Tensor | None = None,
     output_target: torch.Tensor | None = None,
-    bd_lr_h: torch.Tensor | None = None,
-    bd_lr_d: torch.Tensor | None = None,
-    bd_lr_indices: torch.Tensor | None = None,
 ) -> dict[str, torch.Tensor]:
     if gram64 is None or dense.ndim != 2:
         return parent
@@ -1071,47 +1006,6 @@ def _refine_activation(
             target = candidate_target
     q = _dequantize_hif4(parent).to(torch.float32).reshape(rows, blocks, _BLOCK)
     x = dense.to(torch.float32).reshape_as(q)
-    lowrank_gradient = None
-    if _BDLR_STRENGTH > 0.0 and bd_lr_h is not None and bd_lr_indices is not None:
-        try:
-            candidate_h = bd_lr_h.to(device=dense.device, dtype=torch.float32)
-            candidate_indices = bd_lr_indices.to(device=dense.device, dtype=torch.int64).flatten()
-            candidate_d = (
-                bd_lr_d.to(device=dense.device, dtype=torch.float32)
-                if bd_lr_d is not None
-                else None
-            )
-            valid_lowrank = (
-                candidate_h.ndim == 2
-                and tuple(candidate_h.shape[:1]) == (channels,)
-                and candidate_h.shape[1] == candidate_indices.numel()
-                and candidate_indices.numel() > 0
-                and int(candidate_indices.min()) >= 0
-                and int(candidate_indices.max()) < channels
-                and torch.unique(candidate_indices).numel() == candidate_indices.numel()
-            )
-            if candidate_d is not None:
-                valid_lowrank = valid_lowrank and tuple(candidate_d.shape) == tuple(candidate_h.shape)
-            if valid_lowrank:
-                q_flat = q.reshape(rows, channels)
-                x_flat = x.reshape(rows, channels)
-                anchor_q = q_flat.index_select(1, candidate_indices)
-                anchor_x = x_flat.index_select(1, candidate_indices)
-                if output_mode and target is not None and candidate_d is not None:
-                    target_flat = target.reshape(rows, channels)
-                    lowrank_gradient = anchor_q.mm(candidate_h.transpose(0, 1))
-                    lowrank_gradient = lowrank_gradient - target_flat.index_select(
-                        1, candidate_indices
-                    ).mm(candidate_d.transpose(0, 1))
-                else:
-                    lowrank_gradient = (anchor_q - anchor_x).mm(
-                        candidate_h.transpose(0, 1)
-                    )
-                lowrank_gradient = (
-                    _BDLR_STRENGTH * lowrank_gradient
-                ).reshape(rows, blocks, _BLOCK)
-        except (RuntimeError, ValueError, FloatingPointError):
-            lowrank_gradient = None
     den = _denominator(parent).reshape_as(q)
     codes = torch.round(q * 4.0 / den.clamp_min(_EPS)).clamp(-7.0, 7.0)
     error = q - x
@@ -1142,8 +1036,6 @@ def _refine_activation(
             gradient = gradient - torch.einsum(
                 "nij,nj->ni", h_work, x_work
             )
-        if lowrank_gradient is not None:
-            gradient = gradient + lowrank_gradient[row_ids, block_ids]
         for coordinate in range(_BLOCK):
             current = q_work[:, coordinate]
             options = den_work[:, coordinate, None] * levels[None, :]
@@ -1151,17 +1043,6 @@ def _refine_activation(
             change = 2.0 * step * gradient[:, coordinate, None] + diagonal[:, coordinate, None] * step.square()
             best_change, best_index = change.min(dim=-1)
             improve = torch.isfinite(best_change) & (best_change < -_EPS)
-            # The sketch represents the cross-block action through fixed
-            # anchor columns.  Keep those anchor codes fixed: updating an
-            # anchor would require the symmetric (row-side) low-rank factor
-            # that is intentionally not stored.  Non-anchor coordinates still
-            # receive the full rank-r cross-block gradient.
-            if lowrank_gradient is not None:
-                global_coordinate = block_ids * _BLOCK + coordinate
-                is_anchor = (
-                    global_coordinate[:, None] == candidate_indices[None, :]
-                ).any(dim=1)
-                improve = improve & (~is_anchor)
             accepted = step.gather(-1, best_index[:, None]).squeeze(-1)
             accepted = torch.where(improve, accepted, torch.zeros_like(accepted))
             q_work[:, coordinate] += accepted
@@ -1242,9 +1123,6 @@ def hif4_calibration_and_quantize_weight(
 
     gram_tensor = None
     output_cross_tensor = None
-    bd_lr_h_tensor = None
-    bd_lr_d_tensor = None
-    bd_lr_indices_tensor = None
     if int(weight_t.shape[1]) <= _ACT_GRAM_MAX_CHANNELS:
         # The online activation objective is evaluated after this weight has
         # been quantized.  Use the deployed Q(W) curvature instead of the
@@ -1254,9 +1132,6 @@ def hif4_calibration_and_quantize_weight(
         # API can then optimize the actual output objective against the raw
         # transformed activation without storing the full weight matrix.
         output_cross_tensor = _block_cross64(deployed_weight, weight_t)
-        bd_lr = _bdlr_cross_columns(deployed_weight, weight_t)
-        if bd_lr is not None:
-            bd_lr_h_tensor, bd_lr_d_tensor, bd_lr_indices_tensor = bd_lr
     # Recreate the activation tensor that the online API will deploy, then
     # use it as the left operand of an output-supervised W refinement.  The
     # teacher target remains raw ``A_t @ W_t.T`` so the weight codes can
@@ -1288,13 +1163,6 @@ def hif4_calibration_and_quantize_weight(
         deployed_weight = _dequantize_hif4(weight_params).to(torch.float32)
         gram_tensor = _gram64(deployed_weight)
         output_cross_tensor = _block_cross64(deployed_weight, weight_t)
-        bd_lr = _bdlr_cross_columns(deployed_weight, weight_t)
-        if bd_lr is not None:
-            bd_lr_h_tensor, bd_lr_d_tensor, bd_lr_indices_tensor = bd_lr
-        else:
-            bd_lr_h_tensor = None
-            bd_lr_d_tensor = None
-            bd_lr_indices_tensor = None
 
     gram_state = None
     if gram_tensor is not None:
@@ -1313,23 +1181,8 @@ def hif4_calibration_and_quantize_weight(
         ),
         "gram64": gram_state,
         "output_cross64": output_cross_state,
-        "bd_lr_h": (
-            _cpu_tensor(bd_lr_h_tensor)
-            if bd_lr_h_tensor is not None
-            else None
-        ),
-        "bd_lr_d": (
-            _cpu_tensor(bd_lr_d_tensor)
-            if bd_lr_d_tensor is not None
-            else None
-        ),
-        "bd_lr_indices": (
-            bd_lr_indices_tensor.detach().to(device="cpu", dtype=torch.int64).contiguous()
-            if bd_lr_indices_tensor is not None
-            else None
-        ),
         "output_gain": _cpu_tensor(output_gain),
-        "version": 4,
+        "version": 3,
     }
     return {"weight_params": weight_params, "activation_state": state}
 
@@ -1370,18 +1223,6 @@ def hif4_dynamic_quantize_activation(
     output_cross_tensor = output_cross if torch.is_tensor(output_cross) else None
     if output_cross_tensor is not None:
         output_cross_tensor = output_cross_tensor.to(dense.device)
-    bd_lr_h = state.get("bd_lr_h")
-    bd_lr_h_tensor = bd_lr_h if torch.is_tensor(bd_lr_h) else None
-    if bd_lr_h_tensor is not None:
-        bd_lr_h_tensor = bd_lr_h_tensor.to(dense.device)
-    bd_lr_d = state.get("bd_lr_d")
-    bd_lr_d_tensor = bd_lr_d if torch.is_tensor(bd_lr_d) else None
-    if bd_lr_d_tensor is not None:
-        bd_lr_d_tensor = bd_lr_d_tensor.to(dense.device)
-    bd_lr_indices = state.get("bd_lr_indices")
-    bd_lr_indices_tensor = bd_lr_indices if torch.is_tensor(bd_lr_indices) else None
-    if bd_lr_indices_tensor is not None:
-        bd_lr_indices_tensor = bd_lr_indices_tensor.to(dense.device)
     params = _dense_to_hif4(
         dense, offsets=_BASE_OFFSETS, gram64=gram_tensor
     )
@@ -1391,9 +1232,6 @@ def hif4_dynamic_quantize_activation(
         gram_tensor,
         output_cross64=output_cross_tensor,
         output_target=teacher_dense,
-        bd_lr_h=bd_lr_h_tensor,
-        bd_lr_d=bd_lr_d_tensor,
-        bd_lr_indices=bd_lr_indices_tensor,
     )
 
 
