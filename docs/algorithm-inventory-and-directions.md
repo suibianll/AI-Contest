@@ -1,12 +1,20 @@
 # HiF4 算法全景：已实现、已验证效果与未实现方向
 
+> **最新框架更新（2026-09-01）**：用户确认新的 Linear 算法已把官方最高分提升至
+> **17816**。它将 Smooth/Permutation/block-Hadamard 等价变换、Weight GPTQ、Activation
+> GPTQ 与 HiF4 quadratic hierarchy refine 组合为统一输出重构流程。该结果表明 v138–v145
+> 失败的是局部调参路线，而不是 Linear 的结构性提升空间。新源码、版本号和官方时间尚未同步；
+> 后续算法以
+> [`活动计划`](superpowers/plans/2026-09-01-hif4-linear-0.8-under-300s-plan.md)
+> 中的 block-Schur GPTQ、低秩+块对角动态 Hessian 和联合双侧残差优化为主。
+
 > **评测迁移（2026-09-01）**：本索引中的旧 sampled/full-layer 数字是历史算法证据，
 > 不再用于当前排名。当前统一复测由 [`evaluator/official_eval.py`](../evaluator/official_eval.py)
 > 的 `official-shape-v1` 生成（250 Linear + 200 Attention，Attention calibration
 > `[10,128,512,1024,1024]`）；新结果见 [`artifacts/official_eval/`](../artifacts/official_eval/)。
 
 > **官方事实更正（2026-09-01）**：v86 官方结果为 **`16744 / 222.7s`，新权重下通过**，
-> 这是当前官方最优和下一实现基线；本地 `v086` 复测时间不替代该官方时间。最后一次
+> 这是 17816 新框架出现前的仓库内官方最优；本地 `v086` 复测时间不替代该官方时间。最后一次
 > gain+adyn2 本地运行同样受其他程序干扰，其 `365.818s` 仅保留为原始观测，不用于时间排序。
 
 > **重测与超时更新（2026-09-01）**：v86 在空闲机器按 `official-shape-v1` 重测为
@@ -23,9 +31,10 @@
 > Linear `+0.000035`，没有官方结果，不再视为算法最优。v138/v139 官方只有
 > `15715/15716`，均明显低于 v86；v138–v145 路线关闭。
 
-> **新策略（2026-09-01）**：后续从原样 v86 开始，Linear 阶段逐字节冻结 v86 Attention。
-> 先完成合法码域 Structural Oracle，再研究零空间误差整形、子空间嵌入联合舍入、广义特征
-> 乘积保持 butterfly 和 HiF4 层级整体量化；停止局部参数扫描。
+> **新策略（2026-09-01）**：17816 源码同步后作为新 Linear 父版本，冻结该提交对应的
+> Attention。先拆分等价变换、Weight GPTQ、Activation GPTQ 和层级 refine 的贡献，再研究
+> block-Schur GPTQ、低秩+块对角动态 Hessian、联合残差和相同复杂度的学习型 butterfly；
+> 停止局部参数扫描。
 
 > 整理日期：2026-08-31
 > 数据来源：`solutions/README.md`（v000–v125）、`docs/current-solution-status.md`、`docs/archive-implementation-audit.md`、`logs/execution/2026-08-30-e0g-scale-oracle.md`、`logs/execution/2026-08-30-e0g-multimodel-dashboard.md`、`logs/execution/2026-08-30-a7-quant-weight-gram.md`、`logs/execution/2026-08-30-l1-full-hierarchy-lrh.md`、`logs/execution/2026-08-31-v110-l4b-gals-final-gated-qwen-full.md`、`logs/execution/2026-08-31-v111-l5a-joint-permutation-qwen-full.md`、`logs/execution/2026-08-31-l5d-external-component-audit.md`、`logs/execution/2026-08-31-l5e-linear-ceiling-v111.md`、`logs/execution/2026-08-31-v115-l6a-rank16-qwen-full.md`、`logs/execution/2026-08-31-v116-l6b-wide-rank4-qwen-full.md`、`logs/execution/2026-08-31-v117-l6c-g64-hierarchy-qwen-full.md`、`logs/execution/2026-08-31-v118-l6d-structured-factor-qwen-full.md`、`logs/execution/2026-08-31-l6e-crossblock-checkpoint.md`、`logs/execution/2026-08-31-v119-c1a-structured-vectorized-qwen-full.md`、`logs/execution/2026-08-31-c1b-structured-refresh-stratified.md`、`logs/execution/2026-08-31-c1b-structured-refresh2-stratified.md`、`logs/execution/2026-08-31-v121-c1b-structured-refresh2-qwen-full.md`、`logs/execution/2026-08-31-v124-c1c-rank8-screen.md`、`logs/execution/2026-08-31-v124-c1c-rank8-qwen-full.md`、`logs/execution/2026-08-31-v125-c1c-block8-qwen-full.md`、`logs/execution/2026-08-31-v107-attention-contract-audit.md`、`logs/execution/2026-08-31-c1b-structured-refresh-synthetic.md`。
@@ -55,15 +64,15 @@
 | **L2 Linear 输出监督 activation cross64（v134）** | 校准阶段缓存 `Q(W)^T W` 与 `Q(W)^T W_t` 的连续 64×64 block；在线以 `Hq-Da` 作为激活梯度，并用 batched block matmul 避免完整 channel Gram |
 | **L9 BDLR-JAQ（v141–v145，已关闭）** | rank-4 选列跨块 `H/D` 修正；锚点冻结、仅动态激活和阻尼 `0.02/0.005` 均未超过 v140，源码目录已清理，JSON/日志保留证据，不再调参 |
 
-下一阶段的理论方向不是上述组件调参，而是：
+17816 出现后，下一阶段的理论方向更新为：
 
 | 新方向 | 数学依据 | 主要适用 role |
 |---|---|---|
-| NRES 零空间误差整形 | `e∈ker(W) => eW^T=0`，把合法舍入误差推入输出不可见空间 | k/v/proj |
-| SE-JVR 子空间嵌入联合舍入 | 用 SRHT/CountSketch 近似保持完整输出范数，替代无保证的选列 Gram | 全 role |
-| GE-BT 广义特征 butterfly | `AT^{-1}(WT^T)^T=AW^T`，在保持连续输出时重构量化坐标系 | q/o/gate/up 优先 |
-| HATQ 层级整体量化 | 共同选择 scale/lv2/lv3/mantissa，匹配 HiF4 的真实耦合码域 | 全 role |
-| R-JAQ 联合残差抵消 | 直接控制 `E_AW^T+AE_W^T-E_AE_W^T` | oracle 证明可达后组合 |
+| Block-Schur HiF4 GPTQ | 把完整 64-channel 合法码字作为原子变量，按 Schur 补传播误差 | 全 role |
+| 低秩+块对角 Activation GPTQ | `H_W≈B+UU^T`，用 Woodbury 保留跨块主方向并降低动态复杂度 | down/proj 优先 |
+| 双侧联合残差优化 | 直接控制 `E_AW^T+AE_W^T-E_AE_W^T`，固定两轮交替优化 | 全 role |
+| 学习型结构变换 | 在保持乘积和部署 stage 数不变时，用 butterfly/Givens 扩展固定 Hadamard | q/o 优先 |
+| HiF4 层级 block oracle | 联合选择 scale/lv2/lv3/mantissa，而不是分开扫描 | 全 role |
 
 **实测**（Qwen2.5-0.5B 全 24 层，`seq=128/calib=2/test=4/amax6`，缓存只读）：
 

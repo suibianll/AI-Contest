@@ -1,16 +1,36 @@
-# 当前状态：官方基线 v86，Linear 路线重新建立
+# 当前状态：官方最高分更新为 17816，Linear 新框架成立
 
 更新：2026-09-01。
 
+## 0. 最新官方进展
+
+用户确认：一套新的 Linear 算法已经在官方评测上产生明确提升，当前最高总分达到
+**17816**，比旧官方最高 v86 的 16744 高 **1072 分**。
+
+新算法不是 v138–v145 的局部调参延续，而是完整的：
+
+- SmoothQuant + Permutation + block Hadamard 等价变换搜索；
+- 变换后完整协方差驱动的 Weight GPTQ；
+- 部署权重输出 Gram 驱动的 Activation GPTQ；
+- quadratic AdaRound、E6M2 offset、data-driven refinement 和 edge extension；
+- proxy 与 e2e 混合选择，窄层执行联合变换搜索。
+
+新提交的版本号、源码 SHA、官方运行时间以及对应 Attention 配置尚未提供，因此当前只把
+**17816 记为用户确认的官方精度锚点**，不伪造时间结论，也暂不建立源码归档。完整理论分析和
+后续执行顺序见
+[`活动计划`](superpowers/plans/2026-09-01-hif4-linear-0.8-under-300s-plan.md)。
+
 ## 1. 版本结论
 
-- **官方最优与下一实现基线：v86，16744 分 / 222.7s。**
+- **旧仓库内官方基线：v86，16744 分 / 222.7s。** 新的用户确认最高分为 17816，但源码与
+  官方时间尚未同步到仓库。
 - 根目录 [`solution.py`](../solution.py) 当前仍是 v140 实验代码，SHA256
   `52521F1B996BF67641C22A90132ED7A7BCA477976D8A05BEC411CC9E04AA7C90`；它只比 v138
   本地 Linear 高 `0.00003513`，没有官方结果，不再称为“当前最优”。
 - v138/v139 虽在官方 `<300s` 内通过，但只有 `15715/15716`，比 v86 低约 1029 分；
   v138–v145 这条“压缩 Attention 后继续叠 Linear 局部模块”的路线已经失败并关闭。
-- 下一阶段不从 v140 继续调参，而是原样冻结 v86 Attention，只研究结构性 Linear 算法。
+- 下一阶段不从 v140 继续调参；拿到 17816 源码后，以它作为新 Linear 父版本，并冻结该提交
+  对应的 Attention 做单变量归因。
 
 ## 2. 评测口径
 
@@ -77,16 +97,15 @@ v86 的部分 scale-aware/output-aware 机制。此前把它描述为“v86 级�
 新的唯一活动计划是
 [`2026-09-01-hif4-linear-0.8-under-300s-plan.md`](superpowers/plans/2026-09-01-hif4-linear-0.8-under-300s-plan.md)。核心顺序为：
 
-1. 在多切分上完成合法 Weight/Activation/Joint/Transform/Hierarchy oracle，先回答 `0.8` 是否可达。
-2. 对 k/v/proj 利用 `ker(W)` 做零空间误差整形；这些形状分别至少有 768/768/3968 维
-   输出不可见空间。
-3. 用有子空间嵌入保证的输出 sketch 做联合向量舍入，替代失败的任意选列 BDLR。
-4. 从 `H_A/H_W` 广义特征结构学习乘积保持 butterfly，替代 BOAT/ROAB 的局部候选。
-5. 联合求解 HiF4 的 scale/lv2/lv3/mantissa 层级状态，而不是分开扫 scale 和坐标。
-6. 最后固定两轮联合残差抵消，直接优化
+1. 先对 17816 框架做结构消融，拆分等价变换、Weight GPTQ、Activation GPTQ 和 HiF4
+   层级 refine 的真实贡献。
+2. 将 GPTQ 改成以完整 64-channel HiF4 block 为原子的 block-Schur 求解。
+3. 用低秩+块对角 Hessian/Woodbury 形式保留跨块 Activation GPTQ，同时降低动态复杂度。
+4. 固定两轮联合 Weight–Activation 优化，直接控制
    `E_AW^T + AE_W^T - E_AE_W^T`。
-7. Linear 阶段完全冻结 v86 Attention；之后 Attention 只研究保持 `QK^T` 不变的 reciprocal
-   Fisher transform，不恢复动态 Gram/PAWV。
+5. 用相同部署 stage 数的学习型 butterfly 扩展固定 Hadamard，而不叠加第二套变换。
+6. 让 scale/lv2/lv3/mantissa 作为完整层级状态参与 block oracle。
+7. 在这套已被官方验证的新框架上重新测 Joint oracle，判断 `linear_mean=0.8` 可达性。
 
 ## 7. 归档现状与待整理项
 

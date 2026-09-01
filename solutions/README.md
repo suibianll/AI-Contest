@@ -1,5 +1,11 @@
 # HiF4 solutions archive
 
+> **Unarchived official update (2026-09-01):** the user reports a new Linear framework with an
+> official high score of **17816**. Its source file, version identifier, SHA256, official runtime,
+> and matching Attention configuration have not yet been provided, so no archive directory has
+> been invented. Once the source is synchronized, it must be stored as one `retained` official
+> snapshot rather than reconstructed from the prose summary.
+
 `solutions/` contains immutable `solution.py` snapshots. The active code is only the repository
 root [`solution.py`](../solution.py). Every snapshot below was submitted or retained as an
 official-result candidate; official numbers are historical facts and are not replaced by local

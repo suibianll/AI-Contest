@@ -1,5 +1,12 @@
 # HiF4 optimization workspace (official-aligned evaluator)
 
+> **Latest official update (2026-09-01):** the user reports that a new Linear framework has
+> raised the highest official score to **17816**, 1,072 points above the repository's previous
+> v86 high of 16744. The framework combines equivalent Smooth/Permutation/block-Hadamard
+> transforms, Weight and Activation GPTQ, and hierarchical HiF4 quadratic refinement. Its official
+> runtime, version identifier, and source SHA have not yet been provided, so no `<300s` claim is
+> inferred. The active plan now analyzes and extends this framework instead of tuning v140.
+
 The only active local evaluator is [`evaluator/official_eval.py`](evaluator/official_eval.py).
 The former `real_model_suite.py` / `sampled-means-v1/v2` reports are retired and must not be
 used for ranking or timing decisions.
@@ -11,8 +18,9 @@ The evaluator fixes the known public contract: Qwen2.5-0.5B, 24 blocks, 250 Line
 sum, API time, and wall time. The official platform currently requires end-to-end time below
 300 seconds; local CUDA seconds are an A/B proxy only and are never converted into an official
 score. The latest known official anchors are v74 `22750 / 239.387s` (old weights), v84
-`16517 / 252.563s`, and v86 **`16744 / 222.7s`** (revised weights). v86 is the best
-revised-weight official result so far: `+227` score and `29.863s` faster than v84.
+`16517 / 252.563s`, and v86 **`16744 / 222.7s`** (revised weights). Before the newly reported
+17816 Linear framework, v86 was the repository's best revised-weight official result: `+227`
+score and `29.863s` faster than v84.
 The later v128 fixed-attn-budget candidate was confirmed by the user to time out on the
 official evaluator (`>300s`; no official score returned).
 The v129 fixed-attn-budget-sweep1 follow-up was also confirmed to time out (`>300s`).
@@ -27,17 +35,18 @@ The v134 block output-supervised activation cross terms raise the local Linear m
 `0.5073195`, but v130's official timeout shows that local API seconds are not a safe
 runtime proxy. The root file still contains the v140 experiment, but its local Linear gain over
 v138 is only `0.000035` and it has no official result. It is no longer treated as the best
-candidate; the next implementation baseline is the exact v86 source.
+candidate. Once synchronized, the 17816 source becomes the next Linear implementation baseline.
 The user has now reported v138's official result as **`15715 / 208s` (pass)**; its local
-proxy values remain separate from that official result. v86 remains the known official best
-at `16744 / 222.7s`.
+proxy values remain separate from that official result. v86 remains the best timed official
+source currently present in this repository; the reported 17816 source and runtime are not yet present.
 The user has now also reported v139's official result as **`15716 / 202s` (pass)**. Both v138
 and v139 remain roughly 1,029 points below v86, so the v138-v145 lineage is closed.
 The v141-v145 rank-4 selected-column BDLR trials (anchor freeze, dynamic-only, and two damping
 values) returned Linear means `0.281760/0.282559/0.361154/0.506418/0.506256`, all below v140;
 that direction is closed. Their source snapshots were deleted to keep the archive compact; per-run
-JSON and execution logs remain. The new plan first builds legal joint oracles, then studies
-null-space error shaping, subspace-embedded vector rounding, and product-preserving transforms.
+JSON and execution logs remain. The new plan attributes the 17816 framework first, then extends it
+with block-Schur GPTQ, low-rank-plus-block-diagonal dynamic Hessians, and joint two-sided residual
+optimization.
 
 Capture the pinned public data pack once:
 
