@@ -82,7 +82,6 @@ _ATTN_PROXY_TOKENS = 128
 _ATTN_SHORTLIST_TOKENS = 256
 _ATTN_STATS_TOKENS = 512
 _ATTN_CALIBRATION_SWEEPS = 1
-_ATTN_DYNAMIC_SWEEPS = 2
 
 # ---------------------------------------------------------------------------
 # Codec
@@ -1672,7 +1671,7 @@ def _dynamic_attention_operand(
         params,
         gram_tensor,
         max_blocks=max(1, int(dense.shape[-1]) // _BLOCK),
-        sweeps=_ATTN_DYNAMIC_SWEEPS,
+        sweeps=3,
     )
 
 

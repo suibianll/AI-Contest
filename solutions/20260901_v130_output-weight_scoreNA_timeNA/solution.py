@@ -82,7 +82,6 @@ _ATTN_PROXY_TOKENS = 128
 _ATTN_SHORTLIST_TOKENS = 256
 _ATTN_STATS_TOKENS = 512
 _ATTN_CALIBRATION_SWEEPS = 1
-_ATTN_DYNAMIC_SWEEPS = 2
 
 # ---------------------------------------------------------------------------
 # Codec
@@ -896,11 +895,7 @@ def hif4_calibration_and_quantize_weight(
 
     gram_tensor = None
     if int(weight_t.shape[1]) <= _ACT_GRAM_MAX_CHANNELS:
-        # The online activation objective is evaluated after this weight has
-        # been quantized.  Use the deployed Q(W) curvature instead of the
-        # raw-W curvature so the block HSDQ step follows the real operator.
-        deployed_weight = _dequantize_hif4(weight_params).to(torch.float32)
-        gram_tensor = _gram64(deployed_weight)
+        gram_tensor = _gram64(weight_t)
     # Recreate the activation tensor that the online API will deploy, then
     # use it as the left operand of an output-supervised W refinement.  The
     # teacher target remains raw ``A_t @ W_t.T`` so the weight codes can
@@ -1672,7 +1667,7 @@ def _dynamic_attention_operand(
         params,
         gram_tensor,
         max_blocks=max(1, int(dense.shape[-1]) // _BLOCK),
-        sweeps=_ATTN_DYNAMIC_SWEEPS,
+        sweeps=3,
     )
 
 

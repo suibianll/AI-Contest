@@ -58,19 +58,32 @@ call + 250 Linear dyn + ~600 attn dyn）：
 （官方端比本地还慢 70%+）。对 Python 循环 + 变长分组 + 官方 200 case 放大的
 PAWV 路径，这在方向上完全合理；精确值需评测器 per-API 计时（已补，见 §5）。
 
-## 4. PAWV 线官方证据链（全部失败）
+## 4. 官方证据链：超时根因是 PAWV/GQRB 机制，不是 Attention 改动本身
 
 | 候选 | 官方结果 | 本地 sampled API | 备注 |
 |---|---|---:|---|
-| v84（无 PAWV，GQA rotation） | **252.563s 通过** | 422.6s | 唯一新权重通过锚点 |
+| v74（旧权重链） | 239.387s 通过 | — | 旧权重基准 |
+| v84（无 PAWV，GQA rotation） | **252.563s 通过** | 422.6s | 新权重基准锚点 |
+| **v86（= v84 + C86 Q/K 共享 block-Hadamard）** | **222.7s 通过，16744** | 313.6s（旧协议 Qwen） | **Attention 侧改动但官方反而快 29.863s** |
 | v098（B1 GQRB） | timeout | 219.0s | 同为 attention 重路径 |
 | v100（B2 PAWV，原始） | Attention WA | — | WA 短路，未测得完整时间 |
 | v100（pawv-fixed） | **timeout（>300s）** | 150.25s | 本轮用户确认 |
 | v107（+L3） | Attention WA | 241.5s | WA 短路 |
 | v121（+C1 线） | timeout | 832.9s | 本地最慢 |
 
-结论：**B1 GQRB / B2 PAWV attention 路径在官方 300s 限制下时间不可行**；
-本地 sampled 时间越低反而越危险（attention 权重被系统性低估 2.3–3.6 倍）。
+**2026-09-01 更新（关键反例）**：v86 在 v84 基础上做了 Attention 侧改动
+（C86：Q/K 共享 head-local block-Hadamard，block 4/8/16 + 终选器），官方结果
+`16744 / 222.7s` —— 分数 `+227`、时间比 v84 **快 29.863s**。它证明"改动
+Attention 路径"本身不会导致超时，反例成立。
+
+因此结论需收紧为：**超时根因不是 Attention 改动，而是 B1 GQRB / B2 PAWV 这类
+引入 per-seq_len 分组 + Python 循环、且官方端无向量化奖励的机制**。C86 属于
+静态候选搜索（calibration 期一次性选出 block size 与 sign，online 无分组循环），
+成本结构与 v84 同源，所以官方时间与 v84 同量级甚至更低。
+
+本地 sampled 时间对 PAWV/GQRB 类候选系统性低估（attention 权重低估 2.3–3.6 倍），
+本地时间越低越危险；但对 v84/v86 这类 linear/calibration-heavy 候选，本地时间是
+保守上界。
 
 ## 5. 已落地的改进：评测器 per-API 计时
 
@@ -85,8 +98,14 @@ T_official ≈ r_cal·(192/64)·C_local + r_L·(250/224)·D_L + r_A·(600/96)·D
 ```
 
 其中 `C_local/D_L/D_A` 由 `api_seconds` 直接读出；`r_cal/r_L` 可用 v84 锚点
-拟合，`r_A` 目前只能用官方通过的 attention 路径（v74/v84 链）校准——PAWV 线
-没有官方通过数据点，只能给出下界。
+拟合，`r_A` 可用官方通过的 attention 路径校准。
+
+**2026-09-01 校准点补充**：官方通过锚点现增至 v84（`252.563s`）与 v86
+（`222.7s`）。v86 = v84 + C86，Linear 侧完全不变，因此两者官方时间差
+`−29.863s` 可直接归因于 Attention 侧改动：C86 用静态候选搜索替代了部分
+online attention 工作，官方端净收益为正。这给出 `r_A` 的一个可用上界区间——
+C86 型（静态搜索、无 per-seq 分组）机制在官方端不慢于本地；PAWV/GQRB 型
+（动态分组、Python 循环）仍无官方通过数据点，`r_A` 只能给下界 `≥1.7`。
 
 测试：`tests/test_real_model_suite.py` 15 passed；`instrument_solution`
 冒烟验证 `seconds` 与 calibration/dynamic 桶一致。
@@ -96,7 +115,8 @@ T_official ≈ r_cal·(192/64)·C_local + r_L·(250/224)·D_L + r_A·(600/96)·D
 1. 提交线回到 **v84 链**（官方已验证的 attention 路径）；Linear 优化移植时
    保持 attention 调用闭包语义等价（WA 审计纪律第 2/3 条继续有效）。
 2. PAWV/GQRB attention 机制在拿到官方通过数据点前一律视为
-   official-time-infeasible，不再进入提交冻结候选。
+   official-time-infeasible，不再进入提交冻结候选。（2026-09-01：v86 证明
+   C86 型静态 Attention 改动可通过，该限制只针对 PAWV/GQRB 动态分组机制。）
 3. 预算红线的构成修正：`≤150s` 总红线只对 linear/calibration-heavy
    候选保守有效；attention-heavy 候选（`api_seconds` 中 attention 占比高者）
    须把 attention 分量单独压到官方通过路径的对应水平，或直接放弃该路径。

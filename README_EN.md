@@ -10,8 +10,9 @@ The evaluator fixes the known public contract: Qwen2.5-0.5B, 24 blocks, 250 Line
 `(MSE_STD - MSE_PLAYER) / MSE_STD`. It reports `linear_mean`, `attention_mean`, the case-score
 sum, API time, and wall time. The official platform currently requires end-to-end time below
 300 seconds; local CUDA seconds are an A/B proxy only and are never converted into an official
-score. The latest known official anchors are v74 `22750 / 239.387s` (old weights) and v84
-`16517 / 252.563s` (revised weights).
+score. The latest known official anchors are v74 `22750 / 239.387s` (old weights), v84
+`16517 / 252.563s`, and v86 **`16744 / 222.7s`** (revised weights). v86 is the best
+revised-weight official result so far: `+227` score and `29.863s` faster than v84.
 
 Capture the pinned public data pack once:
 

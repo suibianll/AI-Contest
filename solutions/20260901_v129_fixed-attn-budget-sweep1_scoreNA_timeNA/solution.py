@@ -58,9 +58,6 @@ _WEIGHT_HSDQ_MIN_CHANNELS = 256
 _WEIGHT_HSDQ_MAX_ROWS = 256
 _WEIGHT_HSDQ_ROBUST_MIX = 0.5
 _WEIGHT_HSDQ_MIN_GAIN = 1.0e-5
-_OUTPUT_WEIGHT_HSDQ_BLOCKS = 4
-_OUTPUT_WEIGHT_HSDQ_SWEEPS = 1
-_OUTPUT_WEIGHT_HSDQ_MIN_GAIN = 1.0e-5
 
 _ACT_HSDQ_BLOCKS = 128
 _ACT_HSDQ_SWEEPS = 2
@@ -82,7 +79,6 @@ _ATTN_PROXY_TOKENS = 128
 _ATTN_SHORTLIST_TOKENS = 256
 _ATTN_STATS_TOKENS = 512
 _ATTN_CALIBRATION_SWEEPS = 1
-_ATTN_DYNAMIC_SWEEPS = 2
 
 # ---------------------------------------------------------------------------
 # Codec
@@ -602,158 +598,6 @@ def _polish_weight(
     return _write_codes(parent, codes.reshape(rows, channels))
 
 
-def _output_product_loss(
-    raw_activation: torch.Tensor,
-    deployed_activation: torch.Tensor,
-    weight: torch.Tensor,
-    params: dict[str, torch.Tensor],
-) -> float:
-    """Relative output residual for the actually deployed activation.
-
-    ``raw_activation`` is the teacher-side calibration tensor while
-    ``deployed_activation`` is the legal HiF4 tensor that the online
-    activation API will emit.  Keeping the two separate is important: the
-    constant ``E_A W`` term cannot be optimized away when the weight codes
-    are selected.
-    """
-    q = _dequantize_hif4(params).to(torch.float32)
-    raw = _sample_rows(raw_activation, _WEIGHT_HSDQ_MAX_ROWS).to(torch.float32)
-    deployed = _sample_rows(
-        deployed_activation, _WEIGHT_HSDQ_MAX_ROWS
-    ).to(torch.float32)
-    if raw.ndim != 2 or deployed.shape != raw.shape:
-        return math.inf
-    target = raw.mm(weight.t())
-    residual = target - deployed.mm(q.t())
-    return float(
-        residual.square().mean() / (target.square().mean() + _EPS)
-    )
-
-
-def _polish_weight_output(
-    weight: torch.Tensor,
-    parent: dict[str, torch.Tensor],
-    raw_activation: torch.Tensor,
-    deployed_activation: torch.Tensor,
-) -> dict[str, torch.Tensor]:
-    """Output-supervised legal coordinate refinement for a weight tensor.
-
-    The residual is initialized against ``raw_activation @ weight.T`` and
-    updated incrementally as each HiF4 coordinate changes.  Thus every
-    accepted code is judged in the real ``Q(A) @ Q(W).T`` output space rather
-    than by an operand-local weight MSE.
-    """
-    rows, channels = map(int, weight.shape)
-    if channels < _WEIGHT_HSDQ_MIN_CHANNELS or channels % _BLOCK != 0:
-        return parent
-    raw = _sample_rows(raw_activation, _WEIGHT_HSDQ_MAX_ROWS).to(torch.float32)
-    deployed = _sample_rows(
-        deployed_activation, _WEIGHT_HSDQ_MAX_ROWS
-    ).to(torch.float32)
-    if (
-        raw.ndim != 2
-        or deployed.shape != raw.shape
-        or int(raw.shape[1]) != channels
-    ):
-        return parent
-
-    blocks = channels // _BLOCK
-    q = _dequantize_hif4(parent).to(torch.float32).clone()
-    den = _denominator(parent).reshape(rows, blocks, _BLOCK)
-    codes = torch.round(
-        q.reshape(rows, blocks, _BLOCK) * 4.0 / den.clamp_min(_EPS)
-    ).clamp(-7.0, 7.0)
-    residual = raw.mm(weight.t()) - deployed.mm(q.t())
-
-    leverage = []
-    for block in range(blocks):
-        lo = block * _BLOCK
-        hi = lo + _BLOCK
-        leverage.append(
-            deployed[:, lo:hi].t().mm(residual).square().sum()
-        )
-    count = min(blocks, max(1, int(_OUTPUT_WEIGHT_HSDQ_BLOCKS)))
-    selected = torch.topk(torch.stack(leverage), k=count).indices.tolist()
-    levels = torch.as_tensor(_SIGNED_LEVELS, device=weight.device)
-    for block in selected:
-        lo = int(block) * _BLOCK
-        hi = lo + _BLOCK
-        local_z = deployed[:, lo:hi]
-        gram = local_z.t().mm(local_z)
-        diagonal = gram.diagonal().clamp_min(_EPS)
-        local_q = q[:, lo:hi]
-        local_den = den[:, int(block)]
-        local_codes = codes[:, int(block)]
-        for _ in range(max(1, int(_OUTPUT_WEIGHT_HSDQ_SWEEPS))):
-            correlation = local_z.t().mm(residual).t()
-            for coordinate in range(_BLOCK):
-                current = local_q[:, coordinate]
-                options = local_den[:, coordinate, None] * levels[None, :]
-                step = options - current[:, None]
-                change = (
-                    -2.0 * step * correlation[:, coordinate, None]
-                    + diagonal[coordinate] * step.square()
-                )
-                best_change, best_index = change.min(dim=-1)
-                improve = torch.isfinite(best_change) & (best_change < -_EPS)
-                accepted = step.gather(-1, best_index[:, None]).squeeze(-1)
-                accepted = torch.where(improve, accepted, torch.zeros_like(accepted))
-                local_q[:, coordinate] += accepted
-                local_codes[:, coordinate] = torch.round(
-                    local_q[:, coordinate] * 4.0
-                    / local_den[:, coordinate].clamp_min(_EPS)
-                ).clamp(-7.0, 7.0)
-                residual.add_(-local_z[:, coordinate, None] * accepted[None, :])
-                correlation.add_(-accepted[:, None] * gram[coordinate][None, :])
-        q[:, lo:hi] = local_q
-        codes[:, int(block)] = local_codes
-    return _write_codes(parent, codes.reshape(rows, channels))
-
-
-def _crossfold_weight_output(
-    weight: torch.Tensor,
-    parent: dict[str, torch.Tensor],
-    raw_calibration: Sequence[torch.Tensor],
-    deployed_calibration: Sequence[torch.Tensor],
-) -> dict[str, torch.Tensor]:
-    """Cross-fold selector for output-supervised weight candidates."""
-    if not raw_calibration or len(raw_calibration) != len(deployed_calibration):
-        return parent
-    if len(raw_calibration) < 2:
-        return _polish_weight_output(
-            weight, parent, raw_calibration[0], deployed_calibration[0]
-        )
-    raw_folds = [item.to(torch.float32) for item in raw_calibration[:2]]
-    deployed_folds = [item.to(torch.float32) for item in deployed_calibration[:2]]
-    candidates = [parent]
-    cand0 = _polish_weight_output(
-        weight, parent, raw_folds[0], deployed_folds[0]
-    )
-    cand1 = _polish_weight_output(
-        weight, parent, raw_folds[1], deployed_folds[1]
-    )
-    parent_losses = [
-        _output_product_loss(raw, deployed, weight, parent)
-        for raw, deployed in zip(raw_folds, deployed_folds)
-    ]
-    if _output_product_loss(raw_folds[1], deployed_folds[1], weight, cand0) < parent_losses[1]:
-        candidates.append(cand0)
-    if _output_product_loss(raw_folds[0], deployed_folds[0], weight, cand1) < parent_losses[0]:
-        candidates.append(cand1)
-    best = parent
-    best_score = sum(parent_losses) / 2.0 + _WEIGHT_HSDQ_ROBUST_MIX * max(parent_losses)
-    for candidate in candidates[1:]:
-        losses = [
-            _output_product_loss(raw, deployed, weight, candidate)
-            for raw, deployed in zip(raw_folds, deployed_folds)
-        ]
-        score = sum(losses) / 2.0 + _WEIGHT_HSDQ_ROBUST_MIX * max(losses)
-        if score < best_score * (1.0 - _OUTPUT_WEIGHT_HSDQ_MIN_GAIN):
-            best = candidate
-            best_score = score
-    return best
-
-
 def _product_loss(
     activation: torch.Tensor,
     weight: torch.Tensor,
@@ -894,35 +738,9 @@ def hif4_calibration_and_quantize_weight(
     weight_params = _dense_to_hif4(weight_t, offsets=_BASE_OFFSETS)
     weight_params = _crossfold_weight_hsdq(weight_t, weight_params, activation_t)
 
-    gram_tensor = None
-    if int(weight_t.shape[1]) <= _ACT_GRAM_MAX_CHANNELS:
-        # The online activation objective is evaluated after this weight has
-        # been quantized.  Use the deployed Q(W) curvature instead of the
-        # raw-W curvature so the block HSDQ step follows the real operator.
-        deployed_weight = _dequantize_hif4(weight_params).to(torch.float32)
-        gram_tensor = _gram64(deployed_weight)
-    # Recreate the activation tensor that the online API will deploy, then
-    # use it as the left operand of an output-supervised W refinement.  The
-    # teacher target remains raw ``A_t @ W_t.T`` so the weight codes can
-    # compensate the fixed activation error instead of merely fitting W_t.
-    deployed_calibration: list[torch.Tensor] = []
-    for sample in activation_t:
-        activation_params = _dense_to_hif4(
-            sample, offsets=_BASE_OFFSETS, gram64=gram_tensor
-        )
-        activation_params = _refine_activation(
-            sample, activation_params, gram_tensor
-        )
-        deployed_calibration.append(
-            _dequantize_hif4(activation_params).to(torch.float32)
-        )
-    weight_params = _crossfold_weight_output(
-        weight_t, weight_params, activation_t, deployed_calibration
-    )
-
     gram_state = None
-    if gram_tensor is not None:
-        gram_state = _cpu_tensor(gram_tensor)
+    if int(weight_t.shape[1]) <= _ACT_GRAM_MAX_CHANNELS:
+        gram_state = _cpu_tensor(_gram64(weight_t))
     state: dict[str, Any] = {
         "smooth_inv": _cpu_tensor(balance.reciprocal()),
         "block_smooth_size": int(block_size),
@@ -1672,7 +1490,7 @@ def _dynamic_attention_operand(
         params,
         gram_tensor,
         max_blocks=max(1, int(dense.shape[-1]) // _BLOCK),
-        sweeps=_ATTN_DYNAMIC_SWEEPS,
+        sweeps=3,
     )
 
 

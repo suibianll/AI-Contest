@@ -1,0 +1,97 @@
+{
+  "protocol": "official-shape-v1",
+  "created_at": "2026-09-01 08:39:11",
+  "data_source": "cache",
+  "capture_seconds": 14.45645069994498,
+  "cache": "D:\\工作内容\\AI竞赛\\artifacts\\official_eval\\cache\\qwen2.5-0.5b-official-shape-v1.pt",
+  "protocol_config": {
+    "model": "qwen2.5-0.5b",
+    "calibration_lengths": [
+      10,
+      128,
+      512,
+      1024,
+      1024
+    ],
+    "test_length": 128,
+    "test_windows": 9,
+    "linear_cases": 250,
+    "attention_cases": 200,
+    "runtime_limit_seconds": 300.0,
+    "score_formula": "(MSE_STD-MSE_PLAYER)/MSE_STD per case; official total is the sum of case scores",
+    "runtime_measurement": "sum of elapsed six-API calls; wall_seconds is reported separately and is not the official timer"
+  },
+  "data_metadata": {
+    "protocol": "official-shape-v1",
+    "model": "qwen2.5-0.5b",
+    "model_path": "D:\\工作内容\\AI竞赛\\models\\qwen2.5-0.5b",
+    "model_revision": "Qwen/Qwen2.5-0.5B@060db6499f32faf8b98477b0a26969ef7d8b9987",
+    "dataset": "Salesforce/wikitext",
+    "dataset_config": "wikitext-2-raw-v1",
+    "dataset_revision": "b08601e04326c79dfdd32d625aee71d232d685c3",
+    "calibration_lengths": [
+      10,
+      128,
+      512,
+      1024,
+      1024
+    ],
+    "test_length": 128,
+    "test_window_count": 9,
+    "capture_device": "cuda",
+    "weights_dtype": "float32",
+    "data_sha256": {
+      "train": "e83889baabc497075506f91975be5fac0d45c5290b6b20582c8cd1e853d0c9f7",
+      "validation": "204929b7ff9d6184953f867dedb860e40aa69c078fc1e54b3baaa8fb28511c4c"
+    },
+    "linear_case_count": 250,
+    "attention_case_count": 200,
+    "nvfp4_mode": "amax6"
+  },
+  "results": [
+    {
+      "candidate": "root-v127-output-weight",
+      "source": "D:\\工作内容\\AI竞赛\\solution.py",
+      "source_sha256": "2e4e5ef5ac5c81614899e548e159df621b848932a81c831b5ec6d467124d0074",
+      "score": {
+        "linear_sum": 117.95937224685457,
+        "attention_sum": 167.3157108576206,
+        "total_sum": 285.27508310447513,
+        "linear_mean": 0.4718374889874183,
+        "attention_mean": 0.8365785542881029,
+        "equal_weight_45000_scale": 28527.508310447512,
+        "linear_cases": 250,
+        "attention_cases": 200
+      },
+      "timing": {
+        "api_seconds": {
+          "hif4_calibration_and_quantize_weight": 129.43697950069327,
+          "hif4_dynamic_quantize_activation": 16.080274499836378,
+          "hif4_calibration_attention": 115.46075610013213,
+          "hif4_dynamic_quantize_q": 16.389411100768484,
+          "hif4_dynamic_quantize_k": 16.538193399901502,
+          "hif4_dynamic_quantize_v": 1.5315805994905531
+        },
+        "api_total_seconds": 295.4371952008223,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 168,
+          "hif4_dynamic_quantize_activation": 250,
+          "hif4_calibration_attention": 24,
+          "hif4_dynamic_quantize_q": 200,
+          "hif4_dynamic_quantize_k": 200,
+          "hif4_dynamic_quantize_v": 200
+        },
+        "wall_seconds": 317.6072717999341,
+        "local_api_under_300_indicator": true,
+        "wall_under_300_indicator": false
+      },
+      "protocol": "official-shape-v1",
+      "official": {
+        "score": null,
+        "time_seconds": null,
+        "status": "unregistered"
+      },
+      "status": "ok"
+    }
+  ]
+}

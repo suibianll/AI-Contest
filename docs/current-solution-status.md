@@ -1,6 +1,6 @@
 # 当前主版本：算法与评测状态
 
-更新：2026-09-01。根目录 [`solution.py`](../solution.py) 是活动研究版本；归档源码只读。
+更新：2026-09-01。根目录 [`solution.py`](../solution.py) 是当前已验证且满足本地 API `<300s` 代理的活动版本；归档源码只读。
 本页只描述当前状态，历史算法的逐项证据见 [`algorithm-inventory-and-directions.md`](algorithm-inventory-and-directions.md)
 和 [`archive-implementation-audit.md`](archive-implementation-audit.md)。
 
@@ -28,15 +28,16 @@ s=(MSE_{STD}-MSE_{PLAYER})/MSE_{STD},
 
 ## 活动根版本
 
-根代码目前是 v127（v106 Linear 路径 + PAWV 变长修复），SHA256 为
-`F15E112C7E832D019EE83D707ACD9D72FEF121A306E4CC3B50DBBC2CBB574924`。实现保留：
+根代码目前是 v132（固定预算 Attention + 输出监督 W + Q(W)-Gram），SHA256 为
+`7C4884A710F17F44904E8C1C8EA1AC89667711A5B0162497AEAC4D5DAD389F3E`。实现保留：
 
 1. BOAT 对角平衡与 signed-Hadamard 等价变换，满足 `X'W'^T=XW^T`；
 2. Cross-fold Weight-HSDQ，在 64 通道块上使用校准激活统计做合法 HiF4 离散搜索；
-3. Gram-hierarchy Activation-HSDQ，使用静态权重 Gram 做有限预算激活候选筛选；
+3. Gram-hierarchy Activation-HSDQ，使用最终部署 Q(W) 的静态 Gram 做有限预算激活候选筛选；
 4. Expansive-FFN CAT balance，仅在 `rows>channels` 的形状启用并失败回退；
-5. Attention 的 GQRB shortlist 与 PAWV V 精化。PAWV 已按序列长度分组保存 diagonal，
-   对 `[10,128,512,1024,1024]` 逐样本计算，修复了 v100/v107 的固定 `[10,10]` 累加崩溃。
+5. `Q(A)`/`A@W` 输出监督的分块权重精修；
+6. Attention 的 reciprocal balance、K-centering、rotation、GQRB shortlist，候选在
+   128-token proxy/256-token shortlist 上评分，动态 Q/K 使用 2 sweep；dense PAWV 已移除。
 
 已从根代码裁剪并仅保留在归档中的方向：Global Activation-LRH、final deployed-Gram
 row gate、GALS、block-local permutation、L6 rank/factor 系列和 C1 refresh/rank 系列。
@@ -69,22 +70,36 @@ row gate、GALS、block-local permutation、L6 rank/factor 系列和 C1 refresh/
 | v100 | 0.465655 | 0.833617 | 417.747 | 439.896 | Attention WA/timeout |
 | v107 | 0.469211 | 0.833617 | 436.719 | 459.727 | Attention WA |
 | v121 | 0.472198 | 0.833617 | 3404.369 | 3429.645 | timeout |
+| v127 | 0.465655 | 0.833617 | 416.465 | 439.617 | 新协议 root 基线 |
+| v128 | 0.465655 | 0.833573 | 405.851 | 428.122 | PAWV 移除 |
+| v129 | 0.465655 | 0.837789 | 310.732 | 332.557 | 固定预算，仍超代理 |
+| v130 | 0.465655 | 0.836579 | 248.363 | 270.606 | 固定预算 sweep1 |
+| v131 | 0.471837 | 0.836579 | 295.437 | 317.607 | 输出监督 W |
+| v132 | **0.473131** | **0.834256** | **285.929** | 306.940 | **当前根，API<300** |
 
-本轮统一复测中，**最高本地等权显示**为 v121：`linear_mean=0.472197763`、
+本轮统一复测中，旧归档**最高本地等权显示**为 v121：`linear_mean=0.472197763`、
 `attention_mean=0.833617251`、`equal_weight_45000_scale=28477.289`，但 API/Wall 均远超
-300 s，且官方历史裁决为 timeout；它不是可提交版本。若只看官方通过且 API 代理小于 300 s，
-v084 的 Attention 均值最高（0.718107），v024 的 Linear 均值最高（0.450075）。以上数值
-均来自同一 cache、同一协议和同一 CUDA 设备；完整字段以 JSON 为准。
+300 s，且官方历史裁决为 timeout；它不是可提交版本。当前根 v132 的新协议单轮结果为
+Linear `0.473131`、Attention `0.834256`、API `285.929s`、wall `306.940s`；API 总和是
+本计划采用的本地官方时间代理。以上数值均来自同一 cache、同一协议和同一 CUDA 设备；
+完整字段以 JSON 为准。
 
 官方历史锚点（独立于本地代理）：v74 `22750 / 239.387s`（旧权重，通过）；v84
-`16517 / 252.563s`（新权重，通过）；v98/v121 timeout；v100/v107 Attention WA。
+`16517 / 252.563s`（新权重，通过）；**v86 `16744 / 222.7s`（新权重，通过，当前
+官方最佳：分数比 v84 高 `+227`、时间比 v84 快 `29.863s`）**；v98/v121 timeout；
+v100/v107 Attention WA。
+
+v86 尤其重要：它是**唯一在官方 300s 限制内通过、且改动了 Attention 路径**
+（C86 Q/K 共享 block-Hadamard）的候选，证明 Attention 侧改动本身不必然导致
+超时，与 v098/v100/v121 的 B1 GQRB / B2 PAWV 路径形成对照。方向含义：官方时间
+风险来自"per-seq_len 分组 + Python 循环"型 Attention 机制（PAWV/GQRB），而非
+Attention 改动本身。
 
 ## 下一步
 
 当前 active 计划是 [`2026-09-01-hif4-linear-0.8-under-300s-plan.md`](superpowers/plans/2026-09-01-hif4-linear-0.8-under-300s-plan.md)。它只允许在
-`official-shape-v1` 上比较 Linear/Attention 均值和 API 时间；新方向先做固定预算的
-cross-fold screen，再做完整 450-case 复测。任何 Attention 变化必须先通过五种官方长度的
-shape/API 回归，任何新版本必须保留源码 SHA 和可复现 JSON。
+`official-shape-v1` 上比较 Linear/Attention 均值和 API 时间；当前根 v132 已完成完整 450-case
+复测。任何新版本必须保留源码 SHA、统一命名归档和可复现 JSON。
 
 ## 归档规则
 

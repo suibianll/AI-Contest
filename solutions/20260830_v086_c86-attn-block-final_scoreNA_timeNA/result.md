@@ -4,7 +4,17 @@
 - Parent: v084 / C84 full Gram-64 coverage + five coordinate sweeps
 - Commit: `90844fe` (with GQA sign alignment in `31b99d6`)
 - Source SHA256: `E7A16D6991DBB70A593FBE87D0C5D1D8FD38F801665354A01FFAF2F0A96F03CD`
-- Official score/time: `NA` / `NA`
+- Official score/time: **`16744` / `222.7 s`**（新评分权重下官方通过）
+
+> **2026-09-01 官方结果追加**：用户回传 v86 官方评测通过，**`16744 / 222.7s`
+> （< 300s）**。相对父版本 v84（`16517 / 252.563s`）分数 `+227`、时间
+> `−29.863s`，是目前**新权重下分数最高且最快的官方通过点**。
+> 意义：C86 是本归档唯一的 Attention 侧改动（Q/K 共享 block-Hadamard），在
+> 增加 Attention 工作的同时官方时间反而下降，说明"Attention 改动"本身不是
+> 超时根因；真正触发超时的是 v098/v100/v121 的 B1 GQRB / B2 PAWV 路径
+> （per-seq_len 分组 + Python 循环，官方端无向量化奖励）。详见
+> [`v100 超时根因分析`](../../logs/execution/2026-08-31-v100-official-timeout-analysis.md)
+> 与 [`v86 官方结果`](../../logs/execution/2026-09-01-v86-official-result.md)。
 
 ## Mechanism
 

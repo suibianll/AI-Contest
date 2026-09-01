@@ -52,10 +52,26 @@ silently assigned a score.
 | v072 | `20260829_v072_c74-jdrq-hierarchy_scoreNA_timeNA` | 22662 | 226 s | pass |
 | v074 | `20260829_v074_c75-rowwise-jdrq_scoreNA_timeNA` | 22750 | 239.387 s | pass |
 | v084 | `20260830_v084_c84-gram64-sweep5_scoreNA_timeNA` | 16517 | 252.563 s | pass (revised weights) |
+| v086 | `20260830_v086_c86-attn-block-final_scoreNA_timeNA` | **16744** | **222.7 s** | **pass (revised weights, new best)** |
 | v098 | `20260830_v098_b1-gqrb-margin-active_score293.793700_time406s` | — | >300 s | timeout |
 | v100 | `20260830_v100_b2-pawv-diagonly-active_score293.797301_time392s` | — | >300 s | Attention WA / timeout |
 | v107 | `20260830_v107_l3-global-lrh-precision-parent_score295.157057_time481s` | — | — | Attention WA |
 | v121 | `20260831_v121_c1b-structured-refresh2-accepted_score295.811281_time2180s` | — | >300 s | timeout |
+
+## 2026-09-01 official-shape-v1 local candidates
+
+These are local reproductions only; no official score/time is inferred from them.  Their
+directories follow the same immutable naming rule as the historical archive:
+`YYYYMMDD_vNNN_<description>_scoreNA_timeNA`.
+
+| Version | Source directory | Linear mean | Attention mean | API total | Decision |
+|---|---|---:|---:|---:|---|
+| v128 | `20260901_v128_fixed-attn-budget_scoreNA_timeNA` | 0.465655 | 0.837789 | 310.732 s | proxy validated, still over |
+| v129 | `20260901_v129_fixed-attn-budget-sweep1_scoreNA_timeNA` | 0.465655 | 0.836579 | 248.363 s | time parent |
+| v130 | `20260901_v130_output-weight_scoreNA_timeNA` | 0.471837 | 0.836579 | 295.437 s | output W parent |
+| v131 | `20260901_v131_output-weight-qwgram_scoreNA_timeNA` | 0.473131 | 0.836579 | 294.835 s | Q(W)-Gram parent |
+| v132 | `20260901_v132_output-weight-qwgram-dynsweep2_scoreNA_timeNA` | **0.473131** | **0.834256** | **285.929 s** | **active root** |
+| v133 | `20260901_v133_output-weight-qwgram-gain_scoreNA_timeNA` | 0.483610 | 0.834256 | 317.507 s | precision probe, over time |
 
 ## Recording rules
 
