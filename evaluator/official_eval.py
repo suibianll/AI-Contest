@@ -756,7 +756,7 @@ ARCHIVE_MANIFEST: dict[str, dict[str, Any]] = {
     "v024": {"path": "solutions/20260827_v024_c21-gated-exact-cross-selection_score16043_time174s/solution.py", "official_score": 16043, "official_time": 173.8, "official_status": "pass"},
     "v025": {"path": "solutions/20260827_v025_c21c-compliance-baseline/solution.py", "official_score": 14437, "official_time": 166.6, "official_status": "pass"},
     "v030": {"path": "solutions/20260828_v030_c38-beam2-fullcov-official14092_time170.6s/solution.py", "official_score": 14092, "official_time": 170.57, "official_status": "pass"},
-    "v031": {"path": "solutions/20260828_v031_c39-fw-official14613_time159.2s/solution.py", "official_score": 21864, "official_time": 161.3, "official_status": "pass"},
+    "v031": {"path": "solutions/20260828_v031_c39-fw-official21864_time161.3s/solution.py", "official_score": 21864, "official_time": 161.3, "official_status": "pass"},
     "v032": {"path": "solutions/20260828_v032_c40-robust-blockldlq_official-score14432_time216.667s/solution.py", "official_score": 14432, "official_time": 216.667, "official_status": "pass"},
     "v034": {"path": "solutions/20260829_v034_c41b-mha-k-center_scoreNA_timeNA/solution.py", "official_score": 21864, "official_time": 159.4, "official_status": "pass"},
     "v051": {"path": "solutions/20260829_v051_c47b-grouping-threshold005_scoreNA_timeNA/solution.py", "official_score": 22451, "official_time": 234.0, "official_status": "pass"},

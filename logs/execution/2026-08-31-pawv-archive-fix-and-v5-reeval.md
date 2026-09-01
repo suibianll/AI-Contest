@@ -29,7 +29,7 @@ v099–v125 共 **28 个归档 `solution.py`** 携带 B2 PAWV 变长 bug：`_bui
 
 - `20260830_v099_...` 至 `20260830_v107_...`（v099–v107 全部 9 个）
 - `20260831_v108_...` 至 `20260831_v125_...`（v108–v125 全部 18 个）
-- `20260831_v125_c1c-block8-screen-positive`
+- `20260831_v125b_c1c-block8-screen-positive`（2026-09-01 归档整理时重命名，版本号唯一化）
 
 ## v5 sampled-means 复评（Qwen2.5-0.5B，224 Linear / 32 Attention，seed 20260831）
 

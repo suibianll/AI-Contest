@@ -119,5 +119,20 @@ v86 的部分 scale-aware/output-aware 机制。此前把它描述为“v86 级�
 - 空的重复 v140 curvature 目录已删除；
 - v141–v145 失败源码目录删除，逐次 JSON/日志保留。
 
+2026-09-01 归档整理（区分新旧评测分数体系）：
+
+- 旧协议产物移入 `*/archive/legacy-*-20260901/`：`artifacts/oracle_dashboard/` →
+  `artifacts/archive/legacy-oracle-dashboard-20260901/`；`artifacts/jdrq/` →
+  `artifacts/archive/legacy-jdrq-diagnostics-20260901/`；`logs/candidates/` →
+  `logs/archive/legacy-candidates-20260901/`；根目录 `solution_b0_tmp.py` →
+  `logs/archive/legacy-root-files-20260901/`；
+- v031 目录名由旧面板 `official14613` 更正为官方 `21864`（同步更新
+  `evaluator/official_eval.py` ARCHIVE_MANIFEST 与 `solutions/README.md`）；
+- v125 screen 记录目录更名为 `20260831_v125b_c1c-block8-screen-positive`，版本号恢复全局唯一；
+- 清理 12 个 pytest 临时目录残留（`.pytest-tmp-*`、`.tmp-pytest`、`.tmp_pytest`、
+  `artifacts/pytest_tmp*`，均为 gitignore 覆盖的本地临时目录）；
+- 根 README 新增「分数体系与归档对照」章节，三套分数体系（官方旧权重 / 官方新权重 /
+  本地协议分）明确隔离，`solutions/` 目录名中的数字字段口径已在索引中说明。
+
 以后微参数实验不分配版本号；只有新数学算法、官方提交或一个代表性失败实现进入
 `solutions/`，目录名和 `result.md` 必须同时标注 `retained/rejected/timeout`。

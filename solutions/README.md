@@ -50,7 +50,7 @@ silently assigned a score.
 | v024 | `20260827_v024_c21-gated-exact-cross-selection_score16043_time174s` | 16043 | 173.8 s | pass |
 | v025 | `20260827_v025_c21c-compliance-baseline` | 14437 | 166.6 s | pass |
 | v030 | `20260828_v030_c38-beam2-fullcov-official14092_time170.6s` | 14092 | 170.57 s | pass |
-| v031 | `20260828_v031_c39-fw-official14613_time159.2s` | 21864 | 161.3 s | pass |
+| v031 | `20260828_v031_c39-fw-official21864_time161.3s` | 21864 | 161.3 s | pass |
 | v032 | `20260828_v032_c40-robust-blockldlq_official-score14432_time216.667s` | 14432 | 216.667 s | pass |
 | v034 | `20260829_v034_c41b-mha-k-center_scoreNA_timeNA` | 21864 | 159.4 s | pass |
 | v051 | `20260829_v051_c47b-grouping-threshold005_scoreNA_timeNA` | 22451 | 234 s | pass |

@@ -6,7 +6,7 @@
 ## 1. 对照范围与协议
 
 - 对照源码：
-  - v31：`solutions/20260828_v031_c39-fw-official14613_time159.2s/solution.py`
+  - v31：`solutions/20260828_v031_c39-fw-official21864_time161.3s/solution.py`
   - v51：`solutions/20260829_v051_c47b-grouping-threshold005_scoreNA_timeNA/solution.py`
   - 外部：本地归档的 `solutions/20260826_v002_youxilee-hif4_score15000plus_timeNA/solution.py`
   - v107：`solutions/20260830_v107_l3-global-lrh-precision-parent_score295.157057_time481s/solution.py`

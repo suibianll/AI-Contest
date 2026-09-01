@@ -240,7 +240,7 @@ six-API time      2653.580314 s wall time       2686.541758 s   （探索阶段�
 新增 evaluator-side 五层分层诊断，固定 Qwen `layers={0,5,11,17,23}`、七个 Linear role、
 两折校准和 255 个合法 E6M2 scale code。输出四个 evaluator arms：当前双侧量化、
 权重无损、激活无损和双侧无损；同时记录 weight-plain、weight-Gram、activation-Gram
-的独立 block oracle。完整结果见 [`l0-linear-ceiling-qwen.json`](../artifacts/oracle_dashboard/l0-linear-ceiling-qwen.json)。
+的独立 block oracle。完整结果见 [`l0-linear-ceiling-qwen.json`](../artifacts/archive/legacy-oracle-dashboard-20260901/oracle_dashboard/l0-linear-ceiling-qwen.json)。
 
 | arm / oracle | 五层×七 role mean |
 |---|---:|
@@ -268,7 +268,7 @@ E0-G 明细：
 | proj | weight / Gram | 18 / 50（/2432） | 0.0390% / 0.0475% | 9.94% / 20.53% |
 
 D0 三层均值（weight / activation-Gram）如下，原始 JSON 保存在
-`artifacts/oracle_dashboard/e0g-*-layer{1,2,3}.json`：
+`artifacts/archive/legacy-oracle-dashboard-20260901/oracle_dashboard/e0g-*-layer{1,2,3}.json`（2026-09-01 起归档）：
 
 | 模型 | layer 1 | layer 2 | layer 3 |
 |---|---:|---:|---:|

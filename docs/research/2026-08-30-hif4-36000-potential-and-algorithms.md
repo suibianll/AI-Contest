@@ -1433,8 +1433,8 @@ capture_{local}=
 - 当前唯一提交文件：`solution.py`
 - 当前根版本实测、角色归因和 score 公式：`docs/current-solution-status.md`
 - C75 project-only Gram64：`solutions/20260829_v073_c75-source-aware-gram64_scoreNA_timeNA/result.md`
-- Qwen JDRQ D0：`artifacts/jdrq/d0-qwen-proj.json`
-- GPT-2 JDRQ D0：`artifacts/jdrq/d0-gpt2-proj-v3.json`
+- Qwen JDRQ D0：`artifacts/archive/legacy-jdrq-diagnostics-20260901/jdrq/d0-qwen-proj.json`（2026-09-01 起归档）
+- GPT-2 JDRQ D0：`artifacts/archive/legacy-jdrq-diagnostics-20260901/jdrq/d0-gpt2-proj-v3.json`（2026-09-01 起归档）
 - 最新 wide hierarchy64：旧 `logs/evaluations/` 报告已移入本地 legacy archive，不能作为当前结果。
 - 最新 wide JDRQ coordinate 回退：旧 `logs/evaluations/` 报告已移入本地 legacy archive，不能作为当前结果。
 - 文献调研底稿：`docs/research/2026-08-28-hif4-algorithm-literature/report.md`

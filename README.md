@@ -155,6 +155,36 @@ JSON 的 `score.linear_mean` 和 `score.attention_mean` 是唯一主指标；
 结果不再读取、不再更新，旧 evaluator 源码统一放在
 `evaluator/archive/legacy-20260901/` 作为历史证据。
 
+## 分数体系与归档对照（2026-09-01 归档整理）
+
+仓库历史上存在多套**互不相通**的分数，任何排序、对比与结论必须先声明体系，严禁混用：
+
+| 体系 | 来源 | 适用版本 | 状态 |
+|---|---|---|---|
+| 官方旧权重分数 | 官方回传（旧权重时期，panel 数次修订） | v001–v074 | 历史事实，仅存档 |
+| 官方新权重分数 | 官方回传（250 Linear + 200 Attention） | v084/v086/v098/v100/v107/v121/v128–v131/v138–v139 | 当前官方口径 |
+| 本地协议分 | official-shape-v1 复测（`linear_mean`/`attention_mean`） | v132–v145 及活动根文件 | 仅同机 A/B，不换算官方分 |
+| 旧协议分（已废弃） | real_model_suite / sampled-means-v1/v2 / oracle dashboard | v000–v127 时期 | 已全部归档，禁止再用于排序或调参 |
+
+注意：`solutions/` 目录名中的数字字段**不是统一口径**——v001–v032 的 `score`/`official`
+字段为官方分；v034–v086 多数为 `scoreNA_timeNA`（官方分见上表）；v087 之后目录名中的
+`score29x` / `screen0.53x` 是**本地协议分数**，不代表官方结果。2026-09-01 归档整理中
+v031 目录名已从旧面板 `official14613` 更正为官方 `21864`，v125 screen 记录目录更名为
+`v125b` 保证版本号全局唯一。
+
+### 归档目录结构
+
+| 路径 | 内容 |
+|---|---|
+| `solutions/` | 唯一版本源码快照（只读归档，`retained/rejected/timeout` 标注） |
+| `evaluator/official_eval.py` | 当前唯一评测入口（official-shape-v1） |
+| `evaluator/archive/legacy-20260901/` | 旧评测器源码（real_model_suite 等） |
+| `artifacts/official_eval/` | 当前协议 JSON 与 cache |
+| `logs/official_eval/` | 当前协议报告 |
+| `artifacts/archive/legacy-*-20260901/` | 旧协议 JSON（real-model-suite / oracle-dashboard / jdrq-diagnostics） |
+| `logs/archive/legacy-*-20260901/` | 旧协议报告（evaluations / official-eval / candidates / root-files） |
+| `docs/superpowers/archive/plans/` | 已完成/废止计划 |
+
 ## 归档、计划和清理规则
 
 1. 计划目录只保留一个活动计划：`docs/superpowers/plans/`；完成或废止的计划移动到
