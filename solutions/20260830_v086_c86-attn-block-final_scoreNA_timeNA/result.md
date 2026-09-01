@@ -16,6 +16,20 @@
 > [`v100 超时根因分析`](../../logs/execution/2026-08-31-v100-official-timeout-analysis.md)
 > 与 [`v86 官方结果`](../../logs/execution/2026-09-01-v86-official-result.md)。
 
+## 2026-09-01 local official-shape-v1 idle rerun
+
+The candidate was rerun on an idle machine with the pinned read-only cache and the current
+`official-shape-v1` protocol (250 Linear + 200 Attention cases):
+
+| Linear mean | Attention mean | API total | Wall | Local API<300 |
+|---:|---:|---:|---:|---|
+| `0.4066682145` | `0.7196960689` | `299.3015726s` | `321.9955866s` | **True** |
+
+The complete JSON and report are [`v086-idle-rerun-20260901-official-shape-v1.json`](../../artifacts/official_eval/v086-idle-rerun-20260901-official-shape-v1.json)
+and [`v086-idle-rerun-20260901-official-shape-v1.md`](../../logs/official_eval/v086-idle-rerun-20260901-official-shape-v1.md).
+The earlier local `462.239s / 501.257s` observation remains in its original report as a
+concurrent-load/drift upper bound; it is not overwritten or used as the clean rerun result.
+
 ## Mechanism
 
 C86 adds a shared head-local Hadamard candidate to attention Q/K calibration.

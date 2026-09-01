@@ -57,6 +57,7 @@ silently assigned a score.
 | v100 | `20260830_v100_b2-pawv-diagonly-active_score293.797301_time392s` | — | >300 s | Attention WA / timeout |
 | v107 | `20260830_v107_l3-global-lrh-precision-parent_score295.157057_time481s` | — | — | Attention WA |
 | v121 | `20260831_v121_c1b-structured-refresh2-accepted_score295.811281_time2180s` | — | >300 s | timeout |
+| v128 | `20260901_v128_fixed-attn-budget_scoreNA_timeNA` | — | >300 s | **timeout (official, user confirmed)** |
 
 ## 2026-09-01 official-shape-v1 local candidates
 
@@ -66,7 +67,8 @@ directories follow the same immutable naming rule as the historical archive:
 
 | Version | Source directory | Linear mean | Attention mean | API total | Decision |
 |---|---|---:|---:|---:|---|
-| v128 | `20260901_v128_fixed-attn-budget_scoreNA_timeNA` | 0.465655 | 0.837789 | 310.732 s | proxy validated, still over |
+| v086 (idle rerun) | `20260830_v086_c86-attn-block-final_scoreNA_timeNA` | 0.406668 | 0.719696 | 299.302 s | clean rerun; official 16744/222.7 s pass |
+| v128 | `20260901_v128_fixed-attn-budget_scoreNA_timeNA` | 0.465655 | 0.837789 | 310.732 s | **official timeout (user confirmed)** |
 | v129 | `20260901_v129_fixed-attn-budget-sweep1_scoreNA_timeNA` | 0.465655 | 0.836579 | 248.363 s | time parent |
 | v130 | `20260901_v130_output-weight_scoreNA_timeNA` | 0.471837 | 0.836579 | 295.437 s | output W parent |
 | v131 | `20260901_v131_output-weight-qwgram_scoreNA_timeNA` | 0.473131 | 0.836579 | 294.835 s | Q(W)-Gram parent |
@@ -76,6 +78,10 @@ directories follow the same immutable naming rule as the historical archive:
 \* The later temporary gain+adyn2 run reported `365.818 s`, but the machine was concurrently busy;
 its timing is excluded from runtime ranking. The persisted v133 archive was rerun idle at `291.275 s`;
 the active root file was then rerun directly at `287.941 s`.
+
+\* The earlier v086 local `462.239 s` observation was also concurrent-load affected. The clean
+idle rerun is `299.302 s` API / `321.996 s` wall; see
+[`v086 idle rerun`](../artifacts/official_eval/v086-idle-rerun-20260901-official-shape-v1.json).
 
 ## Recording rules
 

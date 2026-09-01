@@ -13,6 +13,8 @@ sum, API time, and wall time. The official platform currently requires end-to-en
 score. The latest known official anchors are v74 `22750 / 239.387s` (old weights), v84
 `16517 / 252.563s`, and v86 **`16744 / 222.7s`** (revised weights). v86 is the best
 revised-weight official result so far: `+227` score and `29.863s` faster than v84.
+The later v128 fixed-attn-budget candidate was confirmed by the user to time out on the
+official evaluator (`>300s`; no official score returned).
 
 Capture the pinned public data pack once:
 
