@@ -255,6 +255,8 @@ def _write_report(path: Path, payload: dict[str, Any]) -> None:
     metadata = payload.get("data_metadata", {})
     decomposition = payload.get("decomposition", {})
     linear = decomposition.get("linear", {}).get("overall", {})
+    linear_by_role = decomposition.get("linear", {}).get("by_role", {})
+    linear_by_family = decomposition.get("linear", {}).get("by_role_family", {})
     attention = decomposition.get("attention", {}).get("overall", {})
     lines = [
         "# Cross-model GPT probe",
@@ -277,8 +279,26 @@ def _write_report(path: Path, payload: dict[str, Any]) -> None:
         f"- Attention interpretation: `{attention.get('interpretation', 'unknown')}`",
         f"- Attention Q-only/K-only/V-only/QK-only/Both: `{attention.get('gain', {}).get('q_only', 0.0):.6f}` / `{attention.get('gain', {}).get('k_only', 0.0):.6f}` / `{attention.get('gain', {}).get('v_only', 0.0):.6f}` / `{attention.get('gain', {}).get('qk_only', 0.0):.6f}` / `{attention.get('gain', {}).get('both', 0.0):.6f}`",
         "",
-        "Full per-role/layer/length results are in JSON `case_scores` and `decomposition`.",
+        "### Static Linear role/family gain",
+        "",
+        "| Group | cases | gain |",
+        "|---|---:|---:|",
     ]
+    for family, value in linear_by_family.items():
+        lines.append(
+            f"| family:{family} | {value.get('case_count', 0)} | "
+            f"{value.get('gain', {}).get('both', 0.0):.6f} |"
+        )
+    for role, value in linear_by_role.items():
+        lines.append(
+            f"| role:{role} | {value.get('case_count', 0)} | "
+            f"{value.get('gain', {}).get('both', 0.0):.6f} |"
+        )
+    lines.extend([
+        "",
+        "Static Linear q/k/v are projection roles; the Attention Q/K/V control arms above are a separate dynamic path.",
+        "Full per-role/layer/length results are in JSON `case_scores` and `decomposition`.",
+    ])
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 

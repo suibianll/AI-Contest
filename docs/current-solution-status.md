@@ -154,6 +154,24 @@ fc 保留 BOAT、重做 expansive 编码/scale；o 暂不重写。完整逐层�
 权重。下一轮本地主评测必须同时报告静态 q/k/v/o/fc/proj 与动态 Attention Q/K/V，逐层显示
 误差源。
 
+## 2.4 评测器分解缺口与修复
+
+此前 `official_eval.py` 已有候选内部的 Linear `E00/E10/E01/E11` 和 `by_role`，但它只回答
+“该候选相对独立标准 codec 的 W/A 增益”，没有把同一 cache 中的 v140 与 v086 按
+`layer/role/window` 配对后计算 signed delta；报告也没有把 `fc_gate/fc_up` 合并为 `fc`，或
+自动列出最差层。因此它无法像外部 hif4 一样直接回答“qkv、o、fc、proj 哪一组退化”。
+
+这不是额外的官方评测调用：已在 [`evaluator/official_eval.py`](../evaluator/official_eval.py)
+中加入 `role_family`（`qkv/o/fc/proj`）、跨候选静态 Linear role 差分和 worst-case layer
+列表。运行 `--archive` 后，JSON 顶层的 `linear_candidate_role_diagnostics` 默认优先以
+`v086`（兼容手工运行名 `v86`）为基线，报告同时输出 family/role 的平均 Δ、正负层数和最差
+case；单候选 JSON 仍保留原有 `decomposition`，不会改变主分数、调用次数或时间。
+
+评测器仍不能自动关闭候选私有的 ROAB/BOAT/CAT，因为六个公开 API 没有这些开关；这类机制
+归因必须用明确的 local-only 变体或外部脚本临时副本，且不能作为官方候选。现在的职责分层是：
+主评测器负责同 cache 的 role 差分，hif4 外部脚本负责跨结构/私有机制探针，官方回传负责最终
+排序。
+
 ## 3. 历史 v1 结果表（不可与 proxy-v2 混用）
 
 下表保留旧 `official-shape-v1` 的同机数字，仅用于审计此前的失真；当前 proxy-v2 分层 panel

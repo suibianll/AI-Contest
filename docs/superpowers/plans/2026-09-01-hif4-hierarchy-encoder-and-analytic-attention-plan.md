@@ -94,6 +94,12 @@ QK 改善，结果标为 `paired_qk_coupling_likely`，不把单侧控制臂当�
 没有额外候选 API 调用，主 `score` 字段保持原始未加权真实 panel 定义；`--full-cases` 的分数
 只能作为 stress 记录，不能与默认 panel 混排。
 
+**role 差分修复：** 评测器同时写入 `role_family`（`qkv/o/fc/proj`）和 archive 级
+`linear_candidate_role_diagnostics`。它在同一 cache 中按 `layer/role/window` 配对候选与
+`v086`（兼容 `v86`）基线，输出每个 family/role 的 signed Δ、正负 case 数、最差层；这补上
+了“候选内部 W/A 分解”无法回答“哪个 role 相对父版本退化”的缺口。该控制只消费已有
+`case_scores`，不增加 API 调用、主分数或时间口径。
+
 **决策顺序：** 先用固定 v86 Attention 做 Linear 四臂归因，再冻结 Linear 做 Attention 六臂
 归因；只有定位到具体 role/layer/length 的误差源后，才进入 L1–L4 或 Attention 独立实验。
 若 W-only、A-only 和 Both 的方向不一致，优先检查坐标变换/部署状态交互，不继续盲调参数。

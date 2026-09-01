@@ -124,6 +124,11 @@ calib2 / test2 / current` 配置。其结果（Linear mean / Attention）依次�
 重做保留 BOAT 的 fc 编码/scale。完整消融和限制见
 [`外部 role 归因日志`](logs/execution/2026-09-01-hif4-external-role-attribution-v140-v86.md)。
 
+本地主评测器现在还会在 `--archive` 的同一 cache 中自动生成跨候选 static Linear role 差分：
+`q/k/v`、`o`、合并后的 `fc` 和 `proj` 均报告平均 Δ、正负 case 数及最差层；这与候选内部的
+W/A 四臂分解互补，不增加六个 API 调用。ROAB/BOAT/CAT 这类私有机制仍须用 local-only 变体
+或外部 hif4 副本消融，不能伪装成官方 API 评测。
+
 计时同时保存：
 
 - `timing.api_total_seconds`：六个候选 API 调用耗时之和，是最接近赛事“量化函数执行时间”

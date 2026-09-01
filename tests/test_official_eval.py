@@ -26,8 +26,10 @@ from official_eval import (  # noqa: E402
     _attention_trace,
     _attention_decomposition_summary,
     _choose_cases,
+    _linear_candidate_role_diagnostics,
     _linear_decomposition_summary,
     _linear_error_source_details,
+    _linear_role_family,
     _trend_diagnostics,
     build_parser,
     load_pack,
@@ -214,6 +216,46 @@ def test_attention_decomposition_summary_contains_intermediate_sources() -> None
 def test_decomposition_is_enabled_by_default_and_can_be_disabled() -> None:
     assert build_parser().parse_args([]).decomposition is True
     assert build_parser().parse_args(["--no-decomposition"]).decomposition is False
+
+
+def test_static_linear_role_family_groups_qkv_fc_o_and_proj() -> None:
+    assert [_linear_role_family(role) for role in ("q", "k", "v", "o", "fc_gate", "fc_up", "proj")] == [
+        "qkv", "qkv", "qkv", "o", "fc", "fc", "proj"
+    ]
+    assert _linear_role_family("ffn_in") == "fc"
+
+
+def test_candidate_role_diagnostics_pairs_same_case_against_v86() -> None:
+    def result(name: str, gains: dict[str, float]) -> dict[str, object]:
+        cases = []
+        for role, gain in gains.items():
+            cases.append({
+                "layer": 0,
+                "role": role,
+                "role_family": _linear_role_family(role),
+                "test_window": 0,
+                "test_split": "validation",
+                "test_length": 128,
+                "gain": gain,
+            })
+        return {
+            "candidate": name,
+            "status": "ok",
+            "decomposition": {"linear": {"enabled": True}},
+            "case_scores": {"linear": cases},
+        }
+
+    diagnostics = _linear_candidate_role_diagnostics([
+        result("v86", {"q": 0.1, "fc_gate": 0.2, "proj": 0.3}),
+        result("candidate", {"q": 0.2, "fc_gate": 0.1, "proj": 0.0}),
+    ])
+    assert diagnostics["enabled"] is True
+    assert diagnostics["baseline"] == "v86"
+    candidate = diagnostics["candidates"]["candidate"]
+    assert candidate["by_role"]["q"]["mean_delta_gain"] == 0.1
+    assert candidate["by_role"]["fc_gate"]["mean_delta_gain"] == -0.1
+    assert candidate["by_role_family"]["fc"]["mean_delta_gain"] == -0.1
+    assert candidate["worst_cases"][0]["role"] == "proj"
 
 
 def test_solution_loader_finds_the_six_public_apis() -> None:

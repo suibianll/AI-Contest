@@ -85,6 +85,7 @@ WIKITEXT_FILES = {
     "test": "test-00000-of-00001.parquet",
 }
 ROLES = ("q", "k", "v", "o", "fc_gate", "fc_up", "proj")
+LINEAR_ROLE_FAMILIES = ("qkv", "o", "fc", "proj")
 REQUIRED_APIS = (
     "hif4_calibration_and_quantize_weight",
     "hif4_dynamic_quantize_activation",
@@ -1128,6 +1129,175 @@ def _group_summary(
     return {name: summary_fn(group) for name, group in sorted(groups.items())}
 
 
+def _linear_role_family(role: str) -> str:
+    """Map model-specific static Linear roles to comparable families.
+
+    The public judge does not expose role names, and cross-model probes can
+    use ``ffn_in`` instead of gated ``fc_gate``/``fc_up``.  Keeping this map in
+    the evaluator makes the diagnostic grouping explicit without changing the
+    candidate API or pretending that static Q/K/V are dynamic Attention Q/K/V.
+    """
+    if role in {"q", "k", "v"}:
+        return "qkv"
+    if role == "o":
+        return "o"
+    if role == "proj":
+        return "proj"
+    if role.startswith("fc_") or role == "ffn_in":
+        return "fc"
+    return role
+
+
+def _delta_summary(values: Sequence[float]) -> dict[str, Any]:
+    """Summarize a candidate-vs-baseline signed role delta."""
+    if not values:
+        return {
+            "case_count": 0,
+            "mean_delta_gain": 0.0,
+            "positive_cases": 0,
+            "negative_cases": 0,
+            "zero_cases": 0,
+            "min_delta_gain": 0.0,
+            "max_delta_gain": 0.0,
+        }
+    return {
+        "case_count": len(values),
+        "mean_delta_gain": sum(values) / len(values),
+        "positive_cases": sum(value > 0.0 for value in values),
+        "negative_cases": sum(value < 0.0 for value in values),
+        "zero_cases": sum(value == 0.0 for value in values),
+        "min_delta_gain": min(values),
+        "max_delta_gain": max(values),
+    }
+
+
+def _linear_case_identity(item: Mapping[str, Any]) -> tuple[Any, ...]:
+    """Return the stable identity used to pair cases across candidates."""
+    return (
+        int(item.get("layer", -1)),
+        str(item.get("role", "")),
+        int(item.get("test_window", -1)),
+        str(item.get("test_split", "")),
+        int(item.get("test_length", -1)),
+    )
+
+
+def _linear_candidate_role_diagnostics(
+    results: Sequence[Mapping[str, Any]],
+    baseline_name: str | None = None,
+) -> dict[str, Any]:
+    """Compare static Linear roles across candidates on one shared panel.
+
+    The per-candidate decomposition already reports W/A arms against the
+    independent standard codec.  This second diagnostic answers a different
+    question: ``candidate gain - baseline gain`` for the exact same
+    layer/role/window.  It is intentionally evaluator-only and never changes
+    a candidate score or invokes an additional public API.
+    """
+    eligible = [
+        result for result in results
+        if result.get("status") == "ok"
+        and result.get("decomposition", {}).get("linear", {}).get("enabled")
+    ]
+    if len(eligible) < 2:
+        return {
+            "enabled": False,
+            "reason": "at least two successful candidates with Linear decomposition are required",
+        }
+    by_name = {str(result.get("candidate", "")): result for result in eligible}
+    if baseline_name is not None:
+        baseline = by_name.get(str(baseline_name))
+        if baseline is None:
+            return {
+                "enabled": False,
+                "reason": f"requested baseline {baseline_name!r} is not an eligible candidate",
+            }
+    else:
+        # v086 (often called v86 in notes) is the verified Linear/Attention
+        # parent in the current cohort.  Keep both spellings because archive
+        # manifests use the zero-padded form while ad-hoc runs often do not.
+        baseline = next(
+            (by_name[name] for name in ("v086", "v86") if name in by_name),
+            eligible[0],
+        )
+    baseline_label = str(baseline.get("candidate", "baseline"))
+    baseline_cases = {
+        _linear_case_identity(item): item
+        for item in baseline.get("case_scores", {}).get("linear", [])
+    }
+    if not baseline_cases:
+        return {"enabled": False, "reason": "baseline has no Linear case scores"}
+
+    candidate_payload: dict[str, Any] = {}
+    for result in eligible:
+        name = str(result.get("candidate", "candidate"))
+        if name == baseline_label:
+            continue
+        paired: list[dict[str, Any]] = []
+        for item in result.get("case_scores", {}).get("linear", []):
+            baseline_item = baseline_cases.get(_linear_case_identity(item))
+            if baseline_item is None:
+                continue
+            role = str(item.get("role", ""))
+            paired.append({
+                "layer": int(item.get("layer", -1)),
+                "role": role,
+                "role_family": str(item.get("role_family", _linear_role_family(role))),
+                "test_window": int(item.get("test_window", -1)),
+                "delta_gain": float(item.get("gain", 0.0)) - float(baseline_item.get("gain", 0.0)),
+            })
+        if not paired:
+            candidate_payload[name] = {
+                "case_count": 0,
+                "by_role": {},
+                "by_role_family": {},
+                "by_role_layer": {},
+                "worst_cases": [],
+            }
+            continue
+
+        def grouped(key: str) -> dict[str, dict[str, Any]]:
+            groups: dict[str, list[float]] = {}
+            for item in paired:
+                groups.setdefault(str(item[key]), []).append(float(item["delta_gain"]))
+            return {group: _delta_summary(values) for group, values in sorted(groups.items())}
+
+        role_layer: dict[str, dict[str, Any]] = {}
+        for item in paired:
+            key = f"{item['role']}@layer{item['layer']}"
+            role_layer.setdefault(key, {"role": item["role"], "role_family": item["role_family"], "layer": item["layer"], "values": []})
+            role_layer[key]["values"].append(float(item["delta_gain"]))
+        role_layer = {
+            key: {
+                **{field: value for field, value in value.items() if field != "values"},
+                **_delta_summary(value["values"]),
+            }
+            for key, value in role_layer.items()
+        }
+        candidate_payload[name] = {
+            "case_count": len(paired),
+            "by_role": grouped("role"),
+            "by_role_family": grouped("role_family"),
+            "by_role_layer": role_layer,
+            "worst_cases": [
+                {
+                    "layer": item["layer"],
+                    "role": item["role"],
+                    "role_family": item["role_family"],
+                    "test_window": item["test_window"],
+                    "delta_gain": item["delta_gain"],
+                }
+                for item in sorted(paired, key=lambda value: value["delta_gain"])[:16]
+            ],
+        }
+    return {
+        "enabled": True,
+        "baseline": baseline_label,
+        "formula": "candidate case gain - baseline case gain; positive means candidate improves the same layer/role/window",
+        "candidates": candidate_payload,
+    }
+
+
 def _cpu_params(params: Mapping[str, torch.Tensor]) -> dict[str, torch.Tensor]:
     return {name: value.detach().to("cpu") for name, value in params.items()}
 
@@ -1263,6 +1433,8 @@ def evaluate_solution(
             "case_id": case.case_id,
             "layer": case.layer,
             "role": case.role,
+            "role_family": _linear_role_family(case.role),
+            "role_domain": "static_linear",
             "calibration_indices": list(case.calibration_indices),
             "test_window": case.test_window,
             "test_split": pack.test_windows[case.test_window].split,
@@ -1391,6 +1563,14 @@ def evaluate_solution(
         / max(1, sum(item["role"] == role for item in linear_details))
         for role in pack.roles
     }
+    linear_role_families = sorted({
+        _linear_role_family(role) for role in pack.roles
+    })
+    linear_by_role_family = {
+        family: sum(item["gain"] for item in linear_details if item["role_family"] == family)
+        / max(1, sum(item["role_family"] == family for item in linear_details))
+        for family in linear_role_families
+    }
     attention_by_layer = {
         str(layer): sum(item["gain"] for item in attention_details if item["layer"] == layer)
         / max(1, sum(item["layer"] == layer for item in attention_details))
@@ -1405,6 +1585,7 @@ def evaluate_solution(
             },
             "overall": _linear_decomposition_summary(linear_details),
             "by_role": _group_summary(linear_details, "role", _linear_decomposition_summary),
+            "by_role_family": _group_summary(linear_details, "role_family", _linear_decomposition_summary),
             "by_layer": _group_summary(linear_details, "layer", _linear_decomposition_summary),
             "by_shape": _group_summary(linear_details, "shape_bucket", _linear_decomposition_summary),
             "by_test_length": _group_summary(linear_details, "test_length", _linear_decomposition_summary),
@@ -1445,6 +1626,7 @@ def evaluate_solution(
             "linear_cases": len(linear_details),
             "attention_cases": len(attention_details),
             "linear_by_role": linear_by_role,
+            "linear_by_role_family": linear_by_role_family,
             "attention_by_layer": attention_by_layer,
         },
         "timing": {
@@ -1548,6 +1730,10 @@ def _write_report(path: Path, result: Mapping[str, Any], pack: PreparedPack) -> 
             "|---|---:|---:|---:|---:|---:|---:|---:|",
         ])
         linear_rows = [("overall", linear_decomposition.get("overall", {}))]
+        linear_rows.extend(
+            (f"family:{family}", value)
+            for family, value in linear_decomposition.get("by_role_family", {}).items()
+        )
         linear_rows.extend(
             (f"role:{role}", value)
             for role, value in linear_decomposition.get("by_role", {}).items()
@@ -1727,6 +1913,7 @@ def _archive_output(
         },
         "data_metadata": prepared.metadata,
         "trend_diagnostics": _trend_diagnostics(results),
+        "linear_candidate_role_diagnostics": _linear_candidate_role_diagnostics(results),
         "results": list(results),
     }
 
@@ -1739,6 +1926,7 @@ def _write_archive_report(
     prepared: PreparedPack | None = None,
 ) -> None:
     trend = _trend_diagnostics(results)
+    role_diagnostics = _linear_candidate_role_diagnostics(results)
     linear_count = len(prepared.linear_cases) if prepared is not None else (
         len(results[0].get("case_scores", {}).get("linear", [])) if results else 0
     )
@@ -1801,6 +1989,31 @@ def _write_archive_report(
         lines.extend([
             "",
             "逐 role/layer/shape/length 细分仍位于各候选 JSON 的 `decomposition` 字段。",
+        ])
+    if role_diagnostics.get("enabled"):
+        lines.extend([
+            "",
+            "## 跨候选静态 Linear role 差分（evaluator-only）",
+            "",
+            f"基线：`{role_diagnostics['baseline']}`；Δ gain = candidate gain − baseline gain，正值表示同一 layer/role/window 变好。",
+            "",
+            "| 候选 | 分组 | cases | mean Δ gain | 正向 | 负向 | 最差 Δ | 最好 Δ |",
+            "|---|---|---:|---:|---:|---:|---:|---:|",
+        ])
+        for candidate, payload in role_diagnostics.get("candidates", {}).items():
+            rows: list[tuple[str, Mapping[str, Any]]] = []
+            rows.extend((f"family:{name}", value) for name, value in payload.get("by_role_family", {}).items())
+            rows.extend((f"role:{name}", value) for name, value in payload.get("by_role", {}).items())
+            for group_name, value in rows:
+                lines.append(
+                    f"| {candidate} | {group_name} | {value.get('case_count', 0)} | "
+                    f"{value.get('mean_delta_gain', 0.0):.6f} | {value.get('positive_cases', 0)} | "
+                    f"{value.get('negative_cases', 0)} | {value.get('min_delta_gain', 0.0):.6f} | "
+                    f"{value.get('max_delta_gain', 0.0):.6f} |"
+                )
+        lines.extend([
+            "",
+            "最差 layer/role/window 已写入 JSON `linear_candidate_role_diagnostics.*.worst_cases`；该差分只用于定位回归，不改变任何候选分数。",
         ])
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
