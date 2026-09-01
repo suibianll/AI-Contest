@@ -12,7 +12,9 @@
 
 ## 当前结论
 
-- 根目录 [`solution.py`](solution.py) 是当前活动单文件候选；v147 归档已在原目录内同步同一源码，`solutions/` 其余内容为只读历史归档。
+- 根目录 [`solution.py`](solution.py) 是当前活动单文件工作稿。v147 已获官方
+  `16579 / 211s`，时间通过但分数低于 v86，因此归档已改为 `_rejected`；由于该目录源码曾被
+  替换，官方提交 SHA 仍未确认。
 - 已知官方面板为 **250 Linear + 200 Attention**，总运行时间要求严格小于 **300 s**。
   官方最近减少了 Linear 评分权重，但没有公开两项新权重，因此本地不能从代理分数换算
   官方绝对分。
@@ -41,16 +43,17 @@
   `+1/+123`；v84/v86 的 Linear 均值完全相同而官方 Attention 差分为 `+227`。因此后续 Linear
   必须冻结 v86 Attention，本地均值不能反推出官方权重。完整计算见
   [`官方分数归因记录`](docs/evaluation-attribution-2026-09-01.md)。
-- v147 目录已原地覆盖为上述可上传源码；完整本地形状评测得到 Linear `0.5100503237`、
-  Attention `0.7196960689`（与 v86 一致），API `300.351s`、墙钟 `325.313s`。这些时间只作
-  诊断，官方分数和官方时间仍未登记，晋级只看官方返回。
+- v147 官方结果为 **`16579 / 211s`**：时间通过但低于 v86 的 16744，已标记 rejected。
+  原始 pre-A3 本地 JSON 为 Linear `0.5073546371`、Attention `0.7196960689`、API
+  `222.227s`；后来被写入归档的 A3 单文件本地 JSON 为 Linear `0.5100503237`、API
+  `300.351s`。两份源码 SHA 均未被确认为官方提交 SHA，原始 JSON 不改写。
 - v148 按计划实现一次双侧 Weight–Activation 交替，Linear 提升到 `0.5097287173`，但 Weight
   calibration 达 `291.582s`、API 总计 `369.038s`，已标记 rejected；这证明重复完整 block
   oracle 不满足时间目标，下一步必须做结构化复用而非继续调参。
 - v141–v145 的 rank-4 选列 BDLR-JAQ（含锚点冻结、仅动态激活和两档阻尼）均已完整复测，
   Linear `0.281760/0.282559/0.361154/0.506418/0.506256`，均低于 v140；该方向已关闭，
-  源码目录已删除，仅保留评测 JSON 和执行日志。下一步不再调 BDLR 参数，而是对 17816
-  新框架做结构归因，并扩展 block-Schur GPTQ、低秩动态 Hessian 和联合双侧残差优化。
+  源码目录已删除，仅保留评测 JSON 和执行日志。下一步不再调 BDLR 参数；按唯一活动计划先
+  恢复可信 pre-A3 对照，再实现 Activation-only Decoupled HiF4 Encoder 和解析式层级矩阵平衡。
 - 2026-09-01 归档复测已完成 18 个有官方记录的候选：本地最高返回结果为 v121
   (`0.472197763 / 0.833617251`)，但 API `3404.369 s`、官方 timeout；v002 的本机
   CUDA/CPU device-mix 错误被原样记录。完整明细只看
@@ -161,6 +164,7 @@ JSON 的 `score.linear_mean` 和 `score.attention_mean` 是唯一主指标；
 | v138 | 15715 | 208 s | pass（官方，用户报告） |
 | v139 | 15716 | 202 s | pass（官方，用户报告） |
 | v140 | 15838 | 207 s | pass but rejected（官方，低于 v86） |
+| v147 | 16579 | 211 s | pass but rejected（官方，低于 v86；提交 SHA 未确认） |
 
 统一复测生成的文件只能放在 `artifacts/official_eval/` 和 `logs/official_eval/`；
 结果表以 `archive-official-shape-v1.json` 为准。旧 `artifacts/real_model_suite/`
@@ -174,7 +178,7 @@ JSON 的 `score.linear_mean` 和 `score.attention_mean` 是唯一主指标；
 | 体系 | 来源 | 适用版本 | 状态 |
 |---|---|---|---|
 | 官方旧权重分数 | 官方回传（旧权重时期，panel 数次修订） | v001–v074 | 历史事实，仅存档 |
-| 官方新权重分数 | 官方回传（250 Linear + 200 Attention） | v084/v086/v098/v100/v107/v121/v128–v131/v138–v139 | 当前官方口径 |
+| 官方新权重分数 | 官方回传（250 Linear + 200 Attention） | v084/v086/v098/v100/v107/v121/v128–v131/v138–v140/v147 | 当前官方口径 |
 | 本地协议分 | official-shape-v1 复测（`linear_mean`/`attention_mean`） | v132–v145 及活动根文件 | 仅同机 A/B，不换算官方分 |
 | 旧协议分（已废弃） | real_model_suite / sampled-means-v1/v2 / oracle dashboard | v000–v127 时期 | 已全部归档，禁止再用于排序或调参 |
 

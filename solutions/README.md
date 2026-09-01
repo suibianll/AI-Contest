@@ -70,6 +70,7 @@ silently assigned a score.
 | v138 | `20260901_v138_attention-static-v86-budget_scoreNA_timeNA` | **15715** | **208 s** | **pass (official, user reported)** |
 | v139 | `20260901_v139_linear-output-aware-gain_scoreNA_timeNA` | **15716** | **202 s** | **pass (official, user reported)** |
 | v140 | `20260901_v140_linear-roab-pair_rejected` | **15838** | **207 s** | **pass, but rejected: below v86 and 17816** |
+| v147 | `20260901_v147_v86-attention-v140-linear_rejected` | **16579** | **211 s** | **pass, but rejected: 165 points below v86; submitted SHA unconfirmed** |
 
 ## 2026-09-01 official-shape-v1 local candidates
 
@@ -92,8 +93,13 @@ directories follow the same immutable naming rule as the historical archive:
 | v139 | `20260901_v139_linear-output-aware-gain_scoreNA_timeNA` | 0.507278 | 0.715942 | 193.389 s | **official 15716/202 s pass; retained official-result archive** |
 | v140 | `20260901_v140_linear-roab-pair_rejected` | 0.507355 | 0.715942 | 205.365 s | **rejected; official 15838/207 s, local-only gain `+0.000035`** |
 | v141–v145 (BDLR family) | — (source snapshots deleted; logs/artifacts retained) | 0.281760–0.506256 | 0.715942 | 204.681–211.460 s | **rejected family; selected-column BDLR closed** |
-| v147 | `20260901_v147_v86-attention-v140-linear_scoreNA_timeNA` | **0.510050** | **0.719696** | **300.351 s** | **retained direct single-file candidate; local time diagnostic only; official unregistered** |
+| v147 | `20260901_v147_v86-attention-v140-linear_rejected` | **0.507355 / 0.510050†** | **0.719696** | **222.227 / 300.351 s†** | **official 16579/211s; rejected below v86; submitted SHA unconfirmed** |
 | v148 | `20260901_v148_joint-wa-v86-attention-v140-linear_rejected` | **0.509729** | **0.719696** | **369.038 s** | **rejected; A3 precision gain but local time over 300 s** |
+
+† The first v147 values come from the original pre-A3 JSON (SHA `9B3EA5...B656`); the second come
+from the later direct-merge A3 JSON (SHA `25C245...9C1B`). The archive was modified in place before
+the official result was reported, so neither SHA is claimed as the submitted source without further
+evidence. The current archived source SHA is `44E377...2672`.
 
 \* The later temporary gain+adyn2 run reported `365.818 s`, but the machine was concurrently busy;
 its timing is excluded from runtime ranking. The persisted v133 archive was rerun idle at `291.275 s`;

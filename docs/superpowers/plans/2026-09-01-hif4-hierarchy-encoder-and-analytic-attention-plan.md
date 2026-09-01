@@ -25,10 +25,12 @@
 3. 当前 A3 并非一次 block-Schur 增量，而是在已有 `_crossfold_weight_output` 后再次调用同一个
    完整离散求解器。它把本地 Linear 从 pre-A3 的 `0.5073546371` 提到 `0.5100503237`，同时把
    API 从 `222.2266s` 增到 `300.3507s`，新增约 `78.1s`。
-4. 历史五层×七 role 单侧 oracle 为：当前双侧 `0.523019`、Weight perfect `0.704170`、
+4. 用户已确认 v147 官方结果为 `16579 / 211s`：时间通过，但分数低于 v86 的 `16744`，因此
+   v147 已标记 `REJECTED`。由于 v147 目录源码曾被替换，官方提交 SHA 仍为 `unconfirmed`。
+5. 历史五层×七 role 单侧 oracle 为：当前双侧 `0.523019`、Weight perfect `0.704170`、
    Activation perfect `0.820357`。它不是当前全量成绩，但足以说明只改善 Weight 不能承担
    `0.8` 目标，Activation 才是主要误差源。
-5. 当前本地 API 分解约为：Weight calibration `219.694s`、Activation dynamic `18.716s`、
+6. 当前本地 API 分解约为：Weight calibration `219.694s`、Activation dynamic `18.716s`、
    Attention calibration `55.616s`、Attention Q/K/V dynamic `6.325s`。主矛盾是 Linear
    calibration 的重复离散求解，不是动态完整 Hessian 的存储。
 
