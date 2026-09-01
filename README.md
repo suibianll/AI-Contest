@@ -119,6 +119,10 @@ calib2 / test2 / current` 配置。其结果（Linear mean / Attention）依次�
 `v147 0.599617/0.4713`；完整逐 role 表、源码 SHA 和限制见
 [`外部复测日志`](logs/execution/2026-09-01-hif4-external-gpt2-v84-v86-v140-v147.md)。
 该脚本的标准 codec 由候选私有实现提供，不能替换本地主评测器或官方趋势判断。
+逐 role 归因显示 v140 相对 v86 的主要回归在 `fc`（12/12 层为负），其次是 `proj`（混合但有
+严重层级异常）；静态 q/k/v 稳定改善、o 近中性。因此下一轮冻结 q/k/v/o，先处理 proj，再
+重做保留 BOAT 的 fc 编码/scale。完整消融和限制见
+[`外部 role 归因日志`](logs/execution/2026-09-01-hif4-external-role-attribution-v140-v86.md)。
 
 计时同时保存：
 

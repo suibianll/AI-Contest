@@ -148,6 +148,18 @@ the standard baseline from candidate-private codec functions, so its ordering do
 the canonical `proxy-v2` evaluator or official results. See the full
 [`external run log`](../logs/execution/2026-09-01-hif4-external-gpt2-v84-v86-v140-v147.md).
 
+### External role attribution
+
+The same hif4 run gives a more actionable result than the aggregate ordering. Relative to v86,
+v140 improves static `q/k/v` by `+0.0409/+0.0900/+0.0085`, is nearly neutral on `o` (`-0.0018`),
+but regresses `fc` in all 12 GPT-2 layers (`-0.0452`) and has a mixed `proj` regression
+(`-0.0153`, including a `-0.1634` layer). A temporary role-gated ablation raises `proj` from
+`.5221` to `.5430` when its ROAB is disabled; disabling fc ROAB is a no-op, while disabling fc
+BOAT is harmful (`.5107` to `.4599`). The next Linear work therefore freezes q/k/v/o, tests
+proj ROAB-off first, and redesigns fc's expansive encoder/scale while retaining BOAT. This is a
+role diagnostic, not an official-score claim; the full evidence and protocol caveats are in
+[`role attribution log`](../logs/execution/2026-09-01-hif4-external-role-attribution-v140-v86.md).
+
 \* The earlier v086 local `462.239 s` observation was also concurrent-load affected. The clean
 idle rerun is `299.302 s` API / `321.996 s` wall; see
 [`v086 idle rerun`](../artifacts/official_eval/v086-idle-rerun-20260901-official-shape-v1.json).

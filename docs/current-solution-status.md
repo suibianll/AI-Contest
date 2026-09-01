@@ -126,6 +126,34 @@ Q/K 配对，而不是围绕 Qwen 特有的 GQA/RoPE 参数继续调参。
 
 † v147 为当前归档含 A3 源码，官方提交 SHA 尚未确认。
 
+## 2.3 外部 hif4 的 Linear role 结论（已完成）
+
+为回答“问题到底在 qkv 还是 o/fc/proj”，直接使用上游
+[youxilee/hif4](https://github.com/youxilee/hif4) 的 `real_data_eval.py` 做了同配置逐 role
+复测。这里的 q/k/v 是静态 fused `c_attn` 投影；Attention 动态 Q/K/V 是另一组控制臂，不能
+混称。外部 GPT-2 causal 结果的 v140−v86 为：
+
+| role | Δ mean | 12 层符号 | 结论 |
+|---|---:|---:|---|
+| q | +0.0409 | 12 正 / 0 负 | 不像主要问题 |
+| k | +0.0900 | 12 正 / 0 负 | 不像主要问题 |
+| v | +0.0085 | 11 正 / 1 负 | 基本中性 |
+| o | −0.0018 | 5 正 / 7 负 | 局部异常，均值近中性 |
+| fc | **−0.0452** | **0 正 / 12 负** | **最明确的系统性问题** |
+| proj | **−0.0153** | 6 正 / 6 负 | 次要但有严重层级异常 |
+
+临时单变量消融给出同一方向：关闭 proj（`rows < channels`）ROAB 后分数从 `.5221` 到
+`.5430`；关闭 fc（`rows > channels`）ROAB 无变化；关闭 fc-CAT 仅到 `.5144`；关闭 fc-BOAT
+则降到 `.4599`。所以行动顺序是：冻结 q/k/v 和 o；proj 先做 ROAB-off，再做解耦 encoder；
+fc 保留 BOAT、重做 expansive 编码/scale；o 暂不重写。完整逐层数组、命令、外部脚本限制和
+置信度说明见 [`外部 role 归因日志`](../logs/execution/2026-09-01-hif4-external-role-attribution-v140-v86.md)。
+
+这只能作为角色退化探针，不能覆盖官方总分趋势：外部脚本的 synthetic text、候选私有 codec
+以及与 Qwen/WikiText 评测的协议差异会造成整体排序冲突。因此当前结论是“fc 高置信、proj
+中高置信、o 低置信；q/k/v 不是第一修复目标”，而不是声称已经定位了官方隐藏 case 的精确
+权重。下一轮本地主评测必须同时报告静态 q/k/v/o/fc/proj 与动态 Attention Q/K/V，逐层显示
+误差源。
+
 ## 3. 历史 v1 结果表（不可与 proxy-v2 混用）
 
 下表保留旧 `official-shape-v1` 的同机数字，仅用于审计此前的失真；当前 proxy-v2 分层 panel

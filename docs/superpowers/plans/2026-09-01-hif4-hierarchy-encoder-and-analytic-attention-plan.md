@@ -127,6 +127,53 @@ Qwen 特有的 GQA/RoPE/SwiGLU，并指导 role 级优化，不能进入官方�
 若两种结构的改善方向冲突，回到数学不变量和逐 role 误差，不围绕模型名称继续调参。需要更接近
 Qwen 层数的压力测试时，再单独生成 `gpt2-medium` cache，不与当前 panel 混排。
 
+## E0.7. 外部 hif4 role 归因（已完成，指导下一轮）
+
+**问题边界：** 直接运行上游 [youxilee/hif4](https://github.com/youxilee/hif4) 的
+`real_data_eval.py`（commit `dd5ee6515323169dbd4133b3d4fd1ff1cb7be646`），在同一 GPT-2
+12 层、`amax6 / seq128 / calib2 / test2 / config=current` 下复测 v84/v86/v140/v147。
+这里的 Linear `q/k/v` 是 fused `c_attn` 拆出的三个**静态投影层**，不是 Attention 动态
+Q/K/V；动态 Attention 另计一列。完整逐层和临时消融见
+[`hif4 外部 role 归因日志`](../../../logs/execution/2026-09-01-hif4-external-role-attribution-v140-v86.md)。
+
+**v140 相对 v86 的外部结果：**
+
+| role | v86 | v140 | Δ | 12 层符号 | 当前判断 |
+|---|---:|---:|---:|---:|---|
+| q | .6221 | .6630 | +.0409 | 12 正 / 0 负 | 不作为第一目标 |
+| k | .6341 | .7241 | +.0900 | 12 正 / 0 负 | 不作为第一目标 |
+| v | .6133 | .6218 | +.0085 | 11 正 / 1 负 | 基本中性 |
+| o | .5578 | .5560 | −.0018 | 5 正 / 7 负 | 近中性，先冻结 |
+| fc | .5558 | .5107 | **−.0452** | **0 正 / 12 负** | **第一嫌疑** |
+| proj | .5373 | .5221 | **−.0153** | 6 正 / 6 负 | **第二嫌疑，层级异常** |
+
+这不是“Linear mean 变好所以 qkv 没问题”的推断，而是逐层符号和形状消融共同支持：
+q/k 稳定改善、v 近中性，fc 全层回归，proj 虽均值较小但有严重单层回归；o 的均值不足以
+支持立即重写。外部临时控制进一步显示：只关闭 `rows < channels` 的 proj-ROAB，proj 从
+`.5221` 升到 `.5430`；关闭 `rows > channels` 的 fc-ROAB 无变化；关闭 fc-CAT 只恢复
+`.0037`；关闭 fc-BOAT 反而降到 `.4599`。因此 fc 不是简单“删掉一个 refine”，而是要保留
+BOAT 的结构收益并重做 expansive 编码/scale；proj 可以先做 ROAB-off 负向控制。
+
+**与官方的关系和置信度：** 官方只给出总分，且 v147 的提交 SHA 未确认；外部脚本使用内置
+synthetic text、候选私有标准 codec 和 causal GPT-2，不能复刻官方绝对分数。它与 Qwen
+`proxy-v2`、独立 WikiText `cross_model_eval.py` 的整体排序冲突，所以不用于晋级或权重拟合。
+但在“v140 代码在真实 GPT-2 causal 输入下哪个 Linear role 退化”这个问题上，证据置信度排序为：
+`fc` 高、`proj` 中高、`o` 低；q/k/v 不再作为第一修复目标。官方 v147 相对 v86 低 165 分且
+Attention 仍为 v86 组合，故下一轮应把官方风险归因优先投向 Linear 的 fc/proj，而不是动态
+Attention 的 Q/K/V。
+
+**后续硬约束：**
+
+1. 先冻结静态 q/k/v 和 o；square shape 暂不通过调用顺序猜 role，避免把 qkv/o 一起误改。
+2. `proj (rows < channels)` 先跑 ROAB-off 对照，再跑 Activation-only Decoupled Encoder；
+   `fc_gate/up (rows > channels)` 保留 BOAT，单独设计 expansive scale/encoder。每一步都要有
+   per-role/per-layer 误差，不接受只看 Linear mean 的提升。
+3. O 只有在跨 fold、跨结构持续为负时才开专属路由；动态 Attention 继续采用 v86 的 Q/K 配对
+   路径，V 不增加搜索。
+4. 新评测报告必须同时输出静态 Linear role（q/k/v/o/fc/proj）和动态 Attention
+   Q/K/V 的控制臂，明确标注二者不是同一层级，不能把 qkv 投影退化误报为 Attention Q/K/V
+   问题。
+
 ## 0. 本计划替代什么
 
 旧活动计划
@@ -218,7 +265,7 @@ oracle 编译成低复杂度部署规则”。Block-Schur 和双侧残差只保�
 ### L0. 恢复可复现父版本与建立最小 attribution workbench
 
 **目的：** 在写新算法前恢复可信基线，并确认当前 A3、Activation 编码器和 Weight 编码器各自的
-真实贡献。L0 不分配正式版本号。
+真实贡献；同时把外部 role 结论落到本地可复现的最小控制臂。L0 不分配正式版本号。
 
 **代码/证据入口：**
 
@@ -234,6 +281,8 @@ oracle 编译成低复杂度部署规则”。Block-Schur 和双侧残差只保�
 2. 在固定层/role 的未编号 workbench 中记录：parent、只加当前第二次 output pass、合法
    Activation block oracle、合法 Weight block oracle。
 3. 对每个 case 记录真实输出相对 MSE、Weight/Activation 各自误差、接受 block 数和 API 热点。
+4. 按 `q/k/v/o/fc_gate/fc_up/proj` 汇总；对 `proj` 记录 ROAB-off，对 `fc_gate/up` 记录
+   BOAT-on/off 和 CAT-on/off。q/k/v/o 只做冻结回归基线，不在同一 workbench 中混入新编码器。
 
 **完成条件：** 得到可复现 source SHA，并能解释 `0.507355→0.510050` 的增益来自哪些 role，且
 不再把当前 A3 称为 block-Schur。
@@ -241,10 +290,11 @@ oracle 编译成低复杂度部署规则”。Block-Schur 和双侧残差只保�
 **失败处理：** 若无法恢复 JSON 对应源码，保留 JSON 为 `non-reproducible evidence`，以当前根
 建立新的、独立编号的基线，不伪造旧归档。
 
-### L1. Activation-only Decoupled HiF4 Encoder
+### L1. Role-gated Activation-only Decoupled HiF4 Encoder
 
 **唯一机制：** 只改变动态 Activation 的 HiF4 code assignment；Weight、等价变换和 v86
-Attention 全部冻结。
+Attention 全部冻结。第一实现只覆盖外部归因指向的 `proj` 与 `fc_gate/fc_up`，q/k/v/o
+沿用 parent，避免把静态 qkv 投影和动态 Attention Q/K/V 混为一个问题。
 
 对于一个 64-channel block，引入只存在于编码阶段的高精度尺度 `s_q`：
 
@@ -264,6 +314,11 @@ z=\operatorname{round}\left(\frac{4x}{s_q d_{lv2}d_{lv3}}\right),\qquad
 
 **动态复杂度约束：** 用固定、向量化的编码尺度候选或闭式更新替换现有部分 coordinate refine；
 不得新增 Python per-coordinate/per-candidate 循环，六 API 调用数不变。
+
+**role 路由：** `rows < channels` 的 `proj` 先使用 ROAB-off 作为负向控制，再接入解耦 encoder；
+`rows > channels` 的 `fc_gate/fc_up` 保留 BOAT，只替换其编码/scale teacher。square shape 的
+q/k/v/o 暂不依据调用顺序区分，统一保持 parent；如果后续必须拆分，必须先在 state 中写入
+可验证的 role 标记或输入统计签名。
 
 **最小验证：**
 
@@ -443,8 +498,10 @@ V 不部署 PAWV；V 的提升只来自 A3 encoder。若 Fisher calibration 开�
 
 ## 6. 执行顺序
 
-1. **L0 证据修复与 attribution**：恢复可信 pre-A3 对照，明确当前 A3 的 role 收益和真实代价。
-2. **L1 Activation-only Decoupled Encoder**：优先攻击最大的 Activation 误差预算。
+1. **L0 证据修复与 role attribution**：恢复可信 pre-A3 对照，复核外部 hif4 指向的 fc/proj
+   回归，并明确当前 A3 的 role 收益和真实代价。
+2. **L1 Role-gated Activation-only Decoupled Encoder**：先处理 proj，再处理保留 BOAT 的 fc；
+   q/k/v/o 冻结作为回归对照。
 3. **L2 Hierarchical Matrix Balance**：用解析变换替换候选式 D/P/H，不叠加部署算子。
 4. **L3 Oracle compilation**：把输出最优合法决策蒸馏成动态一次编码。
 5. **L4 Weight Decoupled Encoder**：复用已验证表示机制，禁止重复完整 output pass。
@@ -474,7 +531,8 @@ workbench 只保留一个汇总 JSON/Markdown，不为内部参数分配版本�
 - 不把当前第二次 `_crossfold_weight_output` 继续包装成 block-Schur。
 - 不优先实现低秩 Activation GPTQ；当前动态 Activation 不是主要时间热点。
 - 不把 v128/v129 高 Attention 路径直接合并到 v86。
-- Linear 第一正式机制是 Activation-only Decoupled HiF4 Encoder。
+- Linear 第一正式机制是 role-gated Activation-only Decoupled HiF4 Encoder：先 proj，后 fc；
+  静态 q/k/v/o 暂不改动。
 - Attention 第一正式机制是 Analytic Matrix-Smooth Q/K，且只能在 Linear 稳定后启动。
 - Block-Schur、双侧联合残差和学习型 rotation 均降为后续备选；只有新的表示/解析框架证明正向后
   才重新评估。
