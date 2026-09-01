@@ -25,9 +25,9 @@ the same high-cost Attention family, so the timeout does not isolate the Linear 
 change as the cause.
 The v134 block output-supervised activation cross terms raise the local Linear mean to
 `0.5073195`, but v130's official timeout shows that local API seconds are not a safe
-runtime proxy.  The active root is now v138: it retains the v134 Linear path while
-using a v86-level static Attention path (`187.935/192.996s` local API in two runs).
-No official result has been registered yet.
+runtime proxy. The active root is now v140: it keeps the v138 v86-level static Attention
+path and adds ROAB-P2 to Linear (`0.5073546 / 0.7159420`, `205.365s` local API,
+`229.337s` wall). No official result has been registered yet.
 
 Capture the pinned public data pack once:
 

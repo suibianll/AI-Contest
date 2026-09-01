@@ -28,8 +28,8 @@ s=(MSE_{STD}-MSE_{PLAYER})/MSE_{STD},
 
 ## 活动根版本
 
-根代码目前是 v138（v134 Linear 输出监督 W/Activation cross64 + v86 级静态 Attention），
-SHA256 为 `3A120BEB62443FF6A5BCDB89B5FAD970AC6D8D45F48F40FE31812073060C2D10`。实现保留：
+根代码目前是 v140（v138 静态 Attention + ROAB-P2 Linear reciprocal pair transform），
+SHA256 为 `52521F1B996BF67641C22A90132ED7A7BCA477976D8A05BEC411CC9E04AA7C90`。实现保留：
 
 1. BOAT 对角平衡与 signed-Hadamard 等价变换，满足 `X'W'^T=XW^T`；
 2. Cross-fold Weight-HSDQ，在 64 通道块上使用校准激活统计做合法 HiF4 离散搜索；
@@ -83,6 +83,7 @@ row gate、GALS、block-local permutation、L6 rank/factor 系列和 C1 refresh/
 | v134 | 0.507320 | 0.834256 | 289.042/289.832 | 312.315/313.181 | 历史 Linear 精度父版本；Attention 时间风险 |
 | v138 | **0.507320** | 0.715942 | **192.996/187.935** | 216.324/210.855 | **当前根；v86 级静态 Attention 时间父版本** |
 | v139 | 0.507278 | 0.715942 | 193.389 | 217.196 | 输出感知连续 gain 回退，拒绝 |
+| v140 | **0.507355** | 0.715942 | **205.365** | 229.337 | **当前根；ROAB-P2 正向 Linear 候选** |
 
 本轮统一复测中，旧归档**最高本地等权显示**为 v121：`linear_mean=0.472197763`、
 `attention_mean=0.833617251`、`equal_weight_45000_scale=28477.289`，但 API/Wall 均远超
@@ -129,6 +130,11 @@ v138 已完成该时间重构：在保持 v134 Linear `0.5073195` 的同时，�
 calibration/动态 Q/K/V 降到 `36.25/3.71s` 量级，总 API `187.935–192.996s`；两次
 结果逐位一致。它只作为官方时间的更保守候选，最终仍需平台实测。
 
+v140 在 v138 上加入 ROAB-P2：校准阶段学习 reciprocal 2×2 pair transform，在线同时变换
+激活与权重并以合法输出重构误差选择坐标系。统一复测 Linear `0.5073546371`，相对 v138
+提升 `+0.0000351323`；Attention 保持 `0.7159419612`，API `205.365s`、wall `229.337s`。
+该正向候选已归档，官方分数/时间仍未登记，下一步进入固定 rank 的 BDLR-JAQ 跨块修正。
+
 官方历史锚点（独立于本地代理）：v74 `22750 / 239.387s`（旧权重，通过）；v84
 `16517 / 252.563s`（新权重，通过）；**v86 `16744 / 222.7s`（新权重，通过，当前
 官方最佳：分数比 v84 高 `+227`、时间比 v84 快 `29.863s`）**；v98/v121 timeout；
@@ -143,8 +149,8 @@ Attention 改动本身。
 ## 下一步
 
 当前 active 计划是 [`2026-09-01-hif4-linear-0.8-under-300s-plan.md`](superpowers/plans/2026-09-01-hif4-linear-0.8-under-300s-plan.md)。它只比较两个最终目标：精度和官方时间；
-本地统一使用 `official-shape-v1` 记录 Linear/Attention 均值和六 API 时间。当前根 v138 已完成
-两次完整 450-case 复测；v139 回退并归档。任何新版本必须保留源码 SHA、统一命名归档和
+本地统一使用 `official-shape-v1` 记录 Linear/Attention 均值和六 API 时间。当前根 v140 已完成
+完整 450-case 复测；v139 回退并归档。任何新版本必须保留源码 SHA、统一命名归档和
 可复现 JSON。
 
 ## 归档规则

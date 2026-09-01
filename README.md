@@ -24,9 +24,9 @@
 - v134 在相同 cache 上两次完整空闲复测得到 Linear `0.5073195`、Attention `0.8342565`，
   API `289.042/289.832 s`；该版本加入 L2 输出监督激活 cross64。由于 v130 官方 timeout，
   本地 API `<300s` 不能作为官方保证。
-- 当前根 v138 保留 v134 的 Linear 路径，并将 Attention 收敛为 v86 级静态低复杂度；两次
-  完整复测 Linear `0.5073195`、Attention `0.715942`，API `192.996/187.935 s`。官方结果
-  尚未登记，仍需平台实测。
+- 当前根 v140 在 v138 的 v86 级静态 Attention 上加入 ROAB-P2 Linear reciprocal pair transform；
+  完整复测 Linear `0.5073546`、Attention `0.715942`，API `205.365 s`、wall `229.337 s`。
+  官方结果尚未登记，仍需平台实测。
 - 2026-09-01 归档复测已完成 18 个有官方记录的候选：本地最高返回结果为 v121
   (`0.472197763 / 0.833617251`)，但 API `3404.369 s`、官方 timeout；v002 的本机
   CUDA/CPU device-mix 错误被原样记录。完整明细只看

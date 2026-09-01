@@ -80,6 +80,7 @@ directories follow the same immutable naming rule as the historical archive:
 | v134 | `20260901_v134_linear-output-activation-cross64_scoreNA_timeNA` | 0.507320 | 0.834256 | 289.042/289.832 s | Linear precision parent; Attention-time risk |
 | v138 | `20260901_v138_attention-static-v86-budget_scoreNA_timeNA` | **0.507320** | 0.715942 | **192.996/187.935 s** | **active root; v86-level static Attention time parent** |
 | v139 | `20260901_v139_linear-output-aware-gain_scoreNA_timeNA` | 0.507278 | 0.715942 | 193.389 s | rejected; output-aware continuous gain regressed |
+| v140 | `20260901_v140_linear-roab-pair_scoreNA_timeNA` | **0.507355** | 0.715942 | **205.365 s** | **active root; ROAB-P2 positive Linear candidate** |
 
 \* The later temporary gain+adyn2 run reported `365.818 s`, but the machine was concurrently busy;
 its timing is excluded from runtime ranking. The persisted v133 archive was rerun idle at `291.275 s`;
@@ -88,10 +89,13 @@ output-supervised activation cross term; its two complete runs are recorded in
 [`v134 first JSON`](../artifacts/official_eval/v134-linear-output-activation-cross64-official-shape-v1.json)
 and [`v134 idle rerun JSON`](../artifacts/official_eval/v134-linear-output-activation-cross64-rerun2-official-shape-v1.json).
 
-v138 is the current time-safe root candidate: it keeps the v134 Linear path but disables the
-per-call Attention Gram refinement and shrinks the static candidate set.  Two full runs are
-recorded in [`v138 first JSON`](../artifacts/official_eval/v138-attention-static-v86-budget-official-shape-v1.json)
+v140 is the current time-safe root candidate: it keeps the v138 static Attention path and adds
+the ROAB-P2 reciprocal pair transform to the Linear path. v138 disables the per-call Attention
+Gram refinement and shrinks the static candidate set. Two v138 runs are recorded in
+[`v138 first JSON`](../artifacts/official_eval/v138-attention-static-v86-budget-official-shape-v1.json)
 and [`v138 idle rerun JSON`](../artifacts/official_eval/v138-attention-static-v86-budget-rerun2-official-shape-v1.json).
+The v140 full run is recorded in [`v140 JSON`](../artifacts/official_eval/v140-linear-roab-pair-official-shape-v1.json);
+it gives Linear `0.5073546371`, unchanged Attention `0.7159419612`, and API `205.365 s`.
 
 \* The earlier v086 local `462.239 s` observation was also concurrent-load affected. The clean
 idle rerun is `299.302 s` API / `321.996 s` wall; see
