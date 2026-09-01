@@ -13,7 +13,8 @@
 - 官方历史锚点：v74 `22750 / 239.387 s`（旧权重），v84 `16517 / 252.563 s`、
   v86 **`16744 / 222.7 s`**（新权重，通过；v86 为新权重下分数最高且最快的官方通过点）。
   v98/v121 为 timeout，v100/v107 为 Attention 相关失败；v128 fixed-attn-budget 已由用户
-  确认官方 timeout（`>300 s`，分数未返回）。
+  确认官方 timeout（`>300 s`，分数未返回）；v129 fixed-attn-budget-sweep1 也已确认官方
+  timeout（`>300 s`，分数未返回）。
 - 本地报告只回答两个问题：固定公开数据上的 `linear_mean`、`attention_mean` 如何变化，
   以及六个官方 API 在同一台机器上的耗时如何变化。官方分数和鲲鹏 920B 时间只保留为
   独立历史字段，绝不伪造映射。
@@ -121,6 +122,7 @@ JSON 的 `score.linear_mean` 和 `score.attention_mean` 是唯一主指标；
 | v107 | — | — | Attention WA |
 | v121 | — | >300 s | timeout |
 | v128 | — | >300 s | timeout（官方，用户确认） |
+| v129 | — | >300 s | timeout（官方，用户确认） |
 
 统一复测生成的文件只能放在 `artifacts/official_eval/` 和 `logs/official_eval/`；
 结果表以 `archive-official-shape-v1.json` 为准。旧 `artifacts/real_model_suite/`

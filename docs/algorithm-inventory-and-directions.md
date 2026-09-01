@@ -13,6 +13,8 @@
 > Linear `0.406668`、Attention `0.719696`、API `299.302s`（wall `321.996s`）；旧
 > `462.239/501.257s` 只保留为受干扰上界。v128 fixed-attn-budget 已由用户确认在官方
 > 评测中 timeout（`>300s`，分数未返回）；其本地 `310.732s` 不能替代官方裁决。
+> v129 fixed-attn-budget-sweep1 虽有本地 API `248.363s`，也已由用户确认官方 timeout
+> （`>300s`，分数未返回）；本地低于 300 秒不能推出官方通过。
 
 > **活动根更新（2026-09-01）**：当前根已提升为 v133（output gain + Attention dynamic
 > sweep2）；根文件直接空闲重测为 Linear `0.483610`、Attention `0.834256`、API
@@ -97,6 +99,7 @@ six-API time      2653.580314 s wall time       2686.541758 s   （探索阶段�
 | v084 / C84 | 16517 | 252.563s |
 | **v086 / C86** | **16744** | **222.7s** |
 | v128 / fixed-attn-budget | — | **>300s（timeout，用户确认）** |
+| v129 / fixed-attn-budget-sweep1 | — | **>300s（timeout，用户确认）** |
 | 外部 youxilee/hif4 v2.7 | **24153** | 239s |
 
 旧口径（不可直接比较）：v024/C21 `16043`、v025/C21-C `14437`、v030/C38 `14092`、v032/C40 `14432`。

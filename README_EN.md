@@ -15,6 +15,7 @@ score. The latest known official anchors are v74 `22750 / 239.387s` (old weights
 revised-weight official result so far: `+227` score and `29.863s` faster than v84.
 The later v128 fixed-attn-budget candidate was confirmed by the user to time out on the
 official evaluator (`>300s`; no official score returned).
+The v129 fixed-attn-budget-sweep1 follow-up was also confirmed to time out (`>300s`).
 
 Capture the pinned public data pack once:
 
