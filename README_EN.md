@@ -28,6 +28,9 @@ The v134 block output-supervised activation cross terms raise the local Linear m
 runtime proxy. The active root is now v140: it keeps the v138 v86-level static Attention
 path and adds ROAB-P2 to Linear (`0.5073546 / 0.7159420`, `205.365s` local API,
 `229.337s` wall). No official result has been registered yet.
+The user has now reported v138's official result as **`15715 / 208s` (pass)**; its local
+proxy values remain separate from that official result. v86 remains the known official best
+at `16744 / 222.7s`.
 The v141-v145 rank-4 selected-column BDLR trials (anchor freeze, dynamic-only, and two damping
 values) returned Linear means `0.281760/0.282559/0.361154/0.506418/0.506256`, all below v140;
 that direction is closed and the next search moves to symmetric joint code-domain updates.

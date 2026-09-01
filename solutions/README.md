@@ -75,10 +75,11 @@ directories follow the same immutable naming rule as the historical archive:
 | v129 | `20260901_v129_fixed-attn-budget-sweep1_scoreNA_timeNA` | 0.465655 | 0.836579 | 248.363 s | **official timeout (user confirmed)** |
 | v130 | `20260901_v130_output-weight_scoreNA_timeNA` | 0.471837 | 0.836579 | 295.437 s | **official timeout (user confirmed); Attention-time risk** |
 | v131 | `20260901_v131_output-weight-qwgram_scoreNA_timeNA` | 0.473131 | 0.836579 | 294.835 s | **official timeout; high-cost Attention family** |
+| v138 | `20260901_v138_attention-static-v86-budget_scoreNA_timeNA` | **15715** | **208 s** | **pass (official, user reported)** |
 | v132 | `20260901_v132_output-weight-qwgram-dynsweep2_scoreNA_timeNA` | 0.473131 | 0.834256 | 290.936 s | historical parent; 2 idle runs API<300 |
 | v133 | `20260901_v133_output-weight-qwgram-gain_scoreNA_timeNA` | 0.483610 | 0.834256 | 287.941 s | historical parent |
 | v134 | `20260901_v134_linear-output-activation-cross64_scoreNA_timeNA` | 0.507320 | 0.834256 | 289.042/289.832 s | Linear precision parent; Attention-time risk |
-| v138 | `20260901_v138_attention-static-v86-budget_scoreNA_timeNA` | **0.507320** | 0.715942 | **192.996/187.935 s** | **active root; v86-level static Attention time parent** |
+| v138 | `20260901_v138_attention-static-v86-budget_scoreNA_timeNA` | **0.507320** | 0.715942 | **192.996/187.935 s** | **official 15715/208 s pass; time parent** |
 | v139 | `20260901_v139_linear-output-aware-gain_scoreNA_timeNA` | 0.507278 | 0.715942 | 193.389 s | rejected; output-aware continuous gain regressed |
 | v140 | `20260901_v140_linear-roab-pair_scoreNA_timeNA` | **0.507355** | 0.715942 | **205.365 s** | **active root; ROAB-P2 positive Linear candidate** |
 | v141 | `20260901_v141_linear-bdlr-jaq-r4_scoreNA_timeNA` | 0.281760 | 0.715942 | 204.681 s | rejected; undamped selected-column BDLR regressed |
@@ -99,7 +100,7 @@ the ROAB-P2 reciprocal pair transform to the Linear path. v138 disables the per-
 Gram refinement and shrinks the static candidate set. Two v138 runs are recorded in
 [`v138 first JSON`](../artifacts/official_eval/v138-attention-static-v86-budget-official-shape-v1.json)
 and [`v138 idle rerun JSON`](../artifacts/official_eval/v138-attention-static-v86-budget-rerun2-official-shape-v1.json).
-The v140 full run is recorded in [`v140 JSON`](../artifacts/official_eval/v140-linear-roab-pair-official-shape-v1.json);
+The v138 official result was reported as **`15715 / 208 s` (pass)**. The v140 full run is recorded in [`v140 JSON`](../artifacts/official_eval/v140-linear-roab-pair-official-shape-v1.json);
 it gives Linear `0.5073546371`, unchanged Attention `0.7159419612`, and API `205.365 s`.
 
 The BDLR-JAQ trials v141–v145 are retained as rejected immutable snapshots. Their local Linear

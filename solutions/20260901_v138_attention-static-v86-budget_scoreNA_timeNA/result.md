@@ -1,5 +1,7 @@
 # v138 result
 
+Status: **RETAINED / OFFICIAL PASS (user-reported)**.
+
 - Parent: v134
 - Change: time-safe Attention path.  Candidate search is restricted to a small
   static reciprocal-balance/block-Hadamard/GQRB set, shortlist views are 128
@@ -14,10 +16,11 @@
 | first | 0.5073195049 | 0.7159419612 | 192.9958572 s | 216.3242606 s |
 | idle rerun 2 | 0.5073195049 | 0.7159419612 | 187.9349367 s | 210.8548920 s |
 
-The Linear score is identical to v134.  Attention is close to the official-pass
+The Linear score is identical to v134. Attention is close to the official-pass
 v86 local mean (`0.719696`) while its expensive dynamic Q/K/V work falls to
-`3.71s` and Attention calibration to `36.25/36.79s`.  Official score/time are
-not registered; local seconds are not an official-time guarantee.
+`3.71s` and Attention calibration to `36.25/36.79s`. User-reported official
+result: **`15715 / 208s`**, which passes the official 300-second limit. Local
+seconds remain separate and are not an official-time guarantee.
 
-Decision: promote v138 as the time-safe root and use it as the parent for the
-next Linear precision experiments.
+Decision: retain v138 as the verified official time/score parent and use it as
+the parent for the next Linear precision experiments; the active local root is now v140.
