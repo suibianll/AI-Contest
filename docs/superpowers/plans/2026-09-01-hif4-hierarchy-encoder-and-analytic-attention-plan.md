@@ -10,6 +10,46 @@
 >
 > Linear 研究期间冻结 v86 Attention；Attention 实验与 Linear 分开执行
 
+## E0. 先修复本地评测趋势代理（当前阻塞项）
+
+**目的：** 让本地结果至少能回答“同一公开输入、同一调用图下候选是否更好”，并在已知官方
+同 cohort 锚点上显式报告顺序反转；在 E0 通过前，不用本地 proxy 分数选择 Linear/Attention
+算法，也不把本地时间当作官方 `<300s` 结论。
+
+**已确认的失真来源：**
+
+1. v1 的 hash 前缀选例集中在少数 WikiText 文档/offset，validation 只有单一 split；
+2. 旧 NVFP4 E4M3 scale 把所有小于 `2^-6` 的值夹到正规数，忽略 `2^-9` subnormal；
+3. 一次修改把校准放在每个 case 内，给 output-aware 候选额外的 per-case oracle；官方历史调用
+   记录明确是 168 个 layer/role Weight state、24 个 Attention state，然后复用到动态 case；
+4. 450 case 等权显示值被误读为官方总分，且跨官方权重 revision 的版本被混排。
+
+**已实现的 proxy-v2 设计：**
+
+- train 只做 calibration；validation/test 交替做 holdout，窗口来自不同文档并使用固定哈希
+  offset，Attention 长度保持 `[10,128,512,1024,1024]` 的轮换扩展；
+- 默认枚举捕获到的全部真实 W/A：24 层×7 role×全部 holdout 窗口的 Linear，以及 24 层×全部
+  holdout 窗口的 Attention；不施加 Linear:Attention 比例。case 数只能通过显式 CLI 参数缩小
+  做 smoke，不能改变校准状态生命周期；
+- E4M3 scale 使用包含 subnormal 的 `e4m3-subnormal-ceil-v1`，标准 HiF4 分母仍由评测器
+  独立冻结；
+- Linear 每个 layer/role 只调用一次 calibration（前两折），Attention 每层只调用一次
+  calibration（五折），动态阶段每 case 只调用对应 API；
+- 主指标为真实 case 的 `linear_mean`、`attention_mean` 和未加权 `overall_mean`；
+  `trend_diagnostics` 只对同一官方 cohort 做 pairwise 顺序审计，不把官方分数拟合进结果。
+
+**E0 验收：**
+
+1. `tests/test_official_eval.py`、codec/合法性检查和 cache 协议检查通过；
+2. v86、v138/v140/v147 使用同一 proxy-v2 cache 重跑，报告全量真实 W/A、实际 API calls、逐 role/layer
+   结果和趋势审计；
+3. 若锚点顺序仍反转，记录为 `inversion_detected`，继续扩充数据/模型 stress panel；不得
+   调权重或硬编码分数把反转“修正”为通过；
+4. E0 完成前，L0–L4 只做代码审计和单层 smoke，不据此晋级新算法。
+
+E0 产物是 `evaluator/official_eval.py`、`evaluator/nvfp4_sim.py`、测试和一份执行日志；旧
+`official-shape-v1` JSON/cache 保持 immutable，只能标为历史诊断。
+
 ## 0. 本计划替代什么
 
 旧活动计划
@@ -52,12 +92,15 @@ oracle 编译成低复杂度部署规则”。Block-Schur 和双侧残差只保�
 
 ### 1.2 评测与时间
 
-- 唯一本地主评测器是 `evaluator/official_eval.py`，协议固定为 `official-shape-v1`。
-- 模型/数据固定为 Qwen2.5-0.5B、250 Linear、200 Attention、Attention calibration lengths
-  `[10,128,512,1024,1024]`、同一只读 CUDA cache。
+- 唯一本地主评测器是 `evaluator/official_eval.py`，当前协议为 `proxy-v2`；旧
+  `official-shape-v1` 只作 immutable 历史诊断。
+- 模型/数据固定为 Qwen2.5-0.5B、全量真实 W/A、Attention calibration lengths
+  `[10,128,512,1024,1024]`、validation/test holdout 和同一只读 proxy-v2 cache。
+- 校准调用保持官方状态图：168 个 layer/role Weight state、24 个 Attention state，动态
+  case 复用 state；不能按 case 重新校准。默认全量 case 不使用任何 5:4 或其它人为权重。
 - 本地只比较同机 A/B 的 `linear_mean`、`attention_mean`、逐 role/case 和六 API 分解。
 - 官方 `<300s` 只由官方回传确认。本地秒数不得覆盖 v86 通过和 v128/v129/v130/v131 超时事实。
-- 小样本 workbench 只用于回答机制问题；正式晋级必须跑完整 `official-shape-v1`。
+- 小样本 workbench 只用于回答机制问题；正式晋级必须跑完整 proxy-v2，并通过 E0 趋势审计。
 
 ### 1.3 版本纪律
 
@@ -338,7 +381,7 @@ V 不部署 PAWV；V 的提升只来自 A3 encoder。若 Fisher calibration 开�
 
 - 完整单文件源码和 SHA256；
 - parent 与唯一算法变化；
-- `official-shape-v1` 命令、模型/data revision、cache、device；
+- `proxy-v2` 命令、模型/data revision、cache、device；
 - Linear/Attention mean、必要的逐 role/case；
 - 六 API 与 wall time；
 - 官方分数/时间/status，未知写 `unregistered/NA`；

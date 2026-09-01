@@ -18,23 +18,41 @@ import torch
 
 E2M1 = torch.tensor([0.0, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 6.0])
 
-# E4M3: 1 符号 + 4 指数（偏置 7）+ 3 尾数；最小正规数 2^-6，最大有限值 448。
+# E4M3: 1 符号 + 4 指数（偏置 7）+ 3 尾数；正规数最小值 2^-6，
+# 非正规数步长为 2^-9。NVFP4 的 block scale 是 E4M3，不能把所有
+# 小于最小正规数的 scale 粗暴地夹到 2^-6；Qwen 权重中这会影响绝大
+# 多数 block。
+E4M3_MIN_SUBNORMAL = 2.0**-9
 E4M3_MIN_NORMAL = 2.0**-6
 E4M3_MAX = 448.0
 
 
 def e4m3_round_up(x: torch.Tensor) -> torch.Tensor:
-    """把正数向上取整到最近的 E4M3 可表示值。"""
-    x = torch.nan_to_num(x, nan=1.0, posinf=E4M3_MAX, neginf=E4M3_MIN_NORMAL)
-    x = x.clamp_min(E4M3_MIN_NORMAL).clamp_max(E4M3_MAX)
-    exponent = torch.floor(torch.log2(x))
-    mantissa = x / torch.pow(2.0, exponent)  # [1, 2)
+    """把正数向上取整到最近的 E4M3 可表示值。
+
+    E4M3 的 subnormal 区间是 ``[2^-9, 2^-6)``，步长 ``2^-9``。
+    旧实现直接从 ``2^-6`` 开始，虽然对大多数 activation 不明显，
+    但会把小权重的 NVFP4 block scale 和对应 carrier 系统性放大。
+    """
+    x = torch.nan_to_num(
+        x,
+        nan=E4M3_MIN_SUBNORMAL,
+        posinf=E4M3_MAX,
+        neginf=E4M3_MIN_SUBNORMAL,
+    )
+    x = x.clamp_min(E4M3_MIN_SUBNORMAL).clamp_max(E4M3_MAX)
+    subnormal = torch.ceil(x / E4M3_MIN_SUBNORMAL) * E4M3_MIN_SUBNORMAL
+
+    normal_x = x.clamp_min(E4M3_MIN_NORMAL)
+    exponent = torch.floor(torch.log2(normal_x))
+    mantissa = normal_x / torch.pow(2.0, exponent)  # [1, 2)
     m_code = torch.ceil((mantissa - 1.0) * 8.0)
     carry = m_code >= 8.0
     exponent = exponent + carry.to(exponent.dtype)
     m_code = torch.where(carry, torch.zeros_like(m_code), m_code)
-    value = torch.pow(2.0, exponent.clamp(-6, 8)) * (1.0 + m_code / 8.0)
-    return value.clamp_max(E4M3_MAX)
+    normal = torch.pow(2.0, exponent.clamp(-6, 8)) * (1.0 + m_code / 8.0)
+    normal = normal.clamp_max(E4M3_MAX)
+    return torch.where(x < E4M3_MIN_NORMAL, subnormal, normal)
 
 
 def e2m1_round_to_even(r: torch.Tensor) -> torch.Tensor:

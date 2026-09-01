@@ -1,20 +1,19 @@
-"""Canonical local reproduction of the public HiF4 judging flow.
+"""Canonical local HiF4 proxy evaluator.
 
-This is intentionally a new, single-protocol evaluator.  It does not import
-the retired ``real_model_suite`` or any of the old ranking helpers.  The
-protocol fixes the public judging geometry in one place:
+``proxy-v2`` is deliberately a *local trend* evaluator, not a claim that the
+hidden judge can be reproduced.  It preserves the published per-case score
+formula and API contract while fixing the old proxy's two largest biases:
 
-* Qwen2.5-0.5B, all 24 transformer blocks;
-* five variable-length calibration samples: 10, 128, 512, 1024, 1024 tokens;
-* exactly 250 Linear and 200 Attention test cases;
-* the public relative-MSE case score and end-to-end candidate timing.
+* the default panel enumerates every captured layer/role/window tensor (no
+  Linear:Attention weighting or prefix sampling);
+* calibration state lifetime follows the judge call graph: one state per
+  layer/role (Linear) and one per layer (Attention), while cases only vary the
+  dynamic inputs.  This prevents a per-case calibration oracle.
 
 The hidden official tensors and Kunpeng hardware are not available locally.
-The generated public-data pack therefore uses pinned WikiText text and records
-its source hash.  Shapes, call counts, state validation, HiF4 decoding, score
-formula, and candidate API order are nevertheless the same as the published
-judge contract.  No local seconds are converted to an official score or a
-hardware pass/fail decision.
+All reports therefore label scores as ``proxy`` and local seconds as same-host
+measurements.  Historical ``official-shape-v1`` artifacts remain immutable and
+are not silently migrated.
 """
 
 from __future__ import annotations
@@ -51,7 +50,8 @@ from reference_hif4 import (  # noqa: E402
 )
 
 
-PROTOCOL = "official-shape-v1"
+PROTOCOL = "proxy-v2"
+LEGACY_PROTOCOL = "official-shape-v1"
 MODEL_NAME = "qwen2.5-0.5b"
 MODEL_PATH = ROOT / "models" / MODEL_NAME
 DATA_DIR = ROOT / "data" / "wikitext-2-raw-v1"
@@ -59,16 +59,23 @@ CACHE_DIR = ROOT / "artifacts" / "official_eval" / "cache"
 DEFAULT_CACHE = CACHE_DIR / f"{MODEL_NAME}-{PROTOCOL}.pt"
 CALIBRATION_LENGTHS = (10, 128, 512, 1024, 1024)
 TEST_LENGTH = 128
-TEST_WINDOW_COUNT = 9
-LINEAR_CASE_COUNT = 250
-ATTENTION_CASE_COUNT = 200
+TEST_LENGTHS = (10, 128, 512, 1024, 1024, 10, 128, 512, 1024, 1024, 128, 512)
+TEST_WINDOW_COUNT = 12
+# No artificial Linear:Attention weighting is applied.  By default the case
+# design expands to every captured W/A tensor: 24*7*windows for Linear and
+# 24*windows for Attention on Qwen.  The CLI limits below are opt-in smoke
+# overrides only; they are recorded and must not be used for ranking.
+LINEAR_CASE_COUNT: int | None = None
+ATTENTION_CASE_COUNT: int | None = None
 OFFICIAL_RUNTIME_LIMIT = 300.0
 NVFP4_MODE = "amax6"
+NVFP4_INPUT_CODEC = "e4m3-subnormal-ceil-v1"
 WIKITEXT_REVISION = "b08601e04326c79dfdd32d625aee71d232d685c3"
 WIKITEXT_CONFIG = "wikitext-2-raw-v1"
 WIKITEXT_FILES = {
     "train": "train-00000-of-00001.parquet",
     "validation": "validation-00000-of-00001.parquet",
+    "test": "test-00000-of-00001.parquet",
 }
 ROLES = ("q", "k", "v", "o", "fc_gate", "fc_up", "proj")
 REQUIRED_APIS = (
@@ -80,6 +87,19 @@ REQUIRED_APIS = (
     "hif4_dynamic_quantize_v",
 )
 
+# These are user-confirmed official observations, used only for an explicit
+# trend audit.  They never enter the proxy score or any candidate-side state.
+# Comparing different historical scoring revisions would be misleading, so
+# every entry carries a cohort and the audit only compares equal cohorts.
+OFFICIAL_TREND_ANCHORS: dict[str, dict[str, Any]] = {
+    "v084": {"score": 16517, "time_seconds": 252.563, "status": "pass", "cohort": "new-weight"},
+    "v086": {"score": 16744, "time_seconds": 222.7, "status": "pass", "cohort": "new-weight"},
+    "v138": {"score": 15715, "time_seconds": 208.0, "status": "pass", "cohort": "new-weight"},
+    "v139": {"score": 15716, "time_seconds": 202.0, "status": "pass", "cohort": "new-weight"},
+    "v140": {"score": 15838, "time_seconds": 207.0, "status": "pass", "cohort": "new-weight"},
+    "v147": {"score": 16579, "time_seconds": 211.0, "status": "pass", "cohort": "new-weight"},
+}
+
 
 @dataclasses.dataclass(frozen=True)
 class Window:
@@ -90,6 +110,23 @@ class Window:
     token_start: int
     token_end: int
     input_ids: tuple[int, ...]
+
+
+@dataclasses.dataclass(frozen=True)
+class LinearCase:
+    case_id: int
+    layer: int
+    role: str
+    calibration_indices: tuple[int, ...]
+    test_window: int
+
+
+@dataclasses.dataclass(frozen=True)
+class AttentionCase:
+    case_id: int
+    layer: int
+    calibration_indices: tuple[int, ...]
+    test_window: int
 
 
 @dataclasses.dataclass
@@ -124,8 +161,8 @@ class PreparedPack:
     q_heads: int
     kv_heads: int
     head_dim: int
-    linear_cases: list[tuple[int, str, int]]
-    attention_cases: list[tuple[int, int]]
+    linear_cases: list[LinearCase]
+    attention_cases: list[AttentionCase]
     metadata: dict[str, Any]
 
 
@@ -218,17 +255,39 @@ def _select_calibration_windows(tokenizer: Any, rows: Sequence[str]) -> list[Win
     selected: list[Window] = []
     used_ranges: dict[str, list[tuple[int, int]]] = {}
     for sample_index, length in enumerate(CALIBRATION_LENGTHS):
-        found: Window | None = None
+        # Pick a different source document for each calibration length when
+        # possible.  The old evaluator always selected the first long article,
+        # making the two Linear calibration samples nearly identical.
+        candidates: list[Window] = []
         for document_id, row_start, row_end, ids in docs:
             if len(ids) < length:
                 continue
-            starts = (0, max(0, len(ids) - length), (sample_index * 97) % max(1, len(ids) - length + 1))
-            for start in starts:
+            max_start = len(ids) - length
+            starts = {
+                0,
+                max_start,
+                int.from_bytes(
+                    hashlib.sha256(f"cal:{sample_index}:{document_id}".encode("utf-8")).digest()[:8],
+                    "big",
+                ) % (max_start + 1),
+            }
+            for start in sorted(starts):
                 end = start + length
                 ranges = used_ranges.setdefault(document_id, [])
                 if any(max(start, left) < min(end, right) for left, right in ranges):
                     continue
-                found = Window("train", document_id, row_start, row_end, start, end, tuple(ids[start:end]))
+                candidates.append(Window("train", document_id, row_start, row_end, start, end, tuple(ids[start:end])))
+        candidates.sort(key=lambda item: hashlib.sha256(repr(item).encode("utf-8")).hexdigest())
+        found: Window | None = None
+        # Prefer a document not used by an earlier calibration sample.  Fall
+        # back to a fresh non-overlapping range if the split has too few long
+        # documents.
+        used_documents = {item.document_id for item in selected}
+        for prefer_new_document in (True, False):
+            for candidate in candidates:
+                if prefer_new_document and candidate.document_id in used_documents:
+                    continue
+                found = candidate
                 break
             if found is not None:
                 break
@@ -239,32 +298,40 @@ def _select_calibration_windows(tokenizer: Any, rows: Sequence[str]) -> list[Win
     return selected
 
 
-def _select_test_windows(tokenizer: Any, rows: Sequence[str]) -> list[Window]:
-    docs = _tokenized_documents(tokenizer, rows, "validation")
-    candidates: list[Window] = []
-    for document_id, row_start, row_end, ids in docs:
-        for start in range(0, len(ids) - TEST_LENGTH + 1, TEST_LENGTH):
-            end = start + TEST_LENGTH
-            candidates.append(Window("validation", document_id, row_start, row_end, start, end, tuple(ids[start:end])))
-    if len(candidates) < TEST_WINDOW_COUNT:
-        raise RuntimeError(f"WikiText validation has only {len(candidates)} test windows")
-    # Round-robin source documents prevents one long article from dominating.
-    by_document: dict[str, list[Window]] = {}
-    for window in candidates:
-        by_document.setdefault(window.document_id, []).append(window)
+def _select_test_windows(tokenizer: Any, rows_by_split: Mapping[str, Sequence[str]]) -> list[Window]:
+    """Select varied, document-balanced, variable-length holdout windows."""
+    docs_by_split = {
+        split: _tokenized_documents(tokenizer, rows_by_split[split], split)
+        for split in ("validation", "test")
+    }
+    used_documents: dict[str, set[str]] = {"validation": set(), "test": set()}
     selected: list[Window] = []
-    round_index = 0
-    while len(selected) < TEST_WINDOW_COUNT:
-        added = False
-        for values in by_document.values():
-            if round_index < len(values):
-                selected.append(values[round_index])
-                added = True
-                if len(selected) == TEST_WINDOW_COUNT:
-                    break
-        if not added:
-            raise RuntimeError("could not select the requested test windows")
-        round_index += 1
+    for index, length in enumerate(TEST_LENGTHS):
+        split = "validation" if index % 2 == 0 else "test"
+        candidates = [item for item in docs_by_split[split] if len(item[3]) >= length]
+        candidates.sort(
+            key=lambda item: hashlib.sha256(
+                f"test:{index}:{split}:{item[0]}".encode("utf-8")
+            ).hexdigest()
+        )
+        found: Window | None = None
+        for prefer_new_document in (True, False):
+            for document_id, row_start, row_end, ids in candidates:
+                if prefer_new_document and document_id in used_documents[split]:
+                    continue
+                max_start = len(ids) - length
+                start = int.from_bytes(
+                    hashlib.sha256(f"offset:{index}:{document_id}".encode("utf-8")).digest()[:8],
+                    "big",
+                ) % (max_start + 1)
+                found = Window(split, document_id, row_start, row_end, start, start + length, tuple(ids[start:start + length]))
+                break
+            if found is not None:
+                break
+        if found is None:
+            raise RuntimeError(f"WikiText {split} split has no window of length {length}")
+        selected.append(found)
+        used_documents[split].add(found.document_id)
     return selected
 
 
@@ -375,8 +442,12 @@ def capture_pack(device_name: str) -> RawPack:
             raise FileNotFoundError("missing pinned WikiText files: " + ", ".join(missing))
         train_rows = _load_rows(paths["train"])
         validation_rows = _load_rows(paths["validation"])
+        test_rows = _load_rows(paths["test"])
         calibration_windows = _select_calibration_windows(tokenizer, train_rows)
-        test_windows = _select_test_windows(tokenizer, validation_rows)
+        test_windows = _select_test_windows(
+            tokenizer,
+            {"validation": validation_rows, "test": test_rows},
+        )
         blocks = list(model.model.layers)
         weights = []
         for block in blocks:
@@ -407,10 +478,14 @@ def capture_pack(device_name: str) -> RawPack:
             "dataset_revision": WIKITEXT_REVISION,
             "calibration_lengths": list(CALIBRATION_LENGTHS),
             "test_length": TEST_LENGTH,
+            "test_lengths": list(TEST_LENGTHS),
             "test_window_count": len(test_windows),
+            "test_splits": sorted({window.split for window in test_windows}),
             "capture_device": str(device),
             "weights_dtype": "float32",
             "weight_layout": "[out_features, in_features]",
+            "input_codec": NVFP4_INPUT_CODEC,
+            "input_mode": NVFP4_MODE,
             "data_sha256": {split: sha256_file(path) for split, path in paths.items()},
         }
         return RawPack(
@@ -464,14 +539,20 @@ def load_pack(path: Path) -> RawPack:
     except Exception as exc:
         raise RuntimeError(f"cannot read official data pack {path}: {exc}") from exc
     if not isinstance(payload, dict) or payload.get("protocol") != PROTOCOL:
-        raise RuntimeError(f"data pack {path} is not protocol {PROTOCOL}")
+        raise RuntimeError(
+            f"data pack {path} is not protocol {PROTOCOL}; the old {LEGACY_PROTOCOL} "
+            "cache is intentionally diagnostic-only"
+        )
     calibration_windows = [_window_from_payload(item) for item in payload["calibration_windows"]]
     test_windows = [_window_from_payload(item) for item in payload["test_windows"]]
     if [len(window.input_ids) for window in calibration_windows] != list(CALIBRATION_LENGTHS):
         raise RuntimeError("calibration data pack has wrong variable-length schedule")
-    if any(len(window.input_ids) != TEST_LENGTH for window in test_windows):
-        raise RuntimeError("test data pack has wrong test length")
+    if len(test_windows) != TEST_WINDOW_COUNT:
+        raise RuntimeError(f"data pack has {len(test_windows)} test windows; expected {TEST_WINDOW_COUNT}")
+    if [len(window.input_ids) for window in test_windows] != list(TEST_LENGTHS):
+        raise RuntimeError("test data pack has wrong variable-length schedule")
     weights = payload["weights"]
+    layers = int(payload["layers"])
     hidden_size = int(payload["hidden_size"])
     q_heads = int(payload["q_heads"])
     kv_heads = int(payload["kv_heads"])
@@ -480,6 +561,8 @@ def load_pack(path: Path) -> RawPack:
     # API receives native [out_features, in_features] weights.
     if not isinstance(weights, list) or not weights:
         raise RuntimeError("official data pack has no layer weights")
+    if len(weights) != layers:
+        raise RuntimeError(f"data pack declares {layers} layers but stores {len(weights)} weight layers")
     expected_kv_width = kv_heads * head_dim
     for layer_index, per_layer in enumerate(weights):
         for role in ROLES:
@@ -507,10 +590,81 @@ def load_pack(path: Path) -> RawPack:
     metadata = dict(payload.get("metadata", {}))
     if metadata.get("weight_layout") not in {None, "[out_features, in_features]"}:
         raise RuntimeError("official data pack uses an unsupported weight layout")
+    if metadata.get("input_codec") != NVFP4_INPUT_CODEC:
+        raise RuntimeError(
+            f"data pack uses input codec {metadata.get('input_codec')!r}; "
+            f"expected {NVFP4_INPUT_CODEC!r}"
+        )
+    if metadata.get("input_mode") not in {None, NVFP4_MODE}:
+        raise RuntimeError("data pack uses an unsupported NVFP4 input mode")
+
+    def validate_activation_bank(
+        bank_name: str,
+        bank: Any,
+        sample_count: int,
+    ) -> None:
+        if not isinstance(bank, Mapping):
+            raise RuntimeError(f"{bank_name} is not a role mapping")
+        for role in ROLES:
+            samples = bank.get(role)
+            if not isinstance(samples, list) or len(samples) != sample_count:
+                raise RuntimeError(
+                    f"{bank_name}[{role}] has {len(samples) if isinstance(samples, list) else 'invalid'} samples; "
+                    f"expected {sample_count}"
+                )
+            for sample_index, per_layer in enumerate(samples):
+                if not isinstance(per_layer, list) or len(per_layer) != layers:
+                    raise RuntimeError(
+                        f"{bank_name}[{role}][{sample_index}] has wrong layer count"
+                    )
+                for layer_index, tensor in enumerate(per_layer):
+                    if not torch.is_tensor(tensor) or tensor.ndim != 2:
+                        raise RuntimeError(
+                            f"{bank_name}[{role}][{sample_index}][{layer_index}] is not a 2-D tensor"
+                        )
+                    expected_width = int(weights[layer_index][role].shape[1])
+                    if int(tensor.shape[-1]) != expected_width:
+                        raise RuntimeError(
+                            f"{bank_name}[{role}][{sample_index}][{layer_index}] has input width "
+                            f"{int(tensor.shape[-1])}; expected {expected_width}"
+                        )
+
+    def validate_qkv_bank(bank_name: str, bank: Any, sample_count: int) -> None:
+        if not isinstance(bank, list) or len(bank) != sample_count:
+            raise RuntimeError(f"{bank_name} has wrong sample count")
+        expected_widths = (q_heads * head_dim, kv_heads * head_dim, kv_heads * head_dim)
+        for sample_index, per_layer in enumerate(bank):
+            if not isinstance(per_layer, list) or len(per_layer) != layers:
+                raise RuntimeError(f"{bank_name}[{sample_index}] has wrong layer count")
+            for layer_index, item in enumerate(per_layer):
+                if not isinstance(item, (tuple, list)) or len(item) != 3:
+                    raise RuntimeError(f"{bank_name}[{sample_index}][{layer_index}] is not a Q/K/V tuple")
+                for name, tensor, expected_width in zip(("q", "k", "v"), item, expected_widths):
+                    if not torch.is_tensor(tensor) or tensor.ndim != 2 or int(tensor.shape[-1]) != expected_width:
+                        raise RuntimeError(
+                            f"{bank_name}[{sample_index}][{layer_index}].{name} has wrong shape"
+                        )
+
+    validate_activation_bank(
+        "calibration_activations", payload["calibration_activations"], len(calibration_windows)
+    )
+    validate_activation_bank(
+        "test_activations", payload["test_activations"], len(test_windows)
+    )
+    validate_qkv_bank("calibration_qkv", payload["calibration_qkv"], len(calibration_windows))
+    validate_qkv_bank("test_qkv", payload["test_qkv"], len(test_windows))
+    window_keys = [
+        (window.split, window.document_id, window.token_start, window.token_end)
+        for window in test_windows
+    ]
+    if len(set(window_keys)) != len(window_keys):
+        raise RuntimeError("test data pack contains duplicate holdout windows")
+    if {window.split for window in test_windows} != {"validation", "test"}:
+        raise RuntimeError("test data pack must contain both validation and test holdout windows")
     return RawPack(
         weights, payload["calibration_activations"], payload["test_activations"],
         payload["calibration_qkv"], payload["test_qkv"], calibration_windows, test_windows,
-        int(payload["layers"]), hidden_size, q_heads,
+        layers, hidden_size, q_heads,
         kv_heads, head_dim, metadata,
     )
 
@@ -520,38 +674,89 @@ def _pair(value: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
     return carrier.contiguous(), scale.contiguous()
 
 
-def _stable_key(value: Any) -> str:
-    return hashlib.sha256(repr(value).encode("utf-8")).hexdigest()
+def _choose_cases(
+    pack: RawPack,
+    linear_count: int | None = LINEAR_CASE_COUNT,
+    attention_count: int | None = ATTENTION_CASE_COUNT,
+) -> tuple[list[LinearCase], list[AttentionCase]]:
+    """Enumerate real captured tensors; optional limits are smoke-only.
+
+    The default is the Cartesian product of every layer, role and holdout
+    window.  This makes the local score a property of the captured model
+    tensors rather than a hash-prefix sample.  ``linear_count`` and
+    ``attention_count`` are explicit development overrides and are never
+    described as a ranking panel.
+    """
+    if len(pack.test_windows) == 0 or len(pack.calibration_windows) == 0:
+        raise RuntimeError("case pool has no calibration/test windows")
+    linear_calibration_indices = tuple(range(min(2, len(pack.calibration_windows))))
+    if not linear_calibration_indices:
+        raise RuntimeError("case pool has no Linear calibration windows")
+    linear_pool = [
+        (layer, role, test_window)
+        for test_window in range(len(pack.test_windows))
+        for layer in range(pack.layers)
+        for role in ROLES
+    ]
+    attention_pool = [
+        (layer, test_window)
+        for test_window in range(len(pack.test_windows))
+        for layer in range(pack.layers)
+    ]
+    if linear_count is not None:
+        if linear_count <= 0:
+            raise ValueError("linear_count must be positive when supplied")
+        linear_pool = linear_pool[: min(int(linear_count), len(linear_pool))]
+    if attention_count is not None:
+        if attention_count <= 0:
+            raise ValueError("attention_count must be positive when supplied")
+        attention_pool = attention_pool[: min(int(attention_count), len(attention_pool))]
+    linear_cases = [
+        LinearCase(case_id=index, layer=layer, role=role,
+                   calibration_indices=linear_calibration_indices,
+                   test_window=test_window)
+        for index, (layer, role, test_window) in enumerate(linear_pool)
+    ]
+    attention_cases = [
+        AttentionCase(case_id=index, layer=layer,
+                      calibration_indices=tuple(range(len(pack.calibration_windows))),
+                      test_window=test_window)
+        for index, (layer, test_window) in enumerate(attention_pool)
+    ]
+    return linear_cases, attention_cases
 
 
-def _choose_cases(pack: RawPack) -> tuple[list[tuple[int, str, int]], list[tuple[int, int]]]:
-    linear_pool = [(layer, role, window) for layer in range(pack.layers) for role in ROLES for window in range(len(pack.test_windows))]
-    attention_pool = [(layer, window) for layer in range(pack.layers) for window in range(len(pack.test_windows))]
-    linear_pool.sort(key=_stable_key)
-    attention_pool.sort(key=_stable_key)
-    if len(linear_pool) < LINEAR_CASE_COUNT or len(attention_pool) < ATTENTION_CASE_COUNT:
-        raise RuntimeError("official case pool is smaller than 250 Linear + 200 Attention")
-    return linear_pool[:LINEAR_CASE_COUNT], attention_pool[:ATTENTION_CASE_COUNT]
-
-
-def prepare_pack(raw: RawPack) -> PreparedPack:
+def prepare_pack(
+    raw: RawPack,
+    linear_count: int | None = LINEAR_CASE_COUNT,
+    attention_count: int | None = ATTENTION_CASE_COUNT,
+) -> PreparedPack:
     weights = [{role: _pair(value) for role, value in per_layer.items()} for per_layer in raw.weights]
-    # The public Attention mini-sample is variable-length.  Linear's public
-    # interface has a separate, small calibration list; keep two samples for
-    # the Linear path instead of accidentally multiplying its work by the
-    # Attention shape schedule.
-    linear_calibration_indices = list(range(min(2, len(raw.calibration_windows))))
+    # Keep every calibration window available for Attention.  Linear follows
+    # the public call graph: one calibration state per layer/role, using the
+    # first two explicitly designated Linear folds.  Test cases may be fewer
+    # than the official panel, but they must not create a fresh state per test
+    # tuple (that would give output-aware candidates an unfair per-case oracle).
+    linear_calibration_indices = tuple(range(min(2, len(raw.calibration_windows))))
+    if not linear_calibration_indices:
+        raise RuntimeError("data pack has no Linear calibration windows")
     linear_calibration_windows = [raw.calibration_windows[index] for index in linear_calibration_indices]
-    cal_act = {role: [[_pair(raw.calibration_activations[role][sample][layer]) for layer in range(raw.layers)] for sample in linear_calibration_indices] for role in ROLES}
+    cal_act = {role: [[_pair(raw.calibration_activations[role][sample][layer]) for layer in range(raw.layers)] for sample in range(len(raw.calibration_windows))] for role in ROLES}
     test_act = {role: [[_pair(raw.test_activations[role][sample][layer]) for layer in range(raw.layers)] for sample in range(len(raw.test_windows))] for role in ROLES}
     cal_qkv = [[{"q": _pair(q), "k": _pair(k), "v": _pair(v)} for q, k, v in per_layer] for per_layer in raw.calibration_qkv]
     test_qkv = [[(_pair(q), _pair(k), _pair(v)) for q, k, v in per_layer] for per_layer in raw.test_qkv]
-    linear_cases, attention_cases = _choose_cases(raw)
+    linear_cases, attention_cases = _choose_cases(raw, linear_count, attention_count)
     metadata = dict(raw.metadata)
     metadata.update({
         "linear_case_count": len(linear_cases),
         "attention_case_count": len(attention_cases),
         "nvfp4_mode": NVFP4_MODE,
+        "input_codec": NVFP4_INPUT_CODEC,
+        "case_design": "full-cartesian-real-wa-v3" if linear_count is None and attention_count is None else "explicit-smoke-prefix-v3",
+        "linear_case_limit": linear_count,
+        "attention_case_limit": attention_count,
+        "linear_calibration_indices": list(linear_calibration_indices),
+        "calibration_call_graph": "all-layer-role-once; attention-layer-once",
     })
     return PreparedPack(
         weights, cal_act, test_act, cal_qkv, test_qkv,
@@ -594,13 +799,30 @@ def _attention(q: torch.Tensor, k: torch.Tensor, v: torch.Tensor, q_heads: int, 
 
 
 def _score(standard: torch.Tensor, player: torch.Tensor, reference: torch.Tensor) -> float:
+    return _score_details(standard, player, reference)["gain"]
+
+
+def _score_details(
+    standard: torch.Tensor,
+    player: torch.Tensor,
+    reference: torch.Tensor,
+) -> dict[str, float]:
     standard_mse = float((standard - reference).square().mean())
     player_mse = float((player - reference).square().mean())
+    reference_energy = float(reference.square().mean())
     if not math.isfinite(standard_mse) or standard_mse <= 0.0:
         raise ValueError("MSE_STD must be finite and positive")
     if not math.isfinite(player_mse):
         raise ValueError("MSE_PLAYER must be finite")
-    return (standard_mse - player_mse) / standard_mse
+    if not math.isfinite(reference_energy) or reference_energy <= 0.0:
+        raise ValueError("reference energy must be finite and positive")
+    return {
+        "mse_standard": standard_mse,
+        "mse_player": player_mse,
+        "reference_energy": reference_energy,
+        "relative_player_mse": player_mse / reference_energy,
+        "gain": (standard_mse - player_mse) / standard_mse,
+    }
 
 
 def _cpu_params(params: Mapping[str, torch.Tensor]) -> dict[str, torch.Tensor]:
@@ -618,37 +840,51 @@ def evaluate_solution(path: Path, pack: PreparedPack, algorithm_device_name: str
     api_calls = {name: 0 for name in REQUIRED_APIS}
     weight_states: dict[tuple[int, str], tuple[Any, dict[str, torch.Tensor]]] = {}
     attention_states: dict[int, dict[str, Any]] = {}
-    linear_layers = sorted({layer for layer, _role, _window in pack.linear_cases})
-    linear_roles = sorted({role for _layer, role, _window in pack.linear_cases})
-    print(f"[{label}] Linear calibration: {len(linear_layers) * len(linear_roles)} weight groups", flush=True)
-    for layer in linear_layers:
-        for role in linear_roles:
+    # Match the judge's state lifetime: calibration is paid once for every
+    # layer/role (24*7 on Qwen) and once for every attention layer (24).  The
+    # selected Linear/Attention cases below only vary the dynamic input.  A
+    # fresh calibration for each case would silently turn the local evaluator
+    # into a per-test oracle and reverses the meaning of the runtime budget.
+    linear_calibration_indices = tuple(
+        int(index) for index in pack.metadata.get("linear_calibration_indices", [0, 1])
+    )
+    if not linear_calibration_indices:
+        raise RuntimeError("pack has no Linear calibration indices")
+    print(f"[{label}] Linear calibration: {pack.layers * len(ROLES)} layer/role states", flush=True)
+    for layer in range(pack.layers):
+        for role in ROLES:
             weight_pair = _move_pair(pack.weights[layer][role], device)
-            calibration = [_move_pair(pack.linear_calibration_activations[role][sample][layer], device) for sample in range(len(pack.linear_calibration_windows))]
+            calibration = [
+                _move_pair(
+                    pack.linear_calibration_activations[role][sample][layer],
+                    device,
+                )
+                for sample in linear_calibration_indices
+            ]
             started = time.perf_counter()
             result = solution.hif4_calibration_and_quantize_weight(weight_pair[0], weight_pair[1], calibration)
             if device.type == "cuda":
                 torch.cuda.synchronize(device)
-            elapsed = time.perf_counter() - started
-            api_seconds["hif4_calibration_and_quantize_weight"] += elapsed
+            api_seconds["hif4_calibration_and_quantize_weight"] += time.perf_counter() - started
             api_calls["hif4_calibration_and_quantize_weight"] += 1
             if not isinstance(result, Mapping) or set(result) != {"weight_params", "activation_state"}:
                 raise ValueError("weight calibration must return exactly weight_params and activation_state")
             validate_state(result["activation_state"])
-            validate_hif4_params(
-                result["weight_params"],
-                dequantize_nvfp4(*pack.weights[layer][role]).shape,
-            )
+            ref_weight_shape = dequantize_nvfp4(*pack.weights[layer][role]).shape
+            validate_hif4_params(result["weight_params"], ref_weight_shape)
             weight_states[(layer, role)] = (result["activation_state"], _cpu_params(result["weight_params"]))
-    print(f"[{label}] Attention calibration: {len({layer for layer, _window in pack.attention_cases})} layers", flush=True)
-    for layer in sorted({layer for layer, _window in pack.attention_cases}):
-        calibration = [_move_qkv(pack.calibration_qkv[sample][layer], device) for sample in range(len(pack.calibration_windows))]
+    attention_calibration_indices = tuple(range(len(pack.calibration_windows)))
+    print(f"[{label}] Attention calibration: {pack.layers} layer states", flush=True)
+    for layer in range(pack.layers):
+        calibration = [
+            _move_qkv(pack.calibration_qkv[sample][layer], device)
+            for sample in attention_calibration_indices
+        ]
         started = time.perf_counter()
         states = solution.hif4_calibration_attention(calibration, pack.q_heads, pack.kv_heads, pack.head_dim)
         if device.type == "cuda":
             torch.cuda.synchronize(device)
-        elapsed = time.perf_counter() - started
-        api_seconds["hif4_calibration_attention"] += elapsed
+        api_seconds["hif4_calibration_attention"] += time.perf_counter() - started
         api_calls["hif4_calibration_attention"] += 1
         if not isinstance(states, Mapping) or set(states) != {"q_state", "k_state", "v_state"}:
             raise ValueError("attention calibration must return exactly q_state, k_state, v_state")
@@ -656,34 +892,48 @@ def evaluate_solution(path: Path, pack: PreparedPack, algorithm_device_name: str
             validate_state(states[name])
         attention_states[layer] = dict(states)
 
-    linear_scores: list[float] = []
-    attention_scores: list[float] = []
-    standard_weight_cache: dict[tuple[int, str], torch.Tensor] = {}
+    linear_details: list[dict[str, Any]] = []
+    attention_details: list[dict[str, Any]] = []
+    standard_weight_cache: dict[tuple[int, str], tuple[torch.Tensor, torch.Tensor]] = {}
     print(f"[{label}] Linear scoring: {len(pack.linear_cases)} cases", flush=True)
-    for layer, role, window in pack.linear_cases:
-        state, weight_params = weight_states[(layer, role)]
-        activation_pair = _move_pair(pack.test_activations[role][window][layer], device)
+    for case in pack.linear_cases:
+        state, weight_params = weight_states[(case.layer, case.role)]
+        activation_pair = _move_pair(pack.test_activations[case.role][case.test_window][case.layer], device)
         started = time.perf_counter()
         activation_params = solution.hif4_dynamic_quantize_activation(activation_pair[0], activation_pair[1], state)
         if device.type == "cuda":
             torch.cuda.synchronize(device)
         api_seconds["hif4_dynamic_quantize_activation"] += time.perf_counter() - started
         api_calls["hif4_dynamic_quantize_activation"] += 1
-        ref_activation = dequantize_nvfp4(*pack.test_activations[role][window][layer]).to(torch.float32)
-        ref_weight = dequantize_nvfp4(*pack.weights[layer][role]).to(torch.float32)
-        if (layer, role) not in standard_weight_cache:
-            standard_weight_cache[(layer, role)] = decode_standard_hif4(encode_standard_hif4(ref_weight)).to(torch.float32)
+        ref_activation = dequantize_nvfp4(*pack.test_activations[case.role][case.test_window][case.layer]).to(torch.float32)
+        cache_key = (case.layer, case.role)
+        if cache_key not in standard_weight_cache:
+            ref_weight = dequantize_nvfp4(*pack.weights[case.layer][case.role]).to(torch.float32)
+            standard_weight_cache[cache_key] = (
+                ref_weight,
+                decode_standard_hif4(encode_standard_hif4(ref_weight)).to(torch.float32),
+            )
+        ref_weight, standard_weight = standard_weight_cache[cache_key]
         standard_activation = decode_standard_hif4(encode_standard_hif4(ref_activation)).to(torch.float32)
         player_activation = dequantize_hif4(_cpu_params(activation_params), ref_activation.shape).to(torch.float32)
         player_weight = dequantize_hif4(weight_params, ref_weight.shape).to(torch.float32)
         reference = ref_activation @ ref_weight.T
-        standard = standard_activation @ standard_weight_cache[(layer, role)].T
+        standard = standard_activation @ standard_weight.T
         player = player_activation @ player_weight.T
-        linear_scores.append(_score(standard, player, reference))
+        details = _score_details(standard, player, reference)
+        details.update({
+            "case_id": case.case_id,
+            "layer": case.layer,
+            "role": case.role,
+            "calibration_indices": list(case.calibration_indices),
+            "test_window": case.test_window,
+            "test_split": pack.test_windows[case.test_window].split,
+        })
+        linear_details.append(details)
     print(f"[{label}] Attention scoring: {len(pack.attention_cases)} cases", flush=True)
-    for layer, window in pack.attention_cases:
-        states = attention_states[layer]
-        q_pair, k_pair, v_pair = (_move_pair(pair, device) for pair in pack.test_qkv[window][layer])
+    for case in pack.attention_cases:
+        states = attention_states[case.layer]
+        q_pair, k_pair, v_pair = (_move_pair(pair, device) for pair in pack.test_qkv[case.test_window][case.layer])
         started = time.perf_counter()
         q_params = solution.hif4_dynamic_quantize_q(q_pair[0], q_pair[1], pack.q_heads, pack.head_dim, states["q_state"])
         if device.type == "cuda":
@@ -702,9 +952,9 @@ def evaluate_solution(path: Path, pack: PreparedPack, algorithm_device_name: str
             torch.cuda.synchronize(device)
         api_seconds["hif4_dynamic_quantize_v"] += time.perf_counter() - started
         api_calls["hif4_dynamic_quantize_v"] += 1
-        ref_q = dequantize_nvfp4(*pack.test_qkv[window][layer][0]).to(torch.float32)
-        ref_k = dequantize_nvfp4(*pack.test_qkv[window][layer][1]).to(torch.float32)
-        ref_v = dequantize_nvfp4(*pack.test_qkv[window][layer][2]).to(torch.float32)
+        ref_q = dequantize_nvfp4(*pack.test_qkv[case.test_window][case.layer][0]).to(torch.float32)
+        ref_k = dequantize_nvfp4(*pack.test_qkv[case.test_window][case.layer][1]).to(torch.float32)
+        ref_v = dequantize_nvfp4(*pack.test_qkv[case.test_window][case.layer][2]).to(torch.float32)
         std_q = decode_standard_hif4(encode_standard_hif4(ref_q)).to(torch.float32)
         std_k = decode_standard_hif4(encode_standard_hif4(ref_k)).to(torch.float32)
         std_v = decode_standard_hif4(encode_standard_hif4(ref_v)).to(torch.float32)
@@ -714,12 +964,35 @@ def evaluate_solution(path: Path, pack: PreparedPack, algorithm_device_name: str
         reference = _attention(ref_q[None], ref_k[None], ref_v[None], pack.q_heads, pack.kv_heads, pack.head_dim)
         standard = _attention(std_q[None], std_k[None], std_v[None], pack.q_heads, pack.kv_heads, pack.head_dim)
         player = _attention(player_q[None], player_k[None], player_v[None], pack.q_heads, pack.kv_heads, pack.head_dim)
-        attention_scores.append(_score(standard, player, reference))
+        details = _score_details(standard, player, reference)
+        details.update({
+            "case_id": case.case_id,
+            "layer": case.layer,
+            "calibration_indices": list(case.calibration_indices),
+            "test_window": case.test_window,
+            "test_split": pack.test_windows[case.test_window].split,
+            "test_length": int(ref_q.shape[0]),
+        })
+        attention_details.append(details)
     if device.type == "cuda":
         torch.cuda.synchronize(device)
     wall_seconds = time.perf_counter() - wall_start
+    linear_scores = [float(item["gain"]) for item in linear_details]
+    attention_scores = [float(item["gain"]) for item in attention_details]
     linear_sum = float(sum(linear_scores))
     attention_sum = float(sum(attention_scores))
+    linear_mean = linear_sum / max(1, len(linear_details))
+    attention_mean = attention_sum / max(1, len(attention_details))
+    linear_by_role = {
+        role: sum(item["gain"] for item in linear_details if item["role"] == role)
+        / max(1, sum(item["role"] == role for item in linear_details))
+        for role in ROLES
+    }
+    attention_by_layer = {
+        str(layer): sum(item["gain"] for item in attention_details if item["layer"] == layer)
+        / max(1, sum(item["layer"] == layer for item in attention_details))
+        for layer in sorted({item["layer"] for item in attention_details})
+    }
     return {
         "candidate": path.stem,
         "source": str(path.resolve()),
@@ -728,11 +1001,19 @@ def evaluate_solution(path: Path, pack: PreparedPack, algorithm_device_name: str
             "linear_sum": linear_sum,
             "attention_sum": attention_sum,
             "total_sum": linear_sum + attention_sum,
-            "linear_mean": linear_sum / LINEAR_CASE_COUNT,
-            "attention_mean": attention_sum / ATTENTION_CASE_COUNT,
-            "equal_weight_45000_scale": (linear_sum + attention_sum) * 100.0,
-            "linear_cases": LINEAR_CASE_COUNT,
-            "attention_cases": ATTENTION_CASE_COUNT,
+            "linear_mean": linear_mean,
+            "attention_mean": attention_mean,
+            # This is the mean over the actual captured W/A cases.  No
+            # Linear:Attention weighting is applied; compare runs only when
+            # their case design and cache are identical.
+            "overall_mean": (linear_sum + attention_sum)
+            / max(1, len(linear_details) + len(attention_details)),
+            "linear_role_macro_mean": sum(linear_by_role.values()) / len(ROLES),
+            "attention_layer_macro_mean": sum(attention_by_layer.values()) / max(1, len(attention_by_layer)),
+            "linear_cases": len(linear_details),
+            "attention_cases": len(attention_details),
+            "linear_by_role": linear_by_role,
+            "attention_by_layer": attention_by_layer,
         },
         "timing": {
             # The official rule times the six candidate quantization APIs.  Keep
@@ -744,6 +1025,10 @@ def evaluate_solution(path: Path, pack: PreparedPack, algorithm_device_name: str
             "wall_seconds": wall_seconds,
             "local_api_under_300_indicator": float(sum(api_seconds.values())) < OFFICIAL_RUNTIME_LIMIT,
             "wall_under_300_indicator": wall_seconds < OFFICIAL_RUNTIME_LIMIT,
+        },
+        "case_scores": {
+            "linear": linear_details,
+            "attention": attention_details,
         },
         "protocol": PROTOCOL,
     }
@@ -763,7 +1048,12 @@ ARCHIVE_MANIFEST: dict[str, dict[str, Any]] = {
     "v066": {"path": "solutions/20260829_v066_c66-activation-ratio100_scoreNA_timeNA/solution.py", "official_score": 22557, "official_time": 217.2, "official_status": "pass"},
     "v072": {"path": "solutions/20260829_v072_c74-jdrq-hierarchy_scoreNA_timeNA/solution.py", "official_score": 22662, "official_time": 226.0, "official_status": "pass"},
     "v074": {"path": "solutions/20260829_v074_c75-rowwise-jdrq_scoreNA_timeNA/solution.py", "official_score": 22750, "official_time": 239.387, "official_status": "pass"},
-    "v084": {"path": "solutions/20260830_v084_c84-gram64-sweep5_scoreNA_timeNA/solution.py", "official_score": 16517, "official_time": 252.563, "official_status": "pass"},
+    "v084": {"path": "solutions/20260830_v084_c84-gram64-sweep5_scoreNA_timeNA/solution.py", "official_score": 16517, "official_time": 252.563, "official_status": "pass", "official_cohort": "new-weight"},
+    "v086": {"path": "solutions/20260830_v086_c86-attn-block-final_scoreNA_timeNA/solution.py", "official_score": 16744, "official_time": 222.7, "official_status": "pass", "official_cohort": "new-weight"},
+    "v138": {"path": "solutions/20260901_v138_attention-static-v86-budget_scoreNA_timeNA/solution.py", "official_score": 15715, "official_time": 208.0, "official_status": "pass", "official_cohort": "new-weight"},
+    "v139": {"path": "solutions/20260901_v139_linear-output-aware-gain_scoreNA_timeNA/solution.py", "official_score": 15716, "official_time": 202.0, "official_status": "pass", "official_cohort": "new-weight"},
+    "v140": {"path": "solutions/20260901_v140_linear-roab-pair_rejected/solution.py", "official_score": 15838, "official_time": 207.0, "official_status": "pass", "official_cohort": "new-weight"},
+    "v147": {"path": "solutions/20260901_v147_v86-attention-v140-linear_rejected/solution.py", "official_score": 16579, "official_time": 211.0, "official_status": "pass", "official_cohort": "new-weight"},
     "v098": {"path": "solutions/20260830_v098_b1-gqrb-margin-active_score293.793700_time406s/solution.py", "official_score": None, "official_time": None, "official_status": "timeout"},
     "v100": {"path": "solutions/20260830_v100_b2-pawv-diagonly-active_score293.797301_time392s/solution.py", "official_score": None, "official_time": None, "official_status": "wrong-answer/timeout"},
     "v107": {"path": "solutions/20260830_v107_l3-global-lrh-precision-parent_score295.157057_time481s/solution.py", "official_score": None, "official_time": None, "official_status": "wrong-answer"},
@@ -782,10 +1072,13 @@ def _write_report(path: Path, result: Mapping[str, Any], pack: PreparedPack) -> 
     lines = [
         f"# {result['candidate']} — {PROTOCOL}",
         "",
-        "本报告使用唯一官方形状协议；隐藏官方数据和鲲鹏硬件不可本地复制。",
+        "本报告是本地 proxy；隐藏官方数据和鲲鹏硬件不可本地复制。",
         "",
         f"- calibration lengths: `{list(CALIBRATION_LENGTHS)}`",
-        f"- cases: `{LINEAR_CASE_COUNT} Linear + {ATTENTION_CASE_COUNT} Attention`",
+        f"- cases: `{score['linear_cases']} Linear + {score['attention_cases']} Attention` (full captured W/A by default)",
+        f"- calibration calls: `{timing['api_calls'].get('hif4_calibration_and_quantize_weight', 0)} weight + {timing['api_calls'].get('hif4_calibration_attention', 0)} attention` (shared state)",
+        f"- input codec: `{pack.metadata.get('input_codec', NVFP4_INPUT_CODEC)}` / mode `{NVFP4_MODE}`",
+        f"- test splits: `{pack.metadata.get('test_splits', [])}`",
         f"- source SHA256: `{result['source_sha256']}`",
         f"- data pack: `{pack.metadata.get('data_sha256', {})}`",
         "",
@@ -793,14 +1086,84 @@ def _write_report(path: Path, result: Mapping[str, Any], pack: PreparedPack) -> 
         "|---|---:|",
         f"| Linear mean | {score['linear_mean']:.9f} |",
         f"| Attention mean | {score['attention_mean']:.9f} |",
-        f"| Equal-weight 45000 scale | {score['equal_weight_45000_scale']:.6f} |",
+        f"| Overall mean (all captured cases) | {score['overall_mean']:.9f} |",
+        f"| Linear role macro mean | {score['linear_role_macro_mean']:.9f} |",
+        f"| Attention layer macro mean | {score['attention_layer_macro_mean']:.9f} |",
         f"| Candidate wall | {timing['wall_seconds']:.3f}s |",
         f"| Candidate API total | {timing['api_total_seconds']:.3f}s |",
         "",
-        "官方成绩只保留为独立历史字段，不参与本地评分或时间换算。",
+        "官方成绩只保留为独立历史字段，不参与本地 proxy 评分或时间换算。",
     ]
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def _trend_diagnostics(results: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    """Compare local ordering with known official ordering, without fitting it.
+
+    This is intentionally a diagnostic rather than a score correction.  A
+    local proxy that disagrees with the same-cohort official anchors must be
+    treated as a failed proxy and cannot be used to promote an algorithm.
+    Historical scoring revisions are kept in separate cohorts.
+    """
+    eligible: list[tuple[str, str, float, float]] = []
+    for result in results:
+        if result.get("status") != "ok":
+            continue
+        official = result.get("official", {})
+        score = official.get("score")
+        cohort = official.get("cohort")
+        local = result.get("score", {}).get("overall_mean")
+        if cohort is None or score is None or local is None:
+            continue
+        try:
+            official_value = float(score)
+            local_value = float(local)
+        except (TypeError, ValueError):
+            continue
+        if not (math.isfinite(official_value) and math.isfinite(local_value)):
+            continue
+        eligible.append((str(result.get("candidate", "?")), str(cohort), local_value, official_value))
+
+    pairs: list[dict[str, Any]] = []
+    concordant = 0
+    inverted = 0
+    tied = 0
+    for index, left in enumerate(eligible):
+        for right in eligible[index + 1:]:
+            if left[1] != right[1]:
+                continue
+            local_delta = left[2] - right[2]
+            official_delta = left[3] - right[3]
+            if local_delta == 0.0 or official_delta == 0.0:
+                tied += 1
+                relation = "tie"
+            elif local_delta * official_delta > 0.0:
+                concordant += 1
+                relation = "concordant"
+            else:
+                inverted += 1
+                relation = "inversion"
+            if relation == "inversion":
+                pairs.append({
+                    "left": left[0],
+                    "right": right[0],
+                    "local_delta": local_delta,
+                    "official_delta": official_delta,
+                    "cohort": left[1],
+                })
+    compared = concordant + inverted + tied
+    return {
+        "eligible_candidates": [item[0] for item in eligible],
+        "cohort": sorted({item[1] for item in eligible}),
+        "pair_count": compared,
+        "concordant_pairs": concordant,
+        "inverted_pairs": inverted,
+        "tied_pairs": tied,
+        "status": "pass" if inverted == 0 and compared > 0 else ("inversion_detected" if inverted else "insufficient_anchors"),
+        "inversions": pairs[:32],
+        "note": "diagnostic only; official scores are never used to alter proxy means",
+    }
 
 
 def _archive_output(
@@ -820,29 +1183,53 @@ def _archive_output(
             "model": MODEL_NAME,
             "calibration_lengths": list(CALIBRATION_LENGTHS),
             "test_length": TEST_LENGTH,
+            "test_lengths": list(TEST_LENGTHS),
             "test_windows": TEST_WINDOW_COUNT,
-            "linear_cases": LINEAR_CASE_COUNT,
-            "attention_cases": ATTENTION_CASE_COUNT,
+            "linear_cases": len(prepared.linear_cases),
+            "attention_cases": len(prepared.attention_cases),
+            "case_design_scope": "all captured W/A tensors by default; optional CLI limits are smoke-only",
+            "case_design": prepared.metadata.get("case_design", "full-cartesian-real-wa-v3"),
+            "calibration_call_graph": prepared.metadata.get(
+                "calibration_call_graph", "all-layer-role-once; attention-layer-once"
+            ),
+            "input_codec": NVFP4_INPUT_CODEC,
             "runtime_limit_seconds": OFFICIAL_RUNTIME_LIMIT,
-            "score_formula": "(MSE_STD-MSE_PLAYER)/MSE_STD per case; official total is the sum of case scores",
-            "runtime_measurement": "sum of elapsed six-API calls; wall_seconds is reported separately and is not the official timer",
+            "score_formula": "proxy gain=(MSE_STD-MSE_PLAYER)/MSE_STD per case; means are unweighted over actual captured cases",
+            "runtime_measurement": "sum of elapsed six-API calls; wall_seconds is reported separately and neither is official time",
+            "trend_validation": "same-cohort pairwise ordering against user-confirmed anchors; diagnostic-only",
         },
         "data_metadata": prepared.metadata,
+        "trend_diagnostics": _trend_diagnostics(results),
         "results": list(results),
     }
 
 
-def _write_archive_report(path: Path, data_source: str, capture_seconds: float, results: Sequence[Mapping[str, Any]]) -> None:
+def _write_archive_report(
+    path: Path,
+    data_source: str,
+    capture_seconds: float,
+    results: Sequence[Mapping[str, Any]],
+    prepared: PreparedPack | None = None,
+) -> None:
+    trend = _trend_diagnostics(results)
+    linear_count = len(prepared.linear_cases) if prepared is not None else (
+        len(results[0].get("case_scores", {}).get("linear", [])) if results else 0
+    )
+    attention_count = len(prepared.attention_cases) if prepared is not None else (
+        len(results[0].get("case_scores", {}).get("attention", [])) if results else 0
+    )
     lines = [
         f"# {PROTOCOL} archive evaluation",
         "",
         f"- data source: `{data_source}`",
         f"- capture seconds: `{capture_seconds:.3f}`",
         f"- calibration lengths: `{list(CALIBRATION_LENGTHS)}`",
-        f"- case counts: `{LINEAR_CASE_COUNT} Linear + {ATTENTION_CASE_COUNT} Attention`",
+        f"- case counts: `{linear_count} Linear + {attention_count} Attention` (all captured W/A by default)",
+        f"- official trend audit: `{trend['status']}` ({trend['concordant_pairs']} concordant / {trend['inverted_pairs']} inverted / {trend['tied_pairs']} tied pairs)",
+        "- trend audit is a same-cohort diagnostic only; it never changes a proxy score",
         "",
-        "| Candidate | Status | Linear mean | Attention mean | Equal-weight scale | API total(s) | API<300 | Wall(s) | Wall<300 | Official status |",
-        "|---|---|---:|---:|---:|---:|---|---:|---|---|",
+        "| Candidate | Status | Linear mean | Attention mean | Overall mean | API total(s) | API calls | Wall(s) | Official status |",
+        "|---|---|---:|---:|---:|---:|---:|---:|---|",
     ]
     for result in results:
         score = result.get("score", {})
@@ -850,18 +1237,15 @@ def _write_archive_report(path: Path, data_source: str, capture_seconds: float, 
         if result.get("status") == "ok":
             linear_mean = f"{score['linear_mean']:.6f}"
             attention_mean = f"{score['attention_mean']:.6f}"
-            equal_weight = f"{score['equal_weight_45000_scale']:.3f}"
+            overall_mean = f"{score['overall_mean']:.6f}"
             api_total = f"{timing['api_total_seconds']:.3f}"
-            api_under = str(timing['local_api_under_300_indicator'])
+            api_calls = str(sum(timing.get('api_calls', {}).values()))
             wall = f"{timing['wall_seconds']:.3f}"
-            wall_under = str(timing['wall_under_300_indicator'])
         else:
-            linear_mean = attention_mean = equal_weight = api_total = wall = "-"
-            api_under = wall_under = "-"
+            linear_mean = attention_mean = overall_mean = api_total = api_calls = wall = "-"
         lines.append(
             f"| {result['candidate']} | {result['status']} | "
-            f"{linear_mean} | {attention_mean} | {equal_weight} | {api_total} | "
-            f"{api_under} | {wall} | {wall_under} | "
+            f"{linear_mean} | {attention_mean} | {overall_mean} | {api_total} | {api_calls} | {wall} | "
             f"{result.get('official', {}).get('status', '')} |"
         )
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -879,14 +1263,36 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         data_source = "model_forward"
         if args.cache_mode in {"auto", "write"}:
             save_pack(raw, cache_path)
-    prepared = prepare_pack(raw)
+    prepared = prepare_pack(
+        raw,
+        linear_count=args.linear_cases,
+        attention_count=args.attention_cases,
+    )
     capture_seconds = time.perf_counter() - capture_started
     if args.archive:
         candidates = [(name, item) for name, item in ARCHIVE_MANIFEST.items()]
     else:
         if args.solution is None:
-            raise ValueError("--solution is required unless --archive is used")
-        candidates = [(args.name, {"path": str(args.solution), "official_score": None, "official_time": None, "official_status": "unregistered"})]
+            # ``--cache-mode write`` is a supported capture-only operation.
+            # The old evaluator captured a multi-gigabyte pack successfully
+            # and then discarded it with this late argument error.
+            output = _archive_output(data_source, capture_seconds, cache_path, prepared, [])
+            _write_json(args.output, output)
+            if args.report:
+                _write_archive_report(args.report, data_source, capture_seconds, [], prepared)
+            print(f"[capture] wrote {cache_path}", flush=True)
+            return output
+        anchor = OFFICIAL_TREND_ANCHORS.get(args.name)
+        candidates = [(
+            args.name,
+            {
+                "path": str(args.solution),
+                "official_score": None if anchor is None else anchor["score"],
+                "official_time": None if anchor is None else anchor["time_seconds"],
+                "official_status": "unregistered" if anchor is None else anchor["status"],
+                "official_cohort": None if anchor is None else anchor["cohort"],
+            },
+        )]
     results: list[dict[str, Any]] = []
     for name, item in candidates:
         source = (ROOT / item["path"]).resolve()
@@ -898,6 +1304,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 "score": item.get("official_score"),
                 "time_seconds": item.get("official_time"),
                 "status": item.get("official_status"),
+                "cohort": item.get("official_cohort"),
             }
             result["status"] = "ok"
         except Exception as exc:
@@ -905,7 +1312,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 "candidate": name,
                 "source": str(source),
                 "source_sha256": sha256_file(source) if source.is_file() else None,
-                "official": {"score": item.get("official_score"), "time_seconds": item.get("official_time"), "status": item.get("official_status")},
+                "official": {"score": item.get("official_score"), "time_seconds": item.get("official_time"), "status": item.get("official_status"), "cohort": item.get("official_cohort")},
                 "status": "error",
                 "error": f"{type(exc).__name__}: {exc}",
             }
@@ -924,11 +1331,11 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         # inspectable if a process is interrupted.
         _write_json(args.output, _archive_output(data_source, capture_seconds, cache_path, prepared, results))
         if args.report:
-            _write_archive_report(args.report, data_source, capture_seconds, results)
+            _write_archive_report(args.report, data_source, capture_seconds, results, prepared)
     output = _archive_output(data_source, capture_seconds, cache_path, prepared, results)
     _write_json(args.output, output)
     if args.report:
-        _write_archive_report(args.report, data_source, capture_seconds, results)
+        _write_archive_report(args.report, data_source, capture_seconds, results, prepared)
     return output
 
 
@@ -939,6 +1346,18 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--name", default="candidate", help="name for --solution")
     parser.add_argument("--cache", type=Path, default=DEFAULT_CACHE)
     parser.add_argument("--cache-mode", choices=("auto", "read", "write", "off"), default="auto")
+    parser.add_argument(
+        "--linear-cases",
+        type=int,
+        default=LINEAR_CASE_COUNT,
+        help="optional Linear case limit for smoke only; default enumerates every captured W/A tensor",
+    )
+    parser.add_argument(
+        "--attention-cases",
+        type=int,
+        default=ATTENTION_CASE_COUNT,
+        help="optional Attention case limit for smoke only; default enumerates every captured W/A tensor",
+    )
     parser.add_argument("--capture-device", default="cuda" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--algorithm-device", default="cuda" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--output", type=Path, default=ROOT / "artifacts" / "official_eval" / "archive.json")

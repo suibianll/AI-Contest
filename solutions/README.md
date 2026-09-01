@@ -14,23 +14,28 @@ proxy scores.
 ## Canonical re-evaluation
 
 Use [`evaluator/official_eval.py`](../evaluator/official_eval.py), never the retired
-`real_model_suite.py`:
+`real_model_suite.py`.  The current evaluator is `proxy-v2`; the older v1 archive is
+immutable historical evidence only:
 
 ```powershell
 .venv\Scripts\python.exe -u evaluator\official_eval.py --archive `
-  --cache artifacts\official_eval\cache\qwen2.5-0.5b-official-shape-v1.pt `
+  --cache artifacts\official_eval\cache\qwen2.5-0.5b-proxy-v2.pt `
   --cache-mode read --algorithm-device cuda `
-  --output artifacts\official_eval\archive-official-shape-v1.json `
-  --report logs\official_eval\archive-official-shape-v1.md
+  --output artifacts\official_eval\archive-proxy-v2.json `
+  --report logs\official_eval\archive-proxy-v2.md
 ```
 
-The protocol fixes Qwen2.5-0.5B, 250 Linear + 200 Attention cases, Attention calibration
-lengths `[10,128,512,1024,1024]`, independent HiF4 validation, and the public relative-MSE
-case score. The authoritative local table is generated from the JSON above; `linear_mean` and
-`attention_mean` are the only local ranking metrics. Local seconds are same-machine A/B data,
-not an official-time conversion.
+The protocol fixes Qwen2.5-0.5B, the five Attention calibration lengths
+`[10,128,512,1024,1024]`, validation/test holdout windows, independent HiF4 validation, and the
+public relative-MSE case score. The default panel enumerates all captured W/A tensors; counts can
+be reduced only by an explicit smoke-test flag. Calibration still follows the judge graph: 168
+shared layer/role Weight states and 24 shared Attention states, followed by one dynamic call per
+selected case. The authoritative local fields are `linear_mean`, `attention_mean`, and the
+unweighted `overall_mean`; no Linear:Attention ratio or official-score fit is applied. Local
+seconds are same-machine A/B data, not an official-time conversion; `trend_diagnostics` reports
+known same-cohort ordering inversions without fitting them.
 
-The completed 2026-09-01 archive run is in
+The completed 2026-09-01 **historical v1** archive run is in
 [`artifacts/official_eval/archive-official-shape-v1.json`](../artifacts/official_eval/archive-official-shape-v1.json)
 and [`logs/official_eval/archive-official-shape-v1.md`](../logs/official_eval/archive-official-shape-v1.md).
 Among candidates whose functions returned, v121 is the local maximum

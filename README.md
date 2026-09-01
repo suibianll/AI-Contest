@@ -15,9 +15,9 @@
 - 根目录 [`solution.py`](solution.py) 是当前活动单文件工作稿。v147 已获官方
   `16579 / 211s`，时间通过但分数低于 v86，因此归档已改为 `_rejected`；由于该目录源码曾被
   替换，官方提交 SHA 仍未确认。
-- 已知官方面板为 **250 Linear + 200 Attention**，总运行时间要求严格小于 **300 s**。
-  官方最近减少了 Linear 评分权重，但没有公开两项新权重，因此本地不能从代理分数换算
-  官方绝对分。
+- 已知官方面板曾使用 **250 Linear + 200 Attention**，总运行时间要求严格小于 **300 s**。
+  本地 `proxy-v2` 不再人为限制数量或比例，默认直接枚举捕获到的全部真实 W/A；官方最近
+  减少了 Linear 评分权重但没有公开新权重，因此本地不能从代理分数换算官方绝对分。
 - 官方历史锚点：v74 `22750 / 239.387 s`（旧权重），v84 `16517 / 252.563 s`、
   v86 **`16744 / 222.7 s`**（新权重，通过；在 17816 新框架出现前是仓库内最高通过点）。
   v98/v121 为 timeout，v100/v107 为 Attention 相关失败；v128 fixed-attn-budget 已由用户
@@ -57,20 +57,22 @@
 - 2026-09-01 归档复测已完成 18 个有官方记录的候选：本地最高返回结果为 v121
   (`0.472197763 / 0.833617251`)，但 API `3404.369 s`、官方 timeout；v002 的本机
   CUDA/CPU device-mix 错误被原样记录。完整明细只看
-  [`archive-official-shape-v1.json`](artifacts/official_eval/archive-official-shape-v1.json)。
+  [`archive-official-shape-v1.json`](artifacts/official_eval/archive-official-shape-v1.json)（历史 v1 证据）。
 
-## 唯一协议：`official-shape-v1`
+## 当前协议：`proxy-v2`（旧 `official-shape-v1` 仅作历史诊断）
 
-评测器将官方已知的接口、形状、合法性和调用结构集中在一个文件中：
+评测器将官方已知的接口、形状、合法性和调用结构集中在一个文件中。`proxy-v2` 是诚实的
+同机趋势代理，不声称复制隐藏官方数据或鲲鹏硬件；旧 `official-shape-v1` cache 不能被新协议
+静默读取。
 
 | 项目 | 固定值 |
 |---|---|
 | 模型 | Qwen2.5-0.5B，24 个 Transformer block |
-| 数据 | 固定 revision 的 Salesforce/WikiText-2-raw-v1；train 只做 calibration，validation 只做 test |
+| 数据 | 固定 revision 的 Salesforce/WikiText-2-raw-v1；train 做 calibration，validation/test 交替 holdout |
 | Attention calibration | **`[10, 128, 512, 1024, 1024]`**，每个 Q/K/V 样本保持自己的序列长度 |
-| Linear calibration | 使用公开本地数据包的前两折；赛事说明书未公开 Linear 折数，假设在元数据中明确记录 |
-| Test windows | 9 个互不重复的 validation 文档窗口，每个 128 token |
-| 用例 | 从 24 层、7 类 Linear role 和 9 个窗口中稳定选取 250 个 tuple；Attention 选取 200 个 tuple，禁止重复 |
+| Linear calibration | 每个 layer/role 只校准一次，使用前两折；动态 case 共享该状态 |
+| Test windows | 12 个互不重复的 validation/test 文档窗口，长度按 `[10,128,512,1024,1024,10,128,512,1024,1024,128,512]` 轮换 |
+| 用例 | 默认全量枚举真实 W/A；`--linear-cases/--attention-cases` 仅可显式用于 smoke，不能用于排名 |
 | API | 六个赛事接口，顺序和参数形状与 `赛事说明书.txt` 一致 |
 | 参数校验 | 独立校验 E6M2、`scale_lv2/lv3`、sign、mant、state 深度/节点数和 CPU tensor 规则 |
 | 标准基线 | `evaluator/reference_hif4.py` 的固定标准 codec；候选代码不能改变分母 |
@@ -81,14 +83,19 @@
 s_i=\frac{\operatorname{MSE}_{\rm STD,i}-\operatorname{MSE}_{\rm PLAYER,i}}
           {\operatorname{MSE}_{\rm STD,i}},
 \qquad
-L=\frac1{250}\sum_{i=1}^{250}s_i,
+L=\frac1{N_L}\sum_{i=1}^{N_L}s_i,
 \qquad
-A=\frac1{200}\sum_{j=1}^{200}s_j.
+A=\frac1{N_A}\sum_{j=1}^{N_A}s_j.
 \]
 
-JSON 的 `score.linear_mean` 和 `score.attention_mean` 是唯一主指标；
-`score.total_sum` 是 450 个 case 分数的和；`equal_weight_45000_scale` 只是把这个和乘
-100 的等权显示，不是新版官方分数。
+JSON 的 `score.linear_mean` 和 `score.attention_mean` 是分场景主指标；
+`score.overall_mean` 是全部真实 case 的未加权均值；`score.total_sum` 只表示本次实际 case 的
+和，不跨不同数量的运行比较。没有任何 Linear:Attention 人为比例或官方分数拟合。
+
+校准调用保持官方状态图：Qwen 默认 168 次 Weight calibration、24 次 Attention
+calibration；每个动态 case 只调用一次相应动态 API。报告中的 `trend_diagnostics` 会在同一
+官方权重 cohort 的已知版本之间做 pairwise 顺序检查；它只标记反转，绝不把官方分数反向拟合
+进候选分数。
 
 计时同时保存：
 
@@ -103,7 +110,7 @@ JSON 的 `score.linear_mean` 和 `score.attention_mean` 是唯一主指标；
 
 ```powershell
 .venv\Scripts\python.exe -u evaluator\official_eval.py `
-  --cache artifacts\official_eval\cache\qwen2.5-0.5b-official-shape-v1.pt `
+  --cache artifacts\official_eval\cache\qwen2.5-0.5b-proxy-v2.pt `
   --cache-mode write --capture-device cuda --algorithm-device cuda `
   --output artifacts\official_eval\capture.json `
   --report logs\official_eval\capture.md
@@ -113,10 +120,10 @@ JSON 的 `score.linear_mean` 和 `score.attention_mean` 是唯一主指标；
 
 ```powershell
 .venv\Scripts\python.exe -u evaluator\official_eval.py --archive `
-  --cache artifacts\official_eval\cache\qwen2.5-0.5b-official-shape-v1.pt `
+  --cache artifacts\official_eval\cache\qwen2.5-0.5b-proxy-v2.pt `
   --cache-mode read --algorithm-device cuda `
-  --output artifacts\official_eval\archive-official-shape-v1.json `
-  --report logs\official_eval\archive-official-shape-v1.md
+  --output artifacts\official_eval\archive-proxy-v2.json `
+  --report logs\official_eval\archive-proxy-v2.md
 ```
 
 只测一个候选：
@@ -124,12 +131,14 @@ JSON 的 `score.linear_mean` 和 `score.attention_mean` 是唯一主指标；
 ```powershell
 .venv\Scripts\python.exe -u evaluator\official_eval.py `
   --solution solutions\20260830_v084_c84-gram64-sweep5_scoreNA_timeNA\solution.py `
-  --name v084 --cache artifacts\official_eval\cache\qwen2.5-0.5b-official-shape-v1.pt `
+  --name v084 --cache artifacts\official_eval\cache\qwen2.5-0.5b-proxy-v2.pt `
   --cache-mode read --algorithm-device cuda `
   --output artifacts\official_eval\v084.json --report logs\official_eval\v084.md
 ```
 
 `--cache-mode read` 缺少或不符合协议的快照会直接失败，不会悄悄切换数据或形状。
+默认命令会枚举全部捕获的真实 W/A，可能明显慢于旧 250/200 代理；只有定位接口或格式问题时
+才显式加 `--linear-cases 1 --attention-cases 1` 做 smoke，smoke 结果不能用于算法排名。
 缓存必须记录模型、数据 revision、五个 Attention 长度、SHA256 和权重原生
 `[out_features, in_features]` 布局。没有 CUDA 时可以把 `--algorithm-device` 改为 `cpu`，
 但 CPU 秒数只适合 CPU 内部 A/B。
@@ -167,7 +176,7 @@ JSON 的 `score.linear_mean` 和 `score.attention_mean` 是唯一主指标；
 | v147 | 16579 | 211 s | pass but rejected（官方，低于 v86；提交 SHA 未确认） |
 
 统一复测生成的文件只能放在 `artifacts/official_eval/` 和 `logs/official_eval/`；
-结果表以 `archive-official-shape-v1.json` 为准。旧 `artifacts/real_model_suite/`
+当前复测结果以 `proxy-v2` JSON 为准；历史结果表以 `archive-official-shape-v1.json` 为准。旧 `artifacts/real_model_suite/`
 结果不再读取、不再更新，旧 evaluator 源码统一放在
 `evaluator/archive/legacy-20260901/` 作为历史证据。
 
@@ -178,8 +187,8 @@ JSON 的 `score.linear_mean` 和 `score.attention_mean` 是唯一主指标；
 | 体系 | 来源 | 适用版本 | 状态 |
 |---|---|---|---|
 | 官方旧权重分数 | 官方回传（旧权重时期，panel 数次修订） | v001–v074 | 历史事实，仅存档 |
-| 官方新权重分数 | 官方回传（250 Linear + 200 Attention） | v084/v086/v098/v100/v107/v121/v128–v131/v138–v140/v147 | 当前官方口径 |
-| 本地协议分 | official-shape-v1 复测（`linear_mean`/`attention_mean`） | v132–v145 及活动根文件 | 仅同机 A/B，不换算官方分 |
+| 官方新权重分数 | 官方回传（历史上 250 Linear + 200 Attention） | v084/v086/v098/v100/v107/v121/v128–v131/v138–v140/v147 | 当前官方口径 |
+| 本地协议分 | proxy-v2 全真实 W/A 复测（`linear_mean`/`attention_mean`/`overall_mean`） | 当前活动候选 | 仅同机 A/B，不换算官方分 |
 | 旧协议分（已废弃） | real_model_suite / sampled-means-v1/v2 / oracle dashboard | v000–v127 时期 | 已全部归档，禁止再用于排序或调参 |
 
 注意：`solutions/` 目录名中的数字字段**不是统一口径**——v001–v032 的 `score`/`official`
@@ -193,7 +202,7 @@ v031 目录名已从旧面板 `official14613` 更正为官方 `21864`，v125 scr
 | 路径 | 内容 |
 |---|---|
 | `solutions/` | 唯一版本源码快照（只读归档，`retained/rejected/timeout` 标注） |
-| `evaluator/official_eval.py` | 当前唯一评测入口（official-shape-v1） |
+| `evaluator/official_eval.py` | 当前唯一评测入口（proxy-v2；v1 只读历史诊断） |
 | `evaluator/archive/legacy-20260901/` | 旧评测器源码（real_model_suite 等） |
 | `artifacts/official_eval/` | 当前协议 JSON 与 cache |
 | `logs/official_eval/` | 当前协议报告 |
@@ -214,7 +223,7 @@ v031 目录名已从旧面板 `official14613` 更正为官方 `21864`，v125 scr
    `artifacts/real_model_suite/` 的 JSON/MD。对已明确拒绝的微版本，可在保留 `artifacts/official_eval/`
    JSON 和 `logs/` 执行日志后删除 `solutions/` 源码，以控制归档规模；通过版本和代表性结构源码保留，
    版本号全局唯一。
-5. 任何排序都以同一 `official-shape-v1`、同一 cache、同一设备为前提；不得混用旧
+5. 任何排序都以同一 `proxy-v2`、同一 cache、同一设备为前提；不得混用旧
    `sampled-means-v1/v2` panel，也不得用官方分数反向调参。
 
 ## 算法文档

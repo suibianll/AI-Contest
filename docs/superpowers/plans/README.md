@@ -3,7 +3,7 @@
 > 最后更新：2026-09-01
 
 本目录只保留一份活跃计划。执行优化时只读取下面这份文件、根 `solution.py`、最新
-`official-shape-v1` 评测和官方规则；归档目录中的计划不具有指令效力。评测命令只能
+`proxy-v2` 评测和官方规则；归档目录中的计划不具有指令效力。评测命令只能
 调用 `evaluator/official_eval.py`，旧 `real_model_suite.py` 已退役。
 
 - [`2026-09-01-hif4-hierarchy-encoder-and-analytic-attention-plan.md`](2026-09-01-hif4-hierarchy-encoder-and-analytic-attention-plan.md)：当前唯一有效计划。只保留两个目标：Linear mean 向 `0.8` 提升，官方端到端时间严格小于 `300s`。Linear 改为 Activation-first：先验证编码/解码尺度解耦的合法 HiF4 encoder，再用解析式层级矩阵平衡替换候选式 Smooth/Permutation/Hadamard，最后把 calibration oracle 编译成固定复杂度动态规则。Attention 在 Linear 稳定后独立执行，只允许同复杂度或更低复杂度的解析 Q/K 变换和固定编码。
