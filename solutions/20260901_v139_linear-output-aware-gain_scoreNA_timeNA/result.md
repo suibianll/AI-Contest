@@ -1,5 +1,7 @@
 # v139 result
 
+Status: **REJECTED** (Linear regressed versus parent v138).
+
 - Parent: v138
 - Change: replace the existing weight-only activation `output_gain` calibration
   with a cross-fold, block-64 output-aware diagonal Newton target. The deployed

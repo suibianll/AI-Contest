@@ -1,5 +1,7 @@
 # v141 result
 
+Status: **REJECTED** (selected-column BDLR caused a large Linear regression).
+
 - Parent: v140 (`52521F1B996BF67641C22A90132ED7A7BCA477976D8A05BEC411CC9E04AA7C90`).
 - Change: BDLR-JAQ rank-4 cross-block `H/D` columns were added directly to the activation coordinate gradient.
 - Source SHA256: `10521332CC1A616E4495C1D0BD5527E011C91A062D46D9E44644D3FB789B1BED`.

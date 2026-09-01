@@ -1,5 +1,7 @@
 # v144 result
 
+Status: **REJECTED** (damping `0.02` remained below v140).
+
 - Parent: v140 (`52521F1B996BF67641C22A90132ED7A7BCA477976D8A05BEC411CC9E04AA7C90`).
 - Change: BDLR rank-4 dynamic-only cross-block correction with damping strength `0.02`.
 - Source SHA256: `66140D0DA5F1BBCAB7C03968F1756A9E77168B0652F82F4305759BD9AD12344B`.

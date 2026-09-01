@@ -1,5 +1,7 @@
 # v140 result
 
+Status: **RETAINED / ACTIVE ROOT**.
+
 - Parent: v138 time-safe root (`3A120BEB62443FF6A5BCDB89B5FAD970AC6D8D45F48F40FE31812073060C2D10`).
 - Change: ROAB-P2 reciprocal 2x2 pair transforms are learned from calibration activation/weight covariance, applied as an exact (within float32) reciprocal coordinate change to `A` and `W`, and selected by the legal `Q(A)Q(W)^T` output score. Attention remains the v138 static path.
 - Protocol: `official-shape-v1`, Qwen2.5-0.5B cache, 250 Linear + 200 Attention cases, CUDA, read-only cache.

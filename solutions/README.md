@@ -118,6 +118,11 @@ idle rerun is `299.302 s` API / `321.996 s` wall; see
 2. Unknown official values stay `scoreNA_timeNA`. Local JSON values belong in the local report,
    not in the directory name or Official fields.
 3. `result.md` records parent, one algorithm change, exact command/protocol, data/model revisions,
-   both means, API/Wall time, source SHA256, official outcome, and next decision.
+   both means, API/Wall time, source SHA256, an explicit `Status` (`RETAINED`, `REJECTED`,
+   `TIMEOUT`, or `ERROR`), official outcome, and next decision.
 4. When the official judge changes weights or limits, start a new protocol label and keep old
    outcomes as history; never mix their absolute scores.
+5. Small parameter sweeps are grouped under one experiment log and one summary result. A new
+   archive directory is created only for a materially different algorithm, a materially different
+   runtime path, or the single selected candidate from a sweep; rejected micro-variants remain in
+   the summary rather than being archived one-by-one.

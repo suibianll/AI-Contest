@@ -1,5 +1,7 @@
 # v142 result
 
+Status: **REJECTED** (anchor freezing did not recover the Linear regression).
+
 - Parent: v141 (`10521332CC1A616E4495C1D0BD5527E011C91A062D46D9E44644D3FB789B1BED`).
 - Change: freeze the four selected BDLR anchor codes while applying the rank-4 off-block gradient to the other coordinates.
 - Source SHA256: `05EA39634891430EF24DD879F982355AC7275534D94C4EBC325646F1C5BB1347`.
