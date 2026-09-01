@@ -52,7 +52,7 @@
 | **L4a final deployed-Gram row gate** | 仅 expansive `rows > channels` 且 `channels <=1024`；v107 parent 与 final-Gram 候选用完整 `G_q` 逐行比较，v109 精度正向 |
 | **Attention v138 时间安全 shortlist** | reciprocal RMS/K-centering + 少量 block-Hadamard/GQRB 静态候选；128-token view；关闭动态 Q/K Gram sweep 与 dense PAWV，保持独立合法 HiF4 编码 |
 | **L2 Linear 输出监督 activation cross64（v134）** | 校准阶段缓存 `Q(W)^T W` 与 `Q(W)^T W_t` 的连续 64×64 block；在线以 `Hq-Da` 作为激活梯度，并用 batched block matmul 避免完整 channel Gram |
-| **L9 BDLR-JAQ（v141–v145，已关闭）** | rank-4 选列跨块 `H/D` 修正；锚点冻结、仅动态激活和阻尼 `0.02/0.005` 均未超过 v140，保留归档证据，不再调参 |
+| **L9 BDLR-JAQ（v141–v145，已关闭）** | rank-4 选列跨块 `H/D` 修正；锚点冻结、仅动态激活和阻尼 `0.02/0.005` 均未超过 v140，源码目录已清理，JSON/日志保留证据，不再调参 |
 
 **实测**（Qwen2.5-0.5B 全 24 层，`seq=128/calib=2/test=4/amax6`，缓存只读）：
 

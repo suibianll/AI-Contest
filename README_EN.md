@@ -31,9 +31,12 @@ path and adds ROAB-P2 to Linear (`0.5073546 / 0.7159420`, `205.365s` local API,
 The user has now reported v138's official result as **`15715 / 208s` (pass)**; its local
 proxy values remain separate from that official result. v86 remains the known official best
 at `16744 / 222.7s`.
+The user has now also reported v139's official result as **`15716 / 202s` (pass)**. v139 is
+retained as an official-result archive, while v140 remains the active local root.
 The v141-v145 rank-4 selected-column BDLR trials (anchor freeze, dynamic-only, and two damping
 values) returned Linear means `0.281760/0.282559/0.361154/0.506418/0.506256`, all below v140;
-that direction is closed and the next search moves to symmetric joint code-domain updates.
+that direction is closed and the next search moves to symmetric joint code-domain updates. Their
+source snapshots were deleted to keep the archive compact; per-run JSON and execution logs remain.
 
 Capture the pinned public data pack once:
 

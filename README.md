@@ -29,9 +29,12 @@
   官方结果尚未登记，仍需平台实测。
 - v138 的官方结果现已更正为 **`15715 分 / 208 s`，通过 300 s 限制**；其本地复测数字仍仅作
   代理记录，不能与官方分数混用。
+- v139 的官方结果为 **`15716 分 / 202 s`，通过 300 s 限制**；它比 v138 高 1 分，保留为
+  官方结果归档，但当前本地根仍为 v140。
 - v141–v145 的 rank-4 选列 BDLR-JAQ（含锚点冻结、仅动态激活和两档阻尼）均已完整复测，
   Linear `0.281760/0.282559/0.361154/0.506418/0.506256`，均低于 v140；该方向已关闭，
-  活动根恢复为 v140，下一步转向对称联合层级码字更新。
+  活动根恢复为 v140，下一步转向对称联合层级码字更新。为控制归档规模，v141–v145 源码目录
+  已删除，仅保留评测 JSON 和执行日志。
 - 2026-09-01 归档复测已完成 18 个有官方记录的候选：本地最高返回结果为 v121
   (`0.472197763 / 0.833617251`)，但 API `3404.369 s`、官方 timeout；v002 的本机
   CUDA/CPU device-mix 错误被原样记录。完整明细只看
@@ -137,6 +140,10 @@ JSON 的 `score.linear_mean` 和 `score.attention_mean` 是唯一主指标；
 | v121 | — | >300 s | timeout |
 | v128 | — | >300 s | timeout（官方，用户确认） |
 | v129 | — | >300 s | timeout（官方，用户确认） |
+| v130 | — | >300 s | timeout（官方，用户确认） |
+| v131 | — | >300 s | timeout（官方，用户确认） |
+| v138 | 15715 | 208 s | pass（官方，用户报告） |
+| v139 | 15716 | 202 s | pass（官方，用户报告） |
 
 统一复测生成的文件只能放在 `artifacts/official_eval/` 和 `logs/official_eval/`；
 结果表以 `archive-official-shape-v1.json` 为准。旧 `artifacts/real_model_suite/`
@@ -153,7 +160,8 @@ JSON 的 `score.linear_mean` 和 `score.attention_mean` 是唯一主指标；
 3. `result.md` 记录唯一算法变化、父版本、命令、协议、数据/模型 revision、Linear/Attention
    均值、API/Wall、源 SHA、官方分数/时间和状态。官方回传只追加，不覆盖本地证据。
 4. 评测输出与源码分离：活动结果只写 `artifacts/official_eval/`；旧结果清理时可以删除
-   `artifacts/real_model_suite/` 的 JSON/MD，但不得删除 `solutions/` 源码和官方回传日志。
+   `artifacts/real_model_suite/` 的 JSON/MD。对已明确拒绝的微版本，可在保留 `artifacts/official_eval/`
+   JSON 和 `logs/` 执行日志后删除 `solutions/` 源码，以控制归档规模；通过版本和当前根源码保留。
 5. 任何排序都以同一 `official-shape-v1`、同一 cache、同一设备为前提；不得混用旧
    `sampled-means-v1/v2` panel，也不得用官方分数反向调参。
 
