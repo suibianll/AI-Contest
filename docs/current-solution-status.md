@@ -79,15 +79,16 @@ row gate、GALS、block-local permutation、L6 rank/factor 系列和 C1 refresh/
 
 本轮统一复测中，旧归档**最高本地等权显示**为 v121：`linear_mean=0.472197763`、
 `attention_mean=0.833617251`、`equal_weight_45000_scale=28477.289`，但 API/Wall 均远超
-300 s，且官方历史裁决为 timeout；它不是可提交版本。当前根 v132 的空闲机器重测结果为
-Linear `0.473131`、Attention `0.834256`、API `290.936s`、wall `314.251s`；API 总和是
-本地官方时间代理，已满足 `<300s`。完整字段以 [重测 JSON](../artifacts/official_eval/root-v132-idle-rerun-20260901-official-shape-v1.json)
-为准；wall 字段仅作诊断，不作为官方计时。
+300 s，且官方历史裁决为 timeout；它不是可提交版本。当前根 v132 两次空闲机器重测结果
+均为 Linear `0.473131`、Attention `0.834256`，API 分别为 `290.936s` 和 `289.318s`
+（均值 `290.127s`，保守取最大值 `290.936s`），均满足 `<300s`。完整字段以[第一轮 JSON](../artifacts/official_eval/root-v132-idle-rerun-20260901-official-shape-v1.json)
+和[第二轮 JSON](../artifacts/official_eval/root-v132-idle-rerun2-20260901-official-shape-v1.json)为准；
+wall 字段仅作诊断，不作为官方计时。
 
 时间质量更正：最后一次 `root-v127-output-weight-qwgram-gain-adyn2` 运行时有其他程序同时
 占用机器，报告的 `365.818s` API / `397.341s` wall 是受干扰观测，不作为超时判定；原始
 JSON 保留，详见 [`时间质量更正`](../logs/execution/2026-09-01-timing-quality-correction.md)。
-随后已在无其他 Python/评测进程的机器状态下重测 v132，得到 API `290.936s`（`<300s`）。
+随后已在无其他 Python/评测进程的机器状态下连续重测 v132 两次，API 均低于 `300s`。
 v86 官方结果为 **`16744 / 222.7s`，新权重下通过**。
 
 官方历史锚点（独立于本地代理）：v74 `22750 / 239.387s`（旧权重，通过）；v84
