@@ -18,14 +18,13 @@
 > 与 v86 本地 `299.302s`、官方 `222.7s` 通过的反差表明本地秒数不能推出官方通过，
 > 需要按 Attention 算子/调用复杂度建立更保守的时间父版本。
 
-> **活动根更新（2026-09-01）**：当前根已提升为 v134（output gain + L2 block
-> output-supervised activation cross64 + Attention dynamic sweep2）；归档副本两次完整
-> 空闲复测均为 Linear `0.5073195`、Attention `0.8342565`，API `289.042/289.832s`
->（均低于本地 `300s` 代理）。
+> **活动根更新（2026-09-01）**：当前根已提升为 v138（v134 output gain + L2 block
+> output-supervised activation cross64 + v86-level static Attention）；两次完整空闲复测
+> 均为 Linear `0.5073195`、Attention `0.715942`，API `192.996/187.935s`。
 
 > **时间策略更新（2026-09-01）**：v130 官方 timeout 后，Attention calibration 与动态
-> Q/K/V 被列为首要风险；下一版本先复现 v86 的静态低复杂度 Attention，再将 v134 的
-> Linear 输出监督路径叠加回去。
+> Q/K/V 被列为首要风险；v138 已复现 v86 的静态低复杂度 Attention，并保留 v134 的
+> Linear 输出监督路径。后续 Linear 优化均以 v138 为父版本。
 
 > 整理日期：2026-08-31
 > 数据来源：`solutions/README.md`（v000–v125）、`docs/current-solution-status.md`、`docs/archive-implementation-audit.md`、`logs/execution/2026-08-30-e0g-scale-oracle.md`、`logs/execution/2026-08-30-e0g-multimodel-dashboard.md`、`logs/execution/2026-08-30-a7-quant-weight-gram.md`、`logs/execution/2026-08-30-l1-full-hierarchy-lrh.md`、`logs/execution/2026-08-31-v110-l4b-gals-final-gated-qwen-full.md`、`logs/execution/2026-08-31-v111-l5a-joint-permutation-qwen-full.md`、`logs/execution/2026-08-31-l5d-external-component-audit.md`、`logs/execution/2026-08-31-l5e-linear-ceiling-v111.md`、`logs/execution/2026-08-31-v115-l6a-rank16-qwen-full.md`、`logs/execution/2026-08-31-v116-l6b-wide-rank4-qwen-full.md`、`logs/execution/2026-08-31-v117-l6c-g64-hierarchy-qwen-full.md`、`logs/execution/2026-08-31-v118-l6d-structured-factor-qwen-full.md`、`logs/execution/2026-08-31-l6e-crossblock-checkpoint.md`、`logs/execution/2026-08-31-v119-c1a-structured-vectorized-qwen-full.md`、`logs/execution/2026-08-31-c1b-structured-refresh-stratified.md`、`logs/execution/2026-08-31-c1b-structured-refresh2-stratified.md`、`logs/execution/2026-08-31-v121-c1b-structured-refresh2-qwen-full.md`、`logs/execution/2026-08-31-v124-c1c-rank8-screen.md`、`logs/execution/2026-08-31-v124-c1c-rank8-qwen-full.md`、`logs/execution/2026-08-31-v125-c1c-block8-qwen-full.md`、`logs/execution/2026-08-31-v107-attention-contract-audit.md`、`logs/execution/2026-08-31-c1b-structured-refresh-synthetic.md`。
@@ -35,9 +34,9 @@
 
 ## 1. 当前根：算法构成与效果
 
-下方历史算法构成段仍以 v126 为基准；活动根已更新为 v134，新增 output gain 与 L2
+下方历史算法构成段仍以 v126 为基准；活动根已更新为 v138，新增 output gain、L2
 输出监督 activation cross64，完整结果见 [`当前状态`](current-solution-status.md) 与
-[`v134 首次 JSON`](../artifacts/official_eval/v134-linear-output-activation-cross64-official-shape-v1.json)。
+[`v138 首次 JSON`](../artifacts/official_eval/v138-attention-static-v86-budget-official-shape-v1.json)。
 
 | 组件 | 内容 |
 |---|---|
@@ -50,7 +49,7 @@
 | **L6d/C1a/C1b/C1c structured factor** | 宽输入最多 8 个 `64×64` kernel + 距离系数生成跨 block proposal；C1b 每个 selected block 后刷新梯度并扫两轮；C1c rank=8、`max_blocks=8`；最终完整 `G_q` 行级 gate；v125 `proj(d=4864)` 正向 |
 | **C1 proposal path** | C1a 批量独立 row/block 的 15-level proposal；C1b block refresh×2；C1c rank 4→8、`max_blocks=4→8`；coordinate 顺序与 exact `G_q` gate 不变；v125 panel `295.847849` |
 | **L4a final deployed-Gram row gate** | 仅 expansive `rows > channels` 且 `channels <=1024`；v107 parent 与 final-Gram 候选用完整 `G_q` 逐行比较，v109 精度正向 |
-| **Attention 输出感知 shortlist** | reciprocal RMS/K-centering/共享 Hadamard + B1 GQRB 2×2/4×4 group-local mixing；B2 PAWV 用 attention probability 的 token-row 对角 Hessian 做 V refinement；V 保持独立合法 HiF4 编码 |
+| **Attention v138 时间安全 shortlist** | reciprocal RMS/K-centering + 少量 block-Hadamard/GQRB 静态候选；128-token view；关闭动态 Q/K Gram sweep 与 dense PAWV，保持独立合法 HiF4 编码 |
 | **L2 Linear 输出监督 activation cross64（v134）** | 校准阶段缓存 `Q(W)^T W` 与 `Q(W)^T W_t` 的连续 64×64 block；在线以 `Hq-Da` 作为激活梯度，并用 batched block matmul 避免完整 channel Gram |
 
 **实测**（Qwen2.5-0.5B 全 24 层，`seq=128/calib=2/test=4/amax6`，缓存只读）：

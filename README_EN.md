@@ -20,9 +20,11 @@ The v130 output-supervised-weight candidate was likewise confirmed to time out (
 despite a local API total of `295.437s`.  This is evidence that local seconds do not map
 monotonically to the official runtime; the v86 static Attention path remains the time-safe
 reference.
-The active root is now v134: block output-supervised activation cross terms raise the
-local Linear mean to `0.5073195` while two idle full-panel runs remain under the local
-API proxy (`289.042/289.832s`); no official result has been registered yet.
+The v134 block output-supervised activation cross terms raise the local Linear mean to
+`0.5073195`, but v130's official timeout shows that local API seconds are not a safe
+runtime proxy.  The active root is now v138: it retains the v134 Linear path while
+using a v86-level static Attention path (`187.935/192.996s` local API in two runs).
+No official result has been registered yet.
 
 Capture the pinned public data pack once:
 

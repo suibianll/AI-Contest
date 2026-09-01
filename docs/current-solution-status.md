@@ -28,8 +28,8 @@ s=(MSE_{STD}-MSE_{PLAYER})/MSE_{STD},
 
 ## 活动根版本
 
-根代码目前是 v134（固定预算 Attention + 输出监督 W/Activation cross64 + Q(W)-Gram + output
-gain），SHA256 为 `5837E765E478B1A16A5E3170ACE40FBADB670871E47C5EE2C8C748102A30478D`。实现保留：
+根代码目前是 v138（v134 Linear 输出监督 W/Activation cross64 + v86 级静态 Attention），
+SHA256 为 `3A120BEB62443FF6A5BCDB89B5FAD970AC6D8D45F48F40FE31812073060C2D10`。实现保留：
 
 1. BOAT 对角平衡与 signed-Hadamard 等价变换，满足 `X'W'^T=XW^T`；
 2. Cross-fold Weight-HSDQ，在 64 通道块上使用校准激活统计做合法 HiF4 离散搜索；
@@ -37,8 +37,8 @@ gain），SHA256 为 `5837E765E478B1A16A5E3170ACE40FBADB670871E47C5EE2C8C748102A
 4. Expansive-FFN CAT balance，仅在 `rows>channels` 的形状启用并失败回退；
 5. `Q(A)`/`A@W` 输出监督的分块权重精修、`Q(W)^T W` 分块 cross 项、output gain 和
    在线输出目标激活精修；
-6. Attention 的 reciprocal balance、K-centering、rotation、GQRB shortlist，候选在
-   128-token proxy/256-token shortlist 上评分，动态 Q/K 使用 2 sweep；dense PAWV 已移除。
+6. Attention 的低复杂度 reciprocal balance、K-centering、少量 block-Hadamard/GQRB 静态
+   shortlist；候选只在 128-token view 上评分，关闭动态 Q/K Gram sweep，dense PAWV 已移除。
 
 已从根代码裁剪并仅保留在归档中的方向：Global Activation-LRH、final deployed-Gram
 row gate、GALS、block-local permutation、L6 rank/factor 系列和 C1 refresh/rank 系列。
@@ -80,7 +80,8 @@ row gate、GALS、block-local permutation、L6 rank/factor 系列和 C1 refresh/
 | v131 | 0.473131 | 0.836579 | 294.835 | 317.708 | Q(W)-Gram parent |
 | v132 | 0.473131 | 0.834256 | 290.936 | 314.251 | 两次空闲重测，历史父版本 |
 | v133 | 0.483610 | 0.834256 | 287.941 | 310.621 | 历史父版本 |
-| v134 | **0.507320** | **0.834256** | **289.042/289.832** | 312.315/313.181 | **当前根；两次结果逐位一致，API<300** |
+| v134 | 0.507320 | 0.834256 | 289.042/289.832 | 312.315/313.181 | 历史 Linear 精度父版本；Attention 时间风险 |
+| v138 | **0.507320** | 0.715942 | **192.996/187.935** | 216.324/210.855 | **当前根；v86 级静态 Attention 时间父版本** |
 
 本轮统一复测中，旧归档**最高本地等权显示**为 v121：`linear_mean=0.472197763`、
 `attention_mean=0.833617251`、`equal_weight_45000_scale=28477.289`，但 API/Wall 均远超
@@ -118,6 +119,10 @@ v130 的本地 API `295.437s`、wall `317.607s`，官方也已确认 timeout（`
 超时风险。v129 本地总时长更低却同样 timeout，说明不能用单一比例映射本地与官方时间。
 后续计划将 Attention 先收敛到 v86 级别的静态低复杂度，再在此时间父版本上恢复必要的
 Linear 精度组件。
+
+v138 已完成该时间重构：在保持 v134 Linear `0.5073195` 的同时，把本地 Attention
+calibration/动态 Q/K/V 降到 `36.25/3.71s` 量级，总 API `187.935–192.996s`；两次
+结果逐位一致。它只作为官方时间的更保守候选，最终仍需平台实测。
 
 官方历史锚点（独立于本地代理）：v74 `22750 / 239.387s`（旧权重，通过）；v84
 `16517 / 252.563s`（新权重，通过）；**v86 `16744 / 222.7s`（新权重，通过，当前
