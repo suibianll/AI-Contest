@@ -41,18 +41,21 @@
 
 ## 2. 评测口径
 
-本地统一使用 [`evaluator/official_eval.py`](../evaluator/official_eval.py) 的
-`proxy-v2`：Qwen2.5-0.5B、24 层、默认使用固定分层真实 W/A panel（Linear 为每层每 role 一个
-真实窗口，共 168 cases；Attention 为每层五个官方长度，共 120 cases；窗口本身是固定、可复现的
-holdout capture），Attention calibration 长度
-`[10,128,512,1024,1024]`，validation/test 交替 holdout。主字段是
-`linear_mean`、`attention_mean`、`overall_mean`、六 API `api_total_seconds` 和
-`wall_seconds`。旧 `official-shape-v1` 只保留为不可迁移的历史证据。
+本地主评测仍使用 [`evaluator/official_eval.py`](../evaluator/official_eval.py) 的
+`proxy-v2`：Qwen2.5-0.5B、24 层、默认固定分层真实 W/A panel（Linear 为每层每 role 一个真实
+窗口，共 168 cases；Attention 为每层五个官方长度，共 120 cases；窗口是固定、可复现的 holdout
+capture），Attention calibration 长度 `[10,128,512,1024,1024]`，validation/test 交替 holdout。
+但必须明确：[`赛事说明书.txt`](../赛事说明书.txt) 没有公开指定 Qwen、层数、hidden size、GQA 或
+RoPE；Qwen 只是当前最完整的本地结构假设，不是官方模型证据。主字段是 `linear_mean`、
+`attention_mean`、`overall_mean`、六 API `api_total_seconds` 和 `wall_seconds`。旧
+`official-shape-v1` 只保留为不可迁移的历史证据。
 
-该协议使用固定公开模型、跨文档 WikiText holdout 和全量 case 枚举，而官方使用隐藏数据与未公开
-的新权重。因此它只用于算法诊断和同机耗时记录，不能继续作为官方排序器，也不能把本地时间换算为
-鲲鹏时间。校准状态按官方调用图共享：168 个 layer/role Weight state、24 个 Attention state；
-`trend_diagnostics` 仅对同一官方权重 cohort 做顺序一致性检查，发现反转时必须停止用本地分数晋级。
+因此 `proxy-v2` 只用于同机算法诊断和耗时记录，不能作为官方排序器，也不能把本地时间换算为
+鲲鹏时间。校准状态按公开调用图共享；`trend_diagnostics` 仅对同一官方权重 cohort 做顺序
+一致性检查，发现反转时必须停止用本地分数晋级。为检查结构假设，新增
+[`evaluator/cross_model_eval.py`](../evaluator/cross_model_eval.py)：它用本地 GPT-2 的真实 fused
+QKV、MHA、绝对位置编码和单一 GELU FFN 建立独立 `cross-model-probe-v1`，不改写 Qwen cache，
+不参与官方 proxy 排名。
 `--full-cases` 可额外展开 2016 Linear + 288 Attention 做 stress，但不能与默认 panel 混排。
 
 当前评测还默认输出 evaluator-only 的误差源分解：Linear 的 `E00/E10/E01/E11` 四臂（标准、
@@ -74,6 +77,33 @@ v84→v86 与官方同向，但四个官方锚点 pairwise 只有 3/6 同向、3
 `906/165`；这项反转集中在 Linear 耦合坐标变换，不能用本地 overall_mean 晋级。v84/v86 的
 Attention 变化与官方方向一致；Q/K 单侧控制恶化而 QK 配对改善，V 基本中性，说明 Attention
 应继续按 Q/K 配对和 logits/softmax 归因。
+
+## 2.1 跨模型 GPT-2 结构探针（已完成）
+
+由于官方说明书没有模型结构，不能只凭 Qwen proxy 断言“官方就是 Qwen”。使用同一 WikiText
+窗口、同一 NVFP4/HiF4 codec、同一 API 调用图，在本地 `gpt2`（12 层、hidden 768、12×64
+MHA、绝对位置编码、fused `c_attn`、单一 GELU `c_fc`）上重新捕获并评测 v86、v140、v147。
+GPT-2 的 `c_attn` 已按真实权重切成 Q/K/V，`ffn_in` 不复制成 gated 两个 role；结果单独存于
+`artifacts/official_eval/gpt2-*-panel.json`，执行摘要见
+`logs/official_eval/gpt2-*-panel.md`。
+
+| 候选 | 官方分数 | GPT-2 Linear | GPT-2 Attention | GPT-2 overall |
+|---|---:|---:|---:|---:|
+| v86 | 16744 | 0.375010 | 0.411100 | 0.391414 |
+| v147 | 16579 | 0.518011 | 0.411100 | 0.469415 |
+| v140 | 15838 | 0.519794 | 0.497247 | 0.509545 |
+
+官方顺序为 `v86 > v147 > v140`，GPT-2 顺序为 `v140 > v147 > v86`，三对全部反转；Qwen
+分层 proxy 也把 v147/v140 排在 v86 之上。因此“换成 GPT 后仍反转”说明失真不只来自 Qwen
+结构，隐藏数据/权重分布、官方 case 构成或实现细节也与公开本地 proxy 不同；同时 Qwen 的
+绝对 Attention 分数和 role 权重不能再当作官方结构证据。GPT-2 运行只作为跨结构稳健性探针，
+不能被解释为官方得分或官方 runtime。
+
+GPT-2 v147 的误差源分解仍显示同一可优化结构：Linear W-only `-240.979`、A-only `-138.412`、
+Both `0.518`、interaction `379.909`，属于 `paired_coordinate_coupling_likely`；Attention
+Q-only `-25.810`、K-only `-28.547`、V-only `0.016`、QK-only `0.389`、Both `0.411`，属于
+`paired_qk_coupling_likely`。这支持下一步继续拆分 Linear 的坐标/双侧编码和 Attention 的
+Q/K 配对，而不是围绕 Qwen 特有的 GQA/RoPE 参数继续调参。
 
 ## 3. 历史 v1 结果表（不可与 proxy-v2 混用）
 

@@ -67,7 +67,7 @@
 
 | 项目 | 固定值 |
 |---|---|
-| 模型 | Qwen2.5-0.5B，24 个 Transformer block |
+| 模型 | Qwen2.5-0.5B，24 个 Transformer block（本地 proxy 结构假设；说明书未公开指定模型） |
 | 数据 | 固定 revision 的 Salesforce/WikiText-2-raw-v1；train 做 calibration，validation/test 交替 holdout |
 | Attention calibration | **`[10, 128, 512, 1024, 1024]`**，每个 Q/K/V 样本保持自己的序列长度 |
 | Linear calibration | 每个 layer/role 只校准一次，使用前两折；动态 case 共享该状态 |
@@ -103,6 +103,14 @@ V-only、QK-only、QKV 控制臂，同时报告 logits MSE、softmax probability
 layer/length 聚合。逐 case 结果在 JSON 的 `case_scores`，聚合结果在 `decomposition`；
 这些控制臂复用已产生的候选输出，不增加候选 API 调用。仅在快速 smoke 时使用
 `--no-decomposition`。
+
+说明书只规定六个 API 和 Linear/Attention 数据组织，没有公开 Qwen、层数、GQA 或 RoPE。
+要检查模型结构假设，可运行独立的
+[`evaluator/cross_model_eval.py`](evaluator/cross_model_eval.py)：它在本地 GPT-2 的真实 fused
+QKV、12×64 MHA、绝对位置编码和单一 GELU FFN 上评测，使用独立
+`cross-model-probe-v1` cache，不修改 Qwen proxy 分数或官方趋势审计。GPT-2 结果是结构压力
+测试，不是官方分数；当前 v86/v147/v140 的 GPT-2 顺序为 `v140 > v147 > v86`，与官方
+`v86 > v147 > v140` 完全相反，详见 `docs/current-solution-status.md` 的跨模型小节。
 
 计时同时保存：
 

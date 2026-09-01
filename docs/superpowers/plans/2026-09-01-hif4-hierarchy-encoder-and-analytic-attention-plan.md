@@ -98,6 +98,35 @@ QK 改善，结果标为 `paired_qk_coupling_likely`，不把单侧控制臂当�
 归因；只有定位到具体 role/layer/length 的误差源后，才进入 L1–L4 或 Attention 独立实验。
 若 W-only、A-only 和 Both 的方向不一致，优先检查坐标变换/部署状态交互，不继续盲调参数。
 
+## E0.6. 跨模型结构探针（已完成，持续作为诊断）
+
+**问题：** `赛事说明书.txt` 只公开六个 API 和数据组织，没有公开模型名称、层数、hidden size、
+GQA 或位置编码。Qwen2.5-0.5B 是当前 `proxy-v2` 的本地结构假设，不能被当作官方结构事实。
+
+**已实现：** `evaluator/cross_model_eval.py` 支持本地 GPT-2 checkpoint 的真实前向捕获。它将
+fused `attn.c_attn` 按真实权重切分为 Q/K/V，以 MHA (`q_heads=kv_heads`) 和绝对位置编码运行，
+并把单一 GELU `mlp.c_fc` 作为一个 `ffn_in` role，不伪造 `fc_gate`/`fc_up`。它复用
+`official_eval.py` 的 NVFP4/HiF4 codec、合法性检查、状态生命周期和 W/A、Q/K/V 误差源分解；
+cache、JSON 和报告与 Qwen proxy 分离，协议标为 `cross-model-probe-v1`。
+
+**已观测（同一 GPT-2 72 Linear + 60 Attention panel）：**
+
+| 候选 | 官方分数 | GPT-2 Linear | GPT-2 Attention | GPT-2 overall |
+|---|---:|---:|---:|---:|
+| v86 | 16744 | 0.375010 | 0.411100 | 0.391414 |
+| v147 | 16579 | 0.518011 | 0.411100 | 0.469415 |
+| v140 | 15838 | 0.519794 | 0.497247 | 0.509545 |
+
+官方 `v86 > v147 > v140` 与 GPT-2 `v140 > v147 > v86` 完全相反；Qwen proxy 也存在同向
+反转。结论不是“GPT-2 更接近官方”，而是：Qwen 结构确实不能证明官方结构，但换模型后反转仍在，
+故失真还来自隐藏权重/数据分布、case 构成或官方实现细节。跨模型结果只用于判断算法是否依赖
+Qwen 特有的 GQA/RoPE/SwiGLU，并指导 role 级优化，不能进入官方分数拟合或晋级门槛。
+
+**后续用法：** 每个新 Linear 机制先跑 Qwen 分层 panel，再用同一 GPT-2 cache 做小 panel
+（默认可选 `--linear-cases/--attention-cases`），只检查合法性、误差源方向和明显结构回归；
+若两种结构的改善方向冲突，回到数学不变量和逐 role 误差，不围绕模型名称继续调参。需要更接近
+Qwen 层数的压力测试时，再单独生成 `gpt2-medium` cache，不与当前 panel 混排。
+
 ## 0. 本计划替代什么
 
 旧活动计划

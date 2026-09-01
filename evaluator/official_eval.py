@@ -151,6 +151,12 @@ class RawPack:
     kv_heads: int
     head_dim: int
     metadata: dict[str, Any]
+    # The public judge has no model-specific role names.  Qwen uses the
+    # seven-role default below; cross-model probes may expose a different
+    # operation set (for example GPT-2 has one GELU FFN input projection
+    # instead of gated ``fc_gate``/``fc_up``).  Keep this optional for
+    # backwards compatibility with existing Qwen cache payloads.
+    roles: tuple[str, ...] = ROLES
 
 
 @dataclasses.dataclass
@@ -171,6 +177,7 @@ class PreparedPack:
     linear_cases: list[LinearCase]
     attention_cases: list[AttentionCase]
     metadata: dict[str, Any]
+    roles: tuple[str, ...] = ROLES
 
 
 def sha256_file(path: Path) -> str:
@@ -478,6 +485,7 @@ def capture_pack(device_name: str) -> RawPack:
         metadata = {
             "protocol": PROTOCOL,
             "model": MODEL_NAME,
+            "linear_roles": list(ROLES),
             "model_path": str(MODEL_PATH),
             "model_revision": "Qwen/Qwen2.5-0.5B@060db6499f32faf8b98477b0a26969ef7d8b9987",
             "dataset": "Salesforce/wikitext",
@@ -521,6 +529,7 @@ def save_pack(pack: RawPack, path: Path) -> None:
         "q_heads": pack.q_heads,
         "kv_heads": pack.kv_heads,
         "head_dim": pack.head_dim,
+        "roles": list(pack.roles),
         "metadata": pack.metadata,
     }
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -564,6 +573,12 @@ def load_pack(path: Path) -> RawPack:
     q_heads = int(payload["q_heads"])
     kv_heads = int(payload["kv_heads"])
     head_dim = int(payload["head_dim"])
+    roles_payload = payload.get("roles", ROLES)
+    if not isinstance(roles_payload, (list, tuple)):
+        raise RuntimeError("data pack roles must be a list or tuple")
+    roles = tuple(str(role) for role in roles_payload)
+    if not roles or len(set(roles)) != len(roles) or not {"q", "k", "v"}.issubset(roles):
+        raise RuntimeError("data pack roles must be unique and include q, k, v")
     # Reject stale snapshots produced by the pre-v1 transpose bug.  The public
     # API receives native [out_features, in_features] weights.
     if not isinstance(weights, list) or not weights:
@@ -572,7 +587,7 @@ def load_pack(path: Path) -> RawPack:
         raise RuntimeError(f"data pack declares {layers} layers but stores {len(weights)} weight layers")
     expected_kv_width = kv_heads * head_dim
     for layer_index, per_layer in enumerate(weights):
-        for role in ROLES:
+        for role in roles:
             value = per_layer.get(role) if isinstance(per_layer, Mapping) else None
             if not torch.is_tensor(value) or value.ndim != 2:
                 raise RuntimeError(f"layer {layer_index} weight {role} is not a matrix")
@@ -587,13 +602,20 @@ def load_pack(path: Path) -> RawPack:
                     f"layer {layer_index} weight {role} has {tuple(value.shape)}; "
                     f"expected native {(hidden_size, hidden_size)}"
                 )
-        for role in {"fc_gate", "fc_up", "proj"}:
+        for role in set(roles) - {"q", "k", "v", "o"}:
             value = per_layer[role]
             rows, cols = map(int, value.shape)
-            if role in {"fc_gate", "fc_up"} and not (rows > cols and cols == hidden_size):
+            if role.startswith("fc_") and not (rows > cols and cols == hidden_size):
                 raise RuntimeError(f"layer {layer_index} weight {role} is not native out-in layout")
             if role == "proj" and not (rows == hidden_size and cols > rows):
                 raise RuntimeError(f"layer {layer_index} weight proj is not native out-in layout")
+            if not role.startswith("fc_") and role != "proj":
+                # Cross-model adapters may expose a differently named
+                # expansive FFN operation (GPT-2 uses ``ffn_in``).  Keep only
+                # the native out-in/input-width invariant here; the public
+                # HiF4 validator performs the block-alignment check later.
+                if cols != hidden_size:
+                    raise RuntimeError(f"layer {layer_index} weight {role} has unsupported input width")
     metadata = dict(payload.get("metadata", {}))
     if metadata.get("weight_layout") not in {None, "[out_features, in_features]"}:
         raise RuntimeError("official data pack uses an unsupported weight layout")
@@ -612,7 +634,7 @@ def load_pack(path: Path) -> RawPack:
     ) -> None:
         if not isinstance(bank, Mapping):
             raise RuntimeError(f"{bank_name} is not a role mapping")
-        for role in ROLES:
+        for role in roles:
             samples = bank.get(role)
             if not isinstance(samples, list) or len(samples) != sample_count:
                 raise RuntimeError(
@@ -672,7 +694,7 @@ def load_pack(path: Path) -> RawPack:
         weights, payload["calibration_activations"], payload["test_activations"],
         payload["calibration_qkv"], payload["test_qkv"], calibration_windows, test_windows,
         layers, hidden_size, q_heads,
-        kv_heads, head_dim, metadata,
+        kv_heads, head_dim, metadata, roles,
     )
 
 
@@ -701,12 +723,13 @@ def _choose_cases(
     linear_calibration_indices = tuple(range(min(2, len(pack.calibration_windows))))
     if not linear_calibration_indices:
         raise RuntimeError("case pool has no Linear calibration windows")
+    roles = tuple(getattr(pack, "roles", ROLES))
     if full_cases:
         linear_pool = [
             (layer, role, test_window)
             for test_window in range(len(pack.test_windows))
             for layer in range(pack.layers)
-            for role in ROLES
+            for role in roles
         ]
         attention_pool = [
             (layer, test_window)
@@ -729,7 +752,7 @@ def _choose_cases(
                 panel_windows[(layer + role_index) % len(panel_windows)],
             )
             for layer in range(pack.layers)
-            for role_index, role in enumerate(ROLES)
+            for role_index, role in enumerate(roles)
         ]
         attention_pool = [
             (layer, test_window)
@@ -775,8 +798,9 @@ def prepare_pack(
     if not linear_calibration_indices:
         raise RuntimeError("data pack has no Linear calibration windows")
     linear_calibration_windows = [raw.calibration_windows[index] for index in linear_calibration_indices]
-    cal_act = {role: [[_pair(raw.calibration_activations[role][sample][layer]) for layer in range(raw.layers)] for sample in range(len(raw.calibration_windows))] for role in ROLES}
-    test_act = {role: [[_pair(raw.test_activations[role][sample][layer]) for layer in range(raw.layers)] for sample in range(len(raw.test_windows))] for role in ROLES}
+    roles = tuple(raw.roles)
+    cal_act = {role: [[_pair(raw.calibration_activations[role][sample][layer]) for layer in range(raw.layers)] for sample in range(len(raw.calibration_windows))] for role in roles}
+    test_act = {role: [[_pair(raw.test_activations[role][sample][layer]) for layer in range(raw.layers)] for sample in range(len(raw.test_windows))] for role in roles}
     cal_qkv = [[{"q": _pair(q), "k": _pair(k), "v": _pair(v)} for q, k, v in per_layer] for per_layer in raw.calibration_qkv]
     test_qkv = [[(_pair(q), _pair(k), _pair(v)) for q, k, v in per_layer] for per_layer in raw.test_qkv]
     linear_cases, attention_cases = _choose_cases(
@@ -801,11 +825,12 @@ def prepare_pack(
         "attention_case_limit": attention_count,
         "linear_calibration_indices": list(linear_calibration_indices),
         "calibration_call_graph": "all-layer-role-once; attention-layer-once",
+        "linear_roles": list(roles),
     })
     return PreparedPack(
         weights, cal_act, test_act, cal_qkv, test_qkv,
         raw.calibration_windows, linear_calibration_windows, raw.test_windows, raw.layers, raw.hidden_size,
-        raw.q_heads, raw.kv_heads, raw.head_dim, linear_cases, attention_cases, metadata,
+        raw.q_heads, raw.kv_heads, raw.head_dim, linear_cases, attention_cases, metadata, roles,
     )
 
 
@@ -1138,9 +1163,9 @@ def evaluate_solution(
     )
     if not linear_calibration_indices:
         raise RuntimeError("pack has no Linear calibration indices")
-    print(f"[{label}] Linear calibration: {pack.layers * len(ROLES)} layer/role states", flush=True)
+    print(f"[{label}] Linear calibration: {pack.layers * len(pack.roles)} layer/role states", flush=True)
     for layer in range(pack.layers):
-        for role in ROLES:
+        for role in pack.roles:
             weight_pair = _move_pair(pack.weights[layer][role], device)
             calibration = [
                 _move_pair(
@@ -1364,7 +1389,7 @@ def evaluate_solution(
     linear_by_role = {
         role: sum(item["gain"] for item in linear_details if item["role"] == role)
         / max(1, sum(item["role"] == role for item in linear_details))
-        for role in ROLES
+        for role in pack.roles
     }
     attention_by_layer = {
         str(layer): sum(item["gain"] for item in attention_details if item["layer"] == layer)
@@ -1415,7 +1440,7 @@ def evaluate_solution(
             # their case design and cache are identical.
             "overall_mean": (linear_sum + attention_sum)
             / max(1, len(linear_details) + len(attention_details)),
-            "linear_role_macro_mean": sum(linear_by_role.values()) / len(ROLES),
+            "linear_role_macro_mean": sum(linear_by_role.values()) / max(1, len(pack.roles)),
             "attention_layer_macro_mean": sum(attention_by_layer.values()) / max(1, len(attention_by_layer)),
             "linear_cases": len(linear_details),
             "attention_cases": len(attention_details),
@@ -1680,6 +1705,7 @@ def _archive_output(
         "cache": str(cache_path),
         "protocol_config": {
             "model": MODEL_NAME,
+            "linear_roles": list(prepared.roles),
             "calibration_lengths": list(CALIBRATION_LENGTHS),
             "test_length": TEST_LENGTH,
             "test_lengths": list(TEST_LENGTHS),
