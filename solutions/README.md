@@ -92,7 +92,7 @@ directories follow the same immutable naming rule as the historical archive:
 | v139 | `20260901_v139_linear-output-aware-gain_scoreNA_timeNA` | 0.507278 | 0.715942 | 193.389 s | **official 15716/202 s pass; retained official-result archive** |
 | v140 | `20260901_v140_linear-roab-pair_rejected` | 0.507355 | 0.715942 | 205.365 s | **rejected; official 15838/207 s, local-only gain `+0.000035`** |
 | v141–v145 (BDLR family) | — (source snapshots deleted; logs/artifacts retained) | 0.281760–0.506256 | 0.715942 | 204.681–211.460 s | **rejected family; selected-column BDLR closed** |
-| v147 | `20260901_v147_v86-attention-v140-linear_scoreNA_timeNA` | **0.507355** | **0.719696** | **222.227 s** | **retained local attribution control; v86 Attention + v140 Linear; official unregistered** |
+| v147 | `20260901_v147_v86-attention-v140-linear_scoreNA_timeNA` | **0.510050** | **0.719696** | **300.351 s** | **retained direct single-file candidate; local time diagnostic only; official unregistered** |
 | v148 | `20260901_v148_joint-wa-v86-attention-v140-linear_rejected` | **0.509729** | **0.719696** | **369.038 s** | **rejected; A3 precision gain but local time over 300 s** |
 
 \* The later temporary gain+adyn2 run reported `365.818 s`, but the machine was concurrently busy;
