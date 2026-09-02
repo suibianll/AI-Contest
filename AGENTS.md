@@ -217,9 +217,11 @@ JSON/report > 未验证推测。发生冲突时保留原始证据并更新状态
   关闭；L2 的首个 2×2 analytic pair-balance local-only probe 也已拒绝：fc focus 配对均值
   `-0.314079`（16/16 回归），说明朴素矩阵平衡破坏静态 Weight code，不再重复同类无约束
   变换。L5a quartile-interleave permutation 的原始 effect panel 虽为 mixed（5 个回归），
-  稳定性门控版 effect panel 为 `+0.000487`、2 改善/0 回归/14 不变，但尚未形成正式 v155；
-  root 不变，继续冻结 v86 Attention。该候选只允许完成一次 default-panel 复核；若出现回归
-  即记录拒绝，不再循环重跑。
+  稳定性门控版正式单文件 v155 的 Qwen default paired 仅 `+0.000116536`（4/0/164），严格
+  GPT-2 配对为 `-0.000153`，所以 v155 只保留为 Qwen-local diagnostic control，不作为优化
+  parent。L4-WD 的正式单文件 v156 已完成隔离依赖检查，Qwen effect `+0.000107624`、GPT-2
+  `+0.000029454`，本地增益很小但按用户要求保留为待提交官方候选；官方回传前 root 不变，
+  Attention 继续冻结 v86。
 - 评测结果必须先看 `evaluation_scope`：只有同 cache 的 `default-panel` 可做本地 proxy 排名；
   `effect-panel`/`paired-json-replay` 只做父子诊断，`full-stress` 只做压力，`smoke-prefix`
   只做接口，GPT-2/hif4 与旧 `official-shape-v1` 只做跨结构/历史审计。任何 scope 都不是

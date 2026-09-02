@@ -1,0 +1,326 @@
+{
+  "protocol": "cross-model-probe-v1",
+  "base_protocol": "proxy-v2",
+  "created_at": "2026-09-01 21:57:40",
+  "data_source": "model_forward",
+  "capture_seconds": 26.439284400083125,
+  "cache": "D:\\工作内容\\AI竞赛\\artifacts\\official_eval\\cache\\gpt2-cross-model-probe-v1.pt",
+  "candidate": "smoke",
+  "layers": 12,
+  "hidden_size": 768,
+  "q_heads": 12,
+  "kv_heads": 12,
+  "head_dim": 64,
+  "roles": [
+    "q",
+    "k",
+    "v",
+    "o",
+    "ffn_in",
+    "proj"
+  ],
+  "data_metadata": {
+    "protocol": "cross-model-probe-v1",
+    "base_protocol": "proxy-v2",
+    "model": "gpt2",
+    "model_path": "D:\\工作内容\\AI竞赛\\models\\gpt2",
+    "model_revision": "local-checkpoint",
+    "architecture": "GPT2LMHeadModel",
+    "dataset": "Salesforce/wikitext",
+    "dataset_config": "wikitext-2-raw-v1",
+    "dataset_revision": "b08601e04326c79dfdd32d625aee71d232d685c3",
+    "calibration_lengths": [
+      10,
+      128,
+      512,
+      1024,
+      1024
+    ],
+    "test_lengths": [
+      10,
+      128,
+      512,
+      1024,
+      1024,
+      10,
+      128,
+      512,
+      1024,
+      1024,
+      128,
+      512
+    ],
+    "test_window_count": 12,
+    "test_splits": [
+      "test",
+      "validation"
+    ],
+    "capture_device": "cuda",
+    "weights_dtype": "float32",
+    "weight_layout": "[out_features, in_features]",
+    "input_codec": "e4m3-subnormal-ceil-v1",
+    "input_mode": "amax6",
+    "linear_roles": [
+      "q",
+      "k",
+      "v",
+      "o",
+      "ffn_in",
+      "proj"
+    ],
+    "role_mapping": {
+      "q/k/v": "fused attn.c_attn split into three independent matrices",
+      "o": "attn.c_proj",
+      "ffn_in": "mlp.c_fc (single GELU projection; no gate/up duplicate)",
+      "proj": "mlp.c_proj"
+    },
+    "positional_encoding": "absolute learned position embeddings; no RoPE transform",
+    "attention_heads": {
+      "q": 12,
+      "kv": 12,
+      "head_dim": 64
+    },
+    "data_sha256": {
+      "train": "e83889baabc497075506f91975be5fac0d45c5290b6b20582c8cd1e853d0c9f7",
+      "validation": "204929b7ff9d6184953f867dedb860e40aa69c078fc1e54b3baaa8fb28511c4c",
+      "test": "5f1bea067869d04849c0f975a2b29c4ff47d867f484f5010ea5e861eab246d91"
+    },
+    "linear_case_count": 1,
+    "attention_case_count": 1,
+    "nvfp4_mode": "amax6",
+    "case_design": "explicit-smoke-prefix-v4",
+    "panel_window_indices": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "full_cases": false,
+    "linear_case_limit": 1,
+    "attention_case_limit": 1,
+    "linear_calibration_indices": [
+      0,
+      1
+    ],
+    "calibration_call_graph": "all-layer-role-once; attention-layer-once"
+  },
+  "score": {
+    "linear_sum": 0.3507353541965088,
+    "attention_sum": 0.3016183901032744,
+    "total_sum": 0.6523537442997832,
+    "linear_mean": 0.3507353541965088,
+    "attention_mean": 0.3016183901032744,
+    "overall_mean": 0.3261768721498916,
+    "linear_role_macro_mean": 0.058455892366084804,
+    "attention_layer_macro_mean": 0.3016183901032744,
+    "linear_cases": 1,
+    "attention_cases": 1,
+    "linear_by_role": {
+      "q": 0.3507353541965088,
+      "k": 0.0,
+      "v": 0.0,
+      "o": 0.0,
+      "ffn_in": 0.0,
+      "proj": 0.0
+    },
+    "attention_by_layer": {
+      "0": 0.3016183901032744
+    }
+  },
+  "timing": {
+    "api_seconds": {
+      "hif4_calibration_and_quantize_weight": 83.83396920049563,
+      "hif4_dynamic_quantize_activation": 0.06209920009132475,
+      "hif4_calibration_attention": 12.887647299910896,
+      "hif4_dynamic_quantize_q": 0.007181999972090125,
+      "hif4_dynamic_quantize_k": 0.008450600085780025,
+      "hif4_dynamic_quantize_v": 0.006084200111217797
+    },
+    "api_total_seconds": 96.80543250066694,
+    "api_calls": {
+      "hif4_calibration_and_quantize_weight": 72,
+      "hif4_dynamic_quantize_activation": 1,
+      "hif4_calibration_attention": 12,
+      "hif4_dynamic_quantize_q": 1,
+      "hif4_dynamic_quantize_k": 1,
+      "hif4_dynamic_quantize_v": 1
+    },
+    "wall_seconds": 97.52790930005722,
+    "local_api_under_300_indicator": true,
+    "wall_under_300_indicator": true
+  },
+  "case_scores": {
+    "linear": [
+      {
+        "mse_standard": 0.008411934599280357,
+        "mse_player": 0.005461571738123894,
+        "reference_energy": 0.898224949836731,
+        "relative_player_mse": 0.00608040529169963,
+        "gain": 0.3507353541965088,
+        "case_id": 0,
+        "layer": 0,
+        "role": "q",
+        "calibration_indices": [
+          0,
+          1
+        ],
+        "test_window": 0,
+        "test_split": "validation",
+        "test_length": 10,
+        "input_width": 768,
+        "output_width": 768,
+        "shape_bucket": "hidden_to_hidden"
+      }
+    ],
+    "attention": [
+      {
+        "mse_standard": 0.0001612238702364266,
+        "mse_player": 0.00011259578604949638,
+        "reference_energy": 0.02041769213974476,
+        "relative_player_mse": 0.005514618659095128,
+        "gain": 0.3016183901032744,
+        "case_id": 0,
+        "layer": 0,
+        "calibration_indices": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "test_window": 0,
+        "test_split": "validation",
+        "test_length": 10
+      }
+    ]
+  },
+  "decomposition": {
+    "linear": {
+      "enabled": false
+    },
+    "attention": {
+      "enabled": false
+    }
+  },
+  "diagnostic_config": {
+    "error_source_decomposition": false,
+    "score_unchanged": true,
+    "candidate_api_calls_unchanged": true
+  },
+  "result": {
+    "candidate": "smoke",
+    "source": "D:\\工作内容\\AI竞赛\\solution.py",
+    "source_sha256": "44e37709a02b962cdaedfc57e3ad999b2c9a2c0606b8b9db7e4e81dc4dc92672",
+    "score": {
+      "linear_sum": 0.3507353541965088,
+      "attention_sum": 0.3016183901032744,
+      "total_sum": 0.6523537442997832,
+      "linear_mean": 0.3507353541965088,
+      "attention_mean": 0.3016183901032744,
+      "overall_mean": 0.3261768721498916,
+      "linear_role_macro_mean": 0.058455892366084804,
+      "attention_layer_macro_mean": 0.3016183901032744,
+      "linear_cases": 1,
+      "attention_cases": 1,
+      "linear_by_role": {
+        "q": 0.3507353541965088,
+        "k": 0.0,
+        "v": 0.0,
+        "o": 0.0,
+        "ffn_in": 0.0,
+        "proj": 0.0
+      },
+      "attention_by_layer": {
+        "0": 0.3016183901032744
+      }
+    },
+    "timing": {
+      "api_seconds": {
+        "hif4_calibration_and_quantize_weight": 83.83396920049563,
+        "hif4_dynamic_quantize_activation": 0.06209920009132475,
+        "hif4_calibration_attention": 12.887647299910896,
+        "hif4_dynamic_quantize_q": 0.007181999972090125,
+        "hif4_dynamic_quantize_k": 0.008450600085780025,
+        "hif4_dynamic_quantize_v": 0.006084200111217797
+      },
+      "api_total_seconds": 96.80543250066694,
+      "api_calls": {
+        "hif4_calibration_and_quantize_weight": 72,
+        "hif4_dynamic_quantize_activation": 1,
+        "hif4_calibration_attention": 12,
+        "hif4_dynamic_quantize_q": 1,
+        "hif4_dynamic_quantize_k": 1,
+        "hif4_dynamic_quantize_v": 1
+      },
+      "wall_seconds": 97.52790930005722,
+      "local_api_under_300_indicator": true,
+      "wall_under_300_indicator": true
+    },
+    "case_scores": {
+      "linear": [
+        {
+          "mse_standard": 0.008411934599280357,
+          "mse_player": 0.005461571738123894,
+          "reference_energy": 0.898224949836731,
+          "relative_player_mse": 0.00608040529169963,
+          "gain": 0.3507353541965088,
+          "case_id": 0,
+          "layer": 0,
+          "role": "q",
+          "calibration_indices": [
+            0,
+            1
+          ],
+          "test_window": 0,
+          "test_split": "validation",
+          "test_length": 10,
+          "input_width": 768,
+          "output_width": 768,
+          "shape_bucket": "hidden_to_hidden"
+        }
+      ],
+      "attention": [
+        {
+          "mse_standard": 0.0001612238702364266,
+          "mse_player": 0.00011259578604949638,
+          "reference_energy": 0.02041769213974476,
+          "relative_player_mse": 0.005514618659095128,
+          "gain": 0.3016183901032744,
+          "case_id": 0,
+          "layer": 0,
+          "calibration_indices": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "test_window": 0,
+          "test_split": "validation",
+          "test_length": 10
+        }
+      ]
+    },
+    "decomposition": {
+      "linear": {
+        "enabled": false
+      },
+      "attention": {
+        "enabled": false
+      }
+    },
+    "diagnostic_config": {
+      "error_source_decomposition": false,
+      "score_unchanged": true,
+      "candidate_api_calls_unchanged": true
+    },
+    "protocol": "proxy-v2",
+    "official": {
+      "status": "not_applicable",
+      "score": null,
+      "time_seconds": null,
+      "note": "cross-model GPT probe; no official model/score claim"
+    }
+  }
+}

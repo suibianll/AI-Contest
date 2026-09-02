@@ -302,6 +302,51 @@ full stress、GPT-2/hif4 外部探针放在同一目录并按均值阅读，造�
 本地 scope 可以替代官方分数或官方 `<300s`。具体字段契约见
 [`artifacts/official_eval/README.md`](../artifacts/official_eval/README.md)。
 
+## 2.11 v155 L5a permutation-stability（RETAINED / local diagnostic only）
+
+在 L3-D0 的 teacher margin 跨 fold 不稳定后，按计划只做了一次参数无关的 stability probe，
+没有继续调 `s_q/s_d`、CAT、ROAB 或阈值。结果是 fold-0 生成的 fc 特征/决策在 fold-1 上
+符号不稳定（`fc_gate` 仅 `8/14` 符号一致、`fc_up` `6/14`，相关系数约 `0.32–0.44`），
+held-out 正向 precision 为零；因此直接 activation teacher-to-student 编译族关闭。
+
+probe 同时保留了一个不同层级的低自由度坐标机制：在既有 BOAT 后计算 64-channel pressure，
+固定四分位 low/high interleave，并要求两折 product loss 均下降且最小折收益不小于折间分歧。
+它不改变连续乘积、HiF4 codec 或六 API 调用图。正式单文件快照为
+[`v155 solution`](../solutions/20260902_v155_l5a-permutation-stability_scoreNA_timeNA/solution.py)，
+SHA256 `816ECBF5E253745C5EBFD04233BD04A2B772CF1510641393C7900CDAFA0EB4CC`，完整说明见其
+[`result.md`](../solutions/20260902_v155_l5a-permutation-stability_scoreNA_timeNA/result.md)。
+
+正式 effect panel（56 Linear + 5 Attention）为 Linear `0.588162284`、Attention `0.757433277`，
+相对 pre-A3 parent 的 Linear `+0.000139055`（2 改善/0 回归/54 不变），focus fc `+0.000486693`
+（2/0/14），静态 control 和 Attention 全 no-op。默认 168+120 的等价 paired replay 为
+Linear `0.570998953`、Attention `0.724734669`，相对 parent `+0.000116536`（4/0/164），
+focus fc `+0.000407876`（4/0/44）；本地 API `248.121s`、wall `280.763s` 仅作同机诊断。
+
+该收益的 W/A 分解不是 operand 独立改善：W-only、A-only 仍为负而 Both 略正，属于双侧坐标
+耦合；且只命中 4 个默认 case，召回率很低。进一步的严格 GPT-2 配对（同一 cache、同一
+pre-A3 parent）使 Linear `0.519793773→0.519641076`（`−0.000153`），`ffn_in/fc`
+`−0.000916`，Attention 完全不变。因此 v155 只作为 **Qwen-local diagnostic control** 保留，
+不作为跨结构优化 parent；不替换根 `solution.py`，不填写官方分数/时间，也不把默认本地秒数
+解释为官方通过。下一步必须从 pre-A3 parent 换新的数学机制（单次 Weight-decoupled 或部署
+Gram block-Schur），而不是继续扩大 permutation 的层列表/分位阈值。GPT-2 证据见
+[`v155 cross-model report`](../logs/official_eval/gpt2-v155-l5a-perm-stability.md)。
+
+## 2.12 v156 L4-WD（RETAINED / official candidate pending）
+
+v156 从 pre-A3 单文件父版本编译了一个只改 Weight 的闭式 stored-scale 机制：固定 sign、
+mantissa、lv2/lv3 与坐标，按变换后校准 Gram 为每个 expansive row/block 求尺度，再投影到
+合法 E6M2 并用两折真实部署输出 loss gate。Qwen effect panel 的 Linear 为 `0.588130853`
+（相对 parent `+0.000107624`，5/0/51），focus fc `+0.000376686`（5/0/11），controls
+和 Attention no-op；GPT-2 同结构配对为 Linear `+0.000029454`、fc `+0.000176722`，
+Attention no-op。该增益很小，不能替代官方验证，但源码已完成单文件隔离导入检查，SHA256
+为 `594EF2FBB70AE54E06BF2D896E11E637E4BA9AF67AD54C01F10D57136EB8DF85`。
+
+按用户要求保留目录
+[`v156 solution`](../solutions/20260902_v156_l4-weight-decoupled_scoreNA_timeNA/solution.py)
+作为待提交官方候选；正式 effect 重跑在提交决定后中止，因而没有伪造 formal default JSON。
+官方分数/时间仍写 `unregistered/NA`，根 `solution.py` 不自动切换。官方回传后立即按分数和
+`<300s` 归档为晋级或 rejected。
+
 ## 3. 历史 v1 结果表（不可与 proxy-v2 混用）
 
 下表保留旧 `official-shape-v1` 的同机数字，仅用于审计此前的失真；当前 proxy-v2 分层 panel
@@ -381,19 +426,21 @@ v86 的部分 scale-aware/output-aware 机制。此前把它描述为“v86 级�
 新的唯一活动计划是
 [`2026-09-01-hif4-hierarchy-encoder-and-analytic-attention-plan.md`](superpowers/plans/2026-09-01-hif4-hierarchy-encoder-and-analytic-attention-plan.md)。核心顺序为：
 
-1. 先恢复可信的 pre-A3 单文件父版本，修复 v147 源码/JSON 混淆，并按 role 归因当前第二次
-   `_crossfold_weight_output` 的收益与约 `78.1s` 新增代价。
-2. L3-D0 已完成：same-fold 合法码字 teacher 有局部 margin，但 layer 3/fold 128 的 exact
-   输出方向相反，当前 fc 表示族不可直接编译；不再调 `s_q/s_d`、CAT、ROAB 或 offset。
-3. 在进入 L2 前只做 layer 3 最坏 fold 的 cross-fold feature/decision stability 快探针，固定
-   复杂度、无动态候选循环；失败即关闭 L3 表示族。
-4. L2 的 2×2 Hierarchical Matrix Balance 必须把部署 `Q(W)` 输出 metric 纳入约束；首个朴素
-   pair-balance 已因 fc 全面回归而拒绝，不能直接替换候选式 Smooth/Permutation/Hadamard。
-5. 只有新的 Activation/坐标机制给出稳定逐 role/逐层证据后，才把同一机制应用到 Weight；禁止
-   重复完整 output pass 或创建高复杂度在线搜索。
-6. Linear 稳定后才独立研究 Attention：解析 Matrix-Smooth Q/K、量化感知 K 公共平移、
-   Q/K/V decoupled encoder 和静态 Fisher importance；禁止 Gram dynamic sweep、PAWV 和随序列
-   增长的候选搜索。
+1. 已完成 pre-A3 父版本恢复、v147 证据隔离和外部 role attribution；当前官方可复现最优仍是
+   v86 `16744/222.7s`，用户确认的 `17816` 尚无源码/时间/Attention 配置，不能伪造候选。
+2. L3-D0 与 stability probe 均已完成：same-fold teacher 有 margin，但没有固定 threshold/LUT
+   可跨 fold 编译；L3 直接 activation encoder 关闭。
+3. v155 的稳定 permutation 只提供低召回坐标信号（默认 `+0.000116536`、4/0/164），保留
+   为 local parent，不继续做参数 sweep；它的正向来自 W/A interaction，不是单侧 operand 降误差。
+4. 跨结构小 smoke 显示 v155 permutation 轻微回归，因此它只作 paired control。L4-WD 已实现
+   并形成待提交的 v156 单文件；其本地提升很小，但没有 role/control 回归。当前先提交 v156
+   获取真实官方分数/时间，不再用本地微增益替代产出；官方回传后再决定保留还是拒绝。
+5. 若 v156 官方失败或低于 v86，再做一个单次 **block-Schur HiF4-GPTQ** 参照实现，优先
+   外部归因支持的 `fc_gate/fc_up/proj` 形状；仍以输出 loss、W/A/interaction 和 API 增量为
+   判据，不增加在线候选。
+6. Linear 出现稳定正向且复杂度可控后，才独立启动 Attention A1 解析 Matrix-Smooth Q/K；冻结
+   v86 其余路径，随后才考虑 K fixed-point center。禁止 Gram sweep、PAWV、length-keyed router
+   和随序列增长的搜索。
 
 ## 7. 归档现状与待整理项
 
@@ -406,6 +453,10 @@ v86 的部分 scale-aware/output-aware 机制。此前把它描述为“v86 级�
 - v140 ROAB-P2 改为 `REJECTED / LOCAL-ONLY`，归档目录标记 `_rejected`；
 - 空的重复 v140 curvature 目录已删除；
 - v141–v145 失败源码目录删除，逐次 JSON/日志保留。
+- v155 L5a permutation-stability 已保存为 `RETAINED / LOCAL DIAGNOSTIC ONLY`，正式单文件和
+  `result.md` 已完成；它不改变 root，也没有官方分数/时间字段。
+- v156 L4-WD 已保存为 `RETAINED / OFFICIAL CANDIDATE PENDING`，单文件 SHA、结果说明和
+  跨模型/本地 effect 证据已完成；尚未收到官方分数/时间。
 
 2026-09-01 归档整理（区分新旧评测分数体系）：
 

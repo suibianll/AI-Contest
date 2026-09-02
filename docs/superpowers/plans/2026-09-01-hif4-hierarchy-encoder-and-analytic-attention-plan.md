@@ -311,24 +311,79 @@ L(Q_A)=\|A_tW_t^T-Q_AQ(W)^T\|_F^2,
 收益不是只集中在单层/单 role，才说明存在可编译空间。若只有 same-fold oracle 获益而另一 fold
 方向消失，它是数据拟合，不进入 student。
 
-### D3. 分支决策与有条件的 v155
+### D3. 分支决策与有条件的 v155（已完成）
 
-1. D0 已证明存在 same-fold margin，但 edit 符号和 exact full-output 结果跨 fold 不稳定，
-   因此按第 2 分支处理：只记录 teacher-student gap，暂不编译 v155，仍转 L2；不引入神经网络、
-   复杂 router 或动态候选循环。
-2. 在转 L2 前只做一个低成本 cross-fold feature/decision stability probe，限定 layer 3、
-   `fc_gate/fc_up` 和最坏 fold；它若找不到固定阈值/LUT 规则，立即关闭当前 fc 表示族。
-3. 若余量和决策结构跨 fold 可复现，再进入 L3-D1 编译：只用 64/8/4 group 的
-   `amax` 比、`rms/amax`、subgroup 排序和 state 中静态 Weight metric，构造一个固定向量化
-   threshold/LUT student。teacher 本身不得进入 state 或动态 API。
-4. 只有 student 完成合法 round-trip 后才分配 v155。若 stability probe 失败，直接进入 L2；
-   若它意外通过，v155 从 pre-A3 parent 出发，只改变 fc
-   Activation encoder；先运行 `--effect-panel --baseline-json ... --focus-linear-roles fc`。
-   报告必须同时给出 teacher margin、student 收回量、focus/control、A-only/Both、最坏层和
-   Activation dynamic 时间。配对证据可解释后才运行默认 168+120 panel。
+1. D0 的 `margin_exists_but_not_compile_safe` 结论保持不变：same-fold teacher margin 不能
+   直接变成固定 fc encoder，layer 3/fold 128 的 exact output 反例仍是硬约束。
+2. 已完成唯一允许的低成本 cross-fold stability probe（layer 3、`fc_gate/fc_up`、两折）。
+   fold-0 的候选规则在 fold-1 上没有正向 precision，固定 threshold/LUT 的符号一致率只有
+   `6/14–8/14`，相关系数约 `0.32–0.44`，因此没有可泛化的 teacher-to-student 编译规则。
+   L3-D1（直接 code/scale encoder）关闭，不再调 `s_q/s_d`、CAT、ROAB 或静态阈值。
+3. stability probe 同时发现一个不同层级、无需候选循环的 L5a 坐标信号：在 BOAT 后按 64
+   通道压力做固定四分位低/高交错，并要求两折的 product loss 都下降且最小折收益不小于
+   折间分歧。该规则不改变连续乘积、HiF4 codec 或 API 调用图。
+4. 正式单文件候选 `v155` 已完成合法 round-trip 和 effect-panel：Linear
+   `0.588162284`、Attention `0.757433277`，相对 pre-A3 parent 的 effect 为 Linear
+   `+0.000139055`（focus fc `+0.000486693`），2/0/54（focus 2/0/14），controls 与
+   Attention 全部 no-op。默认 168+120 的等价 paired replay 为 Linear `+0.000116536`
+   （4/0/164），focus fc `+0.000407876`（4/0/44）。
+5. 这不是“全局 fc 改善”：只改动 4 个默认 case，召回率低；W-only/A-only 仍恶化、Both
+   轻微改善，说明收益来自双侧坐标耦合。GPT-2 严格配对还轻微回归，所以 v155 只作为
+   local diagnostic control 保留，不替换根文件，不填写官方分数/时间，不把本地秒数当成
+   `<300s` 证明。证据见
+   `solutions/20260902_v155_l5a-permutation-stability_scoreNA_timeNA/result.md`、
+   `artifacts/official_eval/v155-l5a-perm-stability-effect.json` 和
+   `artifacts/official_eval/l5a-linear-perm-stability-default-paired.json`。
+6. L4-WD 已完成一次 workbench effect 与 GPT-2 配对：Qwen Linear `+0.000107624`（5/0/51，
+   focus fc `+0.000376686`），GPT-2 Linear `+0.000029454`（fc `+0.000176722`），controls
+   与 Attention no-op。增益仍很小，但正式单文件 v156 已完成隔离导入检查并按用户要求保留
+   为待提交候选；正式 effect 重跑在官方提交优先后停止，未伪造默认结果。证据与 SHA 见
+   `solutions/20260902_v156_l4-weight-decoupled_scoreNA_timeNA/result.md`。
 
-L3-D0 的结束条件不是产生新版本，而是得到“无表示余量 / 有余量但不可压缩 / 有可压缩余量”
-三者之一的证据结论。这样下一步由误差结构决定，而不是继续在旧 encoder 上猜参数。
+L3-D0 的结束结论因此是“有 same-fold 表示余量，但没有低自由度可编译 encoder”；v155 的
+正向只证明一个保守坐标门控值得作为 Qwen-local control。GPT-2 严格配对的轻微回归进一步
+说明它不是跨结构父版本。后续不能围绕该低召回规则继续调四分位/层列表，而要转向新的
+输出度量机制，并从 pre-A3 parent 分支。
+
+## E0.8. 对《NVFP4 到 HiF4 高精度量化赛题完整分析与优化方案》的逐项审计
+
+这份方案给出的方向仍然正确地把目标定义为算子输出重构，但其中“250+200/7 分钟”和若干
+候选搜索描述属于旧口径。当前应以 `proxy-v2` 的 168+120 默认 panel、官方 `<300s` 和六 API
+调用图为执行约束；旧协议数字只能作为历史证据。按方案的章节逐项核对后，结论不是“所有
+方向都做完”，而是“低阶格式/坐标方向大多已经试过，真正可能改变上限的组合方向仍有空缺”。
+
+| 方案方向 | 当前证据 | 状态与含义 |
+|---|---|---|
+| E6M2 scale、lv2/lv3、mantissa 搜索 | E0-G 255-code oracle、Gram hierarchy、GALS/C1 多轮 | **基本耗尽**：总 gap 多数 `<0.1%`；继续加 scale/offset 网格不会解释 `0.8` 缺口 |
+| A@W 输出监督、Weight HSDQ/GPTQ | 多折 A@W、Weight-HSDQ、部署 Gram gate、LRH/C1 | **已大量尝试但非完整 block-GPTQ**：全宽/多轮/低秩方案过拟合或超时；还缺一个单次 block-Schur/HiF4-GPTQ 参照实现 |
+| Smooth/CAT/BOAT、Permutation、Hadamard/rotation | CAT 分流、BOAT、L5a、H32/H64 与等价变换 | **主族已覆盖**：v155 的稳定四分位 permutation 仅在 Qwen 低召回正向，跨 GPT-2 轻微回归；只作 control，不再调参数或默认叠加 |
+| biased rounding、activation compensation | HiF4 hierarchy refine、JDRQ、cross64、A@W residual、L3 teacher | **局部做过，编译缺口未解决**：teacher 有 margin 但跨 fold 不稳定；还缺“单次输出度量 + 合法写回”的 Weight/Activation 结构实现 |
+| Attention Q/K scaling、K center、Q/K Hadamard、V 非对称、true rerank | v034/v075/v086、PAWV diag-only、v128–v131 | **已覆盖但复杂路径失败**：v86 保持冻结；v128–v131 的动态搜索官方超时；尚未实现同复杂度解析 Matrix-Smooth Q/K |
+| 外部 HiF4 / GPTQ / MR-GPTQ 迁移 | youxilee/hif4 role 归因、GPT-2 交叉模型、MR-GPTQ/LRH/C1 | **已审计**：codec parity 和若干 residual 不可直接迁移；外部结果只能定位 fc/proj 风险，不能拟合官方分数 |
+| block-Hessian HiF4-GPTQ（单次） | 仅有 full/block HSDQ、LRH 和多轮结构 proposals | **未完成**：这是最值得补的 Linear 缺口，但必须以部署 `Q(W)` Gram、固定 block 顺序、一次写回和两折 gate 实现，不能复刻旧多轮循环 |
+| Weight decoupled encoder | 计划中，尚未在稳定坐标父版本上实现 | **未完成**：先做一版闭式 stored-scale 更新；若无跨 fold 正向立即关闭 |
+| Analytic Matrix-Smooth Q/K、静态 Fisher | 只有旧 reciprocal/center/rotation 实现 | **未完成**：Linear 稳定且时间可控后再做，严格保持 v86 API/动态复杂度 |
+
+因此当前不是继续“把所有旧候选再扫一遍”，而是补齐两个真正未闭环的层次：
+`(1)` 单次部署-输出度量的 block-Hessian/Weight-decoupled Linear；`(2)` 同复杂度解析式
+Attention Q/K。两条路线都必须使用逐 role、逐 layer、W/A 或 Q/K/V 控制臂，任何只有 aggregate
+mean 的结果都不进入候选队列。
+
+### 下一步的最小优化序列
+
+1. **v155 跨结构 smoke（DONE / control only）**：严格 GPT-2 配对为轻微负向，已关闭其优化
+   方向，不再围绕四分位/层列表调门控。
+2. **L4-WD（DONE / official candidate pending）**：workbench effect 与 GPT-2 方向均为正但
+   量级很小；正式单文件 v156 已保留，当前优先提交官方获取真实反馈，不再追加本地默认重复跑。
+3. **若 v156 官方失败或低于 v86，做单次 block-Schur HiF4-GPTQ**：从 exact v86 单文件
+   baseline 分支，只在 `fc_gate/fc_up/proj` 中选一个外部归因支持的形状，固定 block 顺序和
+   预算，用真实 `A@W` 输出 loss 做一次合法写回；比较 teacher gap、W/A/interaction 和 API
+   增量。
+4. **Linear 仍无稳定增益则停止局部 code 搜索**：更新 `0.8` 可达性判断，把剩余误差归因
+   到表示/坐标缺口；不再增加 rank、block、offset、sweep。
+5. **最后启动 Attention A1**：冻结 Linear，采用 GQA group-local 2×2 matrix smooth
+   `Q'=QM, K'=KM^{-T}`，一次统计/一次 encode，复用 v86 其他路径；随后才考虑 K fixed-point
+   center。任何 dynamic candidate loop 都直接判为不合规时间风险。
 
 ## 0. 本计划替代什么
 
@@ -667,19 +722,24 @@ V 不部署 PAWV；V 的提升只来自 A3 encoder。若 Fisher calibration 开�
 1. **L0 证据修复与 role attribution（DONE）**：已恢复 pre-A3 对照并定位 fc/proj 风险。
 2. **L1 fc 直接 decoupled encoder（REJECTED）**：v152 mixed，v153/v154 回归；停止继续调参。
 3. **L3-D0 fc 合法码字余量诊断（DONE / BLOCKED）**：有 same-fold margin，但 exact fold-128
-   回归，结论为 `margin_exists_but_not_compile_safe`；不编号、不创建 v155。
-4. **cross-fold stability probe（NEXT / FAST）**：只跑 layer 3 最坏 fold，验证是否存在固定
-   threshold/LUT；失败则关闭 L3 表示族。
-5. **L3-D1 student（CONDITIONAL）**：仅在 stability probe 证明可压缩余量后编译固定复杂度规则；此时才
-   允许创建 v155，并使用 parent JSON 的 effect-panel 配对。
-6. **L2 Hierarchical Matrix Balance（NEXT FALLBACK）**：D0 已不可编译；若 stability probe
-   不通过，转解析变换替换
-   候选式 D/P/H，不叠加部署算子。
-7. **L4 Weight Decoupled Encoder**：仅在表示/坐标机制已有正向证据后复用，禁止重复完整 output pass。
-8. **0.8 可达性复判**：比较 player/student/teacher 曲线，决定继续表示、编译还是停止该框架。
-9. **官方单变量提交**：固定 v86 Attention，只提交一个 Linear 数学机制；以官方分数和 `<300s`
-   共同判定。
-10. **Attention A0–A4**：Linear 稳定后独立推进，每版只替换一个机制并遵守复杂度契约。
+   回归，结论为 `margin_exists_but_not_compile_safe`。
+4. **cross-fold stability probe（DONE / CLOSED）**：固定 threshold/LUT 的符号不稳定且 held-out
+   precision 为零；L3-D1 关闭，不再编译直接 activation encoder。
+5. **L5a permutation-stability（RETAINED / LOW-RECALL CONTROL）**：v155 只保留无回归的
+   四分位压力交错，默认 paired 为 `+0.000116536`、4/0/164；跨 GPT-2 轻微回归，不替换 root。
+6. **L4-WD（DONE / OFFICIAL CANDIDATE PENDING）**：workbench effect 与 GPT-2 配对方向均为
+   正但量级很小；正式单文件 v156 已保留，当前优先提交官方获取真实反馈，不再追加本地默认重复跑。
+7. **L2 Hierarchical Matrix Balance（条件分支）**：朴素 pair-balance 已全面回归；只有加入
+   `Q(W)` 输出约束、保持连续乘积不变量且单次向量化的版本才值得做，失败即关闭整个 L2 族。
+8. **若 v156 官方失败或低于 v86，做单次 block-Schur HiF4-GPTQ**：从 exact v86 单文件 baseline
+   分支，只在 `fc_gate/fc_up/proj` 中选一个外部归因支持的形状；使用部署 `Q(W)` Gram、两折
+   输出 loss 和 effect panel，禁止第二轮完整 oracle、动态候选循环或把 W/A 误差当成独立增益。
+9. **0.8 可达性复判**：比较 v86 player、candidate、合法 teacher 曲线；若 teacher 仍远离 `0.8`，
+   停止局部 code 搜索，转表示/坐标的新框架。
+10. **官方单变量提交**：固定 v86 Attention，只提交一个 Linear 数学机制；官方分数和 `<300s`
+    由官方共同裁决，任何本地值只作诊断。
+11. **Attention A0–A4（后置）**：Linear 候选稳定且时间可控后独立推进；第一版只做解析
+    Matrix-Smooth Q/K，保持 v86 调用图和复杂度契约。
 
 ## 7. 最小产物与失败记录
 

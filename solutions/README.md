@@ -129,6 +129,8 @@ directories follow the same immutable naming rule as the historical archive:
 | v152 | `20260902_v152_fc-cat-off_rejected` | **0.583139 / 0.542553 (14/56-case)** | **0.942927** | **199.578/200.432 s** | **rejected; small mixed-sign fc gain** |
 | v153 | `20260902_v153_fc-decoupled-activation_rejected` | **0.568754 (targeted)** | **0.942927** | **197.656 s** | **rejected; direct s_q assignment regresses fc** |
 | v154 | `20260902_v154_fc-decoupled-scale-fit_rejected` | **0.568754 (targeted)** | **0.942927** | **198.098 s** | **rejected; fitted s_d is a no-op after v153** |
+| v155 | `20260902_v155_l5a-permutation-stability_scoreNA_timeNA` | **0.570999 (default)** / 0.588162 (effect) | **0.724735 (default)** / 0.757433 (effect) | **248.121 s (default-equivalent)** / 207.196 s (effect) | **retained Qwen-local diagnostic control; 4/0/164 paired gain, GPT-2 −0.000153, official unregistered** |
+| v156 | `20260902_v156_l4-weight-decoupled_scoreNA_timeNA` | 0.588131 (effect; default not run) | 0.757433 (effect) | 203.994 s (effect) | **retained official candidate pending; single-file SHA, official unregistered** |
 
 † The first v147 values come from the original pre-A3 JSON (SHA `9B3EA5...B656`); the second come
 from the later direct-merge A3 JSON (SHA `25C245...9C1B`). The archive was modified in place before
@@ -204,11 +206,25 @@ v154 added the planned fixed-code `s_d` fit in the deployed `Q(W)` Gram metric, 
 means were exactly v153 (`fc=.334432`, Linear `0.568754`). It is archived as `REJECTED`; direct
 decoupled-scale variants are paused. L3-D0 then found same-fold teacher margin but an exact
 layer-3/fold-128 output regression (`fc_gate=-0.094751`, `fc_up=-0.112680`), so the result is
-`margin_exists_but_not_compile_safe` and no v155 is created. A batched layer-3 screening probe takes
-about `10.35 s` and is the only routine oracle path; the full teacher is a research diagnostic
-(`597.7 s`). The first L2 analytic pair-balance probe is also rejected (`fc` paired mean `-0.314079`,
-16/16 regressions), so the next experiment is a cross-fold feature/decision stability probe followed
-by output-metric-constrained L2, not another scale/CAT/ROAB sweep.
+`margin_exists_but_not_compile_safe`. The batched stability probe found no fixed threshold/LUT
+student (held-out precision zero), so direct activation encoder compilation is closed. Its only
+positive remnant is v155: a fixed four-quartile pressure interleave behind BOAT with a
+fold-disagreement gate. It changes only four default Linear cases, gives paired
+`+0.000116536` with no regressions, and leaves controls/Attention unchanged; the strict GPT-2
+pair is `−0.000153` (fc `−0.000916`), so this is a Qwen-local coordinate control, not a new
+official baseline or parent. The first L2 analytic pair-balance probe remains rejected (`fc` paired
+mean `-0.314079`, 16/16 regressions). The next experiment is therefore a single-pass
+Weight-decoupled or deployment-Gram block-Schur mechanism branched from pre-A3, not another
+permutation/scale/CAT sweep.
+
+v156 is the next single-file candidate for official submission. It is the one-pass Weight-decoupled
+stored-scale fit from the pre-A3 parent (sign/mantissa/lv2/lv3 fixed, transformed Gram closed form,
+legal E6M2 projection, two-fold deployed-output gate). The Qwen effect panel is only
+`+0.000107624` (5/0/51; fc `+0.000376686`) and GPT-2 is `+0.000029454` (fc `+0.000176722`),
+so the local signal is intentionally treated as weak. The formal single-file SHA is
+`594EF2FBB70AE54E06BF2D896E11E637E4BA9AF67AD54C01F10D57136EB8DF85`; submit
+`solutions/20260902_v156_l4-weight-decoupled_scoreNA_timeNA/solution.py` and wait for the official
+score/time before any promotion.
 
 \* The earlier v086 local `462.239 s` observation was also concurrent-load affected. The clean
 idle rerun is `299.302 s` API / `321.996 s` wall; see

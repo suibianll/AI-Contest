@@ -1,0 +1,3396 @@
+{
+  "protocol": "proxy-v2",
+  "diagnostic": "l5a-linear-permutation-mode3-admission-v1",
+  "scope": "research-oracle",
+  "status": "ok",
+  "cache": "D:\\工作内容\\AI竞赛\\artifacts\\official_eval\\cache\\qwen2.5-0.5b-proxy-v2.pt",
+  "device": "cuda",
+  "wall_seconds": 172.79338110005483,
+  "rows": [
+    {
+      "layer": 0,
+      "role": "q",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 0,
+      "role": "k",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          128,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 0,
+      "role": "v",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          128,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 0,
+      "role": "o",
+      "role_family": "o",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 0,
+      "role": "fc_gate",
+      "role_family": "fc",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          4864,
+          896
+        ],
+        "expansive": true,
+        "accepted": false,
+        "base_score": 0.005994353792630136,
+        "candidate_score": 0.006072921212762594,
+        "base_fold_losses": [
+          0.004795513581484556,
+          0.004795437213033438
+        ],
+        "candidate_fold_losses": [
+          0.0049534328281879425,
+          0.004715693183243275
+        ],
+        "changed_channels": 882
+      }
+    },
+    {
+      "layer": 0,
+      "role": "fc_up",
+      "role_family": "fc",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          4864,
+          896
+        ],
+        "expansive": true,
+        "accepted": false,
+        "base_score": 0.013855104567483068,
+        "candidate_score": 0.013836036436259747,
+        "base_fold_losses": [
+          0.010724694468080997,
+          0.011323676444590092
+        ],
+        "candidate_fold_losses": [
+          0.010683081112802029,
+          0.01132599450647831
+        ],
+        "changed_channels": 890
+      }
+    },
+    {
+      "layer": 0,
+      "role": "proj",
+      "role_family": "proj",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          4864
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 1,
+      "role": "q",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 1,
+      "role": "k",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          128,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 1,
+      "role": "v",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          128,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 1,
+      "role": "o",
+      "role_family": "o",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 1,
+      "role": "fc_gate",
+      "role_family": "fc",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          4864,
+          896
+        ],
+        "expansive": true,
+        "accepted": false,
+        "base_score": 0.007101516588591039,
+        "candidate_score": 0.006918641505762935,
+        "base_fold_losses": [
+          0.00597023731097579,
+          0.005247677210718393
+        ],
+        "candidate_fold_losses": [
+          0.0057141464203596115,
+          0.005266063380986452
+        ],
+        "changed_channels": 877
+      }
+    },
+    {
+      "layer": 1,
+      "role": "fc_up",
+      "role_family": "fc",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          4864,
+          896
+        ],
+        "expansive": true,
+        "accepted": false,
+        "base_score": 0.013659450225532055,
+        "candidate_score": 0.01373331481590867,
+        "base_fold_losses": [
+          0.011098168790340424,
+          0.010671647265553474
+        ],
+        "candidate_fold_losses": [
+          0.0111579280346632,
+          0.01072973757982254
+        ],
+        "changed_channels": 876
+      }
+    },
+    {
+      "layer": 1,
+      "role": "proj",
+      "role_family": "proj",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          4864
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 2,
+      "role": "q",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 2,
+      "role": "k",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          128,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 2,
+      "role": "v",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          128,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 2,
+      "role": "o",
+      "role_family": "o",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 2,
+      "role": "fc_gate",
+      "role_family": "fc",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          4864,
+          896
+        ],
+        "expansive": true,
+        "accepted": true,
+        "base_score": 0.0065099170897156,
+        "candidate_score": 0.006413406226783991,
+        "base_fold_losses": [
+          0.005085914395749569,
+          0.005289279855787754
+        ],
+        "candidate_fold_losses": [
+          0.004988078959286213,
+          0.005225822329521179
+        ],
+        "changed_channels": 883
+      }
+    },
+    {
+      "layer": 2,
+      "role": "fc_up",
+      "role_family": "fc",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          4864,
+          896
+        ],
+        "expansive": true,
+        "accepted": false,
+        "base_score": 0.010372600285336375,
+        "candidate_score": 0.01034386781975627,
+        "base_fold_losses": [
+          0.005858391523361206,
+          0.009924539364874363
+        ],
+        "candidate_fold_losses": [
+          0.005777682177722454,
+          0.00994003564119339
+        ],
+        "changed_channels": 880
+      }
+    },
+    {
+      "layer": 2,
+      "role": "proj",
+      "role_family": "proj",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          4864
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 3,
+      "role": "q",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 3,
+      "role": "k",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          128,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 3,
+      "role": "v",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          128,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 3,
+      "role": "o",
+      "role_family": "o",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 3,
+      "role": "fc_gate",
+      "role_family": "fc",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          4864,
+          896
+        ],
+        "expansive": true,
+        "accepted": true,
+        "base_score": 0.010170189198106527,
+        "candidate_score": 0.009894131915643811,
+        "base_fold_losses": [
+          0.009310293942689896,
+          0.006374937482178211
+        ],
+        "candidate_fold_losses": [
+          0.008998881094157696,
+          0.006289942190051079
+        ],
+        "changed_channels": 883
+      }
+    },
+    {
+      "layer": 3,
+      "role": "fc_up",
+      "role_family": "fc",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          4864,
+          896
+        ],
+        "expansive": true,
+        "accepted": false,
+        "base_score": 0.04300536774098873,
+        "candidate_score": 0.043085706420242786,
+        "base_fold_losses": [
+          0.04513715207576752,
+          0.018305007368326187
+        ],
+        "candidate_fold_losses": [
+          0.04512542113661766,
+          0.018483281135559082
+        ],
+        "changed_channels": 875
+      }
+    },
+    {
+      "layer": 3,
+      "role": "proj",
+      "role_family": "proj",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          4864
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 4,
+      "role": "q",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 4,
+      "role": "k",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          128,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 4,
+      "role": "v",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          128,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 4,
+      "role": "o",
+      "role_family": "o",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 4,
+      "role": "fc_gate",
+      "role_family": "fc",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          4864,
+          896
+        ],
+        "expansive": true,
+        "accepted": false,
+        "base_score": 0.004711580113507807,
+        "candidate_score": 0.004821539274416864,
+        "base_fold_losses": [
+          0.0036982784513384104,
+          0.0038165878504514694
+        ],
+        "candidate_fold_losses": [
+          0.003923339303582907,
+          0.0037580695934593678
+        ],
+        "changed_channels": 875
+      }
+    },
+    {
+      "layer": 4,
+      "role": "fc_up",
+      "role_family": "fc",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          4864,
+          896
+        ],
+        "expansive": true,
+        "accepted": false,
+        "base_score": 0.01308131287805736,
+        "candidate_score": 0.01331991283223033,
+        "base_fold_losses": [
+          0.010483830235898495,
+          0.01043688040226698
+        ],
+        "candidate_fold_losses": [
+          0.010704416781663895,
+          0.010583200491964817
+        ],
+        "changed_channels": 883
+      }
+    },
+    {
+      "layer": 4,
+      "role": "proj",
+      "role_family": "proj",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          4864
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 5,
+      "role": "q",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 5,
+      "role": "k",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          128,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 5,
+      "role": "v",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          128,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 5,
+      "role": "o",
+      "role_family": "o",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 5,
+      "role": "fc_gate",
+      "role_family": "fc",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          4864,
+          896
+        ],
+        "expansive": true,
+        "accepted": false,
+        "base_score": 0.0033384650596417487,
+        "candidate_score": 0.003419294720515609,
+        "base_fold_losses": [
+          0.0028801572043448687,
+          0.0023566943127661943
+        ],
+        "candidate_fold_losses": [
+          0.0029915343038737774,
+          0.0023512879852205515
+        ],
+        "changed_channels": 886
+      }
+    },
+    {
+      "layer": 5,
+      "role": "fc_up",
+      "role_family": "fc",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          4864,
+          896
+        ],
+        "expansive": true,
+        "accepted": true,
+        "base_score": 0.013036485528573394,
+        "candidate_score": 0.012862600851804018,
+        "base_fold_losses": [
+          0.010489934124052525,
+          0.010338069871068
+        ],
+        "candidate_fold_losses": [
+          0.010272224433720112,
+          0.01030198484659195
+        ],
+        "changed_channels": 887
+      }
+    },
+    {
+      "layer": 5,
+      "role": "proj",
+      "role_family": "proj",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          4864
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 6,
+      "role": "q",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 6,
+      "role": "k",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          128,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 6,
+      "role": "v",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          128,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 6,
+      "role": "o",
+      "role_family": "o",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 6,
+      "role": "fc_gate",
+      "role_family": "fc",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          4864,
+          896
+        ],
+        "expansive": true,
+        "accepted": false,
+        "base_score": 0.005179634434171021,
+        "candidate_score": 0.005101663642562926,
+        "base_fold_losses": [
+          0.004482042044401169,
+          0.0036362058017402887
+        ],
+        "candidate_fold_losses": [
+          0.00436067720875144,
+          0.0036623114719986916
+        ],
+        "changed_channels": 879
+      }
+    },
+    {
+      "layer": 6,
+      "role": "fc_up",
+      "role_family": "fc",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          4864,
+          896
+        ],
+        "expansive": true,
+        "accepted": false,
+        "base_score": 0.013231089571490884,
+        "candidate_score": 0.013158598216250539,
+        "base_fold_losses": [
+          0.010648087598383427,
+          0.010490047745406628
+        ],
+        "candidate_fold_losses": [
+          0.010522180236876011,
+          0.010530010797083378
+        ],
+        "changed_channels": 885
+      }
+    },
+    {
+      "layer": 6,
+      "role": "proj",
+      "role_family": "proj",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          4864
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 7,
+      "role": "q",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 7,
+      "role": "k",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          128,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 7,
+      "role": "v",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          128,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 7,
+      "role": "o",
+      "role_family": "o",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 7,
+      "role": "fc_gate",
+      "role_family": "fc",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          4864,
+          896
+        ],
+        "expansive": true,
+        "accepted": true,
+        "base_score": 0.004564900358673185,
+        "candidate_score": 0.004416293813847005,
+        "base_fold_losses": [
+          0.0038262081798166037,
+          0.0033904884476214647
+        ],
+        "candidate_fold_losses": [
+          0.003691926598548889,
+          0.003294697729870677
+        ],
+        "changed_channels": 887
+      }
+    },
+    {
+      "layer": 7,
+      "role": "fc_up",
+      "role_family": "fc",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          4864,
+          896
+        ],
+        "expansive": true,
+        "accepted": false,
+        "base_score": 0.012829974060878158,
+        "candidate_score": 0.012989085167646408,
+        "base_fold_losses": [
+          0.009992672130465508,
+          0.010444850660860538
+        ],
+        "candidate_fold_losses": [
+          0.010225593112409115,
+          0.010501718148589134
+        ],
+        "changed_channels": 881
+      }
+    },
+    {
+      "layer": 7,
+      "role": "proj",
+      "role_family": "proj",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          4864
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 8,
+      "role": "q",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 8,
+      "role": "k",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          128,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 8,
+      "role": "v",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          128,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 8,
+      "role": "o",
+      "role_family": "o",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 8,
+      "role": "fc_gate",
+      "role_family": "fc",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          4864,
+          896
+        ],
+        "expansive": true,
+        "accepted": true,
+        "base_score": 0.004585354356095195,
+        "candidate_score": 0.0041528808651492,
+        "base_fold_losses": [
+          0.003921801224350929,
+          0.0032880068756639957
+        ],
+        "candidate_fold_losses": [
+          0.0034640608355402946,
+          0.003109670476987958
+        ],
+        "changed_channels": 884
+      }
+    },
+    {
+      "layer": 8,
+      "role": "fc_up",
+      "role_family": "fc",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          4864,
+          896
+        ],
+        "expansive": true,
+        "accepted": false,
+        "base_score": 0.012120121624320745,
+        "candidate_score": 0.012083698064088821,
+        "base_fold_losses": [
+          0.00964298564940691,
+          0.009731505066156387
+        ],
+        "candidate_fold_losses": [
+          0.009656639769673347,
+          0.009673837572336197
+        ],
+        "changed_channels": 881
+      }
+    },
+    {
+      "layer": 8,
+      "role": "proj",
+      "role_family": "proj",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          4864
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 9,
+      "role": "q",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 9,
+      "role": "k",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          128,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 9,
+      "role": "v",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          128,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 9,
+      "role": "o",
+      "role_family": "o",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 9,
+      "role": "fc_gate",
+      "role_family": "fc",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          4864,
+          896
+        ],
+        "expansive": true,
+        "accepted": true,
+        "base_score": 0.00494961894582957,
+        "candidate_score": 0.004897267674095929,
+        "base_fold_losses": [
+          0.004076555371284485,
+          0.0037844048347324133
+        ],
+        "candidate_fold_losses": [
+          0.00407625874504447,
+          0.0036801472306251526
+        ],
+        "changed_channels": 885
+      }
+    },
+    {
+      "layer": 9,
+      "role": "fc_up",
+      "role_family": "fc",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          4864,
+          896
+        ],
+        "expansive": true,
+        "accepted": true,
+        "base_score": 0.012396688107401133,
+        "candidate_score": 0.012245900696143508,
+        "base_fold_losses": [
+          0.009811894968152046,
+          0.00998765416443348
+        ],
+        "candidate_fold_losses": [
+          0.00960585568100214,
+          0.00992396380752325
+        ],
+        "changed_channels": 881
+      }
+    },
+    {
+      "layer": 9,
+      "role": "proj",
+      "role_family": "proj",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          4864
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 10,
+      "role": "q",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 10,
+      "role": "k",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          128,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 10,
+      "role": "v",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          128,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 10,
+      "role": "o",
+      "role_family": "o",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 10,
+      "role": "fc_gate",
+      "role_family": "fc",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          4864,
+          896
+        ],
+        "expansive": true,
+        "accepted": false,
+        "base_score": 0.0044740691082552075,
+        "candidate_score": 0.00444506254279986,
+        "base_fold_losses": [
+          0.003632634412497282,
+          0.003499186597764492
+        ],
+        "candidate_fold_losses": [
+          0.0036811206955462694,
+          0.0033684440422803164
+        ],
+        "changed_channels": 885
+      }
+    },
+    {
+      "layer": 10,
+      "role": "fc_up",
+      "role_family": "fc",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          4864,
+          896
+        ],
+        "expansive": true,
+        "accepted": false,
+        "base_score": 0.011036078911274672,
+        "candidate_score": 0.011250886367633939,
+        "base_fold_losses": [
+          0.008799836039543152,
+          0.008848214522004128
+        ],
+        "candidate_fold_losses": [
+          0.009102248586714268,
+          0.008848399855196476
+        ],
+        "changed_channels": 876
+      }
+    },
+    {
+      "layer": 10,
+      "role": "proj",
+      "role_family": "proj",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          4864
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 11,
+      "role": "q",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 11,
+      "role": "k",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          128,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 11,
+      "role": "v",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          128,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 11,
+      "role": "o",
+      "role_family": "o",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 11,
+      "role": "fc_gate",
+      "role_family": "fc",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          4864,
+          896
+        ],
+        "expansive": true,
+        "accepted": true,
+        "base_score": 0.005137155530974269,
+        "candidate_score": 0.005076932837255299,
+        "base_fold_losses": [
+          0.0041554272174835205,
+          0.004041170235723257
+        ],
+        "candidate_fold_losses": [
+          0.004122524056583643,
+          0.003970079589635134
+        ],
+        "changed_channels": 878
+      }
+    },
+    {
+      "layer": 11,
+      "role": "fc_up",
+      "role_family": "fc",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          4864,
+          896
+        ],
+        "expansive": true,
+        "accepted": false,
+        "base_score": 0.011739394161850214,
+        "candidate_score": 0.0118020533118397,
+        "base_fold_losses": [
+          0.00909136887639761,
+          0.009591612964868546
+        ],
+        "candidate_fold_losses": [
+          0.00920354574918747,
+          0.009600373916327953
+        ],
+        "changed_channels": 884
+      }
+    },
+    {
+      "layer": 11,
+      "role": "proj",
+      "role_family": "proj",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          4864
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 12,
+      "role": "q",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 12,
+      "role": "k",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          128,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 12,
+      "role": "v",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          128,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 12,
+      "role": "o",
+      "role_family": "o",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 12,
+      "role": "fc_gate",
+      "role_family": "fc",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          4864,
+          896
+        ],
+        "expansive": true,
+        "accepted": true,
+        "base_score": 0.004902314045466483,
+        "candidate_score": 0.004517725843470544,
+        "base_fold_losses": [
+          0.004111588466912508,
+          0.0036372453905642033
+        ],
+        "candidate_fold_losses": [
+          0.003650959813967347,
+          0.0035590119659900665
+        ],
+        "changed_channels": 881
+      }
+    },
+    {
+      "layer": 12,
+      "role": "fc_up",
+      "role_family": "fc",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          4864,
+          896
+        ],
+        "expansive": true,
+        "accepted": true,
+        "base_score": 0.010786795057356358,
+        "candidate_score": 0.01074070343747735,
+        "base_fold_losses": [
+          0.008525277487933636,
+          0.008698875084519386
+        ],
+        "candidate_fold_losses": [
+          0.008451213128864765,
+          0.008686795830726624
+        ],
+        "changed_channels": 886
+      }
+    },
+    {
+      "layer": 12,
+      "role": "proj",
+      "role_family": "proj",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          4864
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 13,
+      "role": "q",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 13,
+      "role": "k",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          128,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 13,
+      "role": "v",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          128,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 13,
+      "role": "o",
+      "role_family": "o",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 13,
+      "role": "fc_gate",
+      "role_family": "fc",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          4864,
+          896
+        ],
+        "expansive": true,
+        "accepted": false,
+        "base_score": 0.004485456447582692,
+        "candidate_score": 0.004643170861527324,
+        "base_fold_losses": [
+          0.0037023902405053377,
+          0.0034173275344073772
+        ],
+        "candidate_fold_losses": [
+          0.0040200394578278065,
+          0.0032562825363129377
+        ],
+        "changed_channels": 880
+      }
+    },
+    {
+      "layer": 13,
+      "role": "fc_up",
+      "role_family": "fc",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          4864,
+          896
+        ],
+        "expansive": true,
+        "accepted": true,
+        "base_score": 0.010802794015035033,
+        "candidate_score": 0.010673616081476212,
+        "base_fold_losses": [
+          0.008584029041230679,
+          0.008681039325892925
+        ],
+        "candidate_fold_losses": [
+          0.008369511924684048,
+          0.008651813492178917
+        ],
+        "changed_channels": 890
+      }
+    },
+    {
+      "layer": 13,
+      "role": "proj",
+      "role_family": "proj",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          4864
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 14,
+      "role": "q",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 14,
+      "role": "k",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          128,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 14,
+      "role": "v",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          128,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 14,
+      "role": "o",
+      "role_family": "o",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 14,
+      "role": "fc_gate",
+      "role_family": "fc",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          4864,
+          896
+        ],
+        "expansive": true,
+        "accepted": false,
+        "base_score": 0.004361971863545477,
+        "candidate_score": 0.0044592018239200115,
+        "base_fold_losses": [
+          0.0036151320673525333,
+          0.0033012456260621548
+        ],
+        "candidate_fold_losses": [
+          0.003773628268390894,
+          0.003257961245253682
+        ],
+        "changed_channels": 891
+      }
+    },
+    {
+      "layer": 14,
+      "role": "fc_up",
+      "role_family": "fc",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          4864,
+          896
+        ],
+        "expansive": true,
+        "accepted": false,
+        "base_score": 0.00984881422482431,
+        "candidate_score": 0.009805283509194851,
+        "base_fold_losses": [
+          0.007851413451135159,
+          0.00789747666567564
+        ],
+        "candidate_fold_losses": [
+          0.007862541824579239,
+          0.007816754281520844
+        ],
+        "changed_channels": 884
+      }
+    },
+    {
+      "layer": 14,
+      "role": "proj",
+      "role_family": "proj",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          4864
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 15,
+      "role": "q",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 15,
+      "role": "k",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          128,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 15,
+      "role": "v",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          128,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 15,
+      "role": "o",
+      "role_family": "o",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 15,
+      "role": "fc_gate",
+      "role_family": "fc",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          4864,
+          896
+        ],
+        "expansive": true,
+        "accepted": false,
+        "base_score": 0.00402709178160876,
+        "candidate_score": 0.004190366482362151,
+        "base_fold_losses": [
+          0.003354514017701149,
+          0.0030224125366657972
+        ],
+        "candidate_fold_losses": [
+          0.0035634241066873074,
+          0.0030355968046933413
+        ],
+        "changed_channels": 886
+      }
+    },
+    {
+      "layer": 15,
+      "role": "fc_up",
+      "role_family": "fc",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          4864,
+          896
+        ],
+        "expansive": true,
+        "accepted": false,
+        "base_score": 0.009957146598026156,
+        "candidate_score": 0.010004875715821981,
+        "base_fold_losses": [
+          0.007765086367726326,
+          0.008099471218883991
+        ],
+        "candidate_fold_losses": [
+          0.007880170829594135,
+          0.008086387068033218
+        ],
+        "changed_channels": 885
+      }
+    },
+    {
+      "layer": 15,
+      "role": "proj",
+      "role_family": "proj",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          4864
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 16,
+      "role": "q",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 16,
+      "role": "k",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          128,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 16,
+      "role": "v",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          128,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 16,
+      "role": "o",
+      "role_family": "o",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 16,
+      "role": "fc_gate",
+      "role_family": "fc",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          4864,
+          896
+        ],
+        "expansive": true,
+        "accepted": false,
+        "base_score": 0.004102552426047623,
+        "candidate_score": 0.004089306865353137,
+        "base_fold_losses": [
+          0.0032999850809574127,
+          0.0032551272306591272
+        ],
+        "candidate_fold_losses": [
+          0.003334162989631295,
+          0.0031773692462593317
+        ],
+        "changed_channels": 882
+      }
+    },
+    {
+      "layer": 16,
+      "role": "fc_up",
+      "role_family": "fc",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          4864,
+          896
+        ],
+        "expansive": true,
+        "accepted": true,
+        "base_score": 0.009807689813897014,
+        "candidate_score": 0.009680829709395766,
+        "base_fold_losses": [
+          0.007677645422518253,
+          0.00795848947018385
+        ],
+        "candidate_fold_losses": [
+          0.007587074767798185,
+          0.007849723100662231
+        ],
+        "changed_channels": 883
+      }
+    },
+    {
+      "layer": 16,
+      "role": "proj",
+      "role_family": "proj",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          4864
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 17,
+      "role": "q",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 17,
+      "role": "k",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          128,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 17,
+      "role": "v",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          128,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 17,
+      "role": "o",
+      "role_family": "o",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 17,
+      "role": "fc_gate",
+      "role_family": "fc",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          4864,
+          896
+        ],
+        "expansive": true,
+        "accepted": true,
+        "base_score": 0.0038068266585469246,
+        "candidate_score": 0.003687263757456094,
+        "base_fold_losses": [
+          0.002996322000399232,
+          0.0030782208777964115
+        ],
+        "candidate_fold_losses": [
+          0.0028182140085846186,
+          0.003037542337551713
+        ],
+        "changed_channels": 881
+      }
+    },
+    {
+      "layer": 17,
+      "role": "fc_up",
+      "role_family": "fc",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          4864,
+          896
+        ],
+        "expansive": true,
+        "accepted": false,
+        "base_score": 0.011438298039138317,
+        "candidate_score": 0.011488341027870774,
+        "base_fold_losses": [
+          0.009158570319414139,
+          0.009138740599155426
+        ],
+        "candidate_fold_losses": [
+          0.009205934591591358,
+          0.009167780168354511
+        ],
+        "changed_channels": 886
+      }
+    },
+    {
+      "layer": 17,
+      "role": "proj",
+      "role_family": "proj",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          4864
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 18,
+      "role": "q",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 18,
+      "role": "k",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          128,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 18,
+      "role": "v",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          128,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 18,
+      "role": "o",
+      "role_family": "o",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 18,
+      "role": "fc_gate",
+      "role_family": "fc",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          4864,
+          896
+        ],
+        "expansive": true,
+        "accepted": false,
+        "base_score": 0.0047969495644792914,
+        "candidate_score": 0.005003304220736027,
+        "base_fold_losses": [
+          0.003852001391351223,
+          0.0038158970419317484
+        ],
+        "candidate_fold_losses": [
+          0.0041090562008321285,
+          0.0038430241402238607
+        ],
+        "changed_channels": 877
+      }
+    },
+    {
+      "layer": 18,
+      "role": "fc_up",
+      "role_family": "fc",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          4864,
+          896
+        ],
+        "expansive": true,
+        "accepted": false,
+        "base_score": 0.012219275580719113,
+        "candidate_score": 0.012272945139557123,
+        "base_fold_losses": [
+          0.009655054658651352,
+          0.00985566433519125
+        ],
+        "candidate_fold_losses": [
+          0.009687111712992191,
+          0.009905852377414703
+        ],
+        "changed_channels": 883
+      }
+    },
+    {
+      "layer": 18,
+      "role": "proj",
+      "role_family": "proj",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          4864
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 19,
+      "role": "q",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 19,
+      "role": "k",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          128,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 19,
+      "role": "v",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          128,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 19,
+      "role": "o",
+      "role_family": "o",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 19,
+      "role": "fc_gate",
+      "role_family": "fc",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          4864,
+          896
+        ],
+        "expansive": true,
+        "accepted": true,
+        "base_score": 0.0042731837602332234,
+        "candidate_score": 0.0041310813394375145,
+        "base_fold_losses": [
+          0.0033879955299198627,
+          0.0034389146603643894
+        ],
+        "candidate_fold_losses": [
+          0.00326708797365427,
+          0.003330049803480506
+        ],
+        "changed_channels": 881
+      }
+    },
+    {
+      "layer": 19,
+      "role": "fc_up",
+      "role_family": "fc",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          4864,
+          896
+        ],
+        "expansive": true,
+        "accepted": false,
+        "base_score": 0.010487566934898496,
+        "candidate_score": 0.010744503932073712,
+        "base_fold_losses": [
+          0.008335278369486332,
+          0.00842657033354044
+        ],
+        "candidate_fold_losses": [
+          0.008695078082382679,
+          0.008446390740573406
+        ],
+        "changed_channels": 879
+      }
+    },
+    {
+      "layer": 19,
+      "role": "proj",
+      "role_family": "proj",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          4864
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 20,
+      "role": "q",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 20,
+      "role": "k",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          128,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 20,
+      "role": "v",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          128,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 20,
+      "role": "o",
+      "role_family": "o",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 20,
+      "role": "fc_gate",
+      "role_family": "fc",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          4864,
+          896
+        ],
+        "expansive": true,
+        "accepted": false,
+        "base_score": 0.004360429651569575,
+        "candidate_score": 0.004268488381057978,
+        "base_fold_losses": [
+          0.003354226006194949,
+          0.003577755531296134
+        ],
+        "candidate_fold_losses": [
+          0.0034083270002156496,
+          0.0034190998412668705
+        ],
+        "changed_channels": 890
+      }
+    },
+    {
+      "layer": 20,
+      "role": "fc_up",
+      "role_family": "fc",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          4864,
+          896
+        ],
+        "expansive": true,
+        "accepted": false,
+        "base_score": 0.008988468209281564,
+        "candidate_score": 0.009161271154880524,
+        "base_fold_losses": [
+          0.007048043888062239,
+          0.007285928353667259
+        ],
+        "candidate_fold_losses": [
+          0.007271260023117065,
+          0.007367521524429321
+        ],
+        "changed_channels": 879
+      }
+    },
+    {
+      "layer": 20,
+      "role": "proj",
+      "role_family": "proj",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          4864
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 21,
+      "role": "q",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 21,
+      "role": "k",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          128,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 21,
+      "role": "v",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          128,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 21,
+      "role": "o",
+      "role_family": "o",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 21,
+      "role": "fc_gate",
+      "role_family": "fc",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          4864,
+          896
+        ],
+        "expansive": true,
+        "accepted": false,
+        "base_score": 0.00765523558948189,
+        "candidate_score": 0.007958894013427198,
+        "base_fold_losses": [
+          0.00697715999558568,
+          0.00484473118558526
+        ],
+        "candidate_fold_losses": [
+          0.007341265212744474,
+          0.004905890207737684
+        ],
+        "changed_channels": 879
+      }
+    },
+    {
+      "layer": 21,
+      "role": "fc_up",
+      "role_family": "fc",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          4864,
+          896
+        ],
+        "expansive": true,
+        "accepted": false,
+        "base_score": 0.019343813881278038,
+        "candidate_score": 0.01904878579080105,
+        "base_fold_losses": [
+          0.018877271562814713,
+          0.010371720418334007
+        ],
+        "candidate_fold_losses": [
+          0.01844034716486931,
+          0.010437050834298134
+        ],
+        "changed_channels": 888
+      }
+    },
+    {
+      "layer": 21,
+      "role": "proj",
+      "role_family": "proj",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          4864
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 22,
+      "role": "q",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 22,
+      "role": "k",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          128,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 22,
+      "role": "v",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          128,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 22,
+      "role": "o",
+      "role_family": "o",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 22,
+      "role": "fc_gate",
+      "role_family": "fc",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          4864,
+          896
+        ],
+        "expansive": true,
+        "accepted": false,
+        "base_score": 0.0056868556421250105,
+        "candidate_score": 0.005920455325394869,
+        "base_fold_losses": [
+          0.004249480552971363,
+          0.004749487154185772
+        ],
+        "candidate_fold_losses": [
+          0.004355970304459333,
+          0.004989960230886936
+        ],
+        "changed_channels": 891
+      }
+    },
+    {
+      "layer": 22,
+      "role": "fc_up",
+      "role_family": "fc",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          4864,
+          896
+        ],
+        "expansive": true,
+        "accepted": false,
+        "base_score": 0.009383707772940397,
+        "candidate_score": 0.009496247861534357,
+        "base_fold_losses": [
+          0.006852072197943926,
+          0.007943562231957912
+        ],
+        "candidate_fold_losses": [
+          0.006947577930986881,
+          0.008029945194721222
+        ],
+        "changed_channels": 878
+      }
+    },
+    {
+      "layer": 22,
+      "role": "proj",
+      "role_family": "proj",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          4864
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 23,
+      "role": "q",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 23,
+      "role": "k",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          128,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 23,
+      "role": "v",
+      "role_family": "qkv",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          128,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 23,
+      "role": "o",
+      "role_family": "o",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          896
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    },
+    {
+      "layer": 23,
+      "role": "fc_gate",
+      "role_family": "fc",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          4864,
+          896
+        ],
+        "expansive": true,
+        "accepted": false,
+        "base_score": 0.00393123651156202,
+        "candidate_score": 0.004005858558230102,
+        "base_fold_losses": [
+          0.002992215333506465,
+          0.0032468384597450495
+        ],
+        "candidate_fold_losses": [
+          0.0030877869576215744,
+          0.00328262010589242
+        ],
+        "changed_channels": 882
+      }
+    },
+    {
+      "layer": 23,
+      "role": "fc_up",
+      "role_family": "fc",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          4864,
+          896
+        ],
+        "expansive": true,
+        "accepted": false,
+        "base_score": 0.006368754198774695,
+        "candidate_score": 0.006374374614097178,
+        "base_fold_losses": [
+          0.00490299379453063,
+          0.0052230097353458405
+        ],
+        "candidate_fold_losses": [
+          0.004829724784940481,
+          0.0052793496288359165
+        ],
+        "changed_channels": 883
+      }
+    },
+    {
+      "layer": 23,
+      "role": "proj",
+      "role_family": "proj",
+      "calibration_lengths": [
+        10,
+        128
+      ],
+      "diagnostic": {
+        "shape": [
+          896,
+          4864
+        ],
+        "expansive": false,
+        "accepted": false
+      }
+    }
+  ],
+  "note": "Admission diagnostics only; join with paired default/effect JSON for held-out behavior."
+}

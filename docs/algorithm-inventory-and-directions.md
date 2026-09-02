@@ -9,10 +9,12 @@
 > 中的 Activation-first decoupled HiF4 encoder、解析式层级矩阵平衡和 oracle-to-encoder
 > 编译为主；block-Schur 与双侧残差降为后期一次性残差步骤。
 
-> **评测迁移（2026-09-01）**：本索引中的旧 sampled/full-layer 数字是历史算法证据，
-> 不再用于当前排名。当前统一复测由 [`evaluator/official_eval.py`](../evaluator/official_eval.py)
-> 的 `official-shape-v1` 生成（250 Linear + 200 Attention，Attention calibration
-> `[10,128,512,1024,1024]`）；新结果见 [`artifacts/official_eval/`](../artifacts/official_eval/)。
+> **评测迁移（2026-09-02）**：本索引中的旧 sampled/full-layer 数字和
+> `official-shape-v1` 结果是历史算法证据，不再用于当前排名。当前统一复测由
+> [`evaluator/official_eval.py`](../evaluator/official_eval.py) 的 `proxy-v2` 生成：默认
+> 168 Linear + 120 Attention，Attention calibration `[10,128,512,1024,1024]`；effect panel
+> 56+5 只做父子归因，full stress 只做压力回归。新结果见
+> [`artifacts/official_eval/`](../artifacts/official_eval/)。
 
 > **官方事实更正（2026-09-01）**：v86 官方结果为 **`16744 / 222.7s`，新权重下通过**，
 > 这是 17816 新框架出现前的仓库内官方最优；本地 `v086` 复测时间不替代该官方时间。最后一次
@@ -39,9 +41,43 @@
 
 > 整理日期：2026-08-31
 > 数据来源：`solutions/README.md`（v000–v125）、`docs/current-solution-status.md`、`docs/archive-implementation-audit.md`、`logs/execution/2026-08-30-e0g-scale-oracle.md`、`logs/execution/2026-08-30-e0g-multimodel-dashboard.md`、`logs/execution/2026-08-30-a7-quant-weight-gram.md`、`logs/execution/2026-08-30-l1-full-hierarchy-lrh.md`、`logs/execution/2026-08-31-v110-l4b-gals-final-gated-qwen-full.md`、`logs/execution/2026-08-31-v111-l5a-joint-permutation-qwen-full.md`、`logs/execution/2026-08-31-l5d-external-component-audit.md`、`logs/execution/2026-08-31-l5e-linear-ceiling-v111.md`、`logs/execution/2026-08-31-v115-l6a-rank16-qwen-full.md`、`logs/execution/2026-08-31-v116-l6b-wide-rank4-qwen-full.md`、`logs/execution/2026-08-31-v117-l6c-g64-hierarchy-qwen-full.md`、`logs/execution/2026-08-31-v118-l6d-structured-factor-qwen-full.md`、`logs/execution/2026-08-31-l6e-crossblock-checkpoint.md`、`logs/execution/2026-08-31-v119-c1a-structured-vectorized-qwen-full.md`、`logs/execution/2026-08-31-c1b-structured-refresh-stratified.md`、`logs/execution/2026-08-31-c1b-structured-refresh2-stratified.md`、`logs/execution/2026-08-31-v121-c1b-structured-refresh2-qwen-full.md`、`logs/execution/2026-08-31-v124-c1c-rank8-screen.md`、`logs/execution/2026-08-31-v124-c1c-rank8-qwen-full.md`、`logs/execution/2026-08-31-v125-c1c-block8-qwen-full.md`、`logs/execution/2026-08-31-v107-attention-contract-audit.md`、`logs/execution/2026-08-31-c1b-structured-refresh-synthetic.md`。
-> 口径纪律：本地只能比 **Qwen 同口径 panel**（`250·g_L + 200·g_A`）；五模型合计 `1085.743597` 只用于检查跨模型结构性回退，**禁止**与官方分数做差值。官方评测集为 250 Linear + 200 Attention case；时间上限已于 2026-08-31 修订为 **`300s`**，且不再限制任何 `A@W` 拟合用法。
+> 口径纪律：本地只能比 **Qwen 同口径 proxy-v2 default panel**（168 Linear + 120 Attention）；
+> effect/smoke/full-stress/跨模型结果不得混入 proxy 排名，五模型合计也只用于检查结构性回退，
+> **禁止**与官方分数做差值。官方 case 数与隐藏权重未知；时间上限为 **`300s`**，且不再限制
+> 任何 `A@W` 拟合用法。
 
 ---
+
+## 0. 2026-09-02 方案逐项审计：已做完什么、还缺什么
+
+《华为2026_NVFP4到HiF4_高精度量化赛题完整分析与优化方案.md》把问题拆成
+“格式专用层级编码 → A@W 输出监督 → GPTQ/Hessian → 等价坐标变换 → Attention Q/K/V
+非对称与真实输出 rerank”。逐项对照源码、归因 JSON、外部 `youxilee/hif4` 和跨模型结果后，
+结论是：**低阶候选搜索基本覆盖，但两个改变上限的结构环节仍未完成；不能说所有方向都试过。**
+
+| 方案章节/方向 | 已有尝试 | 当前判断 |
+|---|---|---|
+| E6M2 scale、lv2/lv3、mantissa | 255-code oracle、Gram hierarchy、GALS/C1、L3 teacher | 顶层 scale 总 gap 多数 `<0.1%`，继续扩大 code/offset 网格收益不足 |
+| Output-aware A@W、Weight GPTQ/HSDQ | 多折 A@W、Weight-HSDQ、部署 Gram gate、LRH/C1 | 已大量尝试但不是一个干净的单次 block-Schur HiF4-GPTQ；旧多轮路线过拟合/超时 |
+| Smooth/CAT/BOAT、Permutation、Hadamard/rotation | CAT 分流、BOAT、L5a、H32/H64 和等价变换 | 主族已覆盖；v155 仅低召回正向，不继续扫分位/层列表 |
+| Biased rounding、Activation compensation | hierarchy refine、JDRQ、cross64、A@W residual、L3 teacher | 局部做过；跨 fold 合法写回尚未闭环，L3 student 明确关闭 |
+| Attention Q/K scaling、K center、Q/K rotation、V 非对称、true rerank | v034/v075/v086、PAWV diag-only、v128–v131 | 复杂动态路径已失败或超时；同复杂度解析 Matrix-Smooth Q/K 尚未实现 |
+| 外部 HiF4/MR-GPTQ/跨模型 | hif4 role attribution、GPT-2 probe、codec/结构审计 | 可定位 fc/proj 风险，不能把外部排序当官方拟合 |
+| **单次 block-Hessian HiF4-GPTQ** | 只有 full/block HSDQ、LRH 和多轮 structured proposal | **未完成，Linear 最值得补的缺口** |
+| **Weight decoupled encoder** | 仅写入活动计划，未在稳定坐标父版本上实现 | **未完成，优先做闭式 stored-scale 单次版本** |
+| **Analytic Matrix-Smooth Q/K、静态 Fisher** | 只有旧 reciprocal/center/rotation | **未完成，必须后置且保持 v86 复杂度** |
+
+### 当前最短优化路径
+
+1. **已完成 v155 小型 GPT-2 smoke**：严格 pre-A3 配对为 Linear `−0.000153`（fc `−0.000916`），
+   因此 v155 只作 Qwen-local control，不做跨模型排名或默认叠加。
+2. 以 pre-A3 为父版本实现一个 **L4-WD 单次 Weight-decoupled stored-scale**：固定坐标（v155
+   仅作对照），按部署 `Q(W)` Gram 与 `H_X` 闭式更新 stored scale，每 block 一次、两折 gate、
+   无第二次完整 output oracle。effect panel 无稳定 role/layer 正向则立即关闭。
+3. L4-WD 失败时只做一个 **block-Schur HiF4-GPTQ** 参照（优先 `fc_gate/fc_up/proj`），固定
+   block 顺序/预算，以真实 `A@W` loss 一次合法写回；不再增加 rank、block、offset、sweep。
+4. Linear 有稳定增益且时间可控后，冻结 Linear，启动 Attention A1 的 GQA group-local
+   `Q'=QM, K'=KM^{-T}`；随后才试两次 K fixed-point center，禁止 Gram sweep/PAWV/length router。
 
 ## 1. 当前代码与官方基线
 
