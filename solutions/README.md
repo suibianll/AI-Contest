@@ -1,10 +1,10 @@
 # HiF4 solutions archive
 
 > **Unarchived official update (2026-09-01):** the user reports a new Linear framework with an
-> official high score of **17816**. Its source file, version identifier, SHA256, official runtime,
-> and matching Attention configuration have not yet been provided, so no archive directory has
-> been invented. Once the source is synchronized, it must be stored as one `retained` official
-> snapshot rather than reconstructed from the prose summary.
+> official high score of **17816**. The supplied `linear.txt`/`linear_dep.txt` are now recorded as a
+> local reconstruction input, but the official submitted source, version identifier, runtime, and
+> matching Attention configuration remain unverified; v159 below is therefore `scoreNA_timeNA`, not
+> an official snapshot.
 
 `solutions/` contains immutable `solution.py` snapshots. The active code is only the repository
 root [`solution.py`](../solution.py). Every snapshot below was submitted or retained as an
@@ -137,6 +137,7 @@ directories follow the same immutable naming rule as the historical archive:
 | v156 | `20260902_v156_l4-weight-decoupled_rejected` | 0.588131 (effect; default not run) | 0.757433 (effect) | 203.994 s (effect) | **rejected; official 16580/204.3s, 164 points below v86** |
 | v157 | `20260902_v157_v86-roab-only_rejected` | NA (legality smoke only) | NA (frozen field-equality check) | NA | **rejected; official 16729/218.96s, 15 points below v86** |
 | v158 | `20260902_v158_v86-attention-matrix-smooth_retained` | 0.448180 (default; frozen) | 0.735752 (default) | 295.069 s (default) | **retained; official 16861/223s, +117 vs v86** |
+| v159 | `20260902_v159_linear-gptq17816_v158-attention_candidate_scoreNA_timeNA` | **0.705515 (compact)** | frozen v158 | **167.570 s API / 174.228 s wall (compact)** | **candidate; paired compact Δ+0.149191, 56/0 improve/regress; official unregistered** |
 
 † The first v147 values come from the original pre-A3 JSON (SHA `9B3EA5...B656`); the second come
 from the later direct-merge A3 JSON (SHA `25C245...9C1B`). The archive was modified in place before

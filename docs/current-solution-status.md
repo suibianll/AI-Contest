@@ -19,20 +19,24 @@
 - quadratic AdaRound、E6M2 offset、data-driven refinement 和 edge extension；
 - proxy 与 e2e 混合选择，窄层执行联合变换搜索。
 
-新提交的版本号、源码 SHA、官方运行时间以及对应 Attention 配置尚未提供，因此当前只把
-**17816 记为用户确认的官方精度锚点**，不伪造时间结论，也暂不建立源码归档。完整理论分析和
-后续执行顺序见
+官方提交的版本号、源码 SHA、官方运行时间以及对应 Attention 配置仍未提供；用户提供的
+`linear.txt`/`linear_dep.txt` 已据此合成为本地候选 v159，但不能冒充官方源码。当前仍只把
+**17816 记为用户确认的官方精度锚点**，不伪造时间结论。完整理论分析和后续执行顺序见
 [`活动计划`](superpowers/plans/2026-09-01-hif4-hierarchy-encoder-and-analytic-attention-plan.md)。
 
 ## 1. 版本结论
 
 - **当前仓库内官方基线：v158，16861 分 / 223s。** 它比 v86 提升 `117` 分、只慢 `0.3s`。
   用户确认的更高分 17816 仍因源码与官方时间未同步而只作为外部锚点。
-- 根目录 [`solution.py`](../solution.py) 当前是 v140 Linear + v86 Attention + 一轮额外 A3
-  的单文件组合，SHA256 `44E37709A02B962CDAEDFC57E3AD999B2C9A2C0606B8B9DB7E4E81DC4DC92672`。
-  最近完整同行为结果为 Linear `0.5100503237`、Attention `0.7196960689`、API
-  `300.3507s`；官方分数和时间未登记。它不是 17816 源码，也不能沿用 v140 的官方
-  `15838 / 207s` 结论。
+- 根目录 [`solution.py`](../solution.py) 已切换为 v159 本地合并候选：Linear 采用用户提供的
+  17816 提取及必要 GPTQ/AdaRound 依赖，Attention 字段与 v158 保持不变；SHA256
+  `0508045A0DDD0F17679DCA827C265CFC7588E76081D3AECEFF555D257DD4242`。Linear compact
+  `proxy-v2` 为 `0.705515`，API `167.570s`、wall `174.228s`；这是缓存命中的机制/泛化诊断，
+  不是官方分数或官方时间，完整 default panel 尚未复跑。
+- v159 与同 cache 的 v158 compact 配对 mean Δ 为 `+0.149191`（56 改善、0 回归）；`proj`
+  八个 case 的配对 Δ 也为正（`+0.124209`）。这仍只是 compact Qwen proxy 证据，不能外推为
+  官方泛化结论。候选说明见
+  [`v159 result`](../solutions/20260902_v159_linear-gptq17816_v158-attention_candidate_scoreNA_timeNA/result.md)。
 - v138/v139 虽在官方 `<300s` 内通过，但只有 `15715/15716`，比 v86 低约 1029 分；
   v138–v145 这条“压缩 Attention 后继续叠 Linear 局部模块”的路线已经失败并关闭。
 - v155 官方 `16581 / 208.5s`、v156 官方 `16580 / 204.3s`，两者时间均通过但分别低于 v86
