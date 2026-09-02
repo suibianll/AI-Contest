@@ -14,6 +14,7 @@ from official_eval import (  # noqa: E402
     ATTENTION_CASE_COUNT,
     CALIBRATION_LENGTHS,
     DEFAULT_CASE_DESIGN,
+    EFFECT_CASE_DESIGN,
     LINEAR_CASE_COUNT,
     NVFP4_INPUT_CODEC,
     PANEL_WINDOW_INDICES,
@@ -26,10 +27,12 @@ from official_eval import (  # noqa: E402
     _attention_trace,
     _attention_decomposition_summary,
     _choose_cases,
+    _depth_spread_indices,
     _linear_candidate_role_diagnostics,
     _linear_decomposition_summary,
     _linear_error_source_details,
     _linear_role_family,
+    _paired_effect_diagnostics,
     _trend_diagnostics,
     build_parser,
     load_pack,
@@ -48,6 +51,7 @@ def test_protocol_uses_stratified_real_wa_panel_by_default() -> None:
     assert LINEAR_CASE_COUNT is None
     assert ATTENTION_CASE_COUNT is None
     assert DEFAULT_CASE_DESIGN == "stratified-real-wa-panel-v1"
+    assert EFFECT_CASE_DESIGN == "paired-effect-panel-v1"
     assert PANEL_WINDOW_INDICES == (0, 1, 2, 3, 4)
 
 
@@ -109,6 +113,29 @@ def test_full_case_expansion_is_explicit_stress_only() -> None:
     linear, attention = _choose_cases(pack, full_cases=True)
     assert len(linear) == pack.layers * 7 * len(pack.test_windows)
     assert len(attention) == pack.layers * len(pack.test_windows)
+
+
+def test_effect_panel_spans_depth_and_keeps_every_linear_role() -> None:
+    pack = SimpleNamespace(
+        layers=24,
+        calibration_windows=[None] * len(CALIBRATION_LENGTHS),
+        test_windows=[
+            Window("validation" if i % 2 == 0 else "test", f"doc-{i}", 0, 0, 0, TEST_LENGTH, tuple(range(TEST_LENGTH)))
+            for i in range(5)
+        ],
+        roles=("q", "k", "v", "o", "fc_gate", "fc_up", "proj"),
+    )
+    linear, attention = _choose_cases(pack, effect_panel=True)
+    expected_layers = _depth_spread_indices(24, 8)
+    assert expected_layers == (0, 3, 7, 10, 13, 16, 20, 23)
+    assert len(linear) == 56
+    assert {case.layer for case in linear} == set(expected_layers)
+    assert all(
+        {case.role for case in linear if case.layer == layer} == set(pack.roles)
+        for layer in expected_layers
+    )
+    assert len(attention) == 5
+    assert [case.test_window for case in attention] == [0, 1, 2, 3, 4]
 
 
 def test_trend_diagnostics_does_not_fit_or_rewrite_scores() -> None:
@@ -218,6 +245,19 @@ def test_decomposition_is_enabled_by_default_and_can_be_disabled() -> None:
     assert build_parser().parse_args(["--no-decomposition"]).decomposition is False
 
 
+def test_paired_cli_options_are_explicit() -> None:
+    args = build_parser().parse_args([
+        "--candidate-json", "candidate.json",
+        "--baseline-json", "baseline.json",
+        "--focus-linear-roles", "fc_gate,fc_up",
+        "--effect-panel",
+    ])
+    assert str(args.candidate_json).endswith("candidate.json")
+    assert str(args.baseline_json).endswith("baseline.json")
+    assert args.focus_linear_roles == "fc_gate,fc_up"
+    assert args.effect_panel is True
+
+
 def test_static_linear_role_family_groups_qkv_fc_o_and_proj() -> None:
     assert [_linear_role_family(role) for role in ("q", "k", "v", "o", "fc_gate", "fc_up", "proj")] == [
         "qkv", "qkv", "qkv", "o", "fc", "fc", "proj"
@@ -256,6 +296,87 @@ def test_candidate_role_diagnostics_pairs_same_case_against_v86() -> None:
     assert candidate["by_role"]["fc_gate"]["mean_delta_gain"] == -0.1
     assert candidate["by_role_family"]["fc"]["mean_delta_gain"] == -0.1
     assert candidate["worst_cases"][0]["role"] == "proj"
+
+
+def test_paired_effect_separates_focus_controls_and_error_sources() -> None:
+    def linear(role: str, gain: float, player_mse: float, a_only: float) -> dict[str, object]:
+        return {
+            "layer": 0,
+            "role": role,
+            "role_family": _linear_role_family(role),
+            "shape_bucket": "hidden_to_wide" if role.startswith("fc_") else "hidden_to_hidden",
+            "test_window": 0,
+            "test_split": "validation",
+            "test_length": 128,
+            "mse_standard": 1.0,
+            "mse_player": player_mse,
+            "reference_energy": 2.0,
+            "relative_player_mse": player_mse / 2.0,
+            "gain": gain,
+            "gain_w_only": 0.1,
+            "gain_a_only": a_only,
+            "gain_both": gain,
+            "interaction_gain": 0.0,
+            "weight_relative_mse": 0.2,
+            "activation_relative_mse": 0.3,
+        }
+
+    def attention(gain: float) -> dict[str, object]:
+        return {
+            "layer": 0,
+            "test_window": 0,
+            "test_split": "validation",
+            "test_length": 10,
+            "mse_standard": 1.0,
+            "mse_player": 0.2,
+            "reference_energy": 2.0,
+            "relative_player_mse": 0.1,
+            "gain": gain,
+            "gain_q_only": 0.1,
+            "gain_k_only": 0.1,
+            "gain_v_only": 0.1,
+            "gain_qk_only": 0.2,
+            "gain_both": gain,
+            "qk_interaction_gain": 0.0,
+            "qkv_interaction_gain": 0.0,
+            "logit_mse_player": 0.3,
+            "probability_mse_player": 0.01,
+            "probability_kl_player_to_reference": 0.02,
+        }
+
+    def result(name: str, fc_delta: float) -> dict[str, object]:
+        linear_cases = [
+            linear("q", 0.10, 0.90, 0.05),
+            linear("fc_gate", 0.20 + fc_delta, 0.80 - fc_delta, 0.10 + fc_delta),
+            linear("fc_up", 0.30 + fc_delta, 0.70 - fc_delta, 0.15 + fc_delta),
+        ]
+        return {
+            "candidate": name,
+            "status": "ok",
+            "score": {"linear_mean": sum(item["gain"] for item in linear_cases) / 3, "attention_mean": 0.8, "overall_mean": 0.5},
+            "timing": {
+                "api_total_seconds": 10.0 + fc_delta,
+                "api_seconds": {"hif4_dynamic_quantize_activation": 2.0 + fc_delta},
+                "api_calls": {"hif4_dynamic_quantize_activation": 3},
+            },
+            "case_scores": {"linear": linear_cases, "attention": [attention(0.8)]},
+        }
+
+    diagnostics = _paired_effect_diagnostics(
+        result("parent", 0.0), result("candidate", 0.05), ("fc",)
+    )
+    assert diagnostics["enabled"] is True
+    assert diagnostics["linear"]["focus"]["effect"] == "consistent_improvement"
+    assert diagnostics["linear"]["focus"]["positive_cases"] == 2
+    assert diagnostics["linear"]["control"]["effect"] == "no_effect"
+    assert diagnostics["linear"]["by_role_family"]["fc"]["component_delta_mean"]["a_only_gain"] == pytest.approx(0.05)
+    assert diagnostics["attention"]["overall"]["effect"] == "no_effect"
+
+    typo = _paired_effect_diagnostics(
+        result("parent", 0.0), result("candidate", 0.05), ("unknown_role",)
+    )
+    assert typo["enabled"] is False
+    assert "matched no Linear" in typo["reason"]
 
 
 def test_solution_loader_finds_the_six_public_apis() -> None:

@@ -9,6 +9,9 @@ formula and API contract while fixing the old proxy's two largest biases:
 * calibration state lifetime follows the judge call graph: one state per
   layer/role (Linear) and one per layer (Attention), while cases only vary the
   dynamic inputs.  This prevents a per-case calibration oracle.
+* mechanism experiments reuse one immutable parent JSON and compare exact
+  layer/role/window identities, so aggregate movement is separated into
+  focus, unchanged-control, W/A or Q/K/V, worst-case, and timing deltas.
 
 The hidden official tensors and Kunpeng hardware are not available locally.
 All reports therefore label scores as ``proxy`` and local seconds as same-host
@@ -26,6 +29,7 @@ import importlib.util
 import json
 import math
 import re
+import statistics
 import sys
 import time
 from pathlib import Path
@@ -73,6 +77,8 @@ LINEAR_CASE_COUNT: int | None = None
 ATTENTION_CASE_COUNT: int | None = None
 PANEL_WINDOW_INDICES = (0, 1, 2, 3, 4)
 DEFAULT_CASE_DESIGN = "stratified-real-wa-panel-v1"
+EFFECT_CASE_DESIGN = "paired-effect-panel-v1"
+EFFECT_LINEAR_LAYERS = 8
 FULL_CASE_DESIGN = "full-cartesian-real-wa-v3"
 OFFICIAL_RUNTIME_LIMIT = 300.0
 NVFP4_MODE = "amax6"
@@ -704,20 +710,38 @@ def _pair(value: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
     return carrier.contiguous(), scale.contiguous()
 
 
+def _depth_spread_indices(total: int, count: int) -> tuple[int, ...]:
+    """Choose deterministic indices spanning the full model depth."""
+    if total <= 0 or count <= 0:
+        return ()
+    if count >= total:
+        return tuple(range(total))
+    if count == 1:
+        return (0,)
+    values = {
+        int(round(index * (total - 1) / (count - 1)))
+        for index in range(count)
+    }
+    return tuple(sorted(values))
+
+
 def _choose_cases(
     pack: RawPack,
     linear_count: int | None = LINEAR_CASE_COUNT,
     attention_count: int | None = ATTENTION_CASE_COUNT,
     full_cases: bool = False,
+    effect_panel: bool = False,
 ) -> tuple[list[LinearCase], list[AttentionCase]]:
     """Select a deterministic real-W/A panel; optional limits are smoke-only.
 
     The default covers every Linear layer/role exactly once, with the five
     official holdout lengths rotated across the grid, and every Attention
     layer once for each of those five lengths.  ``full_cases`` explicitly
-    expands to every layer/role/window tuple for stress testing.  Both modes
-    use captured tensors; ``linear_count`` and ``attention_count`` are only
-    development prefix limits and are never a ranking panel.
+    expands to every layer/role/window tuple for stress testing.
+    ``effect_panel`` selects eight depth-spread layers with every Linear role
+    plus five depth/length-spread Attention sentinels for paired iteration.
+    All modes use captured tensors; ``linear_count`` and ``attention_count``
+    are only development prefix limits and are never a ranking panel.
     """
     if len(pack.test_windows) == 0 or len(pack.calibration_windows) == 0:
         raise RuntimeError("case pool has no calibration/test windows")
@@ -725,6 +749,10 @@ def _choose_cases(
     if not linear_calibration_indices:
         raise RuntimeError("case pool has no Linear calibration windows")
     roles = tuple(getattr(pack, "roles", ROLES))
+    if full_cases and effect_panel:
+        raise ValueError("full_cases and effect_panel are mutually exclusive")
+    if effect_panel and (linear_count is not None or attention_count is not None):
+        raise ValueError("effect_panel cannot be combined with case prefix limits")
     if full_cases:
         linear_pool = [
             (layer, role, test_window)
@@ -743,23 +771,57 @@ def _choose_cases(
         )
         if not panel_windows:
             raise RuntimeError("case pool has no windows in the default panel")
-        # Each layer sees the same length coverage, while the role-to-window
-        # assignment rotates with layer index.  This avoids coupling one role
-        # permanently to one document/split and avoids hash-based sampling.
-        linear_pool = [
-            (
-                layer,
-                role,
-                panel_windows[(layer + role_index) % len(panel_windows)],
+        if effect_panel:
+            # Iteration panel: every selected depth covers all static Linear
+            # roles, while five Attention sentinels span both depth and the
+            # published sequence lengths.  Calibration still follows the
+            # full judge call graph; only dynamic scoring cases are reduced.
+            linear_layers = _depth_spread_indices(
+                pack.layers, min(EFFECT_LINEAR_LAYERS, pack.layers)
             )
-            for layer in range(pack.layers)
-            for role_index, role in enumerate(roles)
-        ]
-        attention_pool = [
-            (layer, test_window)
-            for test_window in panel_windows
-            for layer in range(pack.layers)
-        ]
+            attention_layers = _depth_spread_indices(
+                pack.layers, min(len(panel_windows), pack.layers)
+            )
+            linear_pool = [
+                (
+                    layer,
+                    role,
+                    panel_windows[(layer + role_index) % len(panel_windows)],
+                )
+                for layer in linear_layers
+                for role_index, role in enumerate(roles)
+            ]
+            attention_pool = [
+                (
+                    attention_layers[
+                        min(
+                            len(attention_layers) - 1,
+                            int(round(index * (len(attention_layers) - 1) / max(1, len(panel_windows) - 1))),
+                        )
+                    ],
+                    test_window,
+                )
+                for index, test_window in enumerate(panel_windows)
+            ]
+        else:
+            # Each layer sees the same length coverage, while the
+            # role-to-window assignment rotates with layer index.  This
+            # avoids coupling one role permanently to one document/split and
+            # avoids hash-based sampling.
+            linear_pool = [
+                (
+                    layer,
+                    role,
+                    panel_windows[(layer + role_index) % len(panel_windows)],
+                )
+                for layer in range(pack.layers)
+                for role_index, role in enumerate(roles)
+            ]
+            attention_pool = [
+                (layer, test_window)
+                for test_window in panel_windows
+                for layer in range(pack.layers)
+            ]
     if linear_count is not None:
         if linear_count <= 0:
             raise ValueError("linear_count must be positive when supplied")
@@ -788,6 +850,7 @@ def prepare_pack(
     linear_count: int | None = LINEAR_CASE_COUNT,
     attention_count: int | None = ATTENTION_CASE_COUNT,
     full_cases: bool = False,
+    effect_panel: bool = False,
 ) -> PreparedPack:
     weights = [{role: _pair(value) for role, value in per_layer.items()} for per_layer in raw.weights]
     # Keep every calibration window available for Attention.  Linear follows
@@ -805,7 +868,11 @@ def prepare_pack(
     cal_qkv = [[{"q": _pair(q), "k": _pair(k), "v": _pair(v)} for q, k, v in per_layer] for per_layer in raw.calibration_qkv]
     test_qkv = [[(_pair(q), _pair(k), _pair(v)) for q, k, v in per_layer] for per_layer in raw.test_qkv]
     linear_cases, attention_cases = _choose_cases(
-        raw, linear_count, attention_count, full_cases=full_cases
+        raw,
+        linear_count,
+        attention_count,
+        full_cases=full_cases,
+        effect_panel=effect_panel,
     )
     metadata = dict(raw.metadata)
     metadata.update({
@@ -816,12 +883,15 @@ def prepare_pack(
         "case_design": (
             FULL_CASE_DESIGN
             if full_cases and linear_count is None and attention_count is None
+            else EFFECT_CASE_DESIGN
+            if effect_panel and linear_count is None and attention_count is None
             else DEFAULT_CASE_DESIGN
             if not full_cases and linear_count is None and attention_count is None
             else "explicit-smoke-prefix-v4"
         ),
         "panel_window_indices": list(PANEL_WINDOW_INDICES),
         "full_cases": full_cases,
+        "effect_panel": effect_panel,
         "linear_case_limit": linear_count,
         "attention_case_limit": attention_count,
         "linear_calibration_indices": list(linear_calibration_indices),
@@ -1298,6 +1368,342 @@ def _linear_candidate_role_diagnostics(
     }
 
 
+def _attention_case_identity(item: Mapping[str, Any]) -> tuple[Any, ...]:
+    """Return the stable identity used to pair Attention cases."""
+    return (
+        int(item.get("layer", -1)),
+        int(item.get("test_window", -1)),
+        str(item.get("test_split", "")),
+        int(item.get("test_length", -1)),
+    )
+
+
+def _effect_label(positive: int, negative: int, zero: int) -> str:
+    """Describe paired signs without introducing a promotion threshold."""
+    if positive == 0 and negative == 0:
+        return "no_effect"
+    if positive > 0 and negative == 0:
+        return "consistent_improvement"
+    if negative > 0 and positive == 0:
+        return "consistent_regression"
+    return "mixed"
+
+
+def _paired_effect_summary(items: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    """Summarize exact parent-to-candidate deltas for one case group."""
+    if not items:
+        return {
+            "case_count": 0,
+            "mean_delta_gain": 0.0,
+            "median_delta_gain": 0.0,
+            "positive_cases": 0,
+            "negative_cases": 0,
+            "zero_cases": 0,
+            "win_rate": 0.0,
+            "mean_delta_relative_player_mse": 0.0,
+            "mean_player_mse_ratio": None,
+            "median_player_mse_ratio": None,
+            "component_delta_mean": {},
+            "effect": "no_cases",
+        }
+    deltas = [float(item["delta_gain"]) for item in items]
+    ratios = [
+        float(item["player_mse_ratio"])
+        for item in items
+        if item.get("player_mse_ratio") is not None
+    ]
+    positive = sum(value > 0.0 for value in deltas)
+    negative = sum(value < 0.0 for value in deltas)
+    zero = len(deltas) - positive - negative
+    component_names = sorted({
+        str(name)
+        for item in items
+        for name in item.get("component_deltas", {})
+    })
+    component_delta_mean = {
+        name: sum(float(item.get("component_deltas", {}).get(name, 0.0)) for item in items)
+        / len(items)
+        for name in component_names
+    }
+    return {
+        "case_count": len(items),
+        "baseline_mean_gain": sum(float(item["baseline_gain"]) for item in items) / len(items),
+        "candidate_mean_gain": sum(float(item["candidate_gain"]) for item in items) / len(items),
+        "mean_delta_gain": sum(deltas) / len(deltas),
+        "median_delta_gain": float(statistics.median(deltas)),
+        "positive_cases": positive,
+        "negative_cases": negative,
+        "zero_cases": zero,
+        "win_rate": positive / len(deltas),
+        "min_delta_gain": min(deltas),
+        "max_delta_gain": max(deltas),
+        "mean_delta_relative_player_mse": sum(
+            float(item["delta_relative_player_mse"]) for item in items
+        ) / len(items),
+        "mean_player_mse_ratio": sum(ratios) / len(ratios) if ratios else None,
+        "median_player_mse_ratio": float(statistics.median(ratios)) if ratios else None,
+        "component_delta_mean": component_delta_mean,
+        "effect": _effect_label(positive, negative, zero),
+    }
+
+
+def _paired_group_summary(
+    items: Sequence[Mapping[str, Any]],
+    key: str,
+) -> dict[str, dict[str, Any]]:
+    groups: dict[str, list[Mapping[str, Any]]] = {}
+    for item in items:
+        groups.setdefault(str(item.get(key, "")), []).append(item)
+    return {
+        name: _paired_effect_summary(group)
+        for name, group in sorted(groups.items())
+    }
+
+
+def _paired_case(
+    baseline: Mapping[str, Any],
+    candidate: Mapping[str, Any],
+    metadata: Mapping[str, Any],
+    component_fields: Mapping[str, str],
+) -> dict[str, Any]:
+    baseline_mse = float(baseline.get("mse_player", 0.0))
+    candidate_mse = float(candidate.get("mse_player", 0.0))
+    ratio = candidate_mse / baseline_mse if baseline_mse > 0.0 else None
+    component_deltas = {
+        output_name: float(candidate[source_name]) - float(baseline[source_name])
+        for output_name, source_name in component_fields.items()
+        if source_name in baseline and source_name in candidate
+    }
+    return {
+        **metadata,
+        "baseline_gain": float(baseline.get("gain", 0.0)),
+        "candidate_gain": float(candidate.get("gain", 0.0)),
+        "delta_gain": float(candidate.get("gain", 0.0)) - float(baseline.get("gain", 0.0)),
+        "baseline_relative_player_mse": float(baseline.get("relative_player_mse", 0.0)),
+        "candidate_relative_player_mse": float(candidate.get("relative_player_mse", 0.0)),
+        "delta_relative_player_mse": float(candidate.get("relative_player_mse", 0.0))
+        - float(baseline.get("relative_player_mse", 0.0)),
+        "player_mse_ratio": ratio,
+        "component_deltas": component_deltas,
+    }
+
+
+def _timing_effect(
+    baseline: Mapping[str, Any],
+    candidate: Mapping[str, Any],
+) -> dict[str, Any]:
+    baseline_timing = baseline.get("timing", {})
+    candidate_timing = candidate.get("timing", {})
+    baseline_total = float(baseline_timing.get("api_total_seconds", 0.0))
+    candidate_total = float(candidate_timing.get("api_total_seconds", 0.0))
+    names = sorted(set(baseline_timing.get("api_seconds", {})) | set(candidate_timing.get("api_seconds", {})))
+    by_api: dict[str, Any] = {}
+    for name in names:
+        baseline_seconds = float(baseline_timing.get("api_seconds", {}).get(name, 0.0))
+        candidate_seconds = float(candidate_timing.get("api_seconds", {}).get(name, 0.0))
+        by_api[name] = {
+            "baseline_seconds": baseline_seconds,
+            "candidate_seconds": candidate_seconds,
+            "delta_seconds": candidate_seconds - baseline_seconds,
+            "ratio": candidate_seconds / baseline_seconds if baseline_seconds > 0.0 else None,
+            "baseline_calls": int(baseline_timing.get("api_calls", {}).get(name, 0)),
+            "candidate_calls": int(candidate_timing.get("api_calls", {}).get(name, 0)),
+        }
+    return {
+        "baseline_api_total_seconds": baseline_total,
+        "candidate_api_total_seconds": candidate_total,
+        "delta_api_total_seconds": candidate_total - baseline_total,
+        "api_total_ratio": candidate_total / baseline_total if baseline_total > 0.0 else None,
+        "by_api": by_api,
+        "note": "same-host A/B diagnostic only; local seconds are not official runtime",
+    }
+
+
+def _paired_effect_diagnostics(
+    baseline: Mapping[str, Any],
+    candidate: Mapping[str, Any],
+    focus_linear_roles: Sequence[str] = (),
+) -> dict[str, Any]:
+    """Explain whether one mechanism changed the exact same W/A cases.
+
+    Unlike aggregate proxy means, this diagnostic pairs every case identity,
+    compares parent and candidate output error, and keeps W/A or Q/K/V control
+    arms as signed deltas.  It consumes saved evaluator results and invokes no
+    candidate API, so one immutable parent JSON can be reused across trials.
+    """
+    if baseline.get("status") != "ok" or candidate.get("status") != "ok":
+        return {"enabled": False, "reason": "baseline and candidate must both have status=ok"}
+
+    baseline_linear = {
+        _linear_case_identity(item): item
+        for item in baseline.get("case_scores", {}).get("linear", [])
+    }
+    candidate_linear = {
+        _linear_case_identity(item): item
+        for item in candidate.get("case_scores", {}).get("linear", [])
+    }
+    baseline_attention = {
+        _attention_case_identity(item): item
+        for item in baseline.get("case_scores", {}).get("attention", [])
+    }
+    candidate_attention = {
+        _attention_case_identity(item): item
+        for item in candidate.get("case_scores", {}).get("attention", [])
+    }
+    if set(baseline_linear) != set(candidate_linear) or set(baseline_attention) != set(candidate_attention):
+        return {
+            "enabled": False,
+            "reason": "case identities differ; baseline and candidate must use the same cache and panel",
+            "baseline_linear_cases": len(baseline_linear),
+            "candidate_linear_cases": len(candidate_linear),
+            "baseline_attention_cases": len(baseline_attention),
+            "candidate_attention_cases": len(candidate_attention),
+        }
+
+    standard_mismatches: list[dict[str, Any]] = []
+    for domain, baseline_cases, candidate_cases in (
+        ("linear", baseline_linear, candidate_linear),
+        ("attention", baseline_attention, candidate_attention),
+    ):
+        for identity, baseline_item in baseline_cases.items():
+            candidate_item = candidate_cases[identity]
+            for field in ("mse_standard", "reference_energy"):
+                left = float(baseline_item.get(field, 0.0))
+                right = float(candidate_item.get(field, 0.0))
+                if not math.isclose(left, right, rel_tol=1.0e-12, abs_tol=1.0e-15):
+                    standard_mismatches.append({
+                        "domain": domain,
+                        "identity": list(identity),
+                        "field": field,
+                        "baseline": left,
+                        "candidate": right,
+                    })
+                    break
+    if standard_mismatches:
+        return {
+            "enabled": False,
+            "reason": "standard/reference arms differ; saved results are not a valid paired panel",
+            "mismatches": standard_mismatches[:16],
+        }
+
+    linear_component_fields = {
+        "w_only_gain": "gain_w_only",
+        "a_only_gain": "gain_a_only",
+        "both_gain": "gain_both",
+        "interaction_gain": "interaction_gain",
+        "weight_operand_relative_mse": "weight_relative_mse",
+        "activation_operand_relative_mse": "activation_relative_mse",
+    }
+    attention_component_fields = {
+        "q_only_gain": "gain_q_only",
+        "k_only_gain": "gain_k_only",
+        "v_only_gain": "gain_v_only",
+        "qk_only_gain": "gain_qk_only",
+        "both_gain": "gain_both",
+        "qk_interaction_gain": "qk_interaction_gain",
+        "qkv_interaction_gain": "qkv_interaction_gain",
+        "logit_mse": "logit_mse_player",
+        "probability_mse": "probability_mse_player",
+        "probability_kl": "probability_kl_player_to_reference",
+    }
+    linear_pairs: list[dict[str, Any]] = []
+    for identity in sorted(baseline_linear):
+        baseline_item = baseline_linear[identity]
+        candidate_item = candidate_linear[identity]
+        role = str(candidate_item.get("role", ""))
+        linear_pairs.append(_paired_case(
+            baseline_item,
+            candidate_item,
+            {
+                "layer": int(candidate_item.get("layer", -1)),
+                "role": role,
+                "role_family": str(candidate_item.get("role_family", _linear_role_family(role))),
+                "shape_bucket": str(candidate_item.get("shape_bucket", "")),
+                "test_window": int(candidate_item.get("test_window", -1)),
+                "test_split": str(candidate_item.get("test_split", "")),
+                "test_length": int(candidate_item.get("test_length", -1)),
+            },
+            linear_component_fields,
+        ))
+    attention_pairs: list[dict[str, Any]] = []
+    for identity in sorted(baseline_attention):
+        baseline_item = baseline_attention[identity]
+        candidate_item = candidate_attention[identity]
+        attention_pairs.append(_paired_case(
+            baseline_item,
+            candidate_item,
+            {
+                "layer": int(candidate_item.get("layer", -1)),
+                "test_window": int(candidate_item.get("test_window", -1)),
+                "test_split": str(candidate_item.get("test_split", "")),
+                "test_length": int(candidate_item.get("test_length", -1)),
+            },
+            attention_component_fields,
+        ))
+
+    selectors = tuple(dict.fromkeys(str(value).strip() for value in focus_linear_roles if str(value).strip()))
+    def is_focus(item: Mapping[str, Any]) -> bool:
+        return bool(
+            item.get("role") in selectors
+            or item.get("role_family") in selectors
+        )
+
+    focus_pairs = [item for item in linear_pairs if is_focus(item)]
+    control_pairs = [item for item in linear_pairs if not is_focus(item)]
+    if selectors and not focus_pairs:
+        return {
+            "enabled": False,
+            "reason": "focus selectors matched no Linear role or role family",
+            "focus_selectors": list(selectors),
+            "available_roles": sorted({str(item.get("role", "")) for item in linear_pairs}),
+            "available_role_families": sorted({
+                str(item.get("role_family", "")) for item in linear_pairs
+            }),
+        }
+    linear_payload = {
+        "overall": _paired_effect_summary(linear_pairs),
+        "focus_selectors": list(selectors),
+        "focus": _paired_effect_summary(focus_pairs) if selectors else {"enabled": False, "reason": "no focus role/family supplied"},
+        "control": _paired_effect_summary(control_pairs) if selectors else {"enabled": False, "reason": "no focus role/family supplied"},
+        "by_role": _paired_group_summary(linear_pairs, "role"),
+        "by_role_family": _paired_group_summary(linear_pairs, "role_family"),
+        "by_layer": _paired_group_summary(linear_pairs, "layer"),
+        "by_shape": _paired_group_summary(linear_pairs, "shape_bucket"),
+        "by_split": _paired_group_summary(linear_pairs, "test_split"),
+        "by_test_length": _paired_group_summary(linear_pairs, "test_length"),
+        "worst_cases": sorted(linear_pairs, key=lambda item: float(item["delta_gain"]))[:16],
+        "best_cases": sorted(linear_pairs, key=lambda item: float(item["delta_gain"]), reverse=True)[:16],
+    }
+    attention_payload = {
+        "overall": _paired_effect_summary(attention_pairs),
+        "by_layer": _paired_group_summary(attention_pairs, "layer"),
+        "by_split": _paired_group_summary(attention_pairs, "test_split"),
+        "by_test_length": _paired_group_summary(attention_pairs, "test_length"),
+        "worst_cases": sorted(attention_pairs, key=lambda item: float(item["delta_gain"]))[:16],
+        "best_cases": sorted(attention_pairs, key=lambda item: float(item["delta_gain"]), reverse=True)[:16],
+    }
+    return {
+        "enabled": True,
+        "baseline": str(baseline.get("candidate", "baseline")),
+        "candidate": str(candidate.get("candidate", "candidate")),
+        "formula": "paired delta gain = candidate gain - baseline gain on the same case; positive is better",
+        "decision_policy": "descriptive only: inspect focus direction, sign consistency, control leakage, component deltas, worst cases, and same-host API timing; no fitted score or hidden threshold",
+        "linear": linear_payload,
+        "attention": attention_payload,
+        "timing": _timing_effect(baseline, candidate),
+        "score_delta": {
+            key: float(candidate.get("score", {}).get(key, 0.0)) - float(baseline.get("score", {}).get(key, 0.0))
+            for key in ("linear_mean", "attention_mean", "overall_mean")
+        },
+        "interpretation": {
+            "linear_overall": linear_payload["overall"].get("effect"),
+            "focus": linear_payload["focus"].get("effect") if selectors else "not_selected",
+            "control": linear_payload["control"].get("effect") if selectors else "not_selected",
+            "attention": attention_payload["overall"].get("effect"),
+        },
+    }
+
+
 def _cpu_params(params: Mapping[str, torch.Tensor]) -> dict[str, torch.Tensor]:
     return {name: value.detach().to("cpu") for name, value in params.items()}
 
@@ -1684,12 +2090,167 @@ ARCHIVE_MANIFEST: dict[str, dict[str, Any]] = {
 }
 
 
+def _load_eval_document(path: Path) -> dict[str, Any]:
+    source = path.resolve()
+    if not source.is_file():
+        raise FileNotFoundError(f"evaluation JSON does not exist: {source}")
+    value = json.loads(source.read_text(encoding="utf-8"))
+    if not isinstance(value, dict) or not isinstance(value.get("results"), list):
+        raise ValueError(f"evaluation JSON has no results list: {source}")
+    if value.get("protocol") != PROTOCOL:
+        raise ValueError(
+            f"evaluation JSON protocol {value.get('protocol')!r} != {PROTOCOL!r}: {source}"
+        )
+    return value
+
+
+def _select_eval_result(
+    document: Mapping[str, Any],
+    requested_name: str | None,
+    label: str,
+) -> Mapping[str, Any]:
+    results = [item for item in document.get("results", []) if item.get("status") == "ok"]
+    if requested_name:
+        matches = [item for item in results if str(item.get("candidate", "")) == requested_name]
+        if len(matches) != 1:
+            raise ValueError(f"{label} result {requested_name!r} was not found uniquely")
+        return matches[0]
+    if len(results) != 1:
+        raise ValueError(
+            f"{label} JSON has {len(results)} successful results; select one explicitly"
+        )
+    return results[0]
+
+
+def _format_optional(value: Any, digits: int = 6) -> str:
+    if value is None:
+        return "-"
+    return f"{float(value):.{digits}f}"
+
+
+def _write_paired_effect_report(path: Path, effect: Mapping[str, Any]) -> None:
+    lines = [
+        f"# Paired mechanism effect — {PROTOCOL}",
+        "",
+        f"- baseline: `{effect.get('baseline', '')}`",
+        f"- candidate: `{effect.get('candidate', '')}`",
+        "- comparison: exact layer/role/window pairing; no candidate API is called during JSON replay",
+        "- positive Δ gain means the candidate reduced output error on the same case",
+    ]
+    if not effect.get("enabled"):
+        lines.extend(["", f"Pairing disabled: `{effect.get('reason', 'unknown')}`."])
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        return
+
+    linear = effect.get("linear", {})
+    attention = effect.get("attention", {})
+    rows: list[tuple[str, Mapping[str, Any]]] = [("Linear overall", linear.get("overall", {}))]
+    if linear.get("focus", {}).get("enabled", True):
+        rows.append((f"Linear focus:{','.join(linear.get('focus_selectors', []))}", linear.get("focus", {})))
+        rows.append(("Linear control", linear.get("control", {})))
+    rows.append(("Attention overall", attention.get("overall", {})))
+    lines.extend([
+        "",
+        "## 效果总览",
+        "",
+        "| 范围 | cases | mean Δgain | median Δgain | 改善 | 回归 | 不变 | median MSE ratio | 结论 |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|---|",
+    ])
+    for name, value in rows:
+        lines.append(
+            f"| {name} | {value.get('case_count', 0)} | {value.get('mean_delta_gain', 0.0):.6f} | "
+            f"{value.get('median_delta_gain', 0.0):.6f} | {value.get('positive_cases', 0)} | "
+            f"{value.get('negative_cases', 0)} | {value.get('zero_cases', 0)} | "
+            f"{_format_optional(value.get('median_player_mse_ratio'))} | {value.get('effect', '')} |"
+        )
+
+    lines.extend([
+        "",
+        "## Linear role/family 配对差分",
+        "",
+        "| 分组 | cases | mean Δgain | median Δgain | 改善/回归/不变 | ΔW-only | ΔA-only | Δinteraction |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|",
+    ])
+    linear_groups: list[tuple[str, Mapping[str, Any]]] = []
+    linear_groups.extend((f"family:{name}", value) for name, value in linear.get("by_role_family", {}).items())
+    linear_groups.extend((f"role:{name}", value) for name, value in linear.get("by_role", {}).items())
+    for name, value in linear_groups:
+        components = value.get("component_delta_mean", {})
+        lines.append(
+            f"| {name} | {value.get('case_count', 0)} | {value.get('mean_delta_gain', 0.0):.6f} | "
+            f"{value.get('median_delta_gain', 0.0):.6f} | "
+            f"{value.get('positive_cases', 0)}/{value.get('negative_cases', 0)}/{value.get('zero_cases', 0)} | "
+            f"{components.get('w_only_gain', 0.0):.6f} | {components.get('a_only_gain', 0.0):.6f} | "
+            f"{components.get('interaction_gain', 0.0):.6f} |"
+        )
+    lines.extend([
+        "",
+        "W-only/A-only/interaction 都按各 case 的 standard-error 分母归一化；双侧强耦合时数值可能很大，"
+        "应结合 Both、MSE ratio 和符号一起读取，不能相加解释为独立贡献。",
+    ])
+
+    lines.extend([
+        "",
+        "## 最坏 Linear 回归",
+        "",
+        "| layer | role | split | length | window | Δgain | MSE ratio |",
+        "|---:|---|---|---:|---:|---:|---:|",
+    ])
+    for item in linear.get("worst_cases", [])[:8]:
+        lines.append(
+            f"| {item.get('layer', -1)} | {item.get('role', '')} | {item.get('test_split', '')} | "
+            f"{item.get('test_length', -1)} | {item.get('test_window', -1)} | "
+            f"{item.get('delta_gain', 0.0):.6f} | {_format_optional(item.get('player_mse_ratio'))} |"
+        )
+
+    attention_overall = attention.get("overall", {})
+    attention_components = attention_overall.get("component_delta_mean", {})
+    lines.extend([
+        "",
+        "## Attention 控制臂差分",
+        "",
+        "| ΔQ-only | ΔK-only | ΔV-only | ΔQK-only | ΔBoth | Δprobability MSE | Δprobability KL |",
+        "|---:|---:|---:|---:|---:|---:|---:|",
+        f"| {attention_components.get('q_only_gain', 0.0):.6f} | "
+        f"{attention_components.get('k_only_gain', 0.0):.6f} | "
+        f"{attention_components.get('v_only_gain', 0.0):.6f} | "
+        f"{attention_components.get('qk_only_gain', 0.0):.6f} | "
+        f"{attention_components.get('both_gain', 0.0):.6f} | "
+        f"{attention_components.get('probability_mse', 0.0):.6e} | "
+        f"{attention_components.get('probability_kl', 0.0):.6e} |",
+        "",
+        "## 同机 API 时间差分",
+        "",
+        "| API | baseline(s) | candidate(s) | Δ(s) | ratio | calls(base/candidate) |",
+        "|---|---:|---:|---:|---:|---:|",
+    ])
+    for name, value in effect.get("timing", {}).get("by_api", {}).items():
+        lines.append(
+            f"| {name} | {value.get('baseline_seconds', 0.0):.3f} | "
+            f"{value.get('candidate_seconds', 0.0):.3f} | {value.get('delta_seconds', 0.0):.3f} | "
+            f"{_format_optional(value.get('ratio'), 3)} | "
+            f"{value.get('baseline_calls', 0)}/{value.get('candidate_calls', 0)} |"
+        )
+    lines.extend([
+        "",
+        "该报告只描述同 case 的机制效果和同机成本，不拟合官方分数，也不设置新的晋级阈值。",
+    ])
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
 def _write_json(path: Path, value: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2, allow_nan=False) + "\n", encoding="utf-8")
 
 
-def _write_report(path: Path, result: Mapping[str, Any], pack: PreparedPack) -> None:
+def _write_report(
+    path: Path,
+    result: Mapping[str, Any],
+    pack: PreparedPack,
+    paired_effect: Mapping[str, Any] | None = None,
+) -> None:
     score = result["score"]
     timing = result["timing"]
     decomposition = result.get("decomposition", {})
@@ -1715,11 +2276,47 @@ def _write_report(path: Path, result: Mapping[str, Any], pack: PreparedPack) -> 
         f"| Attention layer macro mean | {score['attention_layer_macro_mean']:.9f} |",
         f"| Candidate wall | {timing['wall_seconds']:.3f}s |",
         f"| Candidate API total | {timing['api_total_seconds']:.3f}s |",
+    ]
+    if paired_effect is not None:
+        lines.extend(["", "## 父版本配对效果"])
+        if paired_effect.get("enabled"):
+            paired_linear = paired_effect.get("linear", {})
+            paired_attention = paired_effect.get("attention", {})
+            paired_rows: list[tuple[str, Mapping[str, Any]]] = [
+                ("Linear overall", paired_linear.get("overall", {})),
+            ]
+            if paired_linear.get("focus", {}).get("enabled", True):
+                paired_rows.extend([
+                    (f"Linear focus:{','.join(paired_linear.get('focus_selectors', []))}", paired_linear.get("focus", {})),
+                    ("Linear control", paired_linear.get("control", {})),
+                ])
+            paired_rows.append(("Attention overall", paired_attention.get("overall", {})))
+            lines.extend([
+                "",
+                f"基线：`{paired_effect.get('baseline', '')}`；候选：`{paired_effect.get('candidate', '')}`。",
+                "",
+                "| 范围 | cases | mean Δgain | median Δgain | 改善/回归/不变 | median MSE ratio | 结论 |",
+                "|---|---:|---:|---:|---:|---:|---|",
+            ])
+            for name, value in paired_rows:
+                lines.append(
+                    f"| {name} | {value.get('case_count', 0)} | {value.get('mean_delta_gain', 0.0):.6f} | "
+                    f"{value.get('median_delta_gain', 0.0):.6f} | "
+                    f"{value.get('positive_cases', 0)}/{value.get('negative_cases', 0)}/{value.get('zero_cases', 0)} | "
+                    f"{_format_optional(value.get('median_player_mse_ratio'))} | {value.get('effect', '')} |"
+                )
+            lines.extend([
+                "",
+                "完整 role/family、W/A 来源、最坏 case、Attention 控制臂和 API 时间差分位于 JSON `paired_effect`。",
+            ])
+        else:
+            lines.extend(["", f"配对已禁用：`{paired_effect.get('reason', 'unknown')}`。"])
+    lines.extend([
         "",
         "## 误差源分解（evaluator-only）",
         "",
         "控制臂只在评测器内重算，不增加六个候选 API 调用，也不改变主分数。gain 为相对标准输出误差的改善；interaction 为正表示超加性互补，负表示收益重叠或递减。",
-    ]
+    ])
     linear_decomposition = decomposition.get("linear", {})
     if linear_decomposition.get("enabled"):
         lines.extend([
@@ -1882,6 +2479,7 @@ def _archive_output(
     cache_path: Path,
     prepared: PreparedPack,
     results: Sequence[Mapping[str, Any]],
+    paired_effect: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     return {
         "protocol": PROTOCOL,
@@ -1898,7 +2496,7 @@ def _archive_output(
             "test_windows": TEST_WINDOW_COUNT,
             "linear_cases": len(prepared.linear_cases),
             "attention_cases": len(prepared.attention_cases),
-            "case_design_scope": "stratified all-layer/role real-W/A panel by default; --full-cases enables Cartesian stress; optional CLI limits are smoke-only",
+            "case_design_scope": "stratified all-layer/role real-W/A panel by default; --effect-panel selects depth-spread paired iteration cases; --full-cases enables Cartesian stress; optional CLI limits are prefix smoke-only",
             "case_design": prepared.metadata.get("case_design", DEFAULT_CASE_DESIGN),
             "panel_window_indices": prepared.metadata.get("panel_window_indices", list(PANEL_WINDOW_INDICES)),
             "calibration_call_graph": prepared.metadata.get(
@@ -1910,10 +2508,12 @@ def _archive_output(
             "runtime_measurement": "sum of elapsed six-API calls; wall_seconds is reported separately and neither is official time",
             "error_source_decomposition": "candidate API outputs are reused in evaluator-only Linear W/A and Attention Q/K/V control arms; it does not alter proxy means or API call counts",
             "trend_validation": "same-cohort pairwise ordering against user-confirmed anchors; diagnostic-only",
+            "paired_effect": "reuse an immutable parent JSON and compare exact layer/role/window output errors; report focus/control signs and W/A or Q/K/V source deltas",
         },
         "data_metadata": prepared.metadata,
         "trend_diagnostics": _trend_diagnostics(results),
         "linear_candidate_role_diagnostics": _linear_candidate_role_diagnostics(results),
+        "paired_effect": dict(paired_effect) if paired_effect is not None else None,
         "results": list(results),
     }
 
@@ -2026,15 +2626,66 @@ def _write_run_report(
     results: Sequence[Mapping[str, Any]],
     prepared: PreparedPack,
     archive: bool,
+    paired_effect: Mapping[str, Any] | None = None,
 ) -> None:
     """Write detailed diagnostics for a single run and compact archive output otherwise."""
     if not archive and len(results) == 1 and results[0].get("status") == "ok":
-        _write_report(path, results[0], prepared)
+        _write_report(path, results[0], prepared, paired_effect=paired_effect)
     else:
         _write_archive_report(path, data_source, capture_seconds, results, prepared)
 
 
+def _focus_selectors(value: str | None) -> tuple[str, ...]:
+    if not value:
+        return ()
+    return tuple(dict.fromkeys(item.strip() for item in value.split(",") if item.strip()))
+
+
+def _run_saved_comparison(args: argparse.Namespace) -> dict[str, Any]:
+    if args.baseline_json is None:
+        raise ValueError("--candidate-json requires --baseline-json")
+    baseline_document = _load_eval_document(args.baseline_json)
+    candidate_document = _load_eval_document(args.candidate_json)
+    baseline_result = _select_eval_result(
+        baseline_document, args.baseline_result, "baseline"
+    )
+    candidate_result = _select_eval_result(
+        candidate_document, args.candidate_result, "candidate"
+    )
+    paired_effect = _paired_effect_diagnostics(
+        baseline_result,
+        candidate_result,
+        _focus_selectors(args.focus_linear_roles),
+    )
+    output = {
+        "protocol": PROTOCOL,
+        "created_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "mode": "paired-json-replay",
+        "baseline_json": str(args.baseline_json.resolve()),
+        "candidate_json": str(args.candidate_json.resolve()),
+        "paired_effect": paired_effect,
+        "results": [candidate_result],
+    }
+    _write_json(args.output, output)
+    if args.report:
+        _write_paired_effect_report(args.report, paired_effect)
+    return output
+
+
 def run(args: argparse.Namespace) -> dict[str, Any]:
+    if args.candidate_json is not None:
+        if args.solution is not None or args.archive:
+            raise ValueError("--candidate-json cannot be combined with --solution or --archive")
+        return _run_saved_comparison(args)
+    if args.baseline_json is not None and (args.solution is None or args.archive):
+        raise ValueError("--baseline-json requires one --solution run or --candidate-json replay")
+    baseline_result: Mapping[str, Any] | None = None
+    if args.baseline_json is not None:
+        baseline_document = _load_eval_document(args.baseline_json)
+        baseline_result = _select_eval_result(
+            baseline_document, args.baseline_result, "baseline"
+        )
+    focus_roles = _focus_selectors(args.focus_linear_roles)
     cache_path = args.cache.resolve()
     capture_started = time.perf_counter()
     if args.cache_mode == "read":
@@ -2050,6 +2701,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         linear_count=args.linear_cases,
         attention_count=args.attention_cases,
         full_cases=args.full_cases,
+        effect_panel=args.effect_panel,
     )
     capture_seconds = time.perf_counter() - capture_started
     if args.archive:
@@ -2077,6 +2729,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             },
         )]
     results: list[dict[str, Any]] = []
+    paired_effect: Mapping[str, Any] | None = None
     for name, item in candidates:
         source = (ROOT / item["path"]).resolve()
         print(f"[{name}] evaluating {source}", flush=True)
@@ -2106,6 +2759,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             }
             print(f"[{name}] ERROR {result['error']}", flush=True)
         results.append(result)
+        if baseline_result is not None and len(results) == 1:
+            paired_effect = _paired_effect_diagnostics(
+                baseline_result, result, focus_roles
+            )
         # Each archive solution is an independent submission.  Do not let a
         # module-level tensor/cache from one candidate change the next
         # candidate's CUDA memory budget or its result.
@@ -2117,13 +2774,46 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             torch.cuda.empty_cache()
         # Checkpoint after every candidate so a long archive run remains
         # inspectable if a process is interrupted.
-        _write_json(args.output, _archive_output(data_source, capture_seconds, cache_path, prepared, results))
+        _write_json(
+            args.output,
+            _archive_output(
+                data_source,
+                capture_seconds,
+                cache_path,
+                prepared,
+                results,
+                paired_effect=paired_effect,
+            ),
+        )
         if args.report:
-            _write_run_report(args.report, data_source, capture_seconds, results, prepared, args.archive)
-    output = _archive_output(data_source, capture_seconds, cache_path, prepared, results)
+            _write_run_report(
+                args.report,
+                data_source,
+                capture_seconds,
+                results,
+                prepared,
+                args.archive,
+                paired_effect=paired_effect,
+            )
+    output = _archive_output(
+        data_source,
+        capture_seconds,
+        cache_path,
+        prepared,
+        results,
+        paired_effect=paired_effect,
+    )
     _write_json(args.output, output)
     if args.report:
-        _write_run_report(args.report, data_source, capture_seconds, results, prepared, args.archive)
+        _write_run_report(
+            args.report,
+            data_source,
+            capture_seconds,
+            results,
+            prepared,
+            args.archive,
+            paired_effect=paired_effect,
+        )
     return output
 
 
@@ -2132,6 +2822,23 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--archive", action="store_true", help="evaluate every archived version with an official result")
     parser.add_argument("--solution", type=Path, help="one solution.py when --archive is not used")
     parser.add_argument("--name", default="candidate", help="name for --solution")
+    parser.add_argument(
+        "--baseline-json",
+        type=Path,
+        help="reuse one saved proxy-v2 parent result for exact paired mechanism deltas",
+    )
+    parser.add_argument(
+        "--candidate-json",
+        type=Path,
+        help="compare a saved candidate JSON to --baseline-json without running any candidate API",
+    )
+    parser.add_argument("--baseline-result", help="candidate name to select from a multi-result baseline JSON")
+    parser.add_argument("--candidate-result", help="candidate name to select from a multi-result candidate JSON")
+    parser.add_argument(
+        "--focus-linear-roles",
+        default="",
+        help="comma-separated static roles or families (for example fc or fc_gate,fc_up) highlighted against unchanged controls",
+    )
     parser.add_argument("--cache", type=Path, default=DEFAULT_CACHE)
     parser.add_argument("--cache-mode", choices=("auto", "read", "write", "off"), default="auto")
     parser.add_argument(
@@ -2151,6 +2858,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="expand every captured layer/role/window tuple for stress only; default uses the stratified real-W/A panel",
     )
+    parser.add_argument(
+        "--effect-panel",
+        action="store_true",
+        help="iteration panel: eight depth-spread layers x all Linear roles plus five depth/length Attention sentinels",
+    )
     parser.add_argument("--capture-device", default="cuda" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--algorithm-device", default="cuda" if torch.cuda.is_available() else "cpu")
     parser.add_argument(
@@ -2167,4 +2879,10 @@ def build_parser() -> argparse.ArgumentParser:
 
 if __name__ == "__main__":
     output = run(build_parser().parse_args())
-    raise SystemExit(0 if output["results"] and all(item.get("status") == "ok" for item in output["results"]) else 1)
+    paired = output.get("paired_effect")
+    success = (
+        bool(output.get("results"))
+        and all(item.get("status") == "ok" for item in output["results"])
+        and (paired is None or paired.get("enabled") is True)
+    )
+    raise SystemExit(0 if success else 1)

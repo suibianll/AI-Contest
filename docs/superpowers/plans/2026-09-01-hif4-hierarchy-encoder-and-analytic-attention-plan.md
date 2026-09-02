@@ -104,6 +104,28 @@ QK 改善，结果标为 `paired_qk_coupling_likely`，不把单侧控制臂当�
 归因；只有定位到具体 role/layer/length 的误差源后，才进入 L1–L4 或 Attention 独立实验。
 若 W-only、A-only 和 Both 的方向不一致，优先检查坐标变换/部署状态交互，不继续盲调参数。
 
+### E0.5a. 父子版本逐 case 配对（新迭代默认）
+
+候选内部四臂仍不能直接回答“这次唯一机制相对父版本到底改好了哪些 case”。后续迭代固定使用
+`--effect-panel --baseline-json <parent.json>`：父版本只运行一次，候选必须复用同一 cache 和
+case identity。Linear effect panel 为 8 个纵深层 `0/3/7/10/13/16/20/23` × 全部 7 role，
+Attention 为 5 个纵深/长度哨兵；校准调用仍保持完整 168 Weight + 24 Attention state。
+`--linear-cases 14/56` 是浅层前缀，只保留作接口 smoke，不再作为算法效果证据。
+
+每次机制实验必须先声明 `focus_linear_roles`；例如 fc 机制用 `fc`，其余静态 role 自动作为
+control。判读顺序固定为：
+
+1. focus 的 mean/median Δgain、MSE ratio 和改善/回归/不变符号；
+2. control 是否为 no-effect，确认没有路由泄漏；
+3. W-only、A-only、Both、interaction 的父子差分，判断收益来自哪一侧；
+4. 最差 role/layer/shape/split/length，避免均值掩盖局部灾难；
+5. Attention Q/K/V/QK/QKV 是否保持冻结，以及六 API 同机时间变化。
+
+`consistent_improvement/regression`、`mixed` 和 `no_effect` 只是逐 case 符号描述，不构成新的
+阈值。focus 明确改善且 control/冻结场景符合预期后，才跑默认 168+120 panel；完整 panel
+负责复核覆盖面，官方回传仍负责最终排序。已有相同 panel 的 JSON 用 `--candidate-json` 直接
+重放，不重新花 API 时间。
+
 ## E0.6. 跨模型结构探针（已完成，持续作为诊断）
 
 **问题：** `赛事说明书.txt` 只公开六个 API 和数据组织，没有公开模型名称、层数、hidden size、
@@ -258,9 +280,14 @@ oracle 编译成低复杂度部署规则”。Block-Schur 和双侧残差只保�
   `--full-cases` 仅用于额外 stress。
 - 校准调用保持官方状态图：168 个 layer/role Weight state、24 个 Attention state，动态
   case 复用 state；不能按 case 重新校准。默认全量 case 不使用任何 5:4 或其它人为权重。
-- 本地只比较同机 A/B 的 `linear_mean`、`attention_mean`、逐 role/case 和六 API 分解。
+- 机制开发先用 `--effect-panel` 的纵深 56 Linear + 5 Attention，并通过保存的 parent JSON 做
+  exact paired A/B；`--linear-cases/--attention-cases` 只用于前缀 smoke。父子 case 或标准臂
+  不一致时不得比较。
+- 本地决策优先看 focus/control 的逐 case signed delta、W/A 或 Q/K/V 来源、最坏层和六 API
+  分解，不再用 aggregate `linear_mean` 的小数点变化单独晋级。
 - 官方 `<300s` 只由官方回传确认。本地秒数不得覆盖 v86 通过和 v128/v129/v130/v131 超时事实。
-- 小样本 workbench 只用于回答机制问题；正式晋级必须跑完整 proxy-v2，并通过 E0 趋势审计。
+- effect panel 只用于快速回答机制问题；有一致、可解释信号后才跑完整 168+120 proxy-v2 并
+  通过 E0 趋势审计。完整笛卡尔 panel 仍只作 stress。
 
 ### 1.3 版本纪律
 
@@ -423,6 +450,11 @@ Student 输出 `s_q/s_d` 选择、lv2/lv3 决策或少量合法候选索引。�
 
 **验收：** 在交换 fold 上改善真实 `Q_XQ_W^T` 输出误差；动态复杂度不高于 L1；完整评测才决定
 是否晋级。
+
+**评测落地：** L3 每个 student 先与固定 parent effect JSON 配对，focus 只包含它实际修改的
+role。除总体 gain 外，必须报告 teacher recoverable margin、student 收回比例、focus 正负 case、
+control 路由泄漏、A-only/Both delta 和最坏层。若均值改善来自少数浅层而 median/深层为负，
+直接判为不可压缩或特征不足，不通过扩大候选网格掩盖。
 
 **失败处理：** 若 teacher-student gap 大，报告不可压缩的决策特征；不扩大成神经网络或复杂
 meta-router。

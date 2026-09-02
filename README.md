@@ -6,7 +6,7 @@
 > 新提交的官方时间、版本号和源码 SHA 尚未同步，因此当前不推测其 `<300s` 状态；根目录现已
 > 用可上传的单文件源码直接合并 v140 Linear、v86 Attention，作为结构验证候选。
 
-更新时间：2026-09-01。当前仓库只认一套本地评测协议：
+更新时间：2026-09-02。当前仓库只认一套本地评测协议：
 [`evaluator/official_eval.py`](evaluator/official_eval.py)。旧的
 `real_model_suite.py`、`sampled-means-v1/v2` 和旧 JSON 不再用于排名、时间判断或调参。
 
@@ -72,7 +72,7 @@
 | Attention calibration | **`[10, 128, 512, 1024, 1024]`**，每个 Q/K/V 样本保持自己的序列长度 |
 | Linear calibration | 每个 layer/role 只校准一次，使用前两折；动态 case 共享该状态 |
 | Test windows | 12 个互不重复的 validation/test 文档窗口，长度按 `[10,128,512,1024,1024,10,128,512,1024,1024,128,512]` 轮换 |
-| 用例 | 默认 168 Linear + 120 Attention 的分层真实 W/A panel；`--full-cases` 才展开 2016 + 288 stress；`--linear-cases/--attention-cases` 仅用于 smoke |
+| 用例 | 默认 168 Linear + 120 Attention 分层 panel；迭代用 `--effect-panel` 的 56 Linear（8 个纵深层×7 role）+ 5 Attention 哨兵；`--full-cases` 才展开 2016 + 288 stress；case limit 仅用于前缀 smoke |
 | API | 六个赛事接口，顺序和参数形状与 `赛事说明书.txt` 一致 |
 | 参数校验 | 独立校验 E6M2、`scale_lv2/lv3`、sign、mant、state 深度/节点数和 CPU tensor 规则 |
 | 标准基线 | `evaluator/reference_hif4.py` 的固定标准 codec；候选代码不能改变分母 |
@@ -103,6 +103,14 @@ V-only、QK-only、QKV 控制臂，同时报告 logits MSE、softmax probability
 layer/length 聚合。逐 case 结果在 JSON 的 `case_scores`，聚合结果在 `decomposition`；
 这些控制臂复用已产生的候选输出，不增加候选 API 调用。仅在快速 smoke 时使用
 `--no-decomposition`。
+
+机制迭代不再用两个总均值手工相减。先把父版本运行一次并保存 JSON，候选用同一 cache、
+同一 `--effect-panel` 和 `--baseline-json` 逐 case 配对。JSON 的 `paired_effect` 会分别给出：
+目标 role/family、未改动 control、每个 role/layer/shape/split/length 的 signed delta，改善/回归/
+不变 case 数，W/A 或 Q/K/V 控制臂变化，最好/最坏 case，以及六 API 同机时间差。配对会校验
+case identity、标准 codec MSE 和 reference energy；任一不一致就拒绝比较，不把不同 panel
+误当成算法效果。`consistent_improvement`、`consistent_regression`、`mixed`、`no_effect`
+只是符号描述，不是新的人为晋级阈值。
 
 说明书只规定六个 API 和 Linear/Attention 数据组织，没有公开 Qwen、层数、GQA 或 RoPE。
 要检查模型结构假设，可运行独立的
@@ -168,11 +176,51 @@ W/A 四臂分解互补，不增加六个 API 调用。ROAB/BOAT/CAT 这类私有
   --output artifacts\official_eval\v084.json --report logs\official_eval\v084.md
 ```
 
+快速机制迭代先建立一次父版本 effect baseline：
+
+```powershell
+.venv\Scripts\python.exe -u evaluator\official_eval.py `
+  --solution <parent-solution.py> --name parent --effect-panel `
+  --cache artifacts\official_eval\cache\qwen2.5-0.5b-proxy-v2.pt `
+  --cache-mode read --algorithm-device cuda `
+  --output artifacts\official_eval\parent-effect.json `
+  --report logs\official_eval\parent-effect.md
+```
+
+随后每个候选只运行自己，直接与保存的父版本逐 case 配对；例如只改 fc：
+
+```powershell
+.venv\Scripts\python.exe -u evaluator\official_eval.py `
+  --solution <candidate.py> --name candidate --effect-panel `
+  --baseline-json artifacts\official_eval\parent-effect.json `
+  --focus-linear-roles fc `
+  --cache artifacts\official_eval\cache\qwen2.5-0.5b-proxy-v2.pt `
+  --cache-mode read --algorithm-device cuda `
+  --output artifacts\official_eval\candidate-effect.json `
+  --report logs\official_eval\candidate-effect.md
+```
+
+已有两个相同 panel 的 JSON 可零 API 重放：
+
+```powershell
+.venv\Scripts\python.exe evaluator\official_eval.py `
+  --baseline-json <parent.json> --candidate-json <candidate.json> `
+  --focus-linear-roles fc --output <paired.json> --report <paired.md>
+```
+
+判读固定按以下顺序：先看 focus 的均值、median 和正负 case 是否同向；再看 control 是否保持
+不变；再看 W-only/A-only/Both/interaction（Attention 则看 Q/K/V/QK/QKV）；最后检查最坏层、
+长度桶和同机 API 增量。只有这种配对证据清楚后才值得跑默认 168+120 panel。总均值的小幅上升
+但 focus 正负混合，只能说明结果不稳定，不能据此晋级。
+
 `--cache-mode read` 缺少或不符合协议的快照会直接失败，不会悄悄切换数据或形状。
 默认命令使用 168 Linear + 120 Attention 的固定分层 panel，覆盖所有 layer/role 和五个官方
-Attention 长度；它保留真实 W/A，同时避免 12 个窗口与所有 layer/role 的笛卡尔展开。只有做
-压力测试时才显式加 `--full-cases`；定位接口或格式问题时使用 `--linear-cases 1
---attention-cases 1`，两类结果都不能与默认 panel 混排。
+Attention 长度；它保留真实 W/A，同时避免 12 个窗口与所有 layer/role 的笛卡尔展开。快速
+算法迭代显式加 `--effect-panel`：Linear 选择 8 个覆盖模型首、中、末深度的层且每层保留全部
+7 个 role，Attention 选择 5 个同时覆盖深度和公开长度的哨兵。校准调用仍保持完整 168 Weight +
+24 Attention state，因此它缩短的是动态评分和分解，不会伪造一个按 case 重新校准的便宜协议。
+只有做压力测试时才显式加 `--full-cases`；`--linear-cases/--attention-cases` 是按顺序截断的接口
+smoke，尤其 `14/56` 不是纵深采样，不能再用于判断算法效果。不同 panel 的结果不能混排。
 缓存必须记录模型、数据 revision、五个 Attention 长度、SHA256 和权重原生
 `[out_features, in_features]` 布局。没有 CUDA 时可以把 `--algorithm-device` 改为 `cpu`，
 但 CPU 秒数只适合 CPU 内部 A/B。

@@ -1,6 +1,6 @@
 # 当前状态：官方最高分更新为 17816，Linear 新框架成立
 
-更新：2026-09-01。
+更新：2026-09-02。
 
 ## 0. 最新官方进展
 
@@ -210,6 +210,41 @@ v154 已按该要求在同一 `s_q` code 下用最终 `Q(W)` Gram/输出度量�
 合法 E6M2，但 Qwen role 均与 v153 完全相同（fc family `0.334432`），没有恢复 v153 的
 回归，因此也标记 `REJECTED`。当前结论是：直接 s_q/s_d 变体先暂停，下一步改做有明确
 recoverable margin 输出的 L3 teacher/oracle 诊断，不再试 CAT/ROAB 或 scale 参数。
+
+## 2.7 配对机制评测（新迭代默认）
+
+此前 14/56-case 运行是默认 case 序列的前缀：14 只覆盖 layer 0–1，56 只覆盖 layer 0–7，
+并不是模型纵深采样。它们适合查接口，却会把浅层偶然收益当作机制趋势；同时父候选比较依赖
+手工相减 aggregate mean，不能稳定区分目标 role、路由泄漏和 W/A 来源。现已把算法迭代方式
+改为 `paired-effect-panel-v1`：
+
+- `--effect-panel` 固定选择 layer `0/3/7/10/13/16/20/23`，每层保留全部七个静态 Linear
+  role，共 56 cases；Attention 选择五个覆盖模型深度与五个公开长度的哨兵；
+- 校准仍按完整调用图产生 168 个 Weight state 和 24 个 Attention state，只减少动态评分与
+  evaluator-only 分解，因此不会因为缩短 panel 而改变 calibration 生命周期；
+- 父版本只运行一次并保存 immutable JSON。候选通过 `--baseline-json` 在完全相同的
+  `layer/role/window/split/length` 上配对；已有结果也可用 `--candidate-json` 零 API 重放；
+- `--focus-linear-roles fc` 将 fc_gate/fc_up 作为目标组，并把 q/k/v/o/proj 作为 control。
+  报告同时输出 mean/median Δgain、改善/回归/不变 case、MSE ratio、逐 role/family/layer、
+  W-only/A-only/Both/interaction、最坏 case、Attention Q/K/V 和六 API 时间差；
+- case identity、标准臂 MSE 或 reference energy 不一致时比较直接失败。符号标签只描述结果，
+  不增加人为门槛，也不把 proxy delta 换算成官方分数。
+
+用新逻辑重放已有证据后，v152 相对父版本的 Linear overall 为 `+0.000186`，但只有
+`3 改善 / 3 回归 / 50 不变`；focus fc 为 `+0.000653`、`3/3/10`，结论为 `mixed`，control
+40 cases 与 Attention 均完全不变。进一步拆分显示 fc_gate `+0.001871`，fc_up
+`−0.000565`；最坏 case 是 layer 7 fc_gate `−0.007283`，其次 layer 0/1 fc_up
+`−0.003087/−0.001435`。所以旧的 `+0.000187` 不是“弱但稳定提升”，而是 gate/up 与层间
+正负抵消，拒绝结论得到更具体的原因。证据见
+[`v152 paired report`](../logs/official_eval/v152-fc-cat-off-paired-effect.md)。
+
+v153 重放则更清晰：focus fc mean `−0.048211`、median `−0.049511`，`0 改善 / 4 回归 /
+0 不变`，median player-MSE ratio `1.078387`，为 `consistent_regression`；10 个 control 和
+Attention 均不变。证据见
+[`v153 paired report`](../logs/official_eval/v153-fc-decoupled-paired-effect.md)。后续 L3 的
+每个候选都先按同一父 JSON、effect panel 和目标 role 生成 paired effect；只有 focus 方向、
+control、误差源和最坏层都可解释，才运行默认 168+120 panel。完整 panel 仍用于复核，不再是
+每次小迭代的第一步。
 
 ## 3. 历史 v1 结果表（不可与 proxy-v2 混用）
 
