@@ -117,6 +117,19 @@ JSON/report > 未验证推测。发生冲突时保留原始证据并更新状态
 
 - 已有结果足以回答的问题不重复跑全量评测；只有代码发生实质变化、需要复核异常或用户明确
   要求时才重新评测。小改动可以先做针对性 smoke/单层测试，不强制跑完整测试套件。
+- **固定评测流水线（2026-09-02 起）**：同一 parent、cache、设备和 evaluator 只建立一次
+  immutable parent JSON；后续候选一律复用该 JSON，不重复运行 parent。每个新机制最多按
+  `smoke → effect-panel → default-panel` 顺序推进：`smoke` 只检查六 API、合法状态和目标
+  layer/role，不能作为效果证据；`effect-panel` 使用 `--effect-panel --baseline-json`，保留
+  完整 168 Weight + 24 Attention calibration，只减少动态评分到 56 Linear + 5 Attention，
+  用于一次父子逐 case 归因；只有 focus 方向、control 无泄漏、最坏 case 可解释且没有需要
+  立即拒绝的回归时，才运行一次 `default-panel`（168 + 120）复核。default 未通过即停止并
+  记录 `REJECTED`，不因计时波动或小数变化重跑。
+- 已生成的同 panel JSON 必须使用 `--candidate-json` 做零 API 的配对重放；不得为了重新输出
+  W/A、Q/K/V 分解而再次调用候选 API。只有以下情况允许重跑同一阶段：源码/评测器/cache/
+  device 实质变化、进程或环境明确失败、或用户明确要求复核；重跑原因必须写入日志。
+- 评测阶段的失败要区分 `ERROR`（接口/环境失败，修复后才可重跑）、`REJECTED`（机制证据
+  已足以否定）和 `TIMEOUT`（超时事实）。不把一次失败重跑产生的数字与原始 JSON 覆盖合并。
 - 新机制的默认顺序是：接口/合法性 smoke → 与固定 parent JSON 的 effect-panel 配对 → 只有
   focus 方向、control、误差源和最坏 case 都可解释时才跑默认 168+120 panel。不得用 aggregate
   `linear_mean` 的微小变化代替配对证据，也不得因少数浅层收益掩盖 median 或深层回归。
@@ -200,11 +213,13 @@ JSON/report > 未验证推测。发生冲突时保留原始证据并更新状态
   的 exact output margin 对 `fc_gate/fc_up` 分别为 `-0.094751/-0.112680`，不能编译成稳定
   student/v155。规范 teacher 约 `597.7s` 只算研究成本；日常迭代只能用 layer-3 batched
   Jacobi fast probe（约 `10.35s`）定位最坏层，不能把它当候选评分。
-- L2 的首个 2×2 analytic pair-balance local-only probe 已拒绝：fc focus 配对均值
-  `-0.314079`（16/16 回归），说明朴素矩阵平衡破坏静态 Weight code；后续 L2 必须加入部署
-  输出 metric 修正，不重复同类无约束变换。当前下一步是 layer 3 最坏 fold 的 cross-fold
-  feature/decision stability 快探针；失败后立即转结构化 L2，不创建 v155、不修改 root，且
-  继续冻结 v86 Attention。
+- L3 cross-fold feature/decision stability 快探针已完成但未找到可压缩的固定规则，L3 表示族
+  关闭；L2 的首个 2×2 analytic pair-balance local-only probe 也已拒绝：fc focus 配对均值
+  `-0.314079`（16/16 回归），说明朴素矩阵平衡破坏静态 Weight code，不再重复同类无约束
+  变换。L5a quartile-interleave permutation 的原始 effect panel 虽为 mixed（5 个回归），
+  稳定性门控版 effect panel 为 `+0.000487`、2 改善/0 回归/14 不变，但尚未形成正式 v155；
+  root 不变，继续冻结 v86 Attention。该候选只允许完成一次 default-panel 复核；若出现回归
+  即记录拒绝，不再循环重跑。
 - 评测结果必须先看 `evaluation_scope`：只有同 cache 的 `default-panel` 可做本地 proxy 排名；
   `effect-panel`/`paired-json-replay` 只做父子诊断，`full-stress` 只做压力，`smoke-prefix`
   只做接口，GPT-2/hif4 与旧 `official-shape-v1` 只做跨结构/历史审计。任何 scope 都不是
