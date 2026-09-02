@@ -105,6 +105,10 @@ silently assigned a score.
 | v156 | `20260902_v156_l4-weight-decoupled_rejected` | **16580** | **204.3 s** | **pass, but rejected: 164 points below v86** |
 | v157 | `20260902_v157_v86-roab-only_rejected` | **16729** | **218.96 s** | **pass, but rejected: 15 points below v86** |
 
+待官方回传：v158 位于 `20260902_v158_v86-attention-matrix-smooth_scoreNA_timeNA`，从 exact
+v86 只修改 Attention Q/K；SHA256
+`18F9DE037A29AD96EE06FB5C73095E9AD36D0D04DA2953162181BE3AEA528277`。
+
 ## 2026-09-01 official-shape-v1 local candidates
 
 These are local reproductions only; no official score/time is inferred from them.  Their
@@ -135,6 +139,7 @@ directories follow the same immutable naming rule as the historical archive:
 | v155 | `20260902_v155_l5a-permutation-stability_rejected` | **0.570999 (default)** / 0.588162 (effect) | **0.724735 (default)** / 0.757433 (effect) | **248.121 s (default-equivalent)** / 207.196 s (effect) | **rejected; official 16581/208.5s, 163 points below v86** |
 | v156 | `20260902_v156_l4-weight-decoupled_rejected` | 0.588131 (effect; default not run) | 0.757433 (effect) | 203.994 s (effect) | **rejected; official 16580/204.3s, 164 points below v86** |
 | v157 | `20260902_v157_v86-roab-only_rejected` | NA (legality smoke only) | NA (frozen field-equality check) | NA | **rejected; official 16729/218.96s, 15 points below v86** |
+| v158 | `20260902_v158_v86-attention-matrix-smooth_scoreNA_timeNA` | 0.448180 (default; frozen) | 0.735752 (default) | 295.069 s (default) | **retained official candidate; official score/time pending** |
 
 † The first v147 values come from the original pre-A3 JSON (SHA `9B3EA5...B656`); the second come
 from the later direct-merge A3 JSON (SHA `25C245...9C1B`). The archive was modified in place before

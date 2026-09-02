@@ -38,9 +38,13 @@
 - v155 官方 `16581 / 208.5s`、v156 官方 `16580 / 204.3s`，两者时间均通过但分别低于 v86
   `163/164` 分，已正式拒绝。它们本地 `10^-4` 级正向没有迁移。
 - v157 exact-v86 + ROAB-only 官方 `16729 / 218.96s`，时间通过但低于 v86 `15` 分，已拒绝。
-  这说明 `v138→v140 +123` 不能作为可移植 ROAB 主效应。下一计划是 exact v86 上的一次
-  single-pass block-Schur HiF4-GPTQ，尚未实现；Attention 继续固定 v86。17816 源码若后续
-  到位，再作为独立官方快照归档和对照，不倒推或覆盖当前证据。
+  这说明 `v138→v140 +123` 不能作为可移植 ROAB 主效应。
+- v158 从 exact v86 只增加解析式 GQA 组内 2×2 Attention Matrix-Smooth；Linear 与 V
+  逐字段冻结。effect 配对 Attention `1/0/4`、mean delta `+0.007195`；default 配对
+  `49/16/55`、mean delta `+0.011018`，Linear control `0/0/168`。本地 mixed 不映射官方结果；
+  用户明确要求保留并提交，官方 score/time 当前 `unregistered / NA`。
+- 评测流程立即改为场景隔离：Linear 优化只运行 Linear，Attention 优化只运行 Attention；
+  单侧实验不再重复另一侧完整校准与计分。17816 源码若后续到位，再独立归档。
 
 ## 2. 评测口径
 

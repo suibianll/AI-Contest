@@ -15,6 +15,10 @@
 > `+123`）。因此执行 exact v86 + ROAB-only 的 v157。用户随后回传 v155
 > `16581/208.5s`、v156 `16580/204.3s`、v157 `16729/218.96s`；三者均低于 v86，现已
 > 正式拒绝。v157 证明 ROAB 增量不可迁移，下一实验切换 single-pass block-Schur。
+>
+> 2026-09-02 用户再次纠偏：Attention 在官方构成中占比较高，先执行 exact-v86 + analytic
+> Matrix-Smooth Q/K 的 v158。其本地 default 为 mixed，但本地不能裁决官方排序；按用户要求
+> 保留并推送官方候选。后续单侧实验只运行对应场景，禁止为 Attention 重跑 Linear 或反之。
 
 ## E0. 本地评测趋势代理（DONE）
 
@@ -735,15 +739,17 @@ V 不部署 PAWV；V 的提升只来自 A3 encoder。若 Fisher calibration 开�
    迁移，stored-scale 路线关闭，目录已标记 `_rejected`。
 7. **E1 exact-v86 + ROAB-only（REJECTED）**：v157 官方 `16729 / 218.96s`，低于 v86 `15`
    分；ROAB 收益不可迁移，目录已标记 `_rejected`，路线关闭。
-8. **下一实验：单次 block-Schur HiF4-GPTQ**：从 exact v86 单文件 baseline
+8. **Attention A1 v158（RETAINED / OFFICIAL PENDING）**：从 exact v86 只增加 GQA 组内
+   解析 2×2 Matrix-Smooth，Linear 与 V 冻结；官方 score/time `unregistered / NA`。
+9. **下一 Linear 实验：单次 block-Schur HiF4-GPTQ**：从 exact v86 单文件 baseline
    分支，只在 `fc_gate/fc_up/proj` 中选一个外部归因支持的形状；使用部署 `Q(W)` Gram、两折
    输出 loss 和 effect panel，禁止第二轮完整 oracle、动态候选循环或把 W/A 误差当成独立增益。
-9. **0.8 可达性复判**：比较 v86 player、candidate、合法 teacher 曲线；若 teacher 仍远离 `0.8`，
+10. **0.8 可达性复判**：比较 v86 player、candidate、合法 teacher 曲线；若 teacher 仍远离 `0.8`，
    停止局部 code 搜索，转表示/坐标的新框架。
-10. **官方单变量提交**：固定 v86 Attention，只提交一个 Linear 数学机制；官方分数和 `<300s`
+11. **官方单变量提交**：固定 v86 Attention，只提交一个 Linear 数学机制；官方分数和 `<300s`
     由官方共同裁决，任何本地值只作诊断。
-11. **Attention A0–A4（后置）**：Linear 候选稳定且时间可控后独立推进；第一版只做解析
-    Matrix-Smooth Q/K，保持 v86 调用图和复杂度契约。
+12. **单侧评测规则**：Linear 版本只校准/计分 Linear；Attention 版本只校准/计分 Attention。
+    场景间冻结通过父源码与字段一致性检查证明，不再重复无关侧全量调用。
 
 ## 7. 最小产物与失败记录
 
