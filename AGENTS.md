@@ -7,20 +7,21 @@
 
 ## 1. 当前状态
 
-- 当前仓库内可复现的官方父版本是 **v158：16861 / 223s**；其 Attention Matrix-Smooth
-  作为后续 Linear 研究的冻结参照。
+- 当前根目录 v159 的源码 SHA 已绑定官方分数 **17532**，官方时间未知；v158
+  **16861 / 223s** 仍是时间与源码均完整的安全父版本，其 Attention Matrix-Smooth 继续冻结。
 
 - 用户确认的官方最高分是 **17816**，但源码、版本号、官方时间和 Attention 配置尚未同步；
   它只能作为外部官方锚点，不能伪造归档或替代本地实验结果。
 
-- 根目录 `solution.py` 是当前活动审计代码，不等同于官方父版本，也不自动继承任何历史版本的
-  官方结果。只有用户明确切换父版本时才更新根文件。
+- 根目录 `solution.py` 是 v159 当前活动代码，SHA256
+  `0508045A0DDD0F17679DCA827C265CFC7588E76081D3AECEFF555D257DD4242`；其官方分数为
+  17532，不能补写未知的官方时间。
 
 - 本地 proxy 只用于同机机制诊断和时间记录，不能换算官方分数或官方 `<300s`；已知历史中
   存在本地排序与官方排序反转，任何本地正向都必须等待官方回传确认。
 
-- 下一算法主线：从 v158 冻结 Attention，研究一次性、部署复杂度受限的 block-Schur
-  HiF4-GPTQ；旧 ROAB、L3 表示族、无约束 permutation/scale 搜索不再作为当前方向。
+- 当前立即顺序：修复 v159 不改变数学的 GPU device 错误，建立 CUDA Linear-only
+  compact/default 基线，再优先做输出等价的 Linear calibration 降复杂度；完成前不增加新算法。
 
 ## 2. 提交代码约束
 
@@ -164,14 +165,14 @@ Linear/Attention 权重。只有同一 `proxy-v2` cache、同一 panel、同一 
 推荐命令模板：
 
 ```powershell
-# Linear compact / cached input
-python evaluator/official_eval.py --solution solution.py --linear-only --compact-panel --cache-mode read --nvfp4-cache-mode auto
+# Linear compact / cached input（必须使用 CUDA venv；系统 Python 是 CPU-only）
+.venv\Scripts\python.exe evaluator/official_eval.py --solution solution.py --linear-only --compact-panel --cache-mode read --nvfp4-cache-mode auto --capture-device cuda --algorithm-device cuda
 
 # Attention compact / cached input
-python evaluator/official_eval.py --solution solution.py --attention-only --compact-panel --cache-mode read --nvfp4-cache-mode auto
+.venv\Scripts\python.exe evaluator/official_eval.py --solution solution.py --attention-only --compact-panel --cache-mode read --nvfp4-cache-mode auto --capture-device cuda --algorithm-device cuda
 
 # Complete default-panel integration audit
-python evaluator/official_eval.py --solution solution.py --cache-mode read --nvfp4-cache-mode auto
+.venv\Scripts\python.exe evaluator/official_eval.py --solution solution.py --cache-mode read --nvfp4-cache-mode auto --capture-device cuda --algorithm-device cuda
 ```
 
 ## 6. 证据、比较和 Git

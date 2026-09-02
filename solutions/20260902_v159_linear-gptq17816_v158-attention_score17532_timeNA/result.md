@@ -1,4 +1,4 @@
-# v159 Linear GPTQ merge candidate
+# v159 Linear GPTQ + v158 Attention
 
 ## Scope
 
@@ -30,14 +30,15 @@ improvements, 0 regressions). The smallest paired improvement is still positive;
 `+0.124209` on its eight cases. This is compact-panel evidence only and does not establish official
 generalization beyond the captured Qwen proxy.
 
-Exact evidence files are [`compact-final JSON`](../../../artifacts/official_eval/v159-linear-gptq-compact-final.json),
-[`compact-final report`](../../../logs/official_eval/v159-linear-gptq-compact-final.md), and the
-[`paired replay`](../../../logs/official_eval/v159-v158-compact-paired-final.md).
+Exact evidence files are [`compact-final JSON`](../../artifacts/official_eval/v159-linear-gptq-compact-final.json),
+[`compact-final report`](../../logs/official_eval/v159-linear-gptq-compact-final.md), and the
+[`paired replay`](../../logs/official_eval/v159-v158-compact-paired-final.md).
 
 ## Status
 
-`candidate / scoreNA_timeNA / official unregistered`
+`official score 17532 / timeNA / runtime status unknown`
 
-The full default 168-Linear + 120-Attention audit was not repeated in this merge because compact is
-the required first gate and the full GPTQ path has not yet received a bounded runtime audit. No local
-seconds or proxy gain is converted into an official score/time claim.
+The user reports that this exact merged version scored **17532** officially. No official runtime was
+provided, so `<300s` remains unknown. The attempted CUDA default audit failed before scoring because
+CPU state tensors were used in CUDA calibration arithmetic; this is an environment/code-path error,
+not a local score. The next audit is GPU Linear-only after a math-preserving device fix.

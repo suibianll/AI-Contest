@@ -1,11 +1,12 @@
-# 当前状态：官方最高分更新为 17816，Linear 新框架成立
+# 当前状态：v159 官方 17532，先修复 GPU 路径再降复杂度
 
 更新：2026-09-02。
 
 ## 0. 最新官方进展
 
-用户确认：一套新的 Linear 算法已经在官方评测上产生明确提升，当前最高总分达到
-**17816**，比旧官方最高 v86 的 16744 高 **1072 分**。
+用户确认：根目录同 SHA 的 v159 合并版本官方分数为 **17532**，比 v158 的 16861 高
+**671 分**；官方时间未提供。另一个 17816 结果仍是更高的外部锚点，比 v159 高 284 分，
+但完整源码、Attention 配置和官方时间尚未同步。
 
 用户同时确认 v147 的官方结果为 **16579 / 211s**。它通过 `<300s` 时间限制，但比 v86
 低 165 分，因此按归档规则标记为 `REJECTED`，不作为后续父版本。v147 目录曾被原地替换，
@@ -19,15 +20,14 @@
 - quadratic AdaRound、E6M2 offset、data-driven refinement 和 edge extension；
 - proxy 与 e2e 混合选择，窄层执行联合变换搜索。
 
-官方提交的版本号、源码 SHA、官方运行时间以及对应 Attention 配置仍未提供；用户提供的
-`linear.txt`/`linear_dep.txt` 已据此合成为本地候选 v159，但不能冒充官方源码。当前仍只把
-**17816 记为用户确认的官方精度锚点**，不伪造时间结论。完整理论分析和后续执行顺序见
-[`活动计划`](superpowers/plans/2026-09-01-hif4-hierarchy-encoder-and-analytic-attention-plan.md)。
+用户提供的 `linear.txt`/`linear_dep.txt` 已合成为 v159，并已获得 17532 官方分数；17816 的
+完整提交仍未同步，不能把两者视为同一源码。完整执行顺序见
+[`活动计划`](superpowers/plans/2026-09-02-v159-gpu-audit-and-next-optimization-plan.md)。
 
 ## 1. 版本结论
 
-- **当前仓库内官方基线：v158，16861 分 / 223s。** 它比 v86 提升 `117` 分、只慢 `0.3s`。
-  用户确认的更高分 17816 仍因源码与官方时间未同步而只作为外部锚点。
+- **当前仓库内最高已绑定源码的官方分数：v159，17532 分 / 时间未知。** v158
+  `16861/223s` 仍是时间与源码均完整的安全基线；17816 仍只作为外部锚点。
 - 根目录 [`solution.py`](../solution.py) 已切换为 v159 本地合并候选：Linear 采用用户提供的
   17816 提取及必要 GPTQ/AdaRound 依赖，Attention 字段与 v158 保持不变；SHA256
   `0508045A0DDD0F17679DCA827C265CFC7588E76081D3AECEFF555D257DD4242`。Linear compact
@@ -36,7 +36,10 @@
 - v159 与同 cache 的 v158 compact 配对 mean Δ 为 `+0.149191`（56 改善、0 回归）；`proj`
   八个 case 的配对 Δ 也为正（`+0.124209`）。这仍只是 compact Qwen proxy 证据，不能外推为
   官方泛化结论。候选说明见
-  [`v159 result`](../solutions/20260902_v159_linear-gptq17816_v158-attention_candidate_scoreNA_timeNA/result.md)。
+  [`v159 result`](../solutions/20260902_v159_linear-gptq17816_v158-attention_score17532_timeNA/result.md)。
+- v159 的 CUDA default audit 当前为 `ERROR`，不是低分：返回 state 已复制到 CPU，却在校准
+  临时计算中与 CUDA activation 混用，首个错误位于 `solution.py:8135`。CPU compact 计时中
+  Weight calibration 占 `131.693/167.570s`，因此 GPU 修复后首先优化校准复杂度。
 - v138/v139 虽在官方 `<300s` 内通过，但只有 `15715/15716`，比 v86 低约 1029 分；
   v138–v145 这条“压缩 Attention 后继续叠 Linear 局部模块”的路线已经失败并关闭。
 - v155 官方 `16581 / 208.5s`、v156 官方 `16580 / 204.3s`，两者时间均通过但分别低于 v86
@@ -513,25 +516,16 @@ v86 的部分 scale-aware/output-aware 机制。此前把它描述为“v86 级�
 这些路线要么官方超时，要么官方分数低于 v86，要么只有固定本地 panel 上的 `10^-5–10^-4`
 级差值，不能支撑继续投入。
 
-## 6. 新的理论算法主线
+## 6. 当前活动计划
 
-新的唯一活动计划是
-[`2026-09-01-hif4-hierarchy-encoder-and-analytic-attention-plan.md`](superpowers/plans/2026-09-01-hif4-hierarchy-encoder-and-analytic-attention-plan.md)。核心顺序为：
+唯一活动计划是
+[`2026-09-02-v159-gpu-audit-and-next-optimization-plan.md`](superpowers/plans/2026-09-02-v159-gpu-audit-and-next-optimization-plan.md)。顺序固定为：
 
-1. 当前官方可复现最优为 v158 `16861/223s`；用户确认的 `17816` 尚无源码/时间/Attention
-   配置，不能伪造候选。
-2. L3-D0 与 stability probe 均已完成：same-fold teacher 有 margin，但没有固定 threshold/LUT
-   可跨 fold 编译；L3 直接 activation encoder 关闭。
-3. v155 官方 `16581 / 208.5s`，低于 v86 `163` 分；稳定 permutation 正式拒绝，不作 parent。
-4. v156 官方 `16580 / 204.3s`，低于 v86 `164` 分；stored-scale 路线正式拒绝。本地微小
-   正向不能支撑官方方向。
-5. v157 官方 `16729 / 218.96s`，比 v86 低 `15` 分；ROAB 可移植假设被否定并关闭。
-6. v158 Attention Matrix-Smooth 官方相对 v86 `+117 / +0.3s`，已晋级并成为后续父版本。
-7. 下一计划是一个单次 **block-Schur HiF4-GPTQ** 参照实现，从 v158 分支并冻结其 Attention，优先
-   外部归因支持的 `fc_gate/fc_up/proj` 形状；仍以输出 loss、W/A/interaction 和 API 增量为
-   判据，不增加在线候选。
-8. Attention 后续机制继续从 v158 独立分支；禁止 Gram sweep、PAWV、length-keyed router 和
-   随序列增长的搜索。
+1. 修复 v159 校准临时张量的 CPU/CUDA 混用，不改变返回 state 或数学结果；
+2. 只跑 CUDA Linear compact，配对通过后再跑一次 Linear default；Attention 冻结且不重复测试；
+3. 优先复用 transformed samples、Gram/Hessian 和候选 metric 中间量，先做输出等价降复杂度；
+4. 补齐 17816 的完整源码/Attention 配置后再解释 284 分差，缺失前不做本地拟合；
+5. 后续精度实验只允许一个 A/W 联合 Linear 机制，不增加 layer/role 特调或候选网格。
 
 ## 7. 归档现状与待整理项
 

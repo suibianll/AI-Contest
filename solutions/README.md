@@ -1,10 +1,8 @@
 # HiF4 solutions archive
 
-> **Unarchived official update (2026-09-01):** the user reports a new Linear framework with an
-> official high score of **17816**. The supplied `linear.txt`/`linear_dep.txt` are now recorded as a
-> local reconstruction input, but the official submitted source, version identifier, runtime, and
-> matching Attention configuration remain unverified; v159 below is therefore `scoreNA_timeNA`, not
-> an official snapshot.
+> **Official update (2026-09-02):** the exact v159 merged source is user-confirmed at **17532**;
+> official runtime is still unknown. The separate 17816 result remains an external anchor because
+> its complete source and Attention configuration are unavailable.
 
 `solutions/` contains immutable `solution.py` snapshots. The active code is only the repository
 root [`solution.py`](../solution.py). Every snapshot below was submitted or retained as an
@@ -42,9 +40,9 @@ cohort ordering inversions without fitting them.
 
 ### Current best and scope rule (2026-09-02)
 
-The best reproducible official result in this repository is **v158: 16861 / 223 s (pass)**.
-The user-confirmed overall high score **17816** has no synchronized source, version or official
-time yet, so it is an official anchor only, not an archive candidate. v147 is **16579 / 211 s**
+The highest official score bound to a repository source is **v159: 17532 / time unknown**. v158
+**16861 / 223 s** remains the highest source-and-runtime-complete pass. The separate **17816** result
+has no synchronized full source or Attention configuration, so it remains an external anchor. v147 is **16579 / 211 s**
 (time pass but below v86, rejected); v140 is **15838 / 207 s** (rejected). The pre-A3 parent effect
 control is local-only (`Linear=0.588023229`, `Attention=0.757433277`, API `202.317 s`) and is not
 an official score.
@@ -105,6 +103,7 @@ silently assigned a score.
 | v156 | `20260902_v156_l4-weight-decoupled_rejected` | **16580** | **204.3 s** | **pass, but rejected: 164 points below v86** |
 | v157 | `20260902_v157_v86-roab-only_rejected` | **16729** | **218.96 s** | **pass, but rejected: 15 points below v86** |
 | v158 | `20260902_v158_v86-attention-matrix-smooth_retained` | **16861** | **223 s** | **pass; retained, +117 vs v86** |
+| v159 | `20260902_v159_linear-gptq17816_v158-attention_score17532_timeNA` | **17532** | — | **official score reported; runtime unknown** |
 
 ## 2026-09-01 official-shape-v1 local candidates
 
@@ -137,7 +136,7 @@ directories follow the same immutable naming rule as the historical archive:
 | v156 | `20260902_v156_l4-weight-decoupled_rejected` | 0.588131 (effect; default not run) | 0.757433 (effect) | 203.994 s (effect) | **rejected; official 16580/204.3s, 164 points below v86** |
 | v157 | `20260902_v157_v86-roab-only_rejected` | NA (legality smoke only) | NA (frozen field-equality check) | NA | **rejected; official 16729/218.96s, 15 points below v86** |
 | v158 | `20260902_v158_v86-attention-matrix-smooth_retained` | 0.448180 (default; frozen) | 0.735752 (default) | 295.069 s (default) | **retained; official 16861/223s, +117 vs v86** |
-| v159 | `20260902_v159_linear-gptq17816_v158-attention_candidate_scoreNA_timeNA` | **0.705515 (compact)** | frozen v158 | **167.570 s API / 174.228 s wall (compact)** | **candidate; paired compact Δ+0.149191, 56/0 improve/regress; official unregistered** |
+| v159 | `20260902_v159_linear-gptq17816_v158-attention_score17532_timeNA` | **0.705515 (CPU compact)** | frozen v158 | **167.570 s API / 174.228 s wall (compact)** | **official 17532, time unknown; CUDA default currently device ERROR** |
 
 † The first v147 values come from the original pre-A3 JSON (SHA `9B3EA5...B656`); the second come
 from the later direct-merge A3 JSON (SHA `25C245...9C1B`). The archive was modified in place before
