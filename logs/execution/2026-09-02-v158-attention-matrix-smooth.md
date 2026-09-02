@@ -19,3 +19,10 @@ v158 从 exact v86 分支，Linear 与 V 冻结，只为 Q/K 增加解析的 GQA
 `67.176s`、wall `67.465s`。对应证据为
 `artifacts/official_eval/v158-attention-only-smoke.json` 与
 `logs/official_eval/v158-attention-only-smoke.md`。
+
+## 官方回传
+
+用户于 2026-09-02 确认 v158 官方结果为 **`16861 / 223s`**。相对 exact v86 的
+`16744 / 222.7s`，分数提升 **`+117`**，时间仅 **`+0.3s`**，因此正式标记 `RETAINED` 并
+晋级为仓库内最高可复现官方基线。此前本地 default 的 `49/16/55 mixed` 不得覆盖这项官方
+事实；它只说明本地 Qwen cases 不能做官方晋级门禁。

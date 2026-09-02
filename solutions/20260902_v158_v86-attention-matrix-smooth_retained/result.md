@@ -1,6 +1,6 @@
 # v158 — exact v86 + analytic Attention Matrix-Smooth
 
-- **Status:** `RETAINED`（官方候选，结果待回传）
+- **Status:** `RETAINED`（官方通过，新可复现基线）
 - **Parent:** v86，官方 `16744 / 222.7s`
 - **唯一算法变化:** Linear 与 V 冻结；在 v86 最终 Q/K 坐标后，对每个 GQA KV 组、每个相邻
   2 通道解析求解 `S A S = B`，Q 使用 `M=sqrt(S)`，K 使用 `M^-T`。连续 QK logits 不变；
@@ -8,7 +8,7 @@
 - **协议:** `proxy-v2`，Qwen2.5-0.5B，cache
   `artifacts/official_eval/cache/qwen2.5-0.5b-proxy-v2.pt`，algorithm device `cuda`。
 - **Effect command:**
-  `.venv\Scripts\python.exe -u evaluator\official_eval.py --solution solutions\20260902_v158_v86-attention-matrix-smooth_scoreNA_timeNA\solution.py --name v158-v86-attention-matrix-smooth --cache artifacts\official_eval\cache\qwen2.5-0.5b-proxy-v2.pt --cache-mode read --effect-panel --algorithm-device cuda --baseline-json artifacts\official_eval\v086-proxy-v2-effect.json --output artifacts\official_eval\v158-v86-attention-matrix-smooth-effect.json --report logs\official_eval\v158-v86-attention-matrix-smooth-effect.md`
+  `.venv\Scripts\python.exe -u evaluator\official_eval.py --solution solutions\20260902_v158_v86-attention-matrix-smooth_retained\solution.py --name v158-v86-attention-matrix-smooth --cache artifacts\official_eval\cache\qwen2.5-0.5b-proxy-v2.pt --cache-mode read --effect-panel --algorithm-device cuda --baseline-json artifacts\official_eval\v086-proxy-v2-effect.json --output artifacts\official_eval\v158-v86-attention-matrix-smooth-effect.json --report logs\official_eval\v158-v86-attention-matrix-smooth-effect.md`
 - **Effect result:** Linear `0.480787684`，Attention `0.764627976`；配对 Linear
   `0/0/56`、Attention `1/0/4`，mean delta `+0.007194699`。API `293.102s`，wall
   `307.247s`；相对父版本 Attention calibration `+3.031s`，Q/K 动态合计约 `+0.0013s`。
@@ -21,6 +21,7 @@
   `9.54e-7`；Linear calibration、Linear dynamic、V dynamic 与 v86 逐字段一致；真实 Qwen
   Attention smoke 合法；单文件可编译。
 - **SHA256:** `18F9DE037A29AD96EE06FB5C73095E9AD36D0D04DA2953162181BE3AEA528277`
-- **Official:** score `unregistered`；time `NA`；status `unknown`。
-- **Decision:** 按用户要求不以本地 mixed 结果拒绝，保留并提交官方评测；官方回传后再决定
-  是否晋级。根 `solution.py` 不切换。
+- **Official:** score `16861`；time `223s`；status `pass`（用户 2026-09-02 回传）。
+- **Official delta vs v86:** `+117` 分，`+0.3s`。
+- **Decision:** 正式晋级为仓库内最高可复现官方基线。该结果同时证明本地 default 的 mixed
+  标签不能否定官方 Attention 方向。根 `solution.py` 未切换。

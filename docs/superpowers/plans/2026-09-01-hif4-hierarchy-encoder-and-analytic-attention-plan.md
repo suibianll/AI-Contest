@@ -17,8 +17,9 @@
 > 正式拒绝。v157 证明 ROAB 增量不可迁移，下一实验切换 single-pass block-Schur。
 >
 > 2026-09-02 用户再次纠偏：Attention 在官方构成中占比较高，先执行 exact-v86 + analytic
-> Matrix-Smooth Q/K 的 v158。其本地 default 为 mixed，但本地不能裁决官方排序；按用户要求
-> 保留并推送官方候选。后续单侧实验只运行对应场景，禁止为 Attention 重跑 Linear 或反之。
+> Matrix-Smooth Q/K 的 v158。其本地 default 为 mixed，但官方结果为 **`16861 / 223s`**，
+> 相对 v86 **`+117 / +0.3s`**，已正式晋级。后续单侧实验只运行对应场景，禁止为 Attention
+> 重跑 Linear 或反之。
 
 ## E0. 本地评测趋势代理（DONE）
 
@@ -385,11 +386,11 @@ stored-scale 继续调参，必须从 exact v86 分支。
 | A@W 输出监督、Weight HSDQ/GPTQ | 多折 A@W、Weight-HSDQ、部署 Gram gate、LRH/C1 | **已大量尝试但非完整 block-GPTQ**：全宽/多轮/低秩方案过拟合或超时；还缺一个单次 block-Schur/HiF4-GPTQ 参照实现 |
 | Smooth/CAT/BOAT、Permutation、Hadamard/rotation | CAT 分流、BOAT、L5a、H32/H64 与等价变换 | **主族已覆盖**：v155 的稳定四分位 permutation 仅在 Qwen 低召回正向，跨 GPT-2 轻微回归；只作 control，不再调参数或默认叠加 |
 | biased rounding、activation compensation | HiF4 hierarchy refine、JDRQ、cross64、A@W residual、L3 teacher | **局部做过，编译缺口未解决**：teacher 有 margin 但跨 fold 不稳定；还缺“单次输出度量 + 合法写回”的 Weight/Activation 结构实现 |
-| Attention Q/K scaling、K center、Q/K Hadamard、V 非对称、true rerank | v034/v075/v086、PAWV diag-only、v128–v131 | **已覆盖但复杂路径失败**：v86 保持冻结；v128–v131 的动态搜索官方超时；尚未实现同复杂度解析 Matrix-Smooth Q/K |
+| Attention Q/K scaling、K center、Q/K Hadamard、V 非对称、true rerank | v034/v075/v086、PAWV diag-only、v128–v131、v158 | **解析路线已验证**：v158 Matrix-Smooth 官方 `16861/223s`，相对 v86 `+117/+0.3s`；高复杂度动态搜索仍关闭 |
 | 外部 HiF4 / GPTQ / MR-GPTQ 迁移 | youxilee/hif4 role 归因、GPT-2 交叉模型、MR-GPTQ/LRH/C1 | **已审计**：codec parity 和若干 residual 不可直接迁移；外部结果只能定位 fc/proj 风险，不能拟合官方分数 |
 | block-Hessian HiF4-GPTQ（单次） | 仅有 full/block HSDQ、LRH 和多轮结构 proposals | **未完成**：这是最值得补的 Linear 缺口，但必须以部署 `Q(W)` Gram、固定 block 顺序、一次写回和两折 gate 实现，不能复刻旧多轮循环 |
 | Weight decoupled encoder | 计划中，尚未在稳定坐标父版本上实现 | **未完成**：先做一版闭式 stored-scale 更新；若无跨 fold 正向立即关闭 |
-| Analytic Matrix-Smooth Q/K、静态 Fisher | 只有旧 reciprocal/center/rotation 实现 | **未完成**：Linear 稳定且时间可控后再做，严格保持 v86 API/动态复杂度 |
+| Analytic Matrix-Smooth Q/K、静态 Fisher | v158 Matrix-Smooth 已实现；Fisher 未启用 | **Matrix-Smooth DONE/RETAINED**：官方 `16861/223s`；后续从 v158 做单变量 Attention 扩展 |
 
 因此当前不是继续“把所有旧候选再扫一遍”，而是补齐两个真正未闭环的层次：
 `(1)` 单次部署-输出度量的 block-Hessian/Weight-decoupled Linear；`(2)` 同复杂度解析式
@@ -758,9 +759,9 @@ V 不部署 PAWV；V 的提升只来自 A3 encoder。若 Fisher calibration 开�
    迁移，stored-scale 路线关闭，目录已标记 `_rejected`。
 7. **E1 exact-v86 + ROAB-only（REJECTED）**：v157 官方 `16729 / 218.96s`，低于 v86 `15`
    分；ROAB 收益不可迁移，目录已标记 `_rejected`，路线关闭。
-8. **Attention A1 v158（RETAINED / OFFICIAL PENDING）**：从 exact v86 只增加 GQA 组内
-   解析 2×2 Matrix-Smooth，Linear 与 V 冻结；官方 score/time `unregistered / NA`。
-9. **下一 Linear 实验：单次 block-Schur HiF4-GPTQ**：从 exact v86 单文件 baseline
+8. **Attention A1 v158（RETAINED）**：从 exact v86 只增加 GQA 组内解析 2×2
+   Matrix-Smooth，Linear 与 V 冻结；官方 `16861 / 223s`，相对 v86 `+117 / +0.3s`。
+9. **下一 Linear 实验：单次 block-Schur HiF4-GPTQ**：从 v158 单文件 baseline
    分支，只在 `fc_gate/fc_up/proj` 中选一个外部归因支持的形状；使用部署 `Q(W)` Gram、两折
    输出 loss 和 effect panel，禁止第二轮完整 oracle、动态候选循环或把 W/A 误差当成独立增益。
 10. **0.8 可达性复判**：比较 v86 player、candidate、合法 teacher 曲线；若 teacher 仍远离 `0.8`，

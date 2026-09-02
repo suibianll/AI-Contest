@@ -116,3 +116,13 @@ v157 从 exact v86 仅加入 ROAB-P2 并冻结 v86 Attention，官方返回 `167
 v86 是 `-15` 分、`-3.74s`；时间通过但精度失败。由此可知，先前固定 reduced Attention 的
 `v138→v140 = +123` 只能说明 ROAB 在那个组合坐标中的交互收益，不能解释为独立、可迁移的
 Linear 主效应。ROAB 路线正式关闭，不再做 pair size、阈值或 role gate 搜索。
+
+## 2026-09-02 v158：Attention Matrix-Smooth 官方正增量成立
+
+v158 从 exact v86 只增加 GQA 组内解析 2×2 Matrix-Smooth Q/K，Linear 与 V 均冻结。官方
+结果为 `16861 / 223s`，相对 v86 的 `16744 / 222.7s` 为 **`+117 / +0.3s`**。这是当前新权重
+cohort 中第二个干净的 Attention-only 官方对照，也证明该解析 Q/K 等价变换是可迁移的有效方向。
+
+本地 default 配对为 `49/16/55 mixed`、mean delta `+0.011018`，但官方明确正向。因此本地
+逐 case 分解仍可定位 Q/K interaction，本地 mixed/aggregate 标签不能充当官方否决门禁；后续
+Attention 优化只运行 Attention-only 评测，并以官方单变量结果决定是否晋级。

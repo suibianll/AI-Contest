@@ -121,6 +121,7 @@ OFFICIAL_TREND_ANCHORS: dict[str, dict[str, Any]] = {
     "v139": {"score": 15716, "time_seconds": 202.0, "status": "pass", "cohort": "new-weight"},
     "v140": {"score": 15838, "time_seconds": 207.0, "status": "pass", "cohort": "new-weight"},
     "v147": {"score": 16579, "time_seconds": 211.0, "status": "pass", "cohort": "new-weight"},
+    "v158": {"score": 16861, "time_seconds": 223.0, "status": "pass", "cohort": "new-weight"},
 }
 
 
@@ -2452,6 +2453,7 @@ ARCHIVE_MANIFEST: dict[str, dict[str, Any]] = {
     "v139": {"path": "solutions/20260901_v139_linear-output-aware-gain_scoreNA_timeNA/solution.py", "official_score": 15716, "official_time": 202.0, "official_status": "pass", "official_cohort": "new-weight"},
     "v140": {"path": "solutions/20260901_v140_linear-roab-pair_rejected/solution.py", "official_score": 15838, "official_time": 207.0, "official_status": "pass", "official_cohort": "new-weight"},
     "v147": {"path": "solutions/20260901_v147_v86-attention-v140-linear_rejected/solution.py", "official_score": 16579, "official_time": 211.0, "official_status": "pass", "official_cohort": "new-weight"},
+    "v158": {"path": "solutions/20260902_v158_v86-attention-matrix-smooth_retained/solution.py", "official_score": 16861, "official_time": 223.0, "official_status": "pass", "official_cohort": "new-weight"},
     "v098": {"path": "solutions/20260830_v098_b1-gqrb-margin-active_score293.793700_time406s/solution.py", "official_score": None, "official_time": None, "official_status": "timeout"},
     "v100": {"path": "solutions/20260830_v100_b2-pawv-diagonly-active_score293.797301_time392s/solution.py", "official_score": None, "official_time": None, "official_status": "wrong-answer/timeout"},
     "v107": {"path": "solutions/20260830_v107_l3-global-lrh-precision-parent_score295.157057_time481s/solution.py", "official_score": None, "official_time": None, "official_status": "wrong-answer"},

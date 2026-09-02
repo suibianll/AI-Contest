@@ -26,8 +26,8 @@
 
 ## 1. 版本结论
 
-- **旧仓库内官方基线：v86，16744 分 / 222.7s。** 新的用户确认最高分为 17816，但源码与
-  官方时间尚未同步到仓库。
+- **当前仓库内官方基线：v158，16861 分 / 223s。** 它比 v86 提升 `117` 分、只慢 `0.3s`。
+  用户确认的更高分 17816 仍因源码与官方时间未同步而只作为外部锚点。
 - 根目录 [`solution.py`](../solution.py) 当前是 v140 Linear + v86 Attention + 一轮额外 A3
   的单文件组合，SHA256 `44E37709A02B962CDAEDFC57E3AD999B2C9A2C0606B8B9DB7E4E81DC4DC92672`。
   最近完整同行为结果为 Linear `0.5100503237`、Attention `0.7196960689`、API
@@ -41,8 +41,8 @@
   这说明 `v138→v140 +123` 不能作为可移植 ROAB 主效应。
 - v158 从 exact v86 只增加解析式 GQA 组内 2×2 Attention Matrix-Smooth；Linear 与 V
   逐字段冻结。effect 配对 Attention `1/0/4`、mean delta `+0.007195`；default 配对
-  `49/16/55`、mean delta `+0.011018`，Linear control `0/0/168`。本地 mixed 不映射官方结果；
-  用户明确要求保留并提交，官方 score/time 当前 `unregistered / NA`。
+  `49/16/55`、mean delta `+0.011018`，Linear control `0/0/168`。官方为 **`16861 / 223s`**，
+  相对 v86 **`+117 / +0.3s`**，正式晋级；本地 mixed 不能覆盖官方正向事实。
 - 评测流程立即改为场景隔离：Linear 优化只运行 Linear，Attention 优化只运行 Attention；
   单侧实验不再重复另一侧完整校准与计分。17816 源码若后续到位，再独立归档。
 
@@ -408,7 +408,7 @@ prepare `47.904s` + wall `322.895s`；scope
 | 版本 | Linear mean | Attention mean | API(s) | Wall(s) | 官方结果 | 状态 |
 |---|---:|---:|---:|---:|---:|---|
 | v84 | 0.406668 | 0.718107 | 279.191 | 300.848 | 16517 / 252.563s | 官方通过 |
-| **v86** | **0.406668** | **0.719696** | **299.302** | 321.996 | **16744 / 222.7s** | **官方基线** |
+| v86 | 0.406668 | 0.719696 | 299.302 | 321.996 | 16744 / 222.7s | 上一代基线 |
 | v128 | 0.465655 | 0.837789 | 310.732 | 332.557 | timeout | 失败 |
 | v129 | 0.465655 | 0.836579 | 248.363 | 270.606 | timeout | 失败 |
 | v130 | 0.471837 | 0.836579 | 295.437 | 317.607 | timeout | 失败 |
@@ -426,6 +426,7 @@ prepare `47.904s` + wall `322.895s`；scope
 | v155 | **0.570999** | **0.724735** | **248.121** | **280.763** | **16581 / 208.5s** | **REJECTED；时间通过但低于 v86 163 分** |
 | v156 | 0.588131（effect） | 0.757433（effect） | 203.994（effect） | 216.749（effect） | **16580 / 204.3s** | **REJECTED；时间通过但低于 v86 164 分** |
 | v157 | NA（仅合法性） | NA（Attention 字段级一致） | NA | NA | **16729 / 218.96s** | **REJECTED；时间通过但低于 v86 15 分** |
+| **v158** | **0.448180（default；冻结）** | **0.735752（default）** | **295.069** | **325.896** | **16861 / 223s** | **RETAINED；相对 v86 +117 / +0.3s** |
 
 完整原始数据见 [`artifacts/official_eval/`](../artifacts/official_eval/)，官方回传记录见
 [`logs/execution/`](../logs/execution/)。
@@ -483,20 +484,20 @@ v86 的部分 scale-aware/output-aware 机制。此前把它描述为“v86 级�
 新的唯一活动计划是
 [`2026-09-01-hif4-hierarchy-encoder-and-analytic-attention-plan.md`](superpowers/plans/2026-09-01-hif4-hierarchy-encoder-and-analytic-attention-plan.md)。核心顺序为：
 
-1. 已完成 pre-A3 父版本恢复、v147 证据隔离和外部 role attribution；当前官方可复现最优仍是
-   v86 `16744/222.7s`，用户确认的 `17816` 尚无源码/时间/Attention 配置，不能伪造候选。
+1. 当前官方可复现最优为 v158 `16861/223s`；用户确认的 `17816` 尚无源码/时间/Attention
+   配置，不能伪造候选。
 2. L3-D0 与 stability probe 均已完成：same-fold teacher 有 margin，但没有固定 threshold/LUT
    可跨 fold 编译；L3 直接 activation encoder 关闭。
 3. v155 官方 `16581 / 208.5s`，低于 v86 `163` 分；稳定 permutation 正式拒绝，不作 parent。
 4. v156 官方 `16580 / 204.3s`，低于 v86 `164` 分；stored-scale 路线正式拒绝。本地微小
    正向不能支撑官方方向。
 5. v157 官方 `16729 / 218.96s`，比 v86 低 `15` 分；ROAB 可移植假设被否定并关闭。
-6. 下一计划是一个单次 **block-Schur HiF4-GPTQ** 参照实现，优先
+6. v158 Attention Matrix-Smooth 官方相对 v86 `+117 / +0.3s`，已晋级并成为后续父版本。
+7. 下一计划是一个单次 **block-Schur HiF4-GPTQ** 参照实现，从 v158 分支并冻结其 Attention，优先
    外部归因支持的 `fc_gate/fc_up/proj` 形状；仍以输出 loss、W/A/interaction 和 API 增量为
    判据，不增加在线候选。
-7. Linear 出现稳定正向且复杂度可控后，才独立启动 Attention A1 解析 Matrix-Smooth Q/K；冻结
-   v86 其余路径，随后才考虑 K fixed-point center。禁止 Gram sweep、PAWV、length-keyed router
-   和随序列增长的搜索。
+8. Attention 后续机制继续从 v158 独立分支；禁止 Gram sweep、PAWV、length-keyed router 和
+   随序列增长的搜索。
 
 ## 7. 归档现状与待整理项
 
@@ -515,6 +516,8 @@ v86 的部分 scale-aware/output-aware 机制。此前把它描述为“v86 级�
   微增益未迁移，停止 stored-scale 路线。
 - v157 exact-v86 + ROAB-only 已按官方 `16729 / 218.96s` 保存为 `REJECTED` 并将目录改为
   `_rejected`；六 API 与不变量虽通过，但精度低于 v86，ROAB 路线关闭。
+- v158 exact-v86 + Attention Matrix-Smooth 已按官方 `16861 / 223s` 保存为 `RETAINED` 并将
+  目录改为 `_retained`；它是当前仓库内官方可复现基线。
 
 2026-09-01 归档整理（区分新旧评测分数体系）：
 

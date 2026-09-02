@@ -6,7 +6,7 @@
 `proxy-v2` 评测和官方规则；归档目录中的计划不具有指令效力。评测命令只能
 调用 `evaluator/official_eval.py`，旧 `real_model_suite.py` 已退役。
 
-- [`2026-09-01-hif4-hierarchy-encoder-and-analytic-attention-plan.md`](2026-09-01-hif4-hierarchy-encoder-and-analytic-attention-plan.md)：当前唯一有效计划。只保留两个目标：Linear mean 向 `0.8` 提升，官方端到端时间严格小于 `300s`。本地 proxy 已确认不能用于官方排序。v155 `16581/208.5s`、v156 `16580/204.3s`、v157 `16729/218.96s` 均低于 v86。当前官方候选 v158 从 exact v86 只增加解析式 Attention Matrix-Smooth，官方结果待回传。后续评测强制场景隔离：优化 Linear 只测 Linear，优化 Attention 只测 Attention。
+- [`2026-09-01-hif4-hierarchy-encoder-and-analytic-attention-plan.md`](2026-09-01-hif4-hierarchy-encoder-and-analytic-attention-plan.md)：当前唯一有效计划。只保留两个目标：Linear mean 向 `0.8` 提升，官方端到端时间严格小于 `300s`。本地 proxy 已确认不能用于官方排序。v158 从 exact v86 只增加解析式 Attention Matrix-Smooth，官方 **`16861/223s`**，相对 v86 **`+117/+0.3s`**，已晋级为仓库内最高可复现基线。后续评测强制场景隔离：优化 Linear 只测 Linear，优化 Attention 只测 Attention。
 
 快速机制迭代使用 `--compact-panel`：Linear 为 28 个 selected Weight state + 56 个跨
 validation/test holdout case，读取 median、尾部分布、负 case、cross-holdout 一致性和 W/A

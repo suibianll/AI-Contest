@@ -210,7 +210,9 @@ JSON/report > 未验证推测。发生冲突时保留原始证据并更新状态
 
 - 官方最高已知分数：用户确认的 **17816**，但其源码、版本号、官方时间和 Attention 配置
   尚未同步，不能伪造归档或时间结论。
-- 已验证官方基线：v86，**16744 / 222.7s**；其 Attention 是 Linear 后续实验的冻结参照。
+- 已验证官方基线：v158，**16861 / 223s**；它从 exact v86 只增加解析式 Attention
+  Matrix-Smooth，官方相对 v86 `+117 / +0.3s`。其 Attention 是后续 Linear 实验的冻结参照；
+  v86 `16744 / 222.7s` 保留为上一代对照。
 - v140：官方 **15838 / 207s**，时间通过但精度低于 v86，已标记 `REJECTED`。
 - v147：官方 **16579 / 211s**，时间通过但精度低于 v86，已标记 `REJECTED`；其官方提交 SHA
   未确认。pre-A3 本地归因控制为 Linear `0.5073546371`、Attention `0.7196960689`、API
@@ -229,14 +231,16 @@ JSON/report > 未验证推测。发生冲突时保留原始证据并更新状态
   GPT-2 配对为 `-0.000153`。用户回传 v155 官方 `16581 / 208.5s`、v156 官方
   `16580 / 204.3s`；两者时间通过但分别低于 v86 `163/164` 分，均已改名并标记 `REJECTED`。
   v156 的 Qwen effect `+0.000107624`、GPT-2 `+0.000029454` 没有迁移，stored-scale 路线关闭；
-  二者都不作为优化 parent，root 不变，Attention 继续冻结 v86。
+  二者都不作为优化 parent，root 不变。
 - 用户已纠正后续实验顺序：v86 的官方结果已知，不能重复提交；本地 proxy 不能决定官方
   方向。固定 Attention 的官方 `v138→v140` 仅增加 ROAB-P2，分数 `15715→15838`（`+123`）；
   为验证其可迁移性，v157 从 exact v86 单文件只加入该机制。用户回传 v157 官方
   `16729 / 218.96s`，时间通过但低于 v86 `15` 分，已标记 `REJECTED`。这证明 `+123` 是
   v138/v140 组合上下文中的交互效应，不是可移植 ROAB 主效应；ROAB 路线关闭，不调 threshold、
-  pair size 或 role gate。下一计划是从 exact v86 做一次 single-pass block-Schur HiF4-GPTQ；
-  尚未实现。v157 SHA256 `984BF752156187B8892894060A99FE52027E2457F37FC23C11657041B29B86E1`。
+  pair size 或 role gate。随后 v158 从 exact v86 只增加 Attention Matrix-Smooth，官方
+  `16861 / 223s`，相对 v86 `+117 / +0.3s`，已晋级为新父版本。下一 Linear 计划从 v158 做
+  single-pass block-Schur HiF4-GPTQ，并冻结 v158 Attention。v157 SHA256
+  `984BF752156187B8892894060A99FE52027E2457F37FC23C11657041B29B86E1`。
 - 评测结果必须先看 `evaluation_scope`：只有同 cache 的 `default-panel` 可做本地 proxy 排名；
   `effect-panel`/`paired-json-replay` 只做父子诊断，`full-stress` 只做压力，`smoke-prefix`
   只做接口，GPT-2/hif4 与旧 `official-shape-v1` 只做跨结构/历史审计。任何 scope 都不是
