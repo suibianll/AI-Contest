@@ -20,8 +20,8 @@
 - 本地 proxy 只用于同机机制诊断和时间记录，不能换算官方分数或官方 `<300s`；已知历史中
   存在本地排序与官方排序反转，任何本地正向都必须等待官方回传确认。
 
-- GPU 修复和 CUDA Linear-only compact/default 已完成；transformed samples 与 Weight Gram
-  等价复用也已完成。下一步先分解校准热点，再做单项复杂度消融；完成前不增加新算法。
+- 当前采用 Linear/Attention 双线分支隔离计划：Linear 固定 v158 Attention，Attention 固定
+  当前 v159 Linear。每条线先做复杂度与误差归因，再做一个数学机制；禁止在同一实验同时修改。
   17816 源码无法提供，不再作为等待项。
 
 ## 2. 提交代码约束
@@ -156,10 +156,14 @@ Linear/Attention 权重。只有同一 `proxy-v2` cache、同一 panel、同一 
 6. **单侧 default audit**：compact 方向、control、尾部和复杂度均可解释后，才运行目标侧
    default panel（Linear 168 或 Attention 120）。旧 `--effect-panel` 只在需要“完整校准图 +
    缩减动态 case”的专项审计时使用，不是默认必经步骤。
-7. **完整端到端审计**：只有明确需要检查集成调用图时，才省略 `--linear-only/--attention-only`
+7. **跨模型泛化门禁**：目标侧 Qwen default 通过后，必须用其他模型真实前向捕获的 W/A/Q/K/V
+   做同 cache、同 device 的父子配对。`gpt2` 为强制验证，最终候选再使用一个不同架构的本地
+   `pythia-160m` 或 `opt-125m`。跨模型只作封存 holdout，不能反向调参数；若 Qwen 正向而
+   跨模型整体负向，候选标记 `model-specific / REJECTED`，禁止增加模型/layer/role 专属路由。
+8. **完整端到端审计**：只有明确需要检查集成调用图时，才省略 `--linear-only/--attention-only`
    跑完整 168 + 120 panel，六 API 全部执行；`--full-cases` 仍只作压力测试。完整测试必须
    保存 JSON 和 Markdown report，并把 local proxy、API total、wall time、official 状态分开写。
-8. **决策与归档**：接口/环境失败记 `ERROR`；机制证据否定记 `REJECTED`；官方明确超时记
+9. **决策与归档**：接口/环境失败记 `ERROR`；机制证据否定记 `REJECTED`；官方明确超时记
    `TIMEOUT`；官方未知写 `unregistered/NA`，不能用本地秒数填充。没有实质算法/复杂度变化的
    运行不分配版本号。正式版本归档前只做一次脱离仓库单文件导入检查。
 

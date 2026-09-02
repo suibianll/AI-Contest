@@ -22,7 +22,7 @@
 
 用户提供的 `linear.txt`/`linear_dep.txt` 已合成为 v159，并已获得 17532 官方分数；17816 的
 完整提交仍未同步，不能把两者视为同一源码。完整执行顺序见
-[`活动计划`](superpowers/plans/2026-09-02-v159-gpu-audit-and-next-optimization-plan.md)。
+[`活动计划`](superpowers/plans/2026-09-02-linear-attention-dual-track-generalization-plan.md)。
 
 ## 1. 版本结论
 
@@ -518,13 +518,14 @@ v86 的部分 scale-aware/output-aware 机制。此前把它描述为“v86 级�
 ## 6. 当前活动计划
 
 唯一活动计划是
-[`2026-09-02-v159-gpu-audit-and-next-optimization-plan.md`](superpowers/plans/2026-09-02-v159-gpu-audit-and-next-optimization-plan.md)。顺序固定为：
+[`2026-09-02-linear-attention-dual-track-generalization-plan.md`](superpowers/plans/2026-09-02-linear-attention-dual-track-generalization-plan.md)。顺序固定为：
 
-1. 修复 v159 校准临时张量的 CPU/CUDA 混用，不改变返回 state 或数学结果；
-2. 只跑 CUDA Linear compact，配对通过后再跑一次 Linear default；Attention 冻结且不重复测试；
-3. 优先复用 transformed samples、Gram/Hessian 和候选 metric 中间量，先做输出等价降复杂度；
-4. 补齐 17816 的完整源码/Attention 配置后再解释 284 分差，缺失前不做本地拟合；
-5. 后续精度实验只允许一个 A/W 联合 Linear 机制，不增加 layer/role 特调或候选网格。
+1. 扩展跨模型评测器的 Linear/Attention 场景隔离和父子配对，并适配一个 Pythia/OPT 真实前向；
+2. Linear 固定 v158 Attention，先做校准热点分解和等价降复杂度，再做单一联合 A/W 机制；
+3. Attention 固定当前 v159 Linear，建立 Attention-only compact/default/GPT-2 父基线，再优化；
+4. 每个方向通过 Qwen default 后必须通过 GPT-2，最终候选再通过 Pythia/OPT；跨模型结果不用于
+   参数搜索，方向冲突直接判为 model-specific；
+5. 两条线分别通过后才运行一次完整集成审计，不增加模型/layer/role 专属路由或旧式搜索网格。
 
 ## 7. 归档现状与待整理项
 

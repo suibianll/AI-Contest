@@ -2,7 +2,8 @@
 
 > **最新官方进展（2026-09-02）**：根目录 v159 的同 SHA 合并版本官方分数为 **17532**，
 > 比 v158 的 16861 高 671 分；官方时间未知。独立的 17816 结果仍高 284 分，但其完整源码和
-> Attention 配置尚未同步。当前先修复 v159 的 GPU device 错误，再做 Linear 校准降复杂度。
+> Attention 配置无法提供。v159 GPU 路径已修复；后续分别优化 Linear 与 Attention，并把其他
+> 模型的真实前向父子配对设为 Qwen default 之后的强制泛化门禁。
 
 更新时间：2026-09-02。当前仓库只认一套本地评测协议：
 [`evaluator/official_eval.py`](evaluator/official_eval.py)。旧的
