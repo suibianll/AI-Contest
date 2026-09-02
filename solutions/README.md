@@ -131,6 +131,7 @@ directories follow the same immutable naming rule as the historical archive:
 | v154 | `20260902_v154_fc-decoupled-scale-fit_rejected` | **0.568754 (targeted)** | **0.942927** | **198.098 s** | **rejected; fitted s_d is a no-op after v153** |
 | v155 | `20260902_v155_l5a-permutation-stability_scoreNA_timeNA` | **0.570999 (default)** / 0.588162 (effect) | **0.724735 (default)** / 0.757433 (effect) | **248.121 s (default-equivalent)** / 207.196 s (effect) | **retained Qwen-local diagnostic control; 4/0/164 paired gain, GPT-2 −0.000153, official unregistered** |
 | v156 | `20260902_v156_l4-weight-decoupled_scoreNA_timeNA` | 0.588131 (effect; default not run) | 0.757433 (effect) | 203.994 s (effect) | **retained official candidate pending; single-file SHA, official unregistered** |
+| v157 | `20260902_v157_v86-roab-only_scoreNA_timeNA` | NA (legality smoke only) | NA (frozen field-equality check) | NA | **retained next official single-variable candidate; exact v86 + ROAB-only** |
 
 † The first v147 values come from the original pre-A3 JSON (SHA `9B3EA5...B656`); the second come
 from the later direct-merge A3 JSON (SHA `25C245...9C1B`). The archive was modified in place before
@@ -217,14 +218,14 @@ mean `-0.314079`, 16/16 regressions). The next experiment is therefore a single-
 Weight-decoupled or deployment-Gram block-Schur mechanism branched from pre-A3, not another
 permutation/scale/CAT sweep.
 
-v156 is the next single-file candidate for official submission. It is the one-pass Weight-decoupled
-stored-scale fit from the pre-A3 parent (sign/mantissa/lv2/lv3 fixed, transformed Gram closed form,
-legal E6M2 projection, two-fold deployed-output gate). The Qwen effect panel is only
-`+0.000107624` (5/0/51; fc `+0.000376686`) and GPT-2 is `+0.000029454` (fc `+0.000176722`),
-so the local signal is intentionally treated as weak. The formal single-file SHA is
-`594EF2FBB70AE54E06BF2D896E11E637E4BA9AF67AD54C01F10D57136EB8DF85`; submit
-`solutions/20260902_v156_l4-weight-decoupled_scoreNA_timeNA/solution.py` and wait for the official
-score/time before any promotion.
+v157 is the next official single-variable experiment. It starts from the exact reproducible v86
+source and adds only the bounded ROAB-P2 reciprocal 2×2 Linear transform, while keeping v86
+Attention field-for-field frozen. The direction comes from the clean fixed-Attention official
+increment `v138→v140 = +123`, not from a local ranking. No local model panel was run for v157;
+legality, continuous-product/covariance invariants, rejected-candidate parent equality, selected
+state propagation and isolated import passed. Its SHA is
+`984BF752156187B8892894060A99FE52027E2457F37FC23C11657041B29B86E1`. v156 remains archived,
+but its tiny local-only signal no longer determines the next experiment.
 
 \* The earlier v086 local `462.239 s` observation was also concurrent-load affected. The clean
 idle rerun is `299.302 s` API / `321.996 s` wall; see

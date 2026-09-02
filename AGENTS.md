@@ -222,6 +222,13 @@ JSON/report > 未验证推测。发生冲突时保留原始证据并更新状态
   parent。L4-WD 的正式单文件 v156 已完成隔离依赖检查，Qwen effect `+0.000107624`、GPT-2
   `+0.000029454`，本地增益很小但按用户要求保留为待提交官方候选；官方回传前 root 不变，
   Attention 继续冻结 v86。
+- 用户已纠正后续实验顺序：v86 的官方结果已知，不能重复提交；本地 proxy 不能决定官方
+  方向。固定 Attention 的官方 `v138→v140` 仅增加 ROAB-P2，分数 `15715→15838`（`+123`），
+  是当前唯一干净的正向 Linear 增量。v157 已从 exact v86 单文件只加入该机制，完成六 API、
+  连续乘积/协方差、拒绝分支 v86 字段级回退、Attention 字段级冻结和隔离导入检查；未运行
+  本地排名 panel。v157 是下一官方单变量实验，SHA256
+  `984BF752156187B8892894060A99FE52027E2457F37FC23C11657041B29B86E1`；v156 仍保留归档但
+  不再优先。
 - 评测结果必须先看 `evaluation_scope`：只有同 cache 的 `default-panel` 可做本地 proxy 排名；
   `effect-panel`/`paired-json-replay` 只做父子诊断，`full-stress` 只做压力，`smoke-prefix`
   只做接口，GPT-2/hif4 与旧 `official-shape-v1` 只做跨结构/历史审计。任何 scope 都不是

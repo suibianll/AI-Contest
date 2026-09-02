@@ -10,6 +10,10 @@
 >
 > Linear 研究期间冻结 v86 Attention；Attention 实验与 Linear 分开执行
 
+> 2026-09-02 用户纠偏：禁止继续用本地排名代替官方方向判断，也不重复提交已有官方结果的
+> v86。固定 Attention 的官方对照中，`v138→v140` 是唯一干净的正向 Linear 增量（ROAB-P2，
+> `+123`）。因此先执行 exact v86 + ROAB-only 的 v157；v156 留作历史候选但不占用下一次实验。
+
 ## E0. 本地评测趋势代理（DONE）
 
 **目的：** 让本地结果至少能回答“同一公开输入、同一调用图下候选是否更好”，并在已知官方
@@ -373,9 +377,10 @@ mean 的结果都不进入候选队列。
 
 1. **v155 跨结构 smoke（DONE / control only）**：严格 GPT-2 配对为轻微负向，已关闭其优化
    方向，不再围绕四分位/层列表调门控。
-2. **L4-WD（DONE / official candidate pending）**：workbench effect 与 GPT-2 方向均为正但
-   量级很小；正式单文件 v156 已保留，当前优先提交官方获取真实反馈，不再追加本地默认重复跑。
-3. **若 v156 官方失败或低于 v86，做单次 block-Schur HiF4-GPTQ**：从 exact v86 单文件
+2. **E1 exact-v86 + ROAB-only（IMPLEMENTED / official candidate pending）**：v157 仅在 v86
+   冻结坐标之后加入一次解析 2×2 等价变换；拒绝分支与 v86 字段级一致，Attention 完全一致，
+   六 API 与单文件隔离检查通过。禁止为它补跑本地排名面板，直接等待官方分数/时间裁决。
+3. **若 v157 官方失败或低于 v86，做单次 block-Schur HiF4-GPTQ**：从 exact v86 单文件
    baseline 分支，只在 `fc_gate/fc_up/proj` 中选一个外部归因支持的形状，固定 block 顺序和
    预算，用真实 `A@W` 输出 loss 做一次合法写回；比较 teacher gap、W/A/interaction 和 API
    增量。
@@ -727,11 +732,12 @@ V 不部署 PAWV；V 的提升只来自 A3 encoder。若 Fisher calibration 开�
    precision 为零；L3-D1 关闭，不再编译直接 activation encoder。
 5. **L5a permutation-stability（RETAINED / LOW-RECALL CONTROL）**：v155 只保留无回归的
    四分位压力交错，默认 paired 为 `+0.000116536`、4/0/164；跨 GPT-2 轻微回归，不替换 root。
-6. **L4-WD（DONE / OFFICIAL CANDIDATE PENDING）**：workbench effect 与 GPT-2 配对方向均为
-   正但量级很小；正式单文件 v156 已保留，当前优先提交官方获取真实反馈，不再追加本地默认重复跑。
-7. **L2 Hierarchical Matrix Balance（条件分支）**：朴素 pair-balance 已全面回归；只有加入
-   `Q(W)` 输出约束、保持连续乘积不变量且单次向量化的版本才值得做，失败即关闭整个 L2 族。
-8. **若 v156 官方失败或低于 v86，做单次 block-Schur HiF4-GPTQ**：从 exact v86 单文件 baseline
+6. **L4-WD（DONE / ARCHIVED CANDIDATE）**：v156 的正向证据只来自很小的本地 proxy 变化，
+   在用户纠偏后不再作为下一次官方实验；源码和证据保留，不据此判断官方方向。
+7. **E1 exact-v86 + ROAB-only（IMPLEMENTED / OFFICIAL CANDIDATE PENDING）**：v157 已完成
+   单文件、六 API、连续乘积/协方差、父路径字段级回退和 v86 Attention 字段级冻结检查；未跑
+   本地排名 panel。其依据是固定 Attention 的官方 `v138→v140 = +123` 增量。
+8. **若 v157 官方失败或低于 v86，做单次 block-Schur HiF4-GPTQ**：从 exact v86 单文件 baseline
    分支，只在 `fc_gate/fc_up/proj` 中选一个外部归因支持的形状；使用部署 `Q(W)` Gram、两折
    输出 loss 和 effect panel，禁止第二轮完整 oracle、动态候选循环或把 W/A 误差当成独立增益。
 9. **0.8 可达性复判**：比较 v86 player、candidate、合法 teacher 曲线；若 teacher 仍远离 `0.8`，

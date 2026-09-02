@@ -347,6 +347,24 @@ Attention no-op。该增益很小，不能替代官方验证，但源码已完�
 官方分数/时间仍写 `unregistered/NA`，根 `solution.py` 不自动切换。官方回传后立即按分数和
 `<300s` 归档为晋级或 rejected。
 
+## 2.13 v157 exact-v86 + ROAB-only（RETAINED / next official experiment）
+
+用户指出 v86 官方结果已经存在，继续提交 v86 不能产生新信息；同时当前本地评测无法预测
+官方排序。重新按固定场景读取官方历史后，唯一干净的正向 Linear 增量是 v138 到 v140：两者
+使用同一 reduced Attention，v140 只增加 ROAB-P2，官方 `15715→15838`（`+123`），时间
+`208s→207s`。v140 的绝对分数低于 v86 说明其组合父路径失败，不等于这个独立增量失败。
+
+因此 v157 从 exact v86 单文件（SHA256
+`E7A16D6991DBB70A593FBE87D0C5D1D8FD38F801665354A01FFAF2F0A96F03CD`）分支，只在 v86
+全部 Linear 变换冻结后加入一次解析 2×2 reciprocal pair 变换：`X→XU`、`W→WU^{-T}`，
+用 bounded plain-HiF4 输出误差在 parent 与 proposal 间二选一。ROAB 被拒绝时 Linear 输出和
+state 与 exact v86 字段级一致；Attention calibration 与 Q/K/V dynamic 也字段级一致。
+
+没有运行任何本地排名 panel。已通过 `35` 个仓库测试、六 API 合法性、selected branch、连续
+乘积/协方差不变量和脱离仓库单文件导入检查。正式源码 SHA256 为
+`984BF752156187B8892894060A99FE52027E2457F37FC23C11657041B29B86E1`。官方 score/time 仍为
+`unregistered/NA`；根 `solution.py` 不切换。v156 保留证据，但不再作为下一实验。
+
 ## 3. 历史 v1 结果表（不可与 proxy-v2 混用）
 
 下表保留旧 `official-shape-v1` 的同机数字，仅用于审计此前的失真；当前 proxy-v2 分层 panel
@@ -413,7 +431,8 @@ v86 的部分 scale-aware/output-aware 机制。此前把它描述为“v86 级�
 
 - v138 的缩减 Attention shortlist；
 - v139 连续 output-aware gain；
-- v140 局部 reciprocal pair/ROAB-P2；
+- v140 的完整 Linear/Attention 组合（绝对分数低于 v86）；其中 ROAB-P2 的固定 Attention
+  增量 `v138→v140 = +123` 已被单独抽出为 v157，不能再与失败组合混为同一结论；
 - v141–v145 非对称选列 BDLR、锚点冻结和阻尼变体；
 - v128–v131 动态 Q/K Gram、PAWV 和随序列放大的 Attention 搜索；
 - 增加 alpha、offset、sweep、block 数、阻尼、角度或候选槽位的局部扫描。
@@ -432,13 +451,14 @@ v86 的部分 scale-aware/output-aware 机制。此前把它描述为“v86 级�
    可跨 fold 编译；L3 直接 activation encoder 关闭。
 3. v155 的稳定 permutation 只提供低召回坐标信号（默认 `+0.000116536`、4/0/164），保留
    为 local parent，不继续做参数 sweep；它的正向来自 W/A interaction，不是单侧 operand 降误差。
-4. 跨结构小 smoke 显示 v155 permutation 轻微回归，因此它只作 paired control。L4-WD 已实现
-   并形成待提交的 v156 单文件；其本地提升很小，但没有 role/control 回归。当前先提交 v156
-   获取真实官方分数/时间，不再用本地微增益替代产出；官方回传后再决定保留还是拒绝。
-5. 若 v156 官方失败或低于 v86，再做一个单次 **block-Schur HiF4-GPTQ** 参照实现，优先
+4. v156 L4-WD 已实现但只有很小的本地 proxy 正向，无法支撑官方方向。在用户纠偏后保留其
+   证据但不作为下一实验。
+5. v157 已从 exact v86 只加入 ROAB-P2；依据是固定 Attention 的官方 `+123` 增量。下一条
+   决策证据是 v157 的官方 score/time，不补跑本地排名 panel。
+6. 若 v157 官方失败或低于 v86，再做一个单次 **block-Schur HiF4-GPTQ** 参照实现，优先
    外部归因支持的 `fc_gate/fc_up/proj` 形状；仍以输出 loss、W/A/interaction 和 API 增量为
    判据，不增加在线候选。
-6. Linear 出现稳定正向且复杂度可控后，才独立启动 Attention A1 解析 Matrix-Smooth Q/K；冻结
+7. Linear 出现稳定正向且复杂度可控后，才独立启动 Attention A1 解析 Matrix-Smooth Q/K；冻结
    v86 其余路径，随后才考虑 K fixed-point center。禁止 Gram sweep、PAWV、length-keyed router
    和随序列增长的搜索。
 
@@ -456,7 +476,9 @@ v86 的部分 scale-aware/output-aware 机制。此前把它描述为“v86 级�
 - v155 L5a permutation-stability 已保存为 `RETAINED / LOCAL DIAGNOSTIC ONLY`，正式单文件和
   `result.md` 已完成；它不改变 root，也没有官方分数/时间字段。
 - v156 L4-WD 已保存为 `RETAINED / OFFICIAL CANDIDATE PENDING`，单文件 SHA、结果说明和
-  跨模型/本地 effect 证据已完成；尚未收到官方分数/时间。
+  跨模型/本地 effect 证据已完成；尚未收到官方分数/时间，但不再作为下一实验。
+- v157 exact-v86 + ROAB-only 已保存为 `RETAINED / NEXT OFFICIAL EXPERIMENT`；六 API、
+  continuous invariant、父路径/Attention 字段级冻结和单文件隔离导入已通过，未运行本地排名。
 
 2026-09-01 归档整理（区分新旧评测分数体系）：
 
