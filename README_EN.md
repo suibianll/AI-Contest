@@ -11,14 +11,17 @@ The only active local evaluator is [`evaluator/official_eval.py`](evaluator/offi
 The former `real_model_suite.py` / `sampled-means-v1/v2` reports are retired and must not be
 used for ranking or timing decisions.
 
-The evaluator fixes the known public contract: Qwen2.5-0.5B, 24 blocks, 250 Linear cases,
-200 Attention cases, the five variable Attention calibration lengths `[10, 128, 512, 1024,
-1024]`, independent HiF4 validation, and the public per-case score
+The evaluator fixes the known public contract (`proxy-v2`; the historical `official-shape-v1`
+is kept only for audit): Qwen2.5-0.5B, 24 blocks, the variable Attention calibration lengths
+`[10, 128, 512, 1024, 1024]`, validation/test holdout windows, full real-W/A enumeration by
+default, independent HiF4 validation, and the public per-case score
 `(MSE_STD - MSE_PLAYER) / MSE_STD`. It reports `linear_mean`, `attention_mean`, the case-score
 sum, API time, and wall time. The official platform currently requires end-to-end time below
 300 seconds; local CUDA seconds are an A/B proxy only and are never converted into an official
-score. The latest known official anchors are v74 `22750 / 239.387s` (old weights), v84
-`16517 / 252.563s`, and v86 **`16744 / 222.7s`** (revised weights). Before the newly reported
+score. The latest known official anchors are v84 `16517 / 252.563s` and v86
+**`16744 / 222.7s`** (revised weights). Note that **v74 scores only `14561 / 188.9s` on the
+current official panel** (reported 2026-09-02); its old-weight `22750 / 239.387s` is obsolete
+by `-8189` points, so v74 is **not** a safe baseline nor the archive champion. Before the newly reported
 17816 Linear framework, v86 was the repository's best revised-weight official result: `+227`
 score and `29.863s` faster than v84.
 The later v128 fixed-attn-budget candidate was confirmed by the user to time out on the
