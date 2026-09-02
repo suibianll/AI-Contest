@@ -65,8 +65,11 @@
   layer `0/3/7/10/13/16/20/23` 并保留每层全部 7 role，共 56 cases；Attention 使用五个覆盖
   深度与长度的哨兵。`--linear-cases/--attention-cases` 是顺序前缀 smoke，尤其 14/56 不是
   纵深采样，禁止用于判断算法是否有效。
-- effect panel 只缩减动态评分与 evaluator-only 分解；校准仍保持完整 168 Weight state +
-  24 Attention state 的调用图，禁止为了提速改成按选中 case 校准或 per-case oracle。
+- 单侧机制实验必须场景隔离：Linear 使用 `--linear-only`，只建立完整 168 Weight state 并
+  跳过全部 Attention API；Attention 使用 `--attention-only`，只建立完整 24 Attention state
+  并跳过全部 Linear API。effect panel 只缩减该侧动态评分与 evaluator-only 分解；本侧校准
+  仍保持完整共享 state 调用图，禁止按选中 case 校准或制造 per-case oracle。只有明确的端到端
+  集成审计才同时运行两侧。
 - 主要本地字段是 `linear_mean`、`attention_mean`、逐 case 分数、六个 API 的
   `api_total_seconds` 和 `wall_seconds`。本地等权显示值只用于公开 panel 诊断，不拟合官方总分。
 - 机制实验必须使用父子版本逐 case 配对：父版本先保存 immutable JSON；候选使用同一 cache、
@@ -117,11 +120,12 @@ JSON/report > 未验证推测。发生冲突时保留原始证据并更新状态
 
 - 已有结果足以回答的问题不重复跑全量评测；只有代码发生实质变化、需要复核异常或用户明确
   要求时才重新评测。小改动可以先做针对性 smoke/单层测试，不强制跑完整测试套件。
-- **固定评测流水线（2026-09-02 起）**：同一 parent、cache、设备和 evaluator 只建立一次
+- **固定评测流水线（2026-09-02 起）**：同一 parent、cache、设备、scenario 和 evaluator 只建立一次
   immutable parent JSON；后续候选一律复用该 JSON，不重复运行 parent。每个新机制最多按
-  `smoke → effect-panel → default-panel` 顺序推进：`smoke` 只检查六 API、合法状态和目标
-  layer/role，不能作为效果证据；`effect-panel` 使用 `--effect-panel --baseline-json`，保留
-  完整 168 Weight + 24 Attention calibration，只减少动态评分到 56 Linear + 5 Attention，
+  `smoke → effect-panel → default-panel` 顺序推进：`smoke` 只检查目标侧 API、合法状态和目标
+  layer/role，不能作为效果证据；`effect-panel` 使用 `--effect-panel --baseline-json` 加对应的
+  `--linear-only`/`--attention-only`，保留目标侧完整共享 calibration；Linear 动态评分为
+  56 cases，Attention 为 5 cases，
   用于一次父子逐 case 归因；只有 focus 方向、control 无泄漏、最坏 case 可解释且没有需要
   立即拒绝的回归时，才运行一次 `default-panel`（168 + 120）复核。default 未通过即停止并
   记录 `REJECTED`，不因计时波动或小数变化重跑。

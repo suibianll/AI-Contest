@@ -14,6 +14,12 @@ runtime conversion. Before comparing two files, read their `protocol` and `evalu
 | `official-shape-v1` | Immutable historical evidence | no |
 | GPT-2 / external hif4 | Cross-model or external-implementation probe | no |
 
+Scenario-isolated runs prefix the scope with `linear-only-` or `attention-only-`. Use
+`--linear-only` for Linear mechanisms and `--attention-only` for Attention mechanisms. These
+runs execute the complete shared calibration graph for the selected side and call **zero APIs**
+from the other side; paired comparisons require a parent JSON produced with the same scenario.
+Run both sides only for an explicit end-to-end integration audit.
+
 The evaluator writes `evaluation_scope.kind`, `intent`, `comparable_for_proxy_ranking` and
 `official_score_equivalent` into new results. `official_score_equivalent` is always `false`.
 Research workbench JSON may instead use a top-level `diagnostic`/`scope` field because it does not
@@ -28,7 +34,8 @@ do not glob it into proxy-v2 analysis, do not rank with it, and do not update it
 Fast iteration rule:
 
 1. Run interface/legality smoke once for a new module.
-2. Run a paired `effect-panel` against an immutable parent JSON.
+2. Select exactly one scenario and run a paired `effect-panel` against a same-scenario immutable
+   parent JSON.
 3. Inspect focus role, controls, W/A or Q/K/V arms, worst layer and API delta.
 4. Run `default-panel` only after the mechanism is explainable; reserve `full-stress` for release
    candidates or explicit regression checks.

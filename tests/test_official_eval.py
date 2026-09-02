@@ -245,6 +245,15 @@ def test_decomposition_is_enabled_by_default_and_can_be_disabled() -> None:
     assert build_parser().parse_args(["--no-decomposition"]).decomposition is False
 
 
+def test_scenario_isolation_cli_is_mutually_exclusive() -> None:
+    parser = build_parser()
+    assert parser.parse_args([]).evaluation_scenario == "both"
+    assert parser.parse_args(["--linear-only"]).evaluation_scenario == "linear"
+    assert parser.parse_args(["--attention-only"]).evaluation_scenario == "attention"
+    with pytest.raises(SystemExit):
+        parser.parse_args(["--linear-only", "--attention-only"])
+
+
 def test_paired_cli_options_are_explicit() -> None:
     args = build_parser().parse_args([
         "--candidate-json", "candidate.json",

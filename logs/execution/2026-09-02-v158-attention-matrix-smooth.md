@@ -13,3 +13,9 @@ v158 从 exact v86 分支，Linear 与 V 冻结，只为 Q/K 增加解析的 GQA
 
 流程修正：后续 Linear 实验只执行 Linear 校准/计分，Attention 实验只执行 Attention
 校准/计分；不再为单侧机制重复无关侧的完整调用图。本轮已产生的全 panel 仅作为一次性证据。
+
+评测器修正后用 `--attention-only --effect-panel --no-decomposition` 实测：调用计数为
+`0 weight + 24 attention calibration`，动态计分为 `0 Linear + 5 Attention`；API
+`67.176s`、wall `67.465s`。对应证据为
+`artifacts/official_eval/v158-attention-only-smoke.json` 与
+`logs/official_eval/v158-attention-only-smoke.md`。

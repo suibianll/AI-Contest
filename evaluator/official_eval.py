@@ -908,11 +908,21 @@ def prepare_pack(
 def _evaluation_scope(pack: PreparedPack) -> dict[str, Any]:
     """Classify a run so reports cannot mix ranking, paired, and smoke numbers."""
     design = str(pack.metadata.get("case_design", "unknown"))
+    scenario = str(pack.metadata.get("evaluation_scenario", "both"))
+
+    def scoped(value: dict[str, Any]) -> dict[str, Any]:
+        value["scenario"] = scenario
+        if scenario != "both":
+            value["kind"] = f"{scenario}-only-{value['kind']}"
+            value["intent"] = f"{scenario}-only-mechanism-diagnosis"
+            value["comparable_for_proxy_ranking"] = False
+        return value
+
     linear_cases = len(pack.linear_cases)
     attention_cases = len(pack.attention_cases)
     default_counts = pack.layers * len(pack.roles), pack.layers * len(PANEL_WINDOW_INDICES)
     if design == DEFAULT_CASE_DESIGN and (linear_cases, attention_cases) == default_counts:
-        return {
+        return scoped({
             "kind": "default-panel",
             "intent": "proxy-ranking-within-identical-cache",
             "comparable_for_proxy_ranking": True,
@@ -920,9 +930,9 @@ def _evaluation_scope(pack: PreparedPack) -> dict[str, Any]:
             "stress_only": False,
             "smoke_only": False,
             "official_score_equivalent": False,
-        }
+        })
     if design == EFFECT_CASE_DESIGN:
-        return {
+        return scoped({
             "kind": "effect-panel",
             "intent": "paired-mechanism-diagnosis",
             "comparable_for_proxy_ranking": False,
@@ -930,9 +940,9 @@ def _evaluation_scope(pack: PreparedPack) -> dict[str, Any]:
             "stress_only": False,
             "smoke_only": False,
             "official_score_equivalent": False,
-        }
+        })
     if design == FULL_CASE_DESIGN:
-        return {
+        return scoped({
             "kind": "full-stress",
             "intent": "stress-only-regression-check",
             "comparable_for_proxy_ranking": False,
@@ -940,9 +950,9 @@ def _evaluation_scope(pack: PreparedPack) -> dict[str, Any]:
             "stress_only": True,
             "smoke_only": False,
             "official_score_equivalent": False,
-        }
+        })
     if design == "explicit-smoke-prefix-v4":
-        return {
+        return scoped({
             "kind": "smoke-prefix",
             "intent": "interface-and-local-sanity-only",
             "comparable_for_proxy_ranking": False,
@@ -950,8 +960,8 @@ def _evaluation_scope(pack: PreparedPack) -> dict[str, Any]:
             "stress_only": False,
             "smoke_only": True,
             "official_score_equivalent": False,
-        }
-    return {
+        })
+    return scoped({
         "kind": "unknown",
         "intent": "do-not-compare",
         "comparable_for_proxy_ranking": False,
@@ -959,7 +969,7 @@ def _evaluation_scope(pack: PreparedPack) -> dict[str, Any]:
         "stress_only": False,
         "smoke_only": False,
         "official_score_equivalent": False,
-    }
+    })
 
 
 def load_solution(path: Path) -> ModuleType:
@@ -1784,6 +1794,11 @@ def evaluate_solution(
     wall_start = time.perf_counter()
     api_seconds = {name: 0.0 for name in REQUIRED_APIS}
     api_calls = {name: 0 for name in REQUIRED_APIS}
+    scenario = str(pack.metadata.get("evaluation_scenario", "both"))
+    if scenario not in {"both", "linear", "attention"}:
+        raise ValueError(f"unsupported evaluation scenario: {scenario}")
+    run_linear = scenario in {"both", "linear"}
+    run_attention = scenario in {"both", "attention"}
     weight_states: dict[tuple[int, str], tuple[Any, dict[str, torch.Tensor]]] = {}
     attention_states: dict[int, dict[str, Any]] = {}
     # Match the judge's state lifetime: calibration is paid once for every
@@ -1794,10 +1809,11 @@ def evaluate_solution(
     linear_calibration_indices = tuple(
         int(index) for index in pack.metadata.get("linear_calibration_indices", [0, 1])
     )
-    if not linear_calibration_indices:
+    if run_linear and not linear_calibration_indices:
         raise RuntimeError("pack has no Linear calibration indices")
-    print(f"[{label}] Linear calibration: {pack.layers * len(pack.roles)} layer/role states", flush=True)
-    for layer in range(pack.layers):
+    if run_linear:
+        print(f"[{label}] Linear calibration: {pack.layers * len(pack.roles)} layer/role states", flush=True)
+    for layer in (range(pack.layers) if run_linear else ()):
         for role in pack.roles:
             weight_pair = _move_pair(pack.weights[layer][role], device)
             calibration = [
@@ -1820,8 +1836,9 @@ def evaluate_solution(
             validate_hif4_params(result["weight_params"], ref_weight_shape)
             weight_states[(layer, role)] = (result["activation_state"], _cpu_params(result["weight_params"]))
     attention_calibration_indices = tuple(range(len(pack.calibration_windows)))
-    print(f"[{label}] Attention calibration: {pack.layers} layer states", flush=True)
-    for layer in range(pack.layers):
+    if run_attention:
+        print(f"[{label}] Attention calibration: {pack.layers} layer states", flush=True)
+    for layer in (range(pack.layers) if run_attention else ()):
         calibration = [
             _move_qkv(pack.calibration_qkv[sample][layer], device)
             for sample in attention_calibration_indices
@@ -1842,8 +1859,9 @@ def evaluate_solution(
     attention_details: list[dict[str, Any]] = []
     standard_weight_cache: dict[tuple[int, str], tuple[torch.Tensor, torch.Tensor]] = {}
     score_weight_cache: dict[tuple[int, str], tuple[torch.Tensor, torch.Tensor]] = {}
-    print(f"[{label}] Linear scoring: {len(pack.linear_cases)} cases", flush=True)
-    for case in pack.linear_cases:
+    if run_linear:
+        print(f"[{label}] Linear scoring: {len(pack.linear_cases)} cases", flush=True)
+    for case in (pack.linear_cases if run_linear else ()):
         state, weight_params = weight_states[(case.layer, case.role)]
         activation_pair = _move_pair(pack.test_activations[case.role][case.test_window][case.layer], device)
         started = time.perf_counter()
@@ -1915,8 +1933,9 @@ def evaluate_solution(
             ),
         })
         linear_details.append(details)
-    print(f"[{label}] Attention scoring: {len(pack.attention_cases)} cases", flush=True)
-    for case in pack.attention_cases:
+    if run_attention:
+        print(f"[{label}] Attention scoring: {len(pack.attention_cases)} cases", flush=True)
+    for case in (pack.attention_cases if run_attention else ()):
         states = attention_states[case.layer]
         q_pair, k_pair, v_pair = (_move_pair(pair, device) for pair in pack.test_qkv[case.test_window][case.layer])
         started = time.perf_counter()
@@ -2021,11 +2040,15 @@ def evaluate_solution(
     attention_sum = float(sum(attention_scores))
     linear_mean = linear_sum / max(1, len(linear_details))
     attention_mean = attention_sum / max(1, len(attention_details))
-    linear_by_role = {
-        role: sum(item["gain"] for item in linear_details if item["role"] == role)
-        / max(1, sum(item["role"] == role for item in linear_details))
-        for role in pack.roles
-    }
+    linear_by_role = (
+        {
+            role: sum(item["gain"] for item in linear_details if item["role"] == role)
+            / max(1, sum(item["role"] == role for item in linear_details))
+            for role in pack.roles
+        }
+        if run_linear
+        else {}
+    )
     linear_role_families = sorted({
         _linear_role_family(role) for role in pack.roles
     })
@@ -2039,7 +2062,7 @@ def evaluate_solution(
         / max(1, sum(item["layer"] == layer for item in attention_details))
         for layer in sorted({item["layer"] for item in attention_details})
     }
-    if decomposition:
+    if decomposition and run_linear:
         linear_decomposition: dict[str, Any] = {
             "enabled": True,
             "formula": {
@@ -2054,6 +2077,12 @@ def evaluate_solution(
             "by_test_length": _group_summary(linear_details, "test_length", _linear_decomposition_summary),
             "by_split": _group_summary(linear_details, "test_split", _linear_decomposition_summary),
         }
+    else:
+        linear_decomposition = {
+            "enabled": False,
+            "reason": "scenario-disabled" if not run_linear else "decomposition-disabled",
+        }
+    if decomposition and run_attention:
         attention_decomposition: dict[str, Any] = {
             "enabled": True,
             "formula": {
@@ -2067,8 +2096,10 @@ def evaluate_solution(
             "by_split": _group_summary(attention_details, "test_split", _attention_decomposition_summary),
         }
     else:
-        linear_decomposition = {"enabled": False}
-        attention_decomposition = {"enabled": False}
+        attention_decomposition = {
+            "enabled": False,
+            "reason": "scenario-disabled" if not run_attention else "decomposition-disabled",
+        }
     scope = _evaluation_scope(pack)
     return {
         "candidate": path.stem,
@@ -2115,8 +2146,9 @@ def evaluate_solution(
         },
         "diagnostic_config": {
             "error_source_decomposition": decomposition,
+            "evaluation_scenario": scenario,
             "score_unchanged": True,
-            "candidate_api_calls_unchanged": True,
+            "candidate_api_calls_unchanged": scenario == "both",
         },
         "protocol": PROTOCOL,
     }
@@ -2314,6 +2346,14 @@ def _write_report(
     score = result["score"]
     timing = result["timing"]
     decomposition = result.get("decomposition", {})
+    linear_mean_display = (
+        f"{score['linear_mean']:.9f}" if score["linear_cases"] else "NA (not run)"
+    )
+    attention_mean_display = (
+        f"{score['attention_mean']:.9f}"
+        if score["attention_cases"]
+        else "NA (not run)"
+    )
     lines = [
         f"# {result['candidate']} — {PROTOCOL}",
         "",
@@ -2331,8 +2371,8 @@ def _write_report(
         "",
         "| 指标 | 值 |",
         "|---|---:|",
-        f"| Linear mean | {score['linear_mean']:.9f} |",
-        f"| Attention mean | {score['attention_mean']:.9f} |",
+        f"| Linear mean | {linear_mean_display} |",
+        f"| Attention mean | {attention_mean_display} |",
         f"| Overall mean (all captured cases) | {score['overall_mean']:.9f} |",
         f"| Linear role macro mean | {score['linear_role_macro_mean']:.9f} |",
         f"| Attention layer macro mean | {score['attention_layer_macro_mean']:.9f} |",
@@ -2544,6 +2584,7 @@ def _archive_output(
     paired_effect: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     scope = _evaluation_scope(prepared)
+    scenario = str(prepared.metadata.get("evaluation_scenario", "both"))
     return {
         "protocol": PROTOCOL,
         "evaluation_scope": scope,
@@ -2558,8 +2599,9 @@ def _archive_output(
             "test_length": TEST_LENGTH,
             "test_lengths": list(TEST_LENGTHS),
             "test_windows": TEST_WINDOW_COUNT,
-            "linear_cases": len(prepared.linear_cases),
-            "attention_cases": len(prepared.attention_cases),
+            "linear_cases": 0 if scenario == "attention" else len(prepared.linear_cases),
+            "attention_cases": 0 if scenario == "linear" else len(prepared.attention_cases),
+            "evaluation_scenario": scenario,
             "case_design_scope": "stratified all-layer/role real-W/A panel by default; --effect-panel selects depth-spread paired iteration cases; --full-cases enables Cartesian stress; optional CLI limits are prefix smoke-only",
             "case_design": prepared.metadata.get("case_design", DEFAULT_CASE_DESIGN),
             "panel_window_indices": prepared.metadata.get("panel_window_indices", list(PANEL_WINDOW_INDICES)),
@@ -2779,6 +2821,12 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         full_cases=args.full_cases,
         effect_panel=args.effect_panel,
     )
+    prepared.metadata["evaluation_scenario"] = args.evaluation_scenario
+    prepared.metadata["calibration_call_graph"] = {
+        "both": "all-layer-role-once; attention-layer-once",
+        "linear": "linear-all-layer-role-once; attention-skipped",
+        "attention": "linear-skipped; attention-layer-once",
+    }[args.evaluation_scenario]
     capture_seconds = time.perf_counter() - capture_started
     if args.archive:
         candidates = [(name, item) for name, item in ARCHIVE_MANIFEST.items()]
@@ -2898,6 +2946,22 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--archive", action="store_true", help="evaluate every archived version with an official result")
     parser.add_argument("--solution", type=Path, help="one solution.py when --archive is not used")
     parser.add_argument("--name", default="candidate", help="name for --solution")
+    scenario = parser.add_mutually_exclusive_group()
+    scenario.add_argument(
+        "--linear-only",
+        dest="evaluation_scenario",
+        action="store_const",
+        const="linear",
+        help="run only Linear calibration/scoring; skip every Attention API",
+    )
+    scenario.add_argument(
+        "--attention-only",
+        dest="evaluation_scenario",
+        action="store_const",
+        const="attention",
+        help="run only Attention calibration/scoring; skip every Linear API",
+    )
+    parser.set_defaults(evaluation_scenario="both")
     parser.add_argument(
         "--baseline-json",
         type=Path,
