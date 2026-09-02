@@ -69,3 +69,20 @@ python evaluator/official_eval.py --solution solution.py --linear-only --compact
 ```
 
 The first invocation builds the profile cache; later parent/candidate runs reuse it automatically.
+
+Attention-only example:
+
+```powershell
+python evaluator/official_eval.py --solution solution.py --attention-only --compact-panel --cache-mode read
+```
+
+For a complete local audit, omit both scenario/panel switches. This uses the cached
+`both-default-nvfp4.pt` input and evaluates the canonical `168 Linear + 120 Attention` panel:
+
+```powershell
+python evaluator/official_eval.py --solution solution.py --cache-mode read --nvfp4-cache-mode auto
+```
+
+The cache removes input preparation overhead only; it does not reduce the six API calls or change
+the local score. The 2026-09-02 complete audit used a cache hit (`1.186s` preparation) and finished
+with `617.842s` API / `669.349s` wall time. Those are same-host diagnostics, not an official runtime.

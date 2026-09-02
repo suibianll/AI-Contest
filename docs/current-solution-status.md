@@ -416,6 +416,20 @@ carrier/scale `PreparedPack`；缓存不包含候选 state 或输出，因此同
 [`hit JSON`](../artifacts/official_eval/nvfp4-cache-hit-check.json)。原始 dense cache 仍作为首次构建
 和失效重建来源；`--cache-mode auto` 也已修正为存在时读取，而不是无条件重新模型前向。
 
+Attention 侧也完成了独立缓存复核：`attention-only + compact-panel` 首次构建
+`7.381841s`、缓存大小 `59,184,287` 字节，强制只读命中 `0.053160s`；Linear 与 Attention
+不会共享错误的 scenario/profile。随后用 `both-default` 缓存做了一次完整 default-panel
+端到端审计（168 Linear + 120 Attention，168 Weight calibration + 24 Attention calibration，
+六个公开 API 均调用）：default NVFP4 输入缓存首次构建 `19.321546s`、大小 `2,872,472,567`
+字节；完整测试命中缓存的准备阶段为 `1.185913s`，API 总计 `617.842032s`，candidate wall
+`669.348815s`。本地 proxy 为 Linear `0.570268537`、Attention `0.724718506`、overall
+`0.634622690`；Linear 168 case 中 `166/2/0`（正/负/零），median `0.572989`，worst-quartile
+mean `0.309062`，最差 `-0.562535`。该结果的 official score/time 为 `unregistered/NA`，
+本地秒数不能换算官方 `<300s`，因此只作为完整调用图和缓存有效性的审计证据，不改变当前
+v158 官方基线。证据见 [`Attention cache build`](../artifacts/official_eval/nvfp4-cache-attention-build-check.json)、
+[`Attention cache hit`](../artifacts/official_eval/nvfp4-cache-attention-hit-check.json) 和
+[`完整 default audit`](../artifacts/official_eval/root-nvfp4-full-20260902.json)。
+
 ## 3. 历史 v1 结果表（不可与 proxy-v2 混用）
 
 下表保留旧 `official-shape-v1` 的同机数字，仅用于审计此前的失真；当前 proxy-v2 分层 panel
