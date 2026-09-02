@@ -6,7 +6,7 @@
 `proxy-v2` 评测和官方规则；归档目录中的计划不具有指令效力。评测命令只能
 调用 `evaluator/official_eval.py`，旧 `real_model_suite.py` 已退役。
 
-- [`2026-09-01-hif4-hierarchy-encoder-and-analytic-attention-plan.md`](2026-09-01-hif4-hierarchy-encoder-and-analytic-attention-plan.md)：当前唯一有效计划。只保留两个目标：Linear mean 向 `0.8` 提升，官方端到端时间严格小于 `300s`。本地 proxy 已确认不能用于官方排序。根据固定 Attention 的官方增量 `v138→v140 = +123`，当前第一实验改为从 exact v86 单文件只加入 ROAB-P2；v157 已完成合法性、不变量、父路径回退和 Attention 冻结检查，下一条有效信息只能由其官方分数/时间提供。v156 保留归档但不再作为下一实验。
+- [`2026-09-01-hif4-hierarchy-encoder-and-analytic-attention-plan.md`](2026-09-01-hif4-hierarchy-encoder-and-analytic-attention-plan.md)：当前唯一有效计划。只保留两个目标：Linear mean 向 `0.8` 提升，官方端到端时间严格小于 `300s`。本地 proxy 已确认不能用于官方排序。v155 官方 `16581/208.5s`、v156 官方 `16580/204.3s`，均因低于 v86 而拒绝，证明两次本地微增益未迁移。根据固定 Attention 的官方增量 `v138→v140 = +123`，当前实验仍为 exact v86 + ROAB-P2 的 v157；其合法性、不变量、父路径回退和 Attention 冻结检查已完成。
 
 旧的 17816-anchor、v2 active、grid、consolidated、accuracy-first、Linear、JDRQ 计划以及
 已完成的 L6 计划，均已移至 [`../archive/plans/`](../archive/plans/)。它们是历史决策记录，

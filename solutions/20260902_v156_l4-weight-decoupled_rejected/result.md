@@ -1,6 +1,6 @@
-# v156 L4 Weight-decoupled stored-scale probe
+# v156 L4 Weight-decoupled stored-scale — rejected
 
-- Status: `RETAINED` (official candidate pending; local evidence only so far)
+- Status: `REJECTED` (official pass, but below v86)
 - Parent: pre-A3 workbench parent; this snapshot was a formal single-file compilation of the probe
 - Unique change: keep HiF4 sign/mantissa/lv2/lv3 fixed, solve one closed-form stored scale per
   expansive row/block under transformed calibration Gram, project to the nearest legal E6M2 code,
@@ -31,14 +31,12 @@ diagnostic evidence. No formal default JSON is claimed for this snapshot.
 
 ## Official fields and decision
 
-- Official score: `unregistered`
-- Official time: `NA`
-- Official status: `unregistered`
+- Official score: `16580` (user reported 2026-09-02; `-164` versus v86)
+- Official time: `204.3s` (passes the strict `<300s` requirement)
+- Official judge status: `pass`
+- Archive decision: `REJECTED` because accuracy is below v86 `16744`
 
-This snapshot is retained specifically so the user can submit it to the official judge. The local
-gain is small and must not be treated as evidence of an official improvement: official v86 is
-`16744 / 222.7s`, while v147 is `16579 / 211s`, so the working hypothesis is a materially worse
-v147 Linear path under the same v86-style Attention. Submit the exact file at
-`solutions/20260902_v156_l4-weight-decoupled_scoreNA_timeNA/solution.py`; after the official score
-and time return, either promote it or rename/archive it as rejected. Do not replace the root file
-automatically.
+The official result rejects the mechanism: it saves `18.4s` versus v86 but loses `164` score points.
+It is also one point below v155, so the small positive Qwen/GPT-2 proxy movements did not produce
+an official accuracy gain. Keep this source only as negative evidence; do not replace root
+`solution.py` and do not tune this stored-scale family further.

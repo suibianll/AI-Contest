@@ -2,10 +2,10 @@
 
 ## Status
 
-`RETAINED / OFFICIAL CANDIDATE PENDING`. This is a single-file candidate for user submission; no
-official score or runtime has been inferred. The root `solution.py` is unchanged.
+`REJECTED`. The user reported official `16580 / 204.3s`: runtime passes, but accuracy is `164`
+points below v86. The root `solution.py` remains unchanged.
 
-Source: `solutions/20260902_v156_l4-weight-decoupled_scoreNA_timeNA/solution.py`
+Source: `solutions/20260902_v156_l4-weight-decoupled_rejected/solution.py`
 SHA256: `594EF2FBB70AE54E06BF2D896E11E637E4BA9AF67AD54C01F10D57136EB8DF85`
 
 ## Mechanism
@@ -42,10 +42,12 @@ partial JSON is treated as a result. Workbench evidence is retained in
 `artifacts/official_eval/l4-weight-decoupled-effect.json` and
 `artifacts/official_eval/gpt2-l4-weight-decoupled.json`.
 
-## Submission handoff
+## Official result and decision
 
-Submit the exact single file at
-`solutions/20260902_v156_l4-weight-decoupled_scoreNA_timeNA/solution.py`. After the official score
-and time return, update `result.md`, `docs/current-solution-status.md`, and `solutions/README.md`;
-if it is below v86 or times out, rename the directory with `_rejected`/`_timeout` according to the
-archive rules. Until then, official fields remain `unregistered/NA`.
+- Official score: `16580`
+- Official time: `204.3s`
+- Judge status: pass
+- Archive decision: `REJECTED` (`-164` versus v86)
+
+The local effect/GPT-2 gains were too small and did not transfer. Stop this stored-scale family and
+keep exact v86 as the reproducible official parent.

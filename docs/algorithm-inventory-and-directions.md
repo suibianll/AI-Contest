@@ -64,17 +64,17 @@
 | Attention Q/K scaling、K center、Q/K rotation、V 非对称、true rerank | v034/v075/v086、PAWV diag-only、v128–v131 | 复杂动态路径已失败或超时；同复杂度解析 Matrix-Smooth Q/K 尚未实现 |
 | 外部 HiF4/MR-GPTQ/跨模型 | hif4 role attribution、GPT-2 probe、codec/结构审计 | 可定位 fc/proj 风险，不能把外部排序当官方拟合 |
 | **单次 block-Hessian HiF4-GPTQ** | 只有 full/block HSDQ、LRH 和多轮 structured proposal | **未完成，Linear 最值得补的缺口** |
-| **Weight decoupled encoder** | 仅写入活动计划，未在稳定坐标父版本上实现 | **未完成，优先做闭式 stored-scale 单次版本** |
+| **Weight decoupled encoder** | v156 闭式 stored-scale | **已完成并拒绝**：官方 `16580 / 204.3s`，低于 v86 `164` 分 |
 | **Analytic Matrix-Smooth Q/K、静态 Fisher** | 只有旧 reciprocal/center/rotation | **未完成，必须后置且保持 v86 复杂度** |
 
 ### 当前最短优化路径
 
-1. **已完成 v155 小型 GPT-2 smoke**：严格 pre-A3 配对为 Linear `−0.000153`（fc `−0.000916`），
-   因此 v155 只作 Qwen-local control，不做跨模型排名或默认叠加。
-2. 以 pre-A3 为父版本实现一个 **L4-WD 单次 Weight-decoupled stored-scale**：固定坐标（v155
-   仅作对照），按部署 `Q(W)` Gram 与 `H_X` 闭式更新 stored scale，每 block 一次、两折 gate、
-   无第二次完整 output oracle。effect panel 无稳定 role/layer 正向则立即关闭。
-3. L4-WD 失败时只做一个 **block-Schur HiF4-GPTQ** 参照（优先 `fc_gate/fc_up/proj`），固定
+1. **v155 已拒绝**：严格 pre-A3/GPT-2 配对为 Linear `−0.000153`（fc `−0.000916`），官方
+   `16581 / 208.5s`，低于 v86 `163` 分；不再做 permutation 扩展。
+2. **v156 L4-WD 已拒绝**：官方 `16580 / 204.3s`，低于 v86 `164` 分；此前以 pre-A3 为父版本
+   的部署-Gram闭式 stored-scale 微增益没有迁移，该路线关闭。
+3. 当前先验证 exact-v86 + ROAB-only 的 v157；若失败，只做一个 **block-Schur HiF4-GPTQ**
+   参照（优先 `fc_gate/fc_up/proj`），固定
    block 顺序/预算，以真实 `A@W` loss 一次合法写回；不再增加 rank、block、offset、sweep。
 4. Linear 有稳定增益且时间可控后，冻结 Linear，启动 Attention A1 的 GQA group-local
    `Q'=QM, K'=KM^{-T}`；随后才试两次 K fixed-point center，禁止 Gram sweep/PAWV/length router。

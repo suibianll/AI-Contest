@@ -101,6 +101,8 @@ silently assigned a score.
 | v139 | `20260901_v139_linear-output-aware-gain_scoreNA_timeNA` | **15716** | **202 s** | **pass (official, user reported)** |
 | v140 | `20260901_v140_linear-roab-pair_rejected` | **15838** | **207 s** | **pass, but rejected: below v86 and 17816** |
 | v147 | `20260901_v147_v86-attention-v140-linear_rejected` | **16579** | **211 s** | **pass, but rejected: 165 points below v86; submitted SHA unconfirmed** |
+| v155 | `20260902_v155_l5a-permutation-stability_rejected` | **16581** | **208.5 s** | **pass, but rejected: 163 points below v86** |
+| v156 | `20260902_v156_l4-weight-decoupled_rejected` | **16580** | **204.3 s** | **pass, but rejected: 164 points below v86** |
 
 ## 2026-09-01 official-shape-v1 local candidates
 
@@ -129,8 +131,8 @@ directories follow the same immutable naming rule as the historical archive:
 | v152 | `20260902_v152_fc-cat-off_rejected` | **0.583139 / 0.542553 (14/56-case)** | **0.942927** | **199.578/200.432 s** | **rejected; small mixed-sign fc gain** |
 | v153 | `20260902_v153_fc-decoupled-activation_rejected` | **0.568754 (targeted)** | **0.942927** | **197.656 s** | **rejected; direct s_q assignment regresses fc** |
 | v154 | `20260902_v154_fc-decoupled-scale-fit_rejected` | **0.568754 (targeted)** | **0.942927** | **198.098 s** | **rejected; fitted s_d is a no-op after v153** |
-| v155 | `20260902_v155_l5a-permutation-stability_scoreNA_timeNA` | **0.570999 (default)** / 0.588162 (effect) | **0.724735 (default)** / 0.757433 (effect) | **248.121 s (default-equivalent)** / 207.196 s (effect) | **retained Qwen-local diagnostic control; 4/0/164 paired gain, GPT-2 −0.000153, official unregistered** |
-| v156 | `20260902_v156_l4-weight-decoupled_scoreNA_timeNA` | 0.588131 (effect; default not run) | 0.757433 (effect) | 203.994 s (effect) | **retained official candidate pending; single-file SHA, official unregistered** |
+| v155 | `20260902_v155_l5a-permutation-stability_rejected` | **0.570999 (default)** / 0.588162 (effect) | **0.724735 (default)** / 0.757433 (effect) | **248.121 s (default-equivalent)** / 207.196 s (effect) | **rejected; official 16581/208.5s, 163 points below v86** |
+| v156 | `20260902_v156_l4-weight-decoupled_rejected` | 0.588131 (effect; default not run) | 0.757433 (effect) | 203.994 s (effect) | **rejected; official 16580/204.3s, 164 points below v86** |
 | v157 | `20260902_v157_v86-roab-only_scoreNA_timeNA` | NA (legality smoke only) | NA (frozen field-equality check) | NA | **retained next official single-variable candidate; exact v86 + ROAB-only** |
 
 † The first v147 values come from the original pre-A3 JSON (SHA `9B3EA5...B656`); the second come
@@ -224,8 +226,9 @@ Attention field-for-field frozen. The direction comes from the clean fixed-Atten
 increment `v138→v140 = +123`, not from a local ranking. No local model panel was run for v157;
 legality, continuous-product/covariance invariants, rejected-candidate parent equality, selected
 state propagation and isolated import passed. Its SHA is
-`984BF752156187B8892894060A99FE52027E2457F37FC23C11657041B29B86E1`. v156 remains archived,
-but its tiny local-only signal no longer determines the next experiment.
+`984BF752156187B8892894060A99FE52027E2457F37FC23C11657041B29B86E1`. Official results later
+rejected v155 (`16581 / 208.5s`) and v156 (`16580 / 204.3s`); both passed time but stayed below
+v86, confirming that their tiny local-only gains did not transfer.
 
 \* The earlier v086 local `462.239 s` observation was also concurrent-load affected. The clean
 idle rerun is `299.302 s` API / `321.996 s` wall; see

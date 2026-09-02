@@ -12,7 +12,8 @@
 
 > 2026-09-02 用户纠偏：禁止继续用本地排名代替官方方向判断，也不重复提交已有官方结果的
 > v86。固定 Attention 的官方对照中，`v138→v140` 是唯一干净的正向 Linear 增量（ROAB-P2，
-> `+123`）。因此先执行 exact v86 + ROAB-only 的 v157；v156 留作历史候选但不占用下一次实验。
+> `+123`）。因此先执行 exact v86 + ROAB-only 的 v157。用户随后回传 v155
+> `16581/208.5s`、v156 `16580/204.3s`；两者均低于 v86，现已正式拒绝。
 
 ## E0. 本地评测趋势代理（DONE）
 
@@ -332,22 +333,20 @@ L(Q_A)=\|A_tW_t^T-Q_AQ(W)^T\|_F^2,
    Attention 全部 no-op。默认 168+120 的等价 paired replay 为 Linear `+0.000116536`
    （4/0/164），focus fc `+0.000407876`（4/0/44）。
 5. 这不是“全局 fc 改善”：只改动 4 个默认 case，召回率低；W-only/A-only 仍恶化、Both
-   轻微改善，说明收益来自双侧坐标耦合。GPT-2 严格配对还轻微回归，所以 v155 只作为
-   local diagnostic control 保留，不替换根文件，不填写官方分数/时间，不把本地秒数当成
-   `<300s` 证明。证据见
-   `solutions/20260902_v155_l5a-permutation-stability_scoreNA_timeNA/result.md`、
+   轻微改善，说明收益来自双侧坐标耦合。GPT-2 严格配对轻微回归；官方进一步回传
+   `16581 / 208.5s`，时间通过但低于 v86 `163` 分，因此 v155 正式拒绝。证据见
+   `solutions/20260902_v155_l5a-permutation-stability_rejected/result.md`、
    `artifacts/official_eval/v155-l5a-perm-stability-effect.json` 和
    `artifacts/official_eval/l5a-linear-perm-stability-default-paired.json`。
 6. L4-WD 已完成一次 workbench effect 与 GPT-2 配对：Qwen Linear `+0.000107624`（5/0/51，
    focus fc `+0.000376686`），GPT-2 Linear `+0.000029454`（fc `+0.000176722`），controls
-   与 Attention no-op。增益仍很小，但正式单文件 v156 已完成隔离导入检查并按用户要求保留
-   为待提交候选；正式 effect 重跑在官方提交优先后停止，未伪造默认结果。证据与 SHA 见
-   `solutions/20260902_v156_l4-weight-decoupled_scoreNA_timeNA/result.md`。
+   与 Attention no-op。官方回传 `16580 / 204.3s`，低于 v86 `164` 分、也比 v155 低 `1`
+   分，因此 v156 正式拒绝并关闭 stored-scale 路线。证据与 SHA 见
+   `solutions/20260902_v156_l4-weight-decoupled_rejected/result.md`。
 
-L3-D0 的结束结论因此是“有 same-fold 表示余量，但没有低自由度可编译 encoder”；v155 的
-正向只证明一个保守坐标门控值得作为 Qwen-local control。GPT-2 严格配对的轻微回归进一步
-说明它不是跨结构父版本。后续不能围绕该低召回规则继续调四分位/层列表，而要转向新的
-输出度量机制，并从 pre-A3 parent 分支。
+L3-D0 的结束结论因此是“有 same-fold 表示余量，但没有低自由度可编译 encoder”；v155/v156
+的官方结果进一步否定了这条 pre-A3 局部微调线。后续不能围绕低召回 permutation 或
+stored-scale 继续调参，必须从 exact v86 分支。
 
 ## E0.8. 对《NVFP4 到 HiF4 高精度量化赛题完整分析与优化方案》的逐项审计
 
@@ -375,8 +374,8 @@ mean 的结果都不进入候选队列。
 
 ### 下一步的最小优化序列
 
-1. **v155 跨结构 smoke（DONE / control only）**：严格 GPT-2 配对为轻微负向，已关闭其优化
-   方向，不再围绕四分位/层列表调门控。
+1. **v155（REJECTED / official 16581, 208.5s）**：严格 GPT-2 配对为轻微负向，官方低于
+   v86 `163` 分；关闭其优化方向，不再围绕四分位/层列表调门控。
 2. **E1 exact-v86 + ROAB-only（IMPLEMENTED / official candidate pending）**：v157 仅在 v86
    冻结坐标之后加入一次解析 2×2 等价变换；拒绝分支与 v86 字段级一致，Attention 完全一致，
    六 API 与单文件隔离检查通过。禁止为它补跑本地排名面板，直接等待官方分数/时间裁决。
@@ -730,10 +729,10 @@ V 不部署 PAWV；V 的提升只来自 A3 encoder。若 Fisher calibration 开�
    回归，结论为 `margin_exists_but_not_compile_safe`。
 4. **cross-fold stability probe（DONE / CLOSED）**：固定 threshold/LUT 的符号不稳定且 held-out
    precision 为零；L3-D1 关闭，不再编译直接 activation encoder。
-5. **L5a permutation-stability（RETAINED / LOW-RECALL CONTROL）**：v155 只保留无回归的
-   四分位压力交错，默认 paired 为 `+0.000116536`、4/0/164；跨 GPT-2 轻微回归，不替换 root。
-6. **L4-WD（DONE / ARCHIVED CANDIDATE）**：v156 的正向证据只来自很小的本地 proxy 变化，
-   在用户纠偏后不再作为下一次官方实验；源码和证据保留，不据此判断官方方向。
+5. **L5a permutation-stability（REJECTED）**：v155 官方 `16581 / 208.5s`，低于 v86 `163`
+   分；本地 `+0.000116536` 没有迁移，目录已标记 `_rejected`。
+6. **L4-WD（REJECTED）**：v156 官方 `16580 / 204.3s`，低于 v86 `164` 分；本地微增益没有
+   迁移，stored-scale 路线关闭，目录已标记 `_rejected`。
 7. **E1 exact-v86 + ROAB-only（IMPLEMENTED / OFFICIAL CANDIDATE PENDING）**：v157 已完成
    单文件、六 API、连续乘积/协方差、父路径字段级回退和 v86 Attention 字段级冻结检查；未跑
    本地排名 panel。其依据是固定 Attention 的官方 `v138→v140 = +123` 增量。

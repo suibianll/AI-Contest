@@ -1,6 +1,6 @@
-# v155 L5a permutation-stability candidate
+# v155 L5a permutation-stability — rejected
 
-- Status: `RETAINED` (local diagnostic control; not the selected submission)
+- Status: `REJECTED` (official pass, but below v86)
 - Parent: pre-A3 local attribution parent `workbench/pre-a3-v147-parent.py`, SHA
   `800CA10EC3414E4FE886B93CA62BD4A350D26BBA015287DF7E8DF2DD871AC23D`
 - Unique change: for expansive `rows > channels` Linear blocks, derive channel pressure after
@@ -21,7 +21,7 @@ official-time conversion.
 The formal single-file effect-panel command was:
 
 ```powershell
-.venv\Scripts\python.exe evaluator\official_eval.py --solution solutions\20260902_v155_l5a-permutation-stability_scoreNA_timeNA\solution.py --name v155-l5a-perm-stability-effect --cache artifacts\official_eval\cache\qwen2.5-0.5b-proxy-v2.pt --cache-mode read --effect-panel --focus-linear-roles fc --baseline-json artifacts\official_eval\l3-fc-parent-effect.json --output artifacts\official_eval\v155-l5a-perm-stability-effect.json --report logs\official_eval\v155-l5a-perm-stability-effect.md
+.venv\Scripts\python.exe evaluator\official_eval.py --solution solutions\20260902_v155_l5a-permutation-stability_rejected\solution.py --name v155-l5a-perm-stability-effect --cache artifacts\official_eval\cache\qwen2.5-0.5b-proxy-v2.pt --cache-mode read --effect-panel --focus-linear-roles fc --baseline-json artifacts\official_eval\l3-fc-parent-effect.json --output artifacts\official_eval\v155-l5a-perm-stability-effect.json --report logs\official_eval\v155-l5a-perm-stability-effect.md
 ```
 
 | panel | Linear | Attention | Overall | API total | wall |
@@ -50,10 +50,10 @@ signs and was rejected as unstable. No arbitrary layer list or tuned threshold w
 
 ## Official fields
 
-- Official score: `unregistered` (the user-confirmed repository anchor remains v86 `16744`;
-  the separate un-synchronized high-score fact is `17816`)
-- Official time: `NA`
-- Official status: `unregistered`
+- Official score: `16581` (user reported 2026-09-02; `-163` versus v86)
+- Official time: `208.5s` (passes the strict `<300s` requirement)
+- Official judge status: `pass`
+- Archive decision: `REJECTED` because accuracy is below v86 `16744`
 
 ## Cross-model check and decision
 
@@ -63,8 +63,6 @@ The candidate moved Linear `0.519793773→0.519641076` (`−0.000152696`), with 
 This is a structural regression, not a reproducible gain. The Qwen positive therefore remains a
 low-recall Qwen-local coordinate signal.
 
-Do not use v155 as the submission: its Qwen gain is only `+0.000116536` on four default cases and
-the strict GPT-2 pair is negative. Keep the snapshot as a reproducible negative control while v156
-is submitted. Do not replace the root `solution.py`, do not claim an official improvement, and do
-not spend another run on permutation thresholds. Any later mechanism should branch from the exact
-v86 baseline and target a materially larger Linear effect with the same paired error-source report.
+The official result confirms rejection: the candidate is fast enough but scores `163` points below
+v86. Keep the snapshot only as a reproducible negative control. Do not replace root `solution.py`
+or spend another run on permutation thresholds. Later mechanisms branch from exact v86.

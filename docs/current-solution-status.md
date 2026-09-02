@@ -35,9 +35,10 @@
   `15838 / 207s` 结论。
 - v138/v139 虽在官方 `<300s` 内通过，但只有 `15715/15716`，比 v86 低约 1029 分；
   v138–v145 这条“压缩 Attention 后继续叠 Linear 局部模块”的路线已经失败并关闭。
-- 下一阶段不从 v140/A3 继续调参，也不等待 17816 源码才开始。先恢复可信 pre-A3 对照并完成
-  role 归因；第一正式机制是 Activation-only Decoupled HiF4 Encoder，Attention 固定 v86。
-  17816 源码若后续到位，再作为独立官方快照归档和对照，不倒推或覆盖当前证据。
+- v155 官方 `16581 / 208.5s`、v156 官方 `16580 / 204.3s`，两者时间均通过但分别低于 v86
+  `163/164` 分，已正式拒绝。它们本地 `10^-4` 级正向没有迁移。
+- 当前候选是从 exact v86 分支的 v157 ROAB-only；Attention 固定 v86。17816 源码若后续
+  到位，再作为独立官方快照归档和对照，不倒推或覆盖当前证据。
 
 ## 2. 评测口径
 
@@ -302,7 +303,7 @@ full stress、GPT-2/hif4 外部探针放在同一目录并按均值阅读，造�
 本地 scope 可以替代官方分数或官方 `<300s`。具体字段契约见
 [`artifacts/official_eval/README.md`](../artifacts/official_eval/README.md)。
 
-## 2.11 v155 L5a permutation-stability（RETAINED / local diagnostic only）
+## 2.11 v155 L5a permutation-stability（REJECTED / official 16581, 208.5s）
 
 在 L3-D0 的 teacher margin 跨 fold 不稳定后，按计划只做了一次参数无关的 stability probe，
 没有继续调 `s_q/s_d`、CAT、ROAB 或阈值。结果是 fold-0 生成的 fc 特征/决策在 fold-1 上
@@ -312,9 +313,9 @@ held-out 正向 precision 为零；因此直接 activation teacher-to-student �
 probe 同时保留了一个不同层级的低自由度坐标机制：在既有 BOAT 后计算 64-channel pressure，
 固定四分位 low/high interleave，并要求两折 product loss 均下降且最小折收益不小于折间分歧。
 它不改变连续乘积、HiF4 codec 或六 API 调用图。正式单文件快照为
-[`v155 solution`](../solutions/20260902_v155_l5a-permutation-stability_scoreNA_timeNA/solution.py)，
+[`v155 solution`](../solutions/20260902_v155_l5a-permutation-stability_rejected/solution.py)，
 SHA256 `816ECBF5E253745C5EBFD04233BD04A2B772CF1510641393C7900CDAFA0EB4CC`，完整说明见其
-[`result.md`](../solutions/20260902_v155_l5a-permutation-stability_scoreNA_timeNA/result.md)。
+[`result.md`](../solutions/20260902_v155_l5a-permutation-stability_rejected/result.md)。
 
 正式 effect panel（56 Linear + 5 Attention）为 Linear `0.588162284`、Attention `0.757433277`，
 相对 pre-A3 parent 的 Linear `+0.000139055`（2 改善/0 回归/54 不变），focus fc `+0.000486693`
@@ -325,13 +326,12 @@ focus fc `+0.000407876`（4/0/44）；本地 API `248.121s`、wall `280.763s` �
 该收益的 W/A 分解不是 operand 独立改善：W-only、A-only 仍为负而 Both 略正，属于双侧坐标
 耦合；且只命中 4 个默认 case，召回率很低。进一步的严格 GPT-2 配对（同一 cache、同一
 pre-A3 parent）使 Linear `0.519793773→0.519641076`（`−0.000153`），`ffn_in/fc`
-`−0.000916`，Attention 完全不变。因此 v155 只作为 **Qwen-local diagnostic control** 保留，
-不作为跨结构优化 parent；不替换根 `solution.py`，不填写官方分数/时间，也不把默认本地秒数
-解释为官方通过。下一步必须从 pre-A3 parent 换新的数学机制（单次 Weight-decoupled 或部署
-Gram block-Schur），而不是继续扩大 permutation 的层列表/分位阈值。GPT-2 证据见
+`−0.000916`，Attention 完全不变。用户随后回传官方 `16581 / 208.5s`：时间通过，但比 v86
+低 `163` 分，正式判为 `REJECTED`。这证明本地低召回微增益没有迁移；不替换根
+`solution.py`，也不再扩大 permutation 的层列表/分位阈值。GPT-2 证据见
 [`v155 cross-model report`](../logs/official_eval/gpt2-v155-l5a-perm-stability.md)。
 
-## 2.12 v156 L4-WD（RETAINED / official candidate pending）
+## 2.12 v156 L4-WD（REJECTED / official 16580, 204.3s）
 
 v156 从 pre-A3 单文件父版本编译了一个只改 Weight 的闭式 stored-scale 机制：固定 sign、
 mantissa、lv2/lv3 与坐标，按变换后校准 Gram 为每个 expansive row/block 求尺度，再投影到
@@ -342,10 +342,10 @@ Attention no-op。该增益很小，不能替代官方验证，但源码已完�
 为 `594EF2FBB70AE54E06BF2D896E11E637E4BA9AF67AD54C01F10D57136EB8DF85`。
 
 按用户要求保留目录
-[`v156 solution`](../solutions/20260902_v156_l4-weight-decoupled_scoreNA_timeNA/solution.py)
-作为待提交官方候选；正式 effect 重跑在提交决定后中止，因而没有伪造 formal default JSON。
-官方分数/时间仍写 `unregistered/NA`，根 `solution.py` 不自动切换。官方回传后立即按分数和
-`<300s` 归档为晋级或 rejected。
+[`v156 solution`](../solutions/20260902_v156_l4-weight-decoupled_rejected/solution.py)。用户回传
+官方 `16580 / 204.3s`：时间比 v86 少 `18.4s`，但分数低 `164`，且比 v155 还低 `1` 分，
+正式判为 `REJECTED`。本地 Qwen/GPT-2 的 `10^-5–10^-4` 正向没有迁移，停止该 stored-scale
+路线；根 `solution.py` 不切换。
 
 ## 2.13 v157 exact-v86 + ROAB-only（RETAINED / next official experiment）
 
@@ -363,7 +363,7 @@ state 与 exact v86 字段级一致；Attention calibration 与 Q/K/V dynamic �
 没有运行任何本地排名 panel。已通过 `35` 个仓库测试、六 API 合法性、selected branch、连续
 乘积/协方差不变量和脱离仓库单文件导入检查。正式源码 SHA256 为
 `984BF752156187B8892894060A99FE52027E2457F37FC23C11657041B29B86E1`。官方 score/time 仍为
-`unregistered/NA`；根 `solution.py` 不切换。v156 保留证据，但不再作为下一实验。
+`unregistered/NA`；根 `solution.py` 不切换。v155/v156 已按官方结果拒绝。
 
 ## 3. 历史 v1 结果表（不可与 proxy-v2 混用）
 
@@ -388,6 +388,8 @@ state 与 exact v86 字段级一致；Attention calibration 与 Q/K/V dynamic �
 | v141–v145 | 0.281760–0.506256 | 0.715942 | 204.681–211.460 | 228.127–234.842 | 未提交 | REJECTED；源码已清理 |
 | **v147** | **0.507355†** | **0.719696** | **222.227†** | **245.038†** | **16579 / 211s** | **REJECTED；时间通过但低于 v86** |
 | v148 | **0.509729** | 0.719696 | **369.038** | 391.615 | 未提交 | **REJECTED；A3 提升 Linear 但校准超时** |
+| v155 | **0.570999** | **0.724735** | **248.121** | **280.763** | **16581 / 208.5s** | **REJECTED；时间通过但低于 v86 163 分** |
+| v156 | 0.588131（effect） | 0.757433（effect） | 203.994（effect） | 216.749（effect） | **16580 / 204.3s** | **REJECTED；时间通过但低于 v86 164 分** |
 
 完整原始数据见 [`artifacts/official_eval/`](../artifacts/official_eval/)，官方回传记录见
 [`logs/execution/`](../logs/execution/)。
@@ -449,10 +451,9 @@ v86 的部分 scale-aware/output-aware 机制。此前把它描述为“v86 级�
    v86 `16744/222.7s`，用户确认的 `17816` 尚无源码/时间/Attention 配置，不能伪造候选。
 2. L3-D0 与 stability probe 均已完成：same-fold teacher 有 margin，但没有固定 threshold/LUT
    可跨 fold 编译；L3 直接 activation encoder 关闭。
-3. v155 的稳定 permutation 只提供低召回坐标信号（默认 `+0.000116536`、4/0/164），保留
-   为 local parent，不继续做参数 sweep；它的正向来自 W/A interaction，不是单侧 operand 降误差。
-4. v156 L4-WD 已实现但只有很小的本地 proxy 正向，无法支撑官方方向。在用户纠偏后保留其
-   证据但不作为下一实验。
+3. v155 官方 `16581 / 208.5s`，低于 v86 `163` 分；稳定 permutation 正式拒绝，不作 parent。
+4. v156 官方 `16580 / 204.3s`，低于 v86 `164` 分；stored-scale 路线正式拒绝。本地微小
+   正向不能支撑官方方向。
 5. v157 已从 exact v86 只加入 ROAB-P2；依据是固定 Attention 的官方 `+123` 增量。下一条
    决策证据是 v157 的官方 score/time，不补跑本地排名 panel。
 6. 若 v157 官方失败或低于 v86，再做一个单次 **block-Schur HiF4-GPTQ** 参照实现，优先
@@ -473,10 +474,10 @@ v86 的部分 scale-aware/output-aware 机制。此前把它描述为“v86 级�
 - v140 ROAB-P2 改为 `REJECTED / LOCAL-ONLY`，归档目录标记 `_rejected`；
 - 空的重复 v140 curvature 目录已删除；
 - v141–v145 失败源码目录删除，逐次 JSON/日志保留。
-- v155 L5a permutation-stability 已保存为 `RETAINED / LOCAL DIAGNOSTIC ONLY`，正式单文件和
-  `result.md` 已完成；它不改变 root，也没有官方分数/时间字段。
-- v156 L4-WD 已保存为 `RETAINED / OFFICIAL CANDIDATE PENDING`，单文件 SHA、结果说明和
-  跨模型/本地 effect 证据已完成；尚未收到官方分数/时间，但不再作为下一实验。
+- v155 L5a permutation-stability 已按官方 `16581 / 208.5s` 保存为 `REJECTED` 并将目录改为
+  `_rejected`；它不改变 root。
+- v156 L4-WD 已按官方 `16580 / 204.3s` 保存为 `REJECTED` 并将目录改为 `_rejected`；本地
+  微增益未迁移，停止 stored-scale 路线。
 - v157 exact-v86 + ROAB-only 已保存为 `RETAINED / NEXT OFFICIAL EXPERIMENT`；六 API、
   continuous invariant、父路径/Attention 字段级冻结和单文件隔离导入已通过，未运行本地排名。
 
