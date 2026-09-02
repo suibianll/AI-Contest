@@ -346,9 +346,13 @@ _ATTN_PAIR_MATRIX_RIDGE = 1.0e-6
 # Flagging this off restores the parent behaviour exactly.
 _ATTN_SCALE_AWARE_CENTER = True
 # C41b: under GQA the KV heads are few (e.g. 2 for qwen2.5-0.5b), so the
-# centered second moment is a high-variance estimate and the scale-aware
-# center degraded the only GQA model.  Keep the parent behaviour there.
-_ATTN_SCALE_AWARE_CENTER_GQA = False
+# centered second moment is a high-variance estimate.  A2 re-enables the
+# scale-aware center for GQA (2026-09-03): the mode-4 candidate only enters
+# the competition when it clears the _candidate_is_safe gate against the
+# identity/parent candidate, so a degraded center cannot regress the result;
+# the fixed-point solve starts at c=0 where the identity candidate is always
+# admissible.
+_ATTN_SCALE_AWARE_CENTER_GQA = True
 _ATTN_CENTER_ALTERNATIONS = 3
 if _ATTN_SCALE_AWARE_CENTER:
     _ATTN_CENTER_MODES = (0, 2, 4)
