@@ -21,6 +21,10 @@ call the six-API evaluator; treat it as `research-oracle` and never rank it with
 The only authoritative official facts are the user-confirmed records in
 `docs/current-solution-status.md` and `solutions/README.md`.
 
+Legacy `official-shape-v1` JSON (36 files, including `archive-official-shape-v1.json`) has been
+moved to the `legacy-v1/` subdirectory for physical isolation. It is immutable historical evidence:
+do not glob it into proxy-v2 analysis, do not rank with it, and do not update it with new runs.
+
 Fast iteration rule:
 
 1. Run interface/legality smoke once for a new module.

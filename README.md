@@ -71,7 +71,7 @@
 - 2026-09-01 归档复测已完成 18 个有官方记录的候选：本地最高返回结果为 v121
   (`0.472197763 / 0.833617251`)，但 API `3404.369 s`、官方 timeout；v002 的本机
   CUDA/CPU device-mix 错误被原样记录。完整明细只看
-  [`archive-official-shape-v1.json`](artifacts/official_eval/archive-official-shape-v1.json)（历史 v1 证据）。
+  [`archive-official-shape-v1.json`](artifacts/official_eval/legacy-v1/archive-official-shape-v1.json)（历史 v1 证据，已隔离到 `legacy-v1/`）。
 
 ## 当前协议：`proxy-v2`（旧 `official-shape-v1` 仅作历史诊断）
 
@@ -283,7 +283,8 @@ smoke，尤其 `14/56` 不是纵深采样，不能再用于判断算法效果。
 | v147 | 16579 | 211 s | pass but rejected（官方，低于 v86；提交 SHA 未确认） |
 
 统一复测生成的文件只能放在 `artifacts/official_eval/` 和 `logs/official_eval/`；
-当前复测结果以 `proxy-v2` JSON 为准；历史结果表以 `archive-official-shape-v1.json` 为准。旧 `artifacts/real_model_suite/`
+当前复测结果以 `proxy-v2` JSON 为准；历史 v1 结果表隔离在
+`artifacts/official_eval/legacy-v1/`（不可迁移比较）。旧 `artifacts/real_model_suite/`
 结果不再读取、不再更新，旧 evaluator 源码统一放在
 `evaluator/archive/legacy-20260901/` 作为历史证据。
 

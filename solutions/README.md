@@ -56,8 +56,9 @@ cross-structure or historical probes. Every new JSON records this in `evaluation
 [`artifact scope contract`](../artifacts/official_eval/README.md).
 
 The completed 2026-09-01 **historical v1** archive run is in
-[`artifacts/official_eval/archive-official-shape-v1.json`](../artifacts/official_eval/archive-official-shape-v1.json)
+[`artifacts/official_eval/legacy-v1/archive-official-shape-v1.json`](../artifacts/official_eval/legacy-v1/archive-official-shape-v1.json)
 and [`logs/official_eval/archive-official-shape-v1.md`](../logs/official_eval/archive-official-shape-v1.md).
+It is immutable historical evidence; do not rank with it.
 Among candidates whose functions returned, v121 is the local maximum
 (`linear_mean=0.472197763`, `attention_mean=0.833617251`, equal-weight display `28477.289`),
 but its API time is `3404.369 s` and its official outcome is timeout. The highest official-pass
@@ -66,6 +67,10 @@ Linear (`0.450074554`). v002 is recorded as a real local CUDA/CPU device-mix err
 silently assigned a score.
 
 ## Versions with official outcomes
+
+> 代际声明：v001–v074 为**旧权重**官方分数（与当前评测集不可换算，仅历史证据）；
+> v084 起为**新权重**官方分数（当前口径）。v074 另有当前评测集回传 `14561 / 188.9s`
+> （2026-09-02），旧权重 `22750` 已失效。
 
 | Version | Source directory | Official score | Official time | Outcome |
 |---|---|---:|---:|---|

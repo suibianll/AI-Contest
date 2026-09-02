@@ -10,14 +10,14 @@
 
 ## 数据口径
 
-本地数据来自同一 `official-shape-v1` cache（Qwen2.5-0.5B、250 个 Linear case、200 个
-Attention case）：
+本地数据来自旧 `official-shape-v1` cache（Qwen2.5-0.5B、250 个 Linear case、200 个
+Attention case；该协议已退役，JSON 隔离在 `artifacts/official_eval/legacy-v1/`）：
 
-- [`v084 archive JSON`](../artifacts/official_eval/archive-official-shape-v1.json)
-- [`v086 idle-rerun JSON`](../artifacts/official_eval/v086-idle-rerun-20260901-official-shape-v1.json)
-- [`v138 rerun JSON`](../artifacts/official_eval/v138-attention-static-v86-budget-rerun2-official-shape-v1.json)
-- [`v139 JSON`](../artifacts/official_eval/v139-linear-output-aware-gain-official-shape-v1.json)
-- [`v140 JSON`](../artifacts/official_eval/v140-linear-roab-pair-official-shape-v1.json)
+- [`v084 archive JSON`](../artifacts/official_eval/legacy-v1/archive-official-shape-v1.json)
+- [`v086 idle-rerun JSON`](../artifacts/official_eval/legacy-v1/v086-idle-rerun-20260901-official-shape-v1.json)
+- [`v138 rerun JSON`](../artifacts/official_eval/legacy-v1/v138-attention-static-v86-budget-rerun2-official-shape-v1.json)
+- [`v139 JSON`](../artifacts/official_eval/legacy-v1/v139-linear-output-aware-gain-official-shape-v1.json)
+- [`v140 JSON`](../artifacts/official_eval/legacy-v1/v140-linear-roab-pair-official-shape-v1.json)
 
 官方分数和时间采用已确认的回传值：v84 为 `16517 / 252.563s`，v86 为 `16744 / 222.7s`，
 v138 为 `15715 / 208s`，v139 为 `15716 / 202s`，v140 为 `15838 / 207s`。官方总分不能用

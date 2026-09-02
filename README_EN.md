@@ -70,14 +70,15 @@ Capture the pinned public data pack once:
   --cache-mode write --capture-device cuda --algorithm-device cuda
 ```
 
-Re-evaluate every archived official-result version with the same cache and configuration:
+Re-evaluate every archived official-result version with the same cache and configuration
+(`proxy-v2` protocol; legacy `official-shape-v1` JSON live under `artifacts/official_eval/legacy-v1/`):
 
 ```powershell
 .venv\Scripts\python.exe -u evaluator\official_eval.py --archive `
-  --cache artifacts\official_eval\cache\qwen2.5-0.5b-official-shape-v1.pt `
+  --cache artifacts\official_eval\cache\qwen2.5-0.5b-proxy-v2.pt `
   --cache-mode read --algorithm-device cuda `
-  --output artifacts\official_eval\archive-official-shape-v1.json `
-  --report logs\official_eval\archive-official-shape-v1.md
+  --output artifacts\official_eval\archive-proxy-v2.json `
+  --report logs\official_eval\archive-proxy-v2.md
 ```
 
 See the Chinese [`README.md`](README.md) for the archive table, cleanup rules, active-plan

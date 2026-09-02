@@ -181,7 +181,7 @@ A@W 拟合目标是 `min ‖AW^T − Q(A)Q(W)^T‖²`，允许 A、W 的量化�
 | 官方分数归因与权重不可求证明 | `docs/evaluation-attribution-2026-09-01.md` |
 | 唯一活动计划 | `docs/superpowers/plans/2026-09-01-hif4-hierarchy-encoder-and-analytic-attention-plan.md` |
 | proxy-v2 面板结果 | `artifacts/official_eval/{v084,v086,v140,v147}-proxy-v2-panel.json` |
-| 历史 v1 面板（不可迁移） | `artifacts/official_eval/archive-official-shape-v1.json` |
+| 历史 v1 面板（不可迁移，已隔离） | `artifacts/official_eval/legacy-v1/archive-official-shape-v1.json` |
 | L3 fc 合法码字 oracle | `artifacts/official_eval/l3-fc-legal-oracle.json` |
 | v151–v154 配对实验 | `artifacts/official_eval/v15{1,2,3,4}-*-targeted.json` |
 | 赛题深度分析（含 420s 过时口径，见下注） | `华为2026_NVFP4到HiF4_高精度量化赛题完整分析与优化方案.md` |
