@@ -99,6 +99,23 @@ gain = (MSE_STD - MSE_PLAYER) / MSE_STD
 Linear/Attention 权重。只有同一 `proxy-v2` cache、同一 panel、同一 device 的
 `default-panel` 才能做本地 proxy 横向比较。
 
+### 3.2 防止过拟合（强制）
+
+- 本地 proxy 只用于否定机制、定位误差和比较同机成本，不得凭本地均值正向直接晋级；官方结果
+  只验证预先声明的单一假设，失败后不得围绕 threshold、seed、alpha、offset 或候选数量做邻域调参。
+- 校准、候选选择和验证必须分离。A@W/GPTQ 的参数只用 calibration folds 学习，晋级读取独立
+  holdout；不得用同一 fold 同时选规则和证明收益。多折选择使用 median、worst-fold 或固定 robust
+  聚合，禁止只取第一折或最好一折。
+- 每个版本只改变一个可解释机制，候选数量固定且与数据结果无关。优先使用低自由度解析结构、
+  block-Schur/块对角/低秩补偿和预先固定的正则；不得通过扩大 permutation、Hadamard seed、搜索
+  网格或多机制叠加换取本地分数。
+- Linear 必须评估最终部署目标 `Q(A)Q(W)^T`，并在最终变换坐标系计算 Hessian/Gram；operand MSE、
+  对角 importance 和 aggregate mean 只能用于诊断，不能代替输出误差与跨折证据。
+- 晋级至少同时检查 focus 的 median、worst-quartile、负 case、跨 holdout 同号率和未修改 control。
+  收益若集中在少数 layer/role/fold、依赖单一模型形状，或 control 发生变化，按过拟合处理。
+- 官方 mini 用例只做接口、合法性和真实形状复杂度 smoke，不用于选算法或参数；Qwen/GPT-2 等
+  本地结构只作机制压力测试。发生本地与官方排序反转后，立即停止用该 proxy 为同一路线晋级。
+
 ## 4. NVFP4 输入缓存
 
 - `--nvfp4-cache-mode auto`（默认）按 scenario/panel/case profile 持久化已编码的 NVFP4
