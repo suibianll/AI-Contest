@@ -136,7 +136,7 @@ directories follow the same immutable naming rule as the historical archive:
 | v156 | `20260902_v156_l4-weight-decoupled_rejected` | 0.588131 (effect; default not run) | 0.757433 (effect) | 203.994 s (effect) | **rejected; official 16580/204.3s, 164 points below v86** |
 | v157 | `20260902_v157_v86-roab-only_rejected` | NA (legality smoke only) | NA (frozen field-equality check) | NA | **rejected; official 16729/218.96s, 15 points below v86** |
 | v158 | `20260902_v158_v86-attention-matrix-smooth_retained` | 0.448180 (default; frozen) | 0.735752 (default) | 295.069 s (default) | **retained; official 16861/223s, +117 vs v86** |
-| v159 | `20260902_v159_linear-gptq17816_v158-attention_score17532_timeNA` | **0.705515 (CPU compact)** | frozen v158 | **167.570 s API / 174.228 s wall (compact)** | **official 17532, time unknown; CUDA default currently device ERROR** |
+| v159 | `20260902_v159_linear-gptq17816_v158-attention_score17532_timeNA` | **0.705508 CUDA compact / 0.633526 CUDA Linear default** | frozen v158 | **51.055s compact after exact reuse / 269.435s pre-reuse default API** | **official 17532 binds original SHA; current archive not yet resubmitted** |
 
 † The first v147 values come from the original pre-A3 JSON (SHA `9B3EA5...B656`); the second come
 from the later direct-merge A3 JSON (SHA `25C245...9C1B`). The archive was modified in place before

@@ -1,0 +1,3155 @@
+{
+  "protocol": "proxy-v2",
+  "evaluation_scope": {
+    "kind": "linear-only-compact-generalization-panel",
+    "intent": "linear-only-low-cost-cross-holdout-mechanism-diagnosis",
+    "comparable_for_proxy_ranking": false,
+    "paired_only": true,
+    "stress_only": false,
+    "smoke_only": false,
+    "official_score_equivalent": false,
+    "scenario": "linear"
+  },
+  "created_at": "2026-09-02 22:31:33",
+  "data_source": "nvfp4_cache",
+  "capture_seconds": 0.18908110004849732,
+  "cache": "D:\\工作内容\\AI竞赛\\artifacts\\official_eval\\cache\\qwen2.5-0.5b-proxy-v2.pt",
+  "protocol_config": {
+    "model": "qwen2.5-0.5b",
+    "linear_roles": [
+      "q",
+      "k",
+      "v",
+      "o",
+      "fc_gate",
+      "fc_up",
+      "proj"
+    ],
+    "calibration_lengths": [
+      10,
+      128,
+      512,
+      1024,
+      1024
+    ],
+    "test_length": 128,
+    "test_lengths": [
+      10,
+      128,
+      512,
+      1024,
+      1024,
+      10,
+      128,
+      512,
+      1024,
+      1024,
+      128,
+      512
+    ],
+    "test_windows": 12,
+    "linear_cases": 56,
+    "attention_cases": 0,
+    "evaluation_scenario": "linear",
+    "case_design_scope": "--compact-panel is the low-cost cross-holdout research screen with selected states; default is the all-layer/role audit panel; --effect-panel preserves the full calibration graph; --full-cases enables Cartesian stress; optional CLI limits are prefix smoke-only",
+    "case_design": "compact-generalization-panel-v1",
+    "panel_window_indices": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "compact_window_indices": [
+      1,
+      2,
+      6,
+      7
+    ],
+    "calibration_call_graph": "selected-layer-role-once; selected-attention-layer-once",
+    "input_codec": "e4m3-subnormal-ceil-v1",
+    "runtime_limit_seconds": 300.0,
+    "score_formula": "proxy gain=(MSE_STD-MSE_PLAYER)/MSE_STD per case; means are unweighted over actual captured cases",
+    "runtime_measurement": "sum of elapsed six-API calls; wall_seconds is reported separately and neither is official time",
+    "error_source_decomposition": "candidate API outputs are reused in evaluator-only Linear W/A and Attention Q/K/V control arms; it does not alter proxy means or API call counts",
+    "trend_validation": "same-cohort pairwise ordering against user-confirmed anchors; diagnostic-only",
+    "paired_effect": "reuse an immutable parent JSON and compare exact layer/role/window output errors; report focus/control signs and W/A or Q/K/V source deltas",
+    "scope_contract": "only default-panel runs are comparable for local proxy ranking; compact/effect panels are mechanism diagnosis only; full-cartesian is stress-only; explicit limits are smoke-only; none are official-score equivalents"
+  },
+  "data_metadata": {
+    "protocol": "proxy-v2",
+    "model": "qwen2.5-0.5b",
+    "model_path": "D:\\工作内容\\AI竞赛\\models\\qwen2.5-0.5b",
+    "model_revision": "Qwen/Qwen2.5-0.5B@060db6499f32faf8b98477b0a26969ef7d8b9987",
+    "dataset": "Salesforce/wikitext",
+    "dataset_config": "wikitext-2-raw-v1",
+    "dataset_revision": "b08601e04326c79dfdd32d625aee71d232d685c3",
+    "calibration_lengths": [
+      10,
+      128,
+      512,
+      1024,
+      1024
+    ],
+    "test_length": 128,
+    "test_lengths": [
+      10,
+      128,
+      512,
+      1024,
+      1024,
+      10,
+      128,
+      512,
+      1024,
+      1024,
+      128,
+      512
+    ],
+    "test_window_count": 12,
+    "test_splits": [
+      "test",
+      "validation"
+    ],
+    "capture_device": "cuda",
+    "weights_dtype": "float32",
+    "weight_layout": "[out_features, in_features]",
+    "input_codec": "e4m3-subnormal-ceil-v1",
+    "input_mode": "amax6",
+    "data_sha256": {
+      "train": "e83889baabc497075506f91975be5fac0d45c5290b6b20582c8cd1e853d0c9f7",
+      "validation": "204929b7ff9d6184953f867dedb860e40aa69c078fc1e54b3baaa8fb28511c4c",
+      "test": "5f1bea067869d04849c0f975a2b29c4ff47d867f484f5010ea5e861eab246d91"
+    },
+    "linear_case_count": 56,
+    "attention_case_count": 4,
+    "nvfp4_mode": "amax6",
+    "case_design": "compact-generalization-panel-v1",
+    "panel_window_indices": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "full_cases": false,
+    "effect_panel": false,
+    "compact_panel": true,
+    "linear_case_limit": null,
+    "attention_case_limit": null,
+    "linear_calibration_indices": [
+      1,
+      2
+    ],
+    "calibration_call_graph": "selected-layer-role-once; selected-attention-layer-once",
+    "evaluation_scenario": "linear",
+    "linear_state_keys": [
+      [
+        0,
+        "fc_gate"
+      ],
+      [
+        0,
+        "fc_up"
+      ],
+      [
+        0,
+        "k"
+      ],
+      [
+        0,
+        "o"
+      ],
+      [
+        0,
+        "proj"
+      ],
+      [
+        0,
+        "q"
+      ],
+      [
+        0,
+        "v"
+      ],
+      [
+        8,
+        "fc_gate"
+      ],
+      [
+        8,
+        "fc_up"
+      ],
+      [
+        8,
+        "k"
+      ],
+      [
+        8,
+        "o"
+      ],
+      [
+        8,
+        "proj"
+      ],
+      [
+        8,
+        "q"
+      ],
+      [
+        8,
+        "v"
+      ],
+      [
+        15,
+        "fc_gate"
+      ],
+      [
+        15,
+        "fc_up"
+      ],
+      [
+        15,
+        "k"
+      ],
+      [
+        15,
+        "o"
+      ],
+      [
+        15,
+        "proj"
+      ],
+      [
+        15,
+        "q"
+      ],
+      [
+        15,
+        "v"
+      ],
+      [
+        23,
+        "fc_gate"
+      ],
+      [
+        23,
+        "fc_up"
+      ],
+      [
+        23,
+        "k"
+      ],
+      [
+        23,
+        "o"
+      ],
+      [
+        23,
+        "proj"
+      ],
+      [
+        23,
+        "q"
+      ],
+      [
+        23,
+        "v"
+      ]
+    ],
+    "attention_state_layers": [],
+    "linear_roles": [
+      "q",
+      "k",
+      "v",
+      "o",
+      "fc_gate",
+      "fc_up",
+      "proj"
+    ],
+    "nvfp4_cache_hit": true,
+    "nvfp4_cache_path": "D:\\工作内容\\AI竞赛\\artifacts\\official_eval\\cache\\qwen2.5-0.5b-proxy-v2-linear-compact-nvfp4.pt"
+  },
+  "trend_diagnostics": {
+    "eligible_candidates": [],
+    "cohort": [],
+    "pair_count": 0,
+    "concordant_pairs": 0,
+    "inverted_pairs": 0,
+    "tied_pairs": 0,
+    "status": "insufficient_anchors",
+    "inversions": [],
+    "note": "diagnostic only; official scores are never used to alter proxy means"
+  },
+  "linear_candidate_role_diagnostics": {
+    "enabled": false,
+    "reason": "at least two successful candidates with Linear decomposition are required"
+  },
+  "paired_effect": null,
+  "results": [
+    {
+      "candidate": "candidate",
+      "evaluation_scope": {
+        "kind": "linear-only-compact-generalization-panel",
+        "intent": "linear-only-low-cost-cross-holdout-mechanism-diagnosis",
+        "comparable_for_proxy_ranking": false,
+        "paired_only": true,
+        "stress_only": false,
+        "smoke_only": false,
+        "official_score_equivalent": false,
+        "scenario": "linear"
+      },
+      "source": "D:\\工作内容\\AI竞赛\\solutions\\20260902_v158_v86-attention-matrix-smooth_retained\\solution.py",
+      "source_sha256": "18f9de037a29ad96ee06fb5c73095e9ad36d0d04da2953162181be3aea528277",
+      "score": {
+        "linear_sum": 31.154077952018536,
+        "attention_sum": 0.0,
+        "total_sum": 31.154077952018536,
+        "linear_mean": 0.5563228205717595,
+        "attention_mean": 0.0,
+        "overall_mean": 0.5563228205717595,
+        "linear_role_macro_mean": 0.5563228205717595,
+        "attention_layer_macro_mean": 0.0,
+        "linear_cases": 56,
+        "attention_cases": 0,
+        "linear_by_role": {
+          "q": 0.6845035127069408,
+          "k": 0.6977685479153684,
+          "v": 0.6518439934622776,
+          "o": 0.4244778516166316,
+          "fc_gate": 0.4609996733872043,
+          "fc_up": 0.44774038152040924,
+          "proj": 0.526925783393485
+        },
+        "linear_by_role_family": {
+          "fc": 0.4543700274538068,
+          "o": 0.4244778516166316,
+          "proj": 0.526925783393485,
+          "qkv": 0.6780386846948622
+        },
+        "attention_by_layer": {}
+      },
+      "timing": {
+        "api_seconds": {
+          "hif4_calibration_and_quantize_weight": 33.3983318998944,
+          "hif4_dynamic_quantize_activation": 8.69707410025876,
+          "hif4_calibration_attention": 0.0,
+          "hif4_dynamic_quantize_q": 0.0,
+          "hif4_dynamic_quantize_k": 0.0,
+          "hif4_dynamic_quantize_v": 0.0
+        },
+        "api_total_seconds": 42.09540600015316,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 28,
+          "hif4_dynamic_quantize_activation": 56,
+          "hif4_calibration_attention": 0,
+          "hif4_dynamic_quantize_q": 0,
+          "hif4_dynamic_quantize_k": 0,
+          "hif4_dynamic_quantize_v": 0
+        },
+        "wall_seconds": 46.447122099925764,
+        "local_api_under_300_indicator": true,
+        "wall_under_300_indicator": true
+      },
+      "case_scores": {
+        "linear": [
+          {
+            "mse_standard": 0.0019206461729481816,
+            "mse_player": 0.00040126993553712964,
+            "reference_energy": 0.713480532169342,
+            "relative_player_mse": 0.000562411891347709,
+            "gain": 0.7910755550975939,
+            "case_id": 0,
+            "layer": 0,
+            "role": "q",
+            "role_family": "qkv",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 1,
+            "test_split": "test",
+            "test_length": 128,
+            "input_width": 896,
+            "output_width": 896,
+            "shape_bucket": "hidden_to_hidden"
+          },
+          {
+            "mse_standard": 0.002399289747700095,
+            "mse_player": 0.00044350032112561166,
+            "reference_energy": 0.7991736531257629,
+            "relative_player_mse": 0.0005549486264855877,
+            "gain": 0.8151534963416815,
+            "case_id": 1,
+            "layer": 0,
+            "role": "q",
+            "role_family": "qkv",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 6,
+            "test_split": "validation",
+            "test_length": 128,
+            "input_width": 896,
+            "output_width": 896,
+            "shape_bucket": "hidden_to_hidden"
+          },
+          {
+            "mse_standard": 0.002037367783486843,
+            "mse_player": 0.0003527785884216428,
+            "reference_energy": 0.5935263633728027,
+            "relative_player_mse": 0.0005943772849733674,
+            "gain": 0.8268458982806327,
+            "case_id": 2,
+            "layer": 0,
+            "role": "k",
+            "role_family": "qkv",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 2,
+            "test_split": "validation",
+            "test_length": 512,
+            "input_width": 896,
+            "output_width": 128,
+            "shape_bucket": "hidden_to_wide"
+          },
+          {
+            "mse_standard": 0.00210024556145072,
+            "mse_player": 0.0003560914483387023,
+            "reference_energy": 0.6433061957359314,
+            "relative_player_mse": 0.0005535333729085878,
+            "gain": 0.8304524695232607,
+            "case_id": 3,
+            "layer": 0,
+            "role": "k",
+            "role_family": "qkv",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 7,
+            "test_split": "test",
+            "test_length": 512,
+            "input_width": 896,
+            "output_width": 128,
+            "shape_bucket": "hidden_to_wide"
+          },
+          {
+            "mse_standard": 2.495410262781661e-05,
+            "mse_player": 5.842975042469334e-06,
+            "reference_energy": 0.000802626134827733,
+            "relative_player_mse": 0.007279821561907408,
+            "gain": 0.7658511255798032,
+            "case_id": 4,
+            "layer": 0,
+            "role": "v",
+            "role_family": "qkv",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 6,
+            "test_split": "validation",
+            "test_length": 128,
+            "input_width": 896,
+            "output_width": 128,
+            "shape_bucket": "hidden_to_wide"
+          },
+          {
+            "mse_standard": 2.3653930838918313e-05,
+            "mse_player": 5.662430339725688e-06,
+            "reference_energy": 0.0007883430225774646,
+            "relative_player_mse": 0.0071826986192032715,
+            "gain": 0.7606135581317769,
+            "case_id": 5,
+            "layer": 0,
+            "role": "v",
+            "role_family": "qkv",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 1,
+            "test_split": "test",
+            "test_length": 128,
+            "input_width": 896,
+            "output_width": 128,
+            "shape_bucket": "hidden_to_wide"
+          },
+          {
+            "mse_standard": 9.527200859338336e-07,
+            "mse_player": 3.2654290293976374e-07,
+            "reference_energy": 0.00019313285883981735,
+            "relative_player_mse": 0.0016907682354072927,
+            "gain": 0.6572520011271787,
+            "case_id": 6,
+            "layer": 0,
+            "role": "o",
+            "role_family": "o",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 7,
+            "test_split": "test",
+            "test_length": 512,
+            "input_width": 896,
+            "output_width": 896,
+            "shape_bucket": "hidden_to_hidden"
+          },
+          {
+            "mse_standard": 9.14051497602486e-07,
+            "mse_player": 3.1105935249797767e-07,
+            "reference_energy": 0.00018815718067344278,
+            "relative_player_mse": 0.001653188846605001,
+            "gain": 0.6596916548861069,
+            "case_id": 7,
+            "layer": 0,
+            "role": "o",
+            "role_family": "o",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 2,
+            "test_split": "validation",
+            "test_length": 512,
+            "input_width": 896,
+            "output_width": 896,
+            "shape_bucket": "hidden_to_hidden"
+          },
+          {
+            "mse_standard": 0.003463444299995899,
+            "mse_player": 0.0020304250065237284,
+            "reference_energy": 0.40455612540245056,
+            "relative_player_mse": 0.005018895720597163,
+            "gain": 0.41375554775743545,
+            "case_id": 8,
+            "layer": 0,
+            "role": "fc_gate",
+            "role_family": "fc",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 1,
+            "test_split": "test",
+            "test_length": 128,
+            "input_width": 896,
+            "output_width": 4864,
+            "shape_bucket": "hidden_to_wide"
+          },
+          {
+            "mse_standard": 0.0035758293233811855,
+            "mse_player": 0.002024339511990547,
+            "reference_energy": 0.4094773232936859,
+            "relative_player_mse": 0.004943715797757737,
+            "gain": 0.4338825125813335,
+            "case_id": 9,
+            "layer": 0,
+            "role": "fc_gate",
+            "role_family": "fc",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 6,
+            "test_split": "validation",
+            "test_length": 128,
+            "input_width": 896,
+            "output_width": 4864,
+            "shape_bucket": "hidden_to_wide"
+          },
+          {
+            "mse_standard": 0.0018909943755716085,
+            "mse_player": 0.0010682223364710808,
+            "reference_energy": 0.09414287656545639,
+            "relative_player_mse": 0.01134682065645571,
+            "gain": 0.4351002042784082,
+            "case_id": 10,
+            "layer": 0,
+            "role": "fc_up",
+            "role_family": "fc",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 2,
+            "test_split": "validation",
+            "test_length": 512,
+            "input_width": 896,
+            "output_width": 4864,
+            "shape_bucket": "hidden_to_wide"
+          },
+          {
+            "mse_standard": 0.0019301173742860556,
+            "mse_player": 0.0010553388856351376,
+            "reference_energy": 0.09174869954586029,
+            "relative_player_mse": 0.011502494213638742,
+            "gain": 0.4532255397029913,
+            "case_id": 11,
+            "layer": 0,
+            "role": "fc_up",
+            "role_family": "fc",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 7,
+            "test_split": "test",
+            "test_length": 512,
+            "input_width": 896,
+            "output_width": 4864,
+            "shape_bucket": "hidden_to_wide"
+          },
+          {
+            "mse_standard": 0.00030066733597777784,
+            "mse_player": 0.00015039803110994399,
+            "reference_energy": 0.04240596666932106,
+            "relative_player_mse": 0.003546624282444448,
+            "gain": 0.49978593244641706,
+            "case_id": 12,
+            "layer": 0,
+            "role": "proj",
+            "role_family": "proj",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 6,
+            "test_split": "validation",
+            "test_length": 128,
+            "input_width": 4864,
+            "output_width": 896,
+            "shape_bucket": "wide_to_hidden"
+          },
+          {
+            "mse_standard": 0.0002900877734646201,
+            "mse_player": 0.0001466831163270399,
+            "reference_energy": 0.038790132850408554,
+            "relative_player_mse": 0.003781454342853455,
+            "gain": 0.4943491944691362,
+            "case_id": 13,
+            "layer": 0,
+            "role": "proj",
+            "role_family": "proj",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 1,
+            "test_split": "test",
+            "test_length": 128,
+            "input_width": 4864,
+            "output_width": 896,
+            "shape_bucket": "wide_to_hidden"
+          },
+          {
+            "mse_standard": 0.012848016805946827,
+            "mse_player": 0.004823708441108465,
+            "reference_energy": 1.4673972129821777,
+            "relative_player_mse": 0.003287254738139571,
+            "gain": 0.6245561852880076,
+            "case_id": 14,
+            "layer": 8,
+            "role": "q",
+            "role_family": "qkv",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 2,
+            "test_split": "validation",
+            "test_length": 512,
+            "input_width": 896,
+            "output_width": 896,
+            "shape_bucket": "hidden_to_hidden"
+          },
+          {
+            "mse_standard": 0.012598851695656776,
+            "mse_player": 0.004864422604441643,
+            "reference_energy": 1.4530478715896606,
+            "relative_player_mse": 0.003347737331681906,
+            "gain": 0.6138995265641103,
+            "case_id": 15,
+            "layer": 8,
+            "role": "q",
+            "role_family": "qkv",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 7,
+            "test_split": "test",
+            "test_length": 512,
+            "input_width": 896,
+            "output_width": 896,
+            "shape_bucket": "hidden_to_hidden"
+          },
+          {
+            "mse_standard": 0.01930970884859562,
+            "mse_player": 0.006177355069667101,
+            "reference_energy": 2.3705129623413086,
+            "relative_player_mse": 0.002605914908630514,
+            "gain": 0.6800907192281993,
+            "case_id": 16,
+            "layer": 8,
+            "role": "k",
+            "role_family": "qkv",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 6,
+            "test_split": "validation",
+            "test_length": 128,
+            "input_width": 896,
+            "output_width": 128,
+            "shape_bucket": "hidden_to_wide"
+          },
+          {
+            "mse_standard": 0.01863185130059719,
+            "mse_player": 0.00631688442081213,
+            "reference_energy": 2.4597983360290527,
+            "relative_player_mse": 0.0025680497170388855,
+            "gain": 0.6609631367866455,
+            "case_id": 17,
+            "layer": 8,
+            "role": "k",
+            "role_family": "qkv",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 1,
+            "test_split": "test",
+            "test_length": 128,
+            "input_width": 896,
+            "output_width": 128,
+            "shape_bucket": "hidden_to_wide"
+          },
+          {
+            "mse_standard": 0.00556633435189724,
+            "mse_player": 0.002113437745720148,
+            "reference_energy": 0.6449208855628967,
+            "relative_player_mse": 0.003277049624273693,
+            "gain": 0.6203178587359202,
+            "case_id": 18,
+            "layer": 8,
+            "role": "v",
+            "role_family": "qkv",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 7,
+            "test_split": "test",
+            "test_length": 512,
+            "input_width": 896,
+            "output_width": 128,
+            "shape_bucket": "hidden_to_wide"
+          },
+          {
+            "mse_standard": 0.005562144331634045,
+            "mse_player": 0.0020212987437844276,
+            "reference_energy": 0.6263461709022522,
+            "relative_player_mse": 0.0032271271665519166,
+            "gain": 0.6365972144432629,
+            "case_id": 19,
+            "layer": 8,
+            "role": "v",
+            "role_family": "qkv",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 2,
+            "test_split": "validation",
+            "test_length": 512,
+            "input_width": 896,
+            "output_width": 128,
+            "shape_bucket": "hidden_to_wide"
+          },
+          {
+            "mse_standard": 0.0004245193558745086,
+            "mse_player": 0.0002911654009949416,
+            "reference_energy": 0.027893342077732086,
+            "relative_player_mse": 0.010438526877974433,
+            "gain": 0.3141292688642153,
+            "case_id": 20,
+            "layer": 8,
+            "role": "o",
+            "role_family": "o",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 1,
+            "test_split": "test",
+            "test_length": 128,
+            "input_width": 896,
+            "output_width": 896,
+            "shape_bucket": "hidden_to_hidden"
+          },
+          {
+            "mse_standard": 0.00042919552652165294,
+            "mse_player": 0.0002734620065893978,
+            "reference_energy": 0.028541263192892075,
+            "relative_player_mse": 0.009581286039837959,
+            "gain": 0.36284982090650564,
+            "case_id": 21,
+            "layer": 8,
+            "role": "o",
+            "role_family": "o",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 6,
+            "test_split": "validation",
+            "test_length": 128,
+            "input_width": 896,
+            "output_width": 896,
+            "shape_bucket": "hidden_to_hidden"
+          },
+          {
+            "mse_standard": 0.007587540429085493,
+            "mse_player": 0.004119365010410547,
+            "reference_energy": 1.2610887289047241,
+            "relative_player_mse": 0.0032665148105702935,
+            "gain": 0.45708822919484016,
+            "case_id": 22,
+            "layer": 8,
+            "role": "fc_gate",
+            "role_family": "fc",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 2,
+            "test_split": "validation",
+            "test_length": 512,
+            "input_width": 896,
+            "output_width": 4864,
+            "shape_bucket": "hidden_to_wide"
+          },
+          {
+            "mse_standard": 0.007317790295928717,
+            "mse_player": 0.004141741897910833,
+            "reference_energy": 1.2199296951293945,
+            "relative_player_mse": 0.0033950660554020948,
+            "gain": 0.43401741093686313,
+            "case_id": 23,
+            "layer": 8,
+            "role": "fc_gate",
+            "role_family": "fc",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 7,
+            "test_split": "test",
+            "test_length": 512,
+            "input_width": 896,
+            "output_width": 4864,
+            "shape_bucket": "hidden_to_wide"
+          },
+          {
+            "mse_standard": 0.004549573175609112,
+            "mse_player": 0.0023883075919002295,
+            "reference_energy": 0.24539415538311005,
+            "relative_player_mse": 0.009732536572322177,
+            "gain": 0.4750479880828656,
+            "case_id": 24,
+            "layer": 8,
+            "role": "fc_up",
+            "role_family": "fc",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 6,
+            "test_split": "validation",
+            "test_length": 128,
+            "input_width": 896,
+            "output_width": 4864,
+            "shape_bucket": "hidden_to_wide"
+          },
+          {
+            "mse_standard": 0.004836424253880978,
+            "mse_player": 0.00263196905143559,
+            "reference_energy": 0.25952163338661194,
+            "relative_player_mse": 0.010141617163432074,
+            "gain": 0.45580269362772047,
+            "case_id": 25,
+            "layer": 8,
+            "role": "fc_up",
+            "role_family": "fc",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 1,
+            "test_split": "test",
+            "test_length": 128,
+            "input_width": 896,
+            "output_width": 4864,
+            "shape_bucket": "hidden_to_wide"
+          },
+          {
+            "mse_standard": 0.0004774283152073622,
+            "mse_player": 0.0003065002092625946,
+            "reference_energy": 0.03774336725473404,
+            "relative_player_mse": 0.008120637652544135,
+            "gain": 0.3580183673658487,
+            "case_id": 26,
+            "layer": 8,
+            "role": "proj",
+            "role_family": "proj",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 7,
+            "test_split": "test",
+            "test_length": 512,
+            "input_width": 4864,
+            "output_width": 896,
+            "shape_bucket": "wide_to_hidden"
+          },
+          {
+            "mse_standard": 0.00048320734640583396,
+            "mse_player": 0.0003081272298004478,
+            "reference_energy": 0.03636716678738594,
+            "relative_player_mse": 0.008472676235733674,
+            "gain": 0.3623291696776908,
+            "case_id": 27,
+            "layer": 8,
+            "role": "proj",
+            "role_family": "proj",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 2,
+            "test_split": "validation",
+            "test_length": 512,
+            "input_width": 4864,
+            "output_width": 896,
+            "shape_bucket": "wide_to_hidden"
+          },
+          {
+            "mse_standard": 0.011068986728787422,
+            "mse_player": 0.004662727937102318,
+            "reference_energy": 0.8111007809638977,
+            "relative_player_mse": 0.005748641903119875,
+            "gain": 0.578757473348863,
+            "case_id": 28,
+            "layer": 15,
+            "role": "q",
+            "role_family": "qkv",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 6,
+            "test_split": "validation",
+            "test_length": 128,
+            "input_width": 896,
+            "output_width": 896,
+            "shape_bucket": "hidden_to_hidden"
+          },
+          {
+            "mse_standard": 0.010635210201144218,
+            "mse_player": 0.004915306810289621,
+            "reference_energy": 0.7994502782821655,
+            "relative_player_mse": 0.006148358370518656,
+            "gain": 0.5378270182416522,
+            "case_id": 29,
+            "layer": 15,
+            "role": "q",
+            "role_family": "qkv",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 1,
+            "test_split": "test",
+            "test_length": 128,
+            "input_width": 896,
+            "output_width": 896,
+            "shape_bucket": "hidden_to_hidden"
+          },
+          {
+            "mse_standard": 0.01858600601553917,
+            "mse_player": 0.007265888154506683,
+            "reference_energy": 2.4549789428710938,
+            "relative_player_mse": 0.0029596539618418232,
+            "gain": 0.6090667274920762,
+            "case_id": 30,
+            "layer": 15,
+            "role": "k",
+            "role_family": "qkv",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 7,
+            "test_split": "test",
+            "test_length": 512,
+            "input_width": 896,
+            "output_width": 128,
+            "shape_bucket": "hidden_to_wide"
+          },
+          {
+            "mse_standard": 0.01785219833254814,
+            "mse_player": 0.00724580604583025,
+            "reference_energy": 2.381930112838745,
+            "relative_player_mse": 0.003041989354253059,
+            "gain": 0.5941224766352897,
+            "case_id": 31,
+            "layer": 15,
+            "role": "k",
+            "role_family": "qkv",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 2,
+            "test_split": "validation",
+            "test_length": 512,
+            "input_width": 896,
+            "output_width": 128,
+            "shape_bucket": "hidden_to_wide"
+          },
+          {
+            "mse_standard": 0.009123280644416809,
+            "mse_player": 0.0038965356070548296,
+            "reference_energy": 0.49372178316116333,
+            "relative_player_mse": 0.007892168707052777,
+            "gain": 0.5729019243270347,
+            "case_id": 32,
+            "layer": 15,
+            "role": "v",
+            "role_family": "qkv",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 1,
+            "test_split": "test",
+            "test_length": 128,
+            "input_width": 896,
+            "output_width": 128,
+            "shape_bucket": "hidden_to_wide"
+          },
+          {
+            "mse_standard": 0.009320658631622791,
+            "mse_player": 0.0034993754234164953,
+            "reference_energy": 0.5039541721343994,
+            "relative_player_mse": 0.006943836596481729,
+            "gain": 0.6245570660056209,
+            "case_id": 33,
+            "layer": 15,
+            "role": "v",
+            "role_family": "qkv",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 6,
+            "test_split": "validation",
+            "test_length": 128,
+            "input_width": 896,
+            "output_width": 128,
+            "shape_bucket": "hidden_to_wide"
+          },
+          {
+            "mse_standard": 0.0005589764914475381,
+            "mse_player": 0.000376513839000836,
+            "reference_energy": 0.027747901156544685,
+            "relative_player_mse": 0.013569092555024854,
+            "gain": 0.3264227659631852,
+            "case_id": 34,
+            "layer": 15,
+            "role": "o",
+            "role_family": "o",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 2,
+            "test_split": "validation",
+            "test_length": 512,
+            "input_width": 896,
+            "output_width": 896,
+            "shape_bucket": "hidden_to_hidden"
+          },
+          {
+            "mse_standard": 0.0006336774677038193,
+            "mse_player": 0.0004247686010785401,
+            "reference_energy": 0.032814472913742065,
+            "relative_player_mse": 0.012944550479147122,
+            "gain": 0.32967696860403933,
+            "case_id": 35,
+            "layer": 15,
+            "role": "o",
+            "role_family": "o",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 7,
+            "test_split": "test",
+            "test_length": 512,
+            "input_width": 896,
+            "output_width": 896,
+            "shape_bucket": "hidden_to_hidden"
+          },
+          {
+            "mse_standard": 0.007637624628841877,
+            "mse_player": 0.0036778380163013935,
+            "reference_energy": 1.2020859718322754,
+            "relative_player_mse": 0.003059546573607761,
+            "gain": 0.5184578720440365,
+            "case_id": 36,
+            "layer": 15,
+            "role": "fc_gate",
+            "role_family": "fc",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 6,
+            "test_split": "validation",
+            "test_length": 128,
+            "input_width": 896,
+            "output_width": 4864,
+            "shape_bucket": "hidden_to_wide"
+          },
+          {
+            "mse_standard": 0.008351197466254234,
+            "mse_player": 0.004160063806921244,
+            "reference_energy": 1.2462615966796875,
+            "relative_player_mse": 0.0033380341799864174,
+            "gain": 0.501860203434136,
+            "case_id": 37,
+            "layer": 15,
+            "role": "fc_gate",
+            "role_family": "fc",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 1,
+            "test_split": "test",
+            "test_length": 128,
+            "input_width": 896,
+            "output_width": 4864,
+            "shape_bucket": "hidden_to_wide"
+          },
+          {
+            "mse_standard": 0.006628554780036211,
+            "mse_player": 0.0035547842271625996,
+            "reference_energy": 0.4045177698135376,
+            "relative_player_mse": 0.008787708457903288,
+            "gain": 0.4637165498173374,
+            "case_id": 38,
+            "layer": 15,
+            "role": "fc_up",
+            "role_family": "fc",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 7,
+            "test_split": "test",
+            "test_length": 512,
+            "input_width": 896,
+            "output_width": 4864,
+            "shape_bucket": "hidden_to_wide"
+          },
+          {
+            "mse_standard": 0.006824151612818241,
+            "mse_player": 0.0035014322493225336,
+            "reference_energy": 0.3975614905357361,
+            "relative_player_mse": 0.008807272164625804,
+            "gain": 0.4869058532132303,
+            "case_id": 39,
+            "layer": 15,
+            "role": "fc_up",
+            "role_family": "fc",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 2,
+            "test_split": "validation",
+            "test_length": 512,
+            "input_width": 896,
+            "output_width": 4864,
+            "shape_bucket": "hidden_to_wide"
+          },
+          {
+            "mse_standard": 0.0009914968395605683,
+            "mse_player": 0.0005316659808158875,
+            "reference_energy": 0.0697910338640213,
+            "relative_player_mse": 0.007617969692951806,
+            "gain": 0.46377440693454763,
+            "case_id": 40,
+            "layer": 15,
+            "role": "proj",
+            "role_family": "proj",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 1,
+            "test_split": "test",
+            "test_length": 128,
+            "input_width": 4864,
+            "output_width": 896,
+            "shape_bucket": "wide_to_hidden"
+          },
+          {
+            "mse_standard": 0.0009857499971985817,
+            "mse_player": 0.0004785998316947371,
+            "reference_energy": 0.06671349704265594,
+            "relative_player_mse": 0.007173958088102099,
+            "gain": 0.5144815287295182,
+            "case_id": 41,
+            "layer": 15,
+            "role": "proj",
+            "role_family": "proj",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 6,
+            "test_split": "validation",
+            "test_length": 128,
+            "input_width": 4864,
+            "output_width": 896,
+            "shape_bucket": "wide_to_hidden"
+          },
+          {
+            "mse_standard": 0.026969190686941147,
+            "mse_player": 0.006676775403320789,
+            "reference_energy": 1.3075321912765503,
+            "relative_player_mse": 0.005106394663065404,
+            "gain": 0.7524295229758683,
+            "case_id": 42,
+            "layer": 23,
+            "role": "q",
+            "role_family": "qkv",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 7,
+            "test_split": "test",
+            "test_length": 512,
+            "input_width": 896,
+            "output_width": 896,
+            "shape_bucket": "hidden_to_hidden"
+          },
+          {
+            "mse_standard": 0.02481785975396633,
+            "mse_player": 0.0058984775096178055,
+            "reference_energy": 1.2216004133224487,
+            "relative_player_mse": 0.004828483557545152,
+            "gain": 0.7623293237977491,
+            "case_id": 43,
+            "layer": 23,
+            "role": "q",
+            "role_family": "qkv",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 2,
+            "test_split": "validation",
+            "test_length": 512,
+            "input_width": 896,
+            "output_width": 896,
+            "shape_bucket": "hidden_to_hidden"
+          },
+          {
+            "mse_standard": 0.022712405771017075,
+            "mse_player": 0.007077745161950588,
+            "reference_energy": 1.9033639430999756,
+            "relative_player_mse": 0.003718545361547192,
+            "gain": 0.6883753648421348,
+            "case_id": 44,
+            "layer": 23,
+            "role": "k",
+            "role_family": "qkv",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 1,
+            "test_split": "test",
+            "test_length": 128,
+            "input_width": 896,
+            "output_width": 128,
+            "shape_bucket": "hidden_to_wide"
+          },
+          {
+            "mse_standard": 0.02190576307475567,
+            "mse_player": 0.006741901859641075,
+            "reference_energy": 1.923591136932373,
+            "relative_player_mse": 0.0035048518004676676,
+            "gain": 0.6922315905347081,
+            "case_id": 45,
+            "layer": 23,
+            "role": "k",
+            "role_family": "qkv",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 6,
+            "test_split": "validation",
+            "test_length": 128,
+            "input_width": 896,
+            "output_width": 128,
+            "shape_bucket": "hidden_to_wide"
+          },
+          {
+            "mse_standard": 0.040632978081703186,
+            "mse_player": 0.015210675075650215,
+            "reference_energy": 4.890556812286377,
+            "relative_player_mse": 0.003110213347780147,
+            "gain": 0.6256568975804532,
+            "case_id": 46,
+            "layer": 23,
+            "role": "v",
+            "role_family": "qkv",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 2,
+            "test_split": "validation",
+            "test_length": 512,
+            "input_width": 896,
+            "output_width": 128,
+            "shape_bucket": "hidden_to_wide"
+          },
+          {
+            "mse_standard": 0.04360252618789673,
+            "mse_player": 0.017081014811992645,
+            "reference_energy": 5.0441718101501465,
+            "relative_player_mse": 0.0033862872746763567,
+            "gain": 0.6082563028943487,
+            "case_id": 47,
+            "layer": 23,
+            "role": "v",
+            "role_family": "qkv",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 7,
+            "test_split": "test",
+            "test_length": 512,
+            "input_width": 896,
+            "output_width": 128,
+            "shape_bucket": "hidden_to_wide"
+          },
+          {
+            "mse_standard": 0.0038271851371973753,
+            "mse_player": 0.0023549783509224653,
+            "reference_energy": 0.5337537527084351,
+            "relative_player_mse": 0.0044121064048216274,
+            "gain": 0.38467090916667757,
+            "case_id": 48,
+            "layer": 23,
+            "role": "o",
+            "role_family": "o",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 6,
+            "test_split": "validation",
+            "test_length": 128,
+            "input_width": 896,
+            "output_width": 896,
+            "shape_bucket": "hidden_to_hidden"
+          },
+          {
+            "mse_standard": 0.0034364298917353153,
+            "mse_player": 0.002195433946326375,
+            "reference_energy": 0.4010935127735138,
+            "relative_player_mse": 0.005473621179124068,
+            "gain": 0.36112942341514404,
+            "case_id": 49,
+            "layer": 23,
+            "role": "o",
+            "role_family": "o",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 1,
+            "test_split": "test",
+            "test_length": 128,
+            "input_width": 896,
+            "output_width": 896,
+            "shape_bucket": "hidden_to_hidden"
+          },
+          {
+            "mse_standard": 0.019689425826072693,
+            "mse_player": 0.01100276131182909,
+            "reference_energy": 3.9363865852355957,
+            "relative_player_mse": 0.0027951424672306587,
+            "gain": 0.44118424737103007,
+            "case_id": 50,
+            "layer": 23,
+            "role": "fc_gate",
+            "role_family": "fc",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 7,
+            "test_split": "test",
+            "test_length": 512,
+            "input_width": 896,
+            "output_width": 4864,
+            "shape_bucket": "hidden_to_wide"
+          },
+          {
+            "mse_standard": 0.01986348256468773,
+            "mse_player": 0.010175041854381561,
+            "reference_energy": 3.8969433307647705,
+            "relative_player_mse": 0.002611031516433348,
+            "gain": 0.48775136377795986,
+            "case_id": 51,
+            "layer": 23,
+            "role": "fc_gate",
+            "role_family": "fc",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 2,
+            "test_split": "validation",
+            "test_length": 512,
+            "input_width": 896,
+            "output_width": 4864,
+            "shape_bucket": "hidden_to_wide"
+          },
+          {
+            "mse_standard": 0.020896190777420998,
+            "mse_player": 0.01397013384848833,
+            "reference_energy": 2.172592878341675,
+            "relative_player_mse": 0.006430166455830251,
+            "gain": 0.33145069370329894,
+            "case_id": 52,
+            "layer": 23,
+            "role": "fc_up",
+            "role_family": "fc",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 1,
+            "test_split": "test",
+            "test_length": 128,
+            "input_width": 896,
+            "output_width": 4864,
+            "shape_bucket": "hidden_to_wide"
+          },
+          {
+            "mse_standard": 0.019547756761312485,
+            "mse_player": 0.010151667520403862,
+            "reference_energy": 2.064046859741211,
+            "relative_player_mse": 0.004918331903412635,
+            "gain": 0.4806735297374217,
+            "case_id": 53,
+            "layer": 23,
+            "role": "fc_up",
+            "role_family": "fc",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 6,
+            "test_split": "validation",
+            "test_length": 128,
+            "input_width": 896,
+            "output_width": 4864,
+            "shape_bucket": "hidden_to_wide"
+          },
+          {
+            "mse_standard": 0.042034830898046494,
+            "mse_player": 0.009000016376376152,
+            "reference_energy": 7.210197925567627,
+            "relative_player_mse": 0.001248234302204349,
+            "gain": 0.7858914575342227,
+            "case_id": 54,
+            "layer": 23,
+            "role": "proj",
+            "role_family": "proj",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 2,
+            "test_split": "validation",
+            "test_length": 512,
+            "input_width": 4864,
+            "output_width": 896,
+            "shape_bucket": "wide_to_hidden"
+          },
+          {
+            "mse_standard": 0.03538476303219795,
+            "mse_player": 0.009314111433923244,
+            "reference_energy": 5.96560001373291,
+            "relative_player_mse": 0.0015613033747623047,
+            "gain": 0.7367762099904985,
+            "case_id": 55,
+            "layer": 23,
+            "role": "proj",
+            "role_family": "proj",
+            "role_domain": "static_linear",
+            "calibration_indices": [
+              1,
+              2
+            ],
+            "test_window": 7,
+            "test_split": "test",
+            "test_length": 512,
+            "input_width": 4864,
+            "output_width": 896,
+            "shape_bucket": "wide_to_hidden"
+          }
+        ],
+        "attention": []
+      },
+      "decomposition": {
+        "linear": {
+          "enabled": false,
+          "reason": "decomposition-disabled"
+        },
+        "attention": {
+          "enabled": false,
+          "reason": "scenario-disabled"
+        }
+      },
+      "analysis": {
+        "linear_generalization": {
+          "enabled": true,
+          "overall": {
+            "case_count": 56,
+            "gain": {
+              "count": 56,
+              "mean": 0.5563228205717595,
+              "median": 0.5281424451428444,
+              "q25": 0.45021521662000097,
+              "q75": 0.6600095253612416,
+              "minimum": 0.3141292688642153,
+              "maximum": 0.8304524695232607,
+              "worst_quartile_mean": 0.3777583793279768,
+              "positive_cases": 56,
+              "negative_cases": 0,
+              "zero_cases": 0
+            },
+            "player_to_standard_mse_ratio": {
+              "count": 56,
+              "mean": 0.4436771794282404,
+              "median": 0.47185755485715564,
+              "q25": 0.3399904746387585,
+              "q75": 0.549784783379999,
+              "minimum": 0.1695475304767393,
+              "maximum": 0.6858707311357847,
+              "worst_quartile_mean": 0.2464943265253732,
+              "positive_cases": 56,
+              "negative_cases": 0,
+              "zero_cases": 0
+            },
+            "coverage": {
+              "layers": [
+                0,
+                8,
+                15,
+                23
+              ],
+              "roles": [
+                "fc_gate",
+                "fc_up",
+                "k",
+                "o",
+                "proj",
+                "q",
+                "v"
+              ],
+              "splits": [
+                "test",
+                "validation"
+              ],
+              "test_lengths": [
+                128,
+                512
+              ],
+              "test_windows": [
+                1,
+                2,
+                6,
+                7
+              ]
+            }
+          },
+          "cross_holdout_consistency": {
+            "enabled": true,
+            "pair_count": 28,
+            "same_sign_pairs": 28,
+            "opposite_or_zero_mismatch_pairs": 0,
+            "absolute_gap": {
+              "count": 28,
+              "mean": 0.025762260245733963,
+              "median": 0.01862645893306844,
+              "q25": 0.008784035110730809,
+              "q75": 0.028291069709868444,
+              "minimum": 0.002439653758928184,
+              "maximum": 0.14922283603412279,
+              "worst_quartile_mean": 0.004020251581733255,
+              "positive_cases": 28,
+              "negative_cases": 0,
+              "zero_cases": 0
+            },
+            "minimum_gain": {
+              "count": 28,
+              "mean": 0.5434416904488926,
+              "median": 0.5198436108378941,
+              "q25": 0.4348295059430219,
+              "q75": 0.6581797850420454,
+              "minimum": 0.3141292688642153,
+              "maximum": 0.8268458982806327,
+              "worst_quartile_mean": 0.36270335400085585,
+              "positive_cases": 28,
+              "negative_cases": 0,
+              "zero_cases": 0
+            },
+            "worst_gap_pairs": [
+              {
+                "layer": 23,
+                "role": "fc_up",
+                "role_family": "fc",
+                "test_length": 128,
+                "validation_window": 6,
+                "test_window": 1,
+                "validation_gain": 0.4806735297374217,
+                "test_gain": 0.33145069370329894,
+                "minimum_gain": 0.33145069370329894,
+                "absolute_gap": 0.14922283603412279,
+                "same_sign": true
+              },
+              {
+                "layer": 15,
+                "role": "v",
+                "role_family": "qkv",
+                "test_length": 128,
+                "validation_window": 6,
+                "test_window": 1,
+                "validation_gain": 0.6245570660056209,
+                "test_gain": 0.5729019243270347,
+                "minimum_gain": 0.5729019243270347,
+                "absolute_gap": 0.0516551416785862,
+                "same_sign": true
+              },
+              {
+                "layer": 15,
+                "role": "proj",
+                "role_family": "proj",
+                "test_length": 128,
+                "validation_window": 6,
+                "test_window": 1,
+                "validation_gain": 0.5144815287295182,
+                "test_gain": 0.46377440693454763,
+                "minimum_gain": 0.46377440693454763,
+                "absolute_gap": 0.05070712179497061,
+                "same_sign": true
+              },
+              {
+                "layer": 23,
+                "role": "proj",
+                "role_family": "proj",
+                "test_length": 512,
+                "validation_window": 2,
+                "test_window": 7,
+                "validation_gain": 0.7858914575342227,
+                "test_gain": 0.7367762099904985,
+                "minimum_gain": 0.7367762099904985,
+                "absolute_gap": 0.049115247543724205,
+                "same_sign": true
+              },
+              {
+                "layer": 8,
+                "role": "o",
+                "role_family": "o",
+                "test_length": 128,
+                "validation_window": 6,
+                "test_window": 1,
+                "validation_gain": 0.36284982090650564,
+                "test_gain": 0.3141292688642153,
+                "minimum_gain": 0.3141292688642153,
+                "absolute_gap": 0.04872055204229031,
+                "same_sign": true
+              },
+              {
+                "layer": 23,
+                "role": "fc_gate",
+                "role_family": "fc",
+                "test_length": 512,
+                "validation_window": 2,
+                "test_window": 7,
+                "validation_gain": 0.48775136377795986,
+                "test_gain": 0.44118424737103007,
+                "minimum_gain": 0.44118424737103007,
+                "absolute_gap": 0.04656711640692979,
+                "same_sign": true
+              },
+              {
+                "layer": 15,
+                "role": "q",
+                "role_family": "qkv",
+                "test_length": 128,
+                "validation_window": 6,
+                "test_window": 1,
+                "validation_gain": 0.578757473348863,
+                "test_gain": 0.5378270182416522,
+                "minimum_gain": 0.5378270182416522,
+                "absolute_gap": 0.04093045510721072,
+                "same_sign": true
+              },
+              {
+                "layer": 0,
+                "role": "q",
+                "role_family": "qkv",
+                "test_length": 128,
+                "validation_window": 6,
+                "test_window": 1,
+                "validation_gain": 0.8151534963416815,
+                "test_gain": 0.7910755550975939,
+                "minimum_gain": 0.7910755550975939,
+                "absolute_gap": 0.024077941244087686,
+                "same_sign": true
+              },
+              {
+                "layer": 23,
+                "role": "o",
+                "role_family": "o",
+                "test_length": 128,
+                "validation_window": 6,
+                "test_window": 1,
+                "validation_gain": 0.38467090916667757,
+                "test_gain": 0.36112942341514404,
+                "minimum_gain": 0.36112942341514404,
+                "absolute_gap": 0.02354148575153353,
+                "same_sign": true
+              },
+              {
+                "layer": 15,
+                "role": "fc_up",
+                "role_family": "fc",
+                "test_length": 512,
+                "validation_window": 2,
+                "test_window": 7,
+                "validation_gain": 0.4869058532132303,
+                "test_gain": 0.4637165498173374,
+                "minimum_gain": 0.4637165498173374,
+                "absolute_gap": 0.023189303395892924,
+                "same_sign": true
+              },
+              {
+                "layer": 8,
+                "role": "fc_gate",
+                "role_family": "fc",
+                "test_length": 512,
+                "validation_window": 2,
+                "test_window": 7,
+                "validation_gain": 0.45708822919484016,
+                "test_gain": 0.43401741093686313,
+                "minimum_gain": 0.43401741093686313,
+                "absolute_gap": 0.02307081825797702,
+                "same_sign": true
+              },
+              {
+                "layer": 0,
+                "role": "fc_gate",
+                "role_family": "fc",
+                "test_length": 128,
+                "validation_window": 6,
+                "test_window": 1,
+                "validation_gain": 0.4338825125813335,
+                "test_gain": 0.41375554775743545,
+                "minimum_gain": 0.41375554775743545,
+                "absolute_gap": 0.02012696482389803,
+                "same_sign": true
+              },
+              {
+                "layer": 8,
+                "role": "fc_up",
+                "role_family": "fc",
+                "test_length": 128,
+                "validation_window": 6,
+                "test_window": 1,
+                "validation_gain": 0.4750479880828656,
+                "test_gain": 0.45580269362772047,
+                "minimum_gain": 0.45580269362772047,
+                "absolute_gap": 0.019245294455145112,
+                "same_sign": true
+              },
+              {
+                "layer": 8,
+                "role": "k",
+                "role_family": "qkv",
+                "test_length": 128,
+                "validation_window": 6,
+                "test_window": 1,
+                "validation_gain": 0.6800907192281993,
+                "test_gain": 0.6609631367866455,
+                "minimum_gain": 0.6609631367866455,
+                "absolute_gap": 0.01912758244155377,
+                "same_sign": true
+              },
+              {
+                "layer": 0,
+                "role": "fc_up",
+                "role_family": "fc",
+                "test_length": 512,
+                "validation_window": 2,
+                "test_window": 7,
+                "validation_gain": 0.4351002042784082,
+                "test_gain": 0.4532255397029913,
+                "minimum_gain": 0.4351002042784082,
+                "absolute_gap": 0.01812533542458311,
+                "same_sign": true
+              },
+              {
+                "layer": 23,
+                "role": "v",
+                "role_family": "qkv",
+                "test_length": 512,
+                "validation_window": 2,
+                "test_window": 7,
+                "validation_gain": 0.6256568975804532,
+                "test_gain": 0.6082563028943487,
+                "minimum_gain": 0.6082563028943487,
+                "absolute_gap": 0.017400594686104442,
+                "same_sign": true
+              }
+            ]
+          },
+          "by_role": {
+            "fc_gate": {
+              "case_count": 8,
+              "gain": {
+                "count": 8,
+                "mean": 0.4609996733872043,
+                "median": 0.44913623828293514,
+                "q25": 0.43398368634798073,
+                "q75": 0.4912785736920039,
+                "minimum": 0.41375554775743545,
+                "maximum": 0.5184578720440365,
+                "worst_quartile_mean": 0.4238190301693845,
+                "positive_cases": 8,
+                "negative_cases": 0,
+                "zero_cases": 0
+              },
+              "player_to_standard_mse_ratio": {
+                "count": 8,
+                "mean": 0.5390003266127956,
+                "median": 0.5508637617170649,
+                "q25": 0.5087214263079961,
+                "q75": 0.5660163136520192,
+                "minimum": 0.4815421279559635,
+                "maximum": 0.5862444522425646,
+                "worst_quartile_mean": 0.4898409622609138,
+                "positive_cases": 8,
+                "negative_cases": 0,
+                "zero_cases": 0
+              },
+              "coverage": {
+                "layers": [
+                  0,
+                  8,
+                  15,
+                  23
+                ],
+                "roles": [
+                  "fc_gate"
+                ],
+                "splits": [
+                  "test",
+                  "validation"
+                ],
+                "test_lengths": [
+                  128,
+                  512
+                ],
+                "test_windows": [
+                  1,
+                  2,
+                  6,
+                  7
+                ]
+              }
+            },
+            "fc_up": {
+              "case_count": 8,
+              "gain": {
+                "count": 8,
+                "mean": 0.44774038152040924,
+                "median": 0.45975962172252893,
+                "q25": 0.4486942058468455,
+                "q75": 0.47645437349650466,
+                "minimum": 0.33145069370329894,
+                "maximum": 0.4869058532132303,
+                "worst_quartile_mean": 0.38327544899085353,
+                "positive_cases": 8,
+                "negative_cases": 0,
+                "zero_cases": 0
+              },
+              "player_to_standard_mse_ratio": {
+                "count": 8,
+                "mean": 0.5522596184795907,
+                "median": 0.5402403782774711,
+                "q25": 0.5235456265034953,
+                "q75": 0.5513057941531545,
+                "minimum": 0.5130941467867697,
+                "maximum": 0.6685493062967011,
+                "worst_quartile_mean": 0.516210308524674,
+                "positive_cases": 8,
+                "negative_cases": 0,
+                "zero_cases": 0
+              },
+              "coverage": {
+                "layers": [
+                  0,
+                  8,
+                  15,
+                  23
+                ],
+                "roles": [
+                  "fc_up"
+                ],
+                "splits": [
+                  "test",
+                  "validation"
+                ],
+                "test_lengths": [
+                  128,
+                  512
+                ],
+                "test_windows": [
+                  1,
+                  2,
+                  6,
+                  7
+                ]
+              }
+            },
+            "k": {
+              "case_count": 8,
+              "gain": {
+                "count": 8,
+                "mean": 0.6977685479153684,
+                "median": 0.684233042035167,
+                "q25": 0.6479890344630033,
+                "q75": 0.7258851674711893,
+                "minimum": 0.5941224766352897,
+                "maximum": 0.8304524695232607,
+                "worst_quartile_mean": 0.601594602063683,
+                "positive_cases": 8,
+                "negative_cases": 0,
+                "zero_cases": 0
+              },
+              "player_to_standard_mse_ratio": {
+                "count": 8,
+                "mean": 0.30223145208463165,
+                "median": 0.315766957964833,
+                "q25": 0.2741148325288108,
+                "q75": 0.3520109655369968,
+                "minimum": 0.1695475304767393,
+                "maximum": 0.4058775233647103,
+                "worst_quartile_mean": 0.1713508160980533,
+                "positive_cases": 8,
+                "negative_cases": 0,
+                "zero_cases": 0
+              },
+              "coverage": {
+                "layers": [
+                  0,
+                  8,
+                  15,
+                  23
+                ],
+                "roles": [
+                  "k"
+                ],
+                "splits": [
+                  "test",
+                  "validation"
+                ],
+                "test_lengths": [
+                  128,
+                  512
+                ],
+                "test_windows": [
+                  1,
+                  2,
+                  6,
+                  7
+                ]
+              }
+            },
+            "o": {
+              "case_count": 8,
+              "gain": {
+                "count": 8,
+                "mean": 0.4244778516166316,
+                "median": 0.36198962216082486,
+                "q25": 0.3288634179438258,
+                "q75": 0.45281618215680286,
+                "minimum": 0.3141292688642153,
+                "maximum": 0.6596916548861069,
+                "worst_quartile_mean": 0.32027601741370026,
+                "positive_cases": 8,
+                "negative_cases": 0,
+                "zero_cases": 0
+              },
+              "player_to_standard_mse_ratio": {
+                "count": 8,
+                "mean": 0.5755221483833683,
+                "median": 0.6380103778391751,
+                "q25": 0.5471838178431971,
+                "q75": 0.6711365820561741,
+                "minimum": 0.34030834511389313,
+                "maximum": 0.6858707311357847,
+                "worst_quartile_mean": 0.34152817199335717,
+                "positive_cases": 8,
+                "negative_cases": 0,
+                "zero_cases": 0
+              },
+              "coverage": {
+                "layers": [
+                  0,
+                  8,
+                  15,
+                  23
+                ],
+                "roles": [
+                  "o"
+                ],
+                "splits": [
+                  "test",
+                  "validation"
+                ],
+                "test_lengths": [
+                  128,
+                  512
+                ],
+                "test_windows": [
+                  1,
+                  2,
+                  6,
+                  7
+                ]
+              }
+            },
+            "proj": {
+              "case_count": 8,
+              "gain": {
+                "count": 8,
+                "mean": 0.526925783393485,
+                "median": 0.49706756345777664,
+                "q25": 0.4384130976203334,
+                "q75": 0.5700551990447633,
+                "minimum": 0.3580183673658487,
+                "maximum": 0.7858914575342227,
+                "worst_quartile_mean": 0.36017376852176974,
+                "positive_cases": 8,
+                "negative_cases": 0,
+                "zero_cases": 0
+              },
+              "player_to_standard_mse_ratio": {
+                "count": 8,
+                "mean": 0.473074216606515,
+                "median": 0.5029324365422234,
+                "q25": 0.4299448009552367,
+                "q75": 0.5615869023796666,
+                "minimum": 0.2141085424657772,
+                "maximum": 0.6419816326341513,
+                "worst_quartile_mean": 0.23866616623763934,
+                "positive_cases": 8,
+                "negative_cases": 0,
+                "zero_cases": 0
+              },
+              "coverage": {
+                "layers": [
+                  0,
+                  8,
+                  15,
+                  23
+                ],
+                "roles": [
+                  "proj"
+                ],
+                "splits": [
+                  "test",
+                  "validation"
+                ],
+                "test_lengths": [
+                  128,
+                  512
+                ],
+                "test_windows": [
+                  1,
+                  2,
+                  6,
+                  7
+                ]
+              }
+            },
+            "q": {
+              "case_count": 8,
+              "gain": {
+                "count": 8,
+                "mean": 0.6845035127069408,
+                "median": 0.688492854131938,
+                "q25": 0.6051140132602985,
+                "q75": 0.7695158816227103,
+                "minimum": 0.5378270182416522,
+                "maximum": 0.8151534963416815,
+                "worst_quartile_mean": 0.5582922457952576,
+                "positive_cases": 8,
+                "negative_cases": 0,
+                "zero_cases": 0
+              },
+              "player_to_standard_mse_ratio": {
+                "count": 8,
+                "mean": 0.31549648729305924,
+                "median": 0.31150714586806205,
+                "q25": 0.2304841183772897,
+                "q75": 0.3948859867397015,
+                "minimum": 0.18484650365831848,
+                "maximum": 0.4621729817583478,
+                "worst_quartile_mean": 0.19688547428036232,
+                "positive_cases": 8,
+                "negative_cases": 0,
+                "zero_cases": 0
+              },
+              "coverage": {
+                "layers": [
+                  0,
+                  8,
+                  15,
+                  23
+                ],
+                "roles": [
+                  "q"
+                ],
+                "splits": [
+                  "test",
+                  "validation"
+                ],
+                "test_lengths": [
+                  128,
+                  512
+                ],
+                "test_windows": [
+                  1,
+                  2,
+                  6,
+                  7
+                ]
+              }
+            },
+            "v": {
+              "case_count": 8,
+              "gain": {
+                "count": 8,
+                "mean": 0.6518439934622776,
+                "median": 0.625106981793037,
+                "q25": 0.6173024697755273,
+                "q75": 0.6676013003653914,
+                "minimum": 0.5729019243270347,
+                "maximum": 0.7658511255798032,
+                "worst_quartile_mean": 0.5905791136106917,
+                "positive_cases": 8,
+                "negative_cases": 0,
+                "zero_cases": 0
+              },
+              "player_to_standard_mse_ratio": {
+                "count": 8,
+                "mean": 0.3481560065377224,
+                "median": 0.37489301820696297,
+                "q25": 0.33239869963460855,
+                "q75": 0.3826975302244727,
+                "minimum": 0.23414887442019677,
+                "maximum": 0.42709807567296526,
+                "worst_quartile_mean": 0.2367676581442099,
+                "positive_cases": 8,
+                "negative_cases": 0,
+                "zero_cases": 0
+              },
+              "coverage": {
+                "layers": [
+                  0,
+                  8,
+                  15,
+                  23
+                ],
+                "roles": [
+                  "v"
+                ],
+                "splits": [
+                  "test",
+                  "validation"
+                ],
+                "test_lengths": [
+                  128,
+                  512
+                ],
+                "test_windows": [
+                  1,
+                  2,
+                  6,
+                  7
+                ]
+              }
+            }
+          },
+          "by_role_family": {
+            "fc": {
+              "case_count": 16,
+              "gain": {
+                "count": 16,
+                "mean": 0.4543700274538068,
+                "median": 0.4564454614112803,
+                "q25": 0.4348295059430219,
+                "q75": 0.4822316106063739,
+                "minimum": 0.33145069370329894,
+                "maximum": 0.5184578720440365,
+                "worst_quartile_mean": 0.4032765412447328,
+                "positive_cases": 16,
+                "negative_cases": 0,
+                "zero_cases": 0
+              },
+              "player_to_standard_mse_ratio": {
+                "count": 16,
+                "mean": 0.5456299725461933,
+                "median": 0.5435545385887197,
+                "q25": 0.5177683893936261,
+                "q75": 0.5651704940569782,
+                "minimum": 0.4815421279559635,
+                "maximum": 0.6685493062967011,
+                "worst_quartile_mean": 0.5012561768826593,
+                "positive_cases": 16,
+                "negative_cases": 0,
+                "zero_cases": 0
+              },
+              "coverage": {
+                "layers": [
+                  0,
+                  8,
+                  15,
+                  23
+                ],
+                "roles": [
+                  "fc_gate",
+                  "fc_up"
+                ],
+                "splits": [
+                  "test",
+                  "validation"
+                ],
+                "test_lengths": [
+                  128,
+                  512
+                ],
+                "test_windows": [
+                  1,
+                  2,
+                  6,
+                  7
+                ]
+              }
+            },
+            "o": {
+              "case_count": 8,
+              "gain": {
+                "count": 8,
+                "mean": 0.4244778516166316,
+                "median": 0.36198962216082486,
+                "q25": 0.3288634179438258,
+                "q75": 0.45281618215680286,
+                "minimum": 0.3141292688642153,
+                "maximum": 0.6596916548861069,
+                "worst_quartile_mean": 0.32027601741370026,
+                "positive_cases": 8,
+                "negative_cases": 0,
+                "zero_cases": 0
+              },
+              "player_to_standard_mse_ratio": {
+                "count": 8,
+                "mean": 0.5755221483833683,
+                "median": 0.6380103778391751,
+                "q25": 0.5471838178431971,
+                "q75": 0.6711365820561741,
+                "minimum": 0.34030834511389313,
+                "maximum": 0.6858707311357847,
+                "worst_quartile_mean": 0.34152817199335717,
+                "positive_cases": 8,
+                "negative_cases": 0,
+                "zero_cases": 0
+              },
+              "coverage": {
+                "layers": [
+                  0,
+                  8,
+                  15,
+                  23
+                ],
+                "roles": [
+                  "o"
+                ],
+                "splits": [
+                  "test",
+                  "validation"
+                ],
+                "test_lengths": [
+                  128,
+                  512
+                ],
+                "test_windows": [
+                  1,
+                  2,
+                  6,
+                  7
+                ]
+              }
+            },
+            "proj": {
+              "case_count": 8,
+              "gain": {
+                "count": 8,
+                "mean": 0.526925783393485,
+                "median": 0.49706756345777664,
+                "q25": 0.4384130976203334,
+                "q75": 0.5700551990447633,
+                "minimum": 0.3580183673658487,
+                "maximum": 0.7858914575342227,
+                "worst_quartile_mean": 0.36017376852176974,
+                "positive_cases": 8,
+                "negative_cases": 0,
+                "zero_cases": 0
+              },
+              "player_to_standard_mse_ratio": {
+                "count": 8,
+                "mean": 0.473074216606515,
+                "median": 0.5029324365422234,
+                "q25": 0.4299448009552367,
+                "q75": 0.5615869023796666,
+                "minimum": 0.2141085424657772,
+                "maximum": 0.6419816326341513,
+                "worst_quartile_mean": 0.23866616623763934,
+                "positive_cases": 8,
+                "negative_cases": 0,
+                "zero_cases": 0
+              },
+              "coverage": {
+                "layers": [
+                  0,
+                  8,
+                  15,
+                  23
+                ],
+                "roles": [
+                  "proj"
+                ],
+                "splits": [
+                  "test",
+                  "validation"
+                ],
+                "test_lengths": [
+                  128,
+                  512
+                ],
+                "test_windows": [
+                  1,
+                  2,
+                  6,
+                  7
+                ]
+              }
+            },
+            "qkv": {
+              "case_count": 24,
+              "gain": {
+                "count": 24,
+                "mean": 0.6780386846948622,
+                "median": 0.6487801756149543,
+                "q25": 0.6126913267961018,
+                "q75": 0.7610424995482699,
+                "minimum": 0.5378270182416522,
+                "maximum": 0.8304524695232607,
+                "worst_quartile_mean": 0.5834886538232108,
+                "positive_cases": 24,
+                "negative_cases": 0,
+                "zero_cases": 0
+              },
+              "player_to_standard_mse_ratio": {
+                "count": 24,
+                "mean": 0.3219613153051378,
+                "median": 0.3512198243850458,
+                "q25": 0.23895750045173003,
+                "q75": 0.38730867320389817,
+                "minimum": 0.1695475304767393,
+                "maximum": 0.4621729817583478,
+                "worst_quartile_mean": 0.2013820218965465,
+                "positive_cases": 24,
+                "negative_cases": 0,
+                "zero_cases": 0
+              },
+              "coverage": {
+                "layers": [
+                  0,
+                  8,
+                  15,
+                  23
+                ],
+                "roles": [
+                  "k",
+                  "q",
+                  "v"
+                ],
+                "splits": [
+                  "test",
+                  "validation"
+                ],
+                "test_lengths": [
+                  128,
+                  512
+                ],
+                "test_windows": [
+                  1,
+                  2,
+                  6,
+                  7
+                ]
+              }
+            }
+          },
+          "by_layer": {
+            "0": {
+              "case_count": 14,
+              "gain": {
+                "count": 14,
+                "mean": 0.6312167635859826,
+                "median": 0.6584718280066428,
+                "q25": 0.4635064533945275,
+                "q75": 0.7847694477181462,
+                "minimum": 0.41375554775743545,
+                "maximum": 0.8304524695232607,
+                "worst_quartile_mean": 0.4339909510800421,
+                "positive_cases": 14,
+                "negative_cases": 0,
+                "zero_cases": 0
+              },
+              "player_to_standard_mse_ratio": {
+                "count": 14,
+                "mean": 0.3687832364140174,
+                "median": 0.34152817199335717,
+                "q25": 0.21523055228185384,
+                "q75": 0.5364935466054725,
+                "minimum": 0.1695475304767393,
+                "maximum": 0.5862444522425646,
+                "worst_quartile_mean": 0.18411814518920783,
+                "positive_cases": 14,
+                "negative_cases": 0,
+                "zero_cases": 0
+              },
+              "coverage": {
+                "layers": [
+                  0
+                ],
+                "roles": [
+                  "fc_gate",
+                  "fc_up",
+                  "k",
+                  "o",
+                  "proj",
+                  "q",
+                  "v"
+                ],
+                "splits": [
+                  "test",
+                  "validation"
+                ],
+                "test_lengths": [
+                  128,
+                  512
+                ],
+                "test_windows": [
+                  1,
+                  2,
+                  6,
+                  7
+                ]
+              }
+            },
+            "15": {
+              "case_count": 14,
+              "gain": {
+                "count": 14,
+                "mean": 0.5087520596278977,
+                "median": 0.5164697003867773,
+                "q25": 0.4695572685042183,
+                "q75": 0.5772935860934059,
+                "minimum": 0.3264227659631852,
+                "maximum": 0.6245570660056209,
+                "worst_quartile_mean": 0.3958976728297774,
+                "positive_cases": 14,
+                "negative_cases": 0,
+                "zero_cases": 0
+              },
+              "player_to_standard_mse_ratio": {
+                "count": 14,
+                "mean": 0.49124794037210234,
+                "median": 0.48353029961322264,
+                "q25": 0.4227064139065941,
+                "q75": 0.5304427314957817,
+                "minimum": 0.3754429339943791,
+                "maximum": 0.6735772340368148,
+                "worst_quartile_mean": 0.3983740641295375,
+                "positive_cases": 14,
+                "negative_cases": 0,
+                "zero_cases": 0
+              },
+              "coverage": {
+                "layers": [
+                  15
+                ],
+                "roles": [
+                  "fc_gate",
+                  "fc_up",
+                  "k",
+                  "o",
+                  "proj",
+                  "q",
+                  "v"
+                ],
+                "splits": [
+                  "test",
+                  "validation"
+                ],
+                "test_lengths": [
+                  128,
+                  512
+                ],
+                "test_windows": [
+                  1,
+                  2,
+                  6,
+                  7
+                ]
+              }
+            },
+            "23": {
+              "case_count": 14,
+              "gain": {
+                "count": 14,
+                "mean": 0.5813433455229654,
+                "median": 0.616956600237401,
+                "q25": 0.45105656796262794,
+                "q75": 0.7256400551265509,
+                "minimum": 0.33145069370329894,
+                "maximum": 0.7858914575342227,
+                "worst_quartile_mean": 0.37960881841403765,
+                "positive_cases": 14,
+                "negative_cases": 0,
+                "zero_cases": 0
+              },
+              "player_to_standard_mse_ratio": {
+                "count": 14,
+                "mean": 0.4186566544770346,
+                "median": 0.38304339976259905,
+                "q25": 0.27435994487344906,
+                "q75": 0.5489434320373721,
+                "minimum": 0.2141085424657772,
+                "maximum": 0.6685493062967011,
+                "worst_quartile_mean": 0.2406433714254153,
+                "positive_cases": 14,
+                "negative_cases": 0,
+                "zero_cases": 0
+              },
+              "coverage": {
+                "layers": [
+                  23
+                ],
+                "roles": [
+                  "fc_gate",
+                  "fc_up",
+                  "k",
+                  "o",
+                  "proj",
+                  "q",
+                  "v"
+                ],
+                "splits": [
+                  "test",
+                  "validation"
+                ],
+                "test_lengths": [
+                  128,
+                  512
+                ],
+                "test_windows": [
+                  1,
+                  2,
+                  6,
+                  7
+                ]
+              }
+            },
+            "8": {
+              "case_count": 14,
+              "gain": {
+                "count": 14,
+                "mean": 0.5039791135501925,
+                "median": 0.46606810863885284,
+                "q25": 0.380641718414095,
+                "q75": 0.6234966036499857,
+                "minimum": 0.3141292688642153,
+                "maximum": 0.6800907192281993,
+                "worst_quartile_mean": 0.34933165670356514,
+                "positive_cases": 14,
+                "negative_cases": 0,
+                "zero_cases": 0
+              },
+              "player_to_standard_mse_ratio": {
+                "count": 14,
+                "mean": 0.49602088644980746,
+                "median": 0.533931891361147,
+                "q25": 0.3765033963500143,
+                "q75": 0.619358281585905,
+                "minimum": 0.31990928077180075,
+                "maximum": 0.6858707311357847,
+                "worst_quartile_mean": 0.34944818606347117,
+                "positive_cases": 14,
+                "negative_cases": 0,
+                "zero_cases": 0
+              },
+              "coverage": {
+                "layers": [
+                  8
+                ],
+                "roles": [
+                  "fc_gate",
+                  "fc_up",
+                  "k",
+                  "o",
+                  "proj",
+                  "q",
+                  "v"
+                ],
+                "splits": [
+                  "test",
+                  "validation"
+                ],
+                "test_lengths": [
+                  128,
+                  512
+                ],
+                "test_windows": [
+                  1,
+                  2,
+                  6,
+                  7
+                ]
+              }
+            }
+          },
+          "by_shape": {
+            "hidden_to_hidden": {
+              "case_count": 16,
+              "gain": {
+                "count": 16,
+                "mean": 0.5544906821617862,
+                "median": 0.5963284999564866,
+                "q25": 0.36241972153366525,
+                "q75": 0.6828761219085473,
+                "minimum": 0.3141292688642153,
+                "maximum": 0.8151534963416815,
+                "worst_quartile_mean": 0.332839606711646,
+                "positive_cases": 16,
+                "negative_cases": 0,
+                "zero_cases": 0
+              },
+              "player_to_standard_mse_ratio": {
+                "count": 16,
+                "mean": 0.44550931783821385,
+                "median": 0.4036715000435134,
+                "q25": 0.31712387809145276,
+                "q75": 0.6375802784663347,
+                "minimum": 0.18484650365831848,
+                "maximum": 0.6858707311357847,
+                "worst_quartile_mean": 0.2197530254467768,
+                "positive_cases": 16,
+                "negative_cases": 0,
+                "zero_cases": 0
+              },
+              "coverage": {
+                "layers": [
+                  0,
+                  8,
+                  15,
+                  23
+                ],
+                "roles": [
+                  "o",
+                  "q"
+                ],
+                "splits": [
+                  "test",
+                  "validation"
+                ],
+                "test_lengths": [
+                  128,
+                  512
+                ],
+                "test_windows": [
+                  1,
+                  2,
+                  6,
+                  7
+                ]
+              }
+            },
+            "hidden_to_wide": {
+              "case_count": 32,
+              "gain": {
+                "count": 32,
+                "mean": 0.5645881490713148,
+                "median": 0.5456798981855355,
+                "q25": 0.4567668453030602,
+                "q75": 0.6426886950291086,
+                "minimum": 0.33145069370329894,
+                "maximum": 0.8304524695232607,
+                "worst_quartile_mean": 0.4248023562448851,
+                "positive_cases": 32,
+                "negative_cases": 0,
+                "zero_cases": 0
+              },
+              "player_to_standard_mse_ratio": {
+                "count": 32,
+                "mean": 0.4354118509286851,
+                "median": 0.45432010181446436,
+                "q25": 0.3573113049708914,
+                "q75": 0.5432331546969398,
+                "minimum": 0.1695475304767393,
+                "maximum": 0.6685493062967011,
+                "worst_quartile_mean": 0.26182201713660486,
+                "positive_cases": 32,
+                "negative_cases": 0,
+                "zero_cases": 0
+              },
+              "coverage": {
+                "layers": [
+                  0,
+                  8,
+                  15,
+                  23
+                ],
+                "roles": [
+                  "fc_gate",
+                  "fc_up",
+                  "k",
+                  "v"
+                ],
+                "splits": [
+                  "test",
+                  "validation"
+                ],
+                "test_lengths": [
+                  128,
+                  512
+                ],
+                "test_windows": [
+                  1,
+                  2,
+                  6,
+                  7
+                ]
+              }
+            },
+            "wide_to_hidden": {
+              "case_count": 8,
+              "gain": {
+                "count": 8,
+                "mean": 0.526925783393485,
+                "median": 0.49706756345777664,
+                "q25": 0.4384130976203334,
+                "q75": 0.5700551990447633,
+                "minimum": 0.3580183673658487,
+                "maximum": 0.7858914575342227,
+                "worst_quartile_mean": 0.36017376852176974,
+                "positive_cases": 8,
+                "negative_cases": 0,
+                "zero_cases": 0
+              },
+              "player_to_standard_mse_ratio": {
+                "count": 8,
+                "mean": 0.473074216606515,
+                "median": 0.5029324365422234,
+                "q25": 0.4299448009552367,
+                "q75": 0.5615869023796666,
+                "minimum": 0.2141085424657772,
+                "maximum": 0.6419816326341513,
+                "worst_quartile_mean": 0.23866616623763934,
+                "positive_cases": 8,
+                "negative_cases": 0,
+                "zero_cases": 0
+              },
+              "coverage": {
+                "layers": [
+                  0,
+                  8,
+                  15,
+                  23
+                ],
+                "roles": [
+                  "proj"
+                ],
+                "splits": [
+                  "test",
+                  "validation"
+                ],
+                "test_lengths": [
+                  128,
+                  512
+                ],
+                "test_windows": [
+                  1,
+                  2,
+                  6,
+                  7
+                ]
+              }
+            }
+          },
+          "by_split": {
+            "test": {
+              "case_count": 28,
+              "gain": {
+                "count": 28,
+                "mean": 0.5448677747404944,
+                "median": 0.5198436108378941,
+                "q25": 0.4393925382624883,
+                "q75": 0.6581797850420454,
+                "minimum": 0.3141292688642153,
+                "maximum": 0.8304524695232607,
+                "worst_quartile_mean": 0.3631682400924064,
+                "positive_cases": 28,
+                "negative_cases": 0,
+                "zero_cases": 0
+              },
+              "player_to_standard_mse_ratio": {
+                "count": 28,
+                "mean": 0.4551322252595056,
+                "median": 0.4801563891621059,
+                "q25": 0.3418202149579545,
+                "q75": 0.5606074617375117,
+                "minimum": 0.1695475304767393,
+                "maximum": 0.6858707311357847,
+                "worst_quartile_mean": 0.25418774037888875,
+                "positive_cases": 28,
+                "negative_cases": 0,
+                "zero_cases": 0
+              },
+              "coverage": {
+                "layers": [
+                  0,
+                  8,
+                  15,
+                  23
+                ],
+                "roles": [
+                  "fc_gate",
+                  "fc_up",
+                  "k",
+                  "o",
+                  "proj",
+                  "q",
+                  "v"
+                ],
+                "splits": [
+                  "test"
+                ],
+                "test_lengths": [
+                  128,
+                  512
+                ],
+                "test_windows": [
+                  1,
+                  7
+                ]
+              }
+            },
+            "validation": {
+              "case_count": 28,
+              "gain": {
+                "count": 28,
+                "mean": 0.5677778664030246,
+                "median": 0.5486076726964497,
+                "q25": 0.47055804836085924,
+                "q75": 0.66479142097163,
+                "minimum": 0.3264227659631852,
+                "maximum": 0.8268458982806327,
+                "worst_quartile_mean": 0.39462051596694875,
+                "positive_cases": 28,
+                "negative_cases": 0,
+                "zero_cases": 0
+              },
+              "player_to_standard_mse_ratio": {
+                "count": 28,
+                "mean": 0.4322221335969753,
+                "median": 0.4513923273035503,
+                "q25": 0.33520857902837004,
+                "q75": 0.5294419516391408,
+                "minimum": 0.17315410171936732,
+                "maximum": 0.6735772340368148,
+                "worst_quartile_mean": 0.2388009126718576,
+                "positive_cases": 28,
+                "negative_cases": 0,
+                "zero_cases": 0
+              },
+              "coverage": {
+                "layers": [
+                  0,
+                  8,
+                  15,
+                  23
+                ],
+                "roles": [
+                  "fc_gate",
+                  "fc_up",
+                  "k",
+                  "o",
+                  "proj",
+                  "q",
+                  "v"
+                ],
+                "splits": [
+                  "validation"
+                ],
+                "test_lengths": [
+                  128,
+                  512
+                ],
+                "test_windows": [
+                  2,
+                  6
+                ]
+              }
+            }
+          },
+          "by_test_length": {
+            "128": {
+              "case_count": 28,
+              "gain": {
+                "count": 28,
+                "mean": 0.541946412655933,
+                "median": 0.5081708660818272,
+                "q25": 0.45032264836612373,
+                "q75": 0.665745032397034,
+                "minimum": 0.3141292688642153,
+                "maximum": 0.8151534963416815,
+                "worst_quartile_mean": 0.37169545377065866,
+                "positive_cases": 28,
+                "negative_cases": 0,
+                "zero_cases": 0
+              },
+              "player_to_standard_mse_ratio": {
+                "count": 28,
+                "mean": 0.45805358734406704,
+                "median": 0.4918291339181729,
+                "q25": 0.334254967602966,
+                "q75": 0.5496773516338762,
+                "minimum": 0.18484650365831848,
+                "maximum": 0.6858707311357847,
+                "worst_quartile_mean": 0.2580869414634432,
+                "positive_cases": 28,
+                "negative_cases": 0,
+                "zero_cases": 0
+              },
+              "coverage": {
+                "layers": [
+                  0,
+                  8,
+                  15,
+                  23
+                ],
+                "roles": [
+                  "fc_gate",
+                  "fc_up",
+                  "k",
+                  "o",
+                  "proj",
+                  "q",
+                  "v"
+                ],
+                "splits": [
+                  "test",
+                  "validation"
+                ],
+                "test_lengths": [
+                  128
+                ],
+                "test_windows": [
+                  1,
+                  6
+                ]
+              }
+            },
+            "512": {
+              "case_count": 28,
+              "gain": {
+                "count": 28,
+                "mean": 0.5706992284875861,
+                "median": 0.6086615151932124,
+                "q25": 0.45021521662000097,
+                "q75": 0.6578619145669108,
+                "minimum": 0.3264227659631852,
+                "maximum": 0.8304524695232607,
+                "worst_quartile_mean": 0.38382130488529503,
+                "positive_cases": 28,
+                "negative_cases": 0,
+                "zero_cases": 0
+              },
+              "player_to_standard_mse_ratio": {
+                "count": 28,
+                "mean": 0.4293007715124139,
+                "median": 0.3913384848067875,
+                "q25": 0.34213808543308916,
+                "q75": 0.549784783379999,
+                "minimum": 0.1695475304767393,
+                "maximum": 0.6735772340368148,
+                "worst_quartile_mean": 0.23508335185880871,
+                "positive_cases": 28,
+                "negative_cases": 0,
+                "zero_cases": 0
+              },
+              "coverage": {
+                "layers": [
+                  0,
+                  8,
+                  15,
+                  23
+                ],
+                "roles": [
+                  "fc_gate",
+                  "fc_up",
+                  "k",
+                  "o",
+                  "proj",
+                  "q",
+                  "v"
+                ],
+                "splits": [
+                  "test",
+                  "validation"
+                ],
+                "test_lengths": [
+                  512
+                ],
+                "test_windows": [
+                  2,
+                  7
+                ]
+              }
+            }
+          }
+        }
+      },
+      "diagnostic_config": {
+        "error_source_decomposition": false,
+        "evaluation_scenario": "linear",
+        "score_unchanged": true,
+        "candidate_api_calls_match_full_graph": false
+      },
+      "protocol": "proxy-v2",
+      "official": {
+        "score": null,
+        "time_seconds": null,
+        "status": "unregistered",
+        "cohort": null
+      },
+      "status": "ok"
+    }
+  ]
+}

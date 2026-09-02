@@ -28,18 +28,17 @@
 
 - **当前仓库内最高已绑定源码的官方分数：v159，17532 分 / 时间未知。** v158
   `16861/223s` 仍是时间与源码均完整的安全基线；17816 仍只作为外部锚点。
-- 根目录 [`solution.py`](../solution.py) 已切换为 v159 本地合并候选：Linear 采用用户提供的
-  17816 提取及必要 GPTQ/AdaRound 依赖，Attention 字段与 v158 保持不变；SHA256
-  `0508045A0DDD0F17679DCA827C265CFC7588E76081D3AECEFF555D257DD4242`。Linear compact
-  `proxy-v2` 为 `0.705515`，API `167.570s`、wall `174.228s`；这是缓存命中的机制/泛化诊断，
-  不是官方分数或官方时间，完整 default panel 尚未复跑。
+- 根目录与 v159 归档已同步数学等价 GPU 修复及中间量复用，当前 SHA256
+  `13C9CF0BFCF2277F0828D8CC1A18A8F7414DB183F3E27DD898D52597ACC5EC79`；17532 仍绑定修复前
+  SHA `0508045A...4242`。CUDA compact 为 `0.705508`、56/0，API `52.321s`；CUDA Linear
+  default 为 `0.633526`、167/1，API `269.435s`、wall `291.145s`。这些仍不是官方时间。
 - v159 与同 cache 的 v158 compact 配对 mean Δ 为 `+0.149191`（56 改善、0 回归）；`proj`
   八个 case 的配对 Δ 也为正（`+0.124209`）。这仍只是 compact Qwen proxy 证据，不能外推为
   官方泛化结论。候选说明见
   [`v159 result`](../solutions/20260902_v159_linear-gptq17816_v158-attention_score17532_timeNA/result.md)。
-- v159 的 CUDA default audit 当前为 `ERROR`，不是低分：返回 state 已复制到 CPU，却在校准
-  临时计算中与 CUDA activation 混用，首个错误位于 `solution.py:8135`。CPU compact 计时中
-  Weight calibration 占 `131.693/167.570s`，因此 GPU 修复后首先优化校准复杂度。
+- CUDA device 错误已经修复；default 中 Weight calibration 占 `208.971/269.435s`，下一步
+  对校准热点做单项消融。transformed samples 与 Weight Gram 已完成等价复用，compact
+  56/56 输出不变，API `52.321→51.055s`；不创建新版本。
 - v138/v139 虽在官方 `<300s` 内通过，但只有 `15715/15716`，比 v86 低约 1029 分；
   v138–v145 这条“压缩 Attention 后继续叠 Linear 局部模块”的路线已经失败并关闭。
 - v155 官方 `16581 / 208.5s`、v156 官方 `16580 / 204.3s`，两者时间均通过但分别低于 v86

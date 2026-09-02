@@ -8126,24 +8126,29 @@ def hif4_calibration_and_quantize_weight(
     smooth_inv_state = None
     if not torch.equal(best_d, identity_d):
         smooth_inv_state = _cpu_state_tensor(best_d.reciprocal())
+    smooth_inv_work = None if smooth_inv_state is None else best_d.reciprocal()
+    permutation_work = None if permutation_state is None else best_perm
+
+    transformed_activation_samples = []
+    for sample in activation_samples:
+        transformed = sample.to(dtype=torch.float32)
+        if smooth_inv_work is not None:
+            transformed = transformed * smooth_inv_work.reshape(1, -1)
+        if permutation_work is not None:
+            transformed = transformed.index_select(-1, permutation_work)
+        if best_block_smooth_size != 0:
+            transformed = _block_hadamard_transform(
+                transformed,
+                best_block_smooth_size,
+                best_block_smooth_seed,
+            )
+        transformed_activation_samples.append(transformed)
 
     if _DATA_DRIVEN_RATIO:
-        loss_parts = []
-        for sample in activation_samples:
-            transformed = sample.to(dtype=torch.float32)
-            if smooth_inv_state is not None:
-                transformed = transformed * smooth_inv_state.reshape(1, -1)
-            if permutation_state is not None:
-                transformed = transformed.index_select(-1, permutation_state)
-            if best_block_smooth_size != 0:
-                transformed = _block_hadamard_transform(
-                    transformed,
-                    best_block_smooth_size,
-                    best_block_smooth_seed,
-                )
-            loss_parts.append(
+        loss_parts = [
                 _standard_block_losses(transformed, activation_importance)
-            )
+            for transformed in transformed_activation_samples
+        ]
         activation_ratio = _loss_capture_ratio(
             torch.cat(loss_parts),
             target=_LINEAR_RATIO_CAPTURE_TARGET,
@@ -8152,23 +8157,31 @@ def hif4_calibration_and_quantize_weight(
     else:
         activation_ratio = _ACTIVATION_REFINE_MAX_RATIO
 
-    activation_gram_state = None
-    if (
+    need_activation_gram = (
         _ACTIVATION_QUADRATIC
         and in_features <= _ACTIVATION_QUADRATIC_MAX_FEATURES
-    ):
-        gram = weight_hat.to(torch.float32).t().mm(weight_hat.to(torch.float32))
+    )
+    need_activation_hessian = (
+        _ACTIVATION_GPTQ and in_features >= _WEIGHT_GPTQ_MIN_FEATURES
+    )
+    weight_output_gram = None
+    if need_activation_gram or need_activation_hessian:
+        weight_hat_float = weight_hat.to(torch.float32)
+        weight_output_gram = weight_hat_float.t().mm(weight_hat_float)
+
+    activation_gram_state = None
+    if need_activation_gram:
         activation_gram_state = _cpu_state_tensor(
-            _flat_group_gram(gram, in_features)
+            _flat_group_gram(weight_output_gram, in_features)
         )
 
     activation_h_inv_state = None
     best_offsets = _DYNAMIC_OFFSETS
-    if _ACTIVATION_GPTQ and in_features >= _WEIGHT_GPTQ_MIN_FEATURES:
-        H_act_base = weight_hat.to(torch.float32).t().mm(weight_hat.to(torch.float32))
+    if need_activation_hessian:
+        H_act_base = weight_output_gram
         H_act_diag_mean = float(H_act_base.diagonal().mean())
 
-        if _ADAPTIVE_ACT_GPTQ_REG and len(activation_samples) > 0:
+        if _ADAPTIVE_ACT_GPTQ_REG and len(transformed_activation_samples) > 0:
             reg_candidates = _ADAPTIVE_ACT_GPTQ_REG_CANDIDATES
             best_reg_loss = float("inf")
             best_reg_h_inv = None
@@ -8181,18 +8194,7 @@ def hif4_calibration_and_quantize_weight(
                     H_inv_act = torch.cholesky_inverse(L_act)
                 except RuntimeError:
                     continue
-                sample = activation_samples[0]
-                transformed = sample.to(dtype=torch.float32)
-                if smooth_inv_state is not None:
-                    transformed = transformed * smooth_inv_state.reshape(1, -1)
-                if permutation_state is not None:
-                    transformed = transformed.index_select(-1, permutation_state)
-                if best_block_smooth_size != 0:
-                    transformed = _block_hadamard_transform(
-                        transformed,
-                        best_block_smooth_size,
-                        best_block_smooth_seed,
-                    )
+                transformed = transformed_activation_samples[0]
                 gram_dev = (
                     activation_gram_state.reshape(
                         in_features // _HIF4_BLOCK_SIZE,
@@ -8259,25 +8261,14 @@ def hif4_calibration_and_quantize_weight(
             except RuntimeError:
                 pass
 
-    if _ADAPTIVE_OFFSETS and len(activation_samples) > 0:
+    if _ADAPTIVE_OFFSETS and len(transformed_activation_samples) > 0:
         best_offset_loss = float("inf")
         for cand_offsets in _ADAPTIVE_OFFSET_CANDIDATES:
             total_loss = 0.0
             cand_offsets_t = torch.tensor(
                 cand_offsets, dtype=torch.int8, device="cpu"
             )
-            for sample in activation_samples:
-                transformed = sample.to(dtype=torch.float32)
-                if smooth_inv_state is not None:
-                    transformed = transformed * smooth_inv_state.reshape(1, -1)
-                if permutation_state is not None:
-                    transformed = transformed.index_select(-1, permutation_state)
-                if best_block_smooth_size != 0:
-                    transformed = _block_hadamard_transform(
-                        transformed,
-                        best_block_smooth_size,
-                        best_block_smooth_seed,
-                    )
+            for transformed in transformed_activation_samples:
                 if activation_h_inv_state is not None:
                     q_result = _activation_gptq_quantize(
                         transformed,
