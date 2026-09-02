@@ -2,7 +2,7 @@
 
 > 状态：**ACTIVE**
 >
-> 更新：2026-09-02
+> 更新：2026-09-03
 >
 > 当前代码与 v159 归档 SHA256：
 > `13C9CF0BFCF2277F0828D8CC1A18A8F7414DB183F3E27DD898D52597ACC5EC79`
@@ -45,10 +45,27 @@ Qwen、GPT-2、Pythia/OPT 都不是官方模型，任何本地结果只用于机
 - validation/test、浅层/深层、短/长序列是否同向；
 - 未修改 control 是否保持不变；
 - Linear 的 W-only/A-only/W+A/interaction，或 Attention 的 Q/K/V/QK/QKV 来源是否可解释；
-- Qwen 与跨模型的父子方向是否一致。
+- Qwen 与跨模型的结构归因是否同构（判据见下）。
 
-若 Qwen 正向、跨模型整体负向，结论为 `model-specific / REJECTED`；不得用 Qwen mean 覆盖。
-若均值正向但 median、尾部或主要 shape/length 系统性负向，结论为 `mixed / not promotable`。
+Qwen 本地判定：均值正向但 median、尾部或主要 shape/length 系统性负向，结论为
+`mixed / not promotable`。
+
+**跨模型（GPT-2/Pythia）门禁：结构归因判据，不用 mean 方向**（2026-09-03 确认）。
+依据：Qwen proxy-v2、GPT-2、外部 hif4 三个独立本地代理对跨 Linear 家族对比
+（v86 vs v140/v147）的排序与官方全部反转——本地 mean 方向对官方排名无预测力，
+把它当跨模型否决票会系统性误杀或误放行。跨模型通过/拒绝改为：
+
+1. **来源归因同构**：候选在跨模型上的 W-only/A-only/W+A/interaction（Linear）或
+   Q/K/V/QK/QKV（Attention）主效应与 Qwen 本地归因同号、主来源一致——机制在另一
+   架构上以同样方式起作用；
+2. **分布稳健性**：median、q25、worst-quartile、negative case 与 control 不变性在
+   跨模型上保持（这些统计对隐藏分布漂移比 mean 稳健）；
+3. **判定规则**：两条件都满足 → 跨模型通过，跨模型 mean 方向仅记录不作判据；
+   来源归因不同构（主来源改变或 interaction 反号）→ `model-specific / REJECTED`；
+   归因同构但分布稳健性破坏 → `mixed / not promotable`，回到机制设计而非调参。
+
+边界：此规则不放松 §2.1 的封存纪律——跨模型仍不得用于参数调优，也不得为挽回跨模型
+mean 反向而调整机制参数；它只改变通过/拒绝的判据从 mean 方向换成结构归因。
 
 ### 2.3 跨模型实现顺序
 
@@ -78,8 +95,9 @@ Qwen、GPT-2、Pythia/OPT 都不是官方模型，任何本地结果只用于机
 5. `gpt2-medium` 只作尺寸压力测试，不替代不同架构验证。
 
 步骤验收：1–2 完成后用 v159 父版本各生成一次 GPT-2 linear/attention parent JSON，与
-Qwen parent 的机制签名（正/负 case 数、最差 layer/role）并列归档；3–4 全部通过后才允许
-进入 §6 集成。所有跨模型结果标记 `cross-model-probe`，不与 Qwen proxy 或官方分数混排。
+Qwen parent 的机制签名（W/A 或 Q/K/V 来源归因、正/负 case 数、最差 layer/role）并列归档，
+归因同构判据见 §2.2；3–4 全部通过后才允许进入 §6 集成。所有跨模型结果标记
+`cross-model-probe`，不与 Qwen proxy 或官方分数混排。
 
 ### 2.4 复杂度准入（2026-09-02 源码审计补充）
 
