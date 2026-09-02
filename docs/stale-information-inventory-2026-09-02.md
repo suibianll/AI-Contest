@@ -36,6 +36,13 @@
 - “当前本地归档冠军 = v74 22750”——`docs/algorithm-inventory-and-directions.md`（已就地更正）
 - 以 `22750` 为起点的 36000 潜力推算——`docs/research/2026-08-30-hif4-36000-potential-and-algorithms.md`
 
+**2026-09-02 补充登记（本次已就地修复）**：
+
+- `docs/archive-implementation-audit.md` 3.6 节 v074 条目、第 4 节“安全边界推进到 v74”——已加 v74 新权重失效标注
+- `solutions/README.md` v074 行——已改为 `22750（旧权重）→ 14561（当前评测集回传）`
+- `solutions/20260829_v074_c75-rowwise-jdrq_scoreNA_timeNA/result.md`——已补记 2026-09-02 新权重回传
+- `华为2026_NVFP4到HiF4_高精度量化赛题完整分析与优化方案.md` 第 4 行——已加 420s / 250+200 口径失效标注
+
 ---
 
 ## 2. 时间口径：420s → **300s**

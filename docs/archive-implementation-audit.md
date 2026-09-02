@@ -153,7 +153,7 @@ v109 已归档为当前精度 parent；API `517.285773s` 只作为探索期时�
 - v031 目录名仍为 `score14613_time159.2s`，但修订官方口径为 `21864 / 161.3s`。
 - v066 目录名为 `scoreNA_timeNA`，但修订官方口径为 `22557 / 217.2s`。
 - v072 目录名仍为 `scoreNA_timeNA`，但用户最新确认官方为 `22662 / 226s`。
-- v074 目录名仍为 `scoreNA_timeNA`，但用户最新确认官方为 `22750 / 239.387s`。
+- v074 目录名仍为 `scoreNA_timeNA`；旧权重官方为 `22750 / 239.387s`，**2026-09-02 当前评测集回传仅 `14561 / 188.9s`**（差 −8189），不再是安全基线或归档冠军（见 `logs/execution/2026-09-02-v74-official-result-correction.md`）。
 
 这不是算法实现 bug，但容易让脚本或读者误把旧目录名当成最终成绩。后续不改写不可变目录，统一在 `solutions/README.md` 和审计表中以 canonical result 字段为准。
 
@@ -184,7 +184,9 @@ v109 已归档为当前精度 parent；API `517.285773s` 只作为探索期时�
 | v124 C1c structured rank-8 | screen `0.53343639`；full panel `295.820229`、Linear `0.509649`，较 v121 `+0.008948`；26 项核心测试/compliance 通过，API `2323.911s` 超时但 accuracy-first 接受。 |
 | v125 C1c rank-8 / max-blocks-8 | screen `0.53358298`；full panel `295.847849`、Linear `0.509760`，较 v124 `+0.027620`；Attention `0.842039` 逐位不变；API `2653.580s`，仅作 precision-only 证据，runtime invalid。 |
 
-最近候选的静态/运行时 Linear 合规扫描均为 `violations=0, static=0`；本次没有发现把 `A@W` 输出监督写入在线 `Q(A)` 的新违规。v107 Attention 合约专项审计（见 [`2026-08-31-v107-attention-contract-audit.md`](../logs/execution/2026-08-31-v107-attention-contract-audit.md)）曾在固定 `seq=128` 下通过，但官方变长 mini sample 已确认 v100/v107 的 `_build_pawv_metric` 会发生 shape mismatch。v72 以 `22662 / 226s` 官方通过，v74 又以 `22750 / 239.387s` 通过，把当前安全边界推进到 v74。v126 已按长度分组修复 PAWV，并通过 `[10,128,512,1024,1024]` 完整公开 calibration API；合规、本地 smoke 和官方通过仍分开记录。
+最近候选的静态/运行时 Linear 合规扫描均为 `violations=0, static=0`；本次没有发现把 `A@W` 输出监督写入在线 `Q(A)` 的新违规。v107 Attention 合约专项审计（见 [`2026-08-31-v107-attention-contract-audit.md`](../logs/execution/2026-08-31-v107-attention-contract-audit.md)）曾在固定 `seq=128` 下通过，但官方变长 mini sample 已确认 v100/v107 的 `_build_pawv_metric` 会发生 shape mismatch。v72 以 `22662 / 226s` 官方通过，v74 又以 `22750 / 239.387s` 通过，把当前安全边界推进到 v74。
+> ⚠️ **2026-09-02 失效标注**：v74 的 `22750` 为旧权重分数；当前评测集回传仅 `14561 / 188.9s`，
+> **不再作为安全基线或出发版本**（见 stale-information-inventory 第 1 节）。v126 已按长度分组修复 PAWV，并通过 `[10,128,512,1024,1024]` 完整公开 calibration API；合规、本地 smoke 和官方通过仍分开记录。
 
 ## 5. 已实现、已验证、未验证的方向矩阵
 

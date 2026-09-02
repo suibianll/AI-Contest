@@ -81,7 +81,7 @@ silently assigned a score.
 | v051 | `20260829_v051_c47b-grouping-threshold005_scoreNA_timeNA` | 22451 | 234 s | pass |
 | v066 | `20260829_v066_c66-activation-ratio100_scoreNA_timeNA` | 22557 | 217.2 s | pass |
 | v072 | `20260829_v072_c74-jdrq-hierarchy_scoreNA_timeNA` | 22662 | 226 s | pass |
-| v074 | `20260829_v074_c75-rowwise-jdrq_scoreNA_timeNA` | 22750 | 239.387 s | pass |
+| v074 | `20260829_v074_c75-rowwise-jdrq_scoreNA_timeNA` | 22750（旧权重）→ **14561**（当前评测集回传，2026-09-02） | 239.387 s → 188.9 s | pass（**非安全基线**，低于 v84/v86） |
 | v084 | `20260830_v084_c84-gram64-sweep5_scoreNA_timeNA` | 16517 | 252.563 s | pass (revised weights) |
 | v086 | `20260830_v086_c86-attn-block-final_scoreNA_timeNA` | **16744** | **222.7 s** | **pass (revised weights, new best)** |
 | v098 | `20260830_v098_b1-gqrb-margin-active_score293.793700_time406s` | — | >300 s | timeout |
