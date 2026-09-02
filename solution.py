@@ -5084,6 +5084,78 @@ def _linear_output_candidate_metrics(
     return sum(case_scores) / float(len(case_scores)), tuple(case_scores)
 
 
+def _linear_output_candidate_metrics_combos(
+    weight: torch.Tensor,
+    activation_samples: Sequence[torch.Tensor],
+    d: torch.Tensor,
+    permutation: torch.Tensor,
+    combos: Sequence[tuple[int, int]],
+) -> list[tuple[float, tuple[float, ...]]]:
+    """Batched equivalent of calling `_linear_output_candidate_metrics` once
+    per ``(block_smooth_size, block_smooth_seed)`` combo for one shared
+    ``(d, permutation)`` pair.
+
+    The HiF4 encoder and dequantizer act independently on each 64-element
+    block and never reduce across leading dimensions, so stacking the combo
+    variants cannot change any encoded value.  The scored matmuls stay
+    per-combo/per-sample on the unbatched slices, so every score and the
+    selection that consumes them remain bit-identical.
+    """
+
+    order = permutation.to(device=weight.device, dtype=torch.int64).reshape(-1)
+    combo_list = [(int(size), int(seed)) for size, seed in combos]
+    weight_transformed = torch.stack([
+        _linear_pair_transform(weight, d, order, size, seed, weight_side=True)
+        for size, seed in combo_list
+    ])
+    weight_hat = _dequantize_hif4(_dense_to_hif4(weight_transformed))
+    weight_transformed_by_combo = list(weight_transformed.unbind(0))
+    weight_hat_by_combo = list(weight_hat.unbind(0))
+
+    sample_reference: list[list[torch.Tensor]] = []
+    sample_reconstructed: list[list[torch.Tensor]] = []
+    for sample in activation_samples:
+        transformed = torch.stack([
+            _linear_pair_transform(
+                sample, d, order, size, seed, weight_side=False
+            )
+            for size, seed in combo_list
+        ])
+        hat = _dequantize_hif4(_dense_to_hif4(transformed))
+        sample_reference.append(list(transformed.unbind(0)))
+        sample_reconstructed.append(list(hat.unbind(0)))
+
+    results: list[tuple[float, tuple[float, ...]]] = []
+    for combo_index, _size_seed in enumerate(combo_list):
+        weight_t = weight_transformed_by_combo[combo_index]
+        weight_h = weight_hat_by_combo[combo_index]
+        case_scores: list[float] = []
+        for sample_index in range(len(activation_samples)):
+            reference = sample_reference[sample_index][combo_index].mm(
+                weight_t.t()
+            )
+            reconstructed = sample_reconstructed[sample_index][combo_index].mm(
+                weight_h.t()
+            )
+            score = (reference - reconstructed).square().sum() / (
+                reference.square().sum() + _EPS
+            )
+            case_scores.append(
+                float(
+                    torch.nan_to_num(
+                        score, nan=1.0e30, posinf=1.0e30, neginf=1.0e30
+                    )
+                )
+            )
+        if not case_scores:
+            results.append((1.0e30, (1.0e30,)))
+        else:
+            results.append(
+                (sum(case_scores) / float(len(case_scores)), tuple(case_scores))
+            )
+    return results
+
+
 def _linear_smooth_hybrid_metrics(
     weight_proxy: torch.Tensor,
     weight_e2e: torch.Tensor,
@@ -7901,28 +7973,33 @@ def hif4_calibration_and_quantize_weight(
         (force_block_size,) if force_block_size else _BLOCK_SMOOTH_SIZES
     )
     forced_choice: tuple[tuple[float, tuple[float, ...]], int, int] | None = None
-    block_baseline_metrics = _linear_output_candidate_metrics(
-        weight_sample,
-        activation_samples,
-        best_d,
-        best_perm,
-    )
-    block_best_metrics = block_baseline_metrics
+    block_combos = [(0, 0)]
     if candidate_block_sizes:
         for candidate_size in candidate_block_sizes:
             size = int(candidate_size)
             if size <= 0 or in_features % size != 0:
                 continue
             for candidate_seed in _BLOCK_SMOOTH_SEEDS:
+                block_combos.append((size, int(candidate_seed)))
+    block_all_metrics = _linear_output_candidate_metrics_combos(
+        weight_sample,
+        activation_samples,
+        best_d,
+        best_perm,
+        block_combos,
+    )
+    block_baseline_metrics = block_all_metrics[0]
+    block_best_metrics = block_baseline_metrics
+    if candidate_block_sizes:
+        block_combo_index = 1
+        for candidate_size in candidate_block_sizes:
+            size = int(candidate_size)
+            if size <= 0 or in_features % size != 0:
+                continue
+            for candidate_seed in _BLOCK_SMOOTH_SEEDS:
                 seed = int(candidate_seed)
-                block_metrics = _linear_output_candidate_metrics(
-                    weight_sample,
-                    activation_samples,
-                    best_d,
-                    best_perm,
-                    size,
-                    seed,
-                )
+                block_metrics = block_all_metrics[block_combo_index]
+                block_combo_index += 1
                 if force_block_size:
                     if (
                         forced_choice is None
@@ -7966,10 +8043,18 @@ def hif4_calibration_and_quantize_weight(
                 candidate_perms_j.append(sorted_j)
 
             for cp in candidate_perms_j:
-                e2e_score = _linear_output_candidate_metrics(
+                joint_combos = [(0, 0)]
+                for bs in candidate_block_sizes:
+                    size_j = int(bs)
+                    if size_j <= 0 or in_features % size_j != 0:
+                        continue
+                    for bseed in _BLOCK_SMOOTH_SEEDS:
+                        joint_combos.append((size_j, int(bseed)))
+                joint_all_metrics = _linear_output_candidate_metrics_combos(
                     weight_sample, activation_samples,
-                    candidate_d, cp, 0, 0,
-                )[0]
+                    candidate_d, cp, joint_combos,
+                )
+                e2e_score = joint_all_metrics[0][0]
                 if e2e_score < joint_best_score:
                     joint_best_score = e2e_score
                     joint_best_d = candidate_d
@@ -7978,12 +8063,15 @@ def hif4_calibration_and_quantize_weight(
                     joint_best_bseed = 0
                     joint_improved = True
 
+                joint_combo_index = 1
                 for bs in candidate_block_sizes:
                     size_j = int(bs)
                     if size_j <= 0 or in_features % size_j != 0:
                         continue
                     for bseed in _BLOCK_SMOOTH_SEEDS:
                         seed_j = int(bseed)
+                        combo_metrics = joint_all_metrics[joint_combo_index]
+                        joint_combo_index += 1
                         if (
                             torch.equal(candidate_d, best_d)
                             and torch.equal(cp, best_perm)
@@ -7991,10 +8079,7 @@ def hif4_calibration_and_quantize_weight(
                             and seed_j == best_block_smooth_seed
                         ):
                             continue
-                        e2e_score = _linear_output_candidate_metrics(
-                            weight_sample, activation_samples,
-                            candidate_d, cp, size_j, seed_j,
-                        )[0]
+                        e2e_score = combo_metrics[0]
                         if e2e_score < joint_best_score:
                             joint_best_score = e2e_score
                             joint_best_d = candidate_d
