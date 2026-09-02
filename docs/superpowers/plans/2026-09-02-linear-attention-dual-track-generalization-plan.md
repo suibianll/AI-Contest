@@ -52,16 +52,34 @@ Qwen、GPT-2、Pythia/OPT 都不是官方模型，任何本地结果只用于机
 
 ### 2.3 跨模型实现顺序
 
-先扩展 `evaluator/cross_model_eval.py`：
+扩展 `evaluator/cross_model_eval.py`。当前 CLI（行 377–390）只有
+`--model/--solution/--name/--cache/--cache-mode/--linear-cases/--attention-cases/--full-cases/
+--capture-device/--algorithm-device/--no-decomposition/--output/--report`；`_load_gpt2`
+（行 55）在行 71 硬编码 `model_type == "gpt2"`。
 
-1. 增加与主评测器一致的 `--linear-only`、`--attention-only`，禁用侧不得调用 API；
-2. 父版本 cache/JSON 只生成一次，候选使用同 case 做配对；
-3. `gpt2` 作为每个通过 Qwen default 的强制真实前向验证；
-4. 在最终候选上增加一个不同架构验证，优先本地 `pythia-160m`（rotary/fused-QKV）；若适配成本
-   过高则用 `opt-125m`，但必须记录真实 module mapping，禁止伪造 Qwen role；
+1. **场景隔离**：argparse 增加 `--linear-only` 与 `--attention-only`，取值转发到已复用的
+   `official_eval.prepare_pack(evaluation_scenario=...)`（`official_eval.py` 行 899，已支持
+   `both/linear/attention`）；禁用侧不得调用任何候选 API。验收：GPT-2 linear-only 运行的
+   JSON 中 attention API 调用数为 0，反之亦然；
+2. **父子配对与 replay**：argparse 增加 `--baseline-json/--candidate-json`，语义与
+   `official_eval` 一致（`--candidate-json` 必须配 `--baseline-json`，replay 不重跑候选
+   API）。配对诊断直接调用 `official_eval._paired_effect_diagnostics`（行 2018，签名
+   `(baseline, candidate, focus_linear_roles)`，内含 case identity 与标准臂一致性检查），
+   禁止另写宽松比较。父版本 cache/JSON 只生成一次（`--name parent`），候选同 case 配对；
+3. **GPT-2 门禁**：`gpt2` 作为每个通过 Qwen default 的强制真实前向验证，走 1–2 的新 CLI
+   运行 linear/attention 单侧配对；
+4. **Pythia/OPT 二次验证**：最终候选上增加一个不同架构。优先本地 `pythia-160m`
+   （GPTNeoX：rotary + fused-QKV）。捕获时点决策：hook 挂在 **rotary 之后**
+   （`GPTNeoXAttention` 内 rotary 应用返回处），使捕获 Q/K 与真实前向输入逐元素一致——
+   评测侧 `_attention_forward` 不施加 rotary，因此捕获前必须已完成 rotary。QKV 按
+   `query/key/value` 真实 module mapping 记录，禁止伪造 Qwen role。验收：任取一个
+   calib batch，hook 捕获值与手工切片参考前向的 max abs diff < 1e-5（float32）。若适配
+   成本过高改用 `opt-125m`（无 rotary、标准 QKV），验收同上；
 5. `gpt2-medium` 只作尺寸压力测试，不替代不同架构验证。
 
-所有跨模型结果标记 `cross-model-probe`，不与 Qwen proxy 或官方分数混排。
+步骤验收：1–2 完成后用 v159 父版本各生成一次 GPT-2 linear/attention parent JSON，与
+Qwen parent 的机制签名（正/负 case 数、最差 layer/role）并列归档；3–4 全部通过后才允许
+进入 §6 集成。所有跨模型结果标记 `cross-model-probe`，不与 Qwen proxy 或官方分数混排。
 
 ### 2.4 复杂度准入（2026-09-02 源码审计补充）
 
@@ -102,18 +120,29 @@ length 或显存边界问题时才运行，不能用作日常排名。
 固定命令骨架：
 
 ```powershell
-# Qwen Linear / Attention 单侧开发门禁
+# 接口 smoke（第 2 步）：顺序前缀 case，只判六 API/状态/设备合法性，不判效果
+.venv\Scripts\python.exe evaluator/official_eval.py --solution solution.py --linear-only --compact-panel --linear-cases 4 --cache-mode read --nvfp4-cache-mode auto --capture-device cuda --algorithm-device cuda
+.venv\Scripts\python.exe evaluator/official_eval.py --solution solution.py --attention-only --compact-panel --attention-cases 4 --cache-mode read --nvfp4-cache-mode auto --capture-device cuda --algorithm-device cuda
+
+# Qwen Linear / Attention 单侧开发门禁（第 3 步，compact 与保存的 parent 精确配对）
 .venv\Scripts\python.exe evaluator/official_eval.py --solution solution.py --linear-only --compact-panel --cache-mode read --nvfp4-cache-mode auto --capture-device cuda --algorithm-device cuda
 .venv\Scripts\python.exe evaluator/official_eval.py --solution solution.py --attention-only --compact-panel --cache-mode read --nvfp4-cache-mode auto --capture-device cuda --algorithm-device cuda
 
-# Qwen default：只保留当前目标侧，去掉 --compact-panel
-# 跨模型 CLI 扩展完成后的封存门禁
-.venv\Scripts\python.exe evaluator/cross_model_eval.py --model gpt2 --solution solution.py --linear-only --cache-mode read --capture-device cuda --algorithm-device cuda
-.venv\Scripts\python.exe evaluator/cross_model_eval.py --model gpt2 --solution solution.py --attention-only --cache-mode read --capture-device cuda --algorithm-device cuda
+# Qwen default（第 4 步）：只保留当前目标侧，去掉 --compact-panel
+# 跨模型 CLI 扩展完成后的封存门禁（第 5 步）
+.venv\Scripts\python.exe evaluator/cross_model_eval.py --model gpt2 --solution solution.py --name parent --linear-only --cache-mode read --capture-device cuda --algorithm-device cuda
+.venv\Scripts\python.exe evaluator/cross_model_eval.py --model gpt2 --solution solution.py --name parent --attention-only --cache-mode read --capture-device cuda --algorithm-device cuda
 ```
 
-为 `cross_model_eval.py` 实现 replay 时直接复用 `official_eval._paired_effect_diagnostics` 的 case
-identity 与标准臂一致性检查，不另写一套宽松比较逻辑。
+零 API replay（父 JSON 已存在、候选 JSON 已保存时的配对复核，不重新调用任何候选 API；
+`--candidate-json` 必须配 `--baseline-json`，且不能与 `--solution` 组合）：
+
+```powershell
+.venv\Scripts\python.exe evaluator/official_eval.py --linear-only --compact-panel --baseline-json artifacts/official_eval/v159-<parent>.json --candidate-json artifacts/official_eval/v159-<candidate>.json
+```
+
+replay 判据：case identity 精确匹配 `(layer, role, test_window, split, length)`、
+`mse_standard`、`reference_energy` 与 parent 一致；不满足即 `ERROR`，不放宽比较。
 
 ## 4. Linear 优化线
 
@@ -128,42 +157,65 @@ identity 与标准臂一致性检查，不另写一套宽松比较逻辑。
 
 ### L1. 校准热点分解与等价降复杂度
 
-目标：不改变候选、接受条件和输出，先降低 Weight calibration。
+目标：不改变候选、接受条件和输出，先降低 Weight calibration（default API `208.971s`）。
 
-实现入口：`hif4_calibration_and_quantize_weight`，按以下阶段增加 workbench 计时，计时器不得进入
-正式提交：
+**计时装置**：新建 `workbench/l1_calib_timing_probe.py`，import 根目录 `solution.py` 的
+`hif4_calibration_and_quantize_weight` 并包裹计时（CUDA 侧 `torch.cuda.synchronize` +
+`time.perf_counter`），不修改提交文件。五阶段切分与源码锚点：
 
-1. Smooth/permutation/block-Hadamard candidate metric；
-2. Weight GPTQ + AdaRound；
-3. Weight e2e refine；
-4. Activation Gram/Hessian、adaptive regularization、adaptive offset；
-5. CPU state 构造与 dynamic state transfer。
+| 阶段 | 激活路径锚点（solution.py） |
+| --- | --- |
+| ① joint 候选搜索 | 7955–8010 嵌套循环；内层 `_linear_output_candidate_metrics`（5031） |
+| ② Weight GPTQ | `_gptq_quantize_weight`（8080 调用，定义 5323）+ `_transformed_covariance`（8056） |
+| ③ Weight e2e refine | `_weight_e2e_refine`（5123） |
+| ④ 激活侧 Gram/Hessian | 变换样本 8132–8145、`weight_output_gram` 8168–8170、单次 Cholesky 8249–8262 |
+| ⑤ CPU state 构造与搬运 | `_cpu_state_tensor` 调用点 |
+
+输出格式：每 `(layer, role)` 一行五列毫秒，末尾按阶段汇总 mean/total，写
+`logs/l1_calib_timing_probe.md`。验收：探针只读不改输出；先在 layer `0/8/15/23` 全 role
+跑通，再覆盖 28 个 compact Weight state。
 
 按热点只做批处理、共享 Gram/Cholesky、避免重复 dequant/reconstruct、复用 candidate metric 等
 数学等价优化。每项要求 Qwen compact 56 case `delta=0`；只降低局部计时但增加显存峰值或在线
 复杂度的实现不保留。当前里程碑是 Linear default API 相对 `269.435s` 明显下降，官方时间仍只
 认官方回传。
 
-2026-09-02 源码审计的热点嫌疑排序，计时阶段先区分三者占比再动手：
+热点嫌疑排序（2026-09-02 二次审计修正；先计时区分占比再动手）：
 
-1. joint 搜索的 smooth × permutation × block_size × seed 嵌套，每次调用
-   `_linear_output_candidate_metrics`；
-2. adaptive regularization 候选循环内重复 `torch.linalg.cholesky(H_act)`（O(C³)，C 至
-   4864）。若各候选只是在同一 H 上变 ridge，优先一次分解 + rank-1 update 或一次
-   eigendecomposition 复用——数学等价、不改候选与输出，为最高价值目标；
-3. `_transformed_covariance` 全协方差 O(m·C²)。
+1. **joint 嵌套搜索**：`smooth_candidates`（identity + `_WEIGHT_SMOOTH_ALPHAS` 变体）×
+   permutation（`[best_perm, sorted_j]`）× `candidate_block_sizes=(4, 8)` ×
+   `_BLOCK_SMOOTH_SEEDS=(0,1,2,3)`；每次调用 `_linear_output_candidate_metrics` 内部对
+   **每个 activation sample** 重复 `_linear_pair_transform` + `_dense_to_hif4` +
+   `_dequantize_hif4` + 两次 matmul（5047–5084）。样本变换/编码随候选数线性重复，是
+   批处理/缓存的首要目标；
+2. **`_weight_e2e_refine` + `_gptq_quantize_weight`** 的 per-block 候选评估（5123/5323）；
+3. **`_transformed_covariance` 全协方差 O(m·C²)**（定义 4782，激活调用 8056）与
+   `weight_output_gram`/Cholesky（每 weight 恰一次，O(C³) × 168）。
+
+死代码声明（修正 2026-09-02 首版审计的错误结论）：`_ADAPTIVE_ACT_GPTQ_REG = False`
+（行 78，reg 候选循环 8184–8248 不执行）且 `_ADAPTIVE_OFFSETS = False`（行 80，offset
+候选循环 8264 起不执行）。激活路径不存在“reg 循环内重复 Cholesky”——首版排序第 2 条
+基于死分支，作废；激活路径每 weight 仅单次 Cholesky。L2 也不得把这两条死分支列为消融
+对象。
 
 ### L2. 有界复杂度消融
 
-L1 完成后，用未编号 workbench 一次只消融一项：
+L1 完成后，一次只消融一项。消融对象只允许是**激活路径**的搜索维度（常量锚点 solution.py）：
 
-1. adaptive activation regularization 候选；
-2. adaptive offset 候选；
-3. 窄层 joint smooth 搜索；
-4. Weight e2e refine 的重复候选评估。
+1. joint block-smooth 搜索维度：`_BLOCK_SMOOTH_SEEDS = (0,1,2,3)`（行 54）→ 如 `(0,1)`；
+   `_BLOCK_SMOOTH_SIZES = (4, 8)`（行 53）→ 如 `(8,)`；
+2. RMS smooth 候选加倍：`_WEIGHT_SMOOTH_RMS = True`（行 317）→ `False`；
+3. `_weight_e2e_refine`（5123）的候选评估次数/`max_refine_ratio`；
+4. `_WEIGHT_SMOOTH_ALPHAS_WIDE`（行 45）宽层 alpha 数量。
 
-关闭项必须在 Qwen compact/default 和 GPT-2 父子配对中均不产生系统性回归。不得用减少测试
-case、缩短 token 或只保留浅层来伪造加速。失败项立即恢复，不组合多个负向消融。
+方法：复制 `solution.py` 到 `workbench/ablate_<name>.py`，只改单个常量，评测命令
+`--solution workbench/ablate_<name>.py` 其余不变；产物标记 `ablation`，不进版本序列。
+关闭项必须在 Qwen compact/default 和 GPT-2 父子配对中均不产生系统性回归（判定同
+§2.2 全部条目）。不得用减少测试 case、缩短 token 或只保留浅层来伪造加速。失败项立即
+恢复，不组合多个负向消融。
+
+显式排除：`_ADAPTIVE_ACT_GPTQ_REG`（行 78）与 `_ADAPTIVE_OFFSETS`（行 80）已是
+`False`，对应候选循环本就不执行，不列为消融对象，也不得顺手翻回 `True`。
 
 ### L3. 精度机制
 
@@ -179,6 +231,14 @@ GPTQ 更新。硬约束：
   模式），禁止整矩阵 Schur/求逆：168 次校准 × O(C³) ≈ 10¹³ FLOPs 不可行，block 内
   168 × B × 64³ ≈ 3×10⁹ 可行。
 
+算法草案（复用现有原语，全部已存在于 solution.py）：最终 `(best_d, best_perm, size, seed)`
+选定后、`_gptq_quantize_weight`（8080）之前，对部署坐标 weight（8039–8046
+`_linear_pair_transform` 输出）按 64 维 block 执行一次 `_gptq_initialize64`（1631）+ 单次
+`_coordinate_descent64`（1681）sweep，block Gram 取自已在部署坐标的 `gram_full`（8056）；
+输出与现行 GPTQ 基线在同一接受准则（`_weight_e2e_refine` 的 margin/threshold）下竞争，
+恒等候选保留。每 block 64³ FLOPs，总量 168 × B × 64³ ≈ 3×10⁹——类 0（校准一次性），
+在线路径零改动。
+
 fc/proj/o 只作为误差定位重点，不作为硬编码路由依据。特别禁止为当前唯一 layer-22 `o` 负例
 增加专属规则；只有跨层、跨模型同类 shape 都显示同一问题时才修改统一机制。
 
@@ -186,14 +246,22 @@ fc/proj/o 只作为误差定位重点，不作为硬编码路由依据。特别�
 
 ### A0. 固定父基线
 
-父代码为当前 v159 Linear + v158 Attention。先运行并保存：
+父代码为当前 v159 Linear + v158 Attention。先运行并保存（产物命名沿用
+`artifacts/official_eval/vNNN-<desc>.json` 惯例）：
 
-1. CUDA Attention-only compact；
-2. compact 通过后一次 Attention-only default 120 cases；
-3. GPT-2 Attention parent JSON，后续候选只做配对。
+1. CUDA Attention-only compact → `artifacts/official_eval/v159-attn-compact-parent.json`；
+2. compact 通过后一次 Attention-only default 120 cases →
+   `artifacts/official_eval/v159-attn-default-parent.json`；
+3. GPT-2 Attention parent JSON → `artifacts/official_eval/v159-attn-gpt2-parent.json`，
+   后续候选只做配对。
+
+依赖关系：1、2 只用现有 `official_eval` CLI，不依赖 §2.3 跨模型扩展，可立即执行；3 依赖
+§2.3 第 1–2 项（`cross_model_eval.py` 场景隔离 + 配对）完成。
 
 报告必须按 Q/K/V、QK、QKV、layer、length、split 输出 logits MSE、softmax probability MSE 和
-KL。静态 Linear q/k/v role 与动态 Attention Q/K/V 必须分开命名和解释。
+KL。静态 Linear q/k/v role 与动态 Attention Q/K/V 必须分开命名和解释。API 时间必须分开记录
+Attention calibration 与 Q/K/V dynamic（当前 v159 六 API 分解里这两项尚无独立基线数字，
+A0 首跑即建立）。
 
 ### A1. 等价复杂度清理
 
@@ -203,20 +271,43 @@ KL。静态 Linear q/k/v role 与动态 Attention Q/K/V 必须分开命名和解
 v158 官方只比 v86 增加约 `0.3s`，因此任何新 Attention 路径必须替换现有计算，不能叠加历史
 v128/v129 的 Gram sweep、PAWV、多轮 dynamic refine 或 length-keyed state。
 
-共享预计算的具体位置（2026-09-02 审计）：候选循环中同一 center_mode 的全部 alpha 候选共享
-`_center_attention_k` 结果；`_attention_candidate_metrics` 每次调用重建的 block_signs 按
-(seed, size) 预计算一次复用。
+共享预计算的具体位置与改法（2026-09-02 审计）：
+
+1. **K 居中共享**：`_center_attention_k`（2774）的输出只依赖
+   `(k_sample, center_mode, center_value)`，与 alpha 候选 `candidate_d` 无关；但
+   `_attention_candidate_metrics`（8434）在每个 alpha 候选内重复对全部 k_samples 居中。
+   改法：签名增加可选参数 `precomputed_centered_k`；在 center_mode 循环（8932）内、alpha
+   循环（8964）前按当前 center_mode（mode 4 时 `center_value=sac_center`，每层固定）算好
+   centered K 样本传入。mode 0 恒等无需预计算；
+2. **block_signs 共享**：`_attention_rotation_signs(kv_num_heads, head_dim, seed)`
+   （8466–8470 调用）只依赖 `(kv_num_heads, head_dim, seed)`；第二阶段 block smooth 候选的
+   (size, seed) 组合有限，按 `{(seed, size): signs}` 预计算一次传入。
+
+注意 `sac_center` 本身已是每层只解一次（8683–8699，统计循环之前），无需改动。验收：
+Attention compact 全部 case 输出与 parent **逐位一致**（浮点 delta=0，非容差比较）、
+六 API 调用数不变、只允许 Attention calibration 计时下降；任何 case 不一致即回退。
 
 ### A2. Q/K 配对精度
 
-第一候选是在 v158 解析式 Matrix-Smooth 后加入固定两次的 K 公共中心更新。K 的 head 内公共平移
-保持 softmax logits 行偏置不变；state 只保存一个固定 center，dynamic 仍为一次 center + encode。
+机制已存在，无需新写迭代（2026-09-02 二次审计修正）：`_solve_k_center_scale_aware`
+（2729，C41）已实现量化感知不动点迭代 `c = mean_tokens(K − dequant(Q(K − c)))`，从
+`c = 0` 起步（恒等候选恒可采纳，不会差于不居中），轮数为 `_ATTN_CENTER_ALTERNATIONS`，
+docstring 明确记载 softmax 精确不变性。当前它对 GQA 被双重关闭：
+
+- `_ATTN_SCALE_AWARE_CENTER_GQA = False`（行 351）使 8686–8699 的每层一次求解跳过
+  （`sac_center = None`），并使候选循环 8933–8940 跳过 mode 4；
+- `_ATTN_CENTER_MODES = (0, 2)`（行 319）候选竞争本身不含 4。
+
+**A2 = 两行开关变更**：`_ATTN_SCALE_AWARE_CENTER_GQA → True` 且
+`_ATTN_CENTER_MODES → (0, 2, 4)`。校准成本为每层一次有界不动点
+（`_ATTN_STATS_TOKENS` 采样行 × rounds × O(C)），类 0；在线路径零改动——state 保存固定
+center，dynamic 仍为一次 center + encode。
 
 数学前提已推导确认（2026-09-02）：per-head 公共平移 c_h 使
 `logits'_ij = logits_ij + q_i·c_hᵀ/√d`，对固定行 i 是不依赖 j 的标量，即行常数，softmax
 严格不变；GQA 下每个 Q head 各自成行常数，causal mask 为加性 -inf 不受影响，K 平移不触碰
 V。连续域严格无损，收益全部来自量化域。实现硬条件：center 必须是 per-head 常向量（非
-per-token），量化在平移后域进行，在线不引入迭代（类 0）。
+per-token），量化在平移后域进行，在线不引入迭代（类 0）——现有实现已全部满足。
 
 验收重点：Q/K 单侧可能变差，但 QK、logits、probability 和 KL 必须在短长序列与跨模型上同向；
 不得只看 Q/K operand MSE。若 length 10 改善而 512/1024 回归，直接拒绝，不建立长度路由。
@@ -250,11 +341,20 @@ proxy；若官方与本地再次反转，记录反转并收紧跨模型/数学�
 
 1. **评测基础设施**：为 `cross_model_eval.py` 增加场景隔离和父子配对；随后适配一个
    Pythia/OPT 真实前向模型。
+   完成判据：新 CLI 生成 GPT-2 linear/attention parent JSON，禁用侧 API 调用数为 0；
+   Pythia hook 捕获与参考前向 max abs diff < 1e-5。
 2. **Linear L1**：完成阶段热点分解，继续数学等价降复杂度。
-3. **Attention A0**：建立 Attention-only compact/default 与 GPT-2 parent 基线；A0 只运行
-   现有评测器，与 Linear L1 并行推进，不串行等待。
+   完成判据：`logs/l1_calib_timing_probe.md` 覆盖 28 个 compact Weight state 的五阶段
+   分解；至少一项等价优化在 compact 全 case delta=0 下使 default API 计时下降。
+3. **Attention A0**：建立 Attention-only compact/default 与 GPT-2 parent 基线；A0 第
+   1–2 步只运行现有评测器，与 Linear L1 并行推进，不串行等待（第 3 步依赖本节项 1）。
+   完成判据：三个 A0 JSON 归档；Attention calibration 与 Q/K/V dynamic 的独立时间
+   基线建立。
 4. **Linear L2/L3 与 Attention A1/A2**：分别执行，禁止同时修改。
+   完成判据：L2 每个消融有 compact + GPT-2 配对记录（通过或恢复二选一）；L3/A2 各自
+   通过 §2.2 全部条目；A1 验收逐位一致（delta=0）。
 5. **最终集成**：每条线独立通过跨模型门禁后只运行一次。
+   完成判据：§6 五步全部走完，六 API 时间与调用数归档，复杂度静态检查通过。
 
 任何 AI 接手时只从本节第一个未完成项继续；不得跳过跨模型门禁，也不得从归档计划恢复旧的
 ROAB、无约束 sweep、PAWV 或多轮在线搜索。
