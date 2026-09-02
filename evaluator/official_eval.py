@@ -2674,9 +2674,13 @@ def _format_optional(value: Any, digits: int = 6) -> str:
     return f"{float(value):.{digits}f}"
 
 
-def _write_paired_effect_report(path: Path, effect: Mapping[str, Any]) -> None:
+def _write_paired_effect_report(
+    path: Path,
+    effect: Mapping[str, Any],
+    protocol: str = PROTOCOL,
+) -> None:
     lines = [
-        f"# Paired mechanism effect — {PROTOCOL}",
+        f"# Paired mechanism effect — {protocol}",
         "",
         f"- baseline: `{effect.get('baseline', '')}`",
         f"- candidate: `{effect.get('candidate', '')}`",

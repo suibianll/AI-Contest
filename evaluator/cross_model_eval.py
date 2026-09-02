@@ -25,7 +25,7 @@ import argparse
 import json
 import time
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any, Mapping, Sequence
 
 import torch
 
@@ -249,6 +249,103 @@ def _write_json(path: Path, value: Any) -> None:
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2, default=str) + "\n", encoding="utf-8")
 
 
+def _resolve_scenario(args: argparse.Namespace) -> str:
+    if args.linear_only and args.attention_only:
+        raise ValueError("--linear-only and --attention-only are mutually exclusive")
+    if args.linear_only:
+        return "linear"
+    if args.attention_only:
+        return "attention"
+    return "both"
+
+
+def _load_probe_document(path: Path) -> dict[str, Any]:
+    source = path.resolve()
+    if not source.is_file():
+        raise FileNotFoundError(f"cross-model JSON does not exist: {source}")
+    value = json.loads(source.read_text(encoding="utf-8"))
+    if not isinstance(value, dict) or not isinstance(value.get("result"), dict):
+        raise ValueError(f"cross-model JSON has no single result object: {source}")
+    if value.get("protocol") != PROBE_PROTOCOL:
+        raise ValueError(
+            f"cross-model JSON protocol {value.get('protocol')!r} != {PROBE_PROTOCOL!r}: {source}"
+        )
+    return value
+
+
+def _select_probe_result(
+    document: Mapping[str, Any],
+    requested_name: str | None,
+    label: str,
+) -> Mapping[str, Any]:
+    result = document.get("result")
+    if not isinstance(result, Mapping) or result.get("status") != "ok":
+        raise ValueError(f"{label} cross-model JSON result is missing or not status=ok")
+    if requested_name and str(result.get("candidate", "")) != requested_name:
+        raise ValueError(
+            f"{label} result {requested_name!r} was not found; got {result.get('candidate')!r}"
+        )
+    return result
+
+
+def _run_saved_comparison(args: argparse.Namespace) -> dict[str, Any]:
+    """Replay two saved cross-model JSONs through the paired diagnostic.
+
+    Mirrors ``official_eval._run_saved_comparison`` semantics: ``--candidate-json``
+    requires ``--baseline-json`` and no candidate API is invoked during replay.
+    """
+    if args.baseline_json is None:
+        raise ValueError("--candidate-json requires --baseline-json")
+    model_name = str(args.model)
+    baseline_document = _load_probe_document(args.baseline_json)
+    candidate_document = _load_probe_document(args.candidate_json)
+    for document, label in (
+        (baseline_document, "baseline"),
+        (candidate_document, "candidate"),
+    ):
+        if str(document.get("model")) != model_name:
+            raise ValueError(
+                f"{label} JSON model {document.get('model')!r} does not match --model {model_name!r}"
+            )
+    baseline_result = _select_probe_result(
+        baseline_document, args.baseline_result, "baseline"
+    )
+    candidate_result = _select_probe_result(
+        candidate_document, args.candidate_result, "candidate"
+    )
+    paired_effect = evaluator._paired_effect_diagnostics(
+        baseline_result,
+        candidate_result,
+        evaluator._focus_selectors(args.focus_linear_roles),
+    )
+    payload = {
+        "protocol": PROBE_PROTOCOL,
+        "base_protocol": PROTOCOL,
+        "created_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "mode": "paired-json-replay",
+        "evaluation_scope": {
+            "kind": "paired-json-replay",
+            "intent": "paired-mechanism-diagnosis",
+            "comparable_for_proxy_ranking": False,
+            "paired_only": True,
+            "stress_only": False,
+            "smoke_only": False,
+            "official_score_equivalent": False,
+        },
+        "model": model_name,
+        "baseline_json": str(args.baseline_json.resolve()),
+        "candidate_json": str(args.candidate_json.resolve()),
+        "paired_effect": paired_effect,
+        "result": candidate_result,
+    }
+    _write_json(args.output, payload)
+    if args.report:
+        evaluator._write_paired_effect_report(
+            args.report, paired_effect, PROBE_PROTOCOL
+        )
+    return payload
+
+
 def _write_report(path: Path, payload: dict[str, Any]) -> None:
     score = payload.get("score", {})
     timing = payload.get("timing", {})
@@ -304,6 +401,9 @@ def _write_report(path: Path, payload: dict[str, Any]) -> None:
 
 
 def run(args: argparse.Namespace) -> dict[str, Any]:
+    if args.candidate_json is not None:
+        return _run_saved_comparison(args)
+    scenario = _resolve_scenario(args)
     model_name = str(args.model)
     if model_name not in SUPPORTED_MODELS:
         raise ValueError(f"unsupported model {model_name!r}; choose from {SUPPORTED_MODELS}")
@@ -326,9 +426,11 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         linear_count=args.linear_cases,
         attention_count=args.attention_cases,
         full_cases=args.full_cases,
+        compact_panel=args.compact_panel,
+        evaluation_scenario=scenario,
     )
     capture_seconds = time.perf_counter() - capture_start
-    source_path = (ROOT / args.solution).resolve()
+    source_path = (ROOT / (args.solution or "solution.py")).resolve()
     print(f"[cross-model:{model_name}] evaluating {source_path}", flush=True)
     result = evaluator.evaluate_solution(
         source_path,
@@ -337,6 +439,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         decomposition=args.decomposition,
     )
     result["candidate"] = args.name
+    result["status"] = "ok"
     result["official"] = {
         "status": "not_applicable",
         "score": None,
@@ -352,6 +455,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "cache": str(cache_path),
         "model": model_name,
         "candidate": args.name,
+        "evaluation_scenario": scenario,
+        "compact_panel": bool(args.compact_panel),
         "layers": prepared.layers,
         "hidden_size": prepared.hidden_size,
         "q_heads": prepared.q_heads,
@@ -366,22 +471,72 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "diagnostic_config": result["diagnostic_config"],
         "result": result,
     }
+    if args.baseline_json is not None:
+        baseline_document = _load_probe_document(args.baseline_json)
+        baseline_result = _select_probe_result(
+            baseline_document, args.baseline_result, "baseline"
+        )
+        payload["mode"] = "paired-run"
+        payload["baseline_json"] = str(args.baseline_json.resolve())
+        payload["paired_effect"] = evaluator._paired_effect_diagnostics(
+            baseline_result,
+            result,
+            evaluator._focus_selectors(args.focus_linear_roles),
+        )
     _write_json(args.output, payload)
     if args.report:
-        _write_report(args.report, payload)
+        if "paired_effect" in payload:
+            evaluator._write_paired_effect_report(
+                args.report, payload["paired_effect"], PROBE_PROTOCOL
+            )
+        else:
+            _write_report(args.report, payload)
     return payload
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--model", choices=SUPPORTED_MODELS, default="gpt2")
-    parser.add_argument("--solution", type=Path, default=Path("solution.py"))
+    parser.add_argument("--solution", type=Path, default=None)
     parser.add_argument("--name", default="candidate")
     parser.add_argument("--cache", type=Path)
     parser.add_argument("--cache-mode", choices=("auto", "read", "write", "off"), default="auto")
     parser.add_argument("--linear-cases", type=int, default=None)
     parser.add_argument("--attention-cases", type=int, default=None)
     parser.add_argument("--full-cases", action="store_true")
+    scenario = parser.add_mutually_exclusive_group()
+    scenario.add_argument(
+        "--linear-only",
+        action="store_true",
+        help="run the Linear scenario only; the disabled side calls no candidate API",
+    )
+    scenario.add_argument(
+        "--attention-only",
+        action="store_true",
+        help="run the Attention scenario only; the disabled side calls no candidate API",
+    )
+    parser.add_argument(
+        "--compact-panel",
+        action="store_true",
+        help="use the depth-spread compact panel (paired validation/test holdouts)",
+    )
+    parser.add_argument(
+        "--baseline-json",
+        type=Path,
+        help="parent JSON used to pair this run into a mechanism diagnostic",
+    )
+    parser.add_argument(
+        "--candidate-json",
+        type=Path,
+        help="candidate JSON for replay-only pairing; requires --baseline-json and runs no API",
+    )
+    parser.add_argument("--baseline-result", default=None)
+    parser.add_argument("--candidate-result", default=None)
+    parser.add_argument(
+        "--focus-linear-roles",
+        default=None,
+        help="comma-separated roles/role families to focus paired Linear diagnostics",
+    )
     parser.add_argument("--capture-device", default="cuda" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--algorithm-device", default="cuda" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--no-decomposition", dest="decomposition", action="store_false")
