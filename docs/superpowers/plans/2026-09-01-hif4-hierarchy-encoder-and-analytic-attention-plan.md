@@ -12,8 +12,9 @@
 
 > 2026-09-02 用户纠偏：禁止继续用本地排名代替官方方向判断，也不重复提交已有官方结果的
 > v86。固定 Attention 的官方对照中，`v138→v140` 是唯一干净的正向 Linear 增量（ROAB-P2，
-> `+123`）。因此先执行 exact v86 + ROAB-only 的 v157。用户随后回传 v155
-> `16581/208.5s`、v156 `16580/204.3s`；两者均低于 v86，现已正式拒绝。
+> `+123`）。因此执行 exact v86 + ROAB-only 的 v157。用户随后回传 v155
+> `16581/208.5s`、v156 `16580/204.3s`、v157 `16729/218.96s`；三者均低于 v86，现已
+> 正式拒绝。v157 证明 ROAB 增量不可迁移，下一实验切换 single-pass block-Schur。
 
 ## E0. 本地评测趋势代理（DONE）
 
@@ -376,10 +377,9 @@ mean 的结果都不进入候选队列。
 
 1. **v155（REJECTED / official 16581, 208.5s）**：严格 GPT-2 配对为轻微负向，官方低于
    v86 `163` 分；关闭其优化方向，不再围绕四分位/层列表调门控。
-2. **E1 exact-v86 + ROAB-only（IMPLEMENTED / official candidate pending）**：v157 仅在 v86
-   冻结坐标之后加入一次解析 2×2 等价变换；拒绝分支与 v86 字段级一致，Attention 完全一致，
-   六 API 与单文件隔离检查通过。禁止为它补跑本地排名面板，直接等待官方分数/时间裁决。
-3. **若 v157 官方失败或低于 v86，做单次 block-Schur HiF4-GPTQ**：从 exact v86 单文件
+2. **E1 exact-v86 + ROAB-only（REJECTED / official 16729, 218.96s）**：比 v86 低 `15`
+   分；`v138→v140 +123` 不可迁移，ROAB 路线关闭，不补跑本地排名或调门控。
+3. **下一实验：单次 block-Schur HiF4-GPTQ**：从 exact v86 单文件
    baseline 分支，只在 `fc_gate/fc_up/proj` 中选一个外部归因支持的形状，固定 block 顺序和
    预算，用真实 `A@W` 输出 loss 做一次合法写回；比较 teacher gap、W/A/interaction 和 API
    增量。
@@ -733,10 +733,9 @@ V 不部署 PAWV；V 的提升只来自 A3 encoder。若 Fisher calibration 开�
    分；本地 `+0.000116536` 没有迁移，目录已标记 `_rejected`。
 6. **L4-WD（REJECTED）**：v156 官方 `16580 / 204.3s`，低于 v86 `164` 分；本地微增益没有
    迁移，stored-scale 路线关闭，目录已标记 `_rejected`。
-7. **E1 exact-v86 + ROAB-only（IMPLEMENTED / OFFICIAL CANDIDATE PENDING）**：v157 已完成
-   单文件、六 API、连续乘积/协方差、父路径字段级回退和 v86 Attention 字段级冻结检查；未跑
-   本地排名 panel。其依据是固定 Attention 的官方 `v138→v140 = +123` 增量。
-8. **若 v157 官方失败或低于 v86，做单次 block-Schur HiF4-GPTQ**：从 exact v86 单文件 baseline
+7. **E1 exact-v86 + ROAB-only（REJECTED）**：v157 官方 `16729 / 218.96s`，低于 v86 `15`
+   分；ROAB 收益不可迁移，目录已标记 `_rejected`，路线关闭。
+8. **下一实验：单次 block-Schur HiF4-GPTQ**：从 exact v86 单文件 baseline
    分支，只在 `fc_gate/fc_up/proj` 中选一个外部归因支持的形状；使用部署 `Q(W)` Gram、两折
    输出 loss 和 effect panel，禁止第二轮完整 oracle、动态候选循环或把 W/A 误差当成独立增益。
 9. **0.8 可达性复判**：比较 v86 player、candidate、合法 teacher 曲线；若 teacher 仍远离 `0.8`，

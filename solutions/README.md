@@ -103,6 +103,7 @@ silently assigned a score.
 | v147 | `20260901_v147_v86-attention-v140-linear_rejected` | **16579** | **211 s** | **pass, but rejected: 165 points below v86; submitted SHA unconfirmed** |
 | v155 | `20260902_v155_l5a-permutation-stability_rejected` | **16581** | **208.5 s** | **pass, but rejected: 163 points below v86** |
 | v156 | `20260902_v156_l4-weight-decoupled_rejected` | **16580** | **204.3 s** | **pass, but rejected: 164 points below v86** |
+| v157 | `20260902_v157_v86-roab-only_rejected` | **16729** | **218.96 s** | **pass, but rejected: 15 points below v86** |
 
 ## 2026-09-01 official-shape-v1 local candidates
 
@@ -133,7 +134,7 @@ directories follow the same immutable naming rule as the historical archive:
 | v154 | `20260902_v154_fc-decoupled-scale-fit_rejected` | **0.568754 (targeted)** | **0.942927** | **198.098 s** | **rejected; fitted s_d is a no-op after v153** |
 | v155 | `20260902_v155_l5a-permutation-stability_rejected` | **0.570999 (default)** / 0.588162 (effect) | **0.724735 (default)** / 0.757433 (effect) | **248.121 s (default-equivalent)** / 207.196 s (effect) | **rejected; official 16581/208.5s, 163 points below v86** |
 | v156 | `20260902_v156_l4-weight-decoupled_rejected` | 0.588131 (effect; default not run) | 0.757433 (effect) | 203.994 s (effect) | **rejected; official 16580/204.3s, 164 points below v86** |
-| v157 | `20260902_v157_v86-roab-only_scoreNA_timeNA` | NA (legality smoke only) | NA (frozen field-equality check) | NA | **retained next official single-variable candidate; exact v86 + ROAB-only** |
+| v157 | `20260902_v157_v86-roab-only_rejected` | NA (legality smoke only) | NA (frozen field-equality check) | NA | **rejected; official 16729/218.96s, 15 points below v86** |
 
 † The first v147 values come from the original pre-A3 JSON (SHA `9B3EA5...B656`); the second come
 from the later direct-merge A3 JSON (SHA `25C245...9C1B`). The archive was modified in place before
@@ -220,15 +221,17 @@ mean `-0.314079`, 16/16 regressions). The next experiment is therefore a single-
 Weight-decoupled or deployment-Gram block-Schur mechanism branched from pre-A3, not another
 permutation/scale/CAT sweep.
 
-v157 is the next official single-variable experiment. It starts from the exact reproducible v86
+v157 was the exact-v86 single-variable ROAB experiment. It starts from the reproducible v86
 source and adds only the bounded ROAB-P2 reciprocal 2×2 Linear transform, while keeping v86
 Attention field-for-field frozen. The direction comes from the clean fixed-Attention official
 increment `v138→v140 = +123`, not from a local ranking. No local model panel was run for v157;
 legality, continuous-product/covariance invariants, rejected-candidate parent equality, selected
 state propagation and isolated import passed. Its SHA is
-`984BF752156187B8892894060A99FE52027E2457F37FC23C11657041B29B86E1`. Official results later
-rejected v155 (`16581 / 208.5s`) and v156 (`16580 / 204.3s`); both passed time but stayed below
-v86, confirming that their tiny local-only gains did not transfer.
+`984BF752156187B8892894060A99FE52027E2457F37FC23C11657041B29B86E1`. Its official result is
+`16729 / 218.96s`: time passes but accuracy is 15 points below v86, so it is rejected. This proves
+the earlier `v138→v140 +123` ROAB increment was context-dependent, not portable to exact v86.
+v155 (`16581 / 208.5s`) and v156 (`16580 / 204.3s`) remain rejected as well. The next planned
+mechanism is a single-pass block-Schur HiF4-GPTQ branch from exact v86.
 
 \* The earlier v086 local `462.239 s` observation was also concurrent-load affected. The clean
 idle rerun is `299.302 s` API / `321.996 s` wall; see

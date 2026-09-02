@@ -223,12 +223,12 @@ JSON/report > 未验证推测。发生冲突时保留原始证据并更新状态
   v156 的 Qwen effect `+0.000107624`、GPT-2 `+0.000029454` 没有迁移，stored-scale 路线关闭；
   二者都不作为优化 parent，root 不变，Attention 继续冻结 v86。
 - 用户已纠正后续实验顺序：v86 的官方结果已知，不能重复提交；本地 proxy 不能决定官方
-  方向。固定 Attention 的官方 `v138→v140` 仅增加 ROAB-P2，分数 `15715→15838`（`+123`），
-  是当前唯一干净的正向 Linear 增量。v157 已从 exact v86 单文件只加入该机制，完成六 API、
-  连续乘积/协方差、拒绝分支 v86 字段级回退、Attention 字段级冻结和隔离导入检查；未运行
-  本地排名 panel。v157 是下一官方单变量实验，SHA256
-  `984BF752156187B8892894060A99FE52027E2457F37FC23C11657041B29B86E1`；v155/v156 官方均已
-  拒绝，v157 顺序不变。
+  方向。固定 Attention 的官方 `v138→v140` 仅增加 ROAB-P2，分数 `15715→15838`（`+123`）；
+  为验证其可迁移性，v157 从 exact v86 单文件只加入该机制。用户回传 v157 官方
+  `16729 / 218.96s`，时间通过但低于 v86 `15` 分，已标记 `REJECTED`。这证明 `+123` 是
+  v138/v140 组合上下文中的交互效应，不是可移植 ROAB 主效应；ROAB 路线关闭，不调 threshold、
+  pair size 或 role gate。下一计划是从 exact v86 做一次 single-pass block-Schur HiF4-GPTQ；
+  尚未实现。v157 SHA256 `984BF752156187B8892894060A99FE52027E2457F37FC23C11657041B29B86E1`。
 - 评测结果必须先看 `evaluation_scope`：只有同 cache 的 `default-panel` 可做本地 proxy 排名；
   `effect-panel`/`paired-json-replay` 只做父子诊断，`full-stress` 只做压力，`smoke-prefix`
   只做接口，GPT-2/hif4 与旧 `official-shape-v1` 只做跨结构/历史审计。任何 scope 都不是

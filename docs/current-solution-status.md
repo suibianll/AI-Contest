@@ -37,7 +37,9 @@
   v138–v145 这条“压缩 Attention 后继续叠 Linear 局部模块”的路线已经失败并关闭。
 - v155 官方 `16581 / 208.5s`、v156 官方 `16580 / 204.3s`，两者时间均通过但分别低于 v86
   `163/164` 分，已正式拒绝。它们本地 `10^-4` 级正向没有迁移。
-- 当前候选是从 exact v86 分支的 v157 ROAB-only；Attention 固定 v86。17816 源码若后续
+- v157 exact-v86 + ROAB-only 官方 `16729 / 218.96s`，时间通过但低于 v86 `15` 分，已拒绝。
+  这说明 `v138→v140 +123` 不能作为可移植 ROAB 主效应。下一计划是 exact v86 上的一次
+  single-pass block-Schur HiF4-GPTQ，尚未实现；Attention 继续固定 v86。17816 源码若后续
   到位，再作为独立官方快照归档和对照，不倒推或覆盖当前证据。
 
 ## 2. 评测口径
@@ -347,7 +349,7 @@ Attention no-op。该增益很小，不能替代官方验证，但源码已完�
 正式判为 `REJECTED`。本地 Qwen/GPT-2 的 `10^-5–10^-4` 正向没有迁移，停止该 stored-scale
 路线；根 `solution.py` 不切换。
 
-## 2.13 v157 exact-v86 + ROAB-only（RETAINED / next official experiment）
+## 2.13 v157 exact-v86 + ROAB-only（REJECTED / official 16729, 218.96s）
 
 用户指出 v86 官方结果已经存在，继续提交 v86 不能产生新信息；同时当前本地评测无法预测
 官方排序。重新按固定场景读取官方历史后，唯一干净的正向 Linear 增量是 v138 到 v140：两者
@@ -362,8 +364,10 @@ state 与 exact v86 字段级一致；Attention calibration 与 Q/K/V dynamic �
 
 没有运行任何本地排名 panel。已通过 `35` 个仓库测试、六 API 合法性、selected branch、连续
 乘积/协方差不变量和脱离仓库单文件导入检查。正式源码 SHA256 为
-`984BF752156187B8892894060A99FE52027E2457F37FC23C11657041B29B86E1`。官方 score/time 仍为
-`unregistered/NA`；根 `solution.py` 不切换。v155/v156 已按官方结果拒绝。
+`984BF752156187B8892894060A99FE52027E2457F37FC23C11657041B29B86E1`。用户回传官方
+`16729 / 218.96s`：时间比 v86 快 `3.74s`，但分数低 `15`，正式判为 `REJECTED`；根
+`solution.py` 不切换。`v138→v140 +123` 是组合上下文交互而非可移植 ROAB 主效应，ROAB
+路线关闭，不再调 pair size、threshold 或 role gate。
 
 ## 3. 历史 v1 结果表（不可与 proxy-v2 混用）
 
@@ -390,6 +394,7 @@ state 与 exact v86 字段级一致；Attention calibration 与 Q/K/V dynamic �
 | v148 | **0.509729** | 0.719696 | **369.038** | 391.615 | 未提交 | **REJECTED；A3 提升 Linear 但校准超时** |
 | v155 | **0.570999** | **0.724735** | **248.121** | **280.763** | **16581 / 208.5s** | **REJECTED；时间通过但低于 v86 163 分** |
 | v156 | 0.588131（effect） | 0.757433（effect） | 203.994（effect） | 216.749（effect） | **16580 / 204.3s** | **REJECTED；时间通过但低于 v86 164 分** |
+| v157 | NA（仅合法性） | NA（Attention 字段级一致） | NA | NA | **16729 / 218.96s** | **REJECTED；时间通过但低于 v86 15 分** |
 
 完整原始数据见 [`artifacts/official_eval/`](../artifacts/official_eval/)，官方回传记录见
 [`logs/execution/`](../logs/execution/)。
@@ -433,8 +438,8 @@ v86 的部分 scale-aware/output-aware 机制。此前把它描述为“v86 级�
 
 - v138 的缩减 Attention shortlist；
 - v139 连续 output-aware gain；
-- v140 的完整 Linear/Attention 组合（绝对分数低于 v86）；其中 ROAB-P2 的固定 Attention
-  增量 `v138→v140 = +123` 已被单独抽出为 v157，不能再与失败组合混为同一结论；
+- ROAB-P2：虽然固定 reduced Attention 的 `v138→v140 = +123`，但 exact-v86 单变量 v157
+  官方为 `16729 / 218.96s`、低于 v86 `15` 分，证明收益不可迁移，整个路线关闭；
 - v141–v145 非对称选列 BDLR、锚点冻结和阻尼变体；
 - v128–v131 动态 Q/K Gram、PAWV 和随序列放大的 Attention 搜索；
 - 增加 alpha、offset、sweep、block 数、阻尼、角度或候选槽位的局部扫描。
@@ -454,9 +459,8 @@ v86 的部分 scale-aware/output-aware 机制。此前把它描述为“v86 级�
 3. v155 官方 `16581 / 208.5s`，低于 v86 `163` 分；稳定 permutation 正式拒绝，不作 parent。
 4. v156 官方 `16580 / 204.3s`，低于 v86 `164` 分；stored-scale 路线正式拒绝。本地微小
    正向不能支撑官方方向。
-5. v157 已从 exact v86 只加入 ROAB-P2；依据是固定 Attention 的官方 `+123` 增量。下一条
-   决策证据是 v157 的官方 score/time，不补跑本地排名 panel。
-6. 若 v157 官方失败或低于 v86，再做一个单次 **block-Schur HiF4-GPTQ** 参照实现，优先
+5. v157 官方 `16729 / 218.96s`，比 v86 低 `15` 分；ROAB 可移植假设被否定并关闭。
+6. 下一计划是一个单次 **block-Schur HiF4-GPTQ** 参照实现，优先
    外部归因支持的 `fc_gate/fc_up/proj` 形状；仍以输出 loss、W/A/interaction 和 API 增量为
    判据，不增加在线候选。
 7. Linear 出现稳定正向且复杂度可控后，才独立启动 Attention A1 解析 Matrix-Smooth Q/K；冻结
@@ -478,8 +482,8 @@ v86 的部分 scale-aware/output-aware 机制。此前把它描述为“v86 级�
   `_rejected`；它不改变 root。
 - v156 L4-WD 已按官方 `16580 / 204.3s` 保存为 `REJECTED` 并将目录改为 `_rejected`；本地
   微增益未迁移，停止 stored-scale 路线。
-- v157 exact-v86 + ROAB-only 已保存为 `RETAINED / NEXT OFFICIAL EXPERIMENT`；六 API、
-  continuous invariant、父路径/Attention 字段级冻结和单文件隔离导入已通过，未运行本地排名。
+- v157 exact-v86 + ROAB-only 已按官方 `16729 / 218.96s` 保存为 `REJECTED` 并将目录改为
+  `_rejected`；六 API 与不变量虽通过，但精度低于 v86，ROAB 路线关闭。
 
 2026-09-01 归档整理（区分新旧评测分数体系）：
 

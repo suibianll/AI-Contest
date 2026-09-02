@@ -12,5 +12,5 @@ point versus v155 while being `4.2s` faster. These results confirm that the Qwen
 (`+0.000116536` for v155 and `+0.000107624` for v156) did not predict official improvement.
 
 Both archive directories were renamed with `_rejected`; root `solution.py` remains unchanged.
-The next single-variable candidate remains v157, which branches from exact v86 instead of the
-pre-A3 family.
+The next single-variable candidate at that point was v157, branched from exact v86. Its later
+official result `16729 / 218.96s` also fell below v86 and closed the ROAB route.

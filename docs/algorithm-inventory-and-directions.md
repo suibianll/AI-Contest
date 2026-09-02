@@ -73,8 +73,9 @@
    `16581 / 208.5s`，低于 v86 `163` 分；不再做 permutation 扩展。
 2. **v156 L4-WD 已拒绝**：官方 `16580 / 204.3s`，低于 v86 `164` 分；此前以 pre-A3 为父版本
    的部署-Gram闭式 stored-scale 微增益没有迁移，该路线关闭。
-3. 当前先验证 exact-v86 + ROAB-only 的 v157；若失败，只做一个 **block-Schur HiF4-GPTQ**
-   参照（优先 `fc_gate/fc_up/proj`），固定
+3. **v157 ROAB-only 已拒绝**：官方 `16729 / 218.96s`，低于 v86 `15` 分，说明
+   `v138→v140 +123` 不可迁移。下一步只做一个 **block-Schur HiF4-GPTQ** 参照（优先
+   `fc_gate/fc_up/proj`），固定
    block 顺序/预算，以真实 `A@W` loss 一次合法写回；不再增加 rank、block、offset、sweep。
 4. Linear 有稳定增益且时间可控后，冻结 Linear，启动 Attention A1 的 GQA group-local
    `Q'=QM, K'=KM^{-T}`；随后才试两次 K fixed-point center，禁止 Gram sweep/PAWV/length router。

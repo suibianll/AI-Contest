@@ -1,6 +1,6 @@
-# v157 exact-v86 + ROAB-P2
+# v157 exact-v86 + ROAB-P2 — rejected
 
-- Status: `RETAINED` (single-variable official candidate pending)
+- Status: `REJECTED` (official pass, but 15 points below v86)
 - Parent: exact v86 single-file archive, official `16744 / 222.7s`
 - Parent SHA256: `E7A16D6991DBB70A593FBE87D0C5D1D8FD38F801665354A01FFAF2F0A96F03CD`
 - Unique change: after all v86 Linear transforms are frozen, learn one bounded analytic 2x2
@@ -22,7 +22,7 @@ increment is negative. v157 tests that increment directly on the reproducible of
 
 No local ranking panel was run. Local work was deliberately limited to implementation checks:
 
-- `python -m py_compile solutions/20260902_v157_v86-roab-only_scoreNA_timeNA/solution.py`
+- `python -m py_compile solutions/20260902_v157_v86-roab-only_rejected/solution.py`
 - `python -m pytest -q` -> `35 passed in 8.42s`
 - analytic invariant check: max absolute error of `XW^T - (XU)(WU^{-T})^T` was
   `9.5367431640625e-06`; transformed covariance error was `3.814697265625e-06`
@@ -46,10 +46,11 @@ official-score proxy and provide no local Linear/Attention mean.
 - Local Linear mean: `NA`
 - Local Attention mean: `NA`
 - Local API total/wall: `NA` (the two synthetic calibration timings above are not comparable)
-- Official score: `unregistered`
-- Official time: `NA`
-- Official status: `unregistered`
+- Official score: `16729` (user reported 2026-09-02; `-15` versus v86)
+- Official time: `218.96s` (`-3.74s` versus v86; passes strict `<300s`)
+- Official judge status: `pass`
+- Archive decision: `REJECTED` because accuracy is below v86 `16744`
 
-Decision: retain this exact file as the next official single-variable experiment. Promotion requires
-an official score above v86 and official runtime strictly below `300s`; otherwise rename it with
-`_rejected` or `_timeout`. Do not replace root `solution.py` before that result.
+Decision: reject and keep only as attribution evidence. The `v138→v140 +123` ROAB increment does
+not transfer when stacked onto exact v86; the effect was context-dependent rather than a portable
+ROAB main effect. Do not replace root `solution.py` or tune ROAB thresholds/pair sizes further.
