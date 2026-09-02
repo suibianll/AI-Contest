@@ -40,6 +40,21 @@ change API call counts; use `--no-decomposition` only for a fast smoke run. Loca
 same-machine A/B data, not an official-time conversion; `trend_diagnostics` reports known same-
 cohort ordering inversions without fitting them.
 
+### Current best and scope rule (2026-09-02)
+
+The best reproducible official result in this repository is **v86: 16744 / 222.7 s (pass)**.
+The user-confirmed overall high score **17816** has no synchronized source, version or official
+time yet, so it is an official anchor only, not an archive candidate. v147 is **16579 / 211 s**
+(time pass but below v86, rejected); v140 is **15838 / 207 s** (rejected). The pre-A3 parent effect
+control is local-only (`Linear=0.588023229`, `Attention=0.757433277`, API `202.317 s`) and is not
+an official score.
+
+Do not rank the following together: `default-panel` is the only local proxy-ranking scope;
+`effect-panel`/`paired-json-replay` are parent-child mechanism diagnostics, `full-stress` is a
+stress check, `smoke-prefix` is interface-only, and GPT-2/hif4/old `official-shape-v1` are
+cross-structure or historical probes. Every new JSON records this in `evaluation_scope`; see
+[`artifact scope contract`](../artifacts/official_eval/README.md).
+
 The completed 2026-09-01 **historical v1** archive run is in
 [`artifacts/official_eval/archive-official-shape-v1.json`](../artifacts/official_eval/archive-official-shape-v1.json)
 and [`logs/official_eval/archive-official-shape-v1.md`](../logs/official_eval/archive-official-shape-v1.md).
@@ -182,9 +197,13 @@ scale fit, not another CAT/ROAB switch. See
 
 v154 added the planned fixed-code `s_d` fit in the deployed `Q(W)` Gram metric, but its Qwen role
 means were exactly v153 (`fc=.334432`, Linear `0.568754`). It is archived as `REJECTED`; direct
-decoupled-scale variants are paused until an oracle diagnostic identifies code assignments with
-recoverable margin. The next step is bounded L3 teacher-to-encoder analysis, not another scale
-parameter.
+decoupled-scale variants are paused. L3-D0 then found same-fold teacher margin but an exact
+layer-3/fold-128 output regression (`fc_gate=-0.094751`, `fc_up=-0.112680`), so the result is
+`margin_exists_but_not_compile_safe` and no v155 is created. A batched layer-3 screening probe takes
+about `10.35 s` and is the only routine oracle path; the full teacher is a research diagnostic
+(`597.7 s`). The first L2 analytic pair-balance probe is also rejected (`fc` paired mean `-0.314079`,
+16/16 regressions), so the next experiment is a cross-fold feature/decision stability probe followed
+by output-metric-constrained L2, not another scale/CAT/ROAB sweep.
 
 \* The earlier v086 local `462.239 s` observation was also concurrent-load affected. The clean
 idle rerun is `299.302 s` API / `321.996 s` wall; see

@@ -190,6 +190,17 @@ JSON/report > 未验证推测。发生冲突时保留原始证据并更新状态
   未确认。pre-A3 本地归因控制为 Linear `0.5073546371`、Attention `0.7196960689`、API
   `222.227s`，不能把这份本地源码 SHA 冒充官方提交 SHA。
 - v152 的 fc CAT-off 配对结果为 mixed；v153/v154 的直接 decoupled activation/scale 路径明确
-  回归，均已拒绝。当前下一步是活动计划中的 L3 fc 合法码字 teacher/oracle 诊断：先判断
-  code assignment 是否存在跨 fold、跨深度的 recoverable margin，再决定是否实现低复杂度
-  student。没有 teacher 证据前禁止继续调 `s_q/s_d`、CAT、ROAB 或 offset 参数。
+  回归，均已拒绝。L3-D0 teacher/oracle 已完成：规范结果为
+  `margin_exists_but_not_compile_safe`，same-fold joint margin 虽为正，但 layer 3 / fold 128
+  的 exact output margin 对 `fc_gate/fc_up` 分别为 `-0.094751/-0.112680`，不能编译成稳定
+  student/v155。规范 teacher 约 `597.7s` 只算研究成本；日常迭代只能用 layer-3 batched
+  Jacobi fast probe（约 `10.35s`）定位最坏层，不能把它当候选评分。
+- L2 的首个 2×2 analytic pair-balance local-only probe 已拒绝：fc focus 配对均值
+  `-0.314079`（16/16 回归），说明朴素矩阵平衡破坏静态 Weight code；后续 L2 必须加入部署
+  输出 metric 修正，不重复同类无约束变换。当前下一步是 layer 3 最坏 fold 的 cross-fold
+  feature/decision stability 快探针；失败后立即转结构化 L2，不创建 v155、不修改 root，且
+  继续冻结 v86 Attention。
+- 评测结果必须先看 `evaluation_scope`：只有同 cache 的 `default-panel` 可做本地 proxy 排名；
+  `effect-panel`/`paired-json-replay` 只做父子诊断，`full-stress` 只做压力，`smoke-prefix`
+  只做接口，GPT-2/hif4 与旧 `official-shape-v1` 只做跨结构/历史审计。任何 scope 都不是
+  官方分数等价物，详见 `artifacts/official_eval/README.md`。

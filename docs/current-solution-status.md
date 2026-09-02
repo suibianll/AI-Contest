@@ -246,20 +246,61 @@ Attention 均不变。证据见
 control、误差源和最坏层都可解释，才运行默认 168+120 panel。完整 panel 仍用于复核，不再是
 每次小迭代的第一步。
 
-## 2.8 当前下一步：L3-D0 fc 合法码字余量诊断
+## 2.8 L3-D0 fc 合法码字余量诊断（DONE / 不可直接编译）
 
-下一步不创建 v155，也不修改 root。以 SHA
-`800CA10EC3414E4FE886B93CA62BD4A350D26BBA015287DF7E8DF2DD871AC23D` 的 pre-A3 local
-parent 为固定对照，先生成一次 56+5 effect baseline；随后在独立 workbench 中只针对
-fc_gate/fc_up，用最终部署 `Q(W)` 的 output quadratic 分别测 signed mantissa、lv3、lv2 和
-相邻 E6M2 scale 合法邻域的 teacher margin。q/k/v/o/proj、Weight、变换和 v86 Attention
-全部冻结，teacher 不进入六个 API。
+以 SHA `800CA10EC3414E4FE886B93CA62BD4A350D26BBA015287DF7E8DF2DD871AC23D` 的 pre-A3
+local parent 为固定对照，规范 teacher 覆盖 layer `0/3/7/10/13/16/20/23`、`fc_gate/fc_up`、
+fold `[10,128]` 和五类合法邻域。完整证据见
+[`l3-fc-legal-oracle.json`](../artifacts/official_eval/l3-fc-legal-oracle.json) 与
+[`执行报告`](../logs/execution/2026-09-02-l3-fc-legal-oracle.md)。
 
-诊断按 layer `0/3/7/10/13/16/20/23`、role 和两个 calibration fold 输出 parent/teacher
-loss、recoverable margin、改善 block 数、edit 类型和收益集中度。若两个 fold 与 fc_gate/up
-均无稳定余量，关闭当前 fc 表示族并转 L2；若有余量但跨 fold 不可压缩，同样转 L2；只有余量
-和局部决策结构都可复现，才编译固定向量化 threshold/LUT student 并分配 v155。完整执行卡见
-[`活动计划`](superpowers/plans/2026-09-01-hif4-hierarchy-encoder-and-analytic-attention-plan.md)。
+| edit | mean margin | median margin | 正/负 case | 结论 |
+|---|---:|---:|---:|---|
+| mantissa | `+0.000287` | `+0.000226` | `19/13` | mixed |
+| lv3 | `+0.000138` | `+0.001518` | `27/5` | mixed |
+| lv2 | `+0.000133` | `+0.000343` | `25/6` | mixed |
+| E6M2 scale | `−0.000231` | `+0.003588` | `29/3` | mixed |
+| joint | `+0.002084` | `+0.007144` | `30/2` | mixed |
+
+layer 3 / fold 128 是决定性反例：joint exact output margin 为 `−0.094751`（`fc_gate`）和
+`−0.112680`（`fc_up`），而 fold 10 仍为 `+0.001447/+0.009264`。所以 D0 结论是
+`margin_exists_but_not_compile_safe`：same-fold quadratic teacher 有局部余量，但跨 fold
+的真实输出方向不稳定，不能据此创建 v155。规范 teacher 约 `597.7s` 是研究成本，不是候选
+API 时间。
+
+为缩短迭代，新增 [`l3_fc_fast_probe.py`](../workbench/l3_fc_fast_probe.py) 只跑 layer 3、
+joint 和一次 batched Jacobi，约 `10.35s`；它再次得到 fold 128 两个 fc role 的负方向。
+该 probe 仅用于定位最坏层，不能替代规范 D0、proxy 排名或官方时间。
+
+因此当前下一步不是继续调 `s_q/s_d`、CAT、ROAB 或 offset，而是做一个只覆盖 layer 3 最坏
+fold 的 cross-fold feature/decision stability 快探针；若不能得到固定 threshold/LUT 规则，
+立即关闭 L3 表示族，转 L2 解析式层级矩阵平衡。根 `solution.py` 和 v86 Attention 保持冻结。
+
+## 2.9 L2 解析 pair-balance 探针（REJECTED）
+
+在同一 pre-A3 parent 上做了 local-only 的 2×2 analytic pair-balance（只替换 expansive
+fc 的 BOAT/CAT/ROAB 选择，其他 role/Attention 不变）。结果见
+[`l2-pair-probe-effect.json`](../artifacts/official_eval/l2-pair-probe-effect.json) 与
+[`报告`](../logs/official_eval/l2-pair-probe-effect.md)：Linear `0.588023229→0.498286314`，
+focus fc `−0.314079`（`0 改善 / 16 回归 / 0 不变`），MSE ratio 中位数 `1.636`；40 个 control
+和 Attention 完全 no-op。朴素 pair balance 破坏静态 Weight code，已拒绝，不分配版本号，也
+不替换 root。后续 L2 必须以部署输出 metric 修正，而不是再试同类无约束矩阵平衡。
+
+## 2.10 评测 scope 清理（DONE）
+
+评测器曾把历史 `official-shape-v1`、当前 `proxy-v2`、14/56 前缀 smoke、effect panel、
+full stress、GPT-2/hif4 外部探针放在同一目录并按均值阅读，造成“系统越来越乱”的表象。现在
+`evaluator/official_eval.py` 给每个结果写入 `evaluation_scope`：
+
+- `default-panel`：同一 proxy-v2 cache 内唯一可做本地 proxy 排名的 168+120 panel；
+- `effect-panel` / `paired-json-replay`：只做父子逐 case 机制诊断；
+- `full-stress`：只做压力回归；
+- `smoke-prefix`：只做接口/合法性检查；
+- `official-shape-v1`、GPT-2、外部 hif4：历史/跨结构诊断，永不与 proxy 排名混用。
+
+报告和 archive JSON 现在同时写 scope、intent 和 `official_score_equivalent=false`；没有任何
+本地 scope 可以替代官方分数或官方 `<300s`。具体字段契约见
+[`artifacts/official_eval/README.md`](../artifacts/official_eval/README.md)。
 
 ## 3. 历史 v1 结果表（不可与 proxy-v2 混用）
 
@@ -342,14 +383,14 @@ v86 的部分 scale-aware/output-aware 机制。此前把它描述为“v86 级�
 
 1. 先恢复可信的 pre-A3 单文件父版本，修复 v147 源码/JSON 混淆，并按 role 归因当前第二次
    `_crossfold_weight_output` 的收益与约 `78.1s` 新增代价。
-2. Linear 第一正式机制改为 Activation-only Decoupled HiF4 Encoder：编码尺度只决定 code，
-   最终仍保存合法 E6M2/lv2/lv3/mantissa/sign。
-3. 用解析式 2×2 Hierarchical Matrix Balance 替换候选式 Smooth/Permutation/Hadamard，保持
-   `XR(WR^{-T})^T=XW^T` 且不叠加动态算子。
-4. 把 calibration 合法输出 oracle 编译成阈值/LUT 型固定复杂度 Activation encoder，删除在线
-   candidate/coordinate loop。
-5. 只有 Activation 路线验证有效后，才把同一 decoupled encoder 应用到 Weight；block-Schur
-   和双侧残差降为一次性后期残差步骤。
+2. L3-D0 已完成：same-fold 合法码字 teacher 有局部 margin，但 layer 3/fold 128 的 exact
+   输出方向相反，当前 fc 表示族不可直接编译；不再调 `s_q/s_d`、CAT、ROAB 或 offset。
+3. 在进入 L2 前只做 layer 3 最坏 fold 的 cross-fold feature/decision stability 快探针，固定
+   复杂度、无动态候选循环；失败即关闭 L3 表示族。
+4. L2 的 2×2 Hierarchical Matrix Balance 必须把部署 `Q(W)` 输出 metric 纳入约束；首个朴素
+   pair-balance 已因 fc 全面回归而拒绝，不能直接替换候选式 Smooth/Permutation/Hadamard。
+5. 只有新的 Activation/坐标机制给出稳定逐 role/逐层证据后，才把同一机制应用到 Weight；禁止
+   重复完整 output pass 或创建高复杂度在线搜索。
 6. Linear 稳定后才独立研究 Attention：解析 Matrix-Smooth Q/K、量化感知 K 公共平移、
    Q/K/V decoupled encoder 和静态 Fisher importance；禁止 Gram dynamic sweep、PAWV 和随序列
    增长的候选搜索。

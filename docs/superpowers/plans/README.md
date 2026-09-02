@@ -6,7 +6,7 @@
 `proxy-v2` 评测和官方规则；归档目录中的计划不具有指令效力。评测命令只能
 调用 `evaluator/official_eval.py`，旧 `real_model_suite.py` 已退役。
 
-- [`2026-09-01-hif4-hierarchy-encoder-and-analytic-attention-plan.md`](2026-09-01-hif4-hierarchy-encoder-and-analytic-attention-plan.md)：当前唯一有效计划。只保留两个目标：Linear mean 向 `0.8` 提升，官方端到端时间严格小于 `300s`。当前立即执行 L3-D0 fc 合法码字余量诊断：在 pre-A3 父版本上用最终部署 `Q(W)` 输出度量拆分 mantissa/lv3/lv2/E6M2 scale teacher margin，并检查跨 role、深度和 calibration fold 的可压缩性；有可压缩余量才创建固定复杂度 student/v155，否则转 L2 解析式层级矩阵平衡。Attention 在 Linear 稳定后独立执行。
+- [`2026-09-01-hif4-hierarchy-encoder-and-analytic-attention-plan.md`](2026-09-01-hif4-hierarchy-encoder-and-analytic-attention-plan.md)：当前唯一有效计划。只保留两个目标：Linear mean 向 `0.8` 提升，官方端到端时间严格小于 `300s`。L3-D0 fc 合法码字余量诊断已完成：teacher 有局部同 fold margin，但 layer 3 / fold 128 的 exact output MSE 对 `fc_gate` 和 `fc_up` 同时大幅回归，结论为 `margin_exists_but_not_compile_safe`，不创建 v155。下一步先做只覆盖最坏层的 cross-fold 特征/决策稳定性快探针；若不能得到固定复杂度规则，转 L2 解析式层级矩阵平衡。Attention 在 Linear 稳定后独立执行。
 
 旧的 17816-anchor、v2 active、grid、consolidated、accuracy-first、Linear、JDRQ 计划以及
 已完成的 L6 计划，均已移至 [`../archive/plans/`](../archive/plans/)。它们是历史决策记录，

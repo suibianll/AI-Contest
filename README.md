@@ -1,6 +1,6 @@
 # HiF4 优化实验仓库（官方对齐版）
 
-> **最新官方进展（2026-09-01）**：用户确认新的 Linear 框架已把官方最高分提升到 **17816**，
+> **最新官方进展（2026-09-02）**：用户确认新的 Linear 框架已把官方最高分提升到 **17816**，
 > 比仓库内旧官方最高 v86 的 16744 高 1072 分。新框架使用等价 Smooth/Permutation/
 > block-Hadamard 变换、Weight/Activation 双侧 GPTQ，以及 HiF4 层级 quadratic refine。
 > 新提交的官方时间、版本号和源码 SHA 尚未同步，因此当前不推测其 `<300s` 状态；根目录现已
@@ -53,10 +53,17 @@
 - v141–v145 的 rank-4 选列 BDLR-JAQ（含锚点冻结、仅动态激活和两档阻尼）均已完整复测，
   Linear `0.281760/0.282559/0.361154/0.506418/0.506256`，均低于 v140；该方向已关闭，
   源码目录已删除，仅保留评测 JSON 和执行日志。后续 v151–v154 已完成 pre-A3 role 控制与
-  fc decoupled encoder 验证：v152 为 mixed，v153/v154 明确回归，均已拒绝。当前下一步不是
-  再调 `s_q/s_d`、CAT、ROAB 或 offset，而是 L3-D0 fc 合法码字 teacher：按纵深层、role 和
-  calibration fold 测量 mantissa/lv3/lv2/E6M2 scale 的 recoverable margin；只有余量可压缩
-  才实现 student/v155，否则转 L2 解析式层级矩阵平衡。
+  fc decoupled encoder 验证：v152 为 mixed，v153/v154 明确回归，均已拒绝。L3-D0 teacher
+  已完成但结论为 `margin_exists_but_not_compile_safe`：layer 3 / fold 128 的 exact output
+  margin 对 `fc_gate/fc_up` 为 `-0.094751/-0.112680`，不创建 v155。当前下一步是只跑最坏层的
+  cross-fold feature/decision stability 快探针；不通过就转 L2，且不再调 `s_q/s_d`、CAT、ROAB
+  或 offset。
+- 首个 L2 2×2 analytic pair-balance local-only probe 已拒绝：fc focus 配对 `0/16/0`、均值
+  `-0.314079`，说明朴素矩阵平衡破坏静态 Weight code。后续 L2 必须直接使用部署输出 metric
+  做约束，不能重复同类无约束变换。规范 D0 约 `597.7s`，日常 layer-3 fast probe 约 `10.35s`。
+- 评测混乱的根因和修复已写入 [`artifacts/official_eval/README.md`](artifacts/official_eval/README.md)：
+  只有同 cache 的 `default-panel` 可做本地 proxy 排名；effect/replay、full stress、smoke、
+  GPT-2/hif4 和旧 v1 都是诊断，任何本地结果都不等价于官方分数或官方时间。
 - 2026-09-01 归档复测已完成 18 个有官方记录的候选：本地最高返回结果为 v121
   (`0.472197763 / 0.833617251`)，但 API `3404.369 s`、官方 timeout；v002 的本机
   CUDA/CPU device-mix 错误被原样记录。完整明细只看

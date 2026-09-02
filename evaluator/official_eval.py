@@ -905,6 +905,63 @@ def prepare_pack(
     )
 
 
+def _evaluation_scope(pack: PreparedPack) -> dict[str, Any]:
+    """Classify a run so reports cannot mix ranking, paired, and smoke numbers."""
+    design = str(pack.metadata.get("case_design", "unknown"))
+    linear_cases = len(pack.linear_cases)
+    attention_cases = len(pack.attention_cases)
+    default_counts = pack.layers * len(pack.roles), pack.layers * len(PANEL_WINDOW_INDICES)
+    if design == DEFAULT_CASE_DESIGN and (linear_cases, attention_cases) == default_counts:
+        return {
+            "kind": "default-panel",
+            "intent": "proxy-ranking-within-identical-cache",
+            "comparable_for_proxy_ranking": True,
+            "paired_only": False,
+            "stress_only": False,
+            "smoke_only": False,
+            "official_score_equivalent": False,
+        }
+    if design == EFFECT_CASE_DESIGN:
+        return {
+            "kind": "effect-panel",
+            "intent": "paired-mechanism-diagnosis",
+            "comparable_for_proxy_ranking": False,
+            "paired_only": True,
+            "stress_only": False,
+            "smoke_only": False,
+            "official_score_equivalent": False,
+        }
+    if design == FULL_CASE_DESIGN:
+        return {
+            "kind": "full-stress",
+            "intent": "stress-only-regression-check",
+            "comparable_for_proxy_ranking": False,
+            "paired_only": False,
+            "stress_only": True,
+            "smoke_only": False,
+            "official_score_equivalent": False,
+        }
+    if design == "explicit-smoke-prefix-v4":
+        return {
+            "kind": "smoke-prefix",
+            "intent": "interface-and-local-sanity-only",
+            "comparable_for_proxy_ranking": False,
+            "paired_only": False,
+            "stress_only": False,
+            "smoke_only": True,
+            "official_score_equivalent": False,
+        }
+    return {
+        "kind": "unknown",
+        "intent": "do-not-compare",
+        "comparable_for_proxy_ranking": False,
+        "paired_only": False,
+        "stress_only": False,
+        "smoke_only": False,
+        "official_score_equivalent": False,
+    }
+
+
 def load_solution(path: Path) -> ModuleType:
     source = path.resolve()
     module_name = f"_hif4_official_{hashlib.sha1(str(source).encode()).hexdigest()}"
@@ -2012,8 +2069,10 @@ def evaluate_solution(
     else:
         linear_decomposition = {"enabled": False}
         attention_decomposition = {"enabled": False}
+    scope = _evaluation_scope(pack)
     return {
         "candidate": path.stem,
+        "evaluation_scope": scope,
         "source": str(path.resolve()),
         "source_sha256": sha256_file(path),
         "score": {
@@ -2134,6 +2193,7 @@ def _write_paired_effect_report(path: Path, effect: Mapping[str, Any]) -> None:
         "",
         f"- baseline: `{effect.get('baseline', '')}`",
         f"- candidate: `{effect.get('candidate', '')}`",
+        "- evaluation scope: `paired-json-replay` (diagnosis only; never a proxy ranking score)",
         "- comparison: exact layer/role/window pairing; no candidate API is called during JSON replay",
         "- positive Δ gain means the candidate reduced output error on the same case",
     ]
@@ -2259,6 +2319,8 @@ def _write_report(
         "",
         "本报告是本地 proxy；隐藏官方数据和鲲鹏硬件不可本地复制。",
         "",
+        f"- evaluation scope: `{result.get('evaluation_scope', {}).get('kind', 'unknown')}` / `{result.get('evaluation_scope', {}).get('intent', 'do-not-compare')}`",
+        f"- proxy ranking comparable: `{result.get('evaluation_scope', {}).get('comparable_for_proxy_ranking', False)}`; official-score equivalent: `False`",
         f"- calibration lengths: `{list(CALIBRATION_LENGTHS)}`",
         f"- cases: `{score['linear_cases']} Linear + {score['attention_cases']} Attention` (stratified real-W/A panel by default)",
         f"- calibration calls: `{timing['api_calls'].get('hif4_calibration_and_quantize_weight', 0)} weight + {timing['api_calls'].get('hif4_calibration_attention', 0)} attention` (shared state)",
@@ -2481,8 +2543,10 @@ def _archive_output(
     results: Sequence[Mapping[str, Any]],
     paired_effect: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
+    scope = _evaluation_scope(prepared)
     return {
         "protocol": PROTOCOL,
+        "evaluation_scope": scope,
         "created_at": time.strftime("%Y-%m-%d %H:%M:%S"),
         "data_source": data_source,
         "capture_seconds": capture_seconds,
@@ -2509,6 +2573,7 @@ def _archive_output(
             "error_source_decomposition": "candidate API outputs are reused in evaluator-only Linear W/A and Attention Q/K/V control arms; it does not alter proxy means or API call counts",
             "trend_validation": "same-cohort pairwise ordering against user-confirmed anchors; diagnostic-only",
             "paired_effect": "reuse an immutable parent JSON and compare exact layer/role/window output errors; report focus/control signs and W/A or Q/K/V source deltas",
+            "scope_contract": "only default-panel runs are comparable for local proxy ranking; effect-panel is paired-only; full-cartesian is stress-only; explicit limits are smoke-only; none are official-score equivalents",
         },
         "data_metadata": prepared.metadata,
         "trend_diagnostics": _trend_diagnostics(results),
@@ -2537,6 +2602,8 @@ def _write_archive_report(
         f"# {PROTOCOL} archive evaluation",
         "",
         f"- data source: `{data_source}`",
+        f"- evaluation scopes: `{sorted({result.get('evaluation_scope', {}).get('kind', 'unknown') for result in results})}`",
+        "- proxy ranking is valid only for identical `default-panel` cache/panel runs; effect-panel, full-stress, smoke-prefix and external probes are not ranking scores",
         f"- capture seconds: `{capture_seconds:.3f}`",
         f"- calibration lengths: `{list(CALIBRATION_LENGTHS)}`",
         f"- case counts: `{linear_count} Linear + {attention_count} Attention` (stratified real-W/A panel by default)",
@@ -2661,6 +2728,15 @@ def _run_saved_comparison(args: argparse.Namespace) -> dict[str, Any]:
         "protocol": PROTOCOL,
         "created_at": time.strftime("%Y-%m-%d %H:%M:%S"),
         "mode": "paired-json-replay",
+        "evaluation_scope": {
+            "kind": "paired-json-replay",
+            "intent": "paired-mechanism-diagnosis",
+            "comparable_for_proxy_ranking": False,
+            "paired_only": True,
+            "stress_only": False,
+            "smoke_only": False,
+            "official_score_equivalent": False,
+        },
         "baseline_json": str(args.baseline_json.resolve()),
         "candidate_json": str(args.candidate_json.resolve()),
         "paired_effect": paired_effect,
