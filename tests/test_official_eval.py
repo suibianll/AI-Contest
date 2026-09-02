@@ -24,6 +24,9 @@ from official_eval import (  # noqa: E402
     REQUIRED_APIS,
     TEST_LENGTH,
     TEST_LENGTHS,
+    AttentionCase,
+    LinearCase,
+    PreparedPack,
     Window,
     _attention,
     _attention_trace,
@@ -38,9 +41,12 @@ from official_eval import (  # noqa: E402
     _linear_role_family,
     _paired_effect_diagnostics,
     _trend_diagnostics,
+    _nvfp4_cache_profile,
     build_parser,
+    load_nvfp4_cache,
     load_pack,
     load_solution,
+    save_nvfp4_cache,
 )
 from reference_hif4 import encode_standard_hif4, decode_standard_hif4, validate_state  # noqa: E402
 from nvfp4_sim import e4m3_round_up  # noqa: E402
@@ -352,6 +358,58 @@ def test_paired_cli_options_are_explicit() -> None:
 
 def test_compact_panel_cli_is_explicit() -> None:
     assert build_parser().parse_args(["--compact-panel"]).compact_panel is True
+
+
+def test_nvfp4_cache_cli_defaults_to_reuse() -> None:
+    args = build_parser().parse_args([])
+    assert args.nvfp4_cache is None
+    assert args.nvfp4_cache_mode == "auto"
+    assert build_parser().parse_args(["--nvfp4-cache-mode", "off"]).nvfp4_cache_mode == "off"
+
+
+def test_nvfp4_prepared_cache_round_trip_and_profile_guard(tmp_path: Path) -> None:
+    source = tmp_path / "dense.pt"
+    source.write_bytes(b"dense-source-identity")
+    window = Window("validation", "doc", 0, 0, 0, 2, (1, 2))
+    pair = (torch.tensor([[0.0, 0.5]], dtype=torch.float32), torch.tensor([[1.0]], dtype=torch.float32))
+    prepared = PreparedPack(
+        weights=[{"q": pair}],
+        linear_calibration_activations={"q": [[pair]]},
+        test_activations={"q": [[pair]]},
+        calibration_qkv=[[{}]],
+        test_qkv=[[None]],
+        calibration_windows=[window],
+        linear_calibration_windows=[window],
+        test_windows=[window],
+        layers=1,
+        hidden_size=2,
+        q_heads=1,
+        kv_heads=1,
+        head_dim=2,
+        linear_cases=[LinearCase(0, 0, "q", (0,), 0)],
+        attention_cases=[AttentionCase(0, 0, (0,), 0)],
+        metadata={"input_codec": NVFP4_INPUT_CODEC, "data_sha256": {"train": "abc"}},
+        roles=("q",),
+    )
+    profile = _nvfp4_cache_profile(
+        linear_count=None,
+        attention_count=None,
+        full_cases=False,
+        effect_panel=False,
+        compact_panel=True,
+        evaluation_scenario="linear",
+    )
+    path = tmp_path / "prepared-nvfp4.pt"
+    save_nvfp4_cache(prepared, path, source, profile)
+    loaded = load_nvfp4_cache(path, source, profile)
+    assert torch.equal(loaded.weights[0]["q"][0], pair[0])
+    assert loaded.linear_cases == prepared.linear_cases
+    assert loaded.metadata["nvfp4_cache_hit"] is True
+
+    mismatched = dict(profile)
+    mismatched["evaluation_scenario"] = "attention"
+    with pytest.raises(RuntimeError, match="different evaluation profile"):
+        load_nvfp4_cache(path, source, mismatched)
 
 
 def test_static_linear_role_family_groups_qkv_fc_o_and_proj() -> None:

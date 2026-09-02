@@ -47,3 +47,25 @@ Fast iteration rule:
 
 Teacher/oracle workbench JSON is research evidence, not a candidate score. Its wall time must not
 be compared with the six API timing fields.
+
+## Persistent NVFP4 evaluator inputs
+
+`official_eval.py` now persists the selected profile's already encoded NVFP4 carrier/scale inputs.
+The default `--nvfp4-cache-mode auto` uses a separate cache for each scenario and panel, for example
+`qwen2.5-0.5b-proxy-v2-linear-compact-nvfp4.pt`. A cache hit skips both the multi-gigabyte dense-pack
+load and every repeated `nvfp4_encode` call. The payload contains evaluator inputs only; it never
+stores candidate state or candidate outputs.
+
+The cache header binds schema, `proxy-v2`, codec/mode, dense source path/size/mtime, dataset hashes,
+scenario, panel, and explicit case limits. A mismatch is rejected in `read` mode and rebuilt in
+`auto` mode. Use `--nvfp4-cache-mode write` to force one rebuild and `off` only for codec/cache
+debugging. `--cache-mode auto` now correctly reads an existing dense cache and captures the model
+only when that cache is absent.
+
+Example compact Linear run:
+
+```powershell
+python evaluator/official_eval.py --solution solution.py --linear-only --compact-panel --cache-mode read
+```
+
+The first invocation builds the profile cache; later parent/candidate runs reuse it automatically.

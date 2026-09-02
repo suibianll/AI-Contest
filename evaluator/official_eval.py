@@ -92,6 +92,7 @@ FULL_CASE_DESIGN = "full-cartesian-real-wa-v3"
 OFFICIAL_RUNTIME_LIMIT = 300.0
 NVFP4_MODE = "amax6"
 NVFP4_INPUT_CODEC = "e4m3-subnormal-ceil-v1"
+NVFP4_PREPARED_CACHE_SCHEMA = 1
 WIKITEXT_REVISION = "b08601e04326c79dfdd32d625aee71d232d685c3"
 WIKITEXT_CONFIG = "wikitext-2-raw-v1"
 WIKITEXT_FILES = {
@@ -1013,6 +1014,180 @@ def prepare_pack(
         raw.calibration_windows, linear_calibration_windows, raw.test_windows, raw.layers, raw.hidden_size,
         raw.q_heads, raw.kv_heads, raw.head_dim, linear_cases, attention_cases, metadata, roles,
     )
+
+
+def _nvfp4_cache_profile(
+    *,
+    linear_count: int | None,
+    attention_count: int | None,
+    full_cases: bool,
+    effect_panel: bool,
+    compact_panel: bool,
+    evaluation_scenario: str,
+) -> dict[str, Any]:
+    """Return the exact evaluator-input profile covered by one NVFP4 cache."""
+    return {
+        "protocol": PROTOCOL,
+        "input_codec": NVFP4_INPUT_CODEC,
+        "nvfp4_mode": NVFP4_MODE,
+        "linear_count": linear_count,
+        "attention_count": attention_count,
+        "full_cases": bool(full_cases),
+        "effect_panel": bool(effect_panel),
+        "compact_panel": bool(compact_panel),
+        "evaluation_scenario": evaluation_scenario,
+    }
+
+
+def _default_nvfp4_cache_path(source_path: Path, profile: Mapping[str, Any]) -> Path:
+    if profile["compact_panel"]:
+        panel = "compact"
+    elif profile["effect_panel"]:
+        panel = "effect"
+    elif profile["full_cases"]:
+        panel = "full"
+    elif profile["linear_count"] is not None or profile["attention_count"] is not None:
+        linear = "all" if profile["linear_count"] is None else str(profile["linear_count"])
+        attention = "all" if profile["attention_count"] is None else str(profile["attention_count"])
+        panel = f"smoke-l{linear}-a{attention}"
+    else:
+        panel = "default"
+    scenario = str(profile["evaluation_scenario"])
+    return source_path.with_name(f"{source_path.stem}-{scenario}-{panel}-nvfp4.pt")
+
+
+def _source_cache_identity(path: Path) -> dict[str, Any]:
+    stat = path.stat()
+    return {
+        "path": str(path.resolve()),
+        "size": int(stat.st_size),
+        "mtime_ns": int(stat.st_mtime_ns),
+    }
+
+
+def _prepared_pack_payload(pack: PreparedPack) -> dict[str, Any]:
+    """Serialize only tensors already encoded as NVFP4 carrier/scale pairs."""
+    return {
+        "weights": pack.weights,
+        "linear_calibration_activations": pack.linear_calibration_activations,
+        "test_activations": pack.test_activations,
+        "calibration_qkv": pack.calibration_qkv,
+        "test_qkv": pack.test_qkv,
+        "calibration_windows": [dataclasses.asdict(window) for window in pack.calibration_windows],
+        "linear_calibration_windows": [dataclasses.asdict(window) for window in pack.linear_calibration_windows],
+        "test_windows": [dataclasses.asdict(window) for window in pack.test_windows],
+        "layers": pack.layers,
+        "hidden_size": pack.hidden_size,
+        "q_heads": pack.q_heads,
+        "kv_heads": pack.kv_heads,
+        "head_dim": pack.head_dim,
+        "linear_cases": [dataclasses.asdict(case) for case in pack.linear_cases],
+        "attention_cases": [dataclasses.asdict(case) for case in pack.attention_cases],
+        "metadata": pack.metadata,
+        "roles": list(pack.roles),
+    }
+
+
+def _linear_case_from_payload(payload: Mapping[str, Any]) -> LinearCase:
+    return LinearCase(
+        int(payload["case_id"]), int(payload["layer"]), str(payload["role"]),
+        tuple(int(index) for index in payload["calibration_indices"]),
+        int(payload["test_window"]),
+    )
+
+
+def _attention_case_from_payload(payload: Mapping[str, Any]) -> AttentionCase:
+    return AttentionCase(
+        int(payload["case_id"]), int(payload["layer"]),
+        tuple(int(index) for index in payload["calibration_indices"]),
+        int(payload["test_window"]),
+    )
+
+
+def _prepared_pack_from_payload(payload: Mapping[str, Any]) -> PreparedPack:
+    metadata = dict(payload["metadata"])
+    if metadata.get("input_codec") != NVFP4_INPUT_CODEC:
+        raise RuntimeError("NVFP4 cache prepared pack uses a different input codec")
+    return PreparedPack(
+        payload["weights"],
+        payload["linear_calibration_activations"],
+        payload["test_activations"],
+        payload["calibration_qkv"],
+        payload["test_qkv"],
+        [_window_from_payload(item) for item in payload["calibration_windows"]],
+        [_window_from_payload(item) for item in payload["linear_calibration_windows"]],
+        [_window_from_payload(item) for item in payload["test_windows"]],
+        int(payload["layers"]),
+        int(payload["hidden_size"]),
+        int(payload["q_heads"]),
+        int(payload["kv_heads"]),
+        int(payload["head_dim"]),
+        [_linear_case_from_payload(item) for item in payload["linear_cases"]],
+        [_attention_case_from_payload(item) for item in payload["attention_cases"]],
+        metadata,
+        tuple(str(role) for role in payload["roles"]),
+    )
+
+
+def save_nvfp4_cache(
+    pack: PreparedPack,
+    path: Path,
+    source_cache_path: Path,
+    profile: Mapping[str, Any],
+) -> None:
+    """Persist reusable evaluator inputs after NVFP4 encoding."""
+    payload = {
+        "schema": NVFP4_PREPARED_CACHE_SCHEMA,
+        "protocol": PROTOCOL,
+        "input_codec": NVFP4_INPUT_CODEC,
+        "nvfp4_mode": NVFP4_MODE,
+        "source_cache": _source_cache_identity(source_cache_path),
+        "source_data_sha256": pack.metadata.get("data_sha256"),
+        "profile": dict(profile),
+        "prepared": _prepared_pack_payload(pack),
+    }
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(path.name + ".tmp")
+    torch.save(payload, temporary)
+    temporary.replace(path)
+
+
+def load_nvfp4_cache(
+    path: Path,
+    source_cache_path: Path,
+    profile: Mapping[str, Any],
+) -> PreparedPack:
+    """Load an exact-profile NVFP4 input cache or reject it as stale."""
+    try:
+        try:
+            payload = torch.load(path, map_location="cpu", weights_only=True)
+        except TypeError:
+            payload = torch.load(path, map_location="cpu")
+    except Exception as exc:
+        raise RuntimeError(f"cannot read NVFP4 input cache {path}: {exc}") from exc
+    if not isinstance(payload, Mapping):
+        raise RuntimeError(f"NVFP4 input cache {path} is not a mapping")
+    expected_header = {
+        "schema": NVFP4_PREPARED_CACHE_SCHEMA,
+        "protocol": PROTOCOL,
+        "input_codec": NVFP4_INPUT_CODEC,
+        "nvfp4_mode": NVFP4_MODE,
+    }
+    for key, expected in expected_header.items():
+        if payload.get(key) != expected:
+            raise RuntimeError(
+                f"NVFP4 input cache {path} has {key}={payload.get(key)!r}; expected {expected!r}"
+            )
+    if dict(payload.get("profile", {})) != dict(profile):
+        raise RuntimeError(f"NVFP4 input cache {path} was built for a different evaluation profile")
+    if dict(payload.get("source_cache", {})) != _source_cache_identity(source_cache_path):
+        raise RuntimeError(f"NVFP4 input cache {path} does not match the current dense source cache")
+    prepared = _prepared_pack_from_payload(payload["prepared"])
+    if prepared.metadata.get("data_sha256") != payload.get("source_data_sha256"):
+        raise RuntimeError(f"NVFP4 input cache {path} has inconsistent source data hashes")
+    prepared.metadata["nvfp4_cache_path"] = str(path.resolve())
+    prepared.metadata["nvfp4_cache_hit"] = True
+    return prepared
 
 
 def _evaluation_scope(pack: PreparedPack) -> dict[str, Any]:
@@ -2968,6 +3143,12 @@ def _write_archive_report(
     attention_count = len(prepared.attention_cases) if prepared is not None else (
         len(results[0].get("case_scores", {}).get("attention", [])) if results else 0
     )
+    if prepared is not None:
+        scenario = str(prepared.metadata.get("evaluation_scenario", "both"))
+        if scenario == "linear":
+            attention_count = 0
+        elif scenario == "attention":
+            linear_count = 0
     lines = [
         f"# {PROTOCOL} archive evaluation",
         "",
@@ -3133,17 +3314,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         )
     focus_roles = _focus_selectors(args.focus_linear_roles)
     cache_path = args.cache.resolve()
-    capture_started = time.perf_counter()
-    if args.cache_mode == "read":
-        raw = load_pack(cache_path)
-        data_source = "cache"
-    else:
-        raw = capture_pack(args.capture_device)
-        data_source = "model_forward"
-        if args.cache_mode in {"auto", "write"}:
-            save_pack(raw, cache_path)
-    prepared = prepare_pack(
-        raw,
+    nvfp4_profile = _nvfp4_cache_profile(
         linear_count=args.linear_cases,
         attention_count=args.attention_cases,
         full_cases=args.full_cases,
@@ -3151,6 +3322,57 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         compact_panel=args.compact_panel,
         evaluation_scenario=args.evaluation_scenario,
     )
+    nvfp4_cache_path = (
+        args.nvfp4_cache.resolve()
+        if args.nvfp4_cache is not None
+        else _default_nvfp4_cache_path(cache_path, nvfp4_profile)
+    )
+    capture_started = time.perf_counter()
+    prepared: PreparedPack | None = None
+    if args.nvfp4_cache_mode in {"auto", "read"} and args.cache_mode != "write":
+        if nvfp4_cache_path.is_file():
+            try:
+                prepared = load_nvfp4_cache(
+                    nvfp4_cache_path, cache_path, nvfp4_profile
+                )
+                data_source = "nvfp4_cache"
+                print(f"[nvfp4-cache] hit {nvfp4_cache_path}", flush=True)
+            except (RuntimeError, OSError) as exc:
+                if args.nvfp4_cache_mode == "read":
+                    raise
+                print(f"[nvfp4-cache] stale/miss: {exc}", flush=True)
+        elif args.nvfp4_cache_mode == "read":
+            raise FileNotFoundError(f"NVFP4 input cache does not exist: {nvfp4_cache_path}")
+    if prepared is None:
+        if args.cache_mode in {"auto", "read"} and cache_path.is_file():
+            raw = load_pack(cache_path)
+            data_source = "cache"
+        elif args.cache_mode == "read":
+            raise FileNotFoundError(f"dense data cache does not exist: {cache_path}")
+        else:
+            raw = capture_pack(args.capture_device)
+            data_source = "model_forward"
+            if args.cache_mode in {"auto", "write"}:
+                save_pack(raw, cache_path)
+        prepared = prepare_pack(
+            raw,
+            linear_count=args.linear_cases,
+            attention_count=args.attention_cases,
+            full_cases=args.full_cases,
+            effect_panel=args.effect_panel,
+            compact_panel=args.compact_panel,
+            evaluation_scenario=args.evaluation_scenario,
+        )
+        prepared.metadata["nvfp4_cache_hit"] = False
+        prepared.metadata["nvfp4_cache_path"] = str(nvfp4_cache_path)
+        if args.nvfp4_cache_mode in {"auto", "write"}:
+            if not cache_path.is_file():
+                raise RuntimeError(
+                    "cannot persist an NVFP4 cache without a saved dense source cache; "
+                    "use --cache-mode auto/write or --nvfp4-cache-mode off"
+                )
+            save_nvfp4_cache(prepared, nvfp4_cache_path, cache_path, nvfp4_profile)
+            print(f"[nvfp4-cache] wrote {nvfp4_cache_path}", flush=True)
     if not args.compact_panel:
         prepared.metadata["calibration_call_graph"] = {
             "both": "all-layer-role-once; attention-layer-once",
@@ -3169,7 +3391,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             _write_json(args.output, output)
             if args.report:
                 _write_archive_report(args.report, data_source, capture_seconds, [], prepared)
-            print(f"[capture] wrote {cache_path}", flush=True)
+            print(f"[capture] prepared inputs from {data_source}", flush=True)
             return output
         anchor = OFFICIAL_TREND_ANCHORS.get(args.name)
         candidates = [(
@@ -3312,6 +3534,17 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--cache", type=Path, default=DEFAULT_CACHE)
     parser.add_argument("--cache-mode", choices=("auto", "read", "write", "off"), default="auto")
     parser.add_argument(
+        "--nvfp4-cache",
+        type=Path,
+        help="persistent prepared NVFP4 input cache; default path is derived from cache, scenario, and panel",
+    )
+    parser.add_argument(
+        "--nvfp4-cache-mode",
+        choices=("auto", "read", "write", "off"),
+        default="auto",
+        help="reuse/build exact-profile NVFP4 evaluator inputs (default: auto)",
+    )
+    parser.add_argument(
         "--linear-cases",
         type=int,
         default=LINEAR_CASE_COUNT,
@@ -3353,11 +3586,19 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 if __name__ == "__main__":
-    output = run(build_parser().parse_args())
+    parsed_args = build_parser().parse_args()
+    output = run(parsed_args)
     paired = output.get("paired_effect")
     success = (
-        bool(output.get("results"))
-        and all(item.get("status") == "ok" for item in output["results"])
-        and (paired is None or paired.get("enabled") is True)
+        (
+            parsed_args.solution is None
+            and not parsed_args.archive
+            and parsed_args.candidate_json is None
+        )
+        or (
+            bool(output.get("results"))
+            and all(item.get("status") == "ok" for item in output["results"])
+            and (paired is None or paired.get("enabled") is True)
+        )
     )
     raise SystemExit(0 if success else 1)

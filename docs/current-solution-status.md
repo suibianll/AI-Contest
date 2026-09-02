@@ -400,6 +400,22 @@ prepare `47.904s` + wall `322.895s`；scope
 `official_score_equivalent=false`、`comparable_for_proxy_ranking=false`；日常只做父子机制与
 跨 holdout 泛化诊断，候选提交前仍运行一次目标侧 default audit。
 
+## 2.15 NVFP4 输入持久化缓存（DONE）
+
+此前 compact panel 虽然只量化实际使用的 28 个 Weight state 和 56 个 Linear 动态输入，但每次
+父子评测仍会重新加载 `10,984,305,646` 字节 dense cache 并执行相同的 `nvfp4_encode`。现在
+`official_eval.py` 默认以 `--nvfp4-cache-mode auto` 按 scenario/panel/profile 保存已经量化的
+carrier/scale `PreparedPack`；缓存不包含候选 state 或输出，因此同一份输入可安全复用于不同
+算法。schema、协议、codec/mode、dense 源文件 identity、数据 SHA 和完整 profile 不一致时拒绝
+只读命中，auto 模式则重建。
+
+真实 compact-linear capture-only 复核：首次从 dense cache 构建为 `9.278575s`，生成
+`476,399,887` 字节 NVFP4 输入缓存；第二次强制 `--nvfp4-cache-mode read` 命中为
+`0.202392s`，准备阶段减少约 `97.8%`，且 `data_source=nvfp4_cache`。证据位于
+[`build JSON`](../artifacts/official_eval/nvfp4-cache-build-check.json) 和
+[`hit JSON`](../artifacts/official_eval/nvfp4-cache-hit-check.json)。原始 dense cache 仍作为首次构建
+和失效重建来源；`--cache-mode auto` 也已修正为存在时读取，而不是无条件重新模型前向。
+
 ## 3. 历史 v1 结果表（不可与 proxy-v2 混用）
 
 下表保留旧 `official-shape-v1` 的同机数字，仅用于审计此前的失真；当前 proxy-v2 分层 panel
