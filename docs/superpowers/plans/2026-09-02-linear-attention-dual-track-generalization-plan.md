@@ -63,6 +63,27 @@ Qwen、GPT-2、Pythia/OPT 都不是官方模型，任何本地结果只用于机
 
 所有跨模型结果标记 `cross-model-probe`，不与 Qwen proxy 或官方分数混排。
 
+### 2.4 复杂度准入（2026-09-02 源码审计补充）
+
+官方总时间是固定调用图的确定性函数（n 为序列长度，C 为通道数）：
+
+```text
+T_total = 168·t_w_calib + 24·t_a_calib + 250·t_linear_dyn + 200·t_attn_dyn
+```
+
+在线 API 的每个新机制在实现前先归入以下类别；类 2/类 3 直接禁止，不进入实现：
+
+1. **类 0**：校准一次性 O(poly(C))，在线 O(n·C) 向量化——安全；
+2. **类 1**：在线常数因子增大（常数次额外 O(n·C) pass）——可接受，须申报；
+3. **类 2**：在线随 n 超线性（n² 前向、per-token 循环）——禁止，v128–v131 超时根因；
+4. **类 3**：在线数据依赖搜索/迭代（无法静态定界）——禁止。
+
+当前 v159 在线路径的两个架构不变量必须保持：动态 Q/K/V 的 refine 上限是绝对常数
+（Q `16_384` / K `24_576` / V `24_576` 个 64-block），且候选评估为批量张量展开后一次
+argmin，无 Python 逐块循环。任何新机制破坏任一条即落入 v128–v131 风险类别。
+
+复杂度验收不靠计时：静态检查在线路径算子清单与上界；本地秒数只作同机 A/B，不预测官方。
+
 ## 3. 统一实验生命周期
 
 每个 Linear 或 Attention 机制按以下顺序执行：
@@ -123,6 +144,15 @@ identity 与标准臂一致性检查，不另写一套宽松比较逻辑。
 复杂度的实现不保留。当前里程碑是 Linear default API 相对 `269.435s` 明显下降，官方时间仍只
 认官方回传。
 
+2026-09-02 源码审计的热点嫌疑排序，计时阶段先区分三者占比再动手：
+
+1. joint 搜索的 smooth × permutation × block_size × seed 嵌套，每次调用
+   `_linear_output_candidate_metrics`；
+2. adaptive regularization 候选循环内重复 `torch.linalg.cholesky(H_act)`（O(C³)，C 至
+   4864）。若各候选只是在同一 H 上变 ridge，优先一次分解 + rank-1 update 或一次
+   eigendecomposition 复用——数学等价、不改候选与输出，为最高价值目标；
+3. `_transformed_covariance` 全协方差 O(m·C²)。
+
 ### L2. 有界复杂度消融
 
 L1 完成后，用未编号 workbench 一次只消融一项：
@@ -144,7 +174,10 @@ GPTQ 更新。硬约束：
 - Hessian/Gram 使用最终部署坐标；
 - Weight 与 Activation 联合验收，不能分别优化后假定可相加；
 - 对 shape class 使用统一规则，不针对 q/k/v/o/fc/proj 或 layer 写表；
-- 不增加第二轮完整 oracle、per-token candidate loop 或新的 block/seed/rank 网格。
+- 不增加第二轮完整 oracle、per-token candidate loop 或新的 block/seed/rank 网格；
+- 分解只允许在 ≤64 维 block 内进行（沿用 `_gptq_initialize64`/`_cholesky_inverse_factor`
+  模式），禁止整矩阵 Schur/求逆：168 次校准 × O(C³) ≈ 10¹³ FLOPs 不可行，block 内
+  168 × B × 64³ ≈ 3×10⁹ 可行。
 
 fc/proj/o 只作为误差定位重点，不作为硬编码路由依据。特别禁止为当前唯一 layer-22 `o` 负例
 增加专属规则；只有跨层、跨模型同类 shape 都显示同一问题时才修改统一机制。
@@ -170,10 +203,20 @@ KL。静态 Linear q/k/v role 与动态 Attention Q/K/V 必须分开命名和解
 v158 官方只比 v86 增加约 `0.3s`，因此任何新 Attention 路径必须替换现有计算，不能叠加历史
 v128/v129 的 Gram sweep、PAWV、多轮 dynamic refine 或 length-keyed state。
 
+共享预计算的具体位置（2026-09-02 审计）：候选循环中同一 center_mode 的全部 alpha 候选共享
+`_center_attention_k` 结果；`_attention_candidate_metrics` 每次调用重建的 block_signs 按
+(seed, size) 预计算一次复用。
+
 ### A2. Q/K 配对精度
 
 第一候选是在 v158 解析式 Matrix-Smooth 后加入固定两次的 K 公共中心更新。K 的 head 内公共平移
 保持 softmax logits 行偏置不变；state 只保存一个固定 center，dynamic 仍为一次 center + encode。
+
+数学前提已推导确认（2026-09-02）：per-head 公共平移 c_h 使
+`logits'_ij = logits_ij + q_i·c_hᵀ/√d`，对固定行 i 是不依赖 j 的标量，即行常数，softmax
+严格不变；GQA 下每个 Q head 各自成行常数，causal mask 为加性 -inf 不受影响，K 平移不触碰
+V。连续域严格无损，收益全部来自量化域。实现硬条件：center 必须是 per-head 常向量（非
+per-token），量化在平移后域进行，在线不引入迭代（类 0）。
 
 验收重点：Q/K 单侧可能变差，但 QK、logits、probability 和 KL 必须在短长序列与跨模型上同向；
 不得只看 Q/K operand MSE。若 length 10 改善而 512/1024 回归，直接拒绝，不建立长度路由。
@@ -186,6 +229,9 @@ v128/v129 的 Gram sweep、PAWV、多轮 dynamic refine 或 length-keyed state�
 - V：只允许一次固定 encode 改进，不使用 `PᵀP`、PAWV、token/length 路由或对侧在线 Gram。
 
 Q/K 与 V 必须分成两个实验。V 改进不能用 QK 正向掩盖，QK 改进也不能用 V/output 正向掩盖。
+
+"替换"必须是净替换：验收加静态断言——在线 per-tensor 算子数不高于现状；叠加式改法直接
+拒绝（类别判定见 2.4）。
 
 ## 6. 集成与提交门禁
 
@@ -205,7 +251,8 @@ proxy；若官方与本地再次反转，记录反转并收紧跨模型/数学�
 1. **评测基础设施**：为 `cross_model_eval.py` 增加场景隔离和父子配对；随后适配一个
    Pythia/OPT 真实前向模型。
 2. **Linear L1**：完成阶段热点分解，继续数学等价降复杂度。
-3. **Attention A0**：建立 Attention-only compact/default 与 GPT-2 parent 基线。
+3. **Attention A0**：建立 Attention-only compact/default 与 GPT-2 parent 基线；A0 只运行
+   现有评测器，与 Linear L1 并行推进，不串行等待。
 4. **Linear L2/L3 与 Attention A1/A2**：分别执行，禁止同时修改。
 5. **最终集成**：每条线独立通过跨模型门禁后只运行一次。
 
