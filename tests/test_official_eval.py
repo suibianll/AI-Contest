@@ -13,6 +13,8 @@ sys.path.insert(0, str(ROOT / "evaluator"))
 from official_eval import (  # noqa: E402
     ATTENTION_CASE_COUNT,
     CALIBRATION_LENGTHS,
+    COMPACT_CASE_DESIGN,
+    COMPACT_WINDOW_INDICES,
     DEFAULT_CASE_DESIGN,
     EFFECT_CASE_DESIGN,
     LINEAR_CASE_COUNT,
@@ -29,8 +31,10 @@ from official_eval import (  # noqa: E402
     _choose_cases,
     _depth_spread_indices,
     _linear_candidate_role_diagnostics,
+    _linear_cross_holdout_consistency,
     _linear_decomposition_summary,
     _linear_error_source_details,
+    _linear_generalization_summary,
     _linear_role_family,
     _paired_effect_diagnostics,
     _trend_diagnostics,
@@ -52,6 +56,8 @@ def test_protocol_uses_stratified_real_wa_panel_by_default() -> None:
     assert ATTENTION_CASE_COUNT is None
     assert DEFAULT_CASE_DESIGN == "stratified-real-wa-panel-v1"
     assert EFFECT_CASE_DESIGN == "paired-effect-panel-v1"
+    assert COMPACT_CASE_DESIGN == "compact-generalization-panel-v1"
+    assert COMPACT_WINDOW_INDICES == (1, 2, 6, 7)
     assert PANEL_WINDOW_INDICES == (0, 1, 2, 3, 4)
 
 
@@ -136,6 +142,83 @@ def test_effect_panel_spans_depth_and_keeps_every_linear_role() -> None:
     )
     assert len(attention) == 5
     assert [case.test_window for case in attention] == [0, 1, 2, 3, 4]
+
+
+def test_compact_panel_uses_cross_split_pairs_and_selected_depths() -> None:
+    windows = [
+        Window(
+            "validation" if i % 2 == 0 else "test",
+            f"doc-{i}",
+            0,
+            0,
+            0,
+            TEST_LENGTHS[i],
+            tuple(range(TEST_LENGTHS[i])),
+        )
+        for i in range(len(TEST_LENGTHS))
+    ]
+    pack = SimpleNamespace(
+        layers=24,
+        calibration_windows=[None] * len(CALIBRATION_LENGTHS),
+        test_windows=windows,
+        roles=("q", "k", "v", "o", "fc_gate", "fc_up", "proj"),
+    )
+    linear, attention = _choose_cases(pack, compact_panel=True)
+    expected_layers = _depth_spread_indices(24, 4)
+    assert expected_layers == (0, 8, 15, 23)
+    assert len(linear) == 4 * 7 * 2
+    assert len(attention) == 4
+    assert {case.layer for case in linear} == set(expected_layers)
+    assert {case.test_window for case in linear} == set(COMPACT_WINDOW_INDICES)
+    assert {tuple(case.calibration_indices) for case in linear} == {(1, 2)}
+    for layer in expected_layers:
+        for role in pack.roles:
+            cases = [case for case in linear if case.layer == layer and case.role == role]
+            assert len(cases) == 2
+            assert {windows[case.test_window].split for case in cases} == {"validation", "test"}
+            assert len({len(windows[case.test_window].input_ids) for case in cases}) == 1
+
+
+def test_linear_generalization_summary_reports_tail_and_sources() -> None:
+    items = [
+        {
+            "gain": gain,
+            "mse_standard": 1.0,
+            "mse_player": 1.0 - gain,
+            "gain_w_only": gain / 2,
+            "gain_a_only": gain / 3,
+            "gain_both": gain,
+            "interaction_gain": gain / 4,
+            "layer": index,
+            "role": "fc_gate",
+            "test_split": "validation" if index % 2 == 0 else "test",
+            "test_length": 128,
+            "test_window": index,
+        }
+        for index, gain in enumerate((-0.2, 0.0, 0.1, 0.3))
+    ]
+    summary = _linear_generalization_summary(items)
+    assert summary["gain"]["median"] == pytest.approx(0.05)
+    assert summary["gain"]["worst_quartile_mean"] == pytest.approx(-0.2)
+    assert summary["gain"]["negative_cases"] == 1
+    assert summary["gain"]["positive_cases"] == 2
+    assert summary["coverage"]["splits"] == ["test", "validation"]
+    assert summary["component_gain"]["activation_only"]["count"] == 4
+
+
+def test_cross_holdout_consistency_pairs_same_layer_role_and_length() -> None:
+    items = [
+        {"layer": 0, "role": "fc_gate", "test_length": 128, "test_split": "validation", "test_window": 6, "gain": 0.2},
+        {"layer": 0, "role": "fc_gate", "test_length": 128, "test_split": "test", "test_window": 1, "gain": 0.1},
+        {"layer": 8, "role": "proj", "test_length": 512, "test_split": "validation", "test_window": 2, "gain": 0.1},
+        {"layer": 8, "role": "proj", "test_length": 512, "test_split": "test", "test_window": 7, "gain": -0.2},
+    ]
+    summary = _linear_cross_holdout_consistency(items)
+    assert summary["enabled"] is True
+    assert summary["pair_count"] == 2
+    assert summary["same_sign_pairs"] == 1
+    assert summary["opposite_or_zero_mismatch_pairs"] == 1
+    assert summary["absolute_gap"]["maximum"] == pytest.approx(0.3)
 
 
 def test_trend_diagnostics_does_not_fit_or_rewrite_scores() -> None:
@@ -265,6 +348,10 @@ def test_paired_cli_options_are_explicit() -> None:
     assert str(args.baseline_json).endswith("baseline.json")
     assert args.focus_linear_roles == "fc_gate,fc_up"
     assert args.effect_panel is True
+
+
+def test_compact_panel_cli_is_explicit() -> None:
+    assert build_parser().parse_args(["--compact-panel"]).compact_panel is True
 
 
 def test_static_linear_role_family_groups_qkv_fc_o_and_proj() -> None:

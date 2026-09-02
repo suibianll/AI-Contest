@@ -8,6 +8,10 @@
 
 - [`2026-09-01-hif4-hierarchy-encoder-and-analytic-attention-plan.md`](2026-09-01-hif4-hierarchy-encoder-and-analytic-attention-plan.md)：当前唯一有效计划。只保留两个目标：Linear mean 向 `0.8` 提升，官方端到端时间严格小于 `300s`。本地 proxy 已确认不能用于官方排序。v155 `16581/208.5s`、v156 `16580/204.3s`、v157 `16729/218.96s` 均低于 v86。当前官方候选 v158 从 exact v86 只增加解析式 Attention Matrix-Smooth，官方结果待回传。后续评测强制场景隔离：优化 Linear 只测 Linear，优化 Attention 只测 Attention。
 
+快速机制迭代使用 `--compact-panel`：Linear 为 28 个 selected Weight state + 56 个跨
+validation/test holdout case，读取 median、尾部分布、负 case、cross-holdout 一致性和 W/A
+interaction；不再用 mean 单独晋级。完整 default panel 仅作单侧低频审计。
+
 旧的 17816-anchor、v2 active、grid、consolidated、accuracy-first、Linear、JDRQ 计划以及
 已完成的 L6 计划，均已移至 [`../archive/plans/`](../archive/plans/)。它们是历史决策记录，
 不再提供下一步指令；若历史文字与活跃计划冲突，以活跃计划、根 `solution.py`、

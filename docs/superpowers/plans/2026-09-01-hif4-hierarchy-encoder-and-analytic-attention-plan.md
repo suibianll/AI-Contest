@@ -136,6 +136,25 @@ control。判读顺序固定为：
 负责复核覆盖面，官方回传仍负责最终排序。已有相同 panel 的 JSON 用 `--candidate-json` 直接
 重放，不重新花 API 时间。
 
+### E0.5b. Compact generalization panel（DONE / 新默认快速入口）
+
+为避免 effect panel 虽减少动态 case 却仍支付 168 Weight + 24 Attention 全校准成本，新增
+`--compact-panel`。Linear 固定选择 layer `0/8/15/23`，保留全部七个 role，并为每个
+layer/role 使用一组 validation/test 同长度 holdout，共 56 个动态 case、28 个 Weight state；
+Linear calibration 改用不同训练文档的 128/512 两折。Attention compact 只建立四个纵深 state。
+prepare 阶段按 scenario/case 懒编码 NVFP4，禁用侧与未使用窗口不再重建。
+
+compact 不是官方调用图或排名分数。报告新增 gain median/q25/worst-quartile/min、正负 case、
+player/standard MSE ratio、逐 role/family/layer/shape/split/length 分布，以及同 layer/role/length
+的 validation/test 同号率与 gap；启用 decomposition 时同时给出 W-only/A-only/Both/interaction
+的完整分布。日常顺序改为 `smoke → compact paired → 单侧 default audit`；旧 effect panel 只在
+需要“完整校准图、缩减动态评分”的专项审计中使用。
+
+根 `solution.py` 的最终 Linear-only 实测为：cache load+按需 prepare `8.20s`、28 次 Weight
+calibration + 56 次 dynamic 的 API `40.41s`、candidate wall `45.44s`，总本地周转约 `53.64s`；
+旧 v86 default 记录为 capture/prepare `47.90s` + candidate wall `322.89s`。两者 scope 不同，
+这些数字只证明评测周转成本下降，不能比较算法分数或推导官方时间。
+
 ## E0.6. 跨模型结构探针（已完成，持续作为诊断）
 
 **问题：** `赛事说明书.txt` 只公开六个 API 和数据组织，没有公开模型名称、层数、hidden size、

@@ -84,9 +84,9 @@
 | 模型 | Qwen2.5-0.5B，24 个 Transformer block（本地 proxy 结构假设；说明书未公开指定模型） |
 | 数据 | 固定 revision 的 Salesforce/WikiText-2-raw-v1；train 做 calibration，validation/test 交替 holdout |
 | Attention calibration | **`[10, 128, 512, 1024, 1024]`**，每个 Q/K/V 样本保持自己的序列长度 |
-| Linear calibration | 每个 layer/role 只校准一次，使用前两折；动态 case 共享该状态 |
+| Linear calibration | default audit 每个 layer/role 使用前两折；compact 使用 128/512 两折并只建立选中 state |
 | Test windows | 12 个互不重复的 validation/test 文档窗口，长度按 `[10,128,512,1024,1024,10,128,512,1024,1024,128,512]` 轮换 |
-| 用例 | 默认 168 Linear + 120 Attention 分层 panel；迭代用 `--effect-panel` 的 56 Linear（8 个纵深层×7 role）+ 5 Attention 哨兵；`--full-cases` 才展开 2016 + 288 stress；case limit 仅用于前缀 smoke |
+| 用例 | 默认 168 Linear + 120 Attention 仅作低频 audit；日常 `--compact-panel` 为 28 个 Weight state + 56 个跨 validation/test Linear case（4 个纵深层×7 role×2 holdout）；`--effect-panel` 保留完整校准图专项诊断；`--full-cases` 才展开 stress |
 | API | 六个赛事接口，顺序和参数形状与 `赛事说明书.txt` 一致 |
 | 参数校验 | 独立校验 E6M2、`scale_lv2/lv3`、sign、mant、state 深度/节点数和 CPU tensor 规则 |
 | 标准基线 | `evaluator/reference_hif4.py` 的固定标准 codec；候选代码不能改变分母 |
@@ -119,7 +119,9 @@ layer/length 聚合。逐 case 结果在 JSON 的 `case_scores`，聚合结果�
 `--no-decomposition`。
 
 机制迭代不再用两个总均值手工相减。先把父版本运行一次并保存 JSON，候选用同一 cache、
-同一 `--effect-panel` 和 `--baseline-json` 逐 case 配对。JSON 的 `paired_effect` 会分别给出：
+同一 `--compact-panel` 和 `--baseline-json` 逐 case 配对。compact 额外输出 median、q25、
+worst-quartile、负 case、MSE ratio 与 validation/test cross-holdout 同号率/gap；JSON 的
+`paired_effect` 会分别给出：
 目标 role/family、未改动 control、每个 role/layer/shape/split/length 的 signed delta，改善/回归/
 不变 case 数，W/A 或 Q/K/V 控制臂变化，最好/最坏 case，以及六 API 同机时间差。配对会校验
 case identity、标准 codec MSE 和 reference energy；任一不一致就拒绝比较，不把不同 panel

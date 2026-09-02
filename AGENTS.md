@@ -65,6 +65,11 @@
   layer `0/3/7/10/13/16/20/23` 并保留每层全部 7 role，共 56 cases；Attention 使用五个覆盖
   深度与长度的哨兵。`--linear-cases/--attention-cases` 是顺序前缀 smoke，尤其 14/56 不是
   纵深采样，禁止用于判断算法是否有效。
+- 日常机制筛选优先使用 `--compact-panel`：Linear 选择 layer `0/8/15/23`，每层保留全部
+  7 role，并为每个 layer/role 配一组 validation/test 同长度 holdout，共 56 cases；只建立
+  这 28 个 Weight state。Linear calibration 使用两个不同文档的 128/512 fold。该 scope 只做
+  跨 holdout 泛化与父子机制诊断，必须读取 median、q25、worst-quartile、负 case、cross-holdout
+  同号率以及 W/A/interaction 分布；不得用其 mean 排名或冒充完整官方调用图。
 - 单侧机制实验必须场景隔离：Linear 使用 `--linear-only`，只建立完整 168 Weight state 并
   跳过全部 Attention API；Attention 使用 `--attention-only`，只建立完整 24 Attention state
   并跳过全部 Linear API。effect panel 只缩减该侧动态评分与 evaluator-only 分解；本侧校准
@@ -120,15 +125,14 @@ JSON/report > 未验证推测。发生冲突时保留原始证据并更新状态
 
 - 已有结果足以回答的问题不重复跑全量评测；只有代码发生实质变化、需要复核异常或用户明确
   要求时才重新评测。小改动可以先做针对性 smoke/单层测试，不强制跑完整测试套件。
-- **固定评测流水线（2026-09-02 起）**：同一 parent、cache、设备、scenario 和 evaluator 只建立一次
-  immutable parent JSON；后续候选一律复用该 JSON，不重复运行 parent。每个新机制最多按
-  `smoke → effect-panel → default-panel` 顺序推进：`smoke` 只检查目标侧 API、合法状态和目标
-  layer/role，不能作为效果证据；`effect-panel` 使用 `--effect-panel --baseline-json` 加对应的
-  `--linear-only`/`--attention-only`，保留目标侧完整共享 calibration；Linear 动态评分为
-  56 cases，Attention 为 5 cases，
-  用于一次父子逐 case 归因；只有 focus 方向、control 无泄漏、最坏 case 可解释且没有需要
-  立即拒绝的回归时，才运行一次 `default-panel`（168 + 120）复核。default 未通过即停止并
-  记录 `REJECTED`，不因计时波动或小数变化重跑。
+- **固定评测流水线（2026-09-02 起，compact 修订）**：同一 parent、cache、设备、scenario 和
+  evaluator 只建立一次 immutable parent JSON；后续候选一律复用该 JSON，不重复运行 parent。
+  每个新机制按 `smoke → compact-panel paired → 单侧 default audit` 推进：`smoke` 只检查目标侧
+  API/合法性；compact 使用 `--compact-panel` 加对应的 `--linear-only`/`--attention-only`，只建立
+  被选 state，并用跨 split 配对、尾部分布和 W/A 或 Q/K/V 来源判断机制。只有 focus/control、
+  cross-holdout、最坏四分位与复杂度均可解释时，才运行一次目标侧 default audit。旧
+  `--effect-panel` 保留作“完整校准图、缩减动态 case”的专项审计，不再作为每个候选的必经步骤；
+  default 未通过即停止并记录 `REJECTED`，不因计时波动或小数变化重跑。
 - 已生成的同 panel JSON 必须使用 `--candidate-json` 做零 API 的配对重放；不得为了重新输出
   W/A、Q/K/V 分解而再次调用候选 API。只有以下情况允许重跑同一阶段：源码/评测器/cache/
   device 实质变化、进程或环境明确失败、或用户明确要求复核；重跑原因必须写入日志。

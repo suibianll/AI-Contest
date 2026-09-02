@@ -373,6 +373,33 @@ state 与 exact v86 字段级一致；Attention calibration 与 Q/K/V dynamic �
 `solution.py` 不切换。`v138→v140 +123` 是组合上下文交互而非可移植 ROAB 主效应，ROAB
 路线关闭，不再调 pair size、threshold 或 role gate。
 
+## 2.14 Compact generalization panel（DONE）
+
+为同时解决“本地不能泛化、effect panel 仍然很慢、Linear 只有 aggregate mean”三个问题，
+`evaluator/official_eval.py` 新增 `--compact-panel`：
+
+- Linear 只建立 layer `0/8/15/23` × 7 role 的 28 个 Weight state；每个 state 使用
+  validation/test 两个同长度独立 holdout，共 56 个动态 case；calibration 使用训练集不同文档的
+  128/512 两折；
+- Attention compact 只建立四个纵深 state；单侧运行在 prepare 前即裁掉禁用侧；NVFP4 pair
+  只为选中 state/case 编码，不再每次重建完整 dense cache；
+- JSON `analysis.linear_generalization` 新增 median、q25/q75、worst-quartile mean、min/max、
+  正负 case、player/standard MSE ratio，按 role/family/layer/shape/split/length 汇总；同时对同
+  layer/role/length 的 validation/test 做 sign consistency、gain gap 和 paired minimum-gain；
+- decomposition 开启时，上述分析同时保存 W-only/A-only/Both/interaction 的分布，而非只看
+  Linear mean。
+
+根 `solution.py` 的一次 Linear-only 验证产物为
+[`JSON`](../artifacts/official_eval/root-compact-generalization-linear-v2.json) 与
+[`report`](../logs/official_eval/root-compact-generalization-linear-v2.md)：28 次 Weight calibration、
+56 次 Activation dynamic，API `40.408s`、candidate wall `45.438s`、cache load+prepare
+`8.203s`，总周转约 `53.64s`。28/28 个 validation/test pair gain 同号，gap median
+`0.009432`、max `0.063375`；这些是基线的本地稳健性描述，不是官方预测。旧 v86 default 为
+prepare `47.904s` + wall `322.895s`；scope
+不同，不能比较分数，但可确认评测复杂度和周转时间显著下降。compact 明确标记
+`official_score_equivalent=false`、`comparable_for_proxy_ranking=false`；日常只做父子机制与
+跨 holdout 泛化诊断，候选提交前仍运行一次目标侧 default audit。
+
 ## 3. 历史 v1 结果表（不可与 proxy-v2 混用）
 
 下表保留旧 `official-shape-v1` 的同机数字，仅用于审计此前的失真；当前 proxy-v2 分层 panel

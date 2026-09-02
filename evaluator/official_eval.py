@@ -12,6 +12,9 @@ formula and API contract while fixing the old proxy's two largest biases:
 * mechanism experiments reuse one immutable parent JSON and compare exact
   layer/role/window identities, so aggregate movement is separated into
   focus, unchanged-control, W/A or Q/K/V, worst-case, and timing deltas.
+* the compact generalization panel creates only selected calibration states,
+  pairs validation/test holdouts, and reports Linear tail/consistency metrics;
+  the original all-state panel remains available as a low-frequency audit.
 
 The hidden official tensors and Kunpeng hardware are not available locally.
 All reports therefore label scores as ``proxy`` and local seconds as same-host
@@ -79,6 +82,12 @@ PANEL_WINDOW_INDICES = (0, 1, 2, 3, 4)
 DEFAULT_CASE_DESIGN = "stratified-real-wa-panel-v1"
 EFFECT_CASE_DESIGN = "paired-effect-panel-v1"
 EFFECT_LINEAR_LAYERS = 8
+COMPACT_CASE_DESIGN = "compact-generalization-panel-v1"
+COMPACT_LINEAR_LAYERS = 4
+# Two validation/test pairs at moderate lengths.  They provide genuinely
+# different documents/splits without paying the quadratic Attention cost of
+# the 1024-token stress windows during ordinary mechanism iteration.
+COMPACT_WINDOW_INDICES = (1, 2, 6, 7)
 FULL_CASE_DESIGN = "full-cartesian-real-wa-v3"
 OFFICIAL_RUNTIME_LIMIT = 300.0
 NVFP4_MODE = "amax6"
@@ -731,6 +740,7 @@ def _choose_cases(
     attention_count: int | None = ATTENTION_CASE_COUNT,
     full_cases: bool = False,
     effect_panel: bool = False,
+    compact_panel: bool = False,
 ) -> tuple[list[LinearCase], list[AttentionCase]]:
     """Select a deterministic real-W/A panel; optional limits are smoke-only.
 
@@ -740,6 +750,8 @@ def _choose_cases(
     expands to every layer/role/window tuple for stress testing.
     ``effect_panel`` selects eight depth-spread layers with every Linear role
     plus five depth/length-spread Attention sentinels for paired iteration.
+    ``compact_panel`` uses four depth-spread layers and paired validation/test
+    holdouts while creating only the states reachable from those cases.
     All modes use captured tensors; ``linear_count`` and ``attention_count``
     are only development prefix limits and are never a ranking panel.
     """
@@ -749,10 +761,10 @@ def _choose_cases(
     if not linear_calibration_indices:
         raise RuntimeError("case pool has no Linear calibration windows")
     roles = tuple(getattr(pack, "roles", ROLES))
-    if full_cases and effect_panel:
-        raise ValueError("full_cases and effect_panel are mutually exclusive")
-    if effect_panel and (linear_count is not None or attention_count is not None):
-        raise ValueError("effect_panel cannot be combined with case prefix limits")
+    if sum(bool(value) for value in (full_cases, effect_panel, compact_panel)) > 1:
+        raise ValueError("full_cases, effect_panel, and compact_panel are mutually exclusive")
+    if (effect_panel or compact_panel) and (linear_count is not None or attention_count is not None):
+        raise ValueError("effect_panel/compact_panel cannot be combined with case prefix limits")
     if full_cases:
         linear_pool = [
             (layer, role, test_window)
@@ -771,7 +783,44 @@ def _choose_cases(
         )
         if not panel_windows:
             raise RuntimeError("case pool has no windows in the default panel")
-        if effect_panel:
+        if compact_panel:
+            compact_windows = tuple(
+                index for index in COMPACT_WINDOW_INDICES if index < len(pack.test_windows)
+            )
+            if len(compact_windows) < 2:
+                raise RuntimeError("compact panel requires at least two configured holdout windows")
+            linear_layers = _depth_spread_indices(
+                pack.layers, min(COMPACT_LINEAR_LAYERS, pack.layers)
+            )
+            # Every selected layer/role is tested on two independent holdouts.
+            # With the canonical four windows, the paired offsets preserve the
+            # same length while switching validation/test split.
+            pair_offset = max(1, len(compact_windows) // 2)
+            linear_pool = []
+            for layer_index, layer in enumerate(linear_layers):
+                for role_index, role in enumerate(roles):
+                    start = (layer_index + role_index) % len(compact_windows)
+                    selected = (
+                        compact_windows[start],
+                        compact_windows[(start + pair_offset) % len(compact_windows)],
+                    )
+                    for test_window in dict.fromkeys(selected):
+                        linear_pool.append((layer, role, test_window))
+            attention_layers = _depth_spread_indices(
+                pack.layers, min(len(compact_windows), pack.layers)
+            )
+            attention_pool = [
+                (layer, test_window)
+                for layer, test_window in zip(attention_layers, compact_windows)
+            ]
+            # Use two non-trivial, different-document calibration folds.  The
+            # selected-state graph is much smaller, so this improves coverage
+            # without increasing total calibration token volume.
+            linear_calibration_indices = (
+                (1, 2) if len(pack.calibration_windows) >= 3
+                else tuple(range(min(2, len(pack.calibration_windows))))
+            )
+        elif effect_panel:
             # Iteration panel: every selected depth covers all static Linear
             # roles, while five Attention sentinels span both depth and the
             # published sequence lengths.  Calibration still follows the
@@ -851,29 +900,80 @@ def prepare_pack(
     attention_count: int | None = ATTENTION_CASE_COUNT,
     full_cases: bool = False,
     effect_panel: bool = False,
+    compact_panel: bool = False,
+    evaluation_scenario: str = "both",
 ) -> PreparedPack:
-    weights = [{role: _pair(value) for role, value in per_layer.items()} for per_layer in raw.weights]
     # Keep every calibration window available for Attention.  Linear follows
     # the public call graph: one calibration state per layer/role, using the
     # first two explicitly designated Linear folds.  Test cases may be fewer
     # than the official panel, but they must not create a fresh state per test
     # tuple (that would give output-aware candidates an unfair per-case oracle).
-    linear_calibration_indices = tuple(range(min(2, len(raw.calibration_windows))))
+    if evaluation_scenario not in {"both", "linear", "attention"}:
+        raise ValueError(f"unsupported evaluation scenario: {evaluation_scenario}")
+    linear_calibration_indices = (
+        (1, 2) if compact_panel and len(raw.calibration_windows) >= 3
+        else tuple(range(min(2, len(raw.calibration_windows))))
+    )
     if not linear_calibration_indices:
         raise RuntimeError("data pack has no Linear calibration windows")
     linear_calibration_windows = [raw.calibration_windows[index] for index in linear_calibration_indices]
     roles = tuple(raw.roles)
-    cal_act = {role: [[_pair(raw.calibration_activations[role][sample][layer]) for layer in range(raw.layers)] for sample in range(len(raw.calibration_windows))] for role in roles}
-    test_act = {role: [[_pair(raw.test_activations[role][sample][layer]) for layer in range(raw.layers)] for sample in range(len(raw.test_windows))] for role in roles}
-    cal_qkv = [[{"q": _pair(q), "k": _pair(k), "v": _pair(v)} for q, k, v in per_layer] for per_layer in raw.calibration_qkv]
-    test_qkv = [[(_pair(q), _pair(k), _pair(v)) for q, k, v in per_layer] for per_layer in raw.test_qkv]
     linear_cases, attention_cases = _choose_cases(
         raw,
         linear_count,
         attention_count,
         full_cases=full_cases,
         effect_panel=effect_panel,
+        compact_panel=compact_panel,
     )
+    run_linear = evaluation_scenario in {"both", "linear"}
+    run_attention = evaluation_scenario in {"both", "attention"}
+    if compact_panel:
+        linear_state_keys = sorted({(case.layer, case.role) for case in linear_cases}) if run_linear else []
+        attention_state_layers = sorted({case.layer for case in attention_cases}) if run_attention else []
+    else:
+        linear_state_keys = (
+            [(layer, role) for layer in range(raw.layers) for role in roles]
+            if run_linear else []
+        )
+        attention_state_layers = list(range(raw.layers)) if run_attention else []
+
+    # Encode only tensors reachable from the selected scenario/cases.  The old
+    # implementation rebuilt every Linear and Attention NVFP4 pair on every
+    # invocation, including unused windows and the disabled scenario.
+    weights: list[dict[str, tuple[torch.Tensor, torch.Tensor]]] = [dict() for _ in range(raw.layers)]
+    cal_act: dict[str, list[list[Any]]] = {
+        role: [[None for _ in range(raw.layers)] for _ in range(len(raw.calibration_windows))]
+        for role in roles
+    }
+    test_act: dict[str, list[list[Any]]] = {
+        role: [[None for _ in range(raw.layers)] for _ in range(len(raw.test_windows))]
+        for role in roles
+    }
+    for layer, role in linear_state_keys:
+        weights[layer][role] = _pair(raw.weights[layer][role])
+        for sample in linear_calibration_indices:
+            cal_act[role][sample][layer] = _pair(raw.calibration_activations[role][sample][layer])
+    for case in (linear_cases if run_linear else ()):
+        if test_act[case.role][case.test_window][case.layer] is None:
+            test_act[case.role][case.test_window][case.layer] = _pair(
+                raw.test_activations[case.role][case.test_window][case.layer]
+            )
+
+    cal_qkv: list[list[Any]] = [
+        [None for _ in range(raw.layers)] for _ in range(len(raw.calibration_windows))
+    ]
+    test_qkv: list[list[Any]] = [
+        [None for _ in range(raw.layers)] for _ in range(len(raw.test_windows))
+    ]
+    for layer in attention_state_layers:
+        for sample in range(len(raw.calibration_windows)):
+            q, k, v = raw.calibration_qkv[sample][layer]
+            cal_qkv[sample][layer] = {"q": _pair(q), "k": _pair(k), "v": _pair(v)}
+    for case in (attention_cases if run_attention else ()):
+        if test_qkv[case.test_window][case.layer] is None:
+            q, k, v = raw.test_qkv[case.test_window][case.layer]
+            test_qkv[case.test_window][case.layer] = (_pair(q), _pair(k), _pair(v))
     metadata = dict(raw.metadata)
     metadata.update({
         "linear_case_count": len(linear_cases),
@@ -885,6 +985,8 @@ def prepare_pack(
             if full_cases and linear_count is None and attention_count is None
             else EFFECT_CASE_DESIGN
             if effect_panel and linear_count is None and attention_count is None
+            else COMPACT_CASE_DESIGN
+            if compact_panel and linear_count is None and attention_count is None
             else DEFAULT_CASE_DESIGN
             if not full_cases and linear_count is None and attention_count is None
             else "explicit-smoke-prefix-v4"
@@ -892,10 +994,17 @@ def prepare_pack(
         "panel_window_indices": list(PANEL_WINDOW_INDICES),
         "full_cases": full_cases,
         "effect_panel": effect_panel,
+        "compact_panel": compact_panel,
         "linear_case_limit": linear_count,
         "attention_case_limit": attention_count,
         "linear_calibration_indices": list(linear_calibration_indices),
-        "calibration_call_graph": "all-layer-role-once; attention-layer-once",
+        "calibration_call_graph": (
+            "selected-layer-role-once; selected-attention-layer-once"
+            if compact_panel else "all-layer-role-once; attention-layer-once"
+        ),
+        "evaluation_scenario": evaluation_scenario,
+        "linear_state_keys": [[layer, role] for layer, role in linear_state_keys],
+        "attention_state_layers": attention_state_layers,
         "linear_roles": list(roles),
     })
     return PreparedPack(
@@ -914,7 +1023,7 @@ def _evaluation_scope(pack: PreparedPack) -> dict[str, Any]:
         value["scenario"] = scenario
         if scenario != "both":
             value["kind"] = f"{scenario}-only-{value['kind']}"
-            value["intent"] = f"{scenario}-only-mechanism-diagnosis"
+            value["intent"] = f"{scenario}-only-{value['intent']}"
             value["comparable_for_proxy_ranking"] = False
         return value
 
@@ -935,6 +1044,16 @@ def _evaluation_scope(pack: PreparedPack) -> dict[str, Any]:
         return scoped({
             "kind": "effect-panel",
             "intent": "paired-mechanism-diagnosis",
+            "comparable_for_proxy_ranking": False,
+            "paired_only": True,
+            "stress_only": False,
+            "smoke_only": False,
+            "official_score_equivalent": False,
+        })
+    if design == COMPACT_CASE_DESIGN:
+        return scoped({
+            "kind": "compact-generalization-panel",
+            "intent": "low-cost-cross-holdout-mechanism-diagnosis",
             "comparable_for_proxy_ranking": False,
             "paired_only": True,
             "stress_only": False,
@@ -1174,6 +1293,140 @@ def _attention_error_source_details(
 def _mean_metric(items: Sequence[Mapping[str, Any]], key: str) -> float:
     values = [float(item[key]) for item in items if key in item]
     return sum(values) / max(1, len(values))
+
+
+def _quantile(values: Sequence[float], probability: float) -> float:
+    ordered = sorted(float(value) for value in values)
+    if not ordered:
+        return 0.0
+    if len(ordered) == 1:
+        return ordered[0]
+    position = min(1.0, max(0.0, probability)) * (len(ordered) - 1)
+    left = int(math.floor(position))
+    right = int(math.ceil(position))
+    if left == right:
+        return ordered[left]
+    weight = position - left
+    return ordered[left] * (1.0 - weight) + ordered[right] * weight
+
+
+def _distribution_summary(values: Sequence[float]) -> dict[str, Any]:
+    ordered = sorted(float(value) for value in values)
+    if not ordered:
+        return {
+            "count": 0,
+            "mean": 0.0,
+            "median": 0.0,
+            "q25": 0.0,
+            "q75": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "worst_quartile_mean": 0.0,
+            "positive_cases": 0,
+            "negative_cases": 0,
+            "zero_cases": 0,
+        }
+    worst_count = max(1, math.ceil(len(ordered) / 4))
+    return {
+        "count": len(ordered),
+        "mean": sum(ordered) / len(ordered),
+        "median": statistics.median(ordered),
+        "q25": _quantile(ordered, 0.25),
+        "q75": _quantile(ordered, 0.75),
+        "minimum": ordered[0],
+        "maximum": ordered[-1],
+        "worst_quartile_mean": sum(ordered[:worst_count]) / worst_count,
+        "positive_cases": sum(value > 0.0 for value in ordered),
+        "negative_cases": sum(value < 0.0 for value in ordered),
+        "zero_cases": sum(value == 0.0 for value in ordered),
+    }
+
+
+def _linear_generalization_summary(items: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    gains = [float(item["gain"]) for item in items if "gain" in item]
+    mse_ratios = [
+        float(item["mse_player"]) / float(item["mse_standard"])
+        for item in items
+        if float(item.get("mse_standard", 0.0)) > 0.0 and "mse_player" in item
+    ]
+    result: dict[str, Any] = {
+        "case_count": len(items),
+        "gain": _distribution_summary(gains),
+        "player_to_standard_mse_ratio": _distribution_summary(mse_ratios),
+        "coverage": {
+            "layers": sorted({int(item["layer"]) for item in items if "layer" in item}),
+            "roles": sorted({str(item["role"]) for item in items if "role" in item}),
+            "splits": sorted({str(item["test_split"]) for item in items if "test_split" in item}),
+            "test_lengths": sorted({int(item["test_length"]) for item in items if "test_length" in item}),
+            "test_windows": sorted({int(item["test_window"]) for item in items if "test_window" in item}),
+        },
+    }
+    component_keys = {
+        "weight_only": "gain_w_only",
+        "activation_only": "gain_a_only",
+        "both": "gain_both",
+        "interaction": "interaction_gain",
+    }
+    component = {
+        name: _distribution_summary([
+            float(item[key]) for item in items if key in item
+        ])
+        for name, key in component_keys.items()
+    }
+    if any(value["count"] for value in component.values()):
+        result["component_gain"] = component
+    return result
+
+
+def _linear_cross_holdout_consistency(items: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    grouped: dict[tuple[int, str, int], list[Mapping[str, Any]]] = {}
+    for item in items:
+        if not {"layer", "role", "test_length", "gain"}.issubset(item):
+            continue
+        key = (int(item["layer"]), str(item["role"]), int(item["test_length"]))
+        grouped.setdefault(key, []).append(item)
+    pairs: list[dict[str, Any]] = []
+    for (layer, role, length), group in sorted(grouped.items()):
+        by_split = {str(item.get("test_split", "")): item for item in group}
+        if "validation" not in by_split or "test" not in by_split:
+            continue
+        validation = by_split["validation"]
+        test = by_split["test"]
+        validation_gain = float(validation["gain"])
+        test_gain = float(test["gain"])
+        same_sign = (
+            (validation_gain > 0.0 and test_gain > 0.0)
+            or (validation_gain < 0.0 and test_gain < 0.0)
+            or (validation_gain == 0.0 and test_gain == 0.0)
+        )
+        pairs.append({
+            "layer": layer,
+            "role": role,
+            "role_family": _linear_role_family(role),
+            "test_length": length,
+            "validation_window": int(validation.get("test_window", -1)),
+            "test_window": int(test.get("test_window", -1)),
+            "validation_gain": validation_gain,
+            "test_gain": test_gain,
+            "minimum_gain": min(validation_gain, test_gain),
+            "absolute_gap": abs(validation_gain - test_gain),
+            "same_sign": same_sign,
+        })
+    if not pairs:
+        return {
+            "enabled": False,
+            "reason": "no layer/role/length has both validation and test holdouts",
+        }
+    gaps = [float(item["absolute_gap"]) for item in pairs]
+    return {
+        "enabled": True,
+        "pair_count": len(pairs),
+        "same_sign_pairs": sum(bool(item["same_sign"]) for item in pairs),
+        "opposite_or_zero_mismatch_pairs": sum(not bool(item["same_sign"]) for item in pairs),
+        "absolute_gap": _distribution_summary(gaps),
+        "minimum_gain": _distribution_summary([float(item["minimum_gain"]) for item in pairs]),
+        "worst_gap_pairs": sorted(pairs, key=lambda item: float(item["absolute_gap"]), reverse=True)[:16],
+    }
 
 
 def _linear_decomposition_summary(items: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
@@ -1811,34 +2064,45 @@ def evaluate_solution(
     )
     if run_linear and not linear_calibration_indices:
         raise RuntimeError("pack has no Linear calibration indices")
+    linear_state_keys = [
+        (int(item[0]), str(item[1]))
+        for item in pack.metadata.get(
+            "linear_state_keys",
+            [[layer, role] for layer in range(pack.layers) for role in pack.roles],
+        )
+    ] if run_linear else []
     if run_linear:
-        print(f"[{label}] Linear calibration: {pack.layers * len(pack.roles)} layer/role states", flush=True)
-    for layer in (range(pack.layers) if run_linear else ()):
-        for role in pack.roles:
-            weight_pair = _move_pair(pack.weights[layer][role], device)
-            calibration = [
-                _move_pair(
-                    pack.linear_calibration_activations[role][sample][layer],
-                    device,
-                )
-                for sample in linear_calibration_indices
-            ]
-            started = time.perf_counter()
-            result = solution.hif4_calibration_and_quantize_weight(weight_pair[0], weight_pair[1], calibration)
-            if device.type == "cuda":
-                torch.cuda.synchronize(device)
-            api_seconds["hif4_calibration_and_quantize_weight"] += time.perf_counter() - started
-            api_calls["hif4_calibration_and_quantize_weight"] += 1
-            if not isinstance(result, Mapping) or set(result) != {"weight_params", "activation_state"}:
-                raise ValueError("weight calibration must return exactly weight_params and activation_state")
-            validate_state(result["activation_state"])
-            ref_weight_shape = dequantize_nvfp4(*pack.weights[layer][role]).shape
-            validate_hif4_params(result["weight_params"], ref_weight_shape)
-            weight_states[(layer, role)] = (result["activation_state"], _cpu_params(result["weight_params"]))
+        print(f"[{label}] Linear calibration: {len(linear_state_keys)} layer/role states", flush=True)
+    for layer, role in linear_state_keys:
+        weight_pair = _move_pair(pack.weights[layer][role], device)
+        calibration = [
+            _move_pair(
+                pack.linear_calibration_activations[role][sample][layer],
+                device,
+            )
+            for sample in linear_calibration_indices
+        ]
+        started = time.perf_counter()
+        result = solution.hif4_calibration_and_quantize_weight(weight_pair[0], weight_pair[1], calibration)
+        if device.type == "cuda":
+            torch.cuda.synchronize(device)
+        api_seconds["hif4_calibration_and_quantize_weight"] += time.perf_counter() - started
+        api_calls["hif4_calibration_and_quantize_weight"] += 1
+        if not isinstance(result, Mapping) or set(result) != {"weight_params", "activation_state"}:
+            raise ValueError("weight calibration must return exactly weight_params and activation_state")
+        validate_state(result["activation_state"])
+        ref_weight_shape = dequantize_nvfp4(*pack.weights[layer][role]).shape
+        validate_hif4_params(result["weight_params"], ref_weight_shape)
+        weight_states[(layer, role)] = (result["activation_state"], _cpu_params(result["weight_params"]))
     attention_calibration_indices = tuple(range(len(pack.calibration_windows)))
+    attention_state_layers = [
+        int(layer) for layer in pack.metadata.get(
+            "attention_state_layers", list(range(pack.layers))
+        )
+    ] if run_attention else []
     if run_attention:
-        print(f"[{label}] Attention calibration: {pack.layers} layer states", flush=True)
-    for layer in (range(pack.layers) if run_attention else ()):
+        print(f"[{label}] Attention calibration: {len(attention_state_layers)} layer states", flush=True)
+    for layer in attention_state_layers:
         calibration = [
             _move_qkv(pack.calibration_qkv[sample][layer], device)
             for sample in attention_calibration_indices
@@ -2101,6 +2365,17 @@ def evaluate_solution(
             "reason": "scenario-disabled" if not run_attention else "decomposition-disabled",
         }
     scope = _evaluation_scope(pack)
+    linear_generalization = {
+        "enabled": bool(run_linear and linear_details),
+        "overall": _linear_generalization_summary(linear_details),
+        "cross_holdout_consistency": _linear_cross_holdout_consistency(linear_details),
+        "by_role": _group_summary(linear_details, "role", _linear_generalization_summary),
+        "by_role_family": _group_summary(linear_details, "role_family", _linear_generalization_summary),
+        "by_layer": _group_summary(linear_details, "layer", _linear_generalization_summary),
+        "by_shape": _group_summary(linear_details, "shape_bucket", _linear_generalization_summary),
+        "by_split": _group_summary(linear_details, "test_split", _linear_generalization_summary),
+        "by_test_length": _group_summary(linear_details, "test_length", _linear_generalization_summary),
+    }
     return {
         "candidate": path.stem,
         "evaluation_scope": scope,
@@ -2144,11 +2419,14 @@ def evaluate_solution(
             "linear": linear_decomposition,
             "attention": attention_decomposition,
         },
+        "analysis": {
+            "linear_generalization": linear_generalization,
+        },
         "diagnostic_config": {
             "error_source_decomposition": decomposition,
             "evaluation_scenario": scenario,
             "score_unchanged": True,
-            "candidate_api_calls_unchanged": scenario == "both",
+            "candidate_api_calls_match_full_graph": not bool(pack.metadata.get("compact_panel")),
         },
         "protocol": PROTOCOL,
     }
@@ -2346,6 +2624,7 @@ def _write_report(
     score = result["score"]
     timing = result["timing"]
     decomposition = result.get("decomposition", {})
+    analysis = result.get("analysis", {})
     linear_mean_display = (
         f"{score['linear_mean']:.9f}" if score["linear_cases"] else "NA (not run)"
     )
@@ -2361,7 +2640,7 @@ def _write_report(
         "",
         f"- evaluation scope: `{result.get('evaluation_scope', {}).get('kind', 'unknown')}` / `{result.get('evaluation_scope', {}).get('intent', 'do-not-compare')}`",
         f"- proxy ranking comparable: `{result.get('evaluation_scope', {}).get('comparable_for_proxy_ranking', False)}`; official-score equivalent: `False`",
-        f"- calibration lengths: `{list(CALIBRATION_LENGTHS)}`",
+        f"- Linear calibration indices: `{pack.metadata.get('linear_calibration_indices', [])}`; all captured lengths: `{list(CALIBRATION_LENGTHS)}`",
         f"- cases: `{score['linear_cases']} Linear + {score['attention_cases']} Attention` (stratified real-W/A panel by default)",
         f"- calibration calls: `{timing['api_calls'].get('hif4_calibration_and_quantize_weight', 0)} weight + {timing['api_calls'].get('hif4_calibration_attention', 0)} attention` (shared state)",
         f"- input codec: `{pack.metadata.get('input_codec', NVFP4_INPUT_CODEC)}` / mode `{NVFP4_MODE}`",
@@ -2379,6 +2658,52 @@ def _write_report(
         f"| Candidate wall | {timing['wall_seconds']:.3f}s |",
         f"| Candidate API total | {timing['api_total_seconds']:.3f}s |",
     ]
+    linear_generalization = analysis.get("linear_generalization", {})
+    if linear_generalization.get("enabled"):
+        lines.extend([
+            "",
+            "## Linear 泛化与尾部分析",
+            "",
+            "均值只作位置统计；优先检查 median、worst-quartile、负 case、跨 split/长度和 W/A/interaction 分布。",
+            "",
+            "| 分组 | cases | mean | median | q25 | worst-quartile mean | min | 正/负/零 | median player/std MSE |",
+            "|---|---:|---:|---:|---:|---:|---:|---:|---:|",
+        ])
+        generalization_rows: list[tuple[str, Mapping[str, Any]]] = [
+            ("overall", linear_generalization.get("overall", {})),
+        ]
+        generalization_rows.extend(
+            (f"family:{name}", value)
+            for name, value in linear_generalization.get("by_role_family", {}).items()
+        )
+        generalization_rows.extend(
+            (f"role:{name}", value)
+            for name, value in linear_generalization.get("by_role", {}).items()
+        )
+        for name, value in generalization_rows:
+            gain = value.get("gain", {})
+            ratio = value.get("player_to_standard_mse_ratio", {})
+            lines.append(
+                f"| {name} | {value.get('case_count', 0)} | {gain.get('mean', 0.0):.6f} | "
+                f"{gain.get('median', 0.0):.6f} | {gain.get('q25', 0.0):.6f} | "
+                f"{gain.get('worst_quartile_mean', 0.0):.6f} | {gain.get('minimum', 0.0):.6f} | "
+                f"{gain.get('positive_cases', 0)}/{gain.get('negative_cases', 0)}/{gain.get('zero_cases', 0)} | "
+                f"{ratio.get('median', 0.0):.6f} |"
+            )
+        lines.extend([
+            "",
+            "跨 layer/shape/split/test_length 的同结构统计，以及 W-only/A-only/Both/interaction 的完整分布位于 JSON `analysis.linear_generalization`。",
+        ])
+        consistency = linear_generalization.get("cross_holdout_consistency", {})
+        if consistency.get("enabled"):
+            gap = consistency.get("absolute_gap", {})
+            minimum = consistency.get("minimum_gain", {})
+            lines.extend([
+                "",
+                f"Cross-holdout：`{consistency.get('same_sign_pairs', 0)}/{consistency.get('pair_count', 0)}` 对 validation/test 同号；"
+                f"gain gap median `{gap.get('median', 0.0):.6f}`、max `{gap.get('maximum', 0.0):.6f}`；"
+                f"成对 minimum-gain median `{minimum.get('median', 0.0):.6f}`。最不稳定 pair 位于 JSON `worst_gap_pairs`。",
+            ])
     if paired_effect is not None:
         lines.extend(["", "## 父版本配对效果"])
         if paired_effect.get("enabled"):
@@ -2602,9 +2927,10 @@ def _archive_output(
             "linear_cases": 0 if scenario == "attention" else len(prepared.linear_cases),
             "attention_cases": 0 if scenario == "linear" else len(prepared.attention_cases),
             "evaluation_scenario": scenario,
-            "case_design_scope": "stratified all-layer/role real-W/A panel by default; --effect-panel selects depth-spread paired iteration cases; --full-cases enables Cartesian stress; optional CLI limits are prefix smoke-only",
+            "case_design_scope": "--compact-panel is the low-cost cross-holdout research screen with selected states; default is the all-layer/role audit panel; --effect-panel preserves the full calibration graph; --full-cases enables Cartesian stress; optional CLI limits are prefix smoke-only",
             "case_design": prepared.metadata.get("case_design", DEFAULT_CASE_DESIGN),
             "panel_window_indices": prepared.metadata.get("panel_window_indices", list(PANEL_WINDOW_INDICES)),
+            "compact_window_indices": list(COMPACT_WINDOW_INDICES),
             "calibration_call_graph": prepared.metadata.get(
                 "calibration_call_graph", "all-layer-role-once; attention-layer-once"
             ),
@@ -2615,7 +2941,7 @@ def _archive_output(
             "error_source_decomposition": "candidate API outputs are reused in evaluator-only Linear W/A and Attention Q/K/V control arms; it does not alter proxy means or API call counts",
             "trend_validation": "same-cohort pairwise ordering against user-confirmed anchors; diagnostic-only",
             "paired_effect": "reuse an immutable parent JSON and compare exact layer/role/window output errors; report focus/control signs and W/A or Q/K/V source deltas",
-            "scope_contract": "only default-panel runs are comparable for local proxy ranking; effect-panel is paired-only; full-cartesian is stress-only; explicit limits are smoke-only; none are official-score equivalents",
+            "scope_contract": "only default-panel runs are comparable for local proxy ranking; compact/effect panels are mechanism diagnosis only; full-cartesian is stress-only; explicit limits are smoke-only; none are official-score equivalents",
         },
         "data_metadata": prepared.metadata,
         "trend_diagnostics": _trend_diagnostics(results),
@@ -2820,13 +3146,15 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         attention_count=args.attention_cases,
         full_cases=args.full_cases,
         effect_panel=args.effect_panel,
+        compact_panel=args.compact_panel,
+        evaluation_scenario=args.evaluation_scenario,
     )
-    prepared.metadata["evaluation_scenario"] = args.evaluation_scenario
-    prepared.metadata["calibration_call_graph"] = {
-        "both": "all-layer-role-once; attention-layer-once",
-        "linear": "linear-all-layer-role-once; attention-skipped",
-        "attention": "linear-skipped; attention-layer-once",
-    }[args.evaluation_scenario]
+    if not args.compact_panel:
+        prepared.metadata["calibration_call_graph"] = {
+            "both": "all-layer-role-once; attention-layer-once",
+            "linear": "linear-all-layer-role-once; attention-skipped",
+            "attention": "linear-skipped; attention-layer-once",
+        }[args.evaluation_scenario]
     capture_seconds = time.perf_counter() - capture_started
     if args.archive:
         candidates = [(name, item) for name, item in ARCHIVE_MANIFEST.items()]
@@ -3002,6 +3330,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--effect-panel",
         action="store_true",
         help="iteration panel: eight depth-spread layers x all Linear roles plus five depth/length Attention sentinels",
+    )
+    parser.add_argument(
+        "--compact-panel",
+        action="store_true",
+        help="low-cost generalization panel: four depth-spread layers, two cross-split holdouts per Linear role, and only selected calibration states",
     )
     parser.add_argument("--capture-device", default="cuda" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--algorithm-device", default="cuda" if torch.cuda.is_available() else "cpu")
