@@ -2,7 +2,7 @@
 
 > 状态：**ACTIVE / SUPERSEDES 17816-ANCHOR PLAN**
 >
-> 更新：2026-09-01
+> 更新：2026-09-02
 >
 > 目标一：Linear mean 向 `0.8` 做可达性验证并持续提升
 >
@@ -230,6 +230,80 @@ v154 已实现这一步，但 Qwen role 结果与 v153 完全相同（fc family 
 表示族的问题在 code assignment 本身，而不只是 stored-scale 投影；L1 暂停扩大，转入 L3
 的 bounded teacher/oracle 诊断，先测哪些 block 的离散 code 有稳定可压缩 margin，再决定是否
 值得重新编译一个动态 encoder。
+
+## 当前下一步执行卡：L3-D0 fc 合法码字余量诊断
+
+这是下一项工作，不先创建 v155，也不修改根 `solution.py`。需要先回答的唯一问题是：在保留
+pre-A3 父版本的 BOAT、CAT、ROAB、最终 `Q(W)` 和合法 HiF4 格式时，fc Activation 的离散
+码字是否仍存在跨 role、跨深度、跨 calibration fold 的可恢复输出误差；如果不存在，就没有
+理由继续编译新 encoder。
+
+### D0. 父版本与冻结边界
+
+- 父源码固定为 `workbench/pre-a3-v147-parent.py`，执行前校验 SHA256 必须为
+  `800CA10EC3414E4FE886B93CA62BD4A350D26BBA015287DF7E8DF2DD871AC23D`；它只是 local
+  attribution parent，不冒充 v147 官方提交 SHA。
+- focus 只有 `fc_gate/fc_up`（原生 `rows > channels`）；静态 q/k/v/o/proj、Weight 编码、
+  等价变换和 v86 Attention 全部冻结。teacher 只存在于独立 workbench，不进入六个 API。
+- 先用新 `--effect-panel` 为父版本生成一次 immutable baseline：
+  `artifacts/official_eval/l3-fc-parent-effect.json`。后续候选都通过 `--baseline-json` 复用，
+  不再运行 14/56 前缀 panel 判断效果。
+
+### D1. Teacher 的唯一目标与合法邻域
+
+对纵深 8 层的 fc_gate/fc_up、两个 calibration fold，复用父版本最终变换后的 `A_t`、原始
+`W_t`、部署 `Q(W)` 和 incumbent `Q(A)`。teacher 最小化真实部署输出目标：
+
+\[
+L(Q_A)=\|A_tW_t^T-Q_AQ(W)^T\|_F^2,
+\]
+
+并用父版本已有的 block `H=Q(W)^TQ(W)` 与 cross term 计算完全等价的 64-channel quadratic，
+不以 Activation operand MSE 代替输出误差。每个 incumbent 始终保留，只测试由 HiF4 格式自然
+定义的局部合法邻域：
+
+1. 固定 scale/lv2/lv3，对一个坐标枚举合法 signed mantissa `[-7,7]/4`；
+2. 单独翻转一个 lv3 `1↔2`，随后对其 4 个 mantissa 精确重解；
+3. 单独翻转一个 lv2 `1↔2`，随后对其 8 个 mantissa 精确重解；
+4. E6M2 scale 只取相邻合法 code `−1/0/+1`，随后精确重解 lv2/lv3/mantissa。
+
+这四类先各自相对同一 incumbent 做消融，再做固定顺序的至多两轮 greedy joint pass；每个 move
+只接受严格负 quadratic delta。它是 bounded local teacher，不扩大 offset、alpha、seed、rank
+或 block-size 网格，也不声称穷举整个 HiF4 组合空间。
+
+### D2. 必须输出的细分证据
+
+未编号 workbench 产物固定为 `workbench/l3_fc_legal_oracle.py`、
+`artifacts/official_eval/l3-fc-legal-oracle.json` 和
+`logs/execution/2026-09-02-l3-fc-legal-oracle.md`。每个 layer/role/fold 必须记录：
+
+- parent loss、每类 teacher loss、joint teacher loss 和 recoverable margin；
+- 改善 block/row 数、总数、margin 的 median/分位数和收益集中度；
+- 被接受的 edit 类型、E6M2 code delta、lv2/lv3 翻转数、mantissa 改动数；
+- fc_gate 与 fc_up 分开结果，以及 layer `0/3/7/10/13/16/20/23` 的纵深分布；
+- fold0/fold1 的收益符号、edit 类型分布和廉价局部特征分布是否一致；
+- teacher 运行时间和峰值显存单独记录为研究成本，绝不填入候选六 API 时间。
+
+这里区分两个量：同 fold teacher margin 是表示空间上界；两个 fold 都出现同方向 margin，且
+收益不是只集中在单层/单 role，才说明存在可编译空间。若只有 same-fold oracle 获益而另一 fold
+方向消失，它是数据拟合，不进入 student。
+
+### D3. 分支决策与有条件的 v155
+
+1. 若 mantissa/lv3/lv2/scale/joint teacher 在两个 fold 和 fc_gate/fc_up 上都没有稳定正向余量，
+   关闭当前 fc 表示族，转 L2 解析层级矩阵平衡；不再试 `s_q/s_d`、CAT、ROAB 或 offset。
+2. 若 teacher 有余量但 edit 类型/局部特征跨 fold 不稳定，只记录 teacher-student gap，仍转 L2；
+   不引入神经网络、复杂 router 或动态候选循环。
+3. 若余量和决策结构跨 fold 可复现，再进入 L3-D1 编译：只用 64/8/4 group 的
+   `amax` 比、`rms/amax`、subgroup 排序和 state 中静态 Weight metric，构造一个固定向量化
+   threshold/LUT student。teacher 本身不得进入 state 或动态 API。
+4. 只有 student 完成合法 round-trip 后才分配 v155。v155 从 pre-A3 parent 出发，只改变 fc
+   Activation encoder；先运行 `--effect-panel --baseline-json ... --focus-linear-roles fc`。
+   报告必须同时给出 teacher margin、student 收回量、focus/control、A-only/Both、最坏层和
+   Activation dynamic 时间。配对证据可解释后才运行默认 168+120 panel。
+
+L3-D0 的结束条件不是产生新版本，而是得到“无表示余量 / 有余量但不可压缩 / 有可压缩余量”
+三者之一的证据结论。这样下一步由误差结构决定，而不是继续在旧 encoder 上猜参数。
 
 ## 0. 本计划替代什么
 
@@ -565,17 +639,18 @@ V 不部署 PAWV；V 的提升只来自 A3 encoder。若 Fisher calibration 开�
 
 ## 6. 执行顺序
 
-1. **L0 证据修复与 role attribution**：恢复可信 pre-A3 对照，复核外部 hif4 指向的 fc/proj
-   回归，并明确当前 A3 的 role 收益和真实代价。
-2. **L1 Role-gated Activation-only Decoupled Encoder**：先处理 proj，再处理保留 BOAT 的 fc；
-   q/k/v/o 冻结作为回归对照。
-3. **L2 Hierarchical Matrix Balance**：用解析变换替换候选式 D/P/H，不叠加部署算子。
-4. **L3 Oracle compilation**：把输出最优合法决策蒸馏成动态一次编码。
-5. **L4 Weight Decoupled Encoder**：复用已验证表示机制，禁止重复完整 output pass。
-6. **0.8 可达性复判**：比较 player/student/teacher 曲线，决定继续表示、编译还是停止该框架。
-7. **官方单变量提交**：固定 v86 Attention，只提交一个 Linear 数学机制；以官方分数和 `<300s`
+1. **L0 证据修复与 role attribution（DONE）**：已恢复 pre-A3 对照并定位 fc/proj 风险。
+2. **L1 fc 直接 decoupled encoder（REJECTED）**：v152 mixed，v153/v154 回归；停止继续调参。
+3. **L3-D0 fc 合法码字余量诊断（NEXT）**：先测 teacher margin 和跨 fold 可压缩性，不编号。
+4. **L3-D1 student（CONDITIONAL）**：仅在 D0 证明有可压缩余量后编译固定复杂度规则；此时才
+   允许创建 v155，并使用 parent JSON 的 effect-panel 配对。
+5. **L2 Hierarchical Matrix Balance（FALLBACK）**：D0 无余量或不可压缩时，转解析变换替换
+   候选式 D/P/H，不叠加部署算子。
+6. **L4 Weight Decoupled Encoder**：仅在表示/坐标机制已有正向证据后复用，禁止重复完整 output pass。
+7. **0.8 可达性复判**：比较 player/student/teacher 曲线，决定继续表示、编译还是停止该框架。
+8. **官方单变量提交**：固定 v86 Attention，只提交一个 Linear 数学机制；以官方分数和 `<300s`
    共同判定。
-8. **Attention A0–A4**：Linear 稳定后独立推进，每版只替换一个机制并遵守复杂度契约。
+9. **Attention A0–A4**：Linear 稳定后独立推进，每版只替换一个机制并遵守复杂度契约。
 
 ## 7. 最小产物与失败记录
 

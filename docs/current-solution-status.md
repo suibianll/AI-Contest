@@ -246,6 +246,21 @@ Attention 均不变。证据见
 control、误差源和最坏层都可解释，才运行默认 168+120 panel。完整 panel 仍用于复核，不再是
 每次小迭代的第一步。
 
+## 2.8 当前下一步：L3-D0 fc 合法码字余量诊断
+
+下一步不创建 v155，也不修改 root。以 SHA
+`800CA10EC3414E4FE886B93CA62BD4A350D26BBA015287DF7E8DF2DD871AC23D` 的 pre-A3 local
+parent 为固定对照，先生成一次 56+5 effect baseline；随后在独立 workbench 中只针对
+fc_gate/fc_up，用最终部署 `Q(W)` 的 output quadratic 分别测 signed mantissa、lv3、lv2 和
+相邻 E6M2 scale 合法邻域的 teacher margin。q/k/v/o/proj、Weight、变换和 v86 Attention
+全部冻结，teacher 不进入六个 API。
+
+诊断按 layer `0/3/7/10/13/16/20/23`、role 和两个 calibration fold 输出 parent/teacher
+loss、recoverable margin、改善 block 数、edit 类型和收益集中度。若两个 fold 与 fc_gate/up
+均无稳定余量，关闭当前 fc 表示族并转 L2；若有余量但跨 fold 不可压缩，同样转 L2；只有余量
+和局部决策结构都可复现，才编译固定向量化 threshold/LUT student 并分配 v155。完整执行卡见
+[`活动计划`](superpowers/plans/2026-09-01-hif4-hierarchy-encoder-and-analytic-attention-plan.md)。
+
 ## 3. 历史 v1 结果表（不可与 proxy-v2 混用）
 
 下表保留旧 `official-shape-v1` 的同机数字，仅用于审计此前的失真；当前 proxy-v2 分层 panel

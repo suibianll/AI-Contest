@@ -52,8 +52,11 @@
   oracle 不满足时间目标，下一步必须做结构化复用而非继续调参。
 - v141–v145 的 rank-4 选列 BDLR-JAQ（含锚点冻结、仅动态激活和两档阻尼）均已完整复测，
   Linear `0.281760/0.282559/0.361154/0.506418/0.506256`，均低于 v140；该方向已关闭，
-  源码目录已删除，仅保留评测 JSON 和执行日志。下一步不再调 BDLR 参数；按唯一活动计划先
-  恢复可信 pre-A3 对照，再实现 Activation-only Decoupled HiF4 Encoder 和解析式层级矩阵平衡。
+  源码目录已删除，仅保留评测 JSON 和执行日志。后续 v151–v154 已完成 pre-A3 role 控制与
+  fc decoupled encoder 验证：v152 为 mixed，v153/v154 明确回归，均已拒绝。当前下一步不是
+  再调 `s_q/s_d`、CAT、ROAB 或 offset，而是 L3-D0 fc 合法码字 teacher：按纵深层、role 和
+  calibration fold 测量 mantissa/lv3/lv2/E6M2 scale 的 recoverable margin；只有余量可压缩
+  才实现 student/v155，否则转 L2 解析式层级矩阵平衡。
 - 2026-09-01 归档复测已完成 18 个有官方记录的候选：本地最高返回结果为 v121
   (`0.472197763 / 0.833617251`)，但 API `3404.369 s`、官方 timeout；v002 的本机
   CUDA/CPU device-mix 错误被原样记录。完整明细只看
