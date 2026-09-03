@@ -239,7 +239,7 @@ _WEIGHT_FULL64_CHUNK_ROWS = 1024
 _WEIGHT_FULL64_MAX_RATIO = 0.25
 # L3 wiring gate (2026-09-03): _refine_weight_blocks64 existed with no caller.
 # A/B only; default OFF keeps the archived v160/v159 weight behaviour intact.
-_WEIGHT_FULL64_APPLY = False
+_WEIGHT_FULL64_APPLY = True
 # C35 (2026-08-28): per-width full-64 coverage.  Narrow layers (q/k/v/o,
 # <=1024 channels) have few 64-blocks and rows, so their refinement is cheap;
 # wide FFN projectors (fc/proj, 2048/3072) dominate the calibration time.
