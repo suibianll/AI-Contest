@@ -82,6 +82,23 @@
   （b）deadzone/残差恢复（需在线存储，C4 论证排除）、（c）logits/post-QK
   修正（A1/C2 覆盖）。无新可注册机制；C1/C2/C3 排序第三次验证维持。
 
+## 0d. 搜索关键证据（第五轮 2026-09-04，logits 校准/温度匹配域）
+
+- **QuantVLA（arXiv 2602.20309, 2026-02）**：attention temperature matching——
+  per-head logits scaling folded into dequant scales。**与 A1（v168，per-KV-head
+  logits gain folded into multiplier，官方 +60）数学同构**——证实 A1 方向是
+  领域公认的低成本 PTQ 校正，无新独立机制。
+- **SageBwd / QK-norm（arXiv 2603.02170, 2026-03）**：R1.0、K-smoothing 必需、
+  Q-smoothing 收益有限——与 C1（K 侧 outlier 等化）方向一致；为预训练侧结论，
+  无六 API 新注入自由度。
+- **Rank-Aware Spectral Bounds（arXiv 2602.18851, 2026-02）**：logits 谱界预测性
+  校准——训练/校准 scale 选择域，A3/v170 已证标准 scale 输出最优，不注册。
+- **温度标定（temperature scaling）文献**：经典单标量 T 标定——乘性 logits 域，
+  已被 A1（per-KV-head、官方正）覆盖的更细结构与 log-shrink 版本胜出；无新方向。
+- **第五轮结论**：logits/温度校准域的可迁移增量已全部落在 A1（官方正）与其细粒度
+  变体（C2 已本地 REJECTED）；无新可注册机制。C1/C2/C3 裁决与 SOTA 收敛性第五次
+  验证维持；官方回传后仅剩 C1 裁决与组合条件。
+
 ## 0. 搜索关键证据（第一轮 2026-09-04）
 
 - **KVQuant（NeurIPS 2024）**：per-channel Key 量化 + Pre-RoPE + per-vector
