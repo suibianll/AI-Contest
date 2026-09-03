@@ -4,10 +4,32 @@
 >
 > 背景：低复杂度扩展计划已全部裁决/实现（A1-A4 + L1-L4 + 组合 v175），官方批测队列
 > v171/v174/v175/v176。用户指示继续算法规划与优化。本清单基于外部 SOTA 搜索
-> （KVQuant / KIVI / QuaRot / TurboQuant / LonghornSilicon GQA 实测），按计划 §6.1
-> 的 1-5 项门禁筛选。
+> （KVQuant / KIVI / QuaRot / TurboQuant / LonghornSilicon GQA 实测 / KVLinC /
+> VecInfer / ResQ / OTT），按计划 §6.1 的 1-5 项门禁筛选。
+>
+> 提交配额账本（用户约束：自目标设置起提交通过 ≤15 个）：v171/v174/v175 为目标设置前
+> 已排期队列（历史排期，不占本次配额）；**v176 为本目标设置后第 1 个**（1/15）。
+> 后续新候选每增加一个从配额扣除 1，官方负向不退还。
 
-## 0. 搜索关键证据
+## 0. 搜索关键证据（第二轮 2026-09-04）
+
+- **KVLinC（arXiv 2510.05373, 2025-10）**：Hadamard rotation（V 侧）+ 针对量化
+  K 引入的 logits 误差做**低秩仿射 linear correction adapters**——logits 误差的
+  结构化修正方向与 A1/C2 相同（对 QKᵀ 域的误差建模），但借旋转；旋转侧与 C3 高风险
+  同一证据冲突（Longhorn Qwen GQA delocalization）。
+- **VecInfer（arXiv 2510.06175, 2025-10）**：smooth + Hadamard 抑制 Key outlier 后
+  K-means VQ。smooth 部分是 C1 的幅值插值/等化变体；VQ 码本编码需在线 lookup——
+  按 v161/v128 家族证据动态 per-call 小张量算子官方超预算，**排除**。
+- **ResQ（ICML 2025）**：PCA 低秩子空间保留 8-bit、其余 4-bit 混合精度——需要
+  在线 per-channel 高精度旁路通道表，HiF4 五字段无此存储，同 C4 论证**排除**。
+- **OTT（arXiv 2505.10938）**：outlier token 在线追踪并排除——动态逐 token 决策
+  分支，官方超时族证据一致，**排除**。
+- **第二轮结论**：新 SOTA 的可迁移增量集中在「QKᵀ logits 误差的结构化修正」
+  （= A1/C2 数学目标）与「K outlier 处理」（= C1 已覆盖）。无新的零动态、HiF4
+  字段兼容、非已闭合家族的独立机制方向；后续以 C2（A1 细粒度仿射/低秩化）为唯一
+  已注册新候选，C3 为条件对照。
+
+## 0. 搜索关键证据（第一轮 2026-09-04）
 
 - **KVQuant（NeurIPS 2024）**：per-channel Key 量化 + Pre-RoPE + per-vector
   dense-sparse outlier 隔离——K 激活存在少数固定高幅通道，统一量化的 scale 被其拖累；
