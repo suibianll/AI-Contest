@@ -38,6 +38,7 @@
 | 机制 reachability                | outlier 注入压力测试：outlier 通道得到 `k_eq < 1` 压缩，`q_eq = 1/k_eq` 放大；state 含 `k_outlier_eq`/`q_outlier_eq` |
 | attention compact 4（配对 v168）   | **mean Δgain +0.002444**、median +0.003312、3+/1−/0=；QK-only +0.0029、QK interaction +0.358           |
 | attention default 120（配对 v168） | **mean Δgain −0.004450**、median −0.001634、56+/64−/0=（win 0.4667）；QK interaction +50.77 强正          |
+| gpt2 attn compact 4（配对 v160 父） | **mean Δgain −0.002753**、median −0.015484、1+/3−/0=；QK-only +0.002406 为正                 |
 | control                        | V 侧 `v_only_gain = 0.0` 未改动；Linear 未执行                                                             |
 | API 时间                         | attention default：校准 60.15s（v168 基线 68.40s）、动态 Q/K/V 3.36s；零新增在线算子，无时间风险                           |
 
@@ -52,9 +53,10 @@ L3/L11/L14/L20 小幅正向，L4 consistent\_regression（−0.0039）；len10 �
 - 轻微本地负向不取消首次官方测量：当前计划规则只以接口/合法 state/有限输出/
   机制 reachability/control 为提交硬门禁，全部通过；算法方向由相对 v168 的官方
   分数裁决。
-
+- 跨模型（GPT-2 compact）：Attention mean Δgain −0.002753（1+/3−），标记
+  `model-specific-risk`——Qwen 与 GPT-2 在该机制上存在轻微方向差异；按计划
+  第 7 步只作封存 holdout，不据此调参数/路由，仍由 v176 首次官方结果裁决。
 - 若官方负：C1 家族关闭，切换 C2（A1 细粒度化），不调 rho/beta/通道数重扫。
-
 - 若官方正：C1 晋级；组合条件维持 `S_pred = 4590 + S_c1 − 1001`，仍按计划
   §3.3 登记。
 
@@ -64,5 +66,7 @@ L3/L11/L14/L20 小幅正向，L4 consistent\_regression（−0.0039）；len10 �
 .venv\Scripts\python.exe -u evaluator\official_eval.py --solution solutions\20260903_v176_k-outlier-eq-attn_scoreNA_timeNA\solution.py --attention-only --compact-panel --cache-mode read --nvfp4-cache-mode auto --capture-device cuda --algorithm-device cuda --baseline-json artifacts\official_eval\v168-compact-attn.json --output artifacts\official_eval\v176-compact-attn.json --report logs\official_eval\v176-compact-attn.md
 
 .venv\Scripts\python.exe -u evaluator\official_eval.py --solution solutions\20260903_v176_k-outlier-eq-attn_scoreNA_timeNA\solution.py --attention-only --cache-mode read --nvfp4-cache-mode auto --capture-device cuda --algorithm-device cuda --baseline-json artifacts\official_eval\v168-attn-default.json
+
+.venv\Scripts\python.exe -u evaluator\cross_model_eval.py --model gpt2 --solution solutions\20260903_v176_k-outlier-eq-attn_scoreNA_timeNA\solution.py --name v176 --attention-only --compact-panel --cache-mode read --capture-device cuda --algorithm-device cuda --baseline-json artifacts\official_eval\s1-parent-v160-gpt2-attn-compact.json --output artifacts\official_eval\v176-gpt2-attn-compact.json --report logs\official_eval\v176-gpt2-attn-compact.md
 ```
 
