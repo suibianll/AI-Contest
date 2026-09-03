@@ -1,0 +1,155 @@
+{
+  "experiment": "score21765-c01-crossfold-minimax",
+  "scope": "linear-compact-selected-calibration-states-audit",
+  "parent": "solutions\\20260903_v160_v159-linear-l1batch_v158-attn-a2_scoreNA_timeNA\\solution.py",
+  "parent_sha256": "33B1D061CE6BFCD92659C597BE4830BB9B910E646FF518433DA67B925AE8680D",
+  "candidate": "workbench\\score21765_linear_crossfold_minimax.py",
+  "candidate_sha256": "05AC8FDCE6082916082A3C38B7051D4BCB92A3FE92A30A6C2B088D58F9CE0D3A",
+  "fold_definition": "sample each window to <=128 rows, then merge row_index mod 5 across both windows",
+  "calibration_indices": [
+    1,
+    2
+  ],
+  "device": "cuda",
+  "records": [
+    {
+      "layer": 0,
+      "role": "fc_gate",
+      "weight_shape": [
+        4864,
+        896
+      ],
+      "parent_seconds": 2.160121599910781,
+      "candidate_seconds": 3.3785280000884086,
+      "calibration_ratio": 1.5640452834821668,
+      "activation_state_equal": true,
+      "hierarchy_equal": true,
+      "actual_changed_codes": 547226,
+      "diagnostic_changed_codes_equal": true,
+      "parent": {
+        "folds": [
+          {
+            "fold": 0,
+            "rows": 52,
+            "a_only_ratio": 0.003578928066417575,
+            "w_only_ratio": 0.001791228773072362,
+            "both_ratio": 0.0053526172414422035,
+            "interaction_ratio": -1.7539598047733307e-05
+          },
+          {
+            "fold": 1,
+            "rows": 52,
+            "a_only_ratio": 0.004073354881256819,
+            "w_only_ratio": 0.0019664689898490906,
+            "both_ratio": 0.006021464243531227,
+            "interaction_ratio": -1.8359627574682236e-05
+          },
+          {
+            "fold": 2,
+            "rows": 52,
+            "a_only_ratio": 0.003656730754300952,
+            "w_only_ratio": 0.0017918340163305402,
+            "both_ratio": 0.005414444487541914,
+            "interaction_ratio": -3.412028308957815e-05
+          },
+          {
+            "fold": 3,
+            "rows": 50,
+            "a_only_ratio": 0.0036286981776356697,
+            "w_only_ratio": 0.001817310694605112,
+            "both_ratio": 0.0054252841509878635,
+            "interaction_ratio": -2.0724721252918243e-05
+          },
+          {
+            "fold": 4,
+            "rows": 50,
+            "a_only_ratio": 0.003951358608901501,
+            "w_only_ratio": 0.0019518317421898246,
+            "both_ratio": 0.005878850817680359,
+            "interaction_ratio": -2.4339533410966396e-05
+          }
+        ],
+        "both_mean": 0.005618532188236713,
+        "both_median": 0.0054252841509878635,
+        "both_worst": 0.006021464243531227,
+        "both_variance": 7.596547648468579e-08
+      },
+      "candidate": {
+        "folds": [
+          {
+            "fold": 0,
+            "rows": 52,
+            "a_only_ratio": 0.003578928066417575,
+            "w_only_ratio": 0.002392153488472104,
+            "both_ratio": 0.003009779378771782,
+            "interaction_ratio": -0.002961302176117897
+          },
+          {
+            "fold": 1,
+            "rows": 52,
+            "a_only_ratio": 0.004073354881256819,
+            "w_only_ratio": 0.0025434144772589207,
+            "both_ratio": 0.003013090929016471,
+            "interaction_ratio": -0.0036036784294992685
+          },
+          {
+            "fold": 2,
+            "rows": 52,
+            "a_only_ratio": 0.003656730754300952,
+            "w_only_ratio": 0.0022454727441072464,
+            "both_ratio": 0.0030132203828543425,
+            "interaction_ratio": -0.002888983115553856
+          },
+          {
+            "fold": 3,
+            "rows": 50,
+            "a_only_ratio": 0.0036286981776356697,
+            "w_only_ratio": 0.0025019452441483736,
+            "both_ratio": 0.0030069316271692514,
+            "interaction_ratio": -0.003123711794614792
+          },
+          {
+            "fold": 4,
+            "rows": 50,
+            "a_only_ratio": 0.003951358608901501,
+            "w_only_ratio": 0.002474691951647401,
+            "both_ratio": 0.0030096902046352625,
+            "interaction_ratio": -0.003416360355913639
+          }
+        ],
+        "both_mean": 0.0030105425044894218,
+        "both_median": 0.003009779378771782,
+        "both_worst": 0.0030132203828543425,
+        "both_variance": 5.602542206203931e-12
+      },
+      "diagnostic": {
+        "fold_count": 5,
+        "fold_rows": [
+          52,
+          52,
+          52,
+          50,
+          50
+        ],
+        "attempted_blocks": 68096,
+        "accepted_blocks": 65460,
+        "changed_codes": 547226,
+        "rejected_changed_blocks": 0,
+        "parent_fold_mean_ratio": [
+          0.0053526172414422035,
+          0.006021464243531227,
+          0.005414444487541914,
+          0.0054252841509878635,
+          0.005878850817680359
+        ],
+        "candidate_fold_mean_ratio": [
+          0.003009779378771782,
+          0.003013090929016471,
+          0.0030132203828543425,
+          0.003006931394338608,
+          0.0030096902046352625
+        ]
+      }
+    }
+  ]
+}

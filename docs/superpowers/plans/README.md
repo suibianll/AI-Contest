@@ -9,12 +9,12 @@
 
 **当前活动计划（2026-09-03）**：
 [`2026-09-03-score21765-dual-track-robust-quantization-plan.md`](2026-09-03-score21765-dual-track-robust-quantization-plan.md)
-——以当前官方榜首 `21765/290s` 为目标，从 v160 `17532/232s` 分两侧串行推进。Attention
-跨折收缩 Softmax-Fisher 已在 compact 以 mean `-0.007813`、median `-0.004871`、
-`1+/3-` 判定 **REJECTED**；不调整 clip/rho/blend，不进入 default/跨模型/官方，依赖它的
-低秩 Fisher B 取消。当前执行点转入 Linear C0：固定 v159/v160 坐标、scale/hierarchy 和
-Activation 编码，验证 cross-fold minimax 最终部署 A@W Weight 码字精化。每个数学假设只产生
-一个候选，必须通过 compact → default → GPT-2 → OPT/Pythia 封存漏斗，失败后关闭而不扫描邻域。
+——以当前官方榜首 `21765/290s` 为目标，从 v160 `17532/232s` 分两侧串行推进。Attention A
+已在 compact **REJECTED**，B 取消；Linear C 也在 C2 compact 以 mean/median
+`-0.088775/-0.088583`、`4+/52-`、七个 role mean 全负判定 **REJECTED**。`1.20×` 时间值已
+澄清为工程风险目标而非硬否决线；C 的正式否决依据是独立 holdout 泛化失败。A/B/C 均不产生
+官方候选，当前计划结束，后继计划必须转向与 Fisher、full64/Householder 和 calibration-residual
+A@W 拟合不同的新编码架构，不扫描失败机制邻域。
 
 当日已归档：官方两侧分数比重校准计划（v162 `1001/146s`、v163 `4587/202s`、v164
 `13945/204s`，score interaction 为 1，当前已实现 Attention:Linear 官方贡献约 `3.61:1`）、

@@ -1,6 +1,6 @@
 # 21765 目标：Attention 静态输出敏感量化 + Linear 鲁棒 A\@W 计划
 
-> 状态：**ACTIVE**
+> 状态：**COMPLETED / ALL LOCAL CANDIDATES REJECTED**
 >
 > 创建：2026-09-03
 >
@@ -201,6 +201,11 @@ Attention 完成一个候选的完整裁决后再启动 C。固定 v160 的所�
 
 对 calibration fold `f` 和一个 Weight row `w`：
 
+`proxy-v2` 的 Linear API 每个 state 只提供两个独立 calibration window，因此这里的五折固定为：
+先沿用 v160 的确定性等距采样、每个 window 最多保留 128 行，再按采样后行号 `mod 5` 交错分组，
+最后把两个 window 中余数相同的行合并为同一 fold。该划分在读取张量值之前确定，五折都覆盖两个
+文档；不得按 loss、长度或 role 重新分组。
+
 ```text
 L_f(wq) = ||A_f w - Q(A_f) wq||_2^2
          = wq^T H_f wq - 2 b_f^T wq + c_f
@@ -325,3 +330,26 @@ A/C 的中间结果临时扩展关键词或来源。每项机制统一按以下�
    attempted/accepted 和明确的 `RETAINED/REJECTED/ERROR/TIMEOUT`；未提交官方保持
    `unregistered/NA`；
 7. 每次实质更新后 `git diff --check`、提交、push 并核验工作区。
+
+## 8. 执行记录（2026-09-03）
+
+- A0 reachability 通过：compact 四层中 Q `3/4`、K `4/4` state 发生变化，校准总计
+  `10.576s`。
+
+- A2 compact 被否决：相对 v160，Attention mean/median delta
+  `-0.007813325/-0.004871463`，`1+/3-/0=`，worst `-0.027699490`；QK-only、probability
+  MSE/KL 均恶化，V control 为 0。A 为 `REJECTED`，不进入 A3-A5、不做邻域调参。
+
+- B 按依赖取消：A 未获得官方强正向，因此不实现、不运行。
+
+- C0/C1 从 v160 干净实现：单个 `fc_gate [4864,896]` state attempted `68096`、accepted
+  `65460`、changed codes `547226`、rollback 残留 0，Activation state 与 scale/lv2/lv3
+  control 逐位一致。校准 `3.421s` 对 parent `2.160s`（`1.584×`）；`1.20×` 仅为工程风险
+  目标，不作硬否决，候选继续进入 C2。
+
+- C2 正式否决 C：Linear compact mean/median delta `-0.088775/-0.088583`，
+  `4+/52-/0=`，worst `-0.216586`、worst-quartile mean `-0.164813`；七个 role mean、test、
+  validation 和 W-only delta 全负。28 个 cross-holdout pair 为 `2` 对双正、`26` 对双负。
+  C 为 `REJECTED`，不进入 C3-C5、不做 fold/Jacobi/coverage/邻域变体、不提交官方。
+
+- A/B/C 均未产生官方候选；根 `solution.py` 未改，下一计划必须转向新的编码架构。

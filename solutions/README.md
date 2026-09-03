@@ -4,6 +4,8 @@
 > Side calibration completed at v162 **1001/146s**, v163 **4587/202s**, and v164 **13945/204s**;
 > the endpoint additivity residual is 1 point. The user-reported leaderboard best is **21765 / 290s**,
 > but its source and configuration are unavailable, so it is a target rather than a reproducible parent.
+> The 21765 Attention Softmax-Fisher and Linear cross-fold minimax workbench candidates both failed
+> their compact generalization gates; neither received a version number or official submission.
 
 `solutions/` contains immutable `solution.py` snapshots. The active code is only the repository
 root [`solution.py`](../solution.py). Every snapshot below was submitted or retained as an

@@ -4,14 +4,14 @@
 
 ## 0. 最新官方进展
 
-**21765-A 本地裁决（2026-09-03）：跨折收缩 Softmax-Fisher 在 Attention compact
-REJECTED。** 候选从 v160 SHA `33B1D061...680D` 干净分支，只修改最终 Q/K importance，
-V/Linear 和动态 API 不变；A0 在四层真实校准 state 上可达，但 A2 配对为 mean
-`-0.007813`、median `-0.004871`、`1+/3-/0=`、worst `-0.027699`，QK-only、
-probability MSE/KL 均恶化，V-only delta 为 0。按预注册停止：不调 clip/rho/blend，不进入
-default、跨模型或官方；工作包 B 取消。当前活动步骤转入 Linear C0 cross-fold minimax A@W。
-证据见
-[`执行记录`](../logs/execution/2026-09-03-score21765-a-softmax-fisher-rejected.md)。
+**21765 A/B/C 本地裁决（2026-09-03）：两个候选均 REJECTED。** Attention A 的
+cross-fold Softmax-Fisher 在 compact 为 mean `-0.007813`、median `-0.004871`、
+`1+/3-/0=`，依赖它的 B 取消。Linear C 的五折 minimax A@W 在 C1 接口/control 通过；
+`1.584×` 单 state 校准时间只记高风险，不作硬否决。继续完成 C2 后，paired mean/median
+为 `-0.088775/-0.088583`、`4+/52-/0=`，worst `-0.216586`、七个 role mean 全负、
+W-only delta `-0.057872`，因此按泛化硬门禁拒绝，不进入 default/跨模型/官方。证据见
+[`A 执行记录`](../logs/execution/2026-09-03-score21765-a-softmax-fisher-rejected.md)和
+[`C 执行记录`](../logs/execution/2026-09-03-score21765-c-crossfold-minimax-rejected.md)。
 
 **✅ 两侧比重校准实验完成（2026-09-03）：S(v162)=1001/146s, S(v163)=4587/202s, S(v164)=13945/204s；可加性成立，Attention 边际 ≈ Linear 的 3.6 倍。**
 为解耦官方总分中 Linear 与 Attention 的贡献，构造了三个候选（预注册判读表见
@@ -52,10 +52,10 @@ per-call 小张量算子成本远超本地 CUDA 外推，v160 的 68s 官方余�
 [`v161 result`](../solutions/20260903_v161_v160-attn-s1-qk-gram-refine_scoreNA_timeout/result.md)。
 **当前唯一活动计划**：
 [`目标 21765 的双路线稳健量化计划`](superpowers/plans/2026-09-03-score21765-dual-track-robust-quantization-plan.md)。
-以 v160 `17532/232s` 为父版本，距榜首 `21765/290s` 还差 **4233 分**。Attention A 已在
-compact 拒绝，依赖它的 B 取消；当前执行 Linear C0/C1，采用部署域 A\@W 的 cross-fold
-minimax 离散优化。任何路线都必须通过 compact、default、跨模型和尾部分布门禁，禁止围绕
-本地结果做邻域调参。
+以 v160 `17532/232s` 为父版本，距榜首 `21765/290s` 还差 **4233 分**。Attention A 与
+Linear C 均已在 compact 拒绝，B 取消；A/B/C 不产生官方候选。下一步必须转向与现有
+Fisher、full64/Householder 和 calibration-residual A@W 拟合数学上不同的新编码架构，禁止
+围绕本次 fold、Jacobi、coverage、邻域或 role 路由继续调参。
 
 **v160 官方回传（2026-09-03）：`17532 / 232s`，与 v159 完全相同。** 232s 通过
 `<300s`，时间风险解除。v160 = v159 Linear（L1 逐位等价编码）+ A2/A1（Attention）：
@@ -647,8 +647,8 @@ v86 的部分 scale-aware/output-aware 机制。此前把它描述为"v86 级静
 
 - 增加 alpha、offset、sweep、block 数、阻尼、角度或候选槽位的局部扫描。
 
-- L3 full64、Householder 和单折相邻码字精化的原目标及其参数变体；活动计划中的 Linear C
-  只允许一次预注册的 cross-fold minimax 部署 A\@W 目标，不得复用旧单折接受规则。
+- L3 full64、Householder、单折相邻码字精化，以及已失败的 cross-fold minimax 部署 A\@W；
+  禁止改 fold 聚合、Jacobi/Gauss-Seidel、coverage、邻域或 role 路由重启该族。
 
 这些路线要么官方超时，要么官方分数低于 v86，要么只有固定本地 panel 上的 `10^-5–10^-4`
 级差值，不能支撑继续投入。
@@ -658,16 +658,15 @@ v86 的部分 scale-aware/output-aware 机制。此前把它描述为"v86 级静
 唯一活动计划是
 [`2026-09-03-score21765-dual-track-robust-quantization-plan.md`](superpowers/plans/2026-09-03-score21765-dual-track-robust-quantization-plan.md)：
 以榜首 **21765/290s** 为目标，从静态、低自由度、跨折稳健算法重新打开 Attention 与 Linear
-两个方向。执行顺序与停止规则：
+两个方向。该计划的本地候选现已全部裁决：
 
 1. **Attention A：REJECTED**：cross-fold Softmax-Fisher compact paired mean/median 均为负，
    已按门禁停止，不进入 default、跨模型或官方；
 2. **Attention B：CANCELED**：其前置条件 A 跨模型成功不成立；
-3. **Linear C0–C5：当前执行点**：在最终部署坐标系直接最小化各 fold 的 `A@W` 输出残差，采用
-   `(worst-fold, median, mean)` 字典序和固定一次 64-block sweep；
-4. 每个主假设只允许一个预注册官方候选；compact、Qwen default、GPT-2、另一架构、尾部和
-   control 任一失败即拒绝，不根据 holdout 或官方结果邻域调参；
-5. 里程碑为 `18500 → 20000 → 21766+`；不得把 3.61:1 的边际比误当成固定评分权重。
+3. **Linear C：REJECTED at C2**：compact mean/median、负 case、全部 role、两个 split 和
+   W-only 均失败，不进入 default、跨模型或官方；
+4. **结论**：A/B/C 不产生官方候选，后继工作必须转向新的编码架构，不从失败机制邻域重启；
+5. 里程碑仍为 `18500 → 20000 → 21766+`；不得把 3.61:1 的边际比误当成固定评分权重。
 
 当日已归档：官方两侧比重校准计划（v162/v163/v164 已完成且可加性残差为 1）、Attention
 per-call 序列自适应精化计划（v161 官方 timeout）、Attention 解析式宽域计划和 Householder

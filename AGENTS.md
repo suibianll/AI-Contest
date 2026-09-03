@@ -44,14 +44,12 @@
   当前算法质量，只指导优先级，禁止作为本地 gain 到官方分的换算率。官方时间不具同样的
   可加性：两侧边际和预测 `260s`，v160 实测 `232s`。
 
-- **当前活动计划（2026-09-03）**：`21765` 双路线鲁棒量化计划。Attention A 跨折收缩
-  Softmax-Fisher 已从 v160 干净实现并在 compact **REJECTED**：paired mean
-  `-0.007813`、median `-0.004871`、`1+/3-/0=`、worst `-0.027699`，QK-only 与
-  probability 同时恶化；V control 为 0、动态 API 源码不变。禁止调整 clip/rho/blend/阈值，
-  不运行 default/跨模型/官方；依赖 A 的低秩 Fisher B 同步取消。下一步是 Linear C0：
-  cross-fold minimax 最终部署 A@W-GPTQ，只在固定 scale/hierarchy/Activation 下调整相邻
-  Weight 码字。含在线逐 call Gram/sweep 的候选默认按官方不可行处理；Linear×Attention
-  官方 2×2 和逐位等价时间 A/B 均停止。
+- `21765` 双路线计划的本地候选已全部裁决：Attention A 在 compact **REJECTED**（mean
+  `-0.007813`、median `-0.004871`、`1+/3-/0=`），B 取消；Linear C 的五折 minimax 在 C1
+  接口/control 通过，`1.584×` 单 state 时间只记高风险、不作硬否决，随后 C2 compact 为
+  mean/median `-0.088775/-0.088583`、`4+/52-/0=`、worst `-0.216586`，七个 role mean、
+  test/validation 和 W-only 均负，故按泛化门禁 **REJECTED**。不运行 C3-C5、不改
+  fold/Jacobi/coverage/邻域、不提交官方；根 `solution.py` 未改。
 
 - 2026-09-03 的首次 L3 full64 no-op 结果无效：`_WEIGHT_FULL64_APPLY=True` 被
   `_WEIGHT_E2E_REFINE=False` 外层死分支遮蔽，目标函数未执行。不得引用该结果证明块级收敛；
@@ -64,9 +62,9 @@
 - Householder 统一 64-block 坐标重分布全族 REJECTED：基础候选 compact `0.705508→0.699190`
   （`8+/48-/0=`），五个 C 源变体（amax/rms/xrms/x-only/w-only）全部低于基线；研究臂在根
   `solution.py` 默认关闭。Linear 侧同坐标码字与坐标几何两个正交假设均无本地余量，Linear
-  原 full64/Householder/单折邻域族闭环，禁止复跑或改参数。唯一新例外是活动计划中预注册的
-  cross-fold minimax 部署 A@W 目标：它必须从 v160 干净父版本实现、只跑一次固定 sweep，并以
-  compact 全 case 非负和跨模型同号为硬门禁；不得复用旧 L3 的单折接受规则冒充新算法。
+  原 full64/Householder/单折邻域族闭环，禁止复跑或改参数。最后一个预注册例外 cross-fold
+  minimax 部署 A@W 已在 C2 因系统性 holdout 回归关闭；不得改 fold 聚合、Jacobi/Gauss-Seidel、
+  coverage、邻域或 role 路由重启。
 
 ## 2. 提交代码约束
 
