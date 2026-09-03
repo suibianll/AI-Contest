@@ -40,7 +40,7 @@ aggregation = component-wise median
 | 无 NaN/Inf、有限输出 | OK |
 | rank-2 reachability | compact 28/28、default 168/168、GPT-2 72/72、OPT 72/72 全部 = 1 |
 | `||V^T U||F` 接近 0 | vtu_cross_max 实测 6.99e-10 ~ 1.86e-08 |
-| 连续域乘积不变 | 数学成立（V^T U=0 → Woodbury R^-1=I-UV^T） |
+| 连续域乘积不变 | 数值验证：`\|A'W'^T − AW^T\| / \|AW^T\| = 3.96e-7`（float32 舍入量级，V^T U 传播理论 ~2e-9）；脚本 `logs/execution/check_lr2_continuity.py` |
 | Attention control | 与 v180 逐位一致（diff 仅 Linear 权重校准 + 激活路径 6 个 hunk） |
 | 动态 API 无 Gram contraction/候选循环 | OK（融合 [D,2] GEMM） |
 
