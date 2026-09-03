@@ -1,17 +1,12 @@
 # HiF4 优化实验仓库（官方对齐版）
 
-> **最新官方进展（2026-09-03）**：v160 官方结果为 **17532/232s**；v162/v163/v164 两侧校准
-> 分别为 **1001/146s、4587/202s、13945/204s**，端点可加性残差仅 1 分。用户确认的榜首为
-> **21765/290s**，当前差 **4233 分**。v165（standard Linear + v161 Attention）已官方
-> **timeout（>300s，无分数）**，确认 Cross-Gram64 per-call 动态精化超出时间预算；v166
-> （rank-1 Linear + standard Attention）官方 **4590/226s**，相对 v163 `+3`，成为新
-> **Linear 父侧**。侧向隔离计划已收官归档（v167 低秩 Gram 码本本地 REJECTED）。当前按
-> [`低复杂度算法扩展计划`](docs/superpowers/plans/2026-09-03-post-v162-low-complexity-algorithm-expansion-plan.md)
-> **Attention 优先**推进（A1 解析 logits 增益校正 → A2 V 偏差质心 → A3 静态 scale 编译
-> → A4 矩匹配阈值，随后 Linear L1-L4）；候选仍从 v162 双标准零点单侧构造，本地只保留
-> 合法性、可达性和 control 检查，官方差分按计划 §3.3 登记。
+> **最新官方进展（2026-09-04）**：v180 官方结果为 **17597/242s**，相对完整父 v175
+> `17594/245s` 提升 `+3`，成为新的完整官方父版本。v180 在 v175 上只加入 Attention D1
+> 的 A1 Q/K 非对称折叠，Linear 逐位一致；因此 D1 官方正向，但属于微增益。用户确认的
+> 榜首为 **21765/290s**，当前差 **4168 分**，时间余量 **58s**。两侧独立父仍为
+> `P_L=v166（4590/226s）`、`P_A=v168（14005/210s）`；v180 不是 Attention 单侧测量。
 
-更新时间：2026-09-03。当前仓库只认一套本地评测协议：
+更新时间：2026-09-04。当前仓库只认一套本地评测协议：
 [`evaluator/official_eval.py`](evaluator/official_eval.py)。旧的
 `real_model_suite.py`、`sampled-means-v1/v2` 和旧 JSON 不再用于排名、时间判断或调参。
 

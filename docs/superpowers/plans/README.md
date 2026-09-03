@@ -9,11 +9,10 @@
 
 **当前活动计划（2026-09-04）**：
 [`2026-09-04-post-official-a1-freedom-plan.md`](2026-09-04-post-official-a1-freedom-plan.md)
-——官方裁决后的新一轮规划。锚点：完整官方父 v175（`17594/245s`，interaction=0 精确
-可加）、A1（v168）为唯一官方正向 Attention 机制、时间余量 55s。**D1 已实现为 v180**
-（A1 Q/K 非对称折叠分配，alpha=0.3，本地 Qwen default 120 `+0.000356`/69+/51−、
-QK interaction +0.01106 正向；GPT-2 轻微负标记 model-specific-risk），已提交官方
-（配额 2/10）；D2 per-Q-head gain 对照；D3 组合延伸（各占 1 配额）。
+——官方裁决后的 A1 结构内自由度计划。**D1 v180 官方 `17597/242s`，相对 v175
+`+3/−3s`，已 RETAINED 为新完整父版本**；D2 v181 per-Q-head gain 本地 REJECTED；
+D3 的 v175+D1 组合已由 v180 本身完成，不另耗配额。当前距榜首 21765 差 4168，官方
+配额 2/10、剩余 8。D1 无在线新增算子，242s 只记实测，不把 −3s 宣称为稳定加速。
 
 当日已归档：低复杂度算法扩展计划（A1-A4/L1-L4/组合全覆盖，
 `-superseded`）、v162 官方侧向隔离优化计划（v165 timeout、v167 本地

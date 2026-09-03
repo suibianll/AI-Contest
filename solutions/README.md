@@ -1,15 +1,10 @@
 # HiF4 solutions archive
 
-> **Official update (2026-09-03):** v160 archive SHA `33B1D061...680D` scored **17532 / 232s**.
-> Side calibration completed at v162 **1001/146s**, v163 **4587/202s**, and v164 **13945/204s**;
-> the endpoint additivity residual is 1 point. v166 (rank-1 Linear residual + standard Attention)
-> scored **4590 / 226s**, a **+3** official step over the v163 Linear side, so **P_L is now v166**
-> per the side-isolation plan §3.1. The user-reported leaderboard best is **21765 / 290s**,
-> but its source and configuration are unavailable, so it is a target rather than a reproducible parent.
-> v165 (standard Linear + v161 Attention) officially timed out at **>300s with no score**; this
-> isolates the current Cross-Gram64 per-call Attention implementation as runtime-infeasible.
-> The 21765 Attention Softmax-Fisher and Linear cross-fold minimax workbench candidates both failed
-> their compact generalization gates; neither received a version number or official submission.
+> **Official update (2026-09-04):** v180 archive SHA `2BA40122...8AA3` scored **17597 / 242s**,
+> a `+3` step over v175 `17594/245s`, and is the new complete official parent. It combines v166
+> rank-1 Linear with v168 A1 Attention plus D1 asymmetric Q/K folding. The independent side parents
+> remain `P_L=v166（4590/226s）` and `P_A=v168（14005/210s）`; v180 is not an isolated Attention
+> measurement. The user-reported leaderboard best is **21765 / 290s**, leaving a **4168-point** gap.
 
 `solutions/` contains immutable `solution.py` snapshots. The active code is only the repository
 root [`solution.py`](../solution.py). Every snapshot below was submitted or retained as an
@@ -45,12 +40,12 @@ change API call counts; use `--no-decomposition` only for a fast smoke run. Loca
 same-machine A/B data, not an official-time conversion; `trend_diagnostics` reports known same-
 cohort ordering inversions without fitting them.
 
-### Current best and scope rule (2026-09-03)
+### Current best and scope rule (2026-09-04)
 
-The highest official score bound to a repository source is **v159/v160: 17532**; v160 additionally
-binds that score to a **232 s** official runtime. v158 **16861 / 223 s** remains the lower-risk
-source-and-runtime-complete baseline. The user-reported leaderboard best **21765 / 290s** is 4233
-points above v160 and has no synchronized source or configuration, so it is a target only. v147 is **16579 / 211 s**
+The highest official score bound to a repository source is **v180: 17597 / 242s**. v175
+**17594 / 245s** is its exact complete parent, while the independent side parents remain v166 and
+v168. The user-reported leaderboard best **21765 / 290s** is 4168 points above v180 and has no
+synchronized source or configuration, so it is a target only. v147 is **16579 / 211 s**
 (time pass but below v86, rejected); v140 is **15838 / 207 s** (rejected). The pre-A3 parent effect
 control is local-only (`Linear=0.588023229`, `Attention=0.757433277`, API `202.317 s`) and is not
 an official score.
@@ -121,7 +116,7 @@ silently assigned a score.
 | v166 | `20260903_v166_rank1-linear-residual_standard-attn_scoreNA_timeNA` | **4590** | **226 s** | **pass; official +3 over v163 (4587/202s), retained as the new Linear parent side P_L (C_L = 4590−1001 = 3589, G_L = +3, 226s < 300s); rank-1 residual redistribution Linear (fold-median top-2 base-codec residual directions, c=1/4, exact product preservation, single-encode design) + standard Attention (mean 0.0, 0/0/120 vs standard); local linear default 0.636590 vs parent 0.633526 (paired +0.003064, 78+/90−, proj +0.0251), API 282.8s (1.24×)**
 | v167 | `20260903_v167_standard-linear_lowrank-gram-attn_rejected` | — | — | **rejected (local, pre-official); side-isolation plan 7.2 low-rank Gram codebook — the designated v165-timeout recovery path. Implementation proven correct (lam=0 ablation is bit-identical to parent, 0.797462). Root cause: the real QK cross-Gram is high-rank (top-2 off-diag ~7% eigen mass), so rank-2 coupling-motivated bumps destroy deep sentinels (L15 0.735→−0.54, L23 0.606→−0.05) under both median and mean fold aggregation, while diagonal-only is a mathematical no-op for nearest-level encodings. No rank neighborhood scan per plan 5; Attention-internal mechanisms exhausted**
 | v168 | `20260903_v168_standard-linear_logit-gain-attn_scoreNA_timeNA` | **14005** | **210 s** | **pass, RETAINED; new Attention parent P_A. Expansion plan A1: per-KV-head multiplicative logit gain folded into the Q/K multiplier path, zero dynamic additions. step_gain +60 over v164 (Attention ratio 0.46 percent), a small positive gain with no local-proxy signal (local Qwen default mean -0.00088, GPT-2 +0.0024); time +6s over v164. Corrected same-day: initially reported 17248/237s in error. Combined-side prediction with v166: 4590 + 14005 - 1001 = 17594 (+62 over v160)** |
-| v180 | `20260904_v180_a1-asym-fold-attn_scoreNA_timeNA` | — | — | **candidate; post-official plan D1 A1 Q/K asymmetric fold (alpha=0.3, exponent-sum-1 keeps logits=gamma, only Q/K dynamic-range reallocation; alpha=0 bit-identical to v175). Compact 4 paired v175 mean +0.000088 (3+/1−); default 120 paired v168 mean +0.000356 (69+/51−, win 0.575), QK interaction +0.01106 positive; GPT-2 −0.008984 (model-specific-risk). Official: S vs 17594 (additivity permits combination)** |
+| v180 | `20260904_v180_a1-asym-fold-attn_scoreNA_timeNA` | **17597** | **242 s** | **pass, RETAINED as new full official parent; post-official plan D1 A1 Q/K asymmetric fold (alpha=0.3, exponent-sum keeps logits=gamma, only Q/K dynamic-range reallocation; alpha=0 bit-identical to v175). step_gain +3 vs v175 17594; time −3s is recorded but not claimed as a stable speedup because D1 adds no online operator. Compact 4 paired v175 mean +0.000088 (3+/1−); default 120 paired v168 mean +0.000356 (69+/51−, win 0.575), QK interaction +0.01106; GPT-2 −0.008984 model-specific-risk. Gap to 21765 is 4168** |
 | v181 | `20260904_v181_a1-qhead-gain-attn_rejected` | — | — | **rejected (local pre-research, clearly negative); post-official plan D2 per-Q-head logits gain control (each Q head own multiplicative gain on top of A1, K per-KV-head shared — breaks GQA group consistency). Clean D2 (D1 fold OFF, A1 symmetric parent): default 120 paired v168 mean −0.002746, median −0.000086, 54+/66−, median MSE ratio 1.000333; D1+D2 stacked was also negative (mean −0.002019, 60/60). Confirms A1 group-consistent structure is load-bearing; D2 family closed, not submitted (no quota spent)** |
 | v169 | `20260903_v169_standard-linear_v-bias-attn_rejected` | — | — | **rejected (local, clearly negative); expansion plan A2 V output-bias centroid: local Qwen -0.0093 (21+/99-) and GPT-2 0/4 all-negative - final classification per user 'reject clearly-negative optimizations'** |
 | v170 | `20260903_v170_standard-linear_fixed-offset-attn_rejected` | — | — | **rejected (local, clearly negative); expansion plan A3 static fixed-offset compile: Qwen -0.0506 (9+/111-) and GPT-2 -0.0551 (1+/3-) - final classification per user** |
