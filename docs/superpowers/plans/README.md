@@ -7,17 +7,16 @@
 `evaluator/official_eval.py`，跨模型泛化调用 `evaluator/cross_model_eval.py`；旧
 `real_model_suite.py` 已退役。
 
-**当前无活动计划（2026-09-03）。** 当日最后一份计划
-（Attention per-call 序列自适应精化）已随 v161 官方 timeout 归档：本地全漏斗通过
-（Qwen default `+0.0525`、GPT-2 同号、D1 满足）但官方 `>300s`，动态 per-call 精化在
-官方鲲鹏硬件上结构性超预算，per-call 动态族关闭，见
-[`归档计划`](../archive/plans/2026-09-03-attention-per-call-refinement-plan-superseded.md)
-与 [`官方超时日志`](../../../logs/execution/2026-09-03-v161-official-timeout.md)。
-本地已知机制族全部闭环（Linear 结构 full64/Householder、Attention 解析静态族、
-Attention per-call 动态族）；下一步是外部材料搜索或用户指定新机制，新计划创建后本
-README 同步更新。
+**当前活动计划（2026-09-03）**：
+[`2026-09-03-official-side-weight-calibration-plan.md`](2026-09-03-official-side-weight-calibration-plan.md)
+——官方两侧分数比重校准实验。三个候选 v162/v163/v164（全标准基线、v160 Linear+标准
+Attention、标准 Linear+v160 Attention）已全部本地验证通过（v162 两侧 mean 精确 0.0；
+v163/v164 保留侧与 v160 逐位一致），等待用户按 v162 → v163 → v164 顺序各做一次官方
+提交。回传后按预注册解释表判读：Δ_L = S(v163)−S(v162)、Δ_A = S(v164)−S(v162)、
+可加性检验 S(v163)+S(v164)−S(v162) ≈ 17532。
 
-当日更早归档：Attention 解析式宽域计划（A1a 4×4 REJECTED、A2 无病因、A3 未启动）与
+当日更早归档：Attention per-call 序列自适应精化计划（v161 官方 timeout，per-call 动态族
+关闭）、Attention 解析式宽域计划（A1a 4×4 REJECTED、A2 无病因、A3 未启动）与
 Householder 快速验证计划（全族 REJECTED），见
 [`../archive/plans/`](../archive/plans/)。Linear 侧 T<d 秩亏伪增益通道已结构性封闭，
 不再从已关闭族内微调；官方证据判别器 D1/D2/D3 预注册于

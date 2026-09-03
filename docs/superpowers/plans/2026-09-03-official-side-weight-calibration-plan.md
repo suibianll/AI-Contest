@@ -1,0 +1,77 @@
+# 官方两侧分数比重校准实验计划
+
+> 状态：**ACTIVE**
+>
+> 创建：2026-09-03
+>
+> 父版本：v160 归档，SHA `33B1D061CE6BFCD92659C597BE4830BB9B910E646FF518433DA67B925AE8680D`
+> （官方 `17532 / 232s`）
+
+## 1. 目的
+
+解耦官方总分中 Linear 与 Attention 两侧的贡献。本地已知机制族全部闭环（Linear 结构、
+Attention 解析静态、Attention per-call 动态），下一个有效方向的选择依赖"哪一侧的官方
+边际更大"，而这只能用官方回传校准。同时检验官方总分的可加结构。
+
+## 2. 三个版本（各一次官方提交，SHA 互不相同）
+
+| 版本 | Linear 侧 | Attention 侧 | 本地预期 |
+| --- | --- | --- | --- |
+| **v162** | 标准 HiF4 codec | 标准 HiF4 codec | linear_mean = 0、attention_mean = 0（与 STD 逐位一致） |
+| **v163** | v160（v159 GPTQ + L1 batch） | 标准 HiF4 codec | linear_mean = 0.633526（与 v160 逐位一致）、attention_mean = 0 |
+| **v164** | 标准 HiF4 codec | v160（v158 Matrix-Smooth + A2） | linear_mean = 0、attention_mean = 0.742354（与 v160 逐位一致） |
+
+"标准 HiF4 codec" 定义：六个 API 对 NVFP4 输入先做 BF16 中间的官方解码，再执行
+`reference_hif4.encode_standard_hif4`（amax/7 E6M2 scale + 8 配置 MSE-optimal 层级 +
+3-bit mantissa + canonical zero sign），无校准、无搜索、无 state 内容（空 dict）。本地
+proxy 的 STD 即该 codec，因此标准侧 gain = 0 by construction。
+
+- v162：独立最小单文件；
+- v163：v160 归档原文件 + 末尾追加标准 encode 辅助与 attention 四 API 重定义（原
+  Linear 代码零改动）；
+- v164：v160 归档原文件 + 末尾追加标准 encode 辅助与 Linear 两 API 重定义（原
+  Attention 代码零改动）。
+
+追加式重定义保证：v163 的 Linear 输出与 v160 逐位一致、v164 的 Attention 输出与
+v160 逐位一致（同一份未改动代码）。
+
+## 3. 预注册解释表（官方回传后判读，失败不邻域调参）
+
+记 `S(x)` 为官方分数：
+
+| 观测 | 结论 | 后续 |
+| --- | --- | --- |
+| `S(v163) + S(v164) - S(v162) ≈ 17532` | 官方总分按 case 可加，无跨侧交互 | 两侧比重 = `S(v163)-S(v162)` : `S(v164)-S(v162)`，直接指导下一机制选择 |
+| `S(v163) + S(v164) - S(v162) < 17532` | 正交互（组合协同，如共享调用图或非线性聚合） | 记录交互量；两侧边际仍按各自 delta 读 |
+| `S(v163) + S(v164) - S(v162) > 17532` | 负交互（组合损失） | 同上；重点排查两侧 state 或评分聚合的冲突 |
+| `S(v162) = 0` | 官方 STD 确认为标准 HiF4（或标准行为得 0 分） | 官方公式与本地 proxy 同构 |
+| `S(v162) > 0` | 官方存在非零基础分或 STD 定义不同 | `S(v162)` 作为官方锚点记录，不反推公式 |
+| 任一版本官方 timeout | 该侧复杂度假设失效 | 标准侧远快于 v160 对应侧，预期不可能；若发生记 ERROR |
+
+预注册假设（单一）：**官方总分 = 基础分 + Linear 侧贡献 + Attention 侧贡献（可加，
+无交互）**。Δ_L = `S(v163)−S(v162)`、Δ_A = `S(v164)−S(v162)`、Δ_total =
+`17532−S(v162)`。
+
+## 4. 时间预算
+
+- v162：六 API 全标准，无搜索无 GPTQ，本地 API 预计 `<60s`，官方远低于 232s；
+- v163：v160 Linear（本地 calib_w `166.6s` + dyn_a `60.7s`）+ 标准 Attention（空校准 +
+  标准编码，本地约几秒）→ 官方预计 `<232s`（砍掉 v160 attention 校准的官方份额）；
+- v164：标准 Linear（几秒）+ v160 Attention（本地 `63.4s`）→ 官方预计 `~70s`。
+- 三个版本时间风险均低于 v160 基线；本地秒数只作复杂度参考。
+
+## 5. 本地验证漏斗（失败即停）
+
+| 阶段 | 内容 | 通过标准 |
+| --- | --- | --- |
+| A | 三文件脱离仓库隔离导入、六 API 齐全 | 无异常 |
+| B | v162 完整 default（168+120） | linear_mean 与 attention_mean 均 `= 0`（逐位一致；容差 `≤1e-9` 量级由浮点路径决定） |
+| C | v163 `--linear-only` default vs `v160-final-integration-default.json` 配对 | 168 case 逐位一致（Δ=0）；`--attention-only` default attention_mean = 0 |
+| D | v164 `--attention-only` default vs `s1-parent-v160-attn-default.json` 配对 | 120 case 逐位一致（Δ=0）；`--linear-only` default linear_mean = 0 |
+| E | 归档三版本 + result.md + SHA；用户按 v162 → v163 → v164 顺序各提交一次官方 | 见 §3 |
+
+## 6. 纪律
+
+- 本实验不是逐位等价时间 A/B：三个版本行为互不相同，目的是官方分数结构校准；
+- 每个版本一次官方提交，回传只记录判读，不围绕结果调参；
+- 实验结束后本计划归档，比重结论写入 `docs/current-solution-status.md`。

@@ -37,11 +37,20 @@
   结构性关闭，不缩 sweeps 重试；S2 前置条件不满足不启动；D1 维持 3/3；本地 CUDA
   时间门禁对官方时间的预测能力记为失效。
 
-- **当前无活动计划（2026-09-03）**：本地已知机制族全部闭环（Linear 结构
-  full64/Householder、Attention 解析静态族、Attention per-call 动态族、Linear T<d
-  秩亏伪增益通道）。下一步为外部材料搜索或用户指定新机制；含在线逐 call 张量计算的
-  候选默认按官方不可行处理。Linear 冻结；Linear×Attention 官方 2×2 和逐位等价时间
-  A/B 均停止。17816 源码无法提供，不再等待。
+- **当前活动计划（2026-09-03）**：官方两侧分数比重校准实验。三个候选已本地验证通过并
+  归档，等待用户各做一次官方提交（顺序 v162 → v163 → v164）：
+  - **v162**（SHA `56101559...000A`）全标准基线：六 API 全部镜像 reference codec，
+    本地 default linear/attention mean **均为精确 0.0**（288 case gain 全 0），API 2.6s；
+  - **v163**（SHA `3352BDEC...B612`）= v160 归档零改动 + 末尾追加标准 Attention 四 API
+    重定义；Linear 168 case 与 v160 逐位一致（mean 0.633526），Attention mean 0.0；
+  - **v164**（SHA `896B4ACA...793D7`）= v160 归档零改动 + 末尾追加标准 Linear 两 API
+    重定义；Attention 120 case 与 v160 逐位一致（mean 0.742354），Linear mean 0.0。
+  判读（预注册）：Δ_L = S(v163)−S(v162)、Δ_A = S(v164)−S(v162)、可加性
+  S(v163)+S(v164)−S(v162) ≈ 17532。这是分数结构校准实验（三个 SHA 行为互不相同），
+  不属于被禁止的相同 SHA 确定性验证。时间风险：v162 ~3s / v164 ~70s / v163 ~186s 官方
+  预计，全部远低于 300s。Linear 冻结；含在线逐 call 张量计算的候选默认按官方不可行
+  处理；Linear×Attention 官方 2×2 和逐位等价时间 A/B 均停止。17816 源码无法提供，
+  不再等待。
 
 - 2026-09-03 的首次 L3 full64 no-op 结果无效：`_WEIGHT_FULL64_APPLY=True` 被
   `_WEIGHT_E2E_REFINE=False` 外层死分支遮蔽，目标函数未执行。不得引用该结果证明块级收敛；

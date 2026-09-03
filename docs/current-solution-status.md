@@ -1,8 +1,28 @@
-# 当前状态：v161 官方 timeout（per-call 动态族关闭），v160 17532/232s 为有效父版本
+# 当前状态：两侧比重校准实验就绪（v162/v163/v164 待官方提交），v161 官方 timeout
 
 更新：2026-09-03。
 
 ## 0. 最新官方进展
+
+**当前活动实验：官方两侧分数比重校准（2026-09-03，本地验证全部通过，等待官方回传）。**
+为解耦官方总分中 Linear 与 Attention 的贡献，构造了三个候选（预注册判读表见
+[`活动计划`](superpowers/plans/2026-09-03-official-side-weight-calibration-plan.md)）：
+
+| 版本 | 构造 | 本地 default | API | 官方角色 |
+|---|---|---|---|---|
+| **v162** | 独立最小实现，六 API 全部标准 HiF4 codec（NVFP4→BF16 中间解码→标准编码） | linear/attention mean **均为 0.0**（288 case gain 全 0，与 STD 逐位一致） | 2.6s | 标准基线锚点 `S(v162)` |
+| **v163** | v160 归档零改动 + 末尾追加标准 Attention 四 API 重定义 | Linear 168 case 与 v160 **逐位一致**（0.633526）；Attention mean 0.0 | 228s | Δ_L = S(v163)−S(v162) |
+| **v164** | v160 归档零改动 + 末尾追加标准 Linear 两 API 重定义 | Attention 120 case 与 v160 **逐位一致**（0.742354）；Linear mean 0.0 | 70s | Δ_A = S(v164)−S(v162) |
+
+判读：若 `S(v163)+S(v164)−S(v162) ≈ 17532` 则官方总分按 case 可加、无跨侧交互，
+两侧比重 = Δ_L : Δ_A；偏离则记录交互量。`S(v162)=0` 说明官方 STD 即标准 HiF4；
+`S(v162)>0` 则为非零基础分锚点。三个 SHA 行为互不相同，不属于被禁止的相同 SHA
+确定性验证。构建方式（复制 v160 + 模块级追加重定义）保证保留侧输出与 v160 逐位一致，
+本地已用 case 级对比确认（max Δgain/Δmse = 0.0）。证据：
+[`v162 result`](../solutions/20260903_v162_standard-baseline-both_scoreNA_timeNA/result.md)、
+[`v163 result`](../solutions/20260903_v163_v160-linear_standard-attn_scoreNA_timeNA/result.md)、
+[`v164 result`](../solutions/20260903_v164_standard-linear_v160-attn_scoreNA_timeNA/result.md)、
+`artifacts/official_eval/sidecal-v16{2,3,4}-*.json`。
 
 **v161 官方回传（2026-09-03）：`timeout（>300s，无分数）`。** v161 = v160 + Attention
 Q/K 交叉算子 Gram64 per-call 精化（v128 机制移植，V/Linear 冻结）。本地全漏斗通过
@@ -577,24 +597,23 @@ v86 的部分 scale-aware/output-aware 机制。此前把它描述为“v86 级�
 
 ## 6. 当前活动计划
 
-**无（2026-09-03）。** 当日最后一份计划（Attention per-call 序列自适应精化，
-[`归档`](superpowers/archive/plans/2026-09-03-attention-per-call-refinement-plan-superseded.md)）
-已随 v161 官方 timeout 结束：Step 0 消融确认 v128 余量属 per-call 自适应族
-（`+0.0636` vs v138 `−0.014`），S1 交叉算子 Gram64 精化本地全漏斗通过（Qwen default
-`+0.0525`、GPT-2 同号、D1 满足、API +28s CUDA 门禁内），但官方 `>300s`——动态
-per-call 精化在官方鲲鹏硬件上结构性超预算，per-call 动态族关闭，S2 前置条件不满足。
+唯一活动计划是
+[`2026-09-03-official-side-weight-calibration-plan.md`](superpowers/plans/2026-09-03-official-side-weight-calibration-plan.md)：
+官方两侧分数比重校准实验（v161 timeout 后本地已知机制族全部闭环，本实验用官方回传
+确定下一优化方向的边际依据）。要点：
 
-至此本地已知机制族全部闭环：
+1. **v162 全标准基线**：六 API 镜像 reference codec，本地两侧 mean 精确 0.0，官方回传
+   `S(v162)` 为标准行为锚点；
+2. **v163**（v160 Linear + 标准 Attention）测 Δ_L，**v164**（标准 Linear + v160
+   Attention）测 Δ_A；保留侧与 v160 逐位一致（构建零改动 + case 级验证）；
+3. 预注册可加性检验：`S(v163)+S(v164)−S(v162) ≈ 17532`；判读表见计划 §3；
+4. 三个版本各一次官方提交（用户执行，顺序 v162 → v163 → v164），回传只记录判读，
+   不围绕结果调参。
 
-- Linear 结构（full64、Householder 六变体）：REJECTED；
-- Attention 解析静态族（Matrix-Smooth 4×4、深层 K 病因）：REJECTED / 无病因；
-- Attention per-call 动态族（v128/v129/v130/v131/v161）：官方全部 timeout；
-- Linear 侧 T<d 秩亏伪增益通道：结构性封闭。
-
-下一步为外部材料搜索（论文/博客/SOTA NVFP4 或 FP4 量化方法）或用户指定新机制；
-新计划创建后同步 `docs/superpowers/plans/README.md`。当日已归档：Attention 解析式宽域
-计划（A1a 4×4 REJECTED、A2 无病因、A3 未启动）、Householder 快速验证计划（全族
-REJECTED）、Attention per-call 精化计划（S1 官方 timeout）。
+当日已归档：Attention per-call 序列自适应精化计划（v161 官方 timeout，per-call 动态族
+关闭）、Attention 解析式宽域计划（A1a 4×4 REJECTED、A2 无病因、A3 未启动）、
+Householder 快速验证计划（全族 REJECTED）。Linear 侧 T<d 秩亏伪增益通道结构性封闭。
+实验结束后本计划归档，比重结论写入本文件。
 
 ## 7. 归档现状与待整理项
 

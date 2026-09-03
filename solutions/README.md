@@ -107,6 +107,9 @@ silently assigned a score.
 | v159 | `20260902_v159_linear-gptq17816_v158-attention_score17532_timeNA` | **17532** | — | **official score reported; runtime unknown** |
 | v160 | `20260903_v160_v159-linear-l1batch_v158-attn-a2_scoreNA_timeNA` | **17532** | **232 s** | **pass; score no-op vs v159, source/time-complete experiment parent** |
 | v161 | `20260903_v161_v160-attn-s1-qk-gram-refine_scoreNA_timeout` | — | >300 s | **timeout (official, user confirmed); local funnel passed (Qwen default 120 paired +0.0525, 106+/14−; GPT-2 +0.0678 same sign; D1 satisfied locally) but per-call dynamic refinement exceeds the official runtime budget — per-call family closed** |
+| v162 | `20260903_v162_standard-baseline-both_scoreNA_timeNA` | — | — | **candidate; official side-weight calibration anchor — both sides standard HiF4 codec, local default linear/attention mean both exactly 0.0 (288 cases), API 2.6 s** |
+| v163 | `20260903_v163_v160-linear_standard-attn_scoreNA_timeNA` | — | — | **candidate; v160 Linear (168 cases bit-identical to v160, mean 0.633526) + standard Attention (mean 0.0); measures the official Linear-side contribution Δ_L = S(v163)−S(v162)** |
+| v164 | `20260903_v164_standard-linear_v160-attn_scoreNA_timeNA` | — | — | **candidate; standard Linear (mean 0.0) + v160 Attention (120 cases bit-identical to v160, mean 0.742354); measures the official Attention-side contribution Δ_A = S(v164)−S(v162)** |
 
 ## 2026-09-01 official-shape-v1 local candidates
 
