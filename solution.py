@@ -237,9 +237,6 @@ _WEIGHT_FULL64_BEAM_OFFSETS = (-2, -1, 0, 1, 2, 3)
 _WEIGHT_FULL64_BEAM_KEEP = 4
 _WEIGHT_FULL64_CHUNK_ROWS = 1024
 _WEIGHT_FULL64_MAX_RATIO = 0.25
-# L3 wiring gate (2026-09-03): _refine_weight_blocks64 existed with no caller.
-# A/B only; default OFF keeps the archived v160/v159 weight behaviour intact.
-_WEIGHT_FULL64_APPLY = False
 # C35 (2026-08-28): per-width full-64 coverage.  Narrow layers (q/k/v/o,
 # <=1024 channels) have few 64-blocks and rows, so their refinement is cheap;
 # wide FFN projectors (fc/proj, 2048/3072) dominate the calibration time.
@@ -268,21 +265,6 @@ _WEIGHT_FULL64_SECOND_COORDINATE = False
 _WEIGHT_FULL64_DATA_DRIVEN_COVERAGE = False
 _WEIGHT_FULL64_TARGET_COVERAGE = 0.97
 _WEIGHT_FULL64_DATA_DRIVEN_MAX_RATIO = 1.0
-
-# Fixed low-freedom coordinate redistribution.  The same symmetric
-# Householder reflection is applied to the final Linear coordinates of X and
-# W, so the continuous product is unchanged before either operand is encoded.
-# There is deliberately no candidate/grid search: one rule is fitted per
-# matrix from calibration-only operand covariances and the vectors alone are
-# retained in the activation state.
-# Research arm; the formal root keeps it disabled until the paired compact
-# gate is passed on Qwen and the cross-model holdouts.
-_HOUSEHOLDER_ENABLED = False
-_HOUSEHOLDER_BLOCK_SIZE = 64
-_HOUSEHOLDER_POWER_ITERS = 4
-_HOUSEHOLDER_MAX_ROWS = 256
-_HOUSEHOLDER_EPS = 1.0e-8
-
 # C45f: static adaptive-headroom candidate.  It reruns the existing
 # CAT-coordinate FULL64 solve with a wider E6M2 neighbourhood, but only after
 # activation_state has been frozen.  A@W then chooses parent vs headroom as a
@@ -383,6 +365,20 @@ if _ATTN_SCALE_AWARE_CENTER:
 # discarding the aggregate gain.
 _ATTN_OUTPUT_SELECTOR = True
 _ATTN_A1_MAX_TOKENS = 256
+_ATTN_LOGIT_GAIN = True
+_ATTN_LOGIT_GAIN_MIN = 0.5
+_ATTN_LOGIT_GAIN_MAX = 2.0
+_ATTN_LOGIT_GAIN_LOG_SHRINK = 0.5
+_ATTN_LOGIT_GAIN_TOKENS = 128
+# D1: plan-2026-09-04 post-official A1 freedom — Q/K asymmetric fold of the
+# per-KV-head logits gain. A1 folds sqrt(gamma) symmetrically into Q and K.
+# D1 redistributes it: q_mult *= sqrt(g)^(1-alpha), k_mult *= sqrt(g)^alpha
+# with a per-KV-head alpha in [0,1] chosen in calibration to minimize the
+# deployed output error. The continuous QK^T product is unchanged for any
+# alpha (product of the two exponents = gamma), so only the quantization
+# dynamic-range allocation between Q and K moves.
+_ATTN_A1_ASYMMETRIC_FOLD = True
+_ATTN_A1_ASYMMETRIC_ALPHA = 0.3  # D1 gate: asymmetric fold (alpha=0 = A1 baseline); single pre-registered value
 # C76.1: after the tied Q/K hierarchy ordering, let the real-output A1 scorer
 # test a small set of *independent* Q-only and K-only head permutations.  The
 # tied permutation is exactly equivalent before quantization; the independent
@@ -4155,7 +4151,6 @@ def _nvfp4_to_hif4(
     block_smooth_size: int = 0,
     block_smooth_seed: int = 0,
     cat_transform: Optional[torch.Tensor] = None,
-    householder_v: Optional[torch.Tensor] = None,
     center_mode: int = 0,
     center_num_heads: Optional[int] = None,
     center_head_dim: Optional[int] = None,
@@ -4246,8 +4241,6 @@ def _nvfp4_to_hif4(
         )
     if cat_transform is not None:
         dense = _apply_cat64_rows(dense, cat_transform, inverse=False)
-    if householder_v is not None:
-        dense = _apply_householder_blocks(dense, householder_v)
     gram = None
     if group_gram is not None:
         gram = group_gram.detach().to(
@@ -4763,116 +4756,6 @@ def _linear_pair_transform(
     return _apply_cat64_rows(
         transformed, cat_transform, inverse=bool(weight_side)
     )
-
-
-def _fit_householder_vectors(
-    weight_smooth: torch.Tensor,
-    activation_samples: Sequence[torch.Tensor],
-) -> Optional[torch.Tensor]:
-    """Fit one fixed 64-channel Householder vector per final-coordinate block."""
-
-    block = int(_HOUSEHOLDER_BLOCK_SIZE)
-    if (
-        not _HOUSEHOLDER_ENABLED
-        or weight_smooth.ndim != 2
-        or not activation_samples
-    ):
-        return None
-    channels = int(weight_smooth.shape[1])
-    if channels < block or channels % block != 0:
-        return None
-    try:
-        activation_rows = torch.cat(
-            [sample.to(dtype=torch.float32) for sample in activation_samples],
-            dim=0,
-        )
-        activation_rows = _sample_rows(
-            activation_rows, int(_HOUSEHOLDER_MAX_ROWS)
-        )
-        weight_rows = _sample_rows(
-            weight_smooth.to(dtype=torch.float32), int(_HOUSEHOLDER_MAX_ROWS)
-        )
-        blocks = channels // block
-        x_grouped = activation_rows.reshape(-1, blocks, block)
-        w_grouped = weight_rows.reshape(-1, blocks, block)
-        x_cov = torch.einsum("tbi,tbj->bij", x_grouped, x_grouped)
-        w_cov = torch.einsum("obi,obj->bij", w_grouped, w_grouped)
-        x_trace = x_cov.diagonal(dim1=-2, dim2=-1).sum(dim=-1)
-        w_trace = w_cov.diagonal(dim1=-2, dim2=-1).sum(dim=-1)
-        identity = torch.eye(
-            block, dtype=torch.float32, device=weight_smooth.device
-        ).expand(blocks, -1, -1)
-        x_cov = torch.where(
-            x_trace[:, None, None] > float(_HOUSEHOLDER_EPS),
-            x_cov / x_trace[:, None, None].clamp_min(float(_HOUSEHOLDER_EPS)),
-            identity,
-        )
-        w_cov = torch.where(
-            w_trace[:, None, None] > float(_HOUSEHOLDER_EPS),
-            w_cov / w_trace[:, None, None].clamp_min(float(_HOUSEHOLDER_EPS)),
-            identity,
-        )
-        covariance = torch.nan_to_num(
-            0.5 * (x_cov + w_cov), nan=0.0, posinf=0.0, neginf=0.0
-        )
-        vector = torch.full(
-            (blocks, block),
-            1.0 / math.sqrt(float(block)),
-            dtype=torch.float32,
-            device=weight_smooth.device,
-        )
-        for _ in range(int(_HOUSEHOLDER_POWER_ITERS)):
-            vector = torch.bmm(
-                covariance, vector.unsqueeze(-1)
-            ).squeeze(-1)
-            norm = vector.norm(dim=-1, keepdim=True).clamp_min(
-                float(_HOUSEHOLDER_EPS)
-            )
-            vector = vector / norm
-        target = torch.where(vector >= 0.0, 1.0, -1.0) / math.sqrt(
-            float(block)
-        )
-        difference = vector - target
-        difference_norm = difference.norm(dim=-1, keepdim=True)
-        valid = torch.isfinite(difference_norm) & (
-            difference_norm > float(_HOUSEHOLDER_EPS)
-        )
-        vectors = torch.where(
-            valid,
-            difference / difference_norm.clamp_min(float(_HOUSEHOLDER_EPS)),
-            torch.zeros_like(difference),
-        )
-        return torch.nan_to_num(
-            vectors, nan=0.0, posinf=0.0, neginf=0.0
-        ).contiguous()
-    except (RuntimeError, ValueError, TypeError):
-        return None
-
-
-def _apply_householder_blocks(
-    dense: torch.Tensor,
-    vectors: Optional[torch.Tensor],
-) -> torch.Tensor:
-    """Apply stored block reflections with one vectorized projection."""
-
-    if vectors is None:
-        return dense
-    block = int(_HOUSEHOLDER_BLOCK_SIZE)
-    channels = int(dense.shape[-1])
-    if channels < block or channels % block != 0:
-        raise ValueError("Householder width must be divisible by 64")
-    v = vectors.detach().to(device=dense.device, dtype=torch.float32)
-    expected = (channels // block, block)
-    if tuple(v.shape) != expected:
-        raise ValueError(
-            f"Householder vector shape {tuple(v.shape)} != {expected}"
-        )
-    grouped = dense.to(dtype=torch.float32).reshape(
-        *dense.shape[:-1], channels // block, block
-    )
-    projection = (grouped * v).sum(dim=-1, keepdim=True)
-    reflected = grouped - 2.0 * projection * v
-    return reflected.reshape_as(dense)
 
 
 def _transformed_second_moment(
@@ -6920,10 +6803,6 @@ def _jdrq_calibration_products(
                 weight_side=False,
                 cat_transform=cat_transform,
             )
-            if state.get("householder_v") is not None:
-                exact_t = _apply_householder_blocks(
-                    exact_t, state.get("householder_v")
-                )
             frozen_params = _nvfp4_to_hif4(
                 quant_rows,
                 scale_rows,
@@ -6932,7 +6811,6 @@ def _jdrq_calibration_products(
                 block_smooth_size=int(state.get("block_smooth_size", 0)),
                 block_smooth_seed=int(state.get("block_smooth_seed", 0)),
                 cat_transform=state.get("cat_transform"),
-                householder_v=state.get("householder_v"),
                 importance=state.get("importance"),
                 group_gram=state.get("gram"),
                 group_gram8=state.get("gram8"),
@@ -8275,6 +8153,7 @@ def hif4_calibration_and_quantize_weight(
         best_perm,
         best_block_smooth_size,
     )
+    weight_group_gram = None
     gram_full = None
     if use_quadratic:
         gram_full = _transformed_covariance(
@@ -8284,61 +8163,145 @@ def hif4_calibration_and_quantize_weight(
             best_block_smooth_size,
             best_block_smooth_seed,
         )
-
-    # Build the final pre-quantization activation coordinates once.  The
-    # Householder vectors are fitted only from these calibration samples and
-    # then applied identically to the static weight and activation operands.
-    transformed_activation_samples = [
-        _linear_pair_transform(
-            sample.to(dtype=torch.float32),
-            best_d,
-            best_perm,
-            best_block_smooth_size,
-            best_block_smooth_seed,
-            weight_side=False,
-        )
-        for sample in activation_samples
-    ]
-    householder_v = _fit_householder_vectors(
-        weight_smooth, transformed_activation_samples
-    )
-    if householder_v is not None:
-        weight_smooth = _apply_householder_blocks(weight_smooth, householder_v)
-        transformed_activation_samples = [
-            _apply_householder_blocks(sample, householder_v)
-            for sample in transformed_activation_samples
-        ]
-        if gram_full is not None:
-            block = int(_HOUSEHOLDER_BLOCK_SIZE)
-            blocks = in_features // block
-            vectors = householder_v.to(
-                device=gram_full.device, dtype=torch.float32
-            )
-            matrices = torch.eye(
-                block, dtype=torch.float32, device=gram_full.device
-            ).unsqueeze(0) - 2.0 * torch.einsum(
-                "bi,bj->bij", vectors, vectors
-            )
-            grouped = gram_full.to(dtype=torch.float32).reshape(
-                blocks, block, blocks, block
-            )
-            left = torch.einsum("bpi,bicj->bpcj", matrices, grouped)
-            gram_full = torch.einsum(
-                "bpcj,cqj->bpcq", left, matrices
-            ).reshape_as(gram_full)
-        if transformed_activation_samples:
-            h_x_smooth = torch.cat(
-                transformed_activation_samples, dim=0
-            ).square().mean(dim=0)
-
-    weight_group_gram = None
-    if gram_full is not None:
         blocks = in_features // _HIF4_BLOCK_SIZE
         weight_group_gram = _flat_group_gram(gram_full, in_features).reshape(
             blocks, 8, 2, 4, 4
         ).unsqueeze(0).expand(
             int(weight.shape[0]), blocks, 8, 2, 4, 4
         )
+    # ------------------------------------------------------------------
+    # v166 rank-1 residual redistribution (side-isolation plan section 6).
+    #
+    # Deployment-coordinate base-codec residual probes define an exactly
+    # product-preserving rank-1 mix R = I + u v^T: v = d1 is the
+    # fold-median top residual direction, u = c * d2 with c = 1/4 and d2
+    # the fold-median second direction orthogonalized against d1, so u is
+    # orthogonal to v and R^{-T} = I - v u^T exactly.  Folds are the
+    # pre-fixed even/odd row split of each calibration window's deployment
+    # sample (4 folds); directions are sign-aligned to fold 0 and
+    # component-wise median aggregated.  Residual probes use the base
+    # HiF4 codec (_dense_to_hif4) in deployment coordinates.  The mix is
+    # applied before the weight encode by rebinding the deployment
+    # operands (weight_smooth, transformed samples, Hessian gram, block
+    # grams, importance), so the entire downstream pipeline (GPTQ encode,
+    # importance, gram, h_inv) runs on the transformed operands; the
+    # dynamic path applies A R = A + (A u) v^T in O(TD).
+    # ------------------------------------------------------------------
+    transformed_activation_samples = []
+    for _sample in activation_samples:
+        _t = _sample.to(dtype=torch.float32) * best_d.reciprocal().reshape(1, -1)
+        _t = _t.index_select(-1, best_perm)
+        if best_block_smooth_size != 0:
+            _t = _block_hadamard_transform(
+                _t, best_block_smooth_size, best_block_smooth_seed
+            )
+        transformed_activation_samples.append(_t)
+
+    weight_residual = weight_smooth - _dequantize_hif4(
+        _dense_to_hif4(weight_smooth)
+    ).to(torch.float32)
+    fold_residuals = []
+    for _sample in transformed_activation_samples:
+        for _fold in (_sample[0::2], _sample[1::2]):
+            fold_residuals.append(
+                _fold
+                - _dequantize_hif4(_dense_to_hif4(_fold)).to(torch.float32)
+            )
+
+    def _rank1_top2(act_res, w_res):
+        ta = float(act_res.square().sum())
+        tw = float(w_res.square().sum())
+        na = 1.0 / ta if ta > _EPS else 0.0
+        nw = 1.0 / tw if tw > _EPS else 0.0
+
+        def _mv(x):
+            return (
+                na * act_res.t().mv(act_res.mv(x))
+                + nw * w_res.t().mv(w_res.mv(x))
+            )
+
+        diag = na * act_res.square().sum(dim=0) + nw * w_res.square().sum(dim=0)
+        d1 = torch.zeros_like(diag)
+        d1[int(diag.argmax())] = 1.0
+        for _ in range(128):
+            d1 = _mv(d1)
+            d1 = d1 / d1.norm().clamp_min(_EPS)
+        lam1 = float(d1 @ _mv(d1))
+        diag2 = diag - lam1 * d1.square()
+        d2 = torch.zeros_like(diag)
+        d2[int(diag2.argmax())] = 1.0
+        for _ in range(128):
+            d2 = _mv(d2) - lam1 * d1 * float(d1 @ d2)
+            d2 = d2 / d2.norm().clamp_min(_EPS)
+        return d1, d2
+
+    def _rank1_fix_sign(d):
+        if float(d[int(d.abs().argmax())]) < 0.0:
+            return -d
+        return d
+
+    d1_list = []
+    d2_list = []
+    for _fold_res in fold_residuals:
+        _d1, _d2 = _rank1_top2(_fold_res, weight_residual)
+        d1_list.append(_rank1_fix_sign(_d1))
+        d2_list.append(_rank1_fix_sign(_d2))
+    for _i in range(1, len(d1_list)):
+        if float(d1_list[_i] @ d1_list[0]) < 0.0:
+            d1_list[_i] = -d1_list[_i]
+        if float(d2_list[_i] @ d2_list[0]) < 0.0:
+            d2_list[_i] = -d2_list[_i]
+    rank1_v = torch.stack(d1_list).median(dim=0).values
+    if float(rank1_v.norm()) < 1.0e-6:
+        rank1_v = d1_list[0]
+    rank1_v = rank1_v / rank1_v.norm().clamp_min(_EPS)
+    d2_med = torch.stack(d2_list).median(dim=0).values
+    d2_med = d2_med - float(d2_med @ rank1_v) * rank1_v
+    d2_norm = float(d2_med.norm())
+    if d2_norm < 1.0e-6:
+        rank1_u = torch.zeros_like(rank1_v)
+    else:
+        rank1_u = 0.25 * d2_med / d2_norm
+    vtu = float(rank1_v @ rank1_u)
+    if abs(vtu) > 0.5:
+        rank1_u = rank1_u * (0.5 / abs(vtu))
+
+    if float(rank1_u.square().sum()) > 0.0:
+        weight_smooth = weight_smooth - torch.outer(
+            weight_smooth.mv(rank1_v), rank1_u
+        )
+        transformed_activation_samples = [
+            _sample + torch.outer(_sample.mv(rank1_u), rank1_v)
+            for _sample in transformed_activation_samples
+        ]
+        if gram_full is not None:
+            g_u = gram_full.mv(rank1_u)
+            ugu = float(rank1_u @ g_u)
+            h_x_smooth = (
+                h_x_smooth
+                + 2.0 * rank1_v * g_u
+                + ugu * rank1_v.square()
+            )
+            gram_full = (
+                gram_full
+                + torch.outer(rank1_v, g_u)
+                + torch.outer(g_u, rank1_v)
+                + ugu * torch.outer(rank1_v, rank1_v)
+            )
+            weight_group_gram = _flat_group_gram(
+                gram_full, in_features
+            ).reshape(
+                blocks, 8, 2, 4, 4
+            ).unsqueeze(0).expand(
+                int(weight.shape[0]),
+                blocks,
+                8, 2, 4, 4,
+            )
+        else:
+            h_x_smooth = torch.cat(
+                transformed_activation_samples
+            ).square().mean(dim=0)
+
     refine_ratio = (
         _WEIGHT_REFINE_MAX_RATIO_SMALL
         if int(weight.numel()) <= 4_194_304
@@ -8377,22 +8340,6 @@ def hif4_calibration_and_quantize_weight(
         )
 
     if _WEIGHT_E2E_REFINE and len(activation_samples) > 0:
-        # L3 (2026-09-03): wire the dormant C23 full-64 block refine before the
-        # e2e refine, behind _WEIGHT_FULL64_APPLY.  Per-block strict full-H
-        # improvement with parent fallback keeps this monotone per block; the
-        # e2e refine then runs on the C23-improved parameters.  A/B gated.
-        if _WEIGHT_FULL64_APPLY and gram_full is not None:
-            full64_ratio = (
-                _WEIGHT_FULL64_MAX_RATIO_NARROW
-                if in_features <= _WEIGHT_FULL64_NARROW_CHANNELS
-                else _WEIGHT_FULL64_MAX_RATIO_WIDE
-            )
-            weight_params = _refine_weight_blocks64(
-                weight_smooth,
-                weight_params,
-                gram_full,
-                max_ratio=full64_ratio,
-            )
         weight_params = _weight_e2e_refine(
             weight_smooth, weight_params,
             activation_samples,
@@ -8415,6 +8362,11 @@ def hif4_calibration_and_quantize_weight(
     smooth_inv_state = None
     if not torch.equal(best_d, identity_d):
         smooth_inv_state = _cpu_state_tensor(best_d.reciprocal())
+    smooth_inv_work = None if smooth_inv_state is None else best_d.reciprocal()
+    permutation_work = None if permutation_state is None else best_perm
+
+    # v166: transformed_activation_samples are built before the weight
+    # encode by the rank-1 residual redistribution block.
 
     if _DATA_DRIVEN_RATIO:
         loss_parts = [
@@ -8602,11 +8554,6 @@ def hif4_calibration_and_quantize_weight(
     activation_state = {
         "smooth_inv": smooth_inv_state,
         "permutation": permutation_state,
-        "householder_v": (
-            _cpu_state_tensor(householder_v)
-            if householder_v is not None
-            else None
-        ),
         "block_smooth_size": int(best_block_smooth_size),
         "block_smooth_seed": int(best_block_smooth_seed),
         "importance": _cpu_state_tensor(activation_importance),
@@ -8617,6 +8564,8 @@ def hif4_calibration_and_quantize_weight(
         "accept_margin": _ACTIVATION_REFINE_ACCEPT_MARGIN,
         "max_refine_ratio": float(activation_ratio),
         "max_refine_blocks": _ACTIVATION_REFINE_MAX_BLOCKS,
+        "rank1_u": _cpu_state_tensor(rank1_u),
+        "rank1_v": _cpu_state_tensor(rank1_v),
         "in_features": int(in_features),
         "version": 4,
     }
@@ -8660,9 +8609,14 @@ def hif4_dynamic_quantize_activation(
         dense = _block_hadamard_transform(
             dense, block_smooth_size, block_smooth_seed
         )
-    householder_v = activation_state.get("householder_v")
-    if householder_v is not None:
-        dense = _apply_householder_blocks(dense, householder_v)
+
+    rank1_u = activation_state["rank1_u"].to(
+        device=dense.device, dtype=torch.float32
+    )
+    rank1_v = activation_state["rank1_v"].to(
+        device=dense.device, dtype=torch.float32
+    )
+    dense = dense + (dense @ rank1_u).unsqueeze(-1) * rank1_v
 
     gram = None
     gram_state = activation_state.get("gram")
@@ -8952,6 +8906,153 @@ def _attention_candidate_metrics(
 
 
 @torch.no_grad()
+def _fit_attention_logit_gain(
+    q_pairs: list,
+    k_pairs: list,
+    q_state: dict,
+    k_state: dict,
+    q_num_heads: int,
+    kv_num_heads: int,
+    head_dim: int,
+) -> tuple[torch.Tensor, dict[str, float]]:
+    """Fit the plan-A1 per-KV-head multiplicative logit gain.
+
+    Row-centered causal logits of the float (NVFP4-dequantized) Q/K are
+    compared with the deployed quantization on even/odd folds of the
+    calibration windows.  ``raw_gamma = <Lq, L> / <Lq, Lq>`` per fold
+    regresses the float logits on the quantized ones; gamma is the
+    log-domain shrunk median fold gain per KV head, so folding
+    ``sqrt(gamma)`` into both Q and K multipliers rescales the deployed
+    logits by gamma.
+    """
+
+    group = int(q_num_heads) // int(kv_num_heads)
+    kv = int(kv_num_heads)
+    sqrt_d = math.sqrt(float(head_dim))
+
+    def _pass(states_q: dict, states_k: dict):
+        fold_num = [torch.zeros(kv, dtype=torch.float64) for _ in range(2)]
+        fold_den = [torch.zeros(kv, dtype=torch.float64) for _ in range(2)]
+        slope_num = 0.0
+        slope_den = 0.0
+        for index in range(min(len(q_pairs), len(k_pairs))):
+            q_pair = q_pairs[index]
+            k_pair = k_pairs[index]
+            take = _ATTN_LOGIT_GAIN_TOKENS
+            q_quant = q_pair[0][:take]
+            q_scale = q_pair[1][:take]
+            k_quant = k_pair[0][:take]
+            k_scale = k_pair[1][:take]
+            q_dense = _dequantize_nvfp4_float32(q_quant, q_scale)
+            k_dense = _dequantize_nvfp4_float32(k_quant, k_scale)
+            q_hat = _dequantize_hif4(
+                hif4_dynamic_quantize_q(
+                    q_quant, q_scale, q_num_heads, head_dim, states_q
+                )
+            ).to(torch.float32)
+            k_hat = _dequantize_hif4(
+                hif4_dynamic_quantize_k(
+                    k_quant, k_scale, kv_num_heads, head_dim, states_k
+                )
+            ).to(torch.float32)
+            seq = int(q_dense.shape[0])
+            tri = torch.ones(
+                seq, seq, device=q_dense.device, dtype=torch.float32
+            ).tril()
+            counts = torch.arange(
+                1, seq + 1, device=q_dense.device, dtype=torch.float32
+            )[:, None]
+            q_f = q_dense.reshape(seq, q_num_heads, head_dim).transpose(0, 1)
+            k_f = (
+                k_dense.reshape(seq, kv, head_dim)
+                .transpose(0, 1)
+                .repeat_interleave(group, dim=0)
+            )
+            q_q = q_hat.reshape(seq, q_num_heads, head_dim).transpose(0, 1)
+            k_q = (
+                k_hat.reshape(seq, kv, head_dim)
+                .transpose(0, 1)
+                .repeat_interleave(group, dim=0)
+            )
+            logits = (q_f @ k_f.transpose(-1, -2)) / sqrt_d
+            logits_q = (q_q @ k_q.transpose(-1, -2)) / sqrt_d
+            center = (
+                logits - (logits * tri).sum(-1, keepdim=True) / counts
+            ) * tri
+            center_q = (
+                logits_q - (logits_q * tri).sum(-1, keepdim=True) / counts
+            ) * tri
+            fold = index % 2
+            fold_num[fold] += (
+                (center_q * center)
+                .reshape(kv, group, -1)
+                .sum(dim=(1, 2))
+                .to(torch.float64)
+                .cpu()
+            )
+            fold_den[fold] += (
+                (center_q * center_q)
+                .reshape(kv, group, -1)
+                .sum(dim=(1, 2))
+                .to(torch.float64)
+                .cpu()
+            )
+            slope_num += float((center_q * center).sum())
+            slope_den += float((center * center).sum())
+        return fold_num, fold_den, slope_num, slope_den
+
+    fold_num, fold_den, slope_num, slope_den = _pass(q_state, k_state)
+    raw = torch.stack(
+        [fold_num[f] / (fold_den[f] + 1.0e-12) for f in range(2)]
+    )
+    finite = (
+        torch.isfinite(raw).all(dim=0)
+        & (fold_den[0] > 0)
+        & (fold_den[1] > 0)
+    )
+    raw = torch.nan_to_num(
+        raw, nan=1.0, posinf=1.0, neginf=1.0
+    ).clamp(_ATTN_LOGIT_GAIN_MIN, _ATTN_LOGIT_GAIN_MAX)
+    gain = (
+        _ATTN_LOGIT_GAIN_LOG_SHRINK * raw.log().median(dim=0).values
+    ).exp()
+    gain = torch.where(finite, gain, torch.ones_like(gain))
+    gain = torch.nan_to_num(
+        gain, nan=1.0, posinf=1.0, neginf=1.0
+    ).clamp(
+        math.sqrt(_ATTN_LOGIT_GAIN_MIN), math.sqrt(_ATTN_LOGIT_GAIN_MAX)
+    )
+
+    q_gain = gain.repeat_interleave(group)
+    q_gain = q_gain[:, None].expand(-1, head_dim).reshape(-1).sqrt()
+    k_gain = gain[:, None].expand(-1, head_dim).reshape(-1).sqrt()
+    q_corr = dict(q_state)
+    k_corr = dict(k_state)
+    q_base = (
+        torch.ones(int(q_num_heads) * int(head_dim), dtype=torch.float32)
+        if q_state.get("multiplier") is None
+        else q_state["multiplier"].to(dtype=torch.float32)
+    )
+    k_base = (
+        torch.ones(kv * int(head_dim), dtype=torch.float32)
+        if k_state.get("multiplier") is None
+        else k_state["multiplier"].to(dtype=torch.float32)
+    )
+    q_corr["multiplier"] = q_base * q_gain
+    k_corr["multiplier"] = k_base * k_gain
+    _, _, corr_num, corr_den = _pass(q_corr, k_corr)
+
+    stats = {
+        "valid_heads": int(finite.sum().item()),
+        "gamma_min": float(gain.min().item()),
+        "gamma_median": float(gain.median().item()),
+        "gamma_max": float(gain.max().item()),
+        "slope_parent": slope_num / slope_den if slope_den > 0.0 else 1.0,
+        "slope_corrected": corr_num / corr_den if corr_den > 0.0 else 1.0,
+    }
+    return gain.to(torch.float32), stats
+
+
 def hif4_calibration_attention(
     calib_qkv_list: list,
     q_num_heads: int,
@@ -10379,6 +10480,46 @@ def hif4_calibration_attention(
                 safety_tolerance=0.0,
             ):
                 q_state, k_state = candidate_q_state, candidate_k_state
+    if _ATTN_LOGIT_GAIN and a1_q_pairs and a1_k_pairs:
+        gain, _logit_gain_stats = _fit_attention_logit_gain(
+            a1_q_pairs,
+            a1_k_pairs,
+            q_state,
+            k_state,
+            q_num_heads,
+            kv_num_heads,
+            head_dim,
+        )
+        group = int(q_num_heads) // int(kv_num_heads)
+        if _ATTN_A1_ASYMMETRIC_FOLD:
+            # D1: asymmetric fold.  q_mult *= sqrt(g)^(1-alpha) and
+            # k_mult *= sqrt(g)^(1+alpha); the exponent sum is 1 so the
+            # continuous logits scale stays gamma == A1 for any alpha
+            # (alpha=0 is exactly the A1 symmetric baseline).  alpha is a
+            # single pre-registered constant; a per-head analytic alpha
+            # would be the follow-up only if this gate shows a local signal.
+            alpha = float(_ATTN_A1_ASYMMETRIC_ALPHA)
+            q_gain = gain.repeat_interleave(group)
+            q_gain = q_gain[:, None].expand(-1, head_dim).reshape(-1) ** (0.5 * (1.0 - alpha))
+            k_gain = gain[:, None].expand(-1, head_dim).reshape(-1) ** (0.5 * (1.0 + alpha))
+        else:
+            q_gain = gain.repeat_interleave(group)
+            q_gain = q_gain[:, None].expand(-1, head_dim).reshape(-1).sqrt()
+            k_gain = gain[:, None].expand(-1, head_dim).reshape(-1).sqrt()
+        q_base = (
+            torch.ones(q_channels, dtype=torch.float32)
+            if q_state.get("multiplier") is None
+            else q_state["multiplier"].to(dtype=torch.float32)
+        )
+        k_base = (
+            torch.ones(kv_channels, dtype=torch.float32)
+            if k_state.get("multiplier") is None
+            else k_state["multiplier"].to(dtype=torch.float32)
+        )
+        q_state["multiplier"] = _cpu_state_tensor(q_base * q_gain)
+        k_state["multiplier"] = _cpu_state_tensor(k_base * k_gain)
+        q_state["logit_gain"] = _cpu_state_tensor(gain)
+        k_state["logit_gain"] = _cpu_state_tensor(gain)
     return {"q_state": q_state, "k_state": k_state, "v_state": v_state}
 
 
