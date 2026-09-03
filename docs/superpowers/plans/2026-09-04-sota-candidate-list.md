@@ -164,6 +164,10 @@ P\_A = v168 而非原始锚点 13945）。
   QK-only +0.002406 为正——标记 `model-specific-risk`，只作封存 holdout，
   不据此调参数/路由，仍由 v176 首次官方结果裁决。
 
+- opt-125m attn 60（配对 v160 父）：mean Δgain −0.021851（30+/30−）、
+  QK-only −0.0246；两架构对 C1 均无正向跨模型信号，风险标记维持；Linear
+  侧差异来自父结构不同（v176=standard vs 父=v160）不可归因 C1。
+
 - 时间：attention default 校准 60.15s（v168 基线 68.40s）、动态 Q/K/V 3.36s，
   无时间风险。
 

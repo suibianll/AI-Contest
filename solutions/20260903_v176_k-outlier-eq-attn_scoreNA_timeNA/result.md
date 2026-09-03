@@ -39,6 +39,7 @@
 | attention compact 4（配对 v168）   | **mean Δgain +0.002444**、median +0.003312、3+/1−/0=；QK-only +0.0029、QK interaction +0.358           |
 | attention default 120（配对 v168） | **mean Δgain −0.004450**、median −0.001634、56+/64−/0=（win 0.4667）；QK interaction +50.77 强正          |
 | gpt2 attn compact 4（配对 v160 父） | **mean Δgain −0.002753**、median −0.015484、1+/3−/0=；QK-only +0.002406 为正                 |
+| opt-125m attn 60（配对 v160 父）     | **mean Δgain −0.021851**、median −0.001365、30+/30−/0=（win 0.5）；QK-only −0.0246；Linear 侧差异来自父结构不同不可归因 |
 | control                        | V 侧 `v_only_gain = 0.0` 未改动；Linear 未执行                                                             |
 | API 时间                         | attention default：校准 60.15s（v168 基线 68.40s）、动态 Q/K/V 3.36s；零新增在线算子，无时间风险                           |
 
@@ -56,6 +57,9 @@ L3/L11/L14/L20 小幅正向，L4 consistent\_regression（−0.0039）；len10 �
 - 跨模型（GPT-2 compact）：Attention mean Δgain −0.002753（1+/3−），标记
   `model-specific-risk`——Qwen 与 GPT-2 在该机制上存在轻微方向差异；按计划
   第 7 步只作封存 holdout，不据此调参数/路由，仍由 v176 首次官方结果裁决。
+- 跨模型（opt-125m attn 60）：mean Δgain −0.021851（30+/30−），方向一致性
+  弱且整体轻微负；两架构（GPT-2/opt-125m）对 C1 均无正向跨模型信号，风险标记
+  维持，仍由首次官方结果裁决。
 - 若官方负：C1 家族关闭，切换 C2（A1 细粒度化），不调 rho/beta/通道数重扫。
 - 若官方正：C1 晋级；组合条件维持 `S_pred = 4590 + S_c1 − 1001`，仍按计划
   §3.3 登记。
@@ -68,5 +72,7 @@ L3/L11/L14/L20 小幅正向，L4 consistent\_regression（−0.0039）；len10 �
 .venv\Scripts\python.exe -u evaluator\official_eval.py --solution solutions\20260903_v176_k-outlier-eq-attn_scoreNA_timeNA\solution.py --attention-only --cache-mode read --nvfp4-cache-mode auto --capture-device cuda --algorithm-device cuda --baseline-json artifacts\official_eval\v168-attn-default.json
 
 .venv\Scripts\python.exe -u evaluator\cross_model_eval.py --model gpt2 --solution solutions\20260903_v176_k-outlier-eq-attn_scoreNA_timeNA\solution.py --name v176 --attention-only --compact-panel --cache-mode read --capture-device cuda --algorithm-device cuda --baseline-json artifacts\official_eval\s1-parent-v160-gpt2-attn-compact.json --output artifacts\official_eval\v176-gpt2-attn-compact.json --report logs\official_eval\v176-gpt2-attn-compact.md
+
+.venv\Scripts\python.exe -u evaluator\cross_model_eval.py --model opt-125m --solution solutions\20260903_v176_k-outlier-eq-attn_scoreNA_timeNA\solution.py --name v176 --cache-mode read --capture-device cuda --algorithm-device cuda --baseline-json artifacts\official_eval\v160-opt-parent.json --output artifacts\official_eval\v176-opt-integration.json --report logs\official_eval\v176-opt-integration.md
 ```
 
