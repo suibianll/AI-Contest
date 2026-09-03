@@ -53,6 +53,33 @@
   Linear 已闭族或 A3 已证最优域；Attention 侧无新增可迁移自由度。排除了第三条
   独立机制路线，C1/C2/C3 排序维持不变。
 
+## 0c. 搜索关键证据（第四轮 2026-09-04，FP4/MXFP4 encoder 内自由度与误差分解）
+
+- **MXFP4 误差三分量分解（arXiv 2605.20402, 2026-06）**：scale bias（E8M0
+  2 的幂舍入 \~44% 超调）、deadzone truncation（< 块最大 1/24 的条目清零，
+  \~9% 权重）、grid noise（E2M1 网格噪声，对 scale 精度不变、不可约）。对应
+  修正：Macro-block scaling（= scale 精化域，第三轮已闭）、Outlier Fallback
+  （恢复清零条目，需在线逐元素判断/独立存储，HiF4 五字段无表 → 同 C4 排除）、
+  AQN（训练侧熵控制，PTQ 不适用）。
+
+- **Hot-Channel Patch / CHON（arXiv 2602.02047, 2026-02, NVFP4 预训练）**：
+  post-QK 操作对量化最敏感；训练后期 outlier 收敛为持续 hot channels，HCP
+  在线注入残差。post-QK 敏感 = 已由 A1/C2 覆盖（logits 域修正）；hot-channel
+  在线残差需逐 token 注入 → 动态排除。
+
+- **ARCQuant（2026）**：outlier channel 残差二次量化并拼接 reduction 维——
+  需要在线为残差分配额外通道存储，HiF4 五字段无此表 → 排除。
+
+- **Dissecting Outlier Dynamics**：LA vs SA 的 heavy-tail 差异、FFN SwiGLU
+  是 outlier 源——跨结构诊断，无六 API 可注入的自由度。
+
+- **Full-Stack FP4 / Metis（训练侧）**：LoRA-SVD、混合精度训练配方——PTQ
+  评测不适用。
+
+- **第四轮结论**：FP4 encoder 内剩自由度可映射为（a）scale 精化（已闭）、
+  （b）deadzone/残差恢复（需在线存储，C4 论证排除）、（c）logits/post-QK
+  修正（A1/C2 覆盖）。无新可注册机制；C1/C2/C3 排序第三次验证维持。
+
 ## 0. 搜索关键证据（第一轮 2026-09-04）
 
 - **KVQuant（NeurIPS 2024）**：per-channel Key 量化 + Pre-RoPE + per-vector
