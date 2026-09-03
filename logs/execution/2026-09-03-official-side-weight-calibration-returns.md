@@ -1,7 +1,7 @@
 # 官方两侧比重校准实验 — 官方回传记录
 
 日期：2026-09-03 起
-实验：[活动计划](../../docs/superpowers/plans/2026-09-03-official-side-weight-calibration-plan.md)
+实验：[已归档计划](../../docs/superpowers/archive/plans/2026-09-03-official-side-weight-calibration-plan-superseded.md)
 候选：v162 / v163 / v164（各一次官方提交，顺序执行）
 
 ## 回传记录

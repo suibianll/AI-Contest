@@ -19,7 +19,7 @@ zero sign。无校准统计、无搜索、无 state 内容（空 dict）。与
 
 ## 2. 实验角色
 
-官方两侧分数比重校准（[`活动计划`](../../docs/superpowers/plans/2026-09-03-official-side-weight-calibration-plan.md)）的
+官方两侧分数比重校准（[`已归档计划`](../../docs/superpowers/archive/plans/2026-09-03-official-side-weight-calibration-plan-superseded.md)）的
 **标准基线锚点**：官方回传 `S(v162)` 定义 Δ\_L = `S(v163)−S(v162)`（Linear 优化贡献）
 与 Δ\_A = `S(v164)−S(v162)`（Attention 优化贡献）的分母。
 
@@ -50,4 +50,3 @@ STD 定义不同，`S(v162)` 只作为锚点记录，不反推公式。判读表
 ```powershell
 .venv\Scripts\python.exe -u evaluator\official_eval.py --solution solutions\20260903_v162_standard-baseline-both_scoreNA_timeNA\solution.py --cache-mode read --nvfp4-cache-mode auto --capture-device cuda --algorithm-device cuda --output artifacts\official_eval\sidecal-v162-both-default.json --report logs\official_eval\sidecal-v162-both-default.md
 ```
-

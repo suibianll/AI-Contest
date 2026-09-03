@@ -1,0 +1,262 @@
+# 21765 目标：Attention 静态输出敏感量化 + Linear 鲁棒 A@W 计划
+
+> 状态：**ACTIVE**
+>
+> 创建：2026-09-03
+>
+> 官方父版本：v160，`17532 / 232s`，归档源码 SHA256
+> `33B1D061CE6BFCD92659C597BE4830BB9B910E646FF518433DA67B925AE8680D`
+>
+> 当前官方榜首锚点：`21765 / 290s`（用户回传，源码未知）
+
+## 1. 目标、差距与执行原则
+
+当前可复现最好分数为 `17532`，距榜首：
+
+```text
+21765 - 17532 = 4233
+```
+
+v162/v163/v164 官方 2×2 校准得到：
+
+```text
+base = 1001
+Linear(v160) - Linear(standard) = 3586
+Attention(v160) - Attention(standard) = 12944
+score interaction = 17532 - 4587 - 13945 + 1001 = 1
+```
+
+因此在 standard/v160 两个端点上，官方分数近似按侧可加；但 `12944:3586=3.61:1`
+是当前已实现贡献比，不是公开评分权重，也不是本地 gain 到官方分的换算率。研发目标按
+Attention `+3000~3300`、Linear `+900~1200` 分解，只作为资源规划，不用于预测单个候选。
+
+执行原则：
+
+- 两侧从 v160 归档分别分支，Attention 实验冻结全部 Linear，Linear 实验冻结全部 Attention；
+- 先 Attention、后 Linear，两个方向不并行调参；
+- 每个数学假设只产生一个预注册候选，失败后关闭该机制，不扫描 alpha、seed、ridge、阈值、
+  block size、候选数量或模型/layer/role/length 路由；
+- 本地 proxy 只负责否定、机制归因和同机复杂度，不换算官方分数或时间；
+- Qwen compact/default 共享数据假设，不视为两个独立泛化证据；GPT-2 与 OPT/Pythia 才是
+  架构否决门禁；
+- 动态 per-call Gram、多轮 refinement 和小张量 Python 循环已被 v161 官方 timeout 关闭；
+  新增计算优先放在 calibration，动态路径保持 O(TD) 且不增加 sweep；
+- 官方结果失败后不做邻域版本；只有死分支、state 未写回、device 错误或 case 身份不匹配等
+  实现错误允许按原数学规则修复一次，并必须记录 attempted/accepted 计数。
+
+## 2. 官方里程碑
+
+| 里程碑 | 分数 | 判读 |
+| --- | ---: | --- |
+| M1 | `18500` | 至少一个新机制达到约千分级官方增量 |
+| M2 | `20000` | 两侧或两个独立机制形成结构性可叠加收益 |
+| M3 | `21766+` | 超过当前榜首 |
+
+官方单机制增量的事后分类只用于决定其战略角色：`<=0` 关闭；`1~299` 为有效微模块但不是
+冲榜主线；`300~999` 可作为组合模块；`>=1000` 才升级为冲击 M2 的新父版本。分类不能用于
+反向修改候选参数。
+
+## 3. 工作包 A：跨折收缩 Softmax-Fisher（第一优先）
+
+### 3.1 理论依据
+
+v161 的 Q/K 交叉 Gram64 per-call 精化在 Qwen default 得到 paired `+0.052502`、
+`106+/14-`，GPT-2 `+0.0678` 同号并通过 D1，但官方 timeout。该证据说明输出感知的
+Q/K 误差度量有精度信号，失败点是部署复杂度。A1 将该信号压缩为 calibration 编译的一维
+静态 importance，不移植动态 sweep。
+
+Attention 定义为：
+
+```text
+S = Q K^T / sqrt(d)
+P = softmax(S)
+O = P Q(V)
+```
+
+对 logit `S_ts` 的输出敏感度：
+
+```text
+J_ts = P_ts * (Q(V)_s - O_t)
+```
+
+在 v160 最终部署坐标中构造对角 Fisher：
+
+```text
+Fq_j = E[sum_ts ||J_ts||^2 * K_sj^2 / d]
+Fk_j = E[sum_ts ||J_ts||^2 * Q_tj^2 / d]
+```
+
+它直接近似 Q/K 通道误差对最终 Attention 输出的二阶影响，不以 operand MSE 或 raw logits MSE
+代替。V 必须先经过父版本动态量化，确保目标对应真实部署的 `Q(V)`。
+
+### 3.2 跨折解析收缩
+
+对五个 calibration fold 和 causal/non-causal mask 分别计算 Fisher。在每个 head 内：
+
+```text
+z_fj = log(F_fj + eps) - mean_j(log(F_fj + eps))
+mu_j = median_f(z_fj)
+signal = Var_j(mu_j)
+noise = median_f(Var_j(z_fj - mu_j))
+rho = max(0, 1 - noise / (signal + eps))
+I_new_j = normalize_head(I_parent_j * exp(rho * mu_j))
+```
+
+`rho` 由折间信噪比解析确定，不设置 blend 网格。折间不稳定时 `rho -> 0`，自然退回父版本；
+稳定时才增强输出敏感通道。禁止直接开启根文件中旧 `_ATTN_FISHER_IMPORTANCE` 的
+`3 blend × Q-only/K-only/QK` 九候选搜索和 calibration-output gate。
+
+### 3.3 冻结与代码边界
+
+唯一允许变化：Q/K state 中最终 `importance`。
+
+以下逐字段冻结：multiplier、permutation、block smooth、rotation、Matrix-Smooth pair transform、
+K center、offsets、refine 参数、V state 和全部 Linear state。动态 Q/K/V 仍调用父版本
+`_nvfp4_to_hif4`，不增加矩阵乘、Gram、候选循环或 sweep。
+
+### 3.4 复杂度
+
+设 fold 数 `F=5`、query head 数 `H`、截断长度 `Tc<=128`、head dimension `d`：
+
+```text
+calibration time: O(F * H * Tc^2 * d)
+temporary memory: O(H * Tc^2 + H * d)
+stored state: O((Hq + Hkv) * d)
+dynamic time: O(T * (Hq + Hkv) * d), 与 v160 相同
+```
+
+每折顺序处理并复用 output-selector 已构造的 logits/probability/V，禁止保存完整 1024-token
+Fisher。Attention calibration 同机增量目标 `<=15s`；这是复杂度风险门禁，不是官方时间换算。
+
+### 3.5 算法流程与停止条件
+
+1. **A0 零 API 统计审计**：输出每层五折 Fisher 余弦一致性、causal/non-causal 一致性、
+   `rho_Q/rho_K`、top-quartile 通道重合率和动态范围；只检查可估性，不据此改公式。
+2. **A1 接口/control**：隔离导入、六 API 合法；Linear compact、V state 逐位一致；Q/K
+   changed-channel 非零；动态调用图不变。
+3. **A2 Qwen attention compact**：mean Δ `>0`、median Δ `>=0`、improved `>regressed`、
+   worst Δ `>=-0.005`、QK-only 不恶化、V-only 精确不变、probability MSE 不恶化；任一失败
+   即关闭 Softmax-Fisher，不试 blend/阈值。
+4. **A3 Qwen attention default 120**：执行 D1（touch `>=50%`、improved `>regressed`、
+   median `>=0`），并要求五个长度组 mean 非负、layer median 非负、worst-quartile 无集中
+   深层回归、QK-only 不恶化、V-only 不变、probability MSE/KL 不恶化。
+5. **A4 跨模型封存**：候选冻结后依次运行 GPT-2 和 OPT-125m/Pythia-160m；任一整体负向
+   即 `model-specific / REJECTED`，禁止模型路由。
+6. **A5 集成与官方**：完整六 API 调用图、单文件导入、SHA 和时间报告通过后只提交一次。
+
+产物：一个未编号 workbench 源码、统计审计日志、parent/candidate JSON 与 report；只有通过
+A0-A5 并准备官方提交时才分配版本号。
+
+## 4. 工作包 B：低秩 Fisher 微块联合舍入（A1 成功后才启动）
+
+A1 本地和跨模型均通过后，才能验证对角 Fisher 是否遗漏可迁移的误差相关性。若 A1 失败，
+B 直接取消，不能复用一个已经失效的统计族。
+
+对每个 HiF4 四元素微块，用固定 `H = D + u u^T` 近似输出 Fisher：`D` 为 A1 对角 importance；
+`u` 是五折协方差经符号对齐、中位聚合和同型解析收缩得到的第一稳定方向。每个微块只比较：
+
+1. parent 最近邻编码；
+2. 分别把四个分量中的一个移到相邻合法码字。
+
+共最多五个候选，按 `e^T H e` 一次向量化选择；禁止 16/256 组合枚举和第二轮坐标下降。
+
+```text
+per microblock: O(5 * 4)
+total dynamic: O(TD), 常数高于 parent
+state: diagonal + one rank-1 vector per head/block
+```
+
+真实形状 smoke 中动态 API 增量超过 20% 即停止，不进入 default。其余门禁完全复用 A2-A5，
+不得因 B 的候选更强而放宽负 case、长度尾部或跨模型条件。
+
+## 5. 工作包 C：Linear 跨折 Minimax 部署 A@W-GPTQ
+
+Attention 完成一个候选的完整裁决后再启动 C。固定 v160 的所有 Linear 坐标变换、Activation
+编码、Weight scale/lv2/lv3、Attention，仅允许在固定 hierarchy 下改变 Weight 相邻 HiF4 码字。
+
+### 5.1 精确部署目标
+
+对 calibration fold `f` 和一个 Weight row `w`：
+
+```text
+L_f(wq) = ||A_f w - Q(A_f) wq||_2^2
+         = wq^T H_f wq - 2 b_f^T wq + c_f
+H_f = Q(A_f)^T Q(A_f)
+b_f = Q(A_f)^T A_f w
+r_f = L_f / (||A_f w||_2^2 + eps)
+```
+
+这在固定 Activation 编码器后是精确二次型，包含 W 误差、A 误差及 interaction。优化采用
+无权重的字典序 minimax：
+
+```text
+minimize (max_f r_f, median_f r_f, mean_f r_f)
+```
+
+先降低最坏折；最大值相同才比较 median，再比较 mean。禁止把所有折拼接成一个平均 Hessian，
+也禁止根据结果选择 mean/median/CVaR 权重。
+
+### 5.2 固定 64-block 单次码字更新
+
+每个元素只允许 parent、相邻较小、相邻较大三个合法码字；E6M2 scale、hierarchy、变换和
+Activation 不变。对码字变化 `delta`：
+
+```text
+Delta L_f = 2 * delta * g_fj + delta^2 * H_fjj
+g_f <- g_f + delta * H_f[:, j]
+```
+
+沿用 v159 已有固定通道顺序，只执行一次 sweep。整个 block 完成后用五折完整二次型复核；
+只有字典序目标严格改善才接受，否则恢复 parent block。必须记录 attempted blocks、accepted
+blocks、changed codes、各折 before/after、W-only/Both/interaction 和各 role 接受率。
+
+### 5.3 复杂度
+
+设总输出行数 `R`、输入宽度 `D`、block `B=64`、fold `F=5`、每折 token 数 `N`：
+
+```text
+block Gram construction: O(F * N * D * B)
+one-pass refinement: O(F * R * D * B)
+temporary memory: O(F * B^2 + F * R_batch * B)
+dynamic activation: 与 v160 完全相同
+```
+
+禁止完整 `D×D` 逆矩阵和第二轮 sweep。Weight calibration 同机 API 增量目标不超过 v160 的
+20%，只作复杂度风险门禁。
+
+### 5.4 验证漏斗
+
+1. **C0 零 API 审计**：计算 parent 的五折最终部署误差、fold 方差、W-only/Both/interaction
+   和 role 最坏折；不据此改变目标。
+2. **C1 接口/control**：Attention state 逐字段一致；未接受 block 与 parent 逐位一致；
+   attempted/accepted 非零；隔离导入通过。
+3. **C2 Linear compact 56**：negative cases `=0`、median `>=0`、worst-quartile `>=0`、
+   7 role mean 均非负、validation/test 同号、W-only 非负、Both 不依赖负 interaction。
+4. **C3 Qwen Linear default 168**：improved `>regressed`、所有 role family 非负、收益不集中
+   于单层/单 role、两个 split 同号、Attention control 逐位一致。
+5. **C4 跨模型封存**：GPT-2 与 OPT/Pythia 总体同号，`fc/qkv/proj/o` 不出现系统性负 family；
+   跨模型只否决不调参。
+6. **C5 集成与官方**：通过完整调用图后只提交一次；官方 `<=0` 则关闭 minimax A@W，
+   不试其他 fold 聚合或码字邻域。
+
+## 6. 组合规则
+
+Attention 与 Linear 候选必须分别获得独立官方正向，才允许进入组合讨论。组合仅做一次本地完整
+集成，检查六 API、state、单文件导入和时间；由于侧向校准的 score interaction 为 1，可把
+两侧官方增量相加作为结构性预期，但不得自动执行官方 2×2，也不得把本地 delta 换算为官方分。
+
+若首轮 Attention + Linear 官方合计仍 `<1000`，说明当前两种目标修正不足以承担 4233 分差，
+停止局部扩展并转向新的编码架构或外部高分方案分析。若合计 `>=1000`，以新官方父版本重新做
+一次证据审计，再决定 M2 的第二个独立机制。
+
+## 7. 固定执行顺序与产物
+
+1. 归档 v162/v163/v164 侧向校准计划并修正索引；
+2. A0-A5：跨折收缩 Softmax-Fisher；
+3. A 官方强正向后才考虑 B；A 失败则跳过 B；
+4. C0-C5：Linear 跨折 minimax 部署 A@W；
+5. 两侧分别官方正向后才做一次组合审计；
+6. 每个实验保存不可覆盖的源码、SHA、JSON、Markdown report、API/wall、scope、control、
+   attempted/accepted 和明确的 `RETAINED/REJECTED/ERROR/TIMEOUT`；未提交官方保持
+   `unregistered/NA`；
+7. 每次实质更新后 `git diff --check`、提交、push 并核验工作区。

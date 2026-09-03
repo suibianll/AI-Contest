@@ -1,11 +1,13 @@
 # HiF4 优化实验仓库（官方对齐版）
 
-> **最新官方进展（2026-09-02）**：根目录 v159 的同 SHA 合并版本官方分数为 **17532**，
-> 比 v158 的 16861 高 671 分；官方时间未知。独立的 17816 结果仍高 284 分，但其完整源码和
-> Attention 配置无法提供。v159 GPU 路径已修复；后续分别优化 Linear 与 Attention，并把其他
-> 模型的真实前向父子配对设为 Qwen default 之后的强制泛化门禁。
+> **最新官方进展（2026-09-03）**：v160 官方结果为 **17532/232s**；v162/v163/v164 两侧校准
+> 分别为 **1001/146s、4587/202s、13945/204s**，端点可加性残差仅 1 分。用户确认的榜首为
+> **21765/290s**，当前差 **4233 分**。下一阶段按
+> [`双路线稳健量化计划`](docs/superpowers/plans/2026-09-03-score21765-dual-track-robust-quantization-plan.md)
+> 先做静态 Attention Softmax-Fisher，再做部署域 Linear A@W cross-fold minimax；跨模型和尾部
+> 指标是强制泛化门禁。
 
-更新时间：2026-09-02。当前仓库只认一套本地评测协议：
+更新时间：2026-09-03。当前仓库只认一套本地评测协议：
 [`evaluator/official_eval.py`](evaluator/official_eval.py)。旧的
 `real_model_suite.py`、`sampled-means-v1/v2` 和旧 JSON 不再用于排名、时间判断或调参。
 

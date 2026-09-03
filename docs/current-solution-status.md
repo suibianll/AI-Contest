@@ -1,4 +1,4 @@
-# 当前状态：两侧比重校准实验完成，Attention 边际为 Linear 3.6 倍
+# 当前状态：目标 21765，启动 Attention/Linear 双路线稳健优化
 
 更新：2026-09-03。
 
@@ -6,20 +6,22 @@
 
 **✅ 两侧比重校准实验完成（2026-09-03）：S(v162)=1001/146s, S(v163)=4587/202s, S(v164)=13945/204s；可加性成立，Attention 边际 ≈ Linear 的 3.6 倍。**
 为解耦官方总分中 Linear 与 Attention 的贡献，构造了三个候选（预注册判读表见
-[`活动计划`](superpowers/plans/2026-09-03-official-side-weight-calibration-plan.md)）：
+[`已归档计划`](superpowers/archive/plans/2026-09-03-official-side-weight-calibration-plan-superseded.md)）：
 
-| 版本       | 构造                                                 | 本地 default                                                     | API  | 官方角色                                         |
-| -------- | -------------------------------------------------- | -------------------------------------------------------------- | ---- | -------------------------------------------- |
-| **v162** | 独立最小实现，六 API 全部标准 HiF4 codec（NVFP4→BF16 中间解码→标准编码） | linear/attention mean **均为 0.0**（288 case gain 全 0，与 STD 逐位一致） | 2.6s | 官方 **1001/146s**；锚点已测，S(v162)>0 触发预注册 §3 行   |
-| **v163** | v160 归档零改动 + 末尾追加标准 Attention 四 API 重定义            | Linear 168 case 与 v160 **逐位一致**（0.633526）；Attention mean 0.0   | 228s | 官方 **4587/202s**；Δ\_L = 4587−1001 = **3586** |
-| **v164** | v160 归档零改动 + 追加标准 Linear 两 API 重定义                 | Attention 120 case 与 v160 **逐位一致**（0.742354）；Linear mean 0.0   | 70s  | Δ\_A = S(v164)−1001                          |
+| 版本       | 构造                                                 | 本地 default                                                     | API  | 官方角色                                            |
+| -------- | -------------------------------------------------- | -------------------------------------------------------------- | ---- | ----------------------------------------------- |
+| **v162** | 独立最小实现，六 API 全部标准 HiF4 codec（NVFP4→BF16 中间解码→标准编码） | linear/attention mean **均为 0.0**（288 case gain 全 0，与 STD 逐位一致） | 2.6s | 官方 **1001/146s**；锚点已测，S(v162)>0 触发预注册 §3 行      |
+| **v163** | v160 归档零改动 + 末尾追加标准 Attention 四 API 重定义            | Linear 168 case 与 v160 **逐位一致**（0.633526）；Attention mean 0.0   | 228s | 官方 **4587/202s**；Δ\_L = 4587−1001 = **3586**    |
+| **v164** | v160 归档零改动 + 追加标准 Linear 两 API 重定义                 | Attention 120 case 与 v160 **逐位一致**（0.742354）；Linear mean 0.0   | 70s  | 官方 **13945/204s**；Δ\_A = 13945−1001 = **12944** |
 
-判读：`S(v162)=1001>0` 触发预注册解释表"官方存在非零基础分或 STD 定义不同"行，
-不反推公式。`S(v163)=4587` → **Δ\_L = 3586**，官方 Linear 优化边际。待 v164 回传后
-完成可加性检验 `S(v163)+S(v164)−1001 ≈ 17532`（即 S(v164) ≈ 13946）。
+判读：`S(v162)=1001>0` 触发预注册解释表“官方存在非零基础分或 STD 定义不同”行，
+不反推公式。`S(v163)=4587` → **Δ\_L = 3586**；`S(v164)=13945` → **Δ\_A = 12944**。
+可加性残差为 `17532−4587−13945+1001=1`，说明标准/v160 两端点下分数近似可加；当前
+Attention 边际约为 Linear 的 **3.61 倍**，但这不是官方纯权重，也不能把本地 proxy 换算成官方分。
 **时间验证**：本地 API 2.6s → 官方 146s（v162），官方时间含 \~140s 评测器开销；
-v163 官方 202s vs 预测 \~186s，误差 16s 远小于余量。v161 timeout 回溯解释成立
-（算子类成本比 ≥ 2.4×）。v164 时间上界 ≈ 232s，风险可忽略。三个 SHA 行为互不相同，
+v163/v164 官方时间为 202s/204s，而两侧边际简单相加会预测 v160 为 260s，实际为 232s。
+因此时间只作独立门禁，不能按两侧线性相加；v161 timeout 仍说明动态小张量算子不可由本地
+CUDA 时间直接外推。三个 SHA 行为互不相同，
 不属于被禁止的相同 SHA 确定性验证。构建方式（复制 v160 + 模块级追加重定义）保证
 保留侧输出与 v160 逐位一致，本地已用 case 级对比确认（max Δgain/Δmse = 0.0）。证据：
 [`v162 result`](../solutions/20260903_v162_standard-baseline-both_scoreNA_timeNA/result.md)、
@@ -39,8 +41,12 @@ per-call 小张量算子成本远超本地 CUDA 外推，v160 的 68s 官方余�
 （v161 无官方分数，不计入）；P9 检验无法记录。证据：
 [`v161 官方超时日志`](../logs/execution/2026-09-03-v161-official-timeout.md)、
 [`v161 result`](../solutions/20260903_v161_v160-attn-s1-qk-gram-refine_scoreNA_timeout/result.md)。
-**当前无活动计划**：本地已知机制族全部闭环（Linear 结构 full64/Householder、Attention
-解析静态族、Attention per-call 动态族），下一步为外部材料搜索或用户指定新机制。
+**当前唯一活动计划**：
+[`目标 21765 的双路线稳健量化计划`](superpowers/plans/2026-09-03-score21765-dual-track-robust-quantization-plan.md)。
+以 v160 `17532/232s` 为父版本，距榜首 `21765/290s` 还差 **4233 分**；优先执行无动态增量的
+Attention cross-fold shrunk Softmax-Fisher，成功后再做固定候选的低秩耦合，Linear 则采用
+部署域 A\@W 的 cross-fold minimax 离散优化。任何路线都必须通过 compact、default、跨模型和
+尾部分布门禁，禁止围绕本地结果做邻域调参。
 
 **v160 官方回传（2026-09-03）：`17532 / 232s`，与 v159 完全相同。** 232s 通过
 `<300s`，时间风险解除。v160 = v159 Linear（L1 逐位等价编码）+ A2/A1（Attention）：
@@ -632,28 +638,33 @@ v86 的部分 scale-aware/output-aware 机制。此前把它描述为"v86 级静
 
 - 增加 alpha、offset、sweep、block 数、阻尼、角度或候选槽位的局部扫描。
 
+- L3 full64、Householder 和单折相邻码字精化的原目标及其参数变体；活动计划中的 Linear C
+  只允许一次预注册的 cross-fold minimax 部署 A\@W 目标，不得复用旧单折接受规则。
+
 这些路线要么官方超时，要么官方分数低于 v86，要么只有固定本地 panel 上的 `10^-5–10^-4`
 级差值，不能支撑继续投入。
 
 ## 6. 当前活动计划
 
 唯一活动计划是
-[`2026-09-03-official-side-weight-calibration-plan.md`](superpowers/plans/2026-09-03-official-side-weight-calibration-plan.md)：
-官方两侧分数比重校准实验（v161 timeout 后本地已知机制族全部闭环，本实验用官方回传
-确定下一优化方向的边际依据）。要点：
+[`2026-09-03-score21765-dual-track-robust-quantization-plan.md`](superpowers/plans/2026-09-03-score21765-dual-track-robust-quantization-plan.md)：
+以榜首 **21765/290s** 为目标，从静态、低自由度、跨折稳健算法重新打开 Attention 与 Linear
+两个方向。执行顺序与停止规则：
 
-1. **v162 全标准基线**：六 API 镜像 reference codec，本地两侧 mean 精确 0.0，官方回传
-   `1001/146s`，已触发 `S(v162)>0` 判读行；
-2. **v163**（v160 Linear + 标准 Attention）测 Δ\_L，官方回传 `4587/202s`，
-   **Δ\_L = 3586**，已归档；
-3. **v164**（标准 Linear + v160 Attention）测 Δ\_A，待官方回传；
-4. 可加性检验：`S(v163)+S(v164)−1001 ≈ 17532` ⇒ S(v164) ≈ 13946 预期；
-5. 回传只记录判读，不围绕结果调参。
+1. **Attention A0–A5**：先验证 Softmax-Fisher 信号，再用 calibration folds 的 median 与
+   解析 shrinkage 编译静态 Q/K importance；动态 API 不增加算子；
+2. **Attention B（条件路线）**：只有 A 跨模型成功，才引入 4 元 microblock 的 diag+rank-1
+   Fisher 和固定五候选选择，不扩展搜索；
+3. **Linear C0–C5**：在最终部署坐标系直接最小化各 fold 的 `A@W` 输出残差，采用
+   `(worst-fold, median, mean)` 字典序和固定一次 64-block sweep；
+4. 每个主假设只允许一个预注册官方候选；compact、Qwen default、GPT-2、另一架构、尾部和
+   control 任一失败即拒绝，不根据 holdout 或官方结果邻域调参；
+5. 里程碑为 `18500 → 20000 → 21766+`；先争取 Attention 主增量，再由 Linear 补足剩余差距，
+   但不得把 3.61:1 的边际比误当成固定评分权重。
 
-当日已归档：Attention per-call 序列自适应精化计划（v161 官方 timeout，per-call 动态族
-关闭）、Attention 解析式宽域计划（A1a 4×4 REJECTED、A2 无病因、A3 未启动）、
-Householder 快速验证计划（全族 REJECTED）。Linear 侧 T\<d 秩亏伪增益通道结构性封闭。
-实验结束后本计划归档，比重结论写入本文件。
+当日已归档：官方两侧比重校准计划（v162/v163/v164 已完成且可加性残差为 1）、Attention
+per-call 序列自适应精化计划（v161 官方 timeout）、Attention 解析式宽域计划和 Householder
+快速验证计划。旧的动态 per-call、full64/Householder 与参数邻域族继续关闭。
 
 ## 7. 归档现状与待整理项
 

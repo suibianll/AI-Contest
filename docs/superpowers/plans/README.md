@@ -8,16 +8,19 @@
 `real_model_suite.py` 已退役。
 
 **当前活动计划（2026-09-03）**：
-[`2026-09-03-official-side-weight-calibration-plan.md`](2026-09-03-official-side-weight-calibration-plan.md)
-——官方两侧分数比重校准实验。三个候选 v162/v163/v164（全标准基线、v160 Linear+标准
-Attention、标准 Linear+v160 Attention）已全部本地验证通过（v162 两侧 mean 精确 0.0；
-v163/v164 保留侧与 v160 逐位一致），等待用户按 v162 → v163 → v164 顺序各做一次官方
-提交。回传后按预注册解释表判读：Δ_L = S(v163)−S(v162)、Δ_A = S(v164)−S(v162)、
-可加性检验 S(v163)+S(v164)−S(v162) ≈ 17532。
+[`2026-09-03-score21765-dual-track-robust-quantization-plan.md`](2026-09-03-score21765-dual-track-robust-quantization-plan.md)
+——以当前官方榜首 `21765/290s` 为目标，从 v160 `17532/232s` 分两侧串行推进：第一优先
+把 v161 已验证但超时的 Attention 输出感知信号压缩为无动态 sweep 的跨折收缩
+Softmax-Fisher importance；通过后才考虑低秩四元素微块联合舍入。随后固定 v159/v160
+坐标和 Activation 编码，执行跨折 minimax 最终部署 A@W Weight 码字精化。两侧不并行调参，
+每个数学假设只产生一个候选，必须通过 compact → default → GPT-2 → OPT/Pythia 封存漏斗，
+失败后关闭机制而不扫描邻域。
 
-当日更早归档：Attention per-call 序列自适应精化计划（v161 官方 timeout，per-call 动态族
-关闭）、Attention 解析式宽域计划（A1a 4×4 REJECTED、A2 无病因、A3 未启动）与
-Householder 快速验证计划（全族 REJECTED），见
+当日已归档：官方两侧分数比重校准计划（v162 `1001/146s`、v163 `4587/202s`、v164
+`13945/204s`，score interaction 为 1，当前已实现 Attention:Linear 官方贡献约 `3.61:1`）、
+Attention per-call 序列自适应精化计划（v161 官方 timeout，per-call 动态族关闭）、Attention
+解析式宽域计划（A1a 4×4 REJECTED、A2 无病因、A3 未启动）与 Householder 快速验证计划
+（全族 REJECTED），见
 [`../archive/plans/`](../archive/plans/)。Linear 侧 T<d 秩亏伪增益通道已结构性封闭，
 不再从已关闭族内微调；官方证据判别器 D1/D2/D3 预注册于
 [`OPA-1 Stage 1 账本`](../../../logs/execution/2026-09-03-opa1-stage1-official-evidence-ledger.md)，

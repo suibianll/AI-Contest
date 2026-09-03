@@ -1,8 +1,9 @@
 # HiF4 solutions archive
 
-> **Official update (2026-09-03):** v160 archive SHA `33B1D061...680D` scored **17532 / 232s**;
-> its score is unchanged from v159, whose runtime remains unknown. The separate 17816 result remains
-> an external anchor because its complete source and Attention configuration are unavailable.
+> **Official update (2026-09-03):** v160 archive SHA `33B1D061...680D` scored **17532 / 232s**.
+> Side calibration completed at v162 **1001/146s**, v163 **4587/202s**, and v164 **13945/204s**;
+> the endpoint additivity residual is 1 point. The user-reported leaderboard best is **21765 / 290s**,
+> but its source and configuration are unavailable, so it is a target rather than a reproducible parent.
 
 `solutions/` contains immutable `solution.py` snapshots. The active code is only the repository
 root [`solution.py`](../solution.py). Every snapshot below was submitted or retained as an
@@ -38,12 +39,12 @@ change API call counts; use `--no-decomposition` only for a fast smoke run. Loca
 same-machine A/B data, not an official-time conversion; `trend_diagnostics` reports known same-
 cohort ordering inversions without fitting them.
 
-### Current best and scope rule (2026-09-02)
+### Current best and scope rule (2026-09-03)
 
 The highest official score bound to a repository source is **v159/v160: 17532**; v160 additionally
 binds that score to a **232 s** official runtime. v158 **16861 / 223 s** remains the lower-risk
-source-and-runtime-complete baseline. The separate **17816** result
-has no synchronized full source or Attention configuration, so it remains an external anchor. v147 is **16579 / 211 s**
+source-and-runtime-complete baseline. The user-reported leaderboard best **21765 / 290s** is 4233
+points above v160 and has no synchronized source or configuration, so it is a target only. v147 is **16579 / 211 s**
 (time pass but below v86, rejected); v140 is **15838 / 207 s** (rejected). The pre-A3 parent effect
 control is local-only (`Linear=0.588023229`, `Attention=0.757433277`, API `202.317 s`) and is not
 an official score.
@@ -109,7 +110,7 @@ silently assigned a score.
 | v161 | `20260903_v161_v160-attn-s1-qk-gram-refine_scoreNA_timeout` | — | >300 s | **timeout (official, user confirmed); local funnel passed (Qwen default 120 paired +0.0525, 106+/14−; GPT-2 +0.0678 same sign; D1 satisfied locally) but per-call dynamic refinement exceeds the official runtime budget — per-call family closed** 
 | v162 | `20260903_v162_standard-baseline-both_scoreNA_timeNA` | **1001** | **146 s** | **pass; calibration anchor measured — official non-zero base score or official STD differs from the local reference codec (local means both exactly 0.0); also establishes the ~146 s official harness time floor** 
 | v163 | `20260903_v163_v160-linear_standard-attn_scoreNA_timeNA` | **4587** | **202 s** | **pass; official Linear-side contribution Δ_L = 4587−1001 = 3586, local linear mean 0.633526 (bit-identical to v160, 168 cases), attention mean 0.0; time 202s vs predicted ~186s, within margin** |
-| v164 | `20260903_v164_standard-linear_v160-attn_scoreNA_timeNA` | — | — | **candidate; standard Linear (mean 0.0) + v160 Attention (120 cases bit-identical to v160, mean 0.742354); measures the official Attention-side contribution Δ_A = S(v164)−S(v162)** 
+| v164 | `20260903_v164_standard-linear_v160-attn_scoreNA_timeNA` | **13945** | **204 s** | **pass; official Attention-side contribution Δ_A = 13945−1001 = 12944; together with v163, endpoint additivity predicts v160 within 1 point**
 
 ## 2026-09-01 official-shape-v1 local candidates
 
