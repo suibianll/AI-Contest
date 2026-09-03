@@ -767,3 +767,14 @@ gap         = 21765 - S_LA
   step 9 进入官方提交；判读按 §3.3：`S_A > 13945` RETAINED 成为新 Attention 父侧，
   否则 REJECTED 转 A2（V 输出偏差质心补偿）。证据：
   [`v168 result`](../../solutions/20260903_v168_standard-linear_logit-gain-attn_scoreNA_timeNA/result.md)。
+
+- **A2 v169 本地 REJECTED（2026-09-03，未提交官方）**：SHA
+  `3E9307BC45EDE56E240380E09905C9FEF8577C9A461FC752ACDD8105EF67DAE8`，从 P_A = v164
+  构造（v168 官方未回传，不叠加）。控制全部通过（Q/K state 与父逐位一致、V 基础
+  字段一致仅新增两键），但三层独立证据否决：①机制级——真实输出偏置修正仅
+  `−1.7%..+0.6%`，父输出偏置由 Q/K 量化误差主导，A2 的补偿目标基本不存在；
+  ②Qwen default `−0.0093`（`21+/99−`、V-only `−0.0154`、worst −0.30）；
+  ③GPT-2 `0/4` 全负（`−0.0172`）——触发 §12 step 9 跨模型结构性反向阻止条款。
+  按 §14 记 REJECTED，不消耗官方提交；不调 shrink/折/token 数（邻域禁令）。
+  **A2 关闭，下一包 A3（动态 scale 搜索的静态策略编译）**。证据：
+  [`v169 result`](../../solutions/20260903_v169_standard-linear_v-bias-attn_rejected/result.md)。
