@@ -64,6 +64,7 @@ R_right = expm(B)
 | linear compact 56（配对 v166 compact smoke）| **0.702896**（父 0.705508）；paired mean **−0.002733**、median **+0.001191**、`34+/22−/0=`（非时间门禁，纯描述）   |
 | API total / wall（28 state 校准 + 56 case 打分）| API 63.240s、wall 68.364s（每 state 校准 ~2.3s，在 2–5s 目标内）                                          |
 | more details                            | per-role 最坏 case、cross-holdout 28/28 同号、W-only/A-only/interaction 见 `v174-compact-linear.json`         |
+| gpt2 linear 72（配对 v159-lin gpt2 父）   | **mean Δgain +0.009767**、median +0.006314、56+/16−/0=（win 0.778）；跨模型 Linear 正向，proj role +0.0291 主导       |
 
 时间归因：Kron 每 state 校准相较父 v166 增加约 +0.5s（本地 CUDA，含 CAT target eigh×2 +
 因子推导 + 部署 operand 重绑定）。本地 CUDA 时间对官方时间不可预测（AGENTS §1 已记失效），
