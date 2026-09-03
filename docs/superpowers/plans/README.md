@@ -9,12 +9,12 @@
 
 **当前活动计划（2026-09-03）**：
 [`2026-09-03-score21765-dual-track-robust-quantization-plan.md`](2026-09-03-score21765-dual-track-robust-quantization-plan.md)
-——以当前官方榜首 `21765/290s` 为目标，从 v160 `17532/232s` 分两侧串行推进：第一优先
-把 v161 已验证但超时的 Attention 输出感知信号压缩为无动态 sweep 的跨折收缩
-Softmax-Fisher importance；通过后才考虑低秩四元素微块联合舍入。随后固定 v159/v160
-坐标和 Activation 编码，执行跨折 minimax 最终部署 A@W Weight 码字精化。两侧不并行调参，
-每个数学假设只产生一个候选，必须通过 compact → default → GPT-2 → OPT/Pythia 封存漏斗，
-失败后关闭机制而不扫描邻域。
+——以当前官方榜首 `21765/290s` 为目标，从 v160 `17532/232s` 分两侧串行推进。Attention
+跨折收缩 Softmax-Fisher 已在 compact 以 mean `-0.007813`、median `-0.004871`、
+`1+/3-` 判定 **REJECTED**；不调整 clip/rho/blend，不进入 default/跨模型/官方，依赖它的
+低秩 Fisher B 取消。当前执行点转入 Linear C0：固定 v159/v160 坐标、scale/hierarchy 和
+Activation 编码，验证 cross-fold minimax 最终部署 A@W Weight 码字精化。每个数学假设只产生
+一个候选，必须通过 compact → default → GPT-2 → OPT/Pythia 封存漏斗，失败后关闭而不扫描邻域。
 
 当日已归档：官方两侧分数比重校准计划（v162 `1001/146s`、v163 `4587/202s`、v164
 `13945/204s`，score interaction 为 1，当前已实现 Attention:Linear 官方贡献约 `3.61:1`）、

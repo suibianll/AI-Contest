@@ -44,13 +44,14 @@
   当前算法质量，只指导优先级，禁止作为本地 gain 到官方分的换算率。官方时间不具同样的
   可加性：两侧边际和预测 `260s`，v160 实测 `232s`。
 
-- **当前活动计划（2026-09-03）**：`21765` 双路线鲁棒量化计划。第一优先从 v160 分支实现
-  calibration-only 的跨折收缩 Softmax-Fisher，只改变 Q/K importance、冻结 V/Linear 且
-  动态调用图不变；通过完整漏斗后才考虑固定五候选的低秩四元素微块联合舍入。随后单独执行
-  Linear 跨折 minimax 最终部署 A@W-GPTQ，只在固定 scale/hierarchy/Activation 下调整相邻
-  Weight 码字。两侧串行、每机制一个候选、失败不邻域调参；目标资源分解为 Attention
-  `+3000~3300`、Linear `+900~1200`，仅作规划而非官方预测。含在线逐 call Gram/sweep 的
-  候选默认按官方不可行处理；Linear×Attention 官方 2×2 和逐位等价时间 A/B 均停止。
+- **当前活动计划（2026-09-03）**：`21765` 双路线鲁棒量化计划。Attention A 跨折收缩
+  Softmax-Fisher 已从 v160 干净实现并在 compact **REJECTED**：paired mean
+  `-0.007813`、median `-0.004871`、`1+/3-/0=`、worst `-0.027699`，QK-only 与
+  probability 同时恶化；V control 为 0、动态 API 源码不变。禁止调整 clip/rho/blend/阈值，
+  不运行 default/跨模型/官方；依赖 A 的低秩 Fisher B 同步取消。下一步是 Linear C0：
+  cross-fold minimax 最终部署 A@W-GPTQ，只在固定 scale/hierarchy/Activation 下调整相邻
+  Weight 码字。含在线逐 call Gram/sweep 的候选默认按官方不可行处理；Linear×Attention
+  官方 2×2 和逐位等价时间 A/B 均停止。
 
 - 2026-09-03 的首次 L3 full64 no-op 结果无效：`_WEIGHT_FULL64_APPLY=True` 被
   `_WEIGHT_E2E_REFINE=False` 外层死分支遮蔽，目标函数未执行。不得引用该结果证明块级收敛；
