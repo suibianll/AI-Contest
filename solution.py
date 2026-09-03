@@ -8537,6 +8537,8 @@ def _attention_candidate_metrics(
     block_smooth_size: int = 0,
     block_smooth_seed: int = 0,
     use_final_quantizer: bool = False,
+    precomputed_centered_k: Optional[Sequence[torch.Tensor]] = None,
+    precomputed_block_signs: Optional[torch.Tensor] = None,
 ) -> tuple[float, tuple[float, ...]]:
     """Q/K quantization proxy with GQA-aligned equivalent transforms.
 
@@ -8545,6 +8547,14 @@ def _attention_candidate_metrics(
     the per-case tuple so ``_candidate_is_safe`` protects both masks.  The
     V quantization is held fixed across candidates, isolating the Q/K
     transform choice exactly like the proxy did.
+
+    ``precomputed_centered_k`` (one entry per traversed K sample/fold, in the
+    same order as ``a1_context["k_full"]`` or ``k_samples``) and
+    ``precomputed_block_signs`` are A1 equivalent-cleanup caches: K centering
+    depends only on ``(k, center_mode, center_value)`` and the Hadamard signs
+    only on ``(kv_num_heads, head_dim, seed)``, so both are shared across the
+    candidate sweep instead of being recomputed per candidate.  Supplying them
+    must not change any tensor value.
     """
 
     group_size = q_num_heads // kv_num_heads
@@ -8554,9 +8564,12 @@ def _attention_candidate_metrics(
     k_order = k_permutation.to(dtype=torch.int64, device=d_kv.device).reshape(-1)
     block_signs = None
     if int(block_smooth_size) != 0:
-        block_signs = _attention_rotation_signs(
-            kv_num_heads, head_dim, int(block_smooth_seed)
-        )
+        if precomputed_block_signs is not None:
+            block_signs = precomputed_block_signs
+        else:
+            block_signs = _attention_rotation_signs(
+                kv_num_heads, head_dim, int(block_smooth_seed)
+            )
 
     if a1_context is not None:
         causal_scores: list[float] = []
@@ -8601,9 +8614,12 @@ def _attention_candidate_metrics(
             )
         ):
             q_smooth = (q_full * d_q.reshape(1, -1)).index_select(-1, q_order)
-            k_centered = _center_attention_k(
-                k_full, kv_num_heads, head_dim, center_mode, center_value
-            )
+            if precomputed_centered_k is not None:
+                k_centered = precomputed_centered_k[index]
+            else:
+                k_centered = _center_attention_k(
+                    k_full, kv_num_heads, head_dim, center_mode, center_value
+                )
             k_smooth = (k_centered * d_k.reshape(1, -1)).index_select(
                 -1, k_order
             )
@@ -8692,13 +8708,16 @@ def _attention_candidate_metrics(
         h_q_for_k = _block_average(h_q_for_k, int(block_smooth_size))
 
     case_scores: list[float] = []
-    for q_sample, k_sample in zip(q_samples, k_samples):
+    for index, (q_sample, k_sample) in enumerate(zip(q_samples, k_samples)):
         q_smooth = (q_sample * d_q.reshape(1, -1)).index_select(
             -1, q_order
         )
-        k_centered = _center_attention_k(
-            k_sample, kv_num_heads, head_dim, center_mode, center_value
-        )
+        if precomputed_centered_k is not None:
+            k_centered = precomputed_centered_k[index]
+        else:
+            k_centered = _center_attention_k(
+                k_sample, kv_num_heads, head_dim, center_mode, center_value
+            )
         k_smooth = (k_centered * d_k.reshape(1, -1)).index_select(
             -1, k_order
         )
@@ -9014,6 +9033,40 @@ def hif4_calibration_attention(
         best_block_smooth_size = 0
         best_block_smooth_seed = 0
 
+        # A1 equivalent cleanup: K centering depends only on the traversed
+        # K fold/sample and (mode, center_value); the Hadamard signs only on
+        # (kv_num_heads, head_dim, seed).  Build each once per mode/seed and
+        # share it across the whole candidate sweep below.
+        center_k_cache: dict[int, Sequence[torch.Tensor]] = {}
+        signs_cache: dict[int, torch.Tensor] = {}
+
+        def _centered_k(mode: int) -> Optional[Sequence[torch.Tensor]]:
+            if mode == 0:
+                return None
+            cached = center_k_cache.get(mode)
+            if cached is None:
+                center_value = sac_center if mode == 4 else None
+                source = (
+                    context["k_full"] if context is not None else k_samples
+                )
+                cached = [
+                    _center_attention_k(
+                        tensor, kv_num_heads, head_dim, mode, center_value
+                    )
+                    for tensor in source
+                ]
+                center_k_cache[mode] = cached
+            return cached
+
+        def _block_signs(seed: int) -> torch.Tensor:
+            cached = signs_cache.get(seed)
+            if cached is None:
+                cached = _attention_rotation_signs(
+                    kv_num_heads, head_dim, seed
+                )
+                signs_cache[seed] = cached
+            return cached
+
         # Midrange K-centering is an exact softmax invariance.  First select
         # the centering/smoothing pair with identity ordering, then test one
         # hierarchy-aware ordering for the selected pair to bound calibration
@@ -9075,6 +9128,7 @@ def hif4_calibration_attention(
                     center_mode,
                     context,
                     sac_center if center_mode == 4 else None,
+                    precomputed_centered_k=_centered_k(center_mode),
                 )
                 if (
                     metrics[0] < best_metrics[0]
@@ -9121,6 +9175,7 @@ def hif4_calibration_attention(
                     best_center_mode,
                     context,
                     sac_center if best_center_mode == 4 else None,
+                    precomputed_centered_k=_centered_k(best_center_mode),
                 )
                 if (
                     metrics[0] < best_metrics[0]
@@ -9212,6 +9267,7 @@ def hif4_calibration_attention(
                     best_center_mode,
                     context,
                     sac_center if best_center_mode == 4 else None,
+                    precomputed_centered_k=_centered_k(best_center_mode),
                 )
                 if (
                     b_metrics[0] < best_metrics[0]
@@ -9281,6 +9337,7 @@ def hif4_calibration_attention(
                     best_center_mode,
                     context,
                     sac_center if best_center_mode == 4 else None,
+                    precomputed_centered_k=_centered_k(best_center_mode),
                 )
                 if (
                     independent_metrics[0] < best_metrics[0]
@@ -9324,6 +9381,8 @@ def hif4_calibration_attention(
                         block,
                         seed,
                         _ATTN_BLOCK_SMOOTH_FINAL_QUANTIZER,
+                        precomputed_centered_k=_centered_k(best_center_mode),
+                        precomputed_block_signs=_block_signs(seed),
                     )
                     if (
                         block_metrics[0] < best_metrics[0]

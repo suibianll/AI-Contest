@@ -1,4 +1,4 @@
-# v160 — v159 Linear (L1 batch) + v158 Attention (A2 scale-aware K center)
+# v160 — v159 Linear (L1 batch) + v158 Attention (A2 scale-aware K center + A1 cleanup)
 
 ## Scope
 
@@ -12,6 +12,14 @@
   candidate set; the single switch lets it compete under GQA, gated by
   `_candidate_is_safe` so a degraded center can never regress the parent
   behaviour.
+- Attention A1 equivalent cleanup (2026-09-03, no output change): the K
+  centering result depends only on `(k, center_mode, center_value)` and the
+  Hadamard rotation signs only on `(kv_num_heads, head_dim, seed)`.  Both are
+  now computed once per mode/seed inside `_run_selection` and shared across
+  the whole candidate sweep via `precomputed_centered_k` /
+  `precomputed_block_signs` on `_attention_candidate_metrics`.  Verified
+  bit-exact: Qwen default 120/120 zero delta and GPT-2 60/60 zero delta
+  against the A2 baseline; attention calibration 60.7 s → 59.7 s.
 - No ROAB / L3 family / unconstrained permutation-scale search is included.
   Online path is unchanged: state saves a fixed center; dynamic Q/K/V stay a
   single center + encode.
@@ -27,8 +35,10 @@ unchanged, but no official time was ever returned for it.
 
 ## Source identity
 
-- Archived `solution.py` SHA256: `29AA1863…` (full SHA in
-  `artifacts/official_eval/v160-integration-default.json` `source_sha256`).
+- Archived `solution.py` SHA256: `33B1D061…` (L1 + A2 + A1).  Full SHA in
+  `artifacts/official_eval/v160-integration-default.json` is for the A2-only
+  build (`29AA1863…`); the A1 re-run is bit-exact so the archive identity is
+  `33B1D061…` (see `source_sha256` in the A1 candidate JSONs).
 - Single-file, self-contained; exposes only the six required APIs.
 
 ## Local proxy-v2 evidence (mechanism/time diagnostics only)
@@ -71,9 +81,19 @@ Per-side baselines and pairing evidence:
 
 ## Version bookkeeping
 
-- v160 is the first archived version that carries BOTH the L1 batched Linear
-  encoding and the A2 attention change.  No further mechanism change is
-  archived under v159.
+- v160 is the first archived version that carries the L1 batched Linear
+  encoding, the A2 attention change, and the A1 equivalent cleanup.  No
+  further mechanism change is archived under v159.
 - L2 bounded-complexity ablations (seeds/sizes/RMS-smooth/wide-alphas) were
   all REJECTED on the Qwen compact paired panel — every block-smooth search
   dimension is load-bearing; no ablation was merged.
+
+## A1 evidence (equivalent cleanup, bit-exact)
+
+- Qwen default pair `v160-a1-attn-default-candidate.json` vs the A2 build:
+  120/120 zero delta, attention_mean unchanged 0.742354, calibration
+  60.7 s → 59.7 s (24 layers), API 64.1 s → 63.1 s.
+- GPT-2 pair `v160-a1-attn-gpt2-candidate.json` vs `v159-attn-gpt2-parent`:
+  60/60 zero delta, attention_mean 0.389583.
+- Six-API call counts unchanged (calibration_attention 24, dynamic q/k/v 120
+  each); only calibration wall time decreased.
