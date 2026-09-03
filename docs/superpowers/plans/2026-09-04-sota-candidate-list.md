@@ -29,6 +29,23 @@
   字段兼容、非已闭合家族的独立机制方向；后续以 C2（A1 细粒度仿射/低秩化）为唯一
   已注册新候选，C3 为条件对照。
 
+## 0b. 搜索关键证据（第三轮 2026-09-04，NVFP4 scale 初始化/精化）
+
+- **ScaleSweep（arXiv 2606.07618, 2026-05）**：AbsMax 之外对 FP8 微块 scale 做
+  可行候选 sweep 最小化 MSE/WMSE——权重/激活 block-scale 选择空间。与已闭合族
+  冲突：v170/A3 已证「标准 scale 已输出最优」（winner 11/12 = 0），且本地
+  Linear 结构族（full64/Householder/单折邻域）已闭环；权重侧 scale 精化族即使
+  数学上等价于 E6M2 层级 scale 重选，仍属已试域，**不注册为新候选**。
+- **H-Scale（arXiv 2608.28113, 2026-08, Qwen Team）**：Hessian 对角加权选 NVFP4
+  per-group scale，零在线开销。同一 scale 选择域，且其收益主要落在 weight 侧
+  E2M1 微块；本计划 Attention 侧 Q/K/V 的 scale 来自 NVFP4 carrier（非候选可改
+  的自由度），权重侧归 Linear 已闭族，**不注册**。
+- **NVFP4 微块缩放（E4M3 per-16 + tensor 全局 FP32）**：HiF4 本地参考 codec
+  已知；scale 自由度的最优性已被 A3/v170 官方负向与校准实验覆盖。
+- **第三轮结论**：scale 初始化/精化类方法（无论 sweep 还是 Hessian 加权）都落入
+  Linear 已闭族或 A3 已证最优域；Attention 侧无新增可迁移自由度。排除了第三条
+  独立机制路线，C1/C2/C3 排序维持不变。
+
 ## 0. 搜索关键证据（第一轮 2026-09-04）
 
 - **KVQuant（NeurIPS 2024）**：per-channel Key 量化 + Pre-RoPE + per-vector
@@ -57,6 +74,38 @@
 - C3 高风险标记；Longhorn 证据指向 Qwen 上旋转有害，仅当 C1/C2 官方均负时考虑
   一次对照。
 - 排序冻结：实施顺序 C1 →（官方回传后）C2 →（条件触发）C3。
+
+## 2b. C2 预注册数学模型（细化定稿，C1 回传后直接实施）
+
+C2 = A1 的细粒度化：把 A1 的 per-KV-head 单一 logits 增益推广为
+per-(KV-head, 8 通道组) 增益。数学上与 A1 同目标（调整量化后 row-centered
+causal logits 相对 float 的乘性偏差），仅提高分辨率。
+
+1. 校准期（final 部署坐标，复用 A1 的校准 Q/K pairs 与对应 Q/K state）把
+   head_dim 划分为 B=8 个连续通道组（每组 head_dim/8 通道）；
+2. 对每 KV head h、每个 case 构建量化后/float 的 row-centered causal logits
+   的组内部分和：
+
+   - `logits_q^{(b)} = <q_hat^{(b)}, k_hat^{(b)}>/sqrt(d)`（该组的部分和），
+   - center_q^{(b)} = row-centered causal 化后的组内部分和；
+   - center^{(b)} = 同一组 float Q/K 的对应中心化部分和；
+
+3. 每 KV head 独立解 **闭式 8 参数线性最小二乘**
+   `min || center − Σ_b g_{h,b} · center_q^{(b)} ||²`（B=8 方阵
+   Normal equation，calibration-only，单次）；偶数/奇数 fold 分别拟合，
+   取 g 的 log-median 并做与 A1 相同的 log-shrink 与 clamp；
+4. 折叠：Q 与 K 在**同一通道组内同乘 sqrt(g_{h,b})**——保持连续域
+   「组内 QᵀK 乘性缩放」结构，即量化后 `Σ_b g_{h,b}·partial_b` 逼近
+   float logits，与 A1 的折叠方式逐层一致（A1 是 B=1 特例）；
+5. 不搜索 B/shrink/clamp；B=8、shrink/clamp 继承 A1 的预注册常数；
+   不做 head/layer 路由；fold 聚合用 median，禁止只取第一/最好 fold；
+6. 动态零新增：只改 state 中的 Q/K multiplier。
+7. v165 约束（动态 API 无 Gram contraction、无候选循环、复杂计算只在
+   calibration）强制。
+
+实施前提（门禁）：仅在 C1 官方回传并裁决后启动；若 C1 官方正 → C2 从 C1
+候选继续（C1 语义并入 C2 基础 multiplier）；若 C1 官方负 → C2 从 P_A=v168
+继续。C2 是 A1 的数学扩展而非邻域扫参，仍只允许一个预注册配置。
 
 ## 3. C1 固定数学规则（预注册）
 
