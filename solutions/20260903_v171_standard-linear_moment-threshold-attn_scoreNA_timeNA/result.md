@@ -13,7 +13,7 @@
 
 每个 operand/layer 校准一个标量 mantissa 舍入阈值 tau（Q/K/V 各一）：每折 8 次二分
 `mean(|Q_tau(x)| − |x|) = 0`，`code = floor(z + 1 − tau)`（z = 归一化绝对值），
-`tau = 0.5 + 0.5·(median_f(tau_f) − 0.5)`，区间 [0.25, 0.75]。仅在 `group_gram is None`
+`tau = 0.5 + 0.5·(median_f(tau_f) − 0.5)`，区间 \[0.25, 0.75]。仅在 `group_gram is None`
 的 mantissa 路径生效（有 gram 的保持父 adaround，不混用两种算法）；动态只用一次
 floor 替代 round，无候选循环。新增 `_params_denominator`/`_round_mantissa_threshold`，
 `_solve_exact_hierarchy`/`_dense_to_hif4`/`_nvfp4_to_hif4`/三动态 API 透传
@@ -21,15 +21,15 @@ floor 替代 round，无候选循环。新增 `_params_denominator`/`_round_mant
 
 ## 2. 本地验证（描述性；官方裁决）
 
-| 检查 | 结果 |
-| --- | --- |
-| 隔离导入 + 六 API | OK |
-| 机制可达 | 是（24 层 q/k/v state 均写入 rounding_threshold，mantissa 变化） |
-| attention compact 4（配对 v168） | 0.797457 vs 父 0.797753（−0.0003，近中性） |
+| 检查                             | 结果                                                                                        |
+| ------------------------------ | ----------------------------------------------------------------------------------------- |
+| 隔离导入 + 六 API                   | OK                                                                                        |
+| 机制可达                           | 是（24 层 q/k/v state 均写入 rounding\_threshold，mantissa 变化）                                   |
+| attention compact 4（配对 v168）   | 0.797457 vs 父 0.797753（−0.0003，近中性）                                                       |
 | attention default 120（配对 v168） | 0.740808 vs 父 0.741474（**−0.0007**、median −0.0003、`56+/64−`、worst −0.027）——与 v168 本地信号同量级 |
-| GPT-2 compact 4（配对 v168） | **+0.009573**（`2+/2−`，worst −0.005）——不构成结构性反向 |
-| opt-125m attn 60（配对 v160 父） | **mean Δgain −0.004172**、median −0.004290、26+/34−/0=（win 0.433）——轻微负向，同 Qwen 方向一致 |
-| API 时间 | default 120：64.0s vs v168 72.1s（本地 −8s） |
+| GPT-2 compact 4（配对 v168）       | **+0.009573**（`2+/2−`，worst −0.005）——不构成结构性反向                                             |
+| opt-125m attn 60（配对 v160 父）    | **mean Δgain −0.004172**、median −0.004290、26+/34−/0=（win 0.433）——轻微负向，同 Qwen 方向一致         |
+| API 时间                         | default 120：64.0s vs v168 72.1s（本地 −8s）                                                   |
 
 证据：`v171-compact-attn.json`、`v171-attn-default.json`、`v171-gpt2-attn-compact.json`
 （`artifacts/official_eval/`，对应 `logs/official_eval/` report）。
@@ -51,3 +51,4 @@ Attention ratio = step_gain / 12944
 
 .venv\Scripts\python.exe -u evaluator\cross_model_eval.py --model gpt2 --solution solutions\20260903_v171_standard-linear_moment-threshold-attn_scoreNA_timeNA\solution.py --attention-only --compact-panel --cache-mode read --capture-device cuda --algorithm-device cuda --baseline-json artifacts\official_eval\v168-gpt2-attn-compact.json --output artifacts\official_eval\v171-gpt2-attn-compact.json --report logs\official_eval\v171-gpt2-attn-compact.md
 ```
+
