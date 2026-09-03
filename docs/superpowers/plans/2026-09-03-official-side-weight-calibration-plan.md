@@ -95,7 +95,8 @@ v160 逐位一致（同一份未改动代码）。
   Linear 侧官方边际为 3586 分。时间 202s vs 预测 ~186s，误差 16s < 余量。v163 本地
   result.md 已更新为 MEASURED。待 v164 回传后完成可加性检验。
 - 回传日志：[`2026-09-03-official-side-weight-calibration-returns.md`](../../../logs/execution/2026-09-03-official-side-weight-calibration-returns.md)。
-- 待办：v164 官方提交与判读。
+- **完成**：v162 1001/146s, v163 4587/202s, v164 13945/204s.
+- **结论**：Δ_L=3586, Δ_A=12944, 比重 ≈ 1 : 3.61, 可加性成立（17531 ≈ 17532）。
 
 
 
