@@ -23,11 +23,12 @@
   （KVLinC/VecInfer/ResQ/OTT）结论：无新的零动态、HiF4 字段兼容、非已闭合家族的独立
   机制方向；第三轮（ScaleSweep/H-Scale NVFP4 scale 精化）落入 Linear 已闭族或 A3 已证
   最优域；第四轮（MXFP4 误差三分量/HCP/ARCQuant）映射到 scale 已闭域、在线存储 C4
-  论证、或 A1/C2 已覆盖 logits 修正——均不注册。**C2 家族本地关闭**：v177（C2 on
-  v168，default 120 `−0.006643`、41+/79−）与 v178（C2 on C1=v176，default 120
-  `−0.008610`、47+/73−）均本地明确负优化，REJECTED 归档、不提交官方、不占配额；
-  无论 C1 官方正负，C2 都不提交。剩余候选：C3 条件对照（仅 C1 官方负时考虑一次，
-  Longhorn 证据预计亦负），详见
+  论证、或 A1/C2 已覆盖 logits 修正——均不注册。**C2/C3 家族本地关闭**：
+  v177（C2 on v168，default 120 `−0.006643`、41+/79−）、v178（C2 on C1=v176，
+  default 120 `−0.008610`、47+/73−）、v179（C3 固定 8×8 随机正交旋转对照，
+  compact 4 `−0.229273`、1+/3−）均本地明确负优化，REJECTED 归档、不提交官方、
+  不占配额；无论 C1 官方正负，C2/C3 都不提交。计划候选清单 C1/C2/C3 全部裁决
+  完毕，仅 C1 官方批测中，详见
   [`2026-09-04-sota-candidate-list.md`](docs/superpowers/plans/2026-09-04-sota-candidate-list.md)。
 
 - v159 原始 SHA `0508045A...4242` 的官方分数为 **17532**、时间未知；v159 修正归档 SHA
