@@ -116,6 +116,7 @@ silently assigned a score.
 | v163 | `20260903_v163_v160-linear_standard-attn_scoreNA_timeNA` | **4587** | **202 s** | **pass; official Linear-side contribution Δ_L = 4587−1001 = 3586, local linear mean 0.633526 (bit-identical to v160, 168 cases), attention mean 0.0; time 202s vs predicted ~186s, within margin** |
 | v164 | `20260903_v164_standard-linear_v160-attn_scoreNA_timeNA` | **13945** | **204 s** | **pass; official Attention-side contribution Δ_A = 13945−1001 = 12944; together with v163, endpoint additivity predicts v160 within 1 point**
 | v165 | `20260903_v165_standard-linear_v161-attn_scoreNA_timeout` | — | >300 s | **timeout (official, user confirmed); standard Linear is bit-identical to v164, so the result isolates the v161 Cross-Gram64 per-call Attention path as over budget; no score means no Attention accuracy ratio is computed**
+| v166 | `20260903_v166_rank1-linear-residual_standard-attn_scoreNA_timeNA` | — | — | **candidate; rank-1 residual redistribution Linear (fold-median top-2 base-codec residual directions, c=1/4, exact product preservation, single-encode design) + standard Attention (mean 0.0, 0/0/120 vs standard); linear default 0.636590 vs parent 0.633526 (paired +0.003064, 78+/90−, proj +0.0251), API 282.8s (1.24×); official reading: S_L vs 4587 per side-isolation plan section 3.1**
 
 ## 2026-09-01 official-shape-v1 local candidates
 
