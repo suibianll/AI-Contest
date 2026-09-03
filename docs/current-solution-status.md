@@ -4,6 +4,17 @@
 
 ## 0. 最新官方进展
 
+**v165 官方回传（2026-09-03）：`timeout（>300s，无分数）`。** v165 = standard Linear +
+v161 Attention Cross-Gram64 per-call 动态精化，SHA
+`033E85D5DAF1A820BACDB14F9E35183C485E8DD489D118899A1AE3CB491D8C1D`；它与 v164 的
+Linear 侧逐位一致，因此这次超时直接确认当前 Attention 动态精化实现复杂度不可接受。v164
+官方为 `13945 / 204s`，在官方评测稳定的已知条件下，精化的官方增量成本下界约为 `>96s`；
+完整官方时间没有返回。本地 `+0.052502`、`106+/14-` 和 GPT-2 同号不能替代官方分数，故
+Attention 精度结论仍未知，不计算 `C_A/G_A/P_A/R_A`。当前活动计划只允许一次 rank-2 Gram
+残差码本复杂度重构，不重试 v165。证据见
+[`v165 官方超时日志`](../logs/execution/2026-09-03-v165-official-timeout.md)和
+[`v165 result`](../solutions/20260903_v165_standard-linear_v161-attn_scoreNA_timeout/result.md)。
+
 **21765 A/B/C 本地裁决（2026-09-03）：两个候选均 REJECTED。** Attention A 的
 cross-fold Softmax-Fisher 在 compact 为 mean `-0.007813`、median `-0.004871`、
 `1+/3-/0=`，依赖它的 B 取消。Linear C 的五折 minimax A@W 在 C1 接口/control 通过；
@@ -56,8 +67,9 @@ per-call 小张量算子成本远超本地 CUDA 外推，v160 的 68s 官方余�
 和“standard Linear + 候选 Attention”。官方结果直接给出每侧绝对贡献、相对 v160 侧贡献
 （Linear `3586`、Attention `12944`）的提升比例；组合后再测实际交互和对 `4233` 分差的闭合率。
 本地 compact/default 降为描述性诊断，只保留接口、合法性、可达性和 control 硬检查，具体提升
-由官方结果决定。首轮 Attention 为已准备的 v165 隔离测量，Linear 为 rank-1 可逆残差重分布。
-已失败的 Fisher、full64/Householder、cross-fold minimax 及其邻域仍不重启。
+由官方结果决定。v165 隔离测量已 timeout，当前 Attention 转入一次低复杂度 rank-2 Gram
+残差码本重构；Linear 仍为 rank-1 可逆残差重分布。已失败的 Fisher、full64/Householder、
+cross-fold minimax 及其邻域仍不重启。
 
 **v160 官方回传（2026-09-03）：`17532 / 232s`，与 v159 完全相同。** 232s 通过
 `<300s`，时间风险解除。v160 = v159 Linear（L1 逐位等价编码）+ A2/A1（Attention）：
@@ -659,11 +671,16 @@ v86 的部分 scale-aware/output-aware 机制。此前把它描述为"v86 级静
 
 唯一活动计划是
 [`2026-09-03-v162-official-side-isolation-optimization-plan.md`](superpowers/plans/2026-09-03-v162-official-side-isolation-optimization-plan.md)：
-以 v162 双标准编码为共同官方零点，分别测量 Linear 与 Attention 新机制。首轮 Attention 使用
-已准备的 v165；首轮 Linear 使用 rank-1 可逆残差重分布。local panel 只记录风险，官方分数相对
-v163/v164 是否增加是唯一准确率裁决；正向不设最低分门槛。两侧取得独立官方结果后，组合版本
-另测 interaction、真实时间和对榜首差距的闭合率。已拒绝的 A/B/C 计划已归档，不从其参数邻域
-重启。
+以 v162 双标准编码为共同官方零点，分别测量 Linear 与 Attention 新机制。v165 已官方
+timeout，当前计划继续首轮 Linear rank-1 可逆残差重分布，以及一次保持 Gram 目标的低复杂度
+rank-2 残差码本重构。local panel 只记录风险，官方分数相对 v163/v164 是否增加是唯一准确率
+裁决；正向不设最低分门槛。两侧取得独立官方结果后，组合版本另测 interaction、真实时间和对
+榜首差距的闭合率。已拒绝的 A/B/C 计划已归档，不从其参数邻域重启。
+
+当前计划完成后的算法扩展已单独写入
+[`排队计划`](superpowers/plans/queued/2026-09-03-post-v162-low-complexity-algorithm-expansion-plan.md)。
+它目前为 `QUEUED / INACTIVE`，不与当前活动计划并行；只有当前计划完成并归档后才能移入
+`plans/` 根目录激活。
 
 当日已归档：官方两侧比重校准计划（v162/v163/v164 已完成且可加性残差为 1）、Attention
 per-call 序列自适应精化计划（v161 官方 timeout）、Attention 解析式宽域计划和 Householder

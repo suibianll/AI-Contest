@@ -12,8 +12,14 @@
 ——以 v162 `1001/146s` 的双标准 HiF4 为共同零点，分别构造“候选 Linear + 标准 Attention”
 和“标准 Linear + 候选 Attention”，由官方结果直接计算两侧绝对贡献、相对 v160 侧贡献的提升率、
 组合交互项及榜首差距闭合率。本地只保留接口、合法性、可达性和 control 检查；不再用严格的
-compact/default 准确率门禁替代官方裁决。首轮为 v165 Attention 官方测量和 Linear rank-1
-可逆残差重分布，后续仅按官方结果保留或更换数学机制。
+compact/default 准确率门禁替代官方裁决。v165 Attention 隔离测量已官方
+`timeout（>300s，无分数）`；当前计划继续 Linear rank-1 可逆残差重分布和一次预注册的
+低复杂度 rank-2 Gram 残差码本重构，后续仅按官方结果保留或更换数学机制。
+
+**排队计划（未激活）**：
+[`queued/2026-09-03-post-v162-low-complexity-algorithm-expansion-plan.md`](queued/2026-09-03-post-v162-low-complexity-algorithm-expansion-plan.md)
+——收录当前计划完成后的低复杂度 Attention 偏差补偿与 Linear 格/trellis 编码方向。该文件
+状态为 `QUEUED / INACTIVE`，当前活动计划完成并归档前不执行、不评测、不分配版本号、不提交。
 
 当日已归档：官方两侧分数比重校准计划（v162 `1001/146s`、v163 `4587/202s`、v164
 `13945/204s`，score interaction 为 1，当前已实现 Attention:Linear 官方贡献约 `3.61:1`）、

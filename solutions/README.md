@@ -4,6 +4,8 @@
 > Side calibration completed at v162 **1001/146s**, v163 **4587/202s**, and v164 **13945/204s**;
 > the endpoint additivity residual is 1 point. The user-reported leaderboard best is **21765 / 290s**,
 > but its source and configuration are unavailable, so it is a target rather than a reproducible parent.
+> v165 (standard Linear + v161 Attention) officially timed out at **>300s with no score**; this
+> isolates the current Cross-Gram64 per-call Attention implementation as runtime-infeasible.
 > The 21765 Attention Softmax-Fisher and Linear cross-fold minimax workbench candidates both failed
 > their compact generalization gates; neither received a version number or official submission.
 
@@ -113,7 +115,7 @@ silently assigned a score.
 | v162 | `20260903_v162_standard-baseline-both_scoreNA_timeNA` | **1001** | **146 s** | **pass; calibration anchor measured — official non-zero base score or official STD differs from the local reference codec (local means both exactly 0.0); also establishes the ~146 s official harness time floor** 
 | v163 | `20260903_v163_v160-linear_standard-attn_scoreNA_timeNA` | **4587** | **202 s** | **pass; official Linear-side contribution Δ_L = 4587−1001 = 3586, local linear mean 0.633526 (bit-identical to v160, 168 cases), attention mean 0.0; time 202s vs predicted ~186s, within margin** |
 | v164 | `20260903_v164_standard-linear_v160-attn_scoreNA_timeNA` | **13945** | **204 s** | **pass; official Attention-side contribution Δ_A = 13945−1001 = 12944; together with v163, endpoint additivity predicts v160 within 1 point**
-| v165 | `20260903_v165_standard-linear_v161-attn_scoreNA_timeNA` | — | — | **candidate (measurement); standard Linear (mean 0.0, bit-identical to v164) + v161 Attention (mean 0.794856, bit-identical to v161); isolates the official effect of the v161 Gram64 refinement as S(v165)−13945; known timeout risk: passes only if the refinement's official/local cost ratio falls in (2.5×, 3.6×)**
+| v165 | `20260903_v165_standard-linear_v161-attn_scoreNA_timeout` | — | >300 s | **timeout (official, user confirmed); standard Linear is bit-identical to v164, so the result isolates the v161 Cross-Gram64 per-call Attention path as over budget; no score means no Attention accuracy ratio is computed**
 
 ## 2026-09-01 official-shape-v1 local candidates
 
