@@ -7,9 +7,17 @@
 `evaluator/official_eval.py`，跨模型泛化调用 `evaluator/cross_model_eval.py`；旧
 `real_model_suite.py` 已退役。
 
-- [`2026-09-03-attention-per-call-refinement-plan.md`](2026-09-03-attention-per-call-refinement-plan.md)：当前唯一有效计划。回收 v128 家族从未被官方否证的 per-call 序列自适应余量（timeout ≠ WA）：Step 0 零实现同协议消融（v128/v129/v138 归档 attention 直接在 proxy-v2 compact 面板运行，测奖金大小），S1 唯一算法候选 = 交叉算子 Gram64 per-call 精化（Q 用 K 的块 Gram 做 QK logits Hessian，动态 3-sweep 有界坐标下降；v128 实测 0.08s/call，时间门禁 attention API ≤ parent+40s）。Linear 冻结；D1 判别器绑定；每假设一次官方提交。
+**当前无活动计划（2026-09-03）。** 当日最后一份计划
+（Attention per-call 序列自适应精化）已随 v161 官方 timeout 归档：本地全漏斗通过
+（Qwen default `+0.0525`、GPT-2 同号、D1 满足）但官方 `>300s`，动态 per-call 精化在
+官方鲲鹏硬件上结构性超预算，per-call 动态族关闭，见
+[`归档计划`](../archive/plans/2026-09-03-attention-per-call-refinement-plan-superseded.md)
+与 [`官方超时日志`](../../../logs/execution/2026-09-03-v161-official-timeout.md)。
+本地已知机制族全部闭环（Linear 结构 full64/Householder、Attention 解析静态族、
+Attention per-call 动态族）；下一步是外部材料搜索或用户指定新机制，新计划创建后本
+README 同步更新。
 
-此前当日归档：Attention 解析式宽域计划（A1a 4×4 REJECTED、A2 无病因、A3 未启动）与
+当日更早归档：Attention 解析式宽域计划（A1a 4×4 REJECTED、A2 无病因、A3 未启动）与
 Householder 快速验证计划（全族 REJECTED），见
 [`../archive/plans/`](../archive/plans/)。Linear 侧 T<d 秩亏伪增益通道已结构性封闭，
 不再从已关闭族内微调；官方证据判别器 D1/D2/D3 预注册于

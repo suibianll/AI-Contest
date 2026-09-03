@@ -1,8 +1,23 @@
-# 当前状态：v160 官方 17532/232s（与 v159 相同，no-op），Attention 微调不迁移
+# 当前状态：v161 官方 timeout（per-call 动态族关闭），v160 17532/232s 为有效父版本
 
 更新：2026-09-03。
 
 ## 0. 最新官方进展
+
+**v161 官方回传（2026-09-03）：`timeout（>300s，无分数）`。** v161 = v160 + Attention
+Q/K 交叉算子 Gram64 per-call 精化（v128 机制移植，V/Linear 冻结）。本地全漏斗通过
+（Qwen default 120 paired `+0.052502`、`106+/14−`、touch 88.3%；GPT-2 `+0.0678` 同号；
+D1 本地满足；attention API `+28.0s` CUDA 在 +40s 门禁内），但官方机（鲲鹏）上动态
+per-call 小张量算子成本远超本地 CUDA 外推，v160 的 68s 官方余量被耗尽。归档目录已
+更名 `_timeout`，per-call 动态自适应族正式关闭；S2（校准搜索解析化）前置条件不满足，
+不启动。**修正时间核算结论：v128 家族超时元凶不只是校准期候选搜索（199.8s/24 calls），
+动态精化本身（本地 `0.092s/call` CUDA）在官方硬件上即超预算**（v138 无 dyn refine 官方
+208s 通过，v128/v129/v130/v131/v161 含 dyn refine 全部官方 timeout）。D1 维持 3/3
+（v161 无官方分数，不计入）；P9 检验无法记录。证据：
+[`v161 官方超时日志`](../logs/execution/2026-09-03-v161-official-timeout.md)、
+[`v161 result`](../solutions/20260903_v161_v160-attn-s1-qk-gram-refine_scoreNA_timeout/result.md)。
+**当前无活动计划**：本地已知机制族全部闭环（Linear 结构 full64/Householder、Attention
+解析静态族、Attention per-call 动态族），下一步为外部材料搜索或用户指定新机制。
 
 **v160 官方回传（2026-09-03）：`17532 / 232s`，与 v159 完全相同。** 232s 通过
 `<300s`，时间风险解除。v160 = v159 Linear（L1 逐位等价编码）+ A2/A1（Attention）：
@@ -552,7 +567,9 @@ v86 的部分 scale-aware/output-aware 机制。此前把它描述为“v86 级�
 - ROAB-P2：虽然固定 reduced Attention 的 `v138→v140 = +123`，但 exact-v86 单变量 v157
   官方为 `16729 / 218.96s`、低于 v86 `15` 分，证明收益不可迁移，整个路线关闭；
 - v141–v145 非对称选列 BDLR、锚点冻结和阻尼变体；
-- v128–v131 动态 Q/K Gram、PAWV 和随序列放大的 Attention 搜索；
+- v128–v131 动态 Q/K Gram、PAWV 和随序列放大的 Attention 搜索；v161（S1 交叉算子
+  Gram64 per-call 精化，v160 坐标系干净移植）官方再次 timeout，证明该族超时根因是
+  动态 per-call 精化在官方硬件的成本而非校准搜索，全族结构性关闭；
 - 增加 alpha、offset、sweep、block 数、阻尼、角度或候选槽位的局部扫描。
 
 这些路线要么官方超时，要么官方分数低于 v86，要么只有固定本地 panel 上的 `10^-5–10^-4`
@@ -560,24 +577,24 @@ v86 的部分 scale-aware/output-aware 机制。此前把它描述为“v86 级�
 
 ## 6. 当前活动计划
 
-唯一活动计划是
-[`2026-09-03-attention-per-call-refinement-plan.md`](superpowers/plans/2026-09-03-attention-per-call-refinement-plan.md)：
-回收 v128 家族 per-call 序列自适应余量（官方 timeout ≠ WA，精度从未被否证）。要点：
+**无（2026-09-03）。** 当日最后一份计划（Attention per-call 序列自适应精化，
+[`归档`](superpowers/archive/plans/2026-09-03-attention-per-call-refinement-plan-superseded.md)）
+已随 v161 官方 timeout 结束：Step 0 消融确认 v128 余量属 per-call 自适应族
+（`+0.0636` vs v138 `−0.014`），S1 交叉算子 Gram64 精化本地全漏斗通过（Qwen default
+`+0.0525`、GPT-2 同号、D1 满足、API +28s CUDA 门禁内），但官方 `>300s`——动态
+per-call 精化在官方鲲鹏硬件上结构性超预算，per-call 动态族关闭，S2 前置条件不满足。
 
-1. 时间核算（legacy-v1 JSON 复盘）：v128 超时元凶是校准期候选搜索
-   （`hif4_calibration_attention` 199.8s/24 calls），动态 per-call 精化仅 0.08s/call
-   （400 calls 共 32s）；v129 搜索砍半精度仅 −0.0012（0.8366），v138 全砍掉 −0.121
-   （0.7159）；
-2. **Step 0**：零实现同协议消融——v128/v129/v138 归档 attention 直接在 proxy-v2
-   attention compact 面板运行（vs v160 parent 0.797462），按判读表决定进入 S1/S2'/关闭；
-3. **S1 唯一候选**：交叉算子 Gram64 per-call 精化——校准期在最终部署坐标计算 Q/K
-   交叉块 Gram 存入 state，动态期对码字做 3-sweep 有界坐标下降（v128 固定值，不扫描）；
-   V bit-exact；从 v160 归档分支；
-4. 漏斗含时间门禁（default attention API ≤ parent+40s 本地）与预注册 D1 判别器；
-   满足 D1 才允许一次官方提交，失败不邻域调参；官方回传同时记录 P9 检验。
+至此本地已知机制族全部闭环：
 
-当日已归档：Attention 解析式宽域计划（A1a 4×4 REJECTED、A2 无病因、A3 未启动）、
-Householder 快速验证计划（全族 REJECTED）。Linear 侧 T<d 秩亏伪增益通道结构性封闭。
+- Linear 结构（full64、Householder 六变体）：REJECTED；
+- Attention 解析静态族（Matrix-Smooth 4×4、深层 K 病因）：REJECTED / 无病因；
+- Attention per-call 动态族（v128/v129/v130/v131/v161）：官方全部 timeout；
+- Linear 侧 T<d 秩亏伪增益通道：结构性封闭。
+
+下一步为外部材料搜索（论文/博客/SOTA NVFP4 或 FP4 量化方法）或用户指定新机制；
+新计划创建后同步 `docs/superpowers/plans/README.md`。当日已归档：Attention 解析式宽域
+计划（A1a 4×4 REJECTED、A2 无病因、A3 未启动）、Householder 快速验证计划（全族
+REJECTED）、Attention per-call 精化计划（S1 官方 timeout）。
 
 ## 7. 归档现状与待整理项
 

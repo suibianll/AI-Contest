@@ -27,14 +27,21 @@
 - 本地 proxy 只用于同机机制诊断和时间记录，不能换算官方分数或官方 `<300s`；已知历史中
   存在本地排序与官方排序反转，任何本地正向都必须等待官方回传确认。
 
-- 当前活动计划（2026-09-03）：回收 v128 家族 per-call 序列自适应余量（官方 timeout ≠
-  WA，精度从未被否证；本地 official-shape-v1 口径 0.8378 vs v138 静态 0.7159）。超时元凶
-  已定位为校准期候选搜索（199.8s/24 calls），动态 per-call 精化仅 0.08s/call。Step 0 先做
-  零实现同协议消融（v128/v129/v138 归档 attention 在 proxy-v2 compact 运行）；S1 唯一候选
-  = 交叉算子 Gram64 per-call 精化（Q 用 K 的块 Gram 作 QK logits Hessian，3-sweep 有界
-  坐标下降，V bit-exact），从 v160 归档分支。漏斗含时间门禁（default attention API ≤
-  parent+40s），满足预注册 D1 才允许一次官方提交，失败不邻域调参。Linear 冻结；Linear×Attention
-  官方 2×2 和逐位等价时间 A/B 均停止。17816 源码无法提供，不再等待。
+- v161（S1 交叉算子 Gram64 per-call 精化，v160 分支，SHA `27EEE471...1848`）官方
+  **timeout（>300s，无分数）**，已按 `_timeout` 归档。本地全漏斗通过（Qwen default 120
+  paired `+0.0525`、106+/14−、GPT-2 同号、D1 满足、attention API +28.0s CUDA 在
+  +40s 门禁内），但官方鲲鹏机上动态 per-call 小张量算子成本远超本地 CUDA 外推。
+  **修正时间核算：v128 家族超时元凶不只是校准搜索（199.8s/24 calls），动态精化本身
+  （本地 0.092s/call CUDA）在官方硬件即超预算**（v138 无 dyn refine 官方 208s 通过；
+  v128/v129/v130/v131/v161 含 dyn refine 全部官方 timeout）。per-call 动态自适应族
+  结构性关闭，不缩 sweeps 重试；S2 前置条件不满足不启动；D1 维持 3/3；本地 CUDA
+  时间门禁对官方时间的预测能力记为失效。
+
+- **当前无活动计划（2026-09-03）**：本地已知机制族全部闭环（Linear 结构
+  full64/Householder、Attention 解析静态族、Attention per-call 动态族、Linear T<d
+  秩亏伪增益通道）。下一步为外部材料搜索或用户指定新机制；含在线逐 call 张量计算的
+  候选默认按官方不可行处理。Linear 冻结；Linear×Attention 官方 2×2 和逐位等价时间
+  A/B 均停止。17816 源码无法提供，不再等待。
 
 - 2026-09-03 的首次 L3 full64 no-op 结果无效：`_WEIGHT_FULL64_APPLY=True` 被
   `_WEIGHT_E2E_REFINE=False` 外层死分支遮蔽，目标函数未执行。不得引用该结果证明块级收敛；
