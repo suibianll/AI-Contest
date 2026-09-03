@@ -30,7 +30,8 @@
 - **官方提交配额（用户约束，2026-09-04 目标设置起）**：提交通过版本 ≤10。v171/v174/
   v175 为目标设置前已排期队列（不占配额）；**v176 为第 1 个（1/10，官方负不退还），
   v180 为第 2 个（2/10，官方 +3 RETAINED；GPT-2 轻微负风险记录保留），
-  剩余 8**。每新增一个候选扣 1 配额，官方负向不退还。SOTA 搜索（二至五轮：KVLinC/
+  v182 为第 3 个（3/10，L-R2 待官方，本地跨模型非负），剩余 7**。每新增一个候选扣 1
+  配额，官方负向不退还。SOTA 搜索（二至五轮：KVLinC/
   VecInfer/ResQ/OTT、ScaleSweep/H-Scale、MXFP4 误差三分量/HCP/ARCQuant、QuantVLA
   温度匹配/SageBwd/谱界）均落入已闭合域或 A1 已覆盖域，不注册新候选。官方裁决后
   A1-freedom 计划已经归档：D1 v180 官方 +3 RETAINED，D2 v181 本地 REJECTED，D3
@@ -39,6 +40,10 @@
   只注册 **L-R2**，把 v166 的 rank-1 官方正向结构推广为融合 rank-2 正交残差重分布；
   连续域乘积严格不变，Attention 冻结为 v180。只设接口/合法 state/有限输出/reachability/
   不变量/control 硬检查，首次官方结果决定提升；不扫 rank、系数、fold 或 role 路由。
+  **v182 已实现并归档**（SHA `F3E39E99...A438`）：硬检查全过（reachability 全 1、
+  vtu\_cross\_max \~1e-8、Attention 与 v180 逐位一致）；本地配对 v180 Qwen default
+  +0.000020（85/83）、GPT-2 +0.001171、OPT +0.025632，跨模型非负无
+  model-specific-risk；等待官方回传。
 
 - **V 侧方向结构性关闭（2026-09-04 穷尽审计）**：V 的量化自由度全部排除——
   per-head importance 无法改变 HiF4 64 块内离散解（64 块恰 = 1 head 1 token 的 64 维，
