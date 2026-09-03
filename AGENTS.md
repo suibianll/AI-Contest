@@ -27,13 +27,14 @@
 - 本地 proxy 只用于同机机制诊断和时间记录，不能换算官方分数或官方 `<300s`；已知历史中
   存在本地排序与官方排序反转，任何本地正向都必须等待官方回传确认。
 
-- 当前无活跃计划（2026-09-03）：Attention 解析式宽域计划当日闭环——A1a Matrix-Smooth
-  4×4 组内扩展 Qwen compact 哨兵 REJECTED（paired `-0.0786`、`0/2/2`，自由度 3→10 拟合
-  方差大），A2 深层 K 诊断无一致病因（outlier 与误差方向相反），A3 前置条件不满足。本地
-  已知机制族全部闭环（Linear full64/Householder、Attention 解析扩展/深层 K），下一计划
-  必须来自外部材料（论文/博客/新机制）或用户新输入，禁止从已关闭族内继续微调。官方判别器
-  D1/D2/D3 预注册于 OPA-1 Stage 1 账本，绑定未来任何官方提交。Linear×Attention 官方 2×2
-  和逐位等价时间 A/B 均停止。17816 源码无法提供，不再等待。
+- 当前活动计划（2026-09-03）：回收 v128 家族 per-call 序列自适应余量（官方 timeout ≠
+  WA，精度从未被否证；本地 official-shape-v1 口径 0.8378 vs v138 静态 0.7159）。超时元凶
+  已定位为校准期候选搜索（199.8s/24 calls），动态 per-call 精化仅 0.08s/call。Step 0 先做
+  零实现同协议消融（v128/v129/v138 归档 attention 在 proxy-v2 compact 运行）；S1 唯一候选
+  = 交叉算子 Gram64 per-call 精化（Q 用 K 的块 Gram 作 QK logits Hessian，3-sweep 有界
+  坐标下降，V bit-exact），从 v160 归档分支。漏斗含时间门禁（default attention API ≤
+  parent+40s），满足预注册 D1 才允许一次官方提交，失败不邻域调参。Linear 冻结；Linear×Attention
+  官方 2×2 和逐位等价时间 A/B 均停止。17816 源码无法提供，不再等待。
 
 - 2026-09-03 的首次 L3 full64 no-op 结果无效：`_WEIGHT_FULL64_APPLY=True` 被
   `_WEIGHT_E2E_REFINE=False` 外层死分支遮蔽，目标函数未执行。不得引用该结果证明块级收敛；

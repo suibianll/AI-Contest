@@ -7,15 +7,12 @@
 `evaluator/official_eval.py`，跨模型泛化调用 `evaluator/cross_model_eval.py`；旧
 `real_model_suite.py` 已退役。
 
-**当前无活跃计划**（2026-09-03）。Attention 解析式宽域计划当日执行完毕即归档：A1a
-Matrix-Smooth 4×4 组内扩展在 Qwen compact 哨兵 REJECTED（paired `-0.0786`、`0/2/2`），
-A2 深层 K 诊断未找到一致病因（通道 outlier 与误差方向相反），A3 前置条件不满足。至此
-本地已知机制族全部闭环：Linear 侧 full64/Householder（见
-[`../archive/plans/2026-09-03-official-pattern-and-linear-structure-experiments-superseded.md`](../archive/plans/2026-09-03-official-pattern-and-linear-structure-experiments-superseded.md)），
-Attention 侧 Matrix-Smooth 扩展/深层 K（见
-[`../archive/plans/2026-09-03-attention-analytic-broad-coverage-plan-superseded.md`](../archive/plans/2026-09-03-attention-analytic-broad-coverage-plan-superseded.md)）。
-下一个计划必须来自外部材料（论文/博客/新机制）或用户新输入，不得从已关闭族内继续微调；
-官方证据判别器 D1/D2/D3 已预注册于
+- [`2026-09-03-attention-per-call-refinement-plan.md`](2026-09-03-attention-per-call-refinement-plan.md)：当前唯一有效计划。回收 v128 家族从未被官方否证的 per-call 序列自适应余量（timeout ≠ WA）：Step 0 零实现同协议消融（v128/v129/v138 归档 attention 直接在 proxy-v2 compact 面板运行，测奖金大小），S1 唯一算法候选 = 交叉算子 Gram64 per-call 精化（Q 用 K 的块 Gram 做 QK logits Hessian，动态 3-sweep 有界坐标下降；v128 实测 0.08s/call，时间门禁 attention API ≤ parent+40s）。Linear 冻结；D1 判别器绑定；每假设一次官方提交。
+
+此前当日归档：Attention 解析式宽域计划（A1a 4×4 REJECTED、A2 无病因、A3 未启动）与
+Householder 快速验证计划（全族 REJECTED），见
+[`../archive/plans/`](../archive/plans/)。Linear 侧 T<d 秩亏伪增益通道已结构性封闭，
+不再从已关闭族内微调；官方证据判别器 D1/D2/D3 预注册于
 [`OPA-1 Stage 1 账本`](../../../logs/execution/2026-09-03-opa1-stage1-official-evidence-ledger.md)，
 绑定未来任何官方提交。
 

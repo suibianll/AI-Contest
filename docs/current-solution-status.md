@@ -560,26 +560,24 @@ v86 的部分 scale-aware/output-aware 机制。此前把它描述为“v86 级�
 
 ## 6. 当前活动计划
 
-**当前无活跃计划**（2026-09-03）。Attention 解析式宽域计划当日执行完毕即归档：
+唯一活动计划是
+[`2026-09-03-attention-per-call-refinement-plan.md`](superpowers/plans/2026-09-03-attention-per-call-refinement-plan.md)：
+回收 v128 家族 per-call 序列自适应余量（官方 timeout ≠ WA，精度从未被否证）。要点：
 
-1. **A1a REJECTED**：Matrix-Smooth 4×4 组内扩展在 Qwen attention compact 哨兵即停
-   （paired mean Δ `-0.078643`、`0/2/2`、`consistent_regression`，layer 23 K-only
-   `-164`）；每 block 自由度 3→10 在少量校准折上拟合方差大，gate 验证折通过但真
-   holdout 回归；间接否定自由度更高的 A1b；
-2. **A2 SKIPPED**：零 API 诊断未找到一致病因——K 通道 outlier/集中度与 K-only gain
-   秩相关 `+0.63`（方向相反），head_ratio 无解释力，深层负增益更可能是参考能量分母
-   效应；
-3. **A3 不启动**：前置条件不满足。
+1. 时间核算（legacy-v1 JSON 复盘）：v128 超时元凶是校准期候选搜索
+   （`hif4_calibration_attention` 199.8s/24 calls），动态 per-call 精化仅 0.08s/call
+   （400 calls 共 32s）；v129 搜索砍半精度仅 −0.0012（0.8366），v138 全砍掉 −0.121
+   （0.7159）；
+2. **Step 0**：零实现同协议消融——v128/v129/v138 归档 attention 直接在 proxy-v2
+   attention compact 面板运行（vs v160 parent 0.797462），按判读表决定进入 S1/S2'/关闭；
+3. **S1 唯一候选**：交叉算子 Gram64 per-call 精化——校准期在最终部署坐标计算 Q/K
+   交叉块 Gram 存入 state，动态期对码字做 3-sweep 有界坐标下降（v128 固定值，不扫描）；
+   V bit-exact；从 v160 归档分支；
+4. 漏斗含时间门禁（default attention API ≤ parent+40s 本地）与预注册 D1 判别器；
+   满足 D1 才允许一次官方提交，失败不邻域调参；官方回传同时记录 P9 检验。
 
-至此本地已知机制族全部闭环（Linear full64/Householder + Attention 解析扩展/深层 K），
-下一计划必须来自外部材料（论文/博客/新机制）或用户新输入；官方判别器 D1/D2/D3 预注册于
-[`OPA-1 Stage 1 账本`](execution-attribution/../logs/execution/2026-09-03-opa1-stage1-official-evidence-ledger.md)，
-绑定未来任何官方提交。
-
-归档计划：Attention 解析
-[`2026-09-03-attention-analytic-broad-coverage-plan-superseded.md`](superpowers/archive/plans/2026-09-03-attention-analytic-broad-coverage-plan-superseded.md)、
-Householder
-[`2026-09-03-official-pattern-and-linear-structure-experiments-superseded.md`](superpowers/archive/plans/2026-09-03-official-pattern-and-linear-structure-experiments-superseded.md)。
+当日已归档：Attention 解析式宽域计划（A1a 4×4 REJECTED、A2 无病因、A3 未启动）、
+Householder 快速验证计划（全族 REJECTED）。Linear 侧 T<d 秩亏伪增益通道结构性封闭。
 
 ## 7. 归档现状与待整理项
 
