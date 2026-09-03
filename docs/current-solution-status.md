@@ -559,7 +559,8 @@ v86 的部分 scale-aware/output-aware 机制。此前把它描述为“v86 级�
 [`2026-09-03-official-pattern-and-linear-structure-experiments.md`](superpowers/plans/2026-09-03-official-pattern-and-linear-structure-experiments.md)。顺序固定为：
 
 1. 补齐 `v159 Linear × v86 Attention` 官方单元，形成 Linear×Attention 2×2 因子对照；
-2. 可选执行 exact-v160 重跑与 L1 unbatched 逐位等价时间 A/B；
+2. 可选执行 L1 unbatched 逐位等价时间 A/B，直接与已确认稳定的 v160 `232s` 比较，不重跑
+   相同 SHA；
 3. 测试无 seed/alpha/rank 搜索的统一 64-block Householder 坐标重分布；
 4. 每个机制只允许一次官方候选，官方结果不反向用于阈值或候选网格调参。
 
