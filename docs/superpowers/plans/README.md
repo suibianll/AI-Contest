@@ -8,11 +8,12 @@
 `real_model_suite.py` 已退役。
 
 **当前活动计划（2026-09-04）**：
-[`2026-09-04-sota-candidate-list.md`](2026-09-04-sota-candidate-list.md)
-——状态 **CLOSED（2026-09-04 全部裁决完毕）**：C1（v176）官方负 REJECTED、C2/C3 本地
-REJECTED；组合 v175 官方 `17594/245s` RETAINED 成为新完整官方父版本（interaction=0）。
-完整官方父：v175，两侧独立父侧 `P_L = v166（4590/226s）`、`P_A = v168（14005/210s）`；
-距榜首 21765 差 4171。本清单已闭环，下一步新候选需新计划（配额账本 v176 = 1/15）。
+[`2026-09-04-post-official-a1-freedom-plan.md`](2026-09-04-post-official-a1-freedom-plan.md)
+——官方裁决后的新一轮规划。锚点：完整官方父 v175（`17594/245s`，interaction=0 精确
+可加）、A1（v168）为唯一官方正向 Attention 机制、时间余量 55s。**D1 首选**：A1 的
+Q/K 非对称折叠分配（per-KV-head 解析闭式 alpha，零动态新增，实现为 v180 本地预研不
+占配额）；D2 per-Q-head gain 对照；D3 组合延伸（占 1 配额）。配额账本（目标设置起
+≤10）：v176 已用 1（官方负），剩余 9。
 
 当日已归档：低复杂度算法扩展计划（A1-A4/L1-L4/组合全覆盖，
 `-superseded`）、v162 官方侧向隔离优化计划（v165 timeout、v167 本地
