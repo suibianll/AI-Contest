@@ -748,10 +748,22 @@ gap         = 21765 - S_LA
   Linear 已官方提交待回传。父版本：`P_L = v163`（若 v166 回传 `S_L > 4587` 则更新
   并在此登记）、`P_A = v164`。下一动作：A1 解析 logits 增益校正（从 P\_A = v164 构造）。
 
-- **2026-09-03 v166 官方回传：`4590 / 226s` → 父侧更新 `P_L：v163 → v166`。** sources
+- **2026-09-03 v166 官方回传：`4590 / 226s`** **→ 父侧更新** **`P_L：v163 → v166`。** sources
   SHA `9C0EAC6A7CA883A1F8962C11735744271259460F5EBBF23D530A5BBCF12B4646`；判读按 §3.1：
   `step_gain = 4590 − 4587 = +3`、`side_contrib C_L = 4590 − 1001 = 3589`、
   `Linear ratio = 3/3586 ≈ 0.0008`（对 v160 固定口径）；`226s < 300s` 时间通过。
   **效果**：v166 成为当前官方最好的 Linear 单侧父版本；§3.1 公式中 `S_parent = 4590`，
   后续 Linear 候选（L1–L4）从 v166 构造，同时继续报告相对 v160 固定口径
   `(S_new − 4587)/3586`。Attention 侧父版本 `P_A = v164` 不变。
+
+- **A1 v168 候选完成本地漏斗（2026-09-03，待官方）**：SHA
+  `5988AE47EAC2E7DDE7488E06B8F91939F5660A585034280A6D68A8FB6701AC79`，从 P_A = v164
+  构造。机制合法（隔离导入/state 校验/V 与 Linear control 逐位）、可达（24 层
+  multiplier 全变化）、校准 +5%、动态零增量（v165 约束满足）。前提被证实但量级小：
+  折间一致（离散 0.002–0.006 << 偏置量）的稳定乘性 logits 偏置 ≤1.5%，fitted
+  gamma ∈ [0.988, 1.006]（48 head）。Qwen default 120 mean −0.00088（median +0.0002、
+  `66+/54−`，回归集中 layer 16——其 gamma 0.9876 为全网络最大校正量，校准→测试
+  不迁移，worst −0.16）；GPT-2 +0.002447（`3+/1−`，无整体结构性反向）。按 §12
+  step 9 进入官方提交；判读按 §3.3：`S_A > 13945` RETAINED 成为新 Attention 父侧，
+  否则 REJECTED 转 A2（V 输出偏差质心补偿）。证据：
+  [`v168 result`](../../solutions/20260903_v168_standard-linear_logit-gain-attn_scoreNA_timeNA/result.md)。
