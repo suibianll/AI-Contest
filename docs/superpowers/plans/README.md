@@ -7,7 +7,7 @@
 `evaluator/official_eval.py`，跨模型泛化调用 `evaluator/cross_model_eval.py`；旧
 `real_model_suite.py` 已退役。
 
-- [`2026-09-03-official-pattern-and-linear-structure-experiments.md`](2026-09-03-official-pattern-and-linear-structure-experiments.md)：当前唯一有效计划。先用一个缺失的 Linear×Attention 官方 2×2 单元识别父版本交互，再测试统一的 64-block Householder 坐标重分布。逐位等价官方时间 A/B 为可选实验。
+- [`2026-09-03-official-pattern-and-linear-structure-experiments.md`](2026-09-03-official-pattern-and-linear-structure-experiments.md)：当前唯一有效计划。停止官方 2×2 与时间探针，只验证一个固定 64-block Householder 候选；采用 Qwen compact → GPT-2/OPT compact → Qwen Linear default 的失败即停漏斗，首个候选预算 10–12 分钟，后续候选 8–10 分钟。
 
 快速机制迭代使用 `--compact-panel`：Linear 为 28 个 selected Weight state + 56 个跨
 validation/test holdout case，读取 median、尾部分布、负 case、cross-holdout 一致性和 W/A

@@ -13,8 +13,8 @@
 - **规律提取**：① 本地 <0.01 级 Attention mean 微调不迁移官方（官方整数分对
   门控小改进不敏感，与历史"本地增益未转化"教训一致）；② v160 官方 232s vs 本地
   API 290.7s，官方机约快 1.25×，68s 余量可用于后续机制（勿花完）；③ 突破 17532
-  必须改变官方 panel 候选行为且 effect 足够大——Attention 门控通道已证无效，
-  重心应放 Linear 大 effect 机制（L3）或同步 17816 源码。
+  必须改变官方 panel 候选行为且 effect 足够大——Attention 门控通道已证无效，当前只验证
+  固定 Householder Linear 机制；17816 源码不再作为等待项。
 
 用户确认：根目录同 SHA 的 v159 合并版本官方分数为 **17532**，比 v158 的 16861 高
 **671 分**；官方时间未提供。另一个 17816 结果仍是更高的外部锚点，比 v159 高 284 分，
@@ -75,8 +75,7 @@ L3 首次 full64 探针因死分支判为 **INVALID EXPERIMENT**；修正 reacha
   官方泛化结论。候选说明见
   [`v159 result`](../solutions/20260902_v159_linear-gptq17816_v158-attention_score17532_timeNA/result.md)。
 - CUDA device 错误已经修复；L1 batching 已把 v160 Linear calibration 降至约 `166.6s`，
-  输出逐位不变。下一步不再消融已证明承重的搜索维度，转为官方 2×2 交互实验与统一
-  64-block Householder 单机制验证。
+  输出逐位不变。下一步不再做官方 2×2 或时间探针，只快速验证统一 64-block Householder。
 - v138/v139 虽在官方 `<300s` 内通过，但只有 `15715/15716`，比 v86 低约 1029 分；
   v138–v145 这条“压缩 Attention 后继续叠 Linear 局部模块”的路线已经失败并关闭。
 - v155 官方 `16581 / 208.5s`、v156 官方 `16580 / 204.3s`，两者时间均通过但分别低于 v86
@@ -558,11 +557,11 @@ v86 的部分 scale-aware/output-aware 机制。此前把它描述为“v86 级�
 唯一活动计划是
 [`2026-09-03-official-pattern-and-linear-structure-experiments.md`](superpowers/plans/2026-09-03-official-pattern-and-linear-structure-experiments.md)。顺序固定为：
 
-1. 补齐 `v159 Linear × v86 Attention` 官方单元，形成 Linear×Attention 2×2 因子对照；
-2. 可选执行 L1 unbatched 逐位等价时间 A/B，直接与已确认稳定的 v160 `232s` 比较，不重跑
-   相同 SHA；
-3. 测试无 seed/alpha/rank 搜索的统一 64-block Householder 坐标重分布；
-4. 每个机制只允许一次官方候选，官方结果不反向用于阈值或候选网格调参。
+1. 不再执行 Linear×Attention 官方 2×2、相同 SHA 重跑或逐位等价时间 A/B；
+2. 只测试一个无 seed/alpha/rank 搜索的统一 64-block Householder 候选；
+3. 按 Qwen compact → GPT-2/OPT compact → Qwen Linear default 失败即停，完整本地运行预算
+   首个候选 `10–12 分钟`（含一次性跨模型 parent），后续候选 `8–10 分钟`；
+4. 全部门禁通过后只允许一次官方候选，官方结果不反向用于阈值或候选网格调参。
 
 ## 7. 归档现状与待整理项
 
