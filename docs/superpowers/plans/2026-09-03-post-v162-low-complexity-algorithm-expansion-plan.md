@@ -792,3 +792,15 @@ gap         = 21765 - S_LA
   按 v160 双侧实测共享折扣 `−28s` 投影约 `289s`——接近 `300s` 上限，组合候选
   构造时须做时间审计。证据：
   [`v168 result`](../../solutions/20260903_v168_standard-linear_logit-gain-attn_scoreNA_timeNA/result.md)。
+
+- **A3 v170 本地 REJECTED（2026-09-03，未提交官方）**：SHA
+  `2CF06B0A5EAFF8FD9AE8543809282934DC7460A713A359130D1FE2DD370BBBDB`，从 P_A = v168
+  构造（A1 multiplier 逐位保留）。机制合法且可达（winner 11/12 = 0——输出感知选择
+  确认标准 scale；Q mant 25–35% 变化来自精确 hierarchy + 去 refine）。**跨模型结构性
+  反向，证据远强于 v169**：Qwen default `−0.0506`（`9+/111−`，四个长度组全负）、
+  GPT-2 `−0.0551`（`1+/3−`，k_only `−0.093`）。结论：动态 refine 是官方 12944
+  Attention 贡献的承重组件，静态 offset 编译无法替代。按 §12 step 9 + §14 记
+  REJECTED，不消耗官方提交，不调候选集/权重/token 数。**A3 关闭，下一包 A4（矩匹配
+  mantissa 阈值）**。战略注记：A3 原含为组合候选降时间的目标——否决后组合时间风险
+  （朴素 317s / v160 式折扣 ~289s）维持原判。证据：
+  [`v170 result`](../../solutions/20260903_v170_standard-linear_fixed-offset-attn_rejected/result.md)。
