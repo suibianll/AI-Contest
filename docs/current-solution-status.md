@@ -57,10 +57,11 @@ v160 = v159 Linear（L1 逐位等价编码）+ A2/A1（Attention）。官方回�
 - **GPT-2 完整集成**：linear `0.603115` / attention `0.389583`（与各自 parent 逐位
   一致，无跨模型回归），API `113.8s`。
 
-L3 首次 full64 探针已判定为 **INVALID EXPERIMENT**：`_WEIGHT_FULL64_APPLY=True` 仍嵌套在
-`_WEIGHT_E2E_REFINE=False` 的死分支内，目标 refine 从未执行，不能据 56/56 zero delta 得出
-块级收敛结论。opt-125m 第二架构已完成（捕获一致性 2.86e-6 < 1e-5）。下一步按新活动计划先
-补齐官方 Linear×Attention 2×2 单元，再正确执行 L3 reachability 实验。
+L3 首次 full64 探针因死分支判为 **INVALID EXPERIMENT**；修正 reachability 后已按用户要求仅
+重跑一次 compact：24 次 refine attempted `659456` row-blocks、accepted `657540`，但 Linear
+`0.705508→0.687588`，paired `6+/42-/8=`、mean delta `-0.017920`。W-only delta `+0.107169`
+被 interaction `-0.118818` 反转，说明块内 full-H 目标与最终 `Q(A)Q(W)^T` 不一致。E3 正式
+`REJECTED`，不再调参或扩大测试；下一算法实验为活动计划 E4。
 
 ## 1. 版本结论
 

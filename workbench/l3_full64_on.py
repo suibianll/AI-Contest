@@ -1813,6 +1813,7 @@ def _refine_weight_blocks64(
         return params
     blocks = channels // _HIF4_BLOCK_SIZE
     device = dense.device
+    print(f"[L3 reach] rows={rows} blocks={blocks} max_ratio={float(max_ratio):.3f}")
 
     h_blocks = _full64_hessian_blocks(cov, channels)
     max_ratio = float(max_ratio)
@@ -2105,6 +2106,22 @@ def _refine_weight_blocks64(
     refined["scale_lv3"] = out_lv3.reshape(rows, blocks, 8, 2, 1)
     refined["sign"] = out_sign.reshape(rows, blocks, 8, 2, 4)
     refined["mant"] = out_mant.reshape(rows, blocks, 8, 2, 4)
+    changed_codes = int(
+        ((out_sign != params["sign"].reshape(rows, blocks, 64))
+         | (out_mant != params["mant"].reshape(rows, blocks, 64))).sum()
+    )
+    accepted_blocks = int((
+        (out_scale != parent_scale)
+        | (out_lv2 != parent_lv2).any(dim=-1)
+        | (out_lv3 != parent_lv3).any(dim=(-1, -2))
+        | (out_sign != params["sign"].reshape(rows, blocks, 64)).any(dim=-1)
+        | (out_mant != params["mant"].reshape(rows, blocks, 64)).any(dim=-1)
+    ).sum())
+    print(
+        f"[L3 result] attempted={rows * num_sel} "
+        f"accepted={accepted_blocks} "
+        f"changed_codes={changed_codes}"
+    )
     return refined
 
 
@@ -8195,23 +8212,20 @@ def hif4_calibration_and_quantize_weight(
             full_sweep_top_k=_WEIGHT_FULL_SWEEP_TOP_K,
         )
 
+    if _WEIGHT_FULL64_APPLY and gram_full is not None:
+        full64_ratio = (
+            _WEIGHT_FULL64_MAX_RATIO_NARROW
+            if in_features <= _WEIGHT_FULL64_NARROW_CHANNELS
+            else _WEIGHT_FULL64_MAX_RATIO_WIDE
+        )
+        weight_params = _refine_weight_blocks64(
+            weight_smooth,
+            weight_params,
+            gram_full,
+            max_ratio=full64_ratio,
+        )
+
     if _WEIGHT_E2E_REFINE and len(activation_samples) > 0:
-        # L3 (2026-09-03): wire the dormant C23 full-64 block refine before the
-        # e2e refine, behind _WEIGHT_FULL64_APPLY.  Per-block strict full-H
-        # improvement with parent fallback keeps this monotone per block; the
-        # e2e refine then runs on the C23-improved parameters.  A/B gated.
-        if _WEIGHT_FULL64_APPLY and gram_full is not None:
-            full64_ratio = (
-                _WEIGHT_FULL64_MAX_RATIO_NARROW
-                if in_features <= _WEIGHT_FULL64_NARROW_CHANNELS
-                else _WEIGHT_FULL64_MAX_RATIO_WIDE
-            )
-            weight_params = _refine_weight_blocks64(
-                weight_smooth,
-                weight_params,
-                gram_full,
-                max_ratio=full64_ratio,
-            )
         weight_params = _weight_e2e_refine(
             weight_smooth, weight_params,
             activation_samples,

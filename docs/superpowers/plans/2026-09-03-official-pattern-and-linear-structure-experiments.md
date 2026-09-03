@@ -155,7 +155,23 @@ L1 在本地把 Linear default API 从约 `269.4s` 降到 `231.4s`，但官方�
 
 E2 只研究时间，不作为新父版本，也不继续做 A1 的 1 秒级官方 A/B。
 
-## 7. E3：修正 reachability 后的 full64 同坐标码字实验
+## 7. E3：修正 reachability 后的 full64 同坐标码字实验（DONE / REJECTED）
+
+### 一次性执行结果（2026-09-03）
+
+- 候选 SHA `05DC0261...8619`，只执行一次 Qwen Linear compact；
+- 24 个具有 `gram_full` 的 Weight state 真实进入 refine；4 个 `proj` state 因输入宽度 4864
+  超过 quadratic 上限而保持 control；
+- attempted row-blocks `659456`，accepted `657540`（99.71%），改变 code 元素 `15124875`；
+- Linear `0.705507633 → 0.687587782`，mean/median delta
+  `-0.017919850/-0.016153218`，`6+/42-/8=`；
+- family delta：fc `-0.021504`、o `-0.056900`、qkv `-0.008510`、proj `0`；
+- 来源 delta：W-only `+0.107169`、A-only `-0.006271`、interaction `-0.118818`，说明块内
+  Weight criterion 的收益被最终 Q(A)Q(W) 配对交互完全抵消并反转。
+
+结论：E3 确认存在大量同坐标码字余量，但当前 damped block-full-H 接受准则与最终联合输出
+目标不一致。它不是“无余量”，而是“错误目标下几乎全量接受”。按预注册门禁直接 REJECTED，
+不跑 default/GPT-2/OPT，不提交官方，不调整 damping、beam、coverage 或 offsets。下一步为 E4。
 
 ### 假设
 
@@ -263,11 +279,12 @@ C   = 0.5 * (C_A + C_W)
 
 ## 10. 执行顺序与停止条件
 
-1. **立即完成**：保存 L3 reachability 审计说明，旧 no-op 结果标为 invalid experiment；
+1. **已完成**：旧 L3 no-op 标为 invalid；正确 reachability compact 已执行一次并因
+   `6+/42-/8=`、mean delta `-0.017920` 判为 REJECTED；
 2. **E1**：先补齐唯一缺失的 2×2 官方单元，这是最高信息量的一次提交；
 3. **E0/E2（可选）**：只有用户希望专门研究官方时间时执行，必须成对；
-4. **E3**：正确接线并先跑 compact；不满足 reachability 或分布门禁就停止；
-5. **E4**：仅在 E3 关闭后实现；通过三模型和复杂度门禁才提交；
+4. **E3 已关闭**：不得重复或调整 full64 参数；
+5. **E4 是下一算法实验**：通过三模型和复杂度门禁才提交；
 6. 每个官方候选只提交一次。官方失败后不做邻域调参，不把官方分数回填成本地 loss 权重。
 
 若 E1、E3、E4 均结束，本计划归档；下一计划必须依据这些正交实验的结论重新定义算法族，不能

@@ -32,6 +32,10 @@
   `_WEIGHT_E2E_REFINE=False` 外层死分支遮蔽，目标函数未执行。不得引用该结果证明块级收敛；
   后续必须记录 attempted/accepted block 计数验证 reachability。
 
+- 修正 reachability 后已仅重跑一次 L3 compact：attempted `659456`、accepted `657540`，但
+  paired mean delta `-0.017920`、`6+/42-/8=`；W-only `+0.107169` 被 interaction
+  `-0.118818` 反转。E3 为 `REJECTED`，禁止再次运行或调整 full64 参数，下一算法实验为 E4。
+
 ## 2. 提交代码约束
 
 - 正式提交是根目录 [`solution.py`](solution.py)，必须单文件、自包含，只提供评测器要求的六个
