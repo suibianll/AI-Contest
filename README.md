@@ -3,9 +3,9 @@
 > **最新官方进展（2026-09-03）**：v160 官方结果为 **17532/232s**；v162/v163/v164 两侧校准
 > 分别为 **1001/146s、4587/202s、13945/204s**，端点可加性残差仅 1 分。用户确认的榜首为
 > **21765/290s**，当前差 **4233 分**。下一阶段按
-> [`双路线稳健量化计划`](docs/superpowers/plans/2026-09-03-score21765-dual-track-robust-quantization-plan.md)
-> 已完成本地裁决：Attention Softmax-Fisher 与 Linear cross-fold minimax 均在 compact
-> 泛化门禁失败，不产生官方候选；下一阶段转向数学上不同的新编码架构。
+> [`v162 官方侧向隔离优化计划`](docs/superpowers/plans/2026-09-03-v162-official-side-isolation-optimization-plan.md)
+> 分别构造“候选 Linear + 标准 Attention”和“标准 Linear + 候选 Attention”，由官方结果
+> 直接测量两侧贡献与优化比例；本地只保留合法性、可达性和 control 检查。
 
 更新时间：2026-09-03。当前仓库只认一套本地评测协议：
 [`evaluator/official_eval.py`](evaluator/official_eval.py)。旧的

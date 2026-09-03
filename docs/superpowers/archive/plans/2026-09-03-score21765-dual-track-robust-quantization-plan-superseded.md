@@ -1,11 +1,12 @@
 # 21765 目标：Attention 静态输出敏感量化 + Linear 鲁棒 A\@W 计划
 
-> 状态：**COMPLETED / ALL LOCAL CANDIDATES REJECTED**
+> 状态：**SUPERSEDED**（该工作树修订未重新执行；A/B/C 的实际裁决以 commit `de1429f`、
+> 对应 execution logs 和后继活动计划为准）
 >
 > 创建：2026-09-03
 >
-> 修订：2026-09-03（预执行审查修正：删除本地到官方的隐式分数换算、修正 C 的绝对归一化
-> minimax 准则、把组合时间降级为只用于否决的非负增量估计，并固定外部搜索协议）
+> 修订：2026-09-03（预执行修订：A 数值界、B 在线硬约束与失败隔离、C 逐元素准则、
+> 组合官方时间账、并行外部搜索工作流、期望校准注记）
 >
 > 官方父版本：v160，`17532 / 232s`，归档源码 SHA256
 > `33B1D061CE6BFCD92659C597BE4830BB9B910E646FF518433DA67B925AE8680D`
@@ -33,10 +34,11 @@ score interaction = 17532 - 4587 - 13945 + 1001 = 1
 是当前已实现贡献比，不是公开评分权重，也不是本地 gain 到官方分的换算率。研发目标按
 Attention `+3000~3300`、Linear `+900~1200` 分解，只作为资源规划，不用于预测单个候选。
 
-量级注记：v161 只证明输出感知 Q/K 误差度量在本地与 GPT-2 上存在同号信号，不构成 A/B 的
-收益上界。由于本地与官方发生过排序反转，当前没有可信证据把任一本地 mean 映射为官方分，
-也不能预估 A+B+C 的官方增量区间或 M2 达成概率。`4233` 只用于说明必须寻找结构性增益；
-所有转向判断只读取预注册的实际官方增量，不读取本地到官方的比例外推。
+量级注记（期望校准）：已测 Attention 信号天花板是 v161 本地 default `0.794856`；按当前
+Attention 官方边际做的粗略比例检查显示，`+3000` 官方分对应本地 mean 约 `0.91` 量级，远超
+已验证信号。A+B 预计落在 `+300~1500` 官方分区间，§6 的"合计 <1000 即转向"分支触发概率
+高；M2（20000）不是 A+B+C 的预期产出，而是需要外部代差机制参与才能接近的目标。该注记
+只用于期望管理与转向预判，禁止作为本地 gain 到官方分的换算率，也不得用于候选参数选择。
 
 执行原则：
 
@@ -117,10 +119,9 @@ I_new_j = normalize_head(I_parent_j * exp(rho * mu_j))
 ```
 
 `rho` 由折间信噪比解析确定，不设置 blend 网格。折间不稳定时 `rho -> 0`，自然退回父版本；
-稳定时才增强输出敏感通道。`c=2` 是固定的鲁棒性先验而非浮点溢出界：它把单通道相对父版本
-的乘数限制在 `[e^-2,e^2]`，极端通道间最大比值为 `e^4≈54.6`，用于限制 Fisher 条件数对
-量化选择的支配。该常数必须在 A0 前冻结，A0、holdout 或官方结果均不得触发调整；若此先验
-失败，整个公式拒绝，不测试其他裁剪值。禁止直接开启根文件中旧 `_ATTN_FISHER_IMPORTANCE` 的
+稳定时才增强输出敏感通道。数值界 `c=2` 是预注册公式常数（通道最大增强 `e^2 ≈ 7.4×`、
+最大抑制 `e^-2 ≈ 0.14×`），防止 log-Fisher 大动态范围下 `exp` 溢出或 importance 塌缩；
+不由 A0 统计数据调整。禁止直接开启根文件中旧 `_ATTN_FISHER_IMPORTANCE` 的
 `3 blend × Q-only/K-only/QK` 九候选搜索和 calibration-output gate。
 
 ### 3.3 冻结与代码边界
@@ -201,11 +202,6 @@ Attention 完成一个候选的完整裁决后再启动 C。固定 v160 的所�
 
 对 calibration fold `f` 和一个 Weight row `w`：
 
-`proxy-v2` 的 Linear API 每个 state 只提供两个独立 calibration window，因此这里的五折固定为：
-先沿用 v160 的确定性等距采样、每个 window 最多保留 128 行，再按采样后行号 `mod 5` 交错分组，
-最后把两个 window 中余数相同的行合并为同一 fold。该划分在读取张量值之前确定，五折都覆盖两个
-文档；不得按 loss、长度或 role 重新分组。
-
 ```text
 L_f(wq) = ||A_f w - Q(A_f) wq||_2^2
          = wq^T H_f wq - 2 b_f^T wq + c_f
@@ -234,21 +230,13 @@ Delta L_f = 2 * delta * g_fj + delta^2 * H_fjj
 g_f <- g_f + delta * H_f[:, j]
 ```
 
-逐元素选择准则（预注册，与 §5.1 的绝对归一化目标一致）：令
-
-```text
-E_f = ||A_f w||_2^2 + eps
-r'_f(c) = r_f + Delta L_f(c) / E_f
-```
-
-其中 parent 候选的 `Delta L_f=0`。每个元素在三个合法码字中，按候选的绝对损失向量
-`r'_f(c)` 对字典序 `(max_f r'_f, median_f r'_f, mean_f r'_f)` 取最小者；接受后同步更新
-`L_f/r_f/g_f`。不得比较未归一化的 `Delta L_f`，也不引入新的聚合权重、折间投票或逐折贪心。
+逐元素选择准则（预注册，与 §5.1 字典序目标同构）：每个元素在三个合法码字中，按各自五折
+delta 向量在字典序 `(max_f Delta L_f, median_f Delta L_f, mean_f Delta L_f)` 下取最小者；
+不引入新的聚合权重、折间投票或逐折贪心。
 
 沿用 v159 已有固定通道顺序，只执行一次 sweep。整个 block 完成后用五折完整二次型复核；
-只有字典序目标严格改善才接受，否则同时恢复 block 的 parent 码字及 sweep 前的 `L_f/r_f/g_f`。
-必须记录 attempted blocks、accepted blocks、changed codes、各折 before/after、
-W-only/Both/interaction 和各 role 接受率。
+只有字典序目标严格改善才接受，否则恢复 parent block。必须记录 attempted blocks、accepted
+blocks、changed codes、各折 before/after、W-only/Both/interaction 和各 role 接受率。
 
 ### 5.3 复杂度
 
@@ -285,44 +273,30 @@ Attention 与 Linear 候选必须分别获得独立官方正向，才允许进�
 集成，检查六 API、state、单文件导入和时间；由于侧向校准的 score interaction 为 1，可把
 两侧官方增量相加作为结构性预期，但不得自动执行官方 2×2，也不得把本地 delta 换算为官方分。
 
-组合候选的官方时间预算使用非负增量估计，只作否决、不作通过证明。Attention 与 Linear 候选
-各自官方回传后，忽略低于 v160 的表观加速，计算：
-
-```text
-T_nonnegative = 232
-              + max(0, T_Attn_official - 232)
-              + max(0, T_Linear_official - 232)
-```
-
-`T_nonnegative >285s` 时不提交组合，先做数学等价的实现复杂度审计；`<=285s` 仍只是必要条件，
-不能证明官方 `<300s`。完整本地集成的 API delta 和算子类型审计作为辅助否决门禁，但不得换算
-官方秒数。v163/v164 的 `-28s` 共享抵扣和榜首 `290s` 均不作为本候选可行性的证据。
+组合候选的官方时间预算账（预注册）：Attention 候选与 Linear 候选各自官方提交回传后，用实测
+官方总时间投影组合时间 `T_combo ≈ T_Attn_official + T_Linear_official - 232`（扣除重复计入
+的 v160 基线；时间交互按 0 计，v163+v164 侧向测量观察到的 -28s 共享抵扣不可依赖）。投影
+`>285s` 时先做时间削减审计再提交，硬上限 `290s`（榜首 290s 证明该量级在官方机上可行）；
+本地 wall 时间不进入该门禁。
 
 若首轮 Attention + Linear 官方合计仍 `<1000`，说明当前两种目标修正不足以承担 4233 分差，
 停止局部扩展并转向新的编码架构或外部高分方案分析。若合计 `>=1000`，以新官方父版本重新做
 一次证据审计，再决定 M2 的第二个独立机制。
 
-### 6.1 与本地调参隔离的外部搜索工作流
+### 6.1 并行外部搜索工作流（零风险，即刻启动）
 
-转向输入可在 A/C 裁决前准备，但必须与本地调参隔离。搜索范围冻结为截至 `2026-09-03` 已公开
-的论文与对应官方源码，优先检查 KV-cache 量化、静态 rotation 和 outlier prevention；不得因
-A/C 的中间结果临时扩展关键词或来源。每项机制统一按以下顺序登记：
-
-1. 能否映射到六 API 和合法 CPU state；
-2. 是否保持动态 `O(TD)`，且不引入 per-call Gram、迭代或小张量 Python 循环；
-3. 是否兼容 HiF4 四元素码字与现有层级 scale；
-4. 是否与已关闭的 full64/Householder/动态 Gram 族数学上不同；
-5. 理论预期、额外状态、动态算子和主要失效模式。
-
-先保存完整候选清单，再按上述布尔门禁筛除；每个机制族最多保留一个、总计最多三个实现提案，
-并在读取任何本地 panel 前冻结排序和第一候选。该工作流只读文献与源码、不运行本地 panel、
-不产生版本号；其产物只能为 §6 转向提供预注册输入，不能根据后续 holdout 或官方结果改排序。
+§6 的"合计 <1000 即转向"分支大概率触发（见 §1 量级注记），转向输入不应等到失败后才开始
+准备。外部 SOTA 搜索作为独立工作流与 A/C 并行推进：优先 KV-cache 量化方向（KIVI、Atom、
+QuaRot、KVQuant、MiKV 等 4-bit Q/K/V + rotation/outlier-prevention 机制），筛选标准是能否
+映射到六 API 约束、HiF4 层级码字结构与"calibration 编译、动态 O(TD)"边界。该工作流只读
+文献与公开源码、不跑本地 panel、不产生候选版本号，不违反"两侧不并行调参"纪律；产出为
+候选机制清单与可行性注记，作为 §6 转向分支的即用输入。
 
 ## 7. 固定执行顺序与产物
 
 1. 归档 v162/v163/v164 侧向校准计划并修正索引（已完成，commit `66b3336`）；
 2. A0-A5：跨折收缩 Softmax-Fisher；
-   并行（与本地调参隔离）：按固定协议准备外部机制清单（§6.1），不依赖 A/C 裁决；
+   并行（零风险）：外部 SOTA 搜索工作流（§6.1）即刻启动，不依赖 A/C 裁决；
 3. A 官方强正向后才考虑 B；A 失败则跳过 B；
 4. C0-C5：Linear 跨折 minimax 部署 A\@W；
 5. 两侧分别官方正向后才做一次组合审计；
@@ -330,26 +304,3 @@ A/C 的中间结果临时扩展关键词或来源。每项机制统一按以下�
    attempted/accepted 和明确的 `RETAINED/REJECTED/ERROR/TIMEOUT`；未提交官方保持
    `unregistered/NA`；
 7. 每次实质更新后 `git diff --check`、提交、push 并核验工作区。
-
-## 8. 执行记录（2026-09-03）
-
-- A0 reachability 通过：compact 四层中 Q `3/4`、K `4/4` state 发生变化，校准总计
-  `10.576s`。
-
-- A2 compact 被否决：相对 v160，Attention mean/median delta
-  `-0.007813325/-0.004871463`，`1+/3-/0=`，worst `-0.027699490`；QK-only、probability
-  MSE/KL 均恶化，V control 为 0。A 为 `REJECTED`，不进入 A3-A5、不做邻域调参。
-
-- B 按依赖取消：A 未获得官方强正向，因此不实现、不运行。
-
-- C0/C1 从 v160 干净实现：单个 `fc_gate [4864,896]` state attempted `68096`、accepted
-  `65460`、changed codes `547226`、rollback 残留 0，Activation state 与 scale/lv2/lv3
-  control 逐位一致。校准 `3.421s` 对 parent `2.160s`（`1.584×`）；`1.20×` 仅为工程风险
-  目标，不作硬否决，候选继续进入 C2。
-
-- C2 正式否决 C：Linear compact mean/median delta `-0.088775/-0.088583`，
-  `4+/52-/0=`，worst `-0.216586`、worst-quartile mean `-0.164813`；七个 role mean、test、
-  validation 和 W-only delta 全负。28 个 cross-holdout pair 为 `2` 对双正、`26` 对双负。
-  C 为 `REJECTED`，不进入 C3-C5、不做 fold/Jacobi/coverage/邻域变体、不提交官方。
-
-- A/B/C 均未产生官方候选；根 `solution.py` 未改，下一计划必须转向新的编码架构。

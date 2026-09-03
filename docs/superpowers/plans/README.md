@@ -8,13 +8,12 @@
 `real_model_suite.py` 已退役。
 
 **当前活动计划（2026-09-03）**：
-[`2026-09-03-score21765-dual-track-robust-quantization-plan.md`](2026-09-03-score21765-dual-track-robust-quantization-plan.md)
-——以当前官方榜首 `21765/290s` 为目标，从 v160 `17532/232s` 分两侧串行推进。Attention A
-已在 compact **REJECTED**，B 取消；Linear C 也在 C2 compact 以 mean/median
-`-0.088775/-0.088583`、`4+/52-`、七个 role mean 全负判定 **REJECTED**。`1.20×` 时间值已
-澄清为工程风险目标而非硬否决线；C 的正式否决依据是独立 holdout 泛化失败。A/B/C 均不产生
-官方候选，当前计划结束，后继计划必须转向与 Fisher、full64/Householder 和 calibration-residual
-A@W 拟合不同的新编码架构，不扫描失败机制邻域。
+[`2026-09-03-v162-official-side-isolation-optimization-plan.md`](2026-09-03-v162-official-side-isolation-optimization-plan.md)
+——以 v162 `1001/146s` 的双标准 HiF4 为共同零点，分别构造“候选 Linear + 标准 Attention”
+和“标准 Linear + 候选 Attention”，由官方结果直接计算两侧绝对贡献、相对 v160 侧贡献的提升率、
+组合交互项及榜首差距闭合率。本地只保留接口、合法性、可达性和 control 检查；不再用严格的
+compact/default 准确率门禁替代官方裁决。首轮为 v165 Attention 官方测量和 Linear rank-1
+可逆残差重分布，后续仅按官方结果保留或更换数学机制。
 
 当日已归档：官方两侧分数比重校准计划（v162 `1001/146s`、v163 `4587/202s`、v164
 `13945/204s`，score interaction 为 1，当前已实现 Attention:Linear 官方贡献约 `3.61:1`）、
@@ -31,7 +30,7 @@ validation/test holdout case，Attention 为四个深度/长度哨兵；读取 m
 case、cross-holdout 一致性和 interaction；不再用 mean 单独晋级。完整 default panel 仅作
 单侧低频审计。
 
-所有历史计划（含当日归档的 Householder 与 Attention 解析计划）均已移至
+所有历史计划（含已完成的 21765 A/B/C 计划、Householder 与 Attention 解析计划）均已移至
 [`../archive/plans/`](../archive/plans/)。它们是历史决策记录，
 不再提供下一步指令。
 

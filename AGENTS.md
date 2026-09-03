@@ -51,6 +51,14 @@
   test/validation 和 W-only 均负，故按泛化门禁 **REJECTED**。不运行 C3-C5、不改
   fold/Jacobi/coverage/邻域、不提交官方；根 `solution.py` 未改。
 
+- 当前活动计划改为以 v162 `1001/146s` 双标准 HiF4 为共同官方零点的侧向隔离优化：Linear
+  候选固定搭配 standard Attention，Attention 候选固定搭配 standard Linear。新候选相对
+  v163 `4587/202s` 或 v164 `13945/204s` 的官方增量决定提升与否，并分别除以当前侧贡献
+  `3586/12944` 报告官方优化比例；组合候选另测真实 interaction 与 `4233` 分差闭合率。
+  本地 panel 只作描述性诊断，不再用轻微 mean/median/尾部负向取消首次官方测量；硬检查仅为
+  接口、合法 state、有限输出、机制 reachability 和非目标 standard control。每个机制仍只允许
+  一个预注册配置，官方负向后不得邻域扫描。
+
 - 2026-09-03 的首次 L3 full64 no-op 结果无效：`_WEIGHT_FULL64_APPLY=True` 被
   `_WEIGHT_E2E_REFINE=False` 外层死分支遮蔽，目标函数未执行。不得引用该结果证明块级收敛；
   后续必须记录 attempted/accepted block 计数验证 reachability。
@@ -87,8 +95,9 @@
   `XW^T - Q(XR) Q(WR^{-T})^T`，变换必须保持连续域乘积不变；Hessian/Gram 必须在最终
   变换和部署权重坐标系中计算。
 
-- Attention 与 Linear 分开改、分开归因。Linear 实验冻结 v158 Attention；Attention 实验
-  冻结 Linear。只有明确的端到端审计才同时运行两侧。
+- Attention 与 Linear 分开改、分开归因。当前侧向计划中 Linear 实验冻结 v162 standard
+  Attention，Attention 实验冻结 v162 standard Linear；只有两侧均取得独立官方结果后，才构造
+  一个组合候选检查 interaction。
 
 ### 2.1 编码原则
 
@@ -176,6 +185,10 @@ Linear/Attention 权重。只有同一 `proxy-v2` cache、同一 panel、同一 
 
 ## 5. 当前评测步骤（固定）
 
+> 当前 v162 官方侧向隔离计划对下述第 5–7 步作专项覆盖：这些统计仍须记录，但不再作为首次
+> 官方提交的准确率硬门禁；只有接口/合法性/有限输出/reachability/control 错误阻止提交，算法
+> 提升与否由相对 v163 或 v164 的官方分数裁决。跨模型负向只能标记风险，不能据此调模型路由。
+
 1. **启动读取**：先读本文件，再读 `docs/superpowers/plans/README.md`、唯一活动计划、
    `docs/current-solution-status.md`、`solutions/README.md`、目标父版本和
    `evaluator/official_eval.py`。历史文档先过 stale inventory。
@@ -192,16 +205,18 @@ Linear/Attention 权重。只有同一 `proxy-v2` cache、同一 panel、同一 
      control、W/A 或 Q/K/V 来源、最坏 layer/role/shape/split/length 和 API 时间。必须精确匹配
      `(layer, role, test_window, split, length)`、`mse_standard`、`reference_energy`；已有同 panel
      JSON 用 `--candidate-json` 零 API 重放。
-5. **泛化判断**：Linear 至少检查 median、q25/q75、worst-quartile、negative cases、
+5. **泛化判断**：Linear 至少记录 median、q25/q75、worst-quartile、negative cases、
    validation/test 同号率和 interaction；Attention 至少检查 Q/K/V、QK/QKV interaction、
-   logits/probability 误差和最坏长度/层。任何一个方向不能用 aggregate mean 单独晋级。
-6. **单侧 default audit**：compact 方向、control、尾部和复杂度均可解释后，才运行目标侧
+   logits/probability 误差和最坏长度/层。不得用 aggregate mean 单独宣称本地泛化；当前计划中
+   这些结果只作官方回传后的归因证据。
+6. **单侧 default audit**：完成 compact、control、尾部和复杂度记录后，运行目标侧
    default panel（Linear 168 或 Attention 120）。旧 `--effect-panel` 只在需要“完整校准图 +
    缩减动态 case”的专项审计时使用，不是默认必经步骤。
-7. **跨模型泛化门禁**：目标侧 Qwen default 通过后，必须用其他模型真实前向捕获的 W/A/Q/K/V
+7. **跨模型泛化记录**：目标侧 Qwen default 完成后，用其他模型真实前向捕获的 W/A/Q/K/V
    做同 cache、同 device 的父子配对。`gpt2` 为强制验证，最终候选再使用一个不同架构的本地
    `pythia-160m` 或 `opt-125m`。跨模型只作封存 holdout，不能反向调参数；若 Qwen 正向而
-   跨模型整体负向，候选标记 `model-specific / REJECTED`，禁止增加模型/layer/role 专属路由。
+   跨模型整体负向，候选标记 `model-specific-risk`，仍由首次官方结果裁决，禁止增加
+   模型/layer/role 专属路由。
 8. **完整端到端审计**：只有明确需要检查集成调用图时，才省略 `--linear-only/--attention-only`
    跑完整 168 + 120 panel，六 API 全部执行；`--full-cases` 仍只作压力测试。完整测试必须
    保存 JSON 和 Markdown report，并把 local proxy、API total、wall time、official 状态分开写。

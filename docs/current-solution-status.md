@@ -51,11 +51,13 @@ per-call 小张量算子成本远超本地 CUDA 外推，v160 的 68s 官方余�
 [`v161 官方超时日志`](../logs/execution/2026-09-03-v161-official-timeout.md)、
 [`v161 result`](../solutions/20260903_v161_v160-attn-s1-qk-gram-refine_scoreNA_timeout/result.md)。
 **当前唯一活动计划**：
-[`目标 21765 的双路线稳健量化计划`](superpowers/plans/2026-09-03-score21765-dual-track-robust-quantization-plan.md)。
-以 v160 `17532/232s` 为父版本，距榜首 `21765/290s` 还差 **4233 分**。Attention A 与
-Linear C 均已在 compact 拒绝，B 取消；A/B/C 不产生官方候选。下一步必须转向与现有
-Fisher、full64/Householder 和 calibration-residual A@W 拟合数学上不同的新编码架构，禁止
-围绕本次 fold、Jacobi、coverage、邻域或 role 路由继续调参。
+[`v162 基线的 Linear / Attention 官方侧向隔离优化计划`](superpowers/plans/2026-09-03-v162-official-side-isolation-optimization-plan.md)。
+以 v162 `1001/146s` 双标准 HiF4 为共同零点，分别构造“候选 Linear + standard Attention”
+和“standard Linear + 候选 Attention”。官方结果直接给出每侧绝对贡献、相对 v160 侧贡献
+（Linear `3586`、Attention `12944`）的提升比例；组合后再测实际交互和对 `4233` 分差的闭合率。
+本地 compact/default 降为描述性诊断，只保留接口、合法性、可达性和 control 硬检查，具体提升
+由官方结果决定。首轮 Attention 为已准备的 v165 隔离测量，Linear 为 rank-1 可逆残差重分布。
+已失败的 Fisher、full64/Householder、cross-fold minimax 及其邻域仍不重启。
 
 **v160 官方回传（2026-09-03）：`17532 / 232s`，与 v159 完全相同。** 232s 通过
 `<300s`，时间风险解除。v160 = v159 Linear（L1 逐位等价编码）+ A2/A1（Attention）：
@@ -656,17 +658,12 @@ v86 的部分 scale-aware/output-aware 机制。此前把它描述为"v86 级静
 ## 6. 当前活动计划
 
 唯一活动计划是
-[`2026-09-03-score21765-dual-track-robust-quantization-plan.md`](superpowers/plans/2026-09-03-score21765-dual-track-robust-quantization-plan.md)：
-以榜首 **21765/290s** 为目标，从静态、低自由度、跨折稳健算法重新打开 Attention 与 Linear
-两个方向。该计划的本地候选现已全部裁决：
-
-1. **Attention A：REJECTED**：cross-fold Softmax-Fisher compact paired mean/median 均为负，
-   已按门禁停止，不进入 default、跨模型或官方；
-2. **Attention B：CANCELED**：其前置条件 A 跨模型成功不成立；
-3. **Linear C：REJECTED at C2**：compact mean/median、负 case、全部 role、两个 split 和
-   W-only 均失败，不进入 default、跨模型或官方；
-4. **结论**：A/B/C 不产生官方候选，后继工作必须转向新的编码架构，不从失败机制邻域重启；
-5. 里程碑仍为 `18500 → 20000 → 21766+`；不得把 3.61:1 的边际比误当成固定评分权重。
+[`2026-09-03-v162-official-side-isolation-optimization-plan.md`](superpowers/plans/2026-09-03-v162-official-side-isolation-optimization-plan.md)：
+以 v162 双标准编码为共同官方零点，分别测量 Linear 与 Attention 新机制。首轮 Attention 使用
+已准备的 v165；首轮 Linear 使用 rank-1 可逆残差重分布。local panel 只记录风险，官方分数相对
+v163/v164 是否增加是唯一准确率裁决；正向不设最低分门槛。两侧取得独立官方结果后，组合版本
+另测 interaction、真实时间和对榜首差距的闭合率。已拒绝的 A/B/C 计划已归档，不从其参数邻域
+重启。
 
 当日已归档：官方两侧比重校准计划（v162/v163/v164 已完成且可加性残差为 1）、Attention
 per-call 序列自适应精化计划（v161 官方 timeout）、Attention 解析式宽域计划和 Householder
