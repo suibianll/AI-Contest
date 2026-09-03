@@ -61,10 +61,12 @@ L3 首次 full64 探针因死分支判为 **INVALID EXPERIMENT**；修正 reacha
 重跑一次 compact：24 次 refine attempted `659456` row-blocks、accepted `657540`，但 Linear
 `0.705508→0.687588`，paired `6+/42-/8=`、mean delta `-0.017920`。W-only delta `+0.107169`
 被 interaction `-0.118818` 反转，说明块内 full-H 目标与最终 `Q(A)Q(W)^T` 不一致。该实验
-正式 `REJECTED`，不再调参或扩大测试；下一算法实验为活动计划 E3 Householder。E3 首个
-固定 64-block Householder 候选已完成 Qwen Linear compact：`0.705508→0.699190`，paired
-`8+/48-/0=`，API `46.052→47.387s`，违反 compact 门禁，正式根已保持该研究臂默认关闭；
-不运行跨模型和 default。
+正式 `REJECTED`，不再调参或扩大测试。E3 首个固定 64-block Householder 候选已完成 Qwen
+Linear compact：`0.705508→0.699190`，paired `8+/48-/0=`，API `46.052→47.387s`，违反
+compact 门禁；五个 C 源构造变体（amax/rms/xrms/x-only/w-only）全部低于基线
+（`0.699719–0.703344`），机制全族否定，正式根已保持该研究臂默认关闭。Linear 侧两个正交
+结构假设（同坐标码字、坐标几何）均无本地可迁移余量，Linear 结构实验闭环；下一算法实验
+为活动计划 Attention 解析式宽域机制（A1 Matrix-Smooth 组内扩展首选）。
 
 ## 1. 版本结论
 
@@ -78,7 +80,8 @@ L3 首次 full64 探针因死分支判为 **INVALID EXPERIMENT**；修正 reacha
   官方泛化结论。候选说明见
   [`v159 result`](../solutions/20260902_v159_linear-gptq17816_v158-attention_score17532_timeNA/result.md)。
 - CUDA device 错误已经修复；L1 batching 已把 v160 Linear calibration 降至约 `166.6s`，
-  输出逐位不变。下一步不再做官方 2×2 或时间探针，只快速验证统一 64-block Householder。
+  输出逐位不变。官方 2×2 与时间探针停止；Householder 全族 REJECTED 后 Linear 结构实验
+  闭环，转向 Attention 解析式宽域机制。
 - v138/v139 虽在官方 `<300s` 内通过，但只有 `15715/15716`，比 v86 低约 1029 分；
   v138–v145 这条“压缩 Attention 后继续叠 Linear 局部模块”的路线已经失败并关闭。
 - v155 官方 `16581 / 208.5s`、v156 官方 `16580 / 204.3s`，两者时间均通过但分别低于 v86
@@ -558,16 +561,19 @@ v86 的部分 scale-aware/output-aware 机制。此前把它描述为“v86 级�
 ## 6. 当前活动计划
 
 唯一活动计划是
-[`2026-09-03-official-pattern-and-linear-structure-experiments.md`](superpowers/plans/2026-09-03-official-pattern-and-linear-structure-experiments.md)。顺序固定为：
+[`2026-09-03-attention-analytic-broad-coverage-plan.md`](superpowers/plans/2026-09-03-attention-analytic-broad-coverage-plan.md)。
+Linear（v159 GPTQ）冻结，只测 Attention 侧解析式宽域机制。顺序固定为：
 
-1. 不再执行 Linear×Attention 官方 2×2、相同 SHA 重跑或逐位等价时间 A/B；
-2. 只测试一个无 seed/alpha/rank 搜索的统一 64-block Householder 候选；
-3. 按 Qwen compact → GPT-2/OPT compact → Qwen Linear default 失败即停，完整本地运行预算
-   首个候选 `10–12 分钟`（含一次性跨模型 parent），后续候选 `8–10 分钟`；
-4. 全部门禁通过后只允许一次官方候选，官方结果不反向用于阈值或候选网格调参。
+1. A1 Matrix-Smooth 组内扩展（首选），A2 深层 K 结构诊断（零 API 第 0 步），A3 短序列
+   regime，按序单机制执行；
+2. 漏斗为接口/control → Qwen attention compact 哨兵 → GPT-2 同号 → Qwen attention
+   default 120 执行预注册 D1 判别器（touch≥50%、improved>regressed、median≥0；OPA-1
+   账本现有证据 3/3），失败即停；
+3. 满足 D1 才允许一次官方提交；官方失败不邻域调参，不把官方分数回填 loss；
+4. 任何官方回传同时记录 P9 检验（17816 的 `+284` 缺口是否在 Attention 侧）。
 
-当前 Householder 首个候选已在 Qwen compact 阶段拒绝；在用户指定下一机制前不继续跨模型或
-default 测试。
+Householder 计划已归档为
+[`2026-09-03-official-pattern-and-linear-structure-experiments-superseded.md`](superpowers/archive/plans/2026-09-03-official-pattern-and-linear-structure-experiments-superseded.md)。
 
 ## 7. 归档现状与待整理项
 

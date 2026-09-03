@@ -1,13 +1,29 @@
-# Linear 快速结构验证计划
+# Linear 快速结构验证计划（已归档）
 
-> 状态：**ACTIVE**
+> 状态：**ARCHIVED / CONCLUDED — Householder 全族 REJECTED**
 >
-> 更新：2026-09-03
+> 创建：2026-09-03；归档：2026-09-03
 >
 > 官方父版本：v160，`17532 / 232s`，归档源码 SHA256
 > `33B1D061CE6BFCD92659C597BE4830BB9B910E646FF518433DA67B925AE8680D`
 >
 > 所有候选从 v160 归档源码分支；父版本 JSON 固定复用，不重复运行父版本。
+
+## 0. 最终结论（归档时写入）
+
+- 基础候选（`C = 0.5(C_A+C_W)`，ones 初值 4 次 power iteration）Qwen Linear compact
+  `0.699190` vs 父版本 `0.705508`，paired mean Δ `-0.006318`、`8/48/0`，违反门禁即停
+  （见 §5.1）；
+- 五个 C 源构造变体全部低于基线：amax `0.703344`、rms `0.703093`、xrms `0.702939`、
+  x-only `0.699896`、w-only `0.699719`（`householder-*-qwen-linear-compact.json`）；
+  失败不是 C 源选择问题，统一 64-block Householder 坐标重分布机制全族否定；
+- 连同此前 full64（修正 reachability 后 REJECTED，见
+  `2026-09-03-l3-full64-reachability-audit.md`），Linear 侧两个正交结构假设（同坐标码字、
+  坐标几何）均无本地可迁移余量；按本计划 §5.2 "E3/E4 均失败" 行，停止 Linear 本地微调；
+- Householder 实现代码保留为研究产物，正式根目录默认关闭（`householder-root-final-disabled`
+  JSON 确认与 v160 行为一致）；根 `solution.py` SHA 与 v160 归档不同但行为不变；
+- 后继计划：`../plans/2026-09-03-attention-analytic-broad-coverage-plan.md`（Attention 侧
+  解析式宽域机制，冻结 v159/v160 Linear）。
 
 ## 1. 目标与边界
 

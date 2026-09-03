@@ -7,13 +7,15 @@
 `evaluator/official_eval.py`，跨模型泛化调用 `evaluator/cross_model_eval.py`；旧
 `real_model_suite.py` 已退役。
 
-- [`2026-09-03-official-pattern-and-linear-structure-experiments.md`](2026-09-03-official-pattern-and-linear-structure-experiments.md)：当前唯一有效计划。停止官方 2×2 与时间探针，只验证一个固定 64-block Householder 候选；采用 Qwen compact → GPT-2/OPT compact → Qwen Linear default 的失败即停漏斗，首个候选预算 10–12 分钟，后续候选 8–10 分钟。
+- [`2026-09-03-attention-analytic-broad-coverage-plan.md`](2026-09-03-attention-analytic-broad-coverage-plan.md)：当前唯一有效计划。Linear 结构实验已闭环（full64 与 Householder 六变体全族 REJECTED），转向 Attention 侧解析式宽域机制：A1 Matrix-Smooth 组内扩展（首选）、A2 深层 K 结构诊断、A3 短序列 regime，按序单机制执行；采用 compact 哨兵 → GPT-2 同号 → Qwen default D1 判别器的失败即停漏斗，Linear 侧逐位冻结。候选满足预注册 D1（touch≥50%、improved>regressed、median≥0）才允许一次官方提交。
 
 快速机制迭代使用 `--compact-panel`：Linear 为 28 个 selected Weight state + 56 个跨
-validation/test holdout case，读取 median、尾部分布、负 case、cross-holdout 一致性和 W/A
-interaction；不再用 mean 单独晋级。完整 default panel 仅作单侧低频审计。
+validation/test holdout case，Attention 为四个深度/长度哨兵；读取 median、尾部分布、负
+case、cross-holdout 一致性和 interaction；不再用 mean 单独晋级。完整 default panel 仅作
+单侧低频审计。
 
-刚完成的双线泛化计划以及旧的 v159 GPU 单线、hierarchy/encoder、17816-anchor、v2 active、grid、consolidated、
+刚归档的 Householder 快速验证计划（基础候选 + 五个 C 源变体全负）、双线泛化计划以及旧的
+v159 GPU 单线、hierarchy/encoder、17816-anchor、v2 active、grid、consolidated、
 accuracy-first、Linear、JDRQ 计划以及已完成的 L6 计划，均已移至
 [`../archive/plans/`](../archive/plans/)。它们是历史决策记录，
 不再提供下一步指令；若历史文字与活跃计划冲突，以活跃计划、根 `solution.py`、

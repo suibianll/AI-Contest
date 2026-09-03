@@ -27,10 +27,12 @@
 - 本地 proxy 只用于同机机制诊断和时间记录，不能换算官方分数或官方 `<300s`；已知历史中
   存在本地排序与官方排序反转，任何本地正向都必须等待官方回传确认。
 
-- 当前活动计划只验证一个固定 64-block Householder 候选；Linear×Attention 官方 2×2 和
-  逐位等价时间 A/B 均停止。验证顺序固定为 Qwen compact → GPT-2/OPT compact → Qwen Linear
-  default，失败即停；首个候选需建立跨模型 compact parent，预算 10–12 分钟，后续候选
-  8–10 分钟。17816 源码无法提供，不再等待。
+- 当前活动计划只测 Attention 侧解析式宽域机制（Linear 冻结）：A1 Matrix-Smooth 组内
+  扩展（首选）、A2 深层 K 结构诊断、A3 短序列 regime，按序单机制；漏斗为接口/control →
+  Qwen attention compact 哨兵 → GPT-2 同号 → Qwen attention default 执行预注册 D1 判别器
+  （touch≥50%、improved>regressed、median≥0），失败即停；满足 D1 才允许一次官方提交，
+  官方失败不邻域调参。Linear×Attention 官方 2×2 和逐位等价时间 A/B 均停止。17816 源码
+  无法提供，不再等待。
 
 - 2026-09-03 的首次 L3 full64 no-op 结果无效：`_WEIGHT_FULL64_APPLY=True` 被
   `_WEIGHT_E2E_REFINE=False` 外层死分支遮蔽，目标函数未执行。不得引用该结果证明块级收敛；
@@ -38,8 +40,12 @@
 
 - 修正 reachability 后已仅重跑一次 L3 compact：attempted `659456`、accepted `657540`，但
   paired mean delta `-0.017920`、`6+/42-/8=`；W-only `+0.107169` 被 interaction
-  `-0.118818` 反转。该实验为 `REJECTED`，禁止再次运行或调整 full64 参数；活动计划只保留
-  固定 Householder 候选。
+  `-0.118818` 反转。该实验为 `REJECTED`，禁止再次运行或调整 full64 参数。
+
+- Householder 统一 64-block 坐标重分布全族 REJECTED：基础候选 compact `0.705508→0.699190`
+  （`8+/48-/0=`），五个 C 源变体（amax/rms/xrms/x-only/w-only）全部低于基线；研究臂在根
+  `solution.py` 默认关闭。Linear 侧同坐标码字与坐标几何两个正交假设均无本地余量，Linear
+  结构实验闭环，禁止在本地继续 Linear 微调族（full64/Householder/邻域变体）。
 
 ## 2. 提交代码约束
 
