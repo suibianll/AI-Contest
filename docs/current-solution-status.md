@@ -4,6 +4,15 @@
 
 ## 0. 最新官方进展
 
+**✅ v166 官方回传（2026-09-03）：`4590 / 226s`，成为新 Linear 父侧。** v166 = rank-1
+残差重分布 Linear + standard Attention（侧向隔离计划首个 Linear 机制，SHA
+`9C0EAC6A7CA883A1F8962C11735744271259460F5EBBF23D530A5BBCF12B4646`）。相对 v163
+（`4587 / 202s`）step_gain **`+3`**，按计划 §3.1 判读为官方正向：`C_L = 4590−1001 = 3589`、
+`G_L = +3`、`R_L = C_L/3586 ≈ 1.0008`。`226s < 300s`，时间通过；收益方向与本地 default
+proj role（`+0.0251`）归因一致，本地 90/168 回归 case 与 median 微负未在官方反转。
+**父侧更新：`P_L：v163 → v166`**，下一个 Linear 候选从 v166 构造（保留 v160 固定口径
+比例）。官方结果记录见 [`v166 result`](../solutions/20260903_v166_rank1-linear-residual_standard-attn_scoreNA_timeNA/result.md)。
+
 **v165 官方回传（2026-09-03）：`timeout（>300s，无分数）`。** v165 = standard Linear +
 v161 Attention Cross-Gram64 per-call 动态精化，SHA
 `033E85D5DAF1A820BACDB14F9E35183C485E8DD489D118899A1AE3CB491D8C1D`；它与 v164 的
@@ -675,15 +684,17 @@ v86 的部分 scale-aware/output-aware 机制。此前把它描述为"v86 级静
 `12944:3586 ≈ 3.61:1`）：A1 解析 logits 增益校正 → A2 V 输出偏差质心补偿 → A3 动态
 scale 静态策略编译 → A4 矩匹配 mantissa 阈值，随后 Linear L1-L4（WUSH/CAT 审计、
 Babai 解码、Trellis/VQ、Kronecker CAT）。候选从 v162 双标准零点单侧构造：Linear 父侧
-`P_L = v163（4587/202s）`——v166 rank-1 已官方提交、结果待回传，若 `S_L > 4587` 则父侧
-更新（登记写入新计划 §16 执行记录）；Attention 父侧 `P_A = v164（13945/204s）`。官方差分
+`P_L = v166（4590/226s）`（v166 rank-1 官方回传 `S_L = 4590 > 4587`，父侧已按计划 §16
+更新，登记见 [`v166 result`](../solutions/20260903_v166_rank1-linear-residual_standard-attn_scoreNA_timeNA/result.md)）；
+Attention 父侧 `P_A = v164（13945/204s）`。官方差分
 按计划 §3.3（step_gain、side_contrib、相对 v160 侧贡献的固定口径比例）；每包一个候选、
 失败换机制不扫邻域；v165 约束（动态 API 无 Gram contraction、无候选循环、复杂计算只在
 calibration）对全部 A 包强制。
 
 侧向隔离计划收官状态：v165 官方 timeout（Cross-Gram64 per-call 官方增量成本下界 >96s）、
 v167 低秩 Gram 码本本地 REJECTED（真实 QK 交叉 Gram 高秩，top-2 off-diag ≈7% 特征质量，
-rank-2 耦合破坏深层哨兵；λ=0 消融与父版本逐位一致证明实现正确）、v166 待官方回传。
+rank-2 耦合破坏深层哨兵；λ=0 消融与父版本逐位一致证明实现正确）、v166 官方
+**`4590 / 226s` RETAINED**（新 Linear 父侧）。
 Attention 侧内部机制在该计划内耗尽，新机制只来自本扩展计划 A1-A4。
 
 当日已归档：v162 官方侧向隔离优化计划、官方两侧比重校准计划（v162/v163/v164 已完成且

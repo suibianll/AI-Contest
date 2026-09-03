@@ -8,6 +8,8 @@
 > [`侧向隔离计划`](../../archive/plans/2026-09-03-v162-official-side-isolation-optimization-plan-superseded.md)：
 > v165 timeout、v167 本地 REJECTED、v166 已官方提交待回传。激活时父版本：
 > `P_L = v163（4587/202s；v166 回传 S_L > 4587 则更新）`、`P_A = v164（13945/204s）`。
+> **2026-09-03 v166 回传** **`4590 / 226s`（S\_L = 4590 > 4587），父侧已更新为
+> `P_L = v166（4590/226s）`**，登记见 §16。
 
 ## 1. 激活条件与边界
 
@@ -23,7 +25,7 @@
    v163（v160 Linear + standard Attention，`4587 / 202s`），Attention 父侧仍为 v164
    （standard Linear + v160 Attention，`13945 / 204s`）。
 
-本计划不恢复已经关闭的 full64 多轮 sweep、Householder、Hadamard seed 搜索、A@W 邻域调参或
+本计划不恢复已经关闭的 full64 多轮 sweep、Householder、Hadamard seed 搜索、A\@W 邻域调参或
 Cross-Gram64 per-call 动态精化。
 
 ## 2. v165 给出的设计约束
@@ -34,9 +36,12 @@ v165（standard Linear + v161 Attention，SHA
 动态精化的官方增量成本下界约为 `>96s`。timeout 没有提供精度结论，但明确给出以下实现约束：
 
 - Attention 动态 API 不再执行完整 `64×64` Gram contraction；
+
 - 不运行随 token 数增长的候选循环、多轮 coordinate sweep 或逐 block Python 调度；
+
 - 新 Attention 方法只能把复杂计算放在 calibration，并把结果编译成逐元素、逐 head 或一次
   固定 hierarchy encode；
+
 - 每个候选必须继续输出标准合法 HiF4 五字段，不能增加 decoder、side channel 或 attention
   内部 hook。
 
@@ -427,9 +432,9 @@ output_delta = ||X R_wush (W R_wush^-T)^T - XW^T|| / ||XW^T||
 codec_delta  = deployed_loss(R_wush) - deployed_loss(R_cat)
 ```
 
-5. 若所有审计 block 的 `matrix_delta <= 1e-6` 或最终 HiF4 五字段逐位相同，记录
+1. 若所有审计 block 的 `matrix_delta <= 1e-6` 或最终 HiF4 五字段逐位相同，记录
    `DUPLICATE / NO VERSION`，立即进入 L2；
-6. 只有变换和编码输出均不同，才把临时函数转为候选实现。
+2. 只有变换和编码输出均不同，才把临时函数转为候选实现。
 
 ### 8.3 非重复时的代码修改
 
@@ -600,8 +605,8 @@ R_left  = expm(A)
 R_right = expm(B)
 ```
 
-4. 用 determinant normalization 消除整体尺度；
-5. 不拟合 strength，不搜索因子形状。
+1. 用 determinant normalization 消除整体尺度；
+2. 不拟合 strength，不搜索因子形状。
 
 ### 11.3 具体代码修改
 
@@ -683,7 +688,7 @@ A1 logits gain
 
 排序依据（2026-09-03 激活时按用户指示改为 Attention 优先）：官方两侧贡献
 `12944:3586 ≈ 3.61:1`，Attention 候选的单次官方提交期望回报更高；且 Linear 侧 v166
-rank-1 已在官方通道中待回传，Linear 名额暂有在途测量。侧内相对顺序不变：A3 优先于
+rank-1 已官方回传 `4590/226s`（RETAINED，新 Linear 父侧）。侧内相对顺序不变：A3 优先于
 A4，因为它同时降低动态候选复杂度；L1 审计先行确认 WUSH 与既有 CAT-64 的关系；
 L4 最后执行，因为与既有 CAT 家族重叠最大。
 
@@ -700,9 +705,13 @@ gap         = 21765 - S_LA
 ## 14. 终止与失败处理
 
 - `ERROR`：导入失败、state 非法、NaN/Inf、control 改变或机制死分支；修实现但不改数学参数；
+
 - `TIMEOUT`：不计算精度；同一机制只允许一次保持输出目标的复杂度重构；
+
 - `REJECTED`：官方有分数且不高于同侧父版本，或跨模型出现整体结构性反向；不做邻域调参；
+
 - `RETAINED`：官方高于父版本且 `<300s`；成为新单侧父版本；
+
 - `DUPLICATE`：公式或输出与已实现机制等价；不分配版本、不提交官方。
 
 所有 A1--A4 和 L1--L4 均获得上述状态后，本计划完成。
@@ -710,14 +719,23 @@ gap         = 21765 - S_LA
 ## 15. 文献依据
 
 - WUSH：<https://arxiv.org/abs/2512.00956>
+
 - GPTQ/Babai 几何：<https://arxiv.org/abs/2507.18553>
+
 - QTIP trellis：<https://arxiv.org/abs/2406.11235>
+
 - GPTVQ：<https://github.com/Qualcomm-AI-research/gptvq>
+
 - FlatQuant：<https://arxiv.org/abs/2410.09426>
+
 - AffineQuant：<https://arxiv.org/abs/2403.12544>
+
 - H-Scale：<https://arxiv.org/abs/2608.28113>
+
 - KIVI：<https://arxiv.org/abs/2402.02750>
+
 - Quantized Keys Steal Attention：<https://arxiv.org/abs/2605.26266>
+
 - KVLinC：<https://arxiv.org/abs/2510.05373>
 
 这些论文只提供数学来源；论文分数、kernel 加速或模型结论不用于预测本竞赛官方结果。
@@ -728,4 +746,12 @@ gap         = 21765 - S_LA
   v165 官方 timeout、v167 低秩 Gram 码本本地 REJECTED（真实 QK 交叉 Gram 高秩，
   rank-2 耦合破坏深层哨兵，λ=0 消融与父版本逐位一致证明实现正确）、v166 rank-1
   Linear 已官方提交待回传。父版本：`P_L = v163`（若 v166 回传 `S_L > 4587` 则更新
-  并在此登记）、`P_A = v164`。下一动作：A1 解析 logits 增益校正（从 P_A = v164 构造）。
+  并在此登记）、`P_A = v164`。下一动作：A1 解析 logits 增益校正（从 P\_A = v164 构造）。
+
+- **2026-09-03 v166 官方回传：`4590 / 226s` → 父侧更新 `P_L：v163 → v166`。** sources
+  SHA `9C0EAC6A7CA883A1F8962C11735744271259460F5EBBF23D530A5BBCF12B4646`；判读按 §3.1：
+  `step_gain = 4590 − 4587 = +3`、`side_contrib C_L = 4590 − 1001 = 3589`、
+  `Linear ratio = 3/3586 ≈ 0.0008`（对 v160 固定口径）；`226s < 300s` 时间通过。
+  **效果**：v166 成为当前官方最好的 Linear 单侧父版本；§3.1 公式中 `S_parent = 4590`，
+  后续 Linear 候选（L1–L4）从 v166 构造，同时继续报告相对 v160 固定口径
+  `(S_new − 4587)/3586`。Attention 侧父版本 `P_A = v164` 不变。

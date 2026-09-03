@@ -3,9 +3,9 @@
 > **最新官方进展（2026-09-03）**：v160 官方结果为 **17532/232s**；v162/v163/v164 两侧校准
 > 分别为 **1001/146s、4587/202s、13945/204s**，端点可加性残差仅 1 分。用户确认的榜首为
 > **21765/290s**，当前差 **4233 分**。v165（standard Linear + v161 Attention）已官方
-> **timeout（>300s，无分数）**，确认 Cross-Gram64 per-call 动态精化超出时间预算。侧向
-> 隔离计划已收官归档（v167 低秩 Gram 码本本地 REJECTED；v166 rank-1 Linear 已官方提交
-> 待回传）。当前按
+> **timeout（>300s，无分数）**，确认 Cross-Gram64 per-call 动态精化超出时间预算；v166
+> （rank-1 Linear + standard Attention）官方 **4590/226s**，相对 v163 `+3`，成为新
+> **Linear 父侧**。侧向隔离计划已收官归档（v167 低秩 Gram 码本本地 REJECTED）。当前按
 > [`低复杂度算法扩展计划`](docs/superpowers/plans/2026-09-03-post-v162-low-complexity-algorithm-expansion-plan.md)
 > **Attention 优先**推进（A1 解析 logits 增益校正 → A2 V 偏差质心 → A3 静态 scale 编译
 > → A4 矩匹配阈值，随后 Linear L1-L4）；候选仍从 v162 双标准零点单侧构造，本地只保留

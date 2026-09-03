@@ -12,13 +12,14 @@
 ——侧向隔离计划收官后的低复杂度算法扩展，**Attention 优先**（A1 解析 logits 增益校正 →
 A2 V 输出偏差质心补偿 → A3 动态 scale 静态策略编译 → A4 矩匹配 mantissa 阈值），随后
 Linear L1-L4（WUSH/CAT 审计、Babai 解码、Trellis/VQ、Kronecker CAT）。候选仍从 v162
-双标准零点单侧构造（`P_L = v163 4587/202s`，v166 rank-1 待官方回传；`P_A = v164
+双标准零点单侧构造（`P_L = v166 4590/226s`（v166 rank-1 官方 `+3`，已按 §16 更新父侧）；
+`P_A = v164
 13945/204s`），官方差分按计划 §3.3 登记；每个工作包一个候选、失败换机制不扫邻域，
 v165 约束（动态 API 无 Gram contraction、无候选循环、复杂计算只在 calibration）对
 全部 A 包强制。
 
 当日已归档：v162 官方侧向隔离优化计划（v165 timeout、v167 低秩 Gram 码本本地
-REJECTED、v166 rank-1 已提交待回传，`-superseded`）、官方两侧分数比重校准计划
+REJECTED、v166 rank-1 官方 `4590/226s` RETAINED 为新 Linear 父侧，`-superseded`）、官方两侧分数比重校准计划
 （v162 `1001/146s`、v163 `4587/202s`、v164
 `13945/204s`，score interaction 为 1，当前已实现 Attention:Linear 官方贡献约 `3.61:1`）、
 Attention per-call 序列自适应精化计划（v161 官方 timeout，per-call 动态族关闭）、Attention
