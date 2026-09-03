@@ -22,10 +22,13 @@
   扣 1 配额，官方负向不退还；C2/C3 不启动则套配不受影响。第二轮 SOTA 搜索
   （KVLinC/VecInfer/ResQ/OTT）结论：无新的零动态、HiF4 字段兼容、非已闭合家族的独立
   机制方向；第三轮（ScaleSweep/H-Scale NVFP4 scale 精化）落入 Linear 已闭族或 A3 已证
-  最优域，同样不注册。后续以 **C2（A1 细粒度化，per-(KV-head, 8 通道组) 闭式 8 参数
-  最小二乘 logits 增益，数学模型已在计划 §2b 细化定稿）** 为唯一已注册新候选（C1 官方
-  门禁）、C3 条件对照，详见
+  最优域；第四轮（MXFP4 误差三分量/HCP/ARCQuant）映射到 scale 已闭域、在线存储 C4
+  论证、或 A1/C2 已覆盖 logits 修正——均不注册。后续以 **C2（A1 细粒度化，
+  per-(KV-head, 8 通道组) 闭式 8 参数最小二乘 logits 增益，数学模型已在计划 §2b 细化
+  定稿）** 为唯一已注册新候选（C1 官方门禁）、C3 条件对照，详见
   [`2026-09-04-sota-candidate-list.md`](docs/superpowers/plans/2026-09-04-sota-candidate-list.md)。
+  **C2 的 v168 基底本地预研已 REJECTED（v177，default 120 `−0.006643`、41+/79−、
+  QK interaction −0.0935），不提交官方、不占配额**；C1 正分支待 C1 官方回传后单独预研。
 
 - v159 原始 SHA `0508045A...4242` 的官方分数为 **17532**、时间未知；v159 修正归档 SHA
   `13C9CF0B...5EC79` 只增加数学等价的 GPU device 修复与中间量复用，尚未官方复测。v158
