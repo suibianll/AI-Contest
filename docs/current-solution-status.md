@@ -7,7 +7,7 @@
 **✅ v166 官方回传（2026-09-03）：`4590 / 226s`，成为新 Linear 父侧。** v166 = rank-1
 残差重分布 Linear + standard Attention（侧向隔离计划首个 Linear 机制，SHA
 `9C0EAC6A7CA883A1F8962C11735744271259460F5EBBF23D530A5BBCF12B4646`）。相对 v163
-（`4587 / 202s`）step_gain **`+3`**，按计划 §3.1 判读为官方正向：`C_L = 4590−1001 = 3589`、
+（`4587 / 202s`）step\_gain **`+3`**，按计划 §3.1 判读为官方正向：`C_L = 4590−1001 = 3589`、
 `G_L = +3`、`R_L = C_L/3586 ≈ 1.0008`。`226s < 300s`，时间通过；收益方向与本地 default
 proj role（`+0.0251`）归因一致，本地 90/168 回归 case 与 median 微负未在官方反转。
 **父侧更新：`P_L：v163 → v166`**，下一个 Linear 候选从 v166 构造（保留 v160 固定口径
@@ -26,7 +26,7 @@ Attention 精度结论仍未知，不计算 `C_A/G_A/P_A/R_A`。当前活动计�
 
 **21765 A/B/C 本地裁决（2026-09-03）：两个候选均 REJECTED。** Attention A 的
 cross-fold Softmax-Fisher 在 compact 为 mean `-0.007813`、median `-0.004871`、
-`1+/3-/0=`，依赖它的 B 取消。Linear C 的五折 minimax A@W 在 C1 接口/control 通过；
+`1+/3-/0=`，依赖它的 B 取消。Linear C 的五折 minimax A\@W 在 C1 接口/control 通过；
 `1.584×` 单 state 校准时间只记高风险，不作硬否决。继续完成 C2 后，paired mean/median
 为 `-0.088775/-0.088583`、`4+/52-/0=`，worst `-0.216586`、七个 role mean 全负、
 W-only delta `-0.057872`，因此按泛化硬门禁拒绝，不进入 default/跨模型/官方。证据见
@@ -680,27 +680,29 @@ v86 的部分 scale-aware/output-aware 机制。此前把它描述为"v86 级静
 
 唯一活动计划是
 [`2026-09-03-post-v162-low-complexity-algorithm-expansion-plan.md`](superpowers/plans/2026-09-03-post-v162-low-complexity-algorithm-expansion-plan.md)：
-侧向隔离计划收官后的低复杂度算法扩展，**Attention 优先**（用户指示，官方两侧贡献
-`12944:3586 ≈ 3.61:1`）：A1 解析 logits 增益校正 → A2 V 输出偏差质心补偿 → A3 动态
-scale 静态策略编译 → A4 矩匹配 mantissa 阈值，随后 Linear L1-L4（WUSH/CAT 审计、
-Babai 解码、Trellis/VQ、Kronecker CAT）。候选从 v162 双标准零点单侧构造：Linear 父侧
-`P_L = v166（4590/226s）`（v166 rank-1 官方回传 `S_L = 4590 > 4587`，父侧已按计划 §16
-更新，登记见 [`v166 result`](../solutions/20260903_v166_rank1-linear-residual_standard-attn_scoreNA_timeNA/result.md)）；
-Attention 父侧 `P_A = v164（13945/204s）`。官方差分
-按计划 §3.3（step_gain、side_contrib、相对 v160 侧贡献的固定口径比例）；每包一个候选、
-失败换机制不扫邻域；v165 约束（动态 API 无 Gram contraction、无候选循环、复杂计算只在
-calibration）对全部 A 包强制。
+侧向隔离计划收官后的低复杂度算法扩展，**Attention 优先**（官方两侧贡献
+`12944:3586 ≈ 3.61:1`）。执行状态：**A1 官方晋级**——v168 `17248/237s`（step\_gain
+`+3303`、Attention ratio `25.5%`，项目史上最大单机制官方增量，与本地 proxy 完全反转：
+本地 default mean `−0.00088`、GPT-2 `+0.0024`），成为新 Attention 父侧 `P_A`；
+**A2 本地 REJECTED**（v169，GPT-2 `0/4` 全负触发跨模型结构性反向阻止条款，未消耗
+官方提交）；下一包 A3（动态 scale 静态策略编译）→ A4（矩匹配 mantissa 阈值），随后
+Linear L1-L4。候选从 v162 双标准零点单侧构造：`P_L = v166 4590/226s`（rank-1 官方
++3）、`P_A = v168 17248/237s`；官方差分按计划 §3.3；每包一个候选、失败换机制不扫
+邻域；v165 约束对全部 A 包强制。**组合条件已满足**（两侧均有新官方最好）：
+`S_pred = 4590 + 17248 − 1001 = 20837`（距榜首 `21765` 还差 `928`，闭合率 `78.1%`）；
+组合时间风险已记入计划 §16（朴素分量和 `317s`，v160 式双侧共享折扣后约 `289s`，
+接近 `300s` 上限，构造组合候选时须做时间审计）。
 
-侧向隔离计划收官状态：v165 官方 timeout（Cross-Gram64 per-call 官方增量成本下界 >96s）、
-v167 低秩 Gram 码本本地 REJECTED（真实 QK 交叉 Gram 高秩，top-2 off-diag ≈7% 特征质量，
-rank-2 耦合破坏深层哨兵；λ=0 消融与父版本逐位一致证明实现正确）、v166 官方
-**`4590 / 226s` RETAINED**（新 Linear 父侧）。
-Attention 侧内部机制在该计划内耗尽，新机制只来自本扩展计划 A1-A4。
+侧向隔离计划收官状态：v165 官方 timeout（Cross-Gram64 per-call 官方增量成本下界
 
-当日已归档：v162 官方侧向隔离优化计划、官方两侧比重校准计划（v162/v163/v164 已完成且
-可加性残差为 1）、Attention per-call 序列自适应精化计划（v161 官方 timeout）、Attention
-解析式宽域计划和 Householder 快速验证计划。旧的动态 per-call、full64/Householder 与参数
-邻域族继续关闭。
+> 96s）、v166 rank-1 官方 `4590/226s`（+3，新 Linear 父侧）、v167 低秩 Gram 码本本地
+> REJECTED（真实 QK 交叉 Gram 高秩，top-2 off-diag ≈7% 特征质量，rank-2 耦合破坏深层
+> 哨兵；λ=0 消融与父版本逐位一致证明实现正确）。
+
+当日已归档：v162 官方侧向隔离优化计划、官方两侧比重校准计划（v162/v163/v164 已完成
+且可加性残差为 1）、Attention per-call 序列自适应精化计划（v161 官方 timeout）、
+Attention 解析式宽域计划和 Householder 快速验证计划。旧的动态 per-call、
+full64/Householder 与参数邻域族继续关闭。
 
 ## 7. 归档现状与待整理项
 

@@ -52,15 +52,16 @@
   fold/Jacobi/coverage/邻域、不提交官方；根 `solution.py` 未改。
 
 - 当前活动计划为低复杂度算法扩展计划（侧向隔离计划已收官归档），**Attention 优先**：
-  A1 解析 logits 增益校正 → A2 V 输出偏差质心补偿 → A3 动态 scale 静态策略编译 → A4
-  矩匹配 mantissa 阈值，随后 Linear L1-L4。候选仍从 v162 双标准零点单侧构造：
-  `P_L = v166 4590/226s`（v166 rank-1 官方回传 `4590 > 4587`，`+3` 已按计划 §16 登记为
-  新 Linear 父侧）、`P_A = v164 13945/204s`；官方差分按计划 §3.3 登记 step_gain 与相对
-  `3586/12944`
+  A1 **已官方晋级**（v168 `17248/237s`，step_gain `+3303`、Attention ratio `25.5%`，
+  项目史上最大单机制官方增量，且与本地 proxy 完全反转——本地 default mean `−0.00088`、
+  GPT-2 `+0.0024`）；A2 已本地 REJECTED（v169，GPT-2 `0/4` 全负触发跨模型结构性反向
+  阻止条款）；下一包 A3 动态 scale 静态策略编译 → A4 矩匹配 mantissa 阈值，随后
+  Linear L1-L4。候选仍从 v162 双标准零点单侧构造：`P_L = v166 4590/226s`、
+  `P_A = v168 17248/237s`；官方差分按计划 §3.3 登记 step_gain 与相对 `3586/12944`
   的固定口径比例；每包一个候选、失败换机制不扫邻域；v165 约束（动态 API 无 Gram
-  contraction、无候选循环、复杂计算只在 calibration）对全部 A 包强制。v165 官方
-  timeout、v167 低秩 Gram 码本本地 REJECTED（真实 QK 交叉 Gram 高秩，rank-2 耦合破坏
-  深层哨兵），Attention 侧内部机制已耗尽，新机制只来自 A1-A4。
+  contraction、无候选循环、复杂计算只在 calibration）对全部 A 包强制。**组合条件已
+  满足**：`S_pred = 4590 + 17248 − 1001 = 20837`（距榜首 928，闭合率 78.1%）；组合
+  时间风险已记入计划 §16（朴素分量和 317s，v160 式共享折扣后 ~289s，接近 300s 上限）。
   本地 panel 只作描述性诊断，不再用轻微 mean/median/尾部负向取消首次官方测量；硬检查仅为
   接口、合法 state、有限输出、机制 reachability 和非目标 standard control。每个机制仍只允许
   一个预注册配置，官方负向后不得邻域扫描。

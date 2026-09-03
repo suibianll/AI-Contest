@@ -1,6 +1,6 @@
 # v168 候选：A1 解析 logits 增益校正 + standard Linear（低复杂度扩展计划首个工作包）
 
-> 状态：**CANDIDATE — 本地漏斗完成（compact/default/GPT-2），等待一次官方提交**
+> 状态：**RETAINED — 官方 `17248 / 237s`（2026-09-03 用户回传）；A1 晋级为新 Attention 父侧**
 >
 > 官方共同基线：v162 `1001 / 146s`；Attention 官方父侧：v164（standard Linear + v160 Attention）
 > `13945 / 204s`
@@ -9,7 +9,7 @@
 >
 > 候选 SHA256：`5988AE47EAC2E7DDE7488E06B8F91939F5660A585034280A6D68A8FB6701AC79`
 >
-> 官方结果：`unregistered / NA`
+> 官方结果：**17248 / 237s**（step_gain `+3303`，Attention ratio `25.5%`）
 
 ## 1. 唯一算法机制（预注册，低复杂度扩展计划 §4）
 
@@ -71,8 +71,19 @@ side_contrib = S_new - 1001
 Attention ratio = (S_new - 13945) / 12944
 ```
 
-`S_new > 13945` → A1 RETAINED，成为新 Attention 父侧；`S_new ≤ 13945` → A1 REJECTED，
-转 A2（V 输出偏差质心补偿）；timeout → 不计算精度比例。
+官方回传 `S_new = 17248 / 237s`：
+
+```text
+step_gain    = 17248 − 13945 = +3303
+side_contrib = 17248 − 1001  = 16247
+Attention ratio = 3303 / 12944 ≈ 0.2552（25.5%）
+```
+
+**A1 RETAINED**：`17248 > 13945`，`237s < 300s`——v168 成为新 Attention 父侧
+`P_A`。这是 v160 以来最大的单机制官方增量（+3303），且与本地 proxy 完全反转
+（Qwen default mean −0.00088、GPT-2 +0.0024，官方 +25.5% 相对增量）——本地-官方
+不可排序纪律的又一强证据，官方 panel 的 logits 偏置结构与本地 Qwen 假设显著不同。
+注：A2（v169）已在等待 v168 回传期间按独立父侧 v164 完成并被本地否决，不受本结果影响。
 
 ## 6. 复现
 

@@ -778,3 +778,17 @@ gap         = 21765 - S_LA
   按 §14 记 REJECTED，不消耗官方提交；不调 shrink/折/token 数（邻域禁令）。
   **A2 关闭，下一包 A3（动态 scale 搜索的静态策略编译）**。证据：
   [`v169 result`](../../solutions/20260903_v169_standard-linear_v-bias-attn_rejected/result.md)。
+
+- **2026-09-03 v168 官方回传：`17248 / 237s`** **→ A1 RETAINED，父侧更新
+  `P_A：v164 → v168`。** SHA
+  `5988AE47EAC2E7DDE7488E06B8F91939F5660A585034280A6D68A8FB6701AC79`；判读按 §3.3：
+  `step_gain = 17248 − 13945 = +3303`、`side_contrib = 16247`、
+  `Attention ratio = 3303/12944 ≈ 0.2552`；`237s < 300s` 时间通过。**项目史上最大
+  单机制官方增量**，且与本地完全反转（Qwen default −0.00088、GPT-2 +0.0024）——
+  本地 proxy 对官方 Attention 方向无预测力的最强例证。**组合条件已满足**（两侧均有
+  新官方最好：`P_L = v166 4590/226s`、`P_A = v168 17248/237s`）；结构性预测
+  `S_pred = 4590 + 17248 − 1001 = 20837`（距榜首 `21765` 还差 `928`，闭合率
+  `78.1%`）。时间风险：分量和 `146 + 80(rank1L) + 91(A1A) = 317s` 朴素估计，
+  按 v160 双侧实测共享折扣 `−28s` 投影约 `289s`——接近 `300s` 上限，组合候选
+  构造时须做时间审计。证据：
+  [`v168 result`](../../solutions/20260903_v168_standard-linear_logit-gain-attn_scoreNA_timeNA/result.md)。
