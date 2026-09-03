@@ -52,21 +52,21 @@
   fold/Jacobi/coverage/邻域、不提交官方；根 `solution.py` 未改。
 
 - 当前活动计划为低复杂度算法扩展计划（侧向隔离计划已收官归档），**Attention 优先**：
-  A1 **已官方晋级**（v168 `17248/237s`，step_gain `+3303`、Attention ratio `25.5%`，
-  项目史上最大单机制官方增量，且与本地 proxy 完全反转——本地 default mean `−0.00088`、
-  GPT-2 `+0.0024`）；A2 已本地 REJECTED（v169，跨模型结构性反向）；A3 已本地 REJECTED
-  （v170，Qwen default `−0.0506`、GPT-2 `−0.0551` 双模型一致系统性回归——动态 refine
-  是官方 12944 Attention 贡献的承重组件；winner 11/12 = 0 证明标准 scale 已最优）；
-  下一包 A4 矩匹配 mantissa 阈值，随后 Linear L1-L4。候选仍从 v162 双标准零点单侧
-  构造：`P_L = v166 4590/226s`、`P_A = v168 17248/237s`；官方差分按计划 §3.3 登记
-  step_gain 与相对 `3586/12944` 的固定口径比例；每包一个候选、失败换机制不扫邻域；
-  v165 约束（动态 API 无 Gram contraction、无候选循环、复杂计算只在 calibration）
-  对全部 A 包强制。**组合条件已满足**：`S_pred = 4590 + 17248 − 1001 = 20837`（距
-  榜首 928，闭合率 78.1%）；组合时间风险已记入计划 §16（朴素分量和 317s，v160 式
-  共享折扣后 ~289s，接近 300s 上限）。本地 panel 只作描述性诊断，不再用轻微
-  mean/median/尾部负向取消首次官方测量；硬检查仅为接口、合法 state、有限输出、机制
-  reachability 和非目标 standard control。每个机制仍只允许一个预注册配置，官方负向
-  后不得邻域扫描。
+  A1 **已官方晋级**（v168 `14005/210s`——同日用户修正，初报 17248/237s 有误；
+  step_gain `+60`、Attention ratio `0.46%`，小幅正向、时间仅 `+6s`；本地 default
+  mean `−0.00088`、GPT-2 `+0.0024` 同样无正向信号）；A2 已本地 REJECTED（v169，
+  跨模型结构性反向）；A3 已本地 REJECTED（v170，Qwen default `−0.0506`、GPT-2
+  `−0.0551` 双模型一致系统性回归——动态 refine 是官方 12944 Attention 贡献的
+  承重组件；winner 11/12 = 0 证明标准 scale 已最优）；下一包 A4 矩匹配 mantissa
+  阈值，随后 Linear L1-L4。候选仍从 v162 双标准零点单侧构造：`P_L = v166
+  4590/226s`、`P_A = v168 14005/210s`；官方差分按计划 §3.3 登记 step_gain 与相对
+  `3586/12944` 的固定口径比例；每包一个候选、失败换机制不扫邻域；v165 约束（动态
+  API 无 Gram contraction、无候选循环、复杂计算只在 calibration）对全部 A 包强制。
+  **组合条件已满足**：`S_pred = 4590 + 14005 − 1001 = 17594`（仅比 v160 高 `+62`，
+  距榜首 `4171`）；组合时间风险（朴素 `290s`，v160 式共享折扣后 ~262s）余量充裕。
+  本地 panel 只作描述性诊断，不再用轻微 mean/median/尾部负向取消首次官方测量；
+  硬检查仅为接口、合法 state、有限输出、机制 reachability 和非目标 standard
+  control。每个机制仍只允许一个预注册配置，官方负向后不得邻域扫描。
 - 2026-09-03 的首次 L3 full64 no-op 结果无效：`_WEIGHT_FULL64_APPLY=True` 被
   `_WEIGHT_E2E_REFINE=False` 外层死分支遮蔽，目标函数未执行。不得引用该结果证明块级收敛；
   后续必须记录 attempted/accepted block 计数验证 reachability。
