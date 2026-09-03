@@ -106,6 +106,7 @@ silently assigned a score.
 | v158 | `20260902_v158_v86-attention-matrix-smooth_retained` | **16861** | **223 s** | **pass; retained, +117 vs v86** |
 | v159 | `20260902_v159_linear-gptq17816_v158-attention_score17532_timeNA` | **17532** | — | **official score reported; runtime unknown** |
 | v160 | `20260903_v160_v159-linear-l1batch_v158-attn-a2_scoreNA_timeNA` | **17532** | **232 s** | **pass; score no-op vs v159, source/time-complete experiment parent** |
+| v161 | `20260903_v161_v160-attn-s1-qk-gram-refine_scoreNA_timeNA` | — | — | **candidate; local funnel passed (Qwen default 120 paired +0.0525, 106+/14−; GPT-2 +0.0678 same sign; D1 satisfied; attention API +28s within gate), awaiting one official submission** |
 
 ## 2026-09-01 official-shape-v1 local candidates
 
