@@ -560,19 +560,25 @@ v86 的部分 scale-aware/output-aware 机制。此前把它描述为“v86 级�
 
 ## 6. 当前活动计划
 
-唯一活动计划是
-[`2026-09-03-attention-analytic-broad-coverage-plan.md`](superpowers/plans/2026-09-03-attention-analytic-broad-coverage-plan.md)。
-Linear（v159 GPTQ）冻结，只测 Attention 侧解析式宽域机制。顺序固定为：
+**当前无活跃计划**（2026-09-03）。Attention 解析式宽域计划当日执行完毕即归档：
 
-1. A1 Matrix-Smooth 组内扩展（首选），A2 深层 K 结构诊断（零 API 第 0 步），A3 短序列
-   regime，按序单机制执行；
-2. 漏斗为接口/control → Qwen attention compact 哨兵 → GPT-2 同号 → Qwen attention
-   default 120 执行预注册 D1 判别器（touch≥50%、improved>regressed、median≥0；OPA-1
-   账本现有证据 3/3），失败即停；
-3. 满足 D1 才允许一次官方提交；官方失败不邻域调参，不把官方分数回填 loss；
-4. 任何官方回传同时记录 P9 检验（17816 的 `+284` 缺口是否在 Attention 侧）。
+1. **A1a REJECTED**：Matrix-Smooth 4×4 组内扩展在 Qwen attention compact 哨兵即停
+   （paired mean Δ `-0.078643`、`0/2/2`、`consistent_regression`，layer 23 K-only
+   `-164`）；每 block 自由度 3→10 在少量校准折上拟合方差大，gate 验证折通过但真
+   holdout 回归；间接否定自由度更高的 A1b；
+2. **A2 SKIPPED**：零 API 诊断未找到一致病因——K 通道 outlier/集中度与 K-only gain
+   秩相关 `+0.63`（方向相反），head_ratio 无解释力，深层负增益更可能是参考能量分母
+   效应；
+3. **A3 不启动**：前置条件不满足。
 
-Householder 计划已归档为
+至此本地已知机制族全部闭环（Linear full64/Householder + Attention 解析扩展/深层 K），
+下一计划必须来自外部材料（论文/博客/新机制）或用户新输入；官方判别器 D1/D2/D3 预注册于
+[`OPA-1 Stage 1 账本`](execution-attribution/../logs/execution/2026-09-03-opa1-stage1-official-evidence-ledger.md)，
+绑定未来任何官方提交。
+
+归档计划：Attention 解析
+[`2026-09-03-attention-analytic-broad-coverage-plan-superseded.md`](superpowers/archive/plans/2026-09-03-attention-analytic-broad-coverage-plan-superseded.md)、
+Householder
 [`2026-09-03-official-pattern-and-linear-structure-experiments-superseded.md`](superpowers/archive/plans/2026-09-03-official-pattern-and-linear-structure-experiments-superseded.md)。
 
 ## 7. 归档现状与待整理项

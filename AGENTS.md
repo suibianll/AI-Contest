@@ -27,12 +27,13 @@
 - 本地 proxy 只用于同机机制诊断和时间记录，不能换算官方分数或官方 `<300s`；已知历史中
   存在本地排序与官方排序反转，任何本地正向都必须等待官方回传确认。
 
-- 当前活动计划只测 Attention 侧解析式宽域机制（Linear 冻结）：A1 Matrix-Smooth 组内
-  扩展（首选）、A2 深层 K 结构诊断、A3 短序列 regime，按序单机制；漏斗为接口/control →
-  Qwen attention compact 哨兵 → GPT-2 同号 → Qwen attention default 执行预注册 D1 判别器
-  （touch≥50%、improved>regressed、median≥0），失败即停；满足 D1 才允许一次官方提交，
-  官方失败不邻域调参。Linear×Attention 官方 2×2 和逐位等价时间 A/B 均停止。17816 源码
-  无法提供，不再等待。
+- 当前无活跃计划（2026-09-03）：Attention 解析式宽域计划当日闭环——A1a Matrix-Smooth
+  4×4 组内扩展 Qwen compact 哨兵 REJECTED（paired `-0.0786`、`0/2/2`，自由度 3→10 拟合
+  方差大），A2 深层 K 诊断无一致病因（outlier 与误差方向相反），A3 前置条件不满足。本地
+  已知机制族全部闭环（Linear full64/Householder、Attention 解析扩展/深层 K），下一计划
+  必须来自外部材料（论文/博客/新机制）或用户新输入，禁止从已关闭族内继续微调。官方判别器
+  D1/D2/D3 预注册于 OPA-1 Stage 1 账本，绑定未来任何官方提交。Linear×Attention 官方 2×2
+  和逐位等价时间 A/B 均停止。17816 源码无法提供，不再等待。
 
 - 2026-09-03 的首次 L3 full64 no-op 结果无效：`_WEIGHT_FULL64_APPLY=True` 被
   `_WEIGHT_E2E_REFINE=False` 外层死分支遮蔽，目标函数未执行。不得引用该结果证明块级收敛；

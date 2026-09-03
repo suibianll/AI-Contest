@@ -7,19 +7,26 @@
 `evaluator/official_eval.py`，跨模型泛化调用 `evaluator/cross_model_eval.py`；旧
 `real_model_suite.py` 已退役。
 
-- [`2026-09-03-attention-analytic-broad-coverage-plan.md`](2026-09-03-attention-analytic-broad-coverage-plan.md)：当前唯一有效计划。Linear 结构实验已闭环（full64 与 Householder 六变体全族 REJECTED），转向 Attention 侧解析式宽域机制：A1 Matrix-Smooth 组内扩展（首选）、A2 深层 K 结构诊断、A3 短序列 regime，按序单机制执行；采用 compact 哨兵 → GPT-2 同号 → Qwen default D1 判别器的失败即停漏斗，Linear 侧逐位冻结。候选满足预注册 D1（touch≥50%、improved>regressed、median≥0）才允许一次官方提交。
+**当前无活跃计划**（2026-09-03）。Attention 解析式宽域计划当日执行完毕即归档：A1a
+Matrix-Smooth 4×4 组内扩展在 Qwen compact 哨兵 REJECTED（paired `-0.0786`、`0/2/2`），
+A2 深层 K 诊断未找到一致病因（通道 outlier 与误差方向相反），A3 前置条件不满足。至此
+本地已知机制族全部闭环：Linear 侧 full64/Householder（见
+[`../archive/plans/2026-09-03-official-pattern-and-linear-structure-experiments-superseded.md`](../archive/plans/2026-09-03-official-pattern-and-linear-structure-experiments-superseded.md)），
+Attention 侧 Matrix-Smooth 扩展/深层 K（见
+[`../archive/plans/2026-09-03-attention-analytic-broad-coverage-plan-superseded.md`](../archive/plans/2026-09-03-attention-analytic-broad-coverage-plan-superseded.md)）。
+下一个计划必须来自外部材料（论文/博客/新机制）或用户新输入，不得从已关闭族内继续微调；
+官方证据判别器 D1/D2/D3 已预注册于
+[`OPA-1 Stage 1 账本`](../../../logs/execution/2026-09-03-opa1-stage1-official-evidence-ledger.md)，
+绑定未来任何官方提交。
 
 快速机制迭代使用 `--compact-panel`：Linear 为 28 个 selected Weight state + 56 个跨
 validation/test holdout case，Attention 为四个深度/长度哨兵；读取 median、尾部分布、负
 case、cross-holdout 一致性和 interaction；不再用 mean 单独晋级。完整 default panel 仅作
 单侧低频审计。
 
-刚归档的 Householder 快速验证计划（基础候选 + 五个 C 源变体全负）、双线泛化计划以及旧的
-v159 GPU 单线、hierarchy/encoder、17816-anchor、v2 active、grid、consolidated、
-accuracy-first、Linear、JDRQ 计划以及已完成的 L6 计划，均已移至
+所有历史计划（含当日归档的 Householder 与 Attention 解析计划）均已移至
 [`../archive/plans/`](../archive/plans/)。它们是历史决策记录，
-不再提供下一步指令；若历史文字与活跃计划冲突，以活跃计划、根 `solution.py`、
-合规检查和最新评测日志为准。
+不再提供下一步指令。
 
 ## 计划生命周期
 

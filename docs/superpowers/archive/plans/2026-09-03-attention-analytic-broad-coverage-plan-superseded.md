@@ -1,14 +1,29 @@
-# Attention 解析式宽域实验计划
+# Attention 解析式宽域实验计划（已归档）
 
-> 状态：**ACTIVE**
+> 状态：**ARCHIVED / CONCLUDED — A1/A2/A3 全部关闭**
 >
-> 创建：2026-09-03
+> 创建：2026-09-03；归档：2026-09-03（同日执行完毕）
 >
 > 官方父版本：v160，`17532 / 232s`，归档源码 SHA256
 > `33B1D061CE6BFCD92659C597BE4830BB9B910E646FF518433DA67B925AE8680D`
 >
 > 所有候选从 v160 归档源码分支，Linear（v159 GPTQ）与 A1/A2/L1 全部冻结；
 > 父版本 JSON 固定复用，不重复运行父版本。
+
+## 0. 最终结论（归档时写入）
+
+- **A1a REJECTED**（阶段 B Qwen compact 哨兵即停）：4×4 组内扩展 paired mean Δ
+  `-0.078643`、`0/2/2`、`consistent_regression`；机制归因为每 block 自由度 3→10 在
+  少量校准折上拟合方差大，gate 验证折通过但真 holdout 回归；同时间接否定 A1b（自由度
+  更高）。证据：`logs/execution/2026-09-03-a1a-matrix-smooth-4x4-rejected.md`；
+- **A2 SKIPPED**（第 0 步零 API 诊断未找到一致病因）：K 通道 outlier/集中度与 K-only
+  gain 秩相关 +0.63（方向与病因假设相反），head_ratio 无解释力（layer 1/8 失衡大但误差
+  小），深层负增益更可能是参考能量分母效应。证据：
+  `logs/execution/2026-09-03-a2-deep-k-diagnosis-no-cause.md`；
+- **A3 不启动**：前置条件（A1/A2 至少一个通过 D1）不满足；
+- 按 §5 解释表最后一行：Attention 解析宽域族在 v160 上饱和，本地已知机制族
+  （Linear 结构 full64/Householder、Attention 解析 Matrix-Smooth 扩展）全部闭环，
+  下一动作是外部材料搜索或用户指定新机制，不再从当前族内继续微调。
 
 ## 1. 背景与方向依据
 
