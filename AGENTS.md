@@ -7,12 +7,18 @@
 
 ## 1. 当前状态
 
-- **v180（v175 + D1 A1 Q/K 非对称折叠）官方** **`17597/242s`，相对 v175** **`+3/−3s`，
-  RETAINED 成为新完整官方父版本**（SHA `2BA40122...8AA3`）。D1 只改 Attention state
-  multiplier、Linear 与 v175 逐位一致，故 +3 可归因 D1；无在线新增算子，−3s 只记实测
-  不宣称稳定加速。当前距榜首 21765 差 4168，时间余量 58s。v180 是完整组合版本，
-  不是 Attention 单侧测量；独立父侧仍为 `P_L=v166（4590/226s）`、
-  `P_A=v168（14005/210s）`。
+- **v182（v180 + L-R2 融合 rank-2 残差重分布）官方 `17598/273s`，相对 v180 `+1/+31s`，
+  RETAINED 成为新完整官方父版本**（SHA `F3E39E99...A438`）。step_gain `+1`（计划 §11
+  `0<G_L≤20`：残差低秩族接近饱和），**rank-3/系数/fold 邻域明确关闭**。273s 在 300s
+  硬限内，但时间余量收窄至 27s；rank-2 校准 power iteration 是时间增量主因。
+  当前距榜首 21765 差 4167。v182 是完整组合版本；独立父侧仍为
+  `P_L=v166（4590/226s）`、`P_A=v168（14005/210s）`。Attention 与 v180 逐位一致，
+  +1 可归因 Linear rank-2 第二残差方向。
+
+- v180（v175 + D1 A1 Q/K 非对称折叠）官方 `17597/242s`，相对 v175 `+3/−3s`，
+  RETAINED；现为 v182 的精确父版本（SHA `2BA40122...8AA3`）。D1 只改 Attention
+  state multiplier、Linear 与 v175 逐位一致，故 +3 可归因 D1；无在线新增算子，
+  −3s 只记实测不宣称稳定加速。v175 的 interaction=0 证明侧向可加性。
 
 - 低复杂度扩展计划全部裁决完毕（A1-A4 + L1-L4 + 组合 v175）。官方 2026-09-04 批测
   回传：**v175（组合 v166+v168）`17594/245s`** **RETAINED**——
@@ -30,20 +36,14 @@
 - **官方提交配额（用户约束，2026-09-04 目标设置起）**：提交通过版本 ≤10。v171/v174/
   v175 为目标设置前已排期队列（不占配额）；**v176 为第 1 个（1/10，官方负不退还），
   v180 为第 2 个（2/10，官方 +3 RETAINED；GPT-2 轻微负风险记录保留），
-  v182 为第 3 个（3/10，L-R2 待官方，本地跨模型非负），剩余 7**。每新增一个候选扣 1
+  v182 为第 3 个（3/10，官方 +1 RETAINED 成为新完整父），剩余 7**。每新增一个候选扣 1
   配额，官方负向不退还。SOTA 搜索（二至五轮：KVLinC/
   VecInfer/ResQ/OTT、ScaleSweep/H-Scale、MXFP4 误差三分量/HCP/ARCQuant、QuantVLA
   温度匹配/SageBwd/谱界）均落入已闭合域或 A1 已覆盖域，不注册新候选。官方裁决后
   A1-freedom 计划已经归档：D1 v180 官方 +3 RETAINED，D2 v181 本地 REJECTED，D3
-  由 v180 完成。用户已明确触发下一阶段，当前唯一活动计划为
-  [`2026-09-04-post-v180-linear-rank2-plan.md`](docs/superpowers/plans/2026-09-04-post-v180-linear-rank2-plan.md)：
-  只注册 **L-R2**，把 v166 的 rank-1 官方正向结构推广为融合 rank-2 正交残差重分布；
-  连续域乘积严格不变，Attention 冻结为 v180。只设接口/合法 state/有限输出/reachability/
-  不变量/control 硬检查，首次官方结果决定提升；不扫 rank、系数、fold 或 role 路由。
-  **v182 已实现并归档**（SHA `F3E39E99...A438`）：硬检查全过（reachability 全 1、
-  vtu\_cross\_max \~1e-8、Attention 与 v180 逐位一致）；本地配对 v180 Qwen default
-  +0.000020（85/83）、GPT-2 +0.001171、OPT +0.025632，跨模型非负无
-  model-specific-risk；等待官方回传。
+  由 v180 完成。**L-R2 计划（post-v180-linear-rank2）已裁决完毕**：v182 官方
+  `17598/273s` RETAINED 为新父，step_gain `+1`（残差低秩族接近饱和），
+  **rank-3/系数扫描/fold 邻域明确关闭**；计划更新状态后可移入 archive。
 
 - **V 侧方向结构性关闭（2026-09-04 穷尽审计）**：V 的量化自由度全部排除——
   per-head importance 无法改变 HiF4 64 块内离散解（64 块恰 = 1 head 1 token 的 64 维，

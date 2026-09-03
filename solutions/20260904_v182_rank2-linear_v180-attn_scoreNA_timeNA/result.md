@@ -1,6 +1,6 @@
 # v182 候选：L-R2 融合 rank-2 残差重分布（Linear）
 
-> 状态：**候选待官方评测（已提交请求）；硬检查全部通过**
+> 状态：**RETAINED（官方 2026-09-04）— v182 `17598/273s`，成为新完整官方父版本**
 >
 > 计划：[`2026-09-04-post-v180-linear-rank2-plan.md`](../../docs/superpowers/plans/2026-09-04-post-v180-linear-rank2-plan.md)
 >
@@ -66,9 +66,17 @@ aggregation = component-wise median
 
 ## 6. 官方裁决
 
-配额账本：v182 为第 3 个（3/10，本地无 model-specific-risk）。等待用户回传官方分数：
-`S(v182) > 17597` 且 `<300s` → RETAINED 新父；`<= 17597` 且 `<300s` → REJECTED（rank
-扩展族关闭）；`>300s` → TIMEOUT（rank 扩展族关闭，不降 rank 重试）。
+配额账本：v182 为第 3 个（3/10，本地无 model-specific-risk）。
+
+**官方结果（2026-09-04 用户回传）：`17598 / 273s`，RETAINED，成为新完整官方父。**
+
+- `S(v182) = 17598 > S(v180) = 17597`，且 `273s < 300s` → RETAINED。
+- step_gain `+1`（计划 §11 `0 < G_L ≤ 20`：微增益，残差低秩族接近饱和）。
+- 时间 `+31s` vs v180（242s）；rank-2 第二列校准 power iteration 是主要增量，
+  273s 在硬限内但余量收窄至 27s。
+- **明确关闭 rank-3 / 系数扫描 / fold 邻域**（计划 §11 + §9：官方负即关闭，
+  任何正增益均保留，不设置晋级门槛，不升 rank）。
+- v182 是完整组合版本；隐含 Attention 单侧不登记为独立测量。
 
 ## 7. 复现
 

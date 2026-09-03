@@ -7,14 +7,13 @@
 `evaluator/official_eval.py`，跨模型泛化调用 `evaluator/cross_model_eval.py`；旧
 `real_model_suite.py` 已退役。
 
-**当前活动计划（2026-09-04）**：
-[`2026-09-04-post-v180-linear-rank2-plan.md`](2026-09-04-post-v180-linear-rank2-plan.md)。
-用户已明确触发下一阶段。计划只注册 **L-R2**：将 v166 官方正向的 rank-1 残差重分布
-推广为一次融合的 rank-2 正交更新，连续域 `A'W'^T=AW^T` 严格不变，动态复杂度
-`O(TD*2)`，无 Gram/candidate loop。Attention 根据现有穷尽证据冻结在 v180；只有出现
-可表达的连续域等价新机制、API 变化或新官方反证才重开。L-R2 只设接口、合法 state、有限
-输出、reachability、不变量和 Attention control 硬检查，实际提升由相对 v180
-`17597/242s` 的首次官方结果裁决。配额 2/10、剩余 8，本计划最多再用 1 个。
+**当前活动计划**：**无 active 计划（2026-09-04）**。
+L-R2 计划已裁决完毕并归档
+（[`2026-09-04-post-v180-linear-rank2-plan-completed.md`](../archive/plans/2026-09-04-post-v180-linear-rank2-plan-completed.md)）：
+v182 官方 `17598/273s` RETAINED 为新完整官方父，step_gain `+1`（残差低秩族接近
+饱和），**rank-3/系数扫描/fold 邻域明确关闭**。官方父 v182 距榜首 21765 差 4167，
+时间余量 27s，官方配额 3/10、剩余 7。新候选需外部触发（新官方裁决、新机制方向、
+或约束调整）。
 
 当日已归档：低复杂度算法扩展计划（A1-A4/L1-L4/组合全覆盖，
 `-superseded`）、v162 官方侧向隔离优化计划（v165 timeout、v167 本地

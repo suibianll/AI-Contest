@@ -71,6 +71,13 @@ _WEIGHT_GPTQ = True
 _WEIGHT_GPTQ_REGULARIZATION = 0.2
 _WEIGHT_GPTQ_REGULARIZATION_WIDE = 0.3
 _WEIGHT_GPTQ_BLOCK_SIZE = 64
+# L-R2 (post-v180 plan 2026-09-04): fused rank-2 residual redistribution.
+# v166 rank-1 keeps its own hardcoded logic; these constants only extend it
+# with one extra orthogonal residual direction pair.  rank=1 keeps the
+# legacy single-pair path bit-identical; rank=2 fuses U=[u1,u2], V=[v1,v2].
+_WEIGHT_RESIDUAL_RANK = 2
+_WEIGHT_RESIDUAL_COEFF = 0.25  # inherited from v166
+_WEIGHT_RESIDUAL_POWER_ITERS = 128  # inherited from v166
 _ACTIVATION_GPTQ = True
 _ACTIVATION_GPTQ_REGULARIZATION = 0.2
 _ACTIVATION_GPTQ_REGULARIZATION_WIDE = 0.1
@@ -8240,6 +8247,122 @@ def hif4_calibration_and_quantize_weight(
             return -d
         return d
 
+    def _rank2_residual_complement(
+        parent_u: torch.Tensor, parent_v: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor, dict[str, float]]:
+        """Plan L-R2: extract one extra residual direction pair in the
+        orthogonal complement of the v166 rank-1 span.
+
+        parent_v = v1 (unit), parent_u = u1 (norm c = 0.25).  For each
+        calibration fold, run fixed power iterations of the deployment-
+        coordinate base-codec residual operator
+            C(x) = Ea^T(Ea x)/||Ea||^2 + Ew^T(Ew x)/||Ew||^2
+        restricted to span(v1, u1)^perp, deflating the top direction to get
+        d3, d4.  Sign align to fold 0, component-wise median across folds,
+        Gram-Schmidt against the parent span, then fix v2 = d3 (unit) and
+        u2 = c*d4 (norm c) with a final projection so V^T U ~= 0.
+        """
+        b1 = parent_v / parent_v.norm().clamp_min(_EPS)
+        pu_norm = float(parent_u.norm())
+        b2 = (
+            parent_u / pu_norm
+            if pu_norm > _EPS
+            else torch.zeros_like(parent_v)
+        )
+
+        def _rank2_top2(act_res):
+            ta = float(act_res.square().sum())
+            tw = float(weight_residual.square().sum())
+            na = 1.0 / ta if ta > _EPS else 0.0
+            nw = 1.0 / tw if tw > _EPS else 0.0
+
+            def _mv(x):
+                return (
+                    na * act_res.t().mv(act_res.mv(x))
+                    + nw * weight_residual.t().mv(weight_residual.mv(x))
+                )
+
+            def _proj(x):
+                x = x - b1 * float(b1 @ x)
+                x = x - b2 * float(b2 @ x)
+                return x
+
+            diag = (
+                na * act_res.square().sum(dim=0)
+                + nw * weight_residual.square().sum(dim=0)
+            )
+            diag3 = _proj(diag)
+            d3 = torch.zeros_like(diag)
+            d3[int(diag3.argmax())] = 1.0
+            for _ in range(_WEIGHT_RESIDUAL_POWER_ITERS):
+                d3 = _proj(_mv(d3))
+                d3 = d3 / d3.norm().clamp_min(_EPS)
+            lam3 = float(d3 @ _mv(d3))
+            diag4 = diag3 - lam3 * d3.square()
+            d4 = torch.zeros_like(diag)
+            d4[int(diag4.argmax())] = 1.0
+            for _ in range(_WEIGHT_RESIDUAL_POWER_ITERS):
+                d4 = _proj(_mv(d4))
+                d4 = d4 - d3 * float(d3 @ d4)
+                d4 = d4 / d4.norm().clamp_min(_EPS)
+            return d3, d4
+
+        d3_list = []
+        d4_list = []
+        for _fold_res in fold_residuals:
+            _d3, _d4 = _rank2_top2(_fold_res)
+            d3_list.append(_rank1_fix_sign(_d3))
+            d4_list.append(_rank1_fix_sign(_d4))
+        for _i in range(1, len(d3_list)):
+            if float(d3_list[_i] @ d3_list[0]) < 0.0:
+                d3_list[_i] = -d3_list[_i]
+            if float(d4_list[_i] @ d4_list[0]) < 0.0:
+                d4_list[_i] = -d4_list[_i]
+        d3_med = torch.stack(d3_list).median(dim=0).values
+        d4_med = torch.stack(d4_list).median(dim=0).values
+
+        d3_med = d3_med - b1 * float(b1 @ d3_med) - b2 * float(b2 @ d3_med)
+        d4_med = d4_med - b1 * float(b1 @ d4_med) - b2 * float(b2 @ d4_med)
+        d4_med = d4_med - d3_med * float(d3_med @ d4_med)
+        d3_norm = float(d3_med.norm())
+        d4_norm = float(d4_med.norm())
+        if d3_norm < 1.0e-6 or d4_norm < 1.0e-6:
+            stats = {
+                "reachable": 0,
+                "d3_norm": d3_norm,
+                "d4_norm": d4_norm,
+                "vtu_cross_max": 0.0,
+            }
+            return (
+                torch.zeros_like(parent_v),
+                torch.zeros_like(parent_v),
+                stats,
+            )
+        v2 = d3_med / d3_norm
+        u2 = _WEIGHT_RESIDUAL_COEFF * d4_med / d4_norm
+        # Final projection to force the cross inner products near zero.
+        v2 = v2 - b1 * float(b1 @ v2) - b2 * float(b2 @ v2)
+        u2 = u2 - b1 * float(b1 @ u2) - b2 * float(b2 @ u2)
+        u2 = u2 - v2 * float(v2 @ u2)
+        v2 = v2 / v2.norm().clamp_min(_EPS)
+        u2 = (
+            u2 / u2.norm().clamp_min(_EPS) * _WEIGHT_RESIDUAL_COEFF
+        )
+        stats = {
+            "reachable": 1,
+            "d3_norm": float(v2.norm()),
+            "d4_norm": float((u2 / _WEIGHT_RESIDUAL_COEFF).norm()),
+            "vtu_cross_max": float(
+                max(
+                    abs(float(v2 @ u2)),
+                    abs(float(b1 @ u2)),
+                    abs(float(b2 @ u2)),
+                    abs(float(v2 @ b2)),
+                )
+            ),
+        }
+        return u2, v2, stats
+
     d1_list = []
     d2_list = []
     for _fold_res in fold_residuals:
@@ -8267,26 +8390,36 @@ def hif4_calibration_and_quantize_weight(
         rank1_u = rank1_u * (0.5 / abs(vtu))
 
     if float(rank1_u.square().sum()) > 0.0:
-        weight_smooth = weight_smooth - torch.outer(
-            weight_smooth.mv(rank1_v), rank1_u
-        )
+        if _WEIGHT_RESIDUAL_RANK >= 2:
+            u2, v2, r2_stats = _rank2_residual_complement(rank1_u, rank1_v)
+            if not int(r2_stats.get("reachable", 0)):
+                u2 = torch.zeros_like(rank1_u)
+                v2 = torch.zeros_like(rank1_v)
+            residual_u = torch.stack([rank1_u, u2], dim=1)  # [D,2]
+            residual_v = torch.stack([rank1_v, v2], dim=1)  # [D,2]
+        else:
+            residual_u = rank1_u.unsqueeze(1)  # [D,1]
+            residual_v = rank1_v.unsqueeze(1)  # [D,1]
+        # Fused rank-r update: W' = W - (W V) U^T, A' = A + (A U) V^T.
+        # For rank=1 this is bit-identical to the legacy outer-product pair.
+        weight_smooth = weight_smooth - (weight_smooth @ residual_v) @ residual_u.t()
         transformed_activation_samples = [
-            _sample + torch.outer(_sample.mv(rank1_u), rank1_v)
+            _sample + (_sample @ residual_u) @ residual_v.t()
             for _sample in transformed_activation_samples
         ]
         if gram_full is not None:
-            g_u = gram_full.mv(rank1_u)
-            ugu = float(rank1_u @ g_u)
+            g_u = gram_full.mm(residual_u)          # [D,r]
+            ugu = residual_u.t().mm(g_u)            # [r,r]
             h_x_smooth = (
                 h_x_smooth
-                + 2.0 * rank1_v * g_u
-                + ugu * rank1_v.square()
+                + 2.0 * (residual_v * g_u).sum(dim=1)
+                + (residual_v.mm(ugu) * residual_v).sum(dim=1)
             )
             gram_full = (
                 gram_full
-                + torch.outer(rank1_v, g_u)
-                + torch.outer(g_u, rank1_v)
-                + ugu * torch.outer(rank1_v, rank1_v)
+                + residual_v.mm(g_u.t())
+                + g_u.mm(residual_v.t())
+                + residual_v.mm(ugu).mm(residual_v.t())
             )
             weight_group_gram = _flat_group_gram(
                 gram_full, in_features
@@ -8301,6 +8434,15 @@ def hif4_calibration_and_quantize_weight(
             h_x_smooth = torch.cat(
                 transformed_activation_samples
             ).square().mean(dim=0)
+    else:
+        residual_u = None
+        residual_v = None
+        r2_stats = {"reachable": 0}
+
+    if _WEIGHT_RESIDUAL_RANK >= 2:
+        print(f"[L-R2] rank2 reachable={r2_stats.get('reachable', 0)} "
+              f"vtu_cross_max={float(r2_stats.get('vtu_cross_max', 0.0)):.3e}",
+              flush=True)
 
     refine_ratio = (
         _WEIGHT_REFINE_MAX_RATIO_SMALL
@@ -8566,6 +8708,12 @@ def hif4_calibration_and_quantize_weight(
         "max_refine_blocks": _ACTIVATION_REFINE_MAX_BLOCKS,
         "rank1_u": _cpu_state_tensor(rank1_u),
         "rank1_v": _cpu_state_tensor(rank1_v),
+        "residual_u": (
+            _cpu_state_tensor(residual_u) if residual_u is not None else None
+        ),
+        "residual_v": (
+            _cpu_state_tensor(residual_v) if residual_v is not None else None
+        ),
         "in_features": int(in_features),
         "version": 4,
     }
@@ -8610,13 +8758,21 @@ def hif4_dynamic_quantize_activation(
             dense, block_smooth_size, block_smooth_seed
         )
 
-    rank1_u = activation_state["rank1_u"].to(
-        device=dense.device, dtype=torch.float32
-    )
-    rank1_v = activation_state["rank1_v"].to(
-        device=dense.device, dtype=torch.float32
-    )
-    dense = dense + (dense @ rank1_u).unsqueeze(-1) * rank1_v
+    residual_u = activation_state.get("residual_u")
+    residual_v = activation_state.get("residual_v")
+    if residual_u is not None and residual_v is not None:
+        # L-R2 fused rank update: A' = A + (A U) V^T, single GEMM pair.
+        u = residual_u.to(device=dense.device, dtype=torch.float32)
+        v = residual_v.to(device=dense.device, dtype=torch.float32)
+        dense = dense + (dense @ u) @ v.transpose(0, 1)
+    else:
+        rank1_u = activation_state["rank1_u"].to(
+            device=dense.device, dtype=torch.float32
+        )
+        rank1_v = activation_state["rank1_v"].to(
+            device=dense.device, dtype=torch.float32
+        )
+        dense = dense + (dense @ rank1_u).unsqueeze(-1) * rank1_v
 
     gram = None
     gram_state = activation_state.get("gram")
