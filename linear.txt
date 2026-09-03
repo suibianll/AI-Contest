@@ -1,0 +1,1657 @@
+"""Linear (non-attention) quantization pipeline for HiF4.
+
+Extracted from solution.py.  Contains:
+- SmoothQuant scale search + permutation + block Hadamard candidate evaluation
+- Weight quantization (standard / GPTQ / e2e refine)
+- Dynamic activation quantization
+
+Public API (re-exported by solution.py):
+- hif4_calibration_and_quantize_weight
+- hif4_dynamic_quantize_activation
+"""
+
+from __future__ import annotations
+
+import math
+from typing import Any, Optional, Sequence
+
+import torch
+
+# ---------------------------------------------------------------------------
+# Import shared constants and utility functions from solution.py
+# ---------------------------------------------------------------------------
+from solution import (
+    # --- constants ---
+    _EPS,
+    _HIF4_BLOCK_SIZE,
+    _SMOOTH_SCALE_MIN,
+    _SMOOTH_SCALE_MAX,
+    _SMOOTH_SOFT_CLAMP,
+    _SMOOTH_SOFT_CLAMP_MIN_RATIO,
+    _LINEAR_STATS_TOKENS,
+    _LINEAR_EVAL_TOKENS,
+    _LINEAR_WEIGHT_EVAL_ROWS,
+    _LINEAR_E2E_EVAL_TOKENS,
+    _LINEAR_E2E_WEIGHT_EVAL_ROWS,
+    _LINEAR_E2E_WEIGHT,
+    _LINEAR_SMOOTH_END_TO_END,
+    _LINEAR_SMOOTH_BLOCK_JOINT,
+    _LINEAR_E2E_VERIFY,
+    _WEIGHT_SMOOTH_ALPHAS,
+    _WEIGHT_SMOOTH_ALPHAS_WIDE,
+    _WEIGHT_SMOOTH_RMS,
+    _WIDE_LAYER_MIN_DIM,
+    _WEIGHT_E2E_REFINE,
+    _WEIGHT_E2E_REFINE_TOP_K,
+    _WEIGHT_E2E_REFINE_OFFSETS,
+    _WEIGHT_E2E_REFINE_MIN_IMPROVEMENT,
+    _WEIGHT_GPTQ,
+    _WEIGHT_GPTQ_BLOCK_SIZE,
+    _WEIGHT_GPTQ_MIN_FEATURES,
+    _WEIGHT_GPTQ_REGULARIZATION,
+    _WEIGHT_GPTQ_REGULARIZATION_WIDE,
+    _WEIGHT_OFFSETS,
+    _WEIGHT_REFINE_ERROR_THRESHOLD,
+    _WEIGHT_REFINE_ACCEPT_MARGIN,
+    _WEIGHT_REFINE_MAX_RATIO_SMALL,
+    _WEIGHT_REFINE_MAX_RATIO_LARGE,
+    _WEIGHT_REFINE_MAX_BLOCKS,
+    _WEIGHT_FULL_SWEEP_TOP_K,
+    _WEIGHT_QUADRATIC,
+    _WEIGHT_QUADRATIC_MAX_FEATURES,
+    _BLOCK_SMOOTH_FORCE_SIZE,
+    _BLOCK_SMOOTH_SIZES,
+    _BLOCK_SMOOTH_SEEDS,
+    _BLOCK_SMOOTH_MIN_IMPROVEMENT,
+    _BLOCK_SMOOTH_WORST_TOLERANCE,
+    _BLOCK_SWAP_ROUNDS,
+    _BLOCK_SWAP_CANDIDATES,
+    _PERMUTATION_BASES,
+    _ACTIVATION_GPTQ,
+    _ACTIVATION_GPTQ_REGULARIZATION,
+    _ACTIVATION_GPTQ_REGULARIZATION_WIDE,
+    _ACTIVATION_QUADRATIC,
+    _ACTIVATION_QUADRATIC_MAX_FEATURES,
+    _ACTIVATION_REFINE_ERROR_THRESHOLD,
+    _ACTIVATION_REFINE_ACCEPT_MARGIN,
+    _ACTIVATION_REFINE_MAX_RATIO,
+    _ACTIVATION_REFINE_MAX_BLOCKS,
+    _DYNAMIC_OFFSETS,
+    _ADAPTIVE_ACT_GPTQ_REG,
+    _ADAPTIVE_ACT_GPTQ_REG_CANDIDATES,
+    _ADAPTIVE_OFFSETS,
+    _ADAPTIVE_OFFSET_CANDIDATES,
+    _DATA_DRIVEN_RATIO,
+    _RATIO_CAPTURE_TARGET,
+    _RATIO_MIN,
+    # --- shared functions ---
+    _identity_permutation,
+    _standard_e6m2_scale,
+    _block_hadamard_transform,
+    _dequantize_nvfp4_float32,
+    _sample_rows,
+    _candidate_is_safe,
+    _cpu_state_tensor,
+    _standard_block_losses,
+    _loss_capture_ratio,
+    _flat_group_gram,
+    _transformed_covariance,
+    _e6m2_encode_nearest,
+    _e6m2_decode,
+    _safe_positive_vector,
+    _dense_to_hif4,
+    _dequantize_hif4,
+    _normalize_importance,
+    _activation_gptq_quantize,
+)
+
+
+# ===========================================================================
+# Permutation helpers (Linear-specific)
+# ===========================================================================
+
+def _hierarchy_aware_permutation(
+    first_range: torch.Tensor,
+    second_range: torch.Tensor,
+) -> torch.Tensor:
+    """Cluster similarly scaled channels for the 64/8/4 HiF4 hierarchy.
+
+    The two ranges describe the paired operands of an exactly equivalent
+    transform (X/W or Q/K). Log-domain median normalization makes the
+    ordering insensitive to the operands' unrelated global units.
+    """
+
+    if tuple(first_range.shape) != tuple(second_range.shape):
+        raise ValueError("Paired channel ranges must have identical shapes")
+    log_first = torch.log2(first_range.to(torch.float32).clamp_min(_EPS))
+    log_second = torch.log2(second_range.to(torch.float32).clamp_min(_EPS))
+    log_first = log_first - torch.median(log_first)
+    log_second = log_second - torch.median(log_second)
+    pressure = torch.maximum(log_first, log_second).reshape(-1)
+    if int(pressure.numel()) == 0:
+        return torch.empty(0, dtype=torch.int64, device=pressure.device)
+    if float(pressure.max() - pressure.min()) < 0.25:
+        return _identity_permutation(int(pressure.numel()), pressure.device)
+    return torch.argsort(pressure, descending=True)
+
+
+def _range_permutation(ranges: torch.Tensor) -> torch.Tensor:
+    """1D argsort of log ranges; identity when the log spread is negligible."""
+
+    log_r = torch.log2(ranges.to(torch.float32).clamp_min(_EPS))
+    log_r = log_r - torch.median(log_r)
+    flat = log_r.reshape(-1)
+    if float(flat.max() - flat.min()) < 0.25:
+        return _identity_permutation(int(flat.numel()), flat.device)
+    return torch.argsort(flat, descending=True)
+
+
+# ===========================================================================
+# Block-swap local search (Linear-specific)
+# ===========================================================================
+
+def _block_loss_single(
+    x_abs_block: torch.Tensor,
+    importance_block: torch.Tensor | None,
+) -> torch.Tensor:
+    """Compute standard HiF4 loss for a single [8,2,4] block (no batch dim)."""
+    max4 = x_abs_block.amax(dim=-1)
+    max8 = max4.amax(dim=-1)
+    amax = max8.amax(dim=-1)
+    _, standard_scale = _standard_e6m2_scale(amax)
+    e2 = max8 >= (4.0 * standard_scale[..., None])
+    scale_lv2 = 1.0 + e2.to(torch.float32)
+    e3 = max4 >= (
+        2.0 * standard_scale[..., None, None] * scale_lv2[..., None]
+    )
+    scale_lv3 = 1.0 + e3.to(torch.float32)
+    denominator = (
+        standard_scale[..., None, None, None]
+        * scale_lv2[..., None, None]
+        * scale_lv3[..., None]
+    )
+    mantissa = (
+        torch.round(x_abs_block * (4.0 / denominator)).clamp_(0.0, 7.0) * 0.25
+    )
+    error = (x_abs_block - mantissa * denominator).square()
+    if importance_block is not None:
+        error = error * importance_block
+    return error.sum()
+
+
+def _block_swap_optimize(
+    weight: torch.Tensor,
+    activation_second_moment: torch.Tensor,
+    d: torch.Tensor,
+    permutation: torch.Tensor,
+    block_smooth_size: int = 0,
+    block_smooth_seed: int = 0,
+) -> torch.Tensor:
+    """Local search: swap channels between 64-blocks to reduce total quantization loss.
+
+    After the global argsort permutation, some channels may still be "stranded"
+    in blocks where their range is mismatched with their 63 block-mates.  This
+    function tries swapping channels between the worst-loss blocks and other
+    blocks, accepting the swap only when the total loss of both affected blocks
+    decreases.  The loss is the exact standard HiF4 reconstruction error,
+    weighted by activation second moment.
+
+    Returns an improved permutation (or the original if no improvement found).
+    """
+    channels = int(weight.shape[1])
+    if channels % _HIF4_BLOCK_SIZE != 0:
+        return permutation
+    num_blocks = channels // _HIF4_BLOCK_SIZE
+    if num_blocks < 2:
+        return permutation
+
+    # Apply the current transform to get the working dense tensor.
+    order = permutation.to(device=weight.device, dtype=torch.int64).reshape(-1)
+    weight_smooth = _linear_pair_transform(
+        weight, d, order, block_smooth_size, block_smooth_seed, weight_side=True,
+    )
+    h_x = _transformed_second_moment(
+        activation_second_moment, d, order, block_smooth_size,
+    )
+
+    # Average the weight across output rows for a representative per-channel profile.
+    w_profile = weight_smooth.abs().mean(dim=0)  # [channels]
+    h_profile = h_x if h_x is not None else torch.ones(channels, dtype=torch.float32, device=weight.device)
+
+    def block_loss_for_block(b: int, profile: torch.Tensor, imp: torch.Tensor) -> torch.Tensor:
+        start = b * 64
+        block_abs = profile[start:start + 64].reshape(8, 2, 4)
+        block_imp = imp[start:start + 64].reshape(8, 2, 4)
+        return _block_loss_single(block_abs, block_imp)
+
+    # Precompute current block losses.
+    block_losses = torch.stack([
+        block_loss_for_block(b, w_profile, h_profile) for b in range(num_blocks)
+    ])
+
+    current_perm = permutation.clone()
+    total_improvement = 0.0
+
+    for _round in range(_BLOCK_SWAP_ROUNDS):
+        n_sources = min(_BLOCK_SWAP_CANDIDATES, num_blocks)
+        source_blocks = torch.topk(block_losses, k=n_sources, largest=True).indices.tolist()
+
+        round_improved = False
+        for src_b in source_blocks:
+            src_loss = float(block_losses[src_b])
+
+            n_targets = min(4, num_blocks - 1)
+            other_losses = block_losses.clone()
+            other_losses[src_b] = float("inf")
+            target_blocks = torch.topk(other_losses, k=n_targets, largest=False).indices.tolist()
+
+            for dst_b in target_blocks:
+                dst_loss = float(block_losses[dst_b])
+                combined_before = src_loss + dst_loss
+
+                src_start = src_b * 64
+                dst_start = dst_b * 64
+                best_delta = 0.0
+                best_swap = None  # (src_local, dst_local)
+
+                src_profile = w_profile[src_start:src_start + 64].clone()
+                dst_profile = w_profile[dst_start:dst_start + 64].clone()
+                src_imp = h_profile[src_start:src_start + 64].clone()
+                dst_imp = h_profile[dst_start:dst_start + 64].clone()
+
+                step = max(1, 64 // 8)  # Try 8 channels per block
+                for si in range(0, 64, step):
+                    for di in range(0, 64, step):
+                        new_src = src_profile.clone()
+                        new_dst = dst_profile.clone()
+                        new_src[si], new_dst[di] = dst_profile[di], src_profile[si]
+                        new_src_imp = src_imp.clone()
+                        new_dst_imp = dst_imp.clone()
+                        new_src_imp[si], new_dst_imp[di] = dst_imp[di], src_imp[si]
+
+                        src_after = float(_block_loss_single(
+                            new_src.reshape(8, 2, 4), new_src_imp.reshape(8, 2, 4)
+                        ))
+                        dst_after = float(_block_loss_single(
+                            new_dst.reshape(8, 2, 4), new_dst_imp.reshape(8, 2, 4)
+                        ))
+                        delta = combined_before - (src_after + dst_after)
+                        if delta > best_delta:
+                            best_delta = delta
+                            best_swap = (si, di, new_src, new_dst, new_src_imp, new_dst_imp,
+                                         src_after, dst_after)
+
+                if best_swap is not None and best_delta > 0:
+                    si, di, new_src, new_dst, new_src_imp, new_dst_imp, src_after, dst_after = best_swap
+                    pos_a = src_start + si
+                    pos_b = dst_start + di
+                    tmp = current_perm[pos_a].clone()
+                    current_perm[pos_a] = current_perm[pos_b]
+                    current_perm[pos_b] = tmp
+
+                    w_profile[src_start:src_start + 64] = new_src
+                    w_profile[dst_start:dst_start + 64] = new_dst
+                    h_profile[src_start:src_start + 64] = new_src_imp
+                    h_profile[dst_start:dst_start + 64] = new_dst_imp
+                    block_losses[src_b] = src_after
+                    block_losses[dst_b] = dst_after
+                    src_loss = src_after
+                    total_improvement += best_delta
+                    round_improved = True
+
+        if not round_improved:
+            break
+
+    if total_improvement <= 0.0:
+        return permutation
+    return current_perm
+
+
+# ===========================================================================
+# SmoothQuant scale (Linear-specific)
+# ===========================================================================
+
+def _smooth_scale(
+    activation_amax: torch.Tensor,
+    weight_amax: torch.Tensor,
+    alpha: float,
+) -> torch.Tensor:
+    d = (activation_amax + _EPS).pow(alpha) / (
+        weight_amax + _EPS
+    ).pow(1.0 - alpha)
+    d = torch.nan_to_num(
+        d, nan=1.0, posinf=_SMOOTH_SCALE_MAX, neginf=_SMOOTH_SCALE_MIN
+    )
+    d = d.clamp(min=_SMOOTH_SCALE_MIN, max=_SMOOTH_SCALE_MAX)
+    # A global normalization prevents an arbitrary overall scale drift while
+    # retaining the relative channel smoothing.
+    geometric_mean = torch.exp(torch.log(d).mean())
+    d = d / geometric_mean
+    if _SMOOTH_SOFT_CLAMP:
+        d_ratio = float(d.max() / d.min().clamp_min(_EPS))
+        if d_ratio > _SMOOTH_SOFT_CLAMP_MIN_RATIO:
+            log_min = math.log(_SMOOTH_SCALE_MIN)
+            log_max = math.log(_SMOOTH_SCALE_MAX)
+            log_mid = 0.5 * (log_min + log_max)
+            log_half = 0.5 * (log_max - log_min)
+            log_d = torch.log(d.clamp_min(_EPS))
+            log_d = log_mid + log_half * torch.tanh(
+                (log_d - log_mid) / log_half
+            )
+            d = torch.exp(log_d)
+    else:
+        d = d.clamp(min=_SMOOTH_SCALE_MIN, max=_SMOOTH_SCALE_MAX)
+    return d
+
+
+# ===========================================================================
+# Linear equivalent transform helpers
+# ===========================================================================
+
+def _linear_pair_transform(
+    dense: torch.Tensor,
+    d: torch.Tensor,
+    permutation: torch.Tensor,
+    block_smooth_size: int,
+    block_smooth_seed: int = 0,
+    *,
+    weight_side: bool,
+) -> torch.Tensor:
+    """Apply one side of the exactly equivalent Linear transform."""
+
+    scale = d if weight_side else d.reciprocal()
+    transformed = (dense * scale.unsqueeze(0)).index_select(-1, permutation)
+    return _block_hadamard_transform(
+        transformed, block_smooth_size, block_smooth_seed
+    )
+
+
+def _transformed_second_moment(
+    second_moment: torch.Tensor,
+    d: torch.Tensor,
+    permutation: torch.Tensor,
+    block_smooth_size: int,
+    block_smooth_seed: int = 0,
+) -> torch.Tensor:
+    """Diagonal covariance after scale/permutation/block rotation.
+
+    Without a full covariance the diagonal after a normalized Hadamard is the
+    mean variance of each block.  The full covariance path below is still used
+    for the quadratic weight solver once a candidate has been selected.
+    """
+
+    moment = (second_moment / d.square()).index_select(0, permutation)
+    size = int(block_smooth_size)
+    if size != 0:
+        moment = moment.reshape(-1, size).mean(dim=-1, keepdim=True).expand(
+            -1, size
+        ).reshape(-1)
+    return moment
+
+
+# ===========================================================================
+# Linear candidate evaluation
+# ===========================================================================
+
+def _linear_candidate_metrics(
+    weight: torch.Tensor,
+    activation_second_moment: torch.Tensor,
+    activation_samples: Sequence[torch.Tensor],
+    d: torch.Tensor,
+    permutation: torch.Tensor,
+    block_smooth_size: int = 0,
+    block_smooth_seed: int = 0,
+) -> tuple[float, tuple[float, ...]]:
+    """Score an equivalent Linear transform from operand-side statistics."""
+
+    channels = int(weight.shape[1])
+    order = permutation.to(device=weight.device, dtype=torch.int64).reshape(-1)
+    if int(order.numel()) != channels:
+        raise ValueError("Linear candidate permutation has an invalid width")
+
+    weight_smooth = _linear_pair_transform(
+        weight,
+        d,
+        order,
+        block_smooth_size,
+        block_smooth_seed,
+        weight_side=True,
+    )
+    h_x = _transformed_second_moment(
+        activation_second_moment, d, order, block_smooth_size
+    )
+    weight_params = _dense_to_hif4(weight_smooth)
+    weight_hat = _dequantize_hif4(weight_params)
+
+    weight_error = (
+        (weight_smooth - weight_hat).square() * h_x.unsqueeze(0)
+    ).sum()
+    weight_energy = (weight_smooth.square() * h_x.unsqueeze(0)).sum()
+    weight_score = weight_error / (weight_energy + _EPS)
+
+    h_w = _normalize_importance(weight_hat.square().sum(dim=0), channels)
+    if h_w is None:
+        h_w = torch.ones(channels, dtype=torch.float32, device=weight.device)
+
+    case_scores: list[float] = []
+    for sample in activation_samples:
+        smooth = _linear_pair_transform(
+            sample,
+            d,
+            order,
+            block_smooth_size,
+            block_smooth_seed,
+            weight_side=False,
+        )
+        params = _dense_to_hif4(smooth)
+        reconstructed = _dequantize_hif4(params)
+        error = ((smooth - reconstructed).square() * h_w.unsqueeze(0)).sum()
+        energy = (smooth.square() * h_w.unsqueeze(0)).sum()
+        score = torch.nan_to_num(
+            weight_score + error / (energy + _EPS),
+            nan=1.0e30,
+            posinf=1.0e30,
+            neginf=1.0e30,
+        )
+        case_scores.append(float(score))
+
+    if not case_scores:
+        case_scores.append(float(torch.nan_to_num(weight_score, nan=1.0e30)))
+    mean_score = sum(case_scores) / float(len(case_scores))
+    return mean_score, tuple(case_scores)
+
+
+def _linear_output_candidate_metrics(
+    weight: torch.Tensor,
+    activation_samples: Sequence[torch.Tensor],
+    d: torch.Tensor,
+    permutation: torch.Tensor,
+    block_smooth_size: int = 0,
+    block_smooth_seed: int = 0,
+) -> tuple[float, tuple[float, ...]]:
+    """Score a transform by the actual sampled Linear output error.
+
+    Operand-local reconstruction error is a useful cheap proxy for diagonal
+    smoothing, but it misses cancellation between activation and weight errors
+    after a non-diagonal transform.  Block-S candidates therefore use the
+    end-to-end sampled objective that the competition ultimately measures.
+    """
+
+    order = permutation.to(device=weight.device, dtype=torch.int64).reshape(-1)
+    weight_transformed = _linear_pair_transform(
+        weight,
+        d,
+        order,
+        block_smooth_size,
+        block_smooth_seed,
+        weight_side=True,
+    )
+    weight_hat = _dequantize_hif4(_dense_to_hif4(weight_transformed))
+    case_scores: list[float] = []
+    for sample in activation_samples:
+        activation_transformed = _linear_pair_transform(
+            sample,
+            d,
+            order,
+            block_smooth_size,
+            block_smooth_seed,
+            weight_side=False,
+        )
+        activation_hat = _dequantize_hif4(
+            _dense_to_hif4(activation_transformed)
+        )
+        reference = activation_transformed.mm(weight_transformed.t())
+        reconstructed = activation_hat.mm(weight_hat.t())
+        score = (reference - reconstructed).square().sum() / (
+            reference.square().sum() + _EPS
+        )
+        case_scores.append(
+            float(
+                torch.nan_to_num(
+                    score, nan=1.0e30, posinf=1.0e30, neginf=1.0e30
+                )
+            )
+        )
+    if not case_scores:
+        return 1.0e30, (1.0e30,)
+    return sum(case_scores) / float(len(case_scores)), tuple(case_scores)
+
+
+def _linear_smooth_hybrid_metrics(
+    weight_proxy: torch.Tensor,
+    weight_e2e: torch.Tensor,
+    activation_second_moment: torch.Tensor,
+    activation_samples: Sequence[torch.Tensor],
+    activation_e2e_samples: Sequence[torch.Tensor],
+    d: torch.Tensor,
+    permutation: torch.Tensor,
+) -> tuple[float, tuple[float, ...]]:
+    """Combined proxy + e2e metric for smooth/perm candidate evaluation.
+
+    Uses proxy as the primary signal (good generalization) and adds a
+    weighted e2e component to catch cases where the proxy is misleading.
+    """
+    proxy_score, proxy_cases = _linear_candidate_metrics(
+        weight_proxy,
+        activation_second_moment,
+        activation_samples,
+        d,
+        permutation,
+    )
+    e2e_score, e2e_cases = _linear_output_candidate_metrics(
+        weight_e2e,
+        activation_e2e_samples,
+        d,
+        permutation,
+    )
+    combined = (1.0 - _LINEAR_E2E_WEIGHT) * proxy_score + _LINEAR_E2E_WEIGHT * e2e_score
+    n = len(proxy_cases)
+    combined_cases = tuple(
+        (1.0 - _LINEAR_E2E_WEIGHT) * proxy_cases[i] + _LINEAR_E2E_WEIGHT * e2e_cases[i]
+        for i in range(n)
+    )
+    return combined, combined_cases
+
+
+# ===========================================================================
+# Weight e2e refinement
+# ===========================================================================
+
+def _weight_e2e_refine(
+    weight_smooth: torch.Tensor,
+    weight_params: dict[str, torch.Tensor],
+    activation_samples: Sequence[torch.Tensor],
+    best_d: torch.Tensor,
+    best_perm: torch.Tensor,
+    identity_d: torch.Tensor,
+    identity_perm: torch.Tensor,
+    best_block_smooth_size: int,
+    best_block_smooth_seed: int,
+) -> dict[str, torch.Tensor]:
+    """Re-optimize weight scale_factor codes using actual output MSE.
+
+    After standard per-block quantization (which uses the Gram approximation),
+    this function identifies the blocks with the largest output error
+    contribution and tries alternative E6M2 scale_factor codes, evaluating
+    each against the actual X@W^T output MSE.  This captures cross-block
+    interactions and error cancellation effects that the Gram approximation
+    misses.
+    """
+    out_features, in_features = map(int, weight_smooth.shape)
+    blocks = in_features // _HIF4_BLOCK_SIZE
+    n_out = out_features
+
+    # Dequantize current weight
+    weight_hat = _dequantize_hif4(weight_params).to(torch.float32)
+
+    # Transform activation samples
+    x_transformed_list: list[torch.Tensor] = []
+    y_ref_list: list[torch.Tensor] = []
+    for sample in activation_samples:
+        x_t = sample.to(dtype=torch.float32, device=weight_smooth.device)
+        if not torch.equal(best_d, identity_d):
+            x_t = x_t * best_d.reciprocal().reshape(1, -1)
+        if not torch.equal(best_perm, identity_perm):
+            x_t = x_t.index_select(-1, best_perm)
+        if best_block_smooth_size != 0:
+            x_t = _block_hadamard_transform(
+                x_t, best_block_smooth_size, best_block_smooth_seed,
+            )
+        x_transformed_list.append(x_t)
+        y_ref_list.append(x_t.mm(weight_smooth.t()))
+
+    # Compute residuals and total output MSE
+    residuals = [
+        y_ref - x_t.mm(weight_hat.t())
+        for y_ref, x_t in zip(y_ref_list, x_transformed_list)
+    ]
+    total_ref_sq = sum(float(y.square().sum()) for y in y_ref_list)
+    total_res_sq = sum(float(r.square().sum()) for r in residuals)
+
+    if total_ref_sq < _EPS:
+        return weight_params
+
+    base_mse = total_res_sq / total_ref_sq
+
+    # Per-block output error contribution for ranking
+    block_output_error = torch.zeros(blocks, dtype=torch.float32)
+    dw = weight_smooth - weight_hat
+    for x_t in x_transformed_list:
+        for j in range(blocks):
+            ch_s = j * _HIF4_BLOCK_SIZE
+            ch_e = ch_s + _HIF4_BLOCK_SIZE
+            dy_j = x_t[:, ch_s:ch_e].mm(dw[:, ch_s:ch_e].t())
+            block_output_error[j] += float(dy_j.square().sum())
+
+    n_top = min(int(_WEIGHT_E2E_REFINE_TOP_K), blocks)
+    if n_top <= 0:
+        return weight_params
+
+    top_indices = torch.topk(
+        block_output_error, k=n_top, largest=True
+    ).indices
+
+    # Prepare weight data for fast re-quantization
+    w_grouped = weight_smooth.reshape(n_out, blocks, 8, 2, 4)
+    w_abs = w_grouped.abs()
+    w_sign = torch.sign(w_grouped)
+    max4 = w_abs.amax(dim=-1)      # [n_out, blocks, 8, 2]
+    max8 = max4.amax(dim=-1)        # [n_out, blocks, 8]
+
+    # For each top block, try E6M2 offsets and pick the one
+    # that minimizes the actual output MSE
+    offsets = _WEIGHT_E2E_REFINE_OFFSETS
+
+    for j_idx in range(int(top_indices.numel())):
+        j = int(top_indices[j_idx])
+        ch_s = j * _HIF4_BLOCK_SIZE
+        ch_e = ch_s + _HIF4_BLOCK_SIZE
+
+        # Current block scale_factor values
+        cur_scale_j = weight_params["scale_factor"][:, j].reshape(n_out)
+        cur_codes_j = _e6m2_encode_nearest(cur_scale_j)
+
+        best_offset_for_block = 0
+        best_mse_for_block = base_mse
+        best_w_hat_block = None
+
+        for offset in offsets:
+            trial_codes = (cur_codes_j + offset).clamp(1, 254).to(torch.int64)
+            trial_scale = _e6m2_decode(trial_codes)  # [n_out]
+
+            # Re-compute hierarchy for this block with the trial scale
+            e2 = max8[:, j] >= (4.0 * trial_scale.unsqueeze(-1))
+            scale_lv2_j = 1.0 + e2.to(torch.float32)
+            e3 = max4[:, j] >= (
+                2.0 * trial_scale.unsqueeze(-1).unsqueeze(-1)
+                * scale_lv2_j.unsqueeze(-1)
+            )
+            scale_lv3_j = 1.0 + e3.to(torch.float32)
+            denominator = (
+                trial_scale.reshape(n_out, 1, 1, 1)
+                * scale_lv2_j.reshape(n_out, 8, 1, 1)
+                * scale_lv3_j.reshape(n_out, 8, 2, 1)
+            )
+            mantissa_j = torch.round(w_abs[:, j] * (4.0 / denominator)).clamp_(
+                0.0, 7.0
+            ) * 0.25
+
+            # Reconstruct the block's quantized weight
+            w_hat_block = (
+                w_sign[:, j] * mantissa_j
+                * scale_lv3_j.unsqueeze(-1)
+                * scale_lv2_j.unsqueeze(-1).unsqueeze(-1)
+                * trial_scale.reshape(n_out, 1, 1, 1)
+            ).reshape(n_out, _HIF4_BLOCK_SIZE)
+
+            # Compute the change in output error
+            dw_old_j = dw[:, ch_s:ch_e]
+            delta_dw = (weight_smooth[:, ch_s:ch_e] - w_hat_block) - dw_old_j
+
+            # New residual for each sample
+            new_res_sq = 0.0
+            for si, x_t in enumerate(x_transformed_list):
+                delta_y = x_t[:, ch_s:ch_e].mm(delta_dw.t())
+                r_new = residuals[si] - delta_y
+                new_res_sq += float(r_new.square().sum())
+
+            trial_mse = new_res_sq / total_ref_sq
+            if trial_mse < best_mse_for_block * (1.0 - _WEIGHT_E2E_REFINE_MIN_IMPROVEMENT):
+                best_mse_for_block = trial_mse
+                best_offset_for_block = offset
+                best_w_hat_block = w_hat_block
+
+        # Apply the best offset if it improved the output MSE
+        if best_offset_for_block != 0 and best_w_hat_block is not None:
+            final_codes = (cur_codes_j + best_offset_for_block).clamp(
+                1, 254
+            ).to(torch.int16)
+            final_scale = _e6m2_decode(final_codes.to(torch.int64))
+
+            # Recompute hierarchy with the final scale
+            e2 = max8[:, j] >= (4.0 * final_scale.unsqueeze(-1))
+            scale_lv2_j = 1.0 + e2.to(torch.float32)
+            e3 = max4[:, j] >= (
+                2.0 * final_scale.unsqueeze(-1).unsqueeze(-1)
+                * scale_lv2_j.unsqueeze(-1)
+            )
+            scale_lv3_j = 1.0 + e3.to(torch.float32)
+            denominator = (
+                final_scale.reshape(n_out, 1, 1, 1)
+                * scale_lv2_j.reshape(n_out, 8, 1, 1)
+                * scale_lv3_j.reshape(n_out, 8, 2, 1)
+            )
+            mantissa_j = torch.round(w_abs[:, j] * (4.0 / denominator)).clamp_(
+                0.0, 7.0
+            ) * 0.25
+            sign_j = w_sign[:, j]
+            sign_j = torch.where(
+                mantissa_j == 0.0, torch.zeros_like(sign_j), sign_j
+            )
+
+            # Update weight_params in-place
+            weight_params["scale_factor"] = weight_params["scale_factor"].clone()
+            weight_params["scale_lv2"] = weight_params["scale_lv2"].clone()
+            weight_params["scale_lv3"] = weight_params["scale_lv3"].clone()
+            weight_params["sign"] = weight_params["sign"].clone()
+            weight_params["mant"] = weight_params["mant"].clone()
+
+            weight_params["scale_factor"][:, j] = final_scale.reshape(n_out, 1, 1, 1)
+            weight_params["scale_lv2"][:, j] = scale_lv2_j.reshape(n_out, 8, 1, 1)
+            weight_params["scale_lv3"][:, j] = scale_lv3_j.reshape(n_out, 8, 2, 1)
+            weight_params["sign"][:, j] = sign_j.reshape(n_out, 8, 2, 4)
+            weight_params["mant"][:, j] = mantissa_j.reshape(n_out, 8, 2, 4)
+
+            # Update dw and residuals for subsequent blocks
+            dw_old_j = dw[:, ch_s:ch_e].clone()
+            dw[:, ch_s:ch_e] = weight_smooth[:, ch_s:ch_e] - best_w_hat_block
+            delta_dw = dw[:, ch_s:ch_e] - dw_old_j
+            for si, x_t in enumerate(x_transformed_list):
+                delta_y = x_t[:, ch_s:ch_e].mm(delta_dw.t())
+                residuals[si] = residuals[si] - delta_y
+
+            # Update base MSE
+            total_res_sq = sum(float(r.square().sum()) for r in residuals)
+            base_mse = total_res_sq / total_ref_sq
+
+    return weight_params
+
+
+# ===========================================================================
+# GPTQ weight quantization
+# ===========================================================================
+
+def _gptq_quantize_weight(
+    weight_smooth: torch.Tensor,
+    gram: torch.Tensor,
+    importance: torch.Tensor | None,
+    group_gram: torch.Tensor | None,
+    search_offsets: tuple[int, ...],
+    error_threshold: float,
+    accept_margin: float,
+    max_refine_ratio: float,
+    max_refine_blocks: int | None,
+    full_sweep_top_k: int,
+    regularization: float | None = None,
+) -> dict[str, torch.Tensor]:
+    """GPTQ-style weight quantization with block-wise Hessian error compensation.
+
+    Processes 64-element blocks sequentially.  After quantizing each block,
+    the remaining unquantized columns are updated using the GPTQ formula:
+
+        W[:, rest] -= δ_batch @ solve(H_inv_batch, H_inv_cross)
+
+    where δ_batch = W[:, batch] - Ŵ[:, batch] is the quantization error,
+    H_inv = (X^TX + reg·I)^{-1}, and batch/rest index the current/later blocks.
+    """
+    out_features, in_features = map(int, weight_smooth.shape)
+    block_size = _WEIGHT_GPTQ_BLOCK_SIZE
+    num_blocks = in_features // block_size
+
+    if num_blocks < 2 or in_features < _WEIGHT_GPTQ_MIN_FEATURES:
+        return _dense_to_hif4(
+            weight_smooth,
+            importance=importance,
+            group_gram=group_gram,
+            search_offsets=search_offsets,
+            error_threshold=error_threshold,
+            accept_margin=accept_margin,
+            max_refine_ratio=max_refine_ratio,
+            max_refine_blocks=max_refine_blocks,
+            full_sweep_top_k=full_sweep_top_k,
+        )
+
+    # Compute H_inv from the full activation Gram matrix
+    H = gram.clone()
+    reg = regularization if regularization is not None else _WEIGHT_GPTQ_REGULARIZATION
+    H.diagonal().add_(reg * float(H.diagonal().mean()))
+    try:
+        L = torch.linalg.cholesky(H)
+        H_inv = torch.cholesky_inverse(L)
+    except RuntimeError:
+        H.diagonal().add_(reg * float(H.diagonal().mean()) * 10.0)
+        try:
+            L = torch.linalg.cholesky(H)
+            H_inv = torch.cholesky_inverse(L)
+        except RuntimeError:
+            return _dense_to_hif4(
+                weight_smooth,
+                importance=importance,
+                group_gram=group_gram,
+                search_offsets=search_offsets,
+                error_threshold=error_threshold,
+                accept_margin=accept_margin,
+                max_refine_ratio=max_refine_ratio,
+                max_refine_blocks=max_refine_blocks,
+                full_sweep_top_k=full_sweep_top_k,
+            )
+
+    W = weight_smooth.clone()
+    all_scale_factor = []
+    all_scale_lv2 = []
+    all_scale_lv3 = []
+    all_sign = []
+    all_mant = []
+
+    for b in range(num_blocks):
+        start = b * block_size
+        end = start + block_size
+
+        if group_gram is not None:
+            bg = group_gram[:, b:b+1]
+        else:
+            bg = None
+
+        block_result = _dense_to_hif4(
+            W[:, start:end],
+            importance=(
+                importance[start:end] if importance is not None else None
+            ),
+            group_gram=bg,
+            search_offsets=search_offsets,
+            error_threshold=error_threshold,
+            accept_margin=accept_margin,
+            max_refine_ratio=max_refine_ratio,
+            max_refine_blocks=max_refine_blocks,
+            full_sweep_top_k=full_sweep_top_k,
+        )
+
+        all_scale_factor.append(block_result["scale_factor"])
+        all_scale_lv2.append(block_result["scale_lv2"])
+        all_scale_lv3.append(block_result["scale_lv3"])
+        all_sign.append(block_result["sign"])
+        all_mant.append(block_result["mant"])
+
+        # GPTQ error compensation: update remaining columns
+        if b < num_blocks - 1:
+            W_hat_block = _dequantize_hif4(block_result).to(torch.float32)
+            delta = W[:, start:end] - W_hat_block
+
+            if float(delta.square().sum()) < _EPS:
+                continue
+
+            rest_start = end
+            H_inv_bb = H_inv[start:end, start:end]
+            H_inv_bc = H_inv[start:end, rest_start:]
+
+            try:
+                update_coeffs = torch.linalg.solve(
+                    H_inv_bb, H_inv_bc
+                )
+                W[:, rest_start:] -= delta @ update_coeffs
+            except RuntimeError:
+                pass
+
+    scale_factor = torch.cat(all_scale_factor, dim=1)
+    scale_lv2 = torch.cat(all_scale_lv2, dim=1)
+    scale_lv3 = torch.cat(all_scale_lv3, dim=1)
+    sign = torch.cat(all_sign, dim=1)
+    mant = torch.cat(all_mant, dim=1)
+
+    sign = torch.where(mant == 0.0, torch.zeros_like(sign), sign)
+
+    return {
+        "scale_factor": scale_factor,
+        "scale_lv2": scale_lv2,
+        "scale_lv3": scale_lv3,
+        "sign": sign,
+        "mant": mant,
+    }
+
+
+# ===========================================================================
+# Public API: Weight calibration + quantization
+# ===========================================================================
+
+@torch.no_grad()
+def hif4_calibration_and_quantize_weight(
+    weight_quant: torch.Tensor,
+    weight_scale: torch.Tensor,
+    calib_activation_list: list,
+) -> dict[str, Any]:
+    """Calibrate SmoothQuant state and quantize a static Linear weight."""
+
+    if not isinstance(calib_activation_list, list) or not calib_activation_list:
+        raise ValueError("calib_activation_list must be a non-empty list")
+
+    weight = _dequantize_nvfp4_float32(weight_quant, weight_scale)
+    if weight.ndim != 2:
+        raise ValueError("weight must be a 2D tensor [out_features, in_features]")
+    out_features, in_features = map(int, weight.shape)
+    if in_features % _HIF4_BLOCK_SIZE != 0:
+        raise ValueError("in_features must be divisible by 64")
+
+    sum_square = torch.zeros(in_features, dtype=torch.float32, device=weight.device)
+    activation_amax = torch.zeros_like(sum_square)
+    token_count = 0
+    activation_samples: list[torch.Tensor] = []
+    activation_e2e_samples: list[torch.Tensor] = []
+    use_quadratic = (
+        _WEIGHT_QUADRATIC
+        and in_features <= _WEIGHT_QUADRATIC_MAX_FEATURES
+    )
+    if use_quadratic:
+        cov_sum = torch.zeros(
+            in_features, in_features, dtype=torch.float32, device=weight.device
+        )
+
+    for pair in calib_activation_list:
+        if not isinstance(pair, (tuple, list)) or len(pair) != 2:
+            raise ValueError("Each calibration activation must be a (quant, scale) pair")
+        activation = _dequantize_nvfp4_float32(pair[0], pair[1])
+        if activation.ndim != 2 or int(activation.shape[1]) != in_features:
+            raise ValueError("Calibration activation shape is incompatible with weight")
+        stats_sample = _sample_rows(activation, _LINEAR_STATS_TOKENS)
+        sum_square += stats_sample.square().sum(dim=0)
+        if use_quadratic:
+            cov_sum += stats_sample.t().mm(stats_sample)
+        activation_amax = torch.maximum(
+            activation_amax, stats_sample.abs().amax(dim=0)
+        )
+        token_count += int(stats_sample.shape[0])
+        activation_samples.append(
+            _sample_rows(activation, _LINEAR_EVAL_TOKENS).clone()
+        )
+        activation_e2e_samples.append(
+            _sample_rows(activation, _LINEAR_E2E_EVAL_TOKENS).clone()
+        )
+
+    activation_second_moment = sum_square / float(max(token_count, 1))
+    weight_amax = weight.abs().amax(dim=0)
+    activation_rms = torch.sqrt(activation_second_moment.clamp_min(_EPS))
+    weight_rms = torch.sqrt((weight * weight).mean(dim=0).clamp_min(_EPS))
+
+    identity_d = torch.ones(
+        in_features, dtype=torch.float32, device=weight.device
+    )
+    identity_perm = _identity_permutation(in_features, weight.device)
+    smooth_candidates = [identity_d]
+    smooth_alphas = (
+        _WEIGHT_SMOOTH_ALPHAS_WIDE
+        if (
+            in_features >= _WIDE_LAYER_MIN_DIM
+            or out_features >= _WIDE_LAYER_MIN_DIM
+        )
+        else _WEIGHT_SMOOTH_ALPHAS
+    )
+    for alpha in smooth_alphas:
+        smooth_candidates.append(
+            _smooth_scale(activation_amax, weight_amax, alpha)
+        )
+        if _WEIGHT_SMOOTH_RMS:
+            smooth_candidates.append(
+                _smooth_scale(activation_rms, weight_rms, alpha)
+            )
+
+    weight_sample = _sample_rows(weight, _LINEAR_WEIGHT_EVAL_ROWS)
+    weight_e2e_sample = _sample_rows(weight, _LINEAR_E2E_WEIGHT_EVAL_ROWS)
+
+    def _eval_smooth_candidate(d, perm):
+        """Evaluate a smooth/perm candidate using the configured metric mode."""
+        if _LINEAR_SMOOTH_END_TO_END is True:
+            return _linear_output_candidate_metrics(
+                weight_e2e_sample, activation_e2e_samples, d, perm,
+            )
+        elif _LINEAR_SMOOTH_END_TO_END == "hybrid":
+            return _linear_smooth_hybrid_metrics(
+                weight_sample, weight_e2e_sample,
+                activation_second_moment,
+                activation_samples, activation_e2e_samples, d, perm,
+            )
+        else:
+            return _linear_candidate_metrics(
+                weight_sample, activation_second_moment,
+                activation_samples, d, perm,
+            )
+
+    baseline_metrics = _eval_smooth_candidate(identity_d, identity_perm)
+    best_metrics = baseline_metrics
+    best_d = identity_d
+    best_perm = identity_perm
+    best_block_smooth_size = 0
+    best_block_smooth_seed = 0
+
+    for candidate_index, candidate_d in enumerate(smooth_candidates):
+        candidate_permutations = [identity_perm]
+        sorted_perm = _hierarchy_aware_permutation(
+            activation_amax / candidate_d,
+            weight_amax * candidate_d,
+        )
+        if not torch.equal(sorted_perm, identity_perm):
+            candidate_permutations.append(sorted_perm)
+
+        for candidate_perm in candidate_permutations:
+            if candidate_index == 0 and torch.equal(candidate_perm, identity_perm):
+                continue
+            metrics = _eval_smooth_candidate(candidate_d, candidate_perm)
+            uses_reordering = not torch.equal(candidate_perm, identity_perm)
+            if (
+                metrics[0] < best_metrics[0]
+                and _candidate_is_safe(
+                    metrics,
+                    baseline_metrics,
+                    min_mean_improvement=0.02 if uses_reordering else 0.01,
+                    worst_tolerance=0.005 if uses_reordering else 0.02,
+                )
+            ):
+                best_metrics = metrics
+                best_d = candidate_d
+                best_perm = candidate_perm
+
+    if _PERMUTATION_BASES:
+        basis_ranges = {
+            "w_amax": weight_amax * best_d,
+            "x_amax": activation_amax / best_d,
+            "w_rms": weight_rms * best_d,
+            "x_rms": activation_rms / best_d,
+        }
+        seen = {tuple(best_perm.tolist())}
+        for bname, b_range in basis_ranges.items():
+            b_perm = _range_permutation(b_range)
+            if torch.equal(b_perm, identity_perm):
+                continue
+            if tuple(b_perm.tolist()) in seen:
+                continue
+            seen.add(tuple(b_perm.tolist()))
+            b_metrics = _eval_smooth_candidate(best_d, b_perm)
+            if (
+                b_metrics[0] < best_metrics[0]
+                and _candidate_is_safe(
+                    b_metrics,
+                    baseline_metrics,
+                    min_mean_improvement=0.02,
+                    worst_tolerance=0.005,
+                )
+            ):
+                best_metrics = b_metrics
+                best_perm = b_perm
+
+    if _BLOCK_SWAP_ROUNDS > 0:
+        swap_perm = _block_swap_optimize(
+            weight_sample,
+            activation_second_moment,
+            best_d,
+            best_perm,
+            0,
+            0,
+        )
+        if not torch.equal(swap_perm, best_perm):
+            swap_metrics = _linear_candidate_metrics(
+                weight_sample,
+                activation_second_moment,
+                activation_samples,
+                best_d,
+                swap_perm,
+            )
+            if (
+                swap_metrics[0] < best_metrics[0]
+                and _candidate_is_safe(
+                    swap_metrics,
+                    baseline_metrics,
+                    min_mean_improvement=0.02,
+                    worst_tolerance=0.005,
+                )
+            ):
+                best_metrics = swap_metrics
+                best_perm = swap_perm
+
+    if not torch.equal(best_perm, identity_perm):
+        for candidate_d in smooth_candidates:
+            if torch.equal(candidate_d, best_d):
+                continue
+            candidate_perms = [best_perm]
+            new_sorted = _hierarchy_aware_permutation(
+                activation_amax / candidate_d,
+                weight_amax * candidate_d,
+            )
+            if not torch.equal(new_sorted, best_perm) and not torch.equal(new_sorted, identity_perm):
+                candidate_perms.append(new_sorted)
+            for cp in candidate_perms:
+                metrics = _eval_smooth_candidate(candidate_d, cp)
+                if (
+                    metrics[0] < best_metrics[0]
+                    and _candidate_is_safe(
+                        metrics,
+                        baseline_metrics,
+                        min_mean_improvement=0.01,
+                        worst_tolerance=0.01,
+                    )
+                ):
+                    best_metrics = metrics
+                    best_d = candidate_d
+                    best_perm = cp
+
+    force_block_size = int(_BLOCK_SMOOTH_FORCE_SIZE)
+    candidate_block_sizes = (
+        (force_block_size,) if force_block_size else _BLOCK_SMOOTH_SIZES
+    )
+    forced_choice: tuple[tuple[float, tuple[float, ...]], int, int] | None = None
+    block_baseline_metrics = _linear_output_candidate_metrics(
+        weight_sample,
+        activation_samples,
+        best_d,
+        best_perm,
+    )
+    block_best_metrics = block_baseline_metrics
+    if candidate_block_sizes:
+        for candidate_size in candidate_block_sizes:
+            size = int(candidate_size)
+            if size <= 0 or in_features % size != 0:
+                continue
+            for candidate_seed in _BLOCK_SMOOTH_SEEDS:
+                seed = int(candidate_seed)
+                block_metrics = _linear_output_candidate_metrics(
+                    weight_sample,
+                    activation_samples,
+                    best_d,
+                    best_perm,
+                    size,
+                    seed,
+                )
+                if force_block_size:
+                    if (
+                        forced_choice is None
+                        or block_metrics[0] < forced_choice[0][0]
+                    ):
+                        forced_choice = (block_metrics, size, seed)
+                    continue
+                if (
+                    block_metrics[0] < block_best_metrics[0]
+                    and _candidate_is_safe(
+                        block_metrics,
+                        block_baseline_metrics,
+                        min_mean_improvement=_BLOCK_SMOOTH_MIN_IMPROVEMENT,
+                        worst_tolerance=_BLOCK_SMOOTH_WORST_TOLERANCE,
+                    )
+                ):
+                    block_best_metrics = block_metrics
+                    best_block_smooth_size = size
+                    best_block_smooth_seed = seed
+    if forced_choice is not None:
+        _, best_block_smooth_size, best_block_smooth_seed = forced_choice
+
+    if _LINEAR_SMOOTH_BLOCK_JOINT and in_features < _WIDE_LAYER_MIN_DIM and out_features < _WIDE_LAYER_MIN_DIM:
+        joint_best_score = _linear_output_candidate_metrics(
+            weight_sample, activation_samples,
+            best_d, best_perm,
+            best_block_smooth_size, best_block_smooth_seed,
+        )[0]
+        joint_best_d = best_d
+        joint_best_perm = best_perm
+        joint_best_bs = best_block_smooth_size
+        joint_best_bseed = best_block_smooth_seed
+        joint_improved = False
+
+        for candidate_d in smooth_candidates:
+            candidate_perms_j = [best_perm]
+            sorted_j = _hierarchy_aware_permutation(
+                activation_amax / candidate_d, weight_amax * candidate_d,
+            )
+            if not torch.equal(sorted_j, best_perm):
+                candidate_perms_j.append(sorted_j)
+
+            for cp in candidate_perms_j:
+                e2e_score = _linear_output_candidate_metrics(
+                    weight_sample, activation_samples,
+                    candidate_d, cp, 0, 0,
+                )[0]
+                if e2e_score < joint_best_score:
+                    joint_best_score = e2e_score
+                    joint_best_d = candidate_d
+                    joint_best_perm = cp
+                    joint_best_bs = 0
+                    joint_best_bseed = 0
+                    joint_improved = True
+
+                for bs in candidate_block_sizes:
+                    size_j = int(bs)
+                    if size_j <= 0 or in_features % size_j != 0:
+                        continue
+                    for bseed in _BLOCK_SMOOTH_SEEDS:
+                        seed_j = int(bseed)
+                        if (
+                            torch.equal(candidate_d, best_d)
+                            and torch.equal(cp, best_perm)
+                            and size_j == best_block_smooth_size
+                            and seed_j == best_block_smooth_seed
+                        ):
+                            continue
+                        e2e_score = _linear_output_candidate_metrics(
+                            weight_sample, activation_samples,
+                            candidate_d, cp, size_j, seed_j,
+                        )[0]
+                        if e2e_score < joint_best_score:
+                            joint_best_score = e2e_score
+                            joint_best_d = candidate_d
+                            joint_best_perm = cp
+                            joint_best_bs = size_j
+                            joint_best_bseed = seed_j
+                            joint_improved = True
+
+        if joint_improved:
+            best_d = joint_best_d
+            best_perm = joint_best_perm
+            best_block_smooth_size = joint_best_bs
+            best_block_smooth_seed = joint_best_bseed
+
+    if _LINEAR_E2E_VERIFY and not (
+        torch.equal(best_d, identity_d)
+        and torch.equal(best_perm, identity_perm)
+        and best_block_smooth_size == 0
+    ):
+        selected_e2e = _linear_output_candidate_metrics(
+            weight_sample,
+            activation_samples,
+            best_d,
+            best_perm,
+            best_block_smooth_size,
+            best_block_smooth_seed,
+        )
+        identity_e2e = _linear_output_candidate_metrics(
+            weight_sample,
+            activation_samples,
+            identity_d,
+            identity_perm,
+            0,
+            0,
+        )
+        if selected_e2e[0] >= identity_e2e[0]:
+            best_d = identity_d
+            best_perm = identity_perm
+            best_block_smooth_size = 0
+            best_block_smooth_seed = 0
+
+    weight_smooth = _linear_pair_transform(
+        weight,
+        best_d,
+        best_perm,
+        best_block_smooth_size,
+        best_block_smooth_seed,
+        weight_side=True,
+    )
+    h_x_smooth = _transformed_second_moment(
+        activation_second_moment,
+        best_d,
+        best_perm,
+        best_block_smooth_size,
+    )
+    weight_group_gram = None
+    gram_full = None
+    if use_quadratic:
+        gram_full = _transformed_covariance(
+            cov_sum / float(max(token_count, 1)),
+            best_d,
+            best_perm,
+            best_block_smooth_size,
+            best_block_smooth_seed,
+        )
+        blocks = in_features // _HIF4_BLOCK_SIZE
+        weight_group_gram = _flat_group_gram(gram_full, in_features).reshape(
+            blocks, 8, 2, 4, 4
+        ).unsqueeze(0).expand(
+            int(weight.shape[0]), blocks, 8, 2, 4, 4
+        )
+    refine_ratio = (
+        _WEIGHT_REFINE_MAX_RATIO_SMALL
+        if int(weight.numel()) <= 4_194_304
+        else _WEIGHT_REFINE_MAX_RATIO_LARGE
+    )
+    if _WEIGHT_GPTQ and gram_full is not None:
+        gptq_reg = (
+            _WEIGHT_GPTQ_REGULARIZATION_WIDE
+            if in_features >= _WIDE_LAYER_MIN_DIM
+            else _WEIGHT_GPTQ_REGULARIZATION
+        )
+        weight_params = _gptq_quantize_weight(
+            weight_smooth,
+            gram_full,
+            importance=h_x_smooth,
+            group_gram=weight_group_gram,
+            search_offsets=_WEIGHT_OFFSETS,
+            error_threshold=_WEIGHT_REFINE_ERROR_THRESHOLD,
+            accept_margin=_WEIGHT_REFINE_ACCEPT_MARGIN,
+            max_refine_ratio=refine_ratio,
+            max_refine_blocks=_WEIGHT_REFINE_MAX_BLOCKS,
+            full_sweep_top_k=_WEIGHT_FULL_SWEEP_TOP_K,
+            regularization=gptq_reg,
+        )
+    else:
+        weight_params = _dense_to_hif4(
+            weight_smooth,
+            importance=h_x_smooth,
+            group_gram=weight_group_gram,
+            search_offsets=_WEIGHT_OFFSETS,
+            error_threshold=_WEIGHT_REFINE_ERROR_THRESHOLD,
+            accept_margin=_WEIGHT_REFINE_ACCEPT_MARGIN,
+            max_refine_ratio=refine_ratio,
+            max_refine_blocks=_WEIGHT_REFINE_MAX_BLOCKS,
+            full_sweep_top_k=_WEIGHT_FULL_SWEEP_TOP_K,
+        )
+
+    if _WEIGHT_E2E_REFINE and len(activation_samples) > 0:
+        weight_params = _weight_e2e_refine(
+            weight_smooth, weight_params,
+            activation_samples,
+            best_d, best_perm, identity_d, identity_perm,
+            best_block_smooth_size, best_block_smooth_seed,
+        )
+
+    weight_hat = _dequantize_hif4(weight_params)
+    activation_importance = _normalize_importance(
+        weight_hat.square().sum(dim=0), in_features
+    )
+    if activation_importance is None:
+        activation_importance = torch.ones_like(best_d)
+
+    permutation_state = None
+    if not torch.equal(best_perm, identity_perm):
+        permutation_state = best_perm.detach().to(
+            device="cpu", dtype=torch.int64
+        ).contiguous()
+    smooth_inv_state = None
+    if not torch.equal(best_d, identity_d):
+        smooth_inv_state = _cpu_state_tensor(best_d.reciprocal())
+
+    if _DATA_DRIVEN_RATIO:
+        loss_parts = []
+        for sample in activation_samples:
+            transformed = sample.to(dtype=torch.float32)
+            if smooth_inv_state is not None:
+                transformed = transformed * smooth_inv_state.reshape(1, -1)
+            if permutation_state is not None:
+                transformed = transformed.index_select(-1, permutation_state)
+            if best_block_smooth_size != 0:
+                transformed = _block_hadamard_transform(
+                    transformed,
+                    best_block_smooth_size,
+                    best_block_smooth_seed,
+                )
+            loss_parts.append(
+                _standard_block_losses(transformed, activation_importance)
+            )
+        activation_ratio = _loss_capture_ratio(
+            torch.cat(loss_parts),
+            target=_RATIO_CAPTURE_TARGET,
+            ratio_min=_RATIO_MIN,
+        )
+    else:
+        activation_ratio = _ACTIVATION_REFINE_MAX_RATIO
+
+    activation_gram_state = None
+    if (
+        _ACTIVATION_QUADRATIC
+        and in_features <= _ACTIVATION_QUADRATIC_MAX_FEATURES
+    ):
+        gram = weight_hat.to(torch.float32).t().mm(weight_hat.to(torch.float32))
+        activation_gram_state = _cpu_state_tensor(
+            _flat_group_gram(gram, in_features)
+        )
+
+    activation_h_inv_state = None
+    best_offsets = _DYNAMIC_OFFSETS
+    if _ACTIVATION_GPTQ and in_features >= _WEIGHT_GPTQ_MIN_FEATURES:
+        H_act_base = weight_hat.to(torch.float32).t().mm(weight_hat.to(torch.float32))
+        H_act_diag_mean = float(H_act_base.diagonal().mean())
+
+        if _ADAPTIVE_ACT_GPTQ_REG and len(activation_samples) > 0:
+            reg_candidates = _ADAPTIVE_ACT_GPTQ_REG_CANDIDATES
+            best_reg_loss = float("inf")
+            best_reg_h_inv = None
+            best_reg_offsets = _DYNAMIC_OFFSETS
+            for cand_reg in reg_candidates:
+                H_act = H_act_base.clone()
+                H_act.diagonal().add_(cand_reg * H_act_diag_mean)
+                try:
+                    L_act = torch.linalg.cholesky(H_act)
+                    H_inv_act = torch.cholesky_inverse(L_act)
+                except RuntimeError:
+                    continue
+                sample = activation_samples[0]
+                transformed = sample.to(dtype=torch.float32)
+                if smooth_inv_state is not None:
+                    transformed = transformed * smooth_inv_state.reshape(1, -1)
+                if permutation_state is not None:
+                    transformed = transformed.index_select(-1, permutation_state)
+                if best_block_smooth_size != 0:
+                    transformed = _block_hadamard_transform(
+                        transformed,
+                        best_block_smooth_size,
+                        best_block_smooth_seed,
+                    )
+                gram_dev = (
+                    activation_gram_state.reshape(
+                        in_features // _HIF4_BLOCK_SIZE,
+                        8, 2, 4, 4
+                    ).unsqueeze(0).expand(
+                        int(transformed.shape[0]),
+                        in_features // _HIF4_BLOCK_SIZE,
+                        8, 2, 4, 4,
+                    ).to(device=transformed.device, dtype=torch.float32)
+                    if activation_gram_state is not None
+                    else None
+                )
+                q_result = _activation_gptq_quantize(
+                    transformed,
+                    H_inv_act.to(
+                        device=transformed.device, dtype=torch.float32
+                    ),
+                    importance=activation_importance,
+                    group_gram=gram_dev,
+                    search_offsets=_DYNAMIC_OFFSETS,
+                    error_threshold=float(_ACTIVATION_REFINE_ERROR_THRESHOLD),
+                    accept_margin=float(_ACTIVATION_REFINE_ACCEPT_MARGIN),
+                    max_refine_ratio=float(activation_ratio),
+                    max_refine_blocks=int(_ACTIVATION_REFINE_MAX_BLOCKS),
+                )
+                recon = _dequantize_hif4(q_result).to(torch.float32)
+                delta = transformed - recon
+                if activation_importance is not None:
+                    w = activation_importance.to(device=delta.device)
+                    loss = float((delta.square() * w).sum())
+                else:
+                    loss = float(delta.square().sum())
+                if loss < best_reg_loss:
+                    best_reg_loss = loss
+                    best_reg_h_inv = H_inv_act
+            if best_reg_h_inv is not None:
+                activation_h_inv_state = _cpu_state_tensor(best_reg_h_inv)
+            else:
+                reg_act = (
+                    _ACTIVATION_GPTQ_REGULARIZATION_WIDE
+                    if in_features >= _WIDE_LAYER_MIN_DIM
+                    else _ACTIVATION_GPTQ_REGULARIZATION
+                )
+                H_act = H_act_base.clone()
+                H_act.diagonal().add_(reg_act * H_act_diag_mean)
+                try:
+                    L_act = torch.linalg.cholesky(H_act)
+                    H_inv_act = torch.cholesky_inverse(L_act)
+                    activation_h_inv_state = _cpu_state_tensor(H_inv_act)
+                except RuntimeError:
+                    pass
+        else:
+            reg_act = (
+                _ACTIVATION_GPTQ_REGULARIZATION_WIDE
+                if in_features >= _WIDE_LAYER_MIN_DIM
+                else _ACTIVATION_GPTQ_REGULARIZATION
+            )
+            H_act = H_act_base.clone()
+            H_act.diagonal().add_(reg_act * H_act_diag_mean)
+            try:
+                L_act = torch.linalg.cholesky(H_act)
+                H_inv_act = torch.cholesky_inverse(L_act)
+                activation_h_inv_state = _cpu_state_tensor(H_inv_act)
+            except RuntimeError:
+                pass
+
+    if _ADAPTIVE_OFFSETS and len(activation_samples) > 0:
+        best_offset_loss = float("inf")
+        for cand_offsets in _ADAPTIVE_OFFSET_CANDIDATES:
+            total_loss = 0.0
+            cand_offsets_t = torch.tensor(
+                cand_offsets, dtype=torch.int8, device="cpu"
+            )
+            for sample in activation_samples:
+                transformed = sample.to(dtype=torch.float32)
+                if smooth_inv_state is not None:
+                    transformed = transformed * smooth_inv_state.reshape(1, -1)
+                if permutation_state is not None:
+                    transformed = transformed.index_select(-1, permutation_state)
+                if best_block_smooth_size != 0:
+                    transformed = _block_hadamard_transform(
+                        transformed,
+                        best_block_smooth_size,
+                        best_block_smooth_seed,
+                    )
+                if activation_h_inv_state is not None:
+                    q_result = _activation_gptq_quantize(
+                        transformed,
+                        activation_h_inv_state.to(
+                            device=transformed.device, dtype=torch.float32
+                        ),
+                        importance=activation_importance,
+                        group_gram=(
+                            activation_gram_state.reshape(
+                                in_features // _HIF4_BLOCK_SIZE,
+                                8, 2, 4, 4
+                            ).unsqueeze(0).expand(
+                                int(transformed.shape[0]),
+                                in_features // _HIF4_BLOCK_SIZE,
+                                8, 2, 4, 4,
+                            ).to(device=transformed.device, dtype=torch.float32)
+                            if activation_gram_state is not None
+                            else None
+                        ),
+                        search_offsets=cand_offsets,
+                        error_threshold=float(_ACTIVATION_REFINE_ERROR_THRESHOLD),
+                        accept_margin=float(_ACTIVATION_REFINE_ACCEPT_MARGIN),
+                        max_refine_ratio=float(activation_ratio),
+                        max_refine_blocks=int(_ACTIVATION_REFINE_MAX_BLOCKS),
+                    )
+                else:
+                    q_result = _dense_to_hif4(
+                        transformed,
+                        importance=activation_importance,
+                        group_gram=(
+                            activation_gram_state.reshape(
+                                in_features // _HIF4_BLOCK_SIZE,
+                                8, 2, 4, 4
+                            ).unsqueeze(0).expand(
+                                int(transformed.shape[0]),
+                                in_features // _HIF4_BLOCK_SIZE,
+                                8, 2, 4, 4,
+                            ).to(device=transformed.device, dtype=torch.float32)
+                            if activation_gram_state is not None
+                            else None
+                        ),
+                        search_offsets=cand_offsets,
+                        error_threshold=float(_ACTIVATION_REFINE_ERROR_THRESHOLD),
+                        accept_margin=float(_ACTIVATION_REFINE_ACCEPT_MARGIN),
+                        max_refine_ratio=float(activation_ratio),
+                        max_refine_blocks=int(_ACTIVATION_REFINE_MAX_BLOCKS),
+                    )
+                recon = _dequantize_hif4(q_result).to(torch.float32)
+                delta = transformed - recon
+                if activation_importance is not None:
+                    w = activation_importance.to(device=delta.device)
+                    total_loss += float((delta.square() * w).sum())
+                else:
+                    total_loss += float(delta.square().sum())
+            if total_loss < best_offset_loss:
+                best_offset_loss = total_loss
+                best_offsets = cand_offsets
+
+    activation_state = {
+        "smooth_inv": smooth_inv_state,
+        "permutation": permutation_state,
+        "block_smooth_size": int(best_block_smooth_size),
+        "block_smooth_seed": int(best_block_smooth_seed),
+        "importance": _cpu_state_tensor(activation_importance),
+        "gram": activation_gram_state,
+        "h_inv": activation_h_inv_state,
+        "offsets": torch.tensor(best_offsets, dtype=torch.int8, device="cpu"),
+        "error_threshold": _ACTIVATION_REFINE_ERROR_THRESHOLD,
+        "accept_margin": _ACTIVATION_REFINE_ACCEPT_MARGIN,
+        "max_refine_ratio": float(activation_ratio),
+        "max_refine_blocks": _ACTIVATION_REFINE_MAX_BLOCKS,
+        "in_features": int(in_features),
+        "version": 3,
+    }
+    return {
+        "weight_params": weight_params,
+        "activation_state": activation_state,
+    }
+
+
+# ===========================================================================
+# Public API: Dynamic activation quantization
+# ===========================================================================
+
+def hif4_dynamic_quantize_activation(
+    activation_quant: torch.Tensor,
+    activation_scale: torch.Tensor,
+    activation_state: Any,
+) -> dict[str, torch.Tensor]:
+    if not isinstance(activation_state, dict):
+        raise TypeError("activation_state must be a dict")
+    channels = int(activation_quant.shape[-1])
+    if channels != int(activation_state.get("in_features", -1)):
+        raise ValueError("Activation hidden size does not match calibration state")
+
+    h_inv = activation_state.get("h_inv")
+
+    dense = _dequantize_nvfp4_float32(activation_quant, activation_scale)
+    if activation_state.get("smooth_inv") is not None:
+        scale = _safe_positive_vector(
+            activation_state["smooth_inv"], channels
+        ).to(dense.device)
+        dense.mul_(scale.reshape(*([1] * (dense.ndim - 1)), channels))
+    permutation = activation_state.get("permutation")
+    if permutation is not None:
+        order = permutation.detach().to(
+            device=dense.device, dtype=torch.int64
+        ).reshape(-1)
+        if int(order.numel()) != channels:
+            raise ValueError("Permutation width does not match tensor width")
+        dense = dense.index_select(-1, order)
+    block_smooth_size = int(activation_state.get("block_smooth_size", 0))
+    block_smooth_seed = int(activation_state.get("block_smooth_seed", 0))
+    if block_smooth_size != 0:
+        dense = _block_hadamard_transform(
+            dense, block_smooth_size, block_smooth_seed
+        )
+
+    gram = None
+    gram_state = activation_state.get("gram")
+    if gram_state is not None:
+        gram = gram_state.detach().to(
+            device=dense.device, dtype=torch.float32
+        )
+        blocks = channels // _HIF4_BLOCK_SIZE
+        gram = gram.reshape(blocks, 8, 2, 4, 4).unsqueeze(0).expand(
+            int(dense.shape[0]), blocks, 8, 2, 4, 4
+        )
+
+    if h_inv is not None:
+        return _activation_gptq_quantize(
+            dense,
+            h_inv,
+            importance=activation_state["importance"],
+            group_gram=gram,
+            search_offsets=activation_state["offsets"],
+            error_threshold=float(activation_state["error_threshold"]),
+            accept_margin=float(activation_state["accept_margin"]),
+            max_refine_ratio=float(activation_state["max_refine_ratio"]),
+            max_refine_blocks=int(activation_state["max_refine_blocks"]),
+        )
+    else:
+        return _dense_to_hif4(
+            dense,
+            importance=activation_state["importance"],
+            group_gram=gram,
+            search_offsets=activation_state["offsets"],
+            error_threshold=float(activation_state["error_threshold"]),
+            accept_margin=float(activation_state["accept_margin"]),
+            max_refine_ratio=float(activation_state["max_refine_ratio"]),
+            max_refine_blocks=int(activation_state["max_refine_blocks"]),
+        )

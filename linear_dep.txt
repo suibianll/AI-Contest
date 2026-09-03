@@ -1,0 +1,1379 @@
+"""Shared constants and utility functions for HiF4 quantization.
+
+Contains all constants and shared utility functions that the Linear
+quantization pipeline depends on.  Extracted from solution.py.
+"""
+
+from __future__ import annotations
+
+import math
+from typing import Any, Iterable, Optional, Sequence, Union
+
+import torch
+
+
+# ===========================================================================
+# Constants
+# ===========================================================================
+
+_NVFP4_BLOCK_SIZE = 16
+_HIF4_BLOCK_SIZE = 64
+_E6M2_MIN = 2.0**-48
+_E6M2_MAX = 49152.0
+_HIF4_MAX_INNER = 7.0
+_BF16_ONE_SEVENTH = 0.142578125
+_EPS = 1.0e-12
+
+_LINEAR_STATS_TOKENS = 512
+_LINEAR_EVAL_TOKENS = 128
+_LINEAR_WEIGHT_EVAL_ROWS = 256
+_ATTN_STATS_TOKENS = 2048
+_ATTN_EVAL_TOKENS = 128
+
+# Tunable calibration/refinement knobs.  Values are deliberately
+# conservative so worst-case calibration and dynamic-quantization time stay
+# bounded on large models; the sweep harness overrides them to find a better
+# accuracy/runtime trade-off.
+_WEIGHT_SMOOTH_ALPHAS = (0.25, 0.50, 0.75)
+# 宽层（FFN 的 fc/proj，输入或输出 ≥ 2048）用更细的 alpha 网格：
+# 通道多、候选统计更稳，细网格实测 +fc 0.0012 / +proj 0.0044；
+# 窄层（q/k/v/o，768）细网格反而过拟合（-0.0003~-0.0021），保持 3 档。
+_WEIGHT_SMOOTH_ALPHAS_WIDE = (0.25, 0.50, 0.75)
+_WIDE_LAYER_MIN_DIM = 2048
+# Matrix SmoothQuant candidates.  After the diagonal scale and optional
+# permutation, apply the same orthogonal block transform to X and W.  In the
+# usual X @ W convention this is a block-diagonal S on X and S^{-1} on W;
+# orthogonality makes S^{-1}=S^T, so the row-major weight carrier can use the
+# same right transform.  Only the winning block size enters dynamic state.
+_BLOCK_SMOOTH_ALLOWED_SIZES = (4, 8, 16)
+_BLOCK_SMOOTH_SIZES = (4, 8)
+_BLOCK_SMOOTH_SEEDS = (0, 1)
+# Evaluation-only override used by the sweep harness.  Zero keeps the guarded
+# production behavior; 4/8/16 forces that size while still choosing its best
+# deterministic sign seed on calibration data.
+_BLOCK_SMOOTH_FORCE_SIZE = 0
+_BLOCK_SMOOTH_MIN_IMPROVEMENT = 0.005
+_BLOCK_SMOOTH_WORST_TOLERANCE = 0.005
+# End-to-end output MSE for smooth/permutation candidate evaluation.
+# Block Hadamard already uses end-to-end (_linear_output_candidate_metrics);
+# setting this True extends it to the smooth scale and permutation search as
+# well, at higher calibration cost but potentially much better accuracy.
+_LINEAR_SMOOTH_END_TO_END = "hybrid"
+_LINEAR_E2E_WEIGHT = 0.02
+_LINEAR_E2E_WEIGHT_EVAL_ROWS = 256
+_LINEAR_E2E_EVAL_TOKENS = 128
+# Joint smooth+block Hadamard search: after finding the best smooth d via
+# proxy and the best block Hadamard for that d via e2e, re-evaluate ALL smooth
+# candidates with ALL block Hadamard configs via e2e.  This catches cases where
+# the proxy-optimal smooth d doesn't pair well with block Hadamard, but a
+# different smooth d does.  Observed failure mode: _LINEAR_SMOOTH_END_TO_END
+# selected a smooth d that was e2e-optimal without block Hadamard but caused
+# proj regression (-0.026) when block Hadamard was subsequently applied.
+_LINEAR_SMOOTH_BLOCK_JOINT = True
+# After selecting the best smooth+perm+block_smooth by proxy metric, verify
+# against the actual e2e output MSE.  If the selected transform doesn't beat
+# identity, revert to identity.  This catches proxy-optimal transforms that
+# hurt the actual linear output (observed on o/fc layers in GPT-2).
+_LINEAR_E2E_VERIFY = False
+# Output-aware weight refinement: after standard per-block quantization,
+# re-evaluate the hardest blocks using the actual output MSE X@W^T.
+# This captures cross-block interactions that the Gram approximation misses.
+# The activation Gram used by _WEIGHT_QUADRATIC only has 4x4 block-diagonal
+# structure within each 64-channel group; the actual output MSE accounts for
+# all cross-channel and cross-block correlations.
+_WEIGHT_E2E_REFINE = False
+# Output-aware weight refinement: after standard per-block quantization,
+# re-evaluate the hardest blocks using the actual output MSE X@W^T.
+# This captures cross-block interactions that the Gram approximation misses.
+# The activation Gram used by _WEIGHT_QUADRATIC only has 4x4 block-diagonal
+# structure within each 64-channel group; the actual output MSE accounts for
+# all cross-channel and cross-block correlations.
+_WEIGHT_E2E_REFINE_TOP_K = 128  # top-K blocks by output error contribution
+_WEIGHT_E2E_REFINE_OFFSETS = (-3, -2, -1, 1, 2, 3, 4)
+_WEIGHT_E2E_REFINE_MIN_IMPROVEMENT = 0.01  # minimum relative MSE improvement
+# GPTQ weight quantization: process 64-element blocks sequentially with
+# Hessian-based error compensation.  After quantizing block b, update
+# the remaining unquantized columns using:
+#   W[:, rest] -= δ_b @ solve(H_inv[batch, batch], H_inv[batch, rest])
+# where δ_b = W[:, batch] - Ŵ[:, batch] is the quantization error and
+# H_inv = (X^TX + reg·I)^{-1}.  This captures inter-block error
+# interactions that per-block quantization misses.  Calibration-only cost.
+_WEIGHT_GPTQ = True
+_WEIGHT_GPTQ_REGULARIZATION = 0.2  # diagonal loading for Cholesky stability
+_WEIGHT_GPTQ_REGULARIZATION_WIDE = 0.3  # wider layers: moderate regularization
+_WEIGHT_GPTQ_BLOCK_SIZE = 64  # process in HiF4-sized blocks
+# Activation GPTQ: store the weight Hessian inverse in the activation state
+# and use it for sequential block-wise error compensation during dynamic
+# activation quantization.  This is the activation-side analogue of weight GPTQ:
+# after quantizing block b of the activation row, update the remaining blocks
+# using  X[rest] -= δ_b @ solve(H_inv_bb, H_inv_bc)  where H_inv = (W^TW + reg·I)^{-1}.
+_ACTIVATION_GPTQ = True
+_ACTIVATION_GPTQ_REGULARIZATION = 0.2  # diagonal loading for Cholesky stability
+_ACTIVATION_GPTQ_REGULARIZATION_WIDE = 0.1  # wider layers: less regularization for sharper GPTQ
+_WEIGHT_GPTQ_MIN_FEATURES = 64  # skip GPTQ for tiny layers
+_WEIGHT_REFINE_ERROR_THRESHOLD = 1.0e-7
+_WEIGHT_REFINE_ACCEPT_MARGIN = 0.0
+_WEIGHT_REFINE_MAX_RATIO_SMALL = 1.0
+_WEIGHT_REFINE_MAX_RATIO_LARGE = 1.0
+_WEIGHT_REFINE_MAX_BLOCKS = 65_536
+
+_ACTIVATION_REFINE_ERROR_THRESHOLD = 1.0e-7
+_ACTIVATION_REFINE_ACCEPT_MARGIN = 0.0
+_ACTIVATION_REFINE_MAX_RATIO = 0.50
+_ACTIVATION_REFINE_MAX_BLOCKS = 32_768
+
+_QK_SMOOTH_ALPHAS = (0.125, 0.25, 0.375, 0.50, 0.625, 0.75, 0.875)
+_WEIGHT_SMOOTH_RMS = True
+_QK_SMOOTH_RMS = True
+_ATTN_CENTER_MODES = (0, 2)
+# Rank refinement by absolute block error (True) or normalized error (False).
+_REFINE_RANK_BY_ABSOLUTE = True
+_ATTN_REFINE_ERROR_THRESHOLD = 1.0e-7
+_Q_REFINE_ACCEPT_MARGIN = 0.0
+_Q_REFINE_MAX_RATIO = 0.40
+_Q_REFINE_MAX_BLOCKS = 16_384
+_K_REFINE_ACCEPT_MARGIN = 0.0
+_K_REFINE_MAX_RATIO = 0.50
+_K_REFINE_MAX_BLOCKS = 24_576
+_V_REFINE_ACCEPT_MARGIN = 0.0
+_V_REFINE_MAX_RATIO = 0.60
+_V_REFINE_MAX_BLOCKS = 24_576
+# V-specific dynamic offsets.  V contributes ~54% of attention output error,
+# so wider offset search for V can be worthwhile even at higher per-sample cost.
+_V_DYNAMIC_OFFSETS = (-1, 1, 2, 3, 4)
+
+# Attention Q/K quadratic loss: use the full Gram matrix (block-diagonal
+# 4x4) of the paired operand as importance for dynamic quantization.
+# Q's quantization uses K's Gram (captures cross-channel K correlations);
+# K's quantization uses Q's Gram.  Analogous to _ACTIVATION_QUADRATIC
+# which uses the weight Gram for Linear activation quantization.
+_ATTN_QUADRATIC = False
+_ATTN_QUADRATIC_MAX_FEATURES = 2048
+# Shrinkage factor for attention Gram: blend toward diagonal to reduce
+# overfitting.  0.0 = full Gram, 1.0 = pure diagonal (no cross-channel).
+_ATTN_QUADRATIC_SHRINKAGE = 0.5
+# V quadratic loss: use attention-weighted V covariance (Gram) for V
+# quantization independently of Q/K quadratic.  V's Gram is well-conditioned
+# because attention weights provide natural regularization.
+_V_QUADRATIC = False
+# Attention GPTQ: apply sequential block compensation to Q/K/V dynamic
+# quantization, using the paired operand's covariance as Hessian.
+# Q uses K's covariance, K uses Q's covariance, V uses V's covariance
+# (attention-weighted).  This is the attention analogue of activation GPTQ.
+_ATTN_GPTQ = False
+_ATTN_GPTQ_REGULARIZATION = 0.2
+# V-specific GPTQ using the attention-weighted Hessian E[A^T A].
+# This is different from _ATTN_GPTQ which uses cross-operand covariances.
+# V contributes the most to attention error, and A^T A is the correct
+# Hessian for V because the output is A @ V.
+_V_GPTQ = False
+_V_GPTQ_REGULARIZATION = 0.2
+
+_SMOOTH_SCALE_MIN = 1.0 / 8.0
+_SMOOTH_SCALE_MAX = 8.0
+_QK_SMOOTH_MIN = 1.0 / 16.0
+_QK_SMOOTH_MAX = 16.0
+
+# Importance weights are mean-normalized; a floor keeps every channel at least
+# this fraction of the mean.  Without it, calibrated importance can be ~0 for
+# whole blocks (e.g. outlier-heavy Q/K data), their weighted losses vanish, and
+# the scale search drifts on numerical noise while degrading the unweighted
+# reconstruction of those blocks.
+_IMPORTANCE_FLOOR = 0.05
+
+# E6M2 code offsets.  Offset +2 is roughly the E6M2 analogue of the
+# alternative 1.5x scale mode seen in microscaling scale search.
+#
+# Exact-solve analysis: the standard amax/7 code frequently rounds DOWN
+# (clipping the block peak), and all other 4-element subgroups sit on
+# arbitrary log phases, so the useful neighborhood is +1..+3 (~1.25x..2x
+# scale).  Negative offsets shrink the representable range and almost never
+# win on the common NVFP4 input regimes; -1 is kept as a fallback for
+# overshooting codes.  -2 is kept for weights (calibration-only cost) as
+# insurance for finer-grained input encodings where it wins up to a few
+# percent of blocks, but dropped from the per-sample dynamic path.
+_DYNAMIC_OFFSETS = (-1, 1, 2, 3)
+# Per-layer adaptive activation GPTQ regularization: during calibration,
+# try multiple regularization values for H_inv and store the best one.
+# This allows different layers to use different regularization based on
+# their actual activation quantization error, rather than a fixed value.
+_ADAPTIVE_ACT_GPTQ_REG = False
+_ADAPTIVE_ACT_GPTQ_REG_CANDIDATES = (0.05, 0.2)
+# Per-layer adaptive offset search: during calibration, try multiple offset
+# sets and store the best one in the activation state.  This allows different
+# layers to use different offset ranges (e.g., fc benefits from wider offsets).
+_ADAPTIVE_OFFSETS = False
+_ADAPTIVE_OFFSET_CANDIDATES = [
+    (-1, 1, 2, 3),
+]
+_WEIGHT_OFFSETS = (-1, 1, 2, 3)
+
+# The per-block scale error over E6M2 codes is locally unimodal, so if the
+# best fixed-window offset lands on a window edge, the true optimum may lie
+# outside the window.  Extend the search beyond the winning edge (only for
+# blocks that actually hit the edge) by up to this many extra codes.
+_REFINE_EDGE_EXTENSION = True
+_REFINE_EDGE_EXTEND_STEPS = 2
+# After the standard offset search, sweep all 255 E6M2 codes for the top-N
+# hardest blocks.  Calibration-only cost; the dynamic path uses the fixed
+# _DYNAMIC_OFFSETS window.  Set to 0 to disable.
+_WEIGHT_FULL_SWEEP_TOP_K = 0
+
+# Data-driven per-layer refine budgets: instead of a global hand-tuned ratio,
+# calibration estimates the block-loss distribution and stores the smallest
+# refine fraction that captures a target share of the total weighted loss.
+_DATA_DRIVEN_RATIO = True
+# 时间预算允许放宽后，把损失覆盖目标从 0.99 提到 0.999：实际 refine
+# 比例从 ~0.95 提到 ~0.99（几乎全量），8 批测试上 7 类得分全部为正
+# （attn +0.0018，其余 +0.0001~0.0003），动态耗时 +约 5%。
+_RATIO_CAPTURE_TARGET = 0.999
+_RATIO_MIN = 0.10
+
+# Weight quantization can use the full per-block activation covariance as a
+# quadratic loss (true output-MSE weighting) instead of the diagonal
+# per-channel importance.  This is calibration-only: the Gram/covariance
+# never enters a dynamic state, so the 4096-node state limit is unaffected.
+_WEIGHT_QUADRATIC = True
+_WEIGHT_QUADRATIC_MAX_FEATURES = 3072
+
+# Dynamic activation quantization can also use the full weight Gram (W^T W)
+# as quadratic error weights.  Unlike Q/K covariances (estimated from a few
+# calibration tokens), the weight Gram is static and well conditioned, so the
+# same machinery that helped weight quantization should transfer.  Only the
+# per-4-group 4x4 blocks are stored in the state (~4*channels elements).
+_ACTIVATION_QUADRATIC = True
+# Gram state is ~4*channels elements; cap so the single stored tensor stays
+# within 4096 elements even under a strict element-count reading of the state
+# node limit.  Wide layers (e.g. FFN down-projection, 3072) fall back to the
+# diagonal importance automatically.
+_ACTIVATION_QUADRATIC_MAX_FEATURES = 3072
+
+# Permutation search bases.  The initial hierarchy-aware ordering combines the
+# paired operands via max(log range); real-data diagnostics show the operand
+# with the larger quantization burden (usually the weight/K side) often yields
+# a better single-sided ordering.  Each basis is evaluated with the exact
+# paired metric and accepted only when it clears the same safety gate as the
+# smoothing candidates.
+_PERMUTATION_BASES = True
+# Block-level permutation swap optimization: after the global argsort, try
+# swapping channels between 64-blocks to reduce within-block range spread.
+# This is a local search that only re-evaluates the two affected blocks per swap.
+_BLOCK_SWAP_ROUNDS = 0
+_BLOCK_SWAP_CANDIDATES = 16  # top-N worst blocks to try swapping from
+_BLOCK_SWAP_TRIALS = 32  # channels to try per source block
+
+
+# ===========================================================================
+# Shared utility functions
+# ===========================================================================
+
+def dequantize_nvfp4(
+    quant_float: torch.Tensor,
+    scale_float: torch.Tensor,
+    blk_size: int = _NVFP4_BLOCK_SIZE,
+) -> torch.Tensor:
+    """Dequantize an NVFP4 carrier/scale pair to BF16."""
+
+    if not torch.is_tensor(quant_float) or not torch.is_tensor(scale_float):
+        raise TypeError("quant_float and scale_float must be torch.Tensor")
+    if quant_float.ndim < 1:
+        raise ValueError("quant_float must have at least one dimension")
+    c = int(quant_float.shape[-1])
+    if c % blk_size != 0:
+        raise ValueError(
+            f"Last dim {c} is not divisible by NVFP4 block size {blk_size}"
+        )
+    expected_scale_shape = tuple(quant_float.shape[:-1]) + (c // blk_size,)
+    if tuple(scale_float.shape) != expected_scale_shape:
+        raise ValueError(
+            f"scale_float shape {tuple(scale_float.shape)} does not match "
+            f"expected {expected_scale_shape}"
+        )
+
+    x = quant_float.unflatten(-1, (-1, blk_size))
+    result = x * scale_float.unsqueeze(-1)
+    return result.flatten(-2, -1).to(torch.bfloat16)
+
+def _dequantize_nvfp4_float32(
+    quant_float: torch.Tensor,
+    scale_float: torch.Tensor,
+) -> torch.Tensor:
+    """Match the supplied BF16 dequantizer, then use FP32 for optimization."""
+
+    return dequantize_nvfp4(quant_float, scale_float).to(torch.float32)
+
+def _sample_rows(x: torch.Tensor, limit: int) -> torch.Tensor:
+    """Deterministically sample at most ``limit`` rows without random state."""
+
+    rows = int(x.shape[0])
+    if rows <= limit:
+        return x
+    step = max(1, (rows + limit - 1) // limit)
+    return x[::step][:limit]
+
+def _safe_positive_vector(x: torch.Tensor, length: int) -> torch.Tensor:
+    """Return a finite, positive FP32 vector of the requested length."""
+
+    y = x.detach().to(dtype=torch.float32).reshape(-1)
+    if int(y.numel()) != length:
+        raise ValueError(f"Expected vector of length {length}, got {y.numel()}")
+    return torch.nan_to_num(
+        y, nan=1.0, posinf=1.0, neginf=1.0
+    ).clamp_min(_EPS)
+
+def _normalize_importance(
+    importance: Optional[torch.Tensor],
+    length: int,
+) -> Optional[torch.Tensor]:
+    if importance is None:
+        return None
+    w = importance.detach().to(dtype=torch.float32).reshape(-1)
+    if int(w.numel()) != length:
+        raise ValueError(
+            f"Expected importance of length {length}, got {w.numel()}"
+        )
+    w = torch.nan_to_num(w, nan=0.0, posinf=0.0, neginf=0.0).clamp_min(0.0)
+    mean = w.mean()
+    if float(mean) <= _EPS:
+        return torch.ones_like(w)
+    return (w / mean).clamp_min(_IMPORTANCE_FLOOR)
+
+def _standard_block_losses(
+    dense: torch.Tensor,
+    importance: Optional[torch.Tensor],
+) -> torch.Tensor:
+    """Per-block importance-weighted squared error of standard HiF4."""
+
+    prefix = tuple(int(v) for v in dense.shape[:-1])
+    channels = int(dense.shape[-1])
+    if channels % _HIF4_BLOCK_SIZE != 0:
+        raise ValueError(
+            f"Last dim {channels} is not divisible by HiF4 block size 64"
+        )
+    blocks = channels // _HIF4_BLOCK_SIZE
+
+    x = torch.nan_to_num(
+        dense.detach().to(torch.float32),
+        nan=0.0,
+        posinf=_E6M2_MAX * _HIF4_MAX_INNER,
+        neginf=-_E6M2_MAX * _HIF4_MAX_INNER,
+    )
+    x_grouped = x.reshape(*prefix, blocks, 8, 2, 4)
+    x_abs = x_grouped.abs()
+    max4 = x_abs.amax(dim=-1)
+    max8 = max4.amax(dim=-1)
+    amax = max8.amax(dim=-1)
+    _, standard_scale = _standard_e6m2_scale(amax)
+
+    e2 = max8 >= (4.0 * standard_scale[..., None])
+    scale_lv2 = 1.0 + e2.to(torch.float32)
+    e3 = max4 >= (
+        2.0 * standard_scale[..., None, None] * scale_lv2[..., None]
+    )
+    scale_lv3 = 1.0 + e3.to(torch.float32)
+    denominator = (
+        standard_scale[..., None, None, None]
+        * scale_lv2[..., None, None]
+        * scale_lv3[..., None]
+    )
+    mantissa = (
+        torch.round(x_abs * (4.0 / denominator)).clamp_(0.0, 7.0) * 0.25
+    )
+
+    channel_importance = _normalize_importance(importance, channels)
+    if channel_importance is None:
+        weighted_error = (x_abs - mantissa * denominator).square()
+    else:
+        weighted_error = (
+            (x_abs - mantissa * denominator).square()
+            * channel_importance.reshape(*([1] * len(prefix)), blocks, 8, 2, 4)
+        )
+    return weighted_error.sum(dim=(-1, -2, -3)).reshape(-1)
+
+
+def _loss_capture_ratio(
+    losses: torch.Tensor,
+    *,
+    target: float,
+    ratio_min: float,
+) -> float:
+    """Smallest fraction of the largest-loss blocks covering ``target`` of the
+    total loss.  This converts the per-block loss tail into a refine budget."""
+
+    losses = losses.detach().to(torch.float32).reshape(-1)
+    total = float(losses.sum())
+    if total <= _EPS:
+        return float(ratio_min)
+    sorted_descending = torch.sort(losses, descending=True).values
+    cumulative = torch.cumsum(sorted_descending, dim=0)
+    k = int((cumulative < float(target) * total).sum()) + 1
+    return float(
+        min(1.0, max(float(ratio_min), k / max(1, int(losses.numel()))))
+    )
+
+
+def _flat_group_gram(cov: torch.Tensor, channels: int) -> torch.Tensor:
+    """Extract per-4-group 4x4 block-diagonal quadratic weights as a flat
+    ``[channels // 4, 4, 4]`` tensor (the only part the solver needs)."""
+
+    blocks = channels // _HIF4_BLOCK_SIZE
+    g = cov.reshape(blocks, 64, blocks, 64)
+    g = torch.diagonal(g, dim1=0, dim2=2).permute(2, 0, 1)
+    g = g.reshape(blocks, 16, 4, 16, 4)
+    g = torch.diagonal(g, dim1=1, dim2=3).permute(0, 3, 1, 2)
+    return g.reshape(blocks * 16, 4, 4)
+
+def _identity_permutation(length: int, device: torch.device) -> torch.Tensor:
+    return torch.arange(length, dtype=torch.int64, device=device)
+
+def _candidate_is_safe(
+    candidate: tuple[float, tuple[float, ...]],
+    baseline: tuple[float, tuple[float, ...]],
+    *,
+    min_mean_improvement: float,
+    worst_tolerance: float,
+) -> bool:
+    candidate_mean, candidate_cases = candidate
+    baseline_mean, baseline_cases = baseline
+    if not math.isfinite(candidate_mean):
+        return False
+    if candidate_mean > baseline_mean * (1.0 - min_mean_improvement):
+        return False
+    if len(candidate_cases) != len(baseline_cases):
+        return False
+    for current, reference in zip(candidate_cases, baseline_cases):
+        if current > reference * (1.0 + worst_tolerance) + 1.0e-8:
+            return False
+    return True
+
+
+def _center_attention_k(
+
+def _e6m2_encode_nearest(value: torch.Tensor) -> torch.Tensor:
+    """Encode non-negative FP32 values into finite unsigned E6M2 codes.
+
+    Codes 0..254 are finite and monotonic.  Code 255 is NaN and is never
+    produced.  Round-to-nearest-even is inherited from ``torch.round``.
+    """
+
+    x = torch.nan_to_num(
+        value.detach().to(torch.float32),
+        nan=_E6M2_MIN,
+        posinf=_E6M2_MAX,
+        neginf=_E6M2_MIN,
+    ).clamp(min=_E6M2_MIN, max=_E6M2_MAX)
+
+    exponent = torch.floor(torch.log2(x))
+    base = torch.pow(2.0, exponent)
+    mantissa_field = torch.round((x / base - 1.0) * 4.0).to(torch.int64)
+
+    carry = mantissa_field >= 4
+    exponent = exponent + carry.to(exponent.dtype)
+    mantissa_field = torch.where(
+        carry, torch.zeros_like(mantissa_field), mantissa_field
+    ).clamp(min=0, max=3)
+
+    exponent_field = (exponent.to(torch.int64) + 48).clamp(min=0, max=63)
+    code = exponent_field * 4 + mantissa_field
+    return code.clamp(min=0, max=254).to(torch.int16)
+
+
+def _e6m2_decode(code: torch.Tensor) -> torch.Tensor:
+
+def _e6m2_decode(code: torch.Tensor) -> torch.Tensor:
+    c = code.to(torch.int64).clamp(min=0, max=254)
+    exponent_field = torch.bitwise_right_shift(c, 2)
+    mantissa_field = torch.bitwise_and(c, 3)
+    exponent = exponent_field.to(torch.float32) - 48.0
+    return torch.pow(2.0, exponent) * (
+        1.0 + mantissa_field.to(torch.float32) * 0.25
+    )
+
+
+def _standard_e6m2_scale(amax: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+
+def _standard_e6m2_scale(amax: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+    """Compute the official amax/7 base scale with a BF16 intermediate."""
+
+    high_precision_scale = (
+        amax.to(torch.bfloat16) * _BF16_ONE_SEVENTH
+    ).to(torch.float32)
+    code = _e6m2_encode_nearest(high_precision_scale)
+    return code, _e6m2_decode(code)
+
+
+
+def _offsets_as_tuple(offsets: Optional[Iterable[int]]) -> tuple[int, ...]:
+    ordered = [0]
+    if offsets is None:
+        return (0,)
+    if torch.is_tensor(offsets):
+        values = offsets.detach().to("cpu").reshape(-1).tolist()
+    else:
+        values = list(offsets)
+    for raw in values:
+        value = int(raw)
+        if value not in ordered:
+            ordered.append(value)
+    return tuple(ordered)
+
+
+
+def _adaround_mantissa(
+    x_abs: torch.Tensor,
+    local_scale: torch.Tensor,
+    sign: torch.Tensor,
+    group_gram: torch.Tensor,
+) -> torch.Tensor:
+    """Optimal mantissa rounding using 4x4 Gram-weighted loss (AdaRound).
+
+    For each 4-element subgroup, enumerate all 2^4=16 floor/ceil
+    combinations and pick the one minimizing ``delta^T G delta``.
+    This replaces greedy per-element ``torch.round`` with an exact
+    discrete optimization when the Gram matrix is available.
+
+    Vectorized implementation: stacks all 16 candidate mantissas along
+    a new leading dimension, computes all losses in one batched einsum,
+    then selects the best per group.
+
+    Args:
+        x_abs: ``[..., 4]`` absolute values.
+        local_scale: broadcastable to x_abs, the effective scale
+            (scale_factor * lv2 * lv3).
+        sign: ``[..., 4]`` signs.
+        group_gram: ``[..., 4, 4]`` per-group quadratic weights.
+    """
+    raw_code = x_abs * (4.0 / local_scale)          # continuous code
+    floor_code = torch.floor(raw_code).clamp(0, 6).to(torch.int64)
+    ceil_code = torch.ceil(raw_code).clamp(0, 7).to(torch.int64)
+
+    # Pre-compute all 16 bit masks as [16, 4] bool
+    bits_all = torch.arange(16, device=x_abs.device)
+    masks = ((bits_all.unsqueeze(1) >> torch.arange(4, device=x_abs.device)) & 1).bool()
+    # masks: [16, 4]
+
+    # Build all 16 candidate codes: [16, ..., 4]
+    # Expand masks to match x_abs shape
+    prefix_ndim = x_abs.ndim - 1  # all dims except last (size 4)
+    # masks needs shape [16, 1, 1, ..., 1, 4] for broadcasting
+    mask_expanded = masks.reshape(16, *([1] * prefix_ndim), 4)
+    all_codes = torch.where(mask_expanded, ceil_code.unsqueeze(0), floor_code.unsqueeze(0))
+    all_mantissa = all_codes.to(torch.float32) * 0.25  # [16, ..., 4]
+
+    # Compute deltas: [16, ..., 4]
+    all_delta = sign.unsqueeze(0) * (x_abs.unsqueeze(0) - all_mantissa * local_scale.unsqueeze(0))
+
+    # Compute Gram-weighted losses: [16, ...]
+    # group_gram: [..., 4, 4] -> [1, ..., 4, 4] for broadcasting
+    gram_expanded = group_gram.unsqueeze(0)
+    # einsum: "k...i,k...ij,k...j->k..."  (k=16 pattern index)
+    all_losses = torch.einsum("k...i,k...ij,k...j->k...", all_delta, gram_expanded, all_delta)
+
+    # Select best pattern per group
+    best_k = all_losses.argmin(dim=0)  # [...]
+
+    # Gather best mantissa
+    # best_k: [...] -> [..., 1, 4] for gathering from [16, ..., 4]
+    # Need to add the pattern dimension for gather
+    gather_idx = best_k.reshape(1, *best_k.shape, 1).expand(1, *best_k.shape, 4)
+    best_mantissa = all_mantissa.gather(0, gather_idx).squeeze(0)
+
+    return best_mantissa
+
+
+def _solve_exact_hierarchy(
+
+def _solve_exact_hierarchy(
+    x_abs: torch.Tensor,
+    scale: torch.Tensor,
+    importance: Optional[torch.Tensor],
+    sign: Optional[torch.Tensor] = None,
+    group_gram: Optional[torch.Tensor] = None,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    """Exactly solve lv2/lv3 for fixed scales using three loss tables.
+
+    Args:
+        x_abs: ``[num_blocks, 8, 2, 4]`` absolute values.
+        scale: ``[num_blocks]`` finite E6M2 values.
+        importance: optional tensor with the same shape as ``x_abs``.
+        sign: ``[num_blocks, 8, 2, 4]`` signs (required with ``group_gram``).
+        group_gram: ``[num_blocks, 8, 2, 4, 4]`` per-group quadratic weights;
+            when given, the loss is the quadratic form ``delta^T G delta``
+            instead of the diagonal per-channel weighted squares.
+    """
+
+    losses: list[torch.Tensor] = []
+    mantissas: list[torch.Tensor] = []
+
+    for total_exponent in (0, 1, 2):
+        local_scale = scale[..., None, None, None] * float(1 << total_exponent)
+        # Use AdaRound when group_gram is available: enumerate all 2^4
+        # floor/ceil combinations and pick the one minimizing delta^T G delta.
+        # This captures cross-element correlations within each 4-element
+        # subgroup that greedy per-element rounding misses.
+        if group_gram is not None and sign is not None:
+            mantissa = _adaround_mantissa(x_abs, local_scale, sign, group_gram)
+            delta = sign * (x_abs - mantissa * local_scale)
+            losses.append(
+                torch.einsum(
+                    "...abi,...abij,...abj->...ab", delta, group_gram, delta
+                )
+            )
+        else:
+            mant_code = torch.round(x_abs * (4.0 / local_scale)).clamp_(0.0, 7.0)
+            mantissa = mant_code * 0.25
+            if group_gram is not None:
+                delta = sign * (x_abs - mantissa * local_scale)
+                losses.append(
+                    torch.einsum(
+                        "...abi,...abij,...abj->...ab", delta, group_gram, delta
+                    )
+                )
+            else:
+                error = (x_abs - mantissa * local_scale).square()
+                if importance is not None:
+                    error = error * importance
+                losses.append(error.sum(dim=-1))
+        mantissas.append(mantissa)
+
+    loss_0, loss_1, loss_2 = losses
+    choose_01 = loss_1 < loss_0
+    choose_12 = loss_2 < loss_1
+
+    cost_e2_0 = torch.minimum(loss_0, loss_1).sum(dim=-1)
+    cost_e2_1 = torch.minimum(loss_1, loss_2).sum(dim=-1)
+    e2 = cost_e2_1 < cost_e2_0
+    e3 = torch.where(e2[..., None], choose_12, choose_01)
+
+    block_loss = torch.where(e2, cost_e2_1, cost_e2_0).sum(dim=-1)
+    total_exponent = e2.to(torch.int64)[..., None] + e3.to(torch.int64)
+
+    # [..., 3, 4]，指数维固定在倒数第二维（批量时随输入维度自然后移）。
+    mantissa_stack = torch.stack(mantissas, dim=-2)
+    gather_index = total_exponent[..., None, None].expand(
+        *total_exponent.shape, 1, 4
+    )
+    gather_dim = mantissa_stack.ndim - 2  # 指数维：4D 输入为 3，批量时随维度后移
+    mantissa = torch.gather(
+        mantissa_stack, gather_dim, gather_index
+    ).squeeze(-2)
+
+    scale_lv2 = 1.0 + e2.to(torch.float32)
+    scale_lv3 = 1.0 + e3.to(torch.float32)
+    return block_loss, scale_lv2, scale_lv3, mantissa
+
+
+def _pack_hif4_params(
+
+def _pack_hif4_params(
+    prefix: tuple[int, ...],
+    blocks: int,
+    scale_factor: torch.Tensor,
+    scale_lv2: torch.Tensor,
+    scale_lv3: torch.Tensor,
+    sign: torch.Tensor,
+    mantissa: torch.Tensor,
+) -> dict[str, torch.Tensor]:
+    # Canonical zero: it is numerically irrelevant, but avoids relying on a
+    # checker accepting sign=+/-1 when the final mantissa is zero.
+    sign_out = sign.reshape(*prefix, blocks, 8, 2, 4)
+    mantissa_out = mantissa.reshape(*prefix, blocks, 8, 2, 4)
+    sign_out = torch.where(
+        mantissa_out == 0.0, torch.zeros_like(sign_out), sign_out
+    )
+    return {
+        "scale_factor": scale_factor.reshape(*prefix, blocks, 1, 1, 1),
+        "scale_lv2": scale_lv2.reshape(*prefix, blocks, 8, 1, 1),
+        "scale_lv3": scale_lv3.reshape(*prefix, blocks, 8, 2, 1),
+        "sign": sign_out,
+        "mant": mantissa_out,
+    }
+
+
+def _dense_to_hif4(
+
+def _dense_to_hif4(
+    dense: torch.Tensor,
+    *,
+    importance: Optional[torch.Tensor] = None,
+    group_gram: Optional[torch.Tensor] = None,
+    search_offsets: Optional[Union[Sequence[int], torch.Tensor]] = None,
+    error_threshold: float = 0.0,
+    accept_margin: float = 0.0,
+    max_refine_ratio: float = 0.0,
+    max_refine_blocks: Optional[int] = None,
+    full_sweep_top_k: int = 0,
+) -> dict[str, torch.Tensor]:
+    """Quantize a dense tensor into valid HiF4 parameters."""
+
+    if group_gram is not None:
+        expected_gram_shape = dense.shape[:-1] + (
+            dense.shape[-1] // 64,
+            8,
+            2,
+            4,
+            4,
+        )
+        if tuple(group_gram.shape) != tuple(expected_gram_shape):
+            raise ValueError(
+                f"group_gram shape {tuple(group_gram.shape)} does not match "
+                f"expected {expected_gram_shape}"
+            )
+
+    if dense.ndim < 1:
+        raise ValueError("dense must have at least one dimension")
+    prefix = tuple(int(v) for v in dense.shape[:-1])
+    channels = int(dense.shape[-1])
+    if channels % _HIF4_BLOCK_SIZE != 0:
+        raise ValueError(
+            f"Last dim {channels} is not divisible by HiF4 block size 64"
+        )
+    blocks = channels // _HIF4_BLOCK_SIZE
+
+    x = torch.nan_to_num(
+        dense.detach().to(torch.float32),
+        nan=0.0,
+        posinf=_E6M2_MAX * _HIF4_MAX_INNER,
+        neginf=-_E6M2_MAX * _HIF4_MAX_INNER,
+    )
+    x_grouped = x.reshape(*prefix, blocks, 8, 2, 4)
+    x_abs = x_grouped.abs()
+    sign = torch.sign(x_grouped)
+
+    max4 = x_abs.amax(dim=-1)
+    max8 = max4.amax(dim=-1)
+    amax = max8.amax(dim=-1)
+    standard_code, standard_scale = _standard_e6m2_scale(amax)
+
+    e2 = max8 >= (4.0 * standard_scale[..., None])
+    scale_lv2 = 1.0 + e2.to(torch.float32)
+    e3 = max4 >= (
+        2.0 * standard_scale[..., None, None] * scale_lv2[..., None]
+    )
+    scale_lv3 = 1.0 + e3.to(torch.float32)
+
+    denominator = (
+        standard_scale[..., None, None, None]
+        * scale_lv2[..., None, None]
+        * scale_lv3[..., None]
+    )
+    # Use AdaRound when group_gram is available: this optimizes the
+    # mantissa rounding within each 4-element subgroup by minimizing
+    # delta^T G delta instead of greedy per-element rounding.
+    if group_gram is not None:
+        mantissa = _adaround_mantissa(x_abs, denominator, sign, group_gram)
+    else:
+        mantissa = torch.round(x_abs * (4.0 / denominator)).clamp_(0.0, 7.0) * 0.25
+    channel_importance = _normalize_importance(importance, channels)
+    if channel_importance is not None:
+        channel_importance = channel_importance.to(x.device)
+
+    offsets = _offsets_as_tuple(search_offsets)
+    refine_ratio = max(0.0, min(float(max_refine_ratio), 1.0))
+    if refine_ratio <= 0.0 or len(offsets) == 0:
+        return _pack_hif4_params(
+            prefix,
+            blocks,
+            standard_scale,
+            scale_lv2,
+            scale_lv3,
+            sign,
+            mantissa,
+        )
+    if group_gram is not None:
+        delta = sign * (x_abs - mantissa * denominator)
+        weighted_error = torch.einsum(
+            "...abi,...abij,...abj->...ab", delta, group_gram, delta
+        )
+        weighted_energy = x_abs.square()
+        importance_view = None
+    elif channel_importance is None:
+        weighted_error = (x_abs - mantissa * denominator).square()
+        weighted_energy = x_abs.square()
+        importance_view = None
+    else:
+        importance_view = channel_importance.reshape(
+            *([1] * len(prefix)), blocks, 8, 2, 4
+        )
+        weighted_error = (x_abs - mantissa * denominator).square() * importance_view
+        weighted_energy = x_abs.square() * importance_view
+
+    loss_reduce_dims = (-1, -2) if group_gram is not None else (-1, -2, -3)
+    standard_loss = weighted_error.sum(dim=loss_reduce_dims)
+    energy = weighted_energy.sum(dim=(-1, -2, -3))
+    normalized_error = standard_loss / (energy + _EPS)
+
+    flat_norm = normalized_error.reshape(-1)
+    flat_loss = standard_loss.reshape(-1)
+    hard_mask = flat_norm > float(error_threshold)
+    hard_indices = torch.nonzero(hard_mask, as_tuple=False).reshape(-1)
+    if int(hard_indices.numel()) == 0:
+        return _pack_hif4_params(
+            prefix,
+            blocks,
+            standard_scale,
+            scale_lv2,
+            scale_lv3,
+            sign,
+            mantissa,
+        )
+
+    total_blocks = int(flat_norm.numel())
+    refine_cap = max(1, int(math.ceil(total_blocks * refine_ratio)))
+    if max_refine_blocks is not None:
+        refine_cap = min(refine_cap, max(1, int(max_refine_blocks)))
+    if int(hard_indices.numel()) > refine_cap:
+        if _REFINE_RANK_BY_ABSOLUTE:
+            # Rank by the block's absolute (importance-weighted) reconstruction
+            # error, i.e. its true contribution to the output MSE, instead of
+            # the normalized error: under a fixed refinement budget this
+            # greedily maximizes the total MSE reduction (and hence the
+            # competition score).
+            hard_indices = torch.topk(flat_loss, k=refine_cap, largest=True).indices
+        else:
+            hard_indices = torch.topk(flat_norm, k=refine_cap, largest=True).indices
+
+    x_flat = x_abs.reshape(-1, 8, 2, 4)
+    x_hard = x_flat.index_select(0, hard_indices)
+    standard_loss_hard = standard_loss.reshape(-1).index_select(0, hard_indices)
+    standard_code_hard = standard_code.reshape(-1).index_select(0, hard_indices)
+
+    best_loss = standard_loss_hard.clone()
+    best_scale = standard_scale.reshape(-1).index_select(0, hard_indices).clone()
+    best_lv2 = scale_lv2.reshape(-1, 8).index_select(0, hard_indices).clone()
+    best_lv3 = scale_lv3.reshape(-1, 8, 2).index_select(0, hard_indices).clone()
+    best_mantissa = mantissa.reshape(-1, 8, 2, 4).index_select(
+        0, hard_indices
+    ).clone()
+    sign_hard = sign.reshape(-1, 8, 2, 4).index_select(0, hard_indices)
+    group_gram_hard = (
+        None
+        if group_gram is None
+        else group_gram.reshape(-1, 8, 2, 4, 4).index_select(0, hard_indices)
+    )
+    best_offset = torch.zeros(
+        int(hard_indices.numel()), dtype=torch.int64, device=x.device
+    )
+
+    if channel_importance is None:
+        importance_hard = None
+    else:
+        block_importance = channel_importance.reshape(blocks, 8, 2, 4)
+        channel_block_ids = torch.remainder(hard_indices, blocks)
+        importance_hard = block_importance.index_select(0, channel_block_ids)
+
+    # 全部 offset 一次性批量求解：把 [N] 块沿 offset 维展开成 [K, N]，
+    # 一次精确求解后按块取 argmin。标准 code（offset 0）必须保留在候选里：
+    # 阈值式 lv2/lv3 与精确解不等价（真实数据约半数块有更低损失），
+    # offset 0 会把 hard 块的 lv2/lv3 升级为精确解。
+    offset_values = torch.tensor(
+        [int(o) for o in offsets], dtype=torch.int64, device=x.device
+    )
+    expanded_codes = (
+        standard_code_hard.to(torch.int64).unsqueeze(0)
+        + offset_values.unsqueeze(1)
+    ).clamp(min=0, max=254)
+    candidate_scales = _e6m2_decode(expanded_codes)
+    num_offsets = int(offset_values.numel())
+    x_expanded = x_hard.unsqueeze(0).expand(
+        num_offsets, -1, -1, -1, -1
+    )
+    sign_expanded = sign_hard.unsqueeze(0).expand(
+        num_offsets, -1, -1, -1, -1
+    )
+    importance_expanded = (
+        None
+        if importance_hard is None
+        else importance_hard.unsqueeze(0).expand(
+            num_offsets, -1, -1, -1, -1
+        )
+    )
+    gram_expanded = (
+        None
+        if group_gram_hard is None
+        else group_gram_hard.unsqueeze(0).expand(
+            num_offsets, -1, -1, -1, -1, -1
+        )
+    )
+    all_losses, all_lv2, all_lv3, all_mantissa = _solve_exact_hierarchy(
+        x_expanded,
+        candidate_scales,
+        importance_expanded,
+        sign_expanded,
+        gram_expanded,
+    )
+    best_k = all_losses.argmin(dim=0)
+    hard_arange = torch.arange(
+        int(hard_indices.numel()), device=x.device
+    )
+    candidate_loss = all_losses[best_k, hard_arange]
+    candidate_scale = candidate_scales[best_k, hard_arange]
+    candidate_lv2 = all_lv2[best_k, hard_arange]
+    candidate_lv3 = all_lv3[best_k, hard_arange]
+    candidate_mantissa = all_mantissa[best_k, hard_arange]
+
+    improve = candidate_loss < best_loss
+    best_loss = torch.where(improve, candidate_loss, best_loss)
+    best_scale = torch.where(improve, candidate_scale, best_scale)
+    best_lv2 = torch.where(improve[:, None], candidate_lv2, best_lv2)
+    best_lv3 = torch.where(improve[:, None, None], candidate_lv3, best_lv3)
+    best_mantissa = torch.where(
+        improve[:, None, None, None], candidate_mantissa, best_mantissa
+    )
+    best_offset = torch.where(
+        improve, offset_values[best_k], best_offset
+    )
+
+    if _REFINE_EDGE_EXTENSION and len(offsets) > 1:
+        lo_offset = int(offsets[0])
+        hi_offset = int(offsets[-1])
+
+        def extend_edge(edge: int, direction: int) -> None:
+            nonlocal best_loss, best_scale
+            nonlocal best_lv2, best_lv3, best_mantissa, best_offset
+            mask = best_offset == edge
+            for _ in range(_REFINE_EDGE_EXTEND_STEPS):
+                if not bool(mask.any()):
+                    return
+                edge_indices = torch.nonzero(mask, as_tuple=False).reshape(-1)
+                target = edge + direction
+                if target < -254 or target > 254:
+                    return
+                edge_code = (
+                    standard_code_hard.index_select(0, edge_indices).to(
+                        torch.int64
+                    )
+                    + target
+                ).clamp(min=0, max=254)
+                edge_scale = _e6m2_decode(edge_code)
+                edge_importance = (
+                    None
+                    if importance_hard is None
+                    else importance_hard.index_select(0, edge_indices)
+                )
+                edge_loss, edge_lv2, edge_lv3, edge_mantissa = (
+                    _solve_exact_hierarchy(
+                        x_hard.index_select(0, edge_indices),
+                        edge_scale,
+                        edge_importance,
+                        sign_hard.index_select(0, edge_indices),
+                        (
+                            None
+                            if group_gram_hard is None
+                            else group_gram_hard.index_select(0, edge_indices)
+                        ),
+                    )
+                )
+                improve = edge_loss < best_loss.index_select(0, edge_indices)
+                improved = edge_indices[improve]
+                if int(improved.numel()) == 0:
+                    return
+                best_loss.index_copy_(
+                    0, improved, edge_loss[improve]
+                )
+                best_scale.index_copy_(0, improved, edge_scale[improve])
+                best_lv2.index_copy_(0, improved, edge_lv2[improve])
+                best_lv3.index_copy_(0, improved, edge_lv3[improve])
+                best_mantissa.index_copy_(
+                    0, improved, edge_mantissa[improve]
+                )
+                best_offset.index_copy_(
+                    0,
+                    improved,
+                    torch.full_like(best_offset[improved], target),
+                )
+                edge = target
+                mask = best_offset == target
+
+        extend_edge(hi_offset, +1)
+        extend_edge(lo_offset, -1)
+
+    # Full E6M2 sweep for the hardest blocks (calibration-only).
+    # After the offset search + edge extension, the worst blocks may still
+    # benefit from a wider code search.  Sweep all 255 valid E6M2 codes for
+    # the top-K blocks by remaining loss.
+    if full_sweep_top_k > 0 and int(hard_indices.numel()) > 0:
+        remaining_loss = best_loss.clone()
+        n_sweep = min(full_sweep_top_k, int(hard_indices.numel()))
+        sweep_indices = torch.topk(remaining_loss, k=n_sweep, largest=True).indices
+        all_codes = torch.arange(1, 255, dtype=torch.int64, device=x.device)
+
+        # Process in batches to bound peak memory (254 codes × batch × 64
+        # elements × float32).  Batch of 32 blocks ≈ 254×32×64×4 = 2 MB.
+        _SWEEP_BATCH_SIZE = 32
+        for batch_start in range(0, int(sweep_indices.numel()), _SWEEP_BATCH_SIZE):
+            batch_end = min(batch_start + _SWEEP_BATCH_SIZE, int(sweep_indices.numel()))
+            batch_local = torch.arange(batch_start, batch_end, device=x.device)
+            batch_sweep = sweep_indices[batch_start:batch_end]
+            n_batch = int(batch_sweep.numel())
+
+            x_sweep = x_hard.index_select(0, batch_sweep)
+            sign_sweep = sign_hard.index_select(0, batch_sweep)
+            importance_sweep = (
+                None
+                if importance_hard is None
+                else importance_hard.index_select(0, batch_sweep)
+            )
+            gram_sweep = (
+                None
+                if group_gram_hard is None
+                else group_gram_hard.index_select(0, batch_sweep)
+            )
+            candidate_scales_full = _e6m2_decode(
+                all_codes.unsqueeze(1).expand(254, n_batch)
+            )
+            x_exp = x_sweep.unsqueeze(0).expand(254, -1, -1, -1, -1)
+            sign_exp = sign_sweep.unsqueeze(0).expand(254, -1, -1, -1, -1)
+            imp_exp = (
+                None
+                if importance_sweep is None
+                else importance_sweep.unsqueeze(0).expand(254, -1, -1, -1, -1)
+            )
+            gram_exp = (
+                None
+                if gram_sweep is None
+                else gram_sweep.unsqueeze(0).expand(254, -1, -1, -1, -1, -1)
+            )
+            all_losses_full, all_lv2_full, all_lv3_full, all_mant_full = (
+                _solve_exact_hierarchy(
+                    x_exp, candidate_scales_full, imp_exp, sign_exp, gram_exp
+                )
+            )
+            best_k_full = all_losses_full.argmin(dim=0)
+            arange_full = torch.arange(n_batch, device=x.device)
+            sweep_best_loss = all_losses_full[best_k_full, arange_full]
+            sweep_best_scale = candidate_scales_full[best_k_full, arange_full]
+            sweep_best_lv2 = all_lv2_full[best_k_full, arange_full]
+            sweep_best_lv3 = all_lv3_full[best_k_full, arange_full]
+            sweep_best_mant = all_mant_full[best_k_full, arange_full]
+
+            improve = sweep_best_loss < best_loss[batch_sweep]
+            if bool(improve.any()):
+                improved_sweep = batch_sweep[improve]
+                best_loss.index_copy_(0, improved_sweep, sweep_best_loss[improve])
+                best_scale.index_copy_(0, improved_sweep, sweep_best_scale[improve])
+                best_lv2.index_copy_(0, improved_sweep, sweep_best_lv2[improve])
+                best_lv3.index_copy_(0, improved_sweep, sweep_best_lv3[improve])
+                best_mantissa.index_copy_(0, improved_sweep, sweep_best_mant[improve])
+
+    margin = max(0.0, min(float(accept_margin), 0.99))
+    accept = best_loss <= ((1.0 - margin) * standard_loss_hard)
+    if not bool(torch.any(accept)):
+        return _pack_hif4_params(
+            prefix,
+            blocks,
+            standard_scale,
+            scale_lv2,
+            scale_lv3,
+            sign,
+            mantissa,
+        )
+
+    selected_indices = hard_indices[accept]
+    out_scale = standard_scale.reshape(-1).clone()
+    out_lv2 = scale_lv2.reshape(-1, 8).clone()
+    out_lv3 = scale_lv3.reshape(-1, 8, 2).clone()
+    out_mantissa = mantissa.reshape(-1, 8, 2, 4).clone()
+
+    out_scale.index_copy_(0, selected_indices, best_scale[accept])
+    out_lv2.index_copy_(0, selected_indices, best_lv2[accept])
+    out_lv3.index_copy_(0, selected_indices, best_lv3[accept])
+    out_mantissa.index_copy_(0, selected_indices, best_mantissa[accept])
+
+    return _pack_hif4_params(
+        prefix,
+        blocks,
+        out_scale,
+        out_lv2,
+        out_lv3,
+        sign,
+        out_mantissa,
+    )
+
+
+def _nvfp4_to_hif4(
+    quant_float: torch.Tensor,
+    scale_float: torch.Tensor,
+    *,
+    multiplier: Optional[torch.Tensor] = None,
+    permutation: Optional[torch.Tensor] = None,
+    block_smooth_size: int = 0,
+    block_smooth_seed: int = 0,
+    center_mode: int = 0,
+    center_num_heads: Optional[int] = None,
+    center_head_dim: Optional[int] = None,
+    attn_num_heads: Optional[int] = None,
+    attn_head_dim: Optional[int] = None,
+    importance: Optional[torch.Tensor] = None,
+    group_gram: Optional[torch.Tensor] = None,
+    search_offsets: Optional[Union[Sequence[int], torch.Tensor]] = None,
+    error_threshold: float = 0.0,
+    accept_margin: float = 0.0,
+    max_refine_ratio: float = 0.0,
+    max_refine_blocks: Optional[int] = None,
+) -> dict[str, torch.Tensor]:
+    dense = _dequantize_nvfp4_float32(quant_float, scale_float)
+    channels = int(dense.shape[-1])
+    if int(center_mode) != 0:
+        if center_num_heads is None or center_head_dim is None:
+            raise ValueError("Attention centering requires head metadata")
+        dense = _center_attention_k(
+            dense,
+            int(center_num_heads),
+            int(center_head_dim),
+            int(center_mode),
+        )
+    if multiplier is not None:
+        scale = _safe_positive_vector(multiplier, channels).to(dense.device)
+        dense.mul_(scale.reshape(*([1] * (dense.ndim - 1)), channels))
+    if permutation is not None:
+        order = permutation.detach().to(
+            device=dense.device, dtype=torch.int64
+        ).reshape(-1)
+        if int(order.numel()) != channels:
+            raise ValueError("Permutation width does not match tensor width")
+        dense = dense.index_select(-1, order)
+    if int(block_smooth_size) != 0:
+        if attn_num_heads is not None and attn_head_dim is not None:
+            dense = _head_block_hadamard_transform(
+                dense, int(attn_num_heads), int(attn_head_dim),
+                int(block_smooth_size), int(block_smooth_seed),
+            )
+        else:
+            dense = _block_hadamard_transform(
+                dense, int(block_smooth_size), int(block_smooth_seed)
+            )
+    gram = None
+    if group_gram is not None:
+        gram = group_gram.detach().to(
+            device=dense.device, dtype=torch.float32
+        )
+        expected = (channels // 4, 4, 4)
+        if tuple(gram.shape) != expected:
+            raise ValueError(
+                f"group_gram shape {tuple(gram.shape)} does not match "
+                f"expected {expected}"
+            )
+        blocks = channels // _HIF4_BLOCK_SIZE
+        gram = gram.reshape(blocks, 8, 2, 4, 4).unsqueeze(0).expand(
+            int(dense.shape[0]), blocks, 8, 2, 4, 4
+        )
+    return _dense_to_hif4(
+        dense,
+        importance=importance,
+        group_gram=gram,
+        search_offsets=search_offsets,
+        error_threshold=error_threshold,
+        accept_margin=accept_margin,
+        max_refine_ratio=max_refine_ratio,
+        max_refine_blocks=max_refine_blocks,
+    )
+
+
+
+def _dequantize_hif4(params: dict[str, torch.Tensor]) -> torch.Tensor:
+    dense = (
+        params["sign"]
+        * params["mant"]
+        * params["scale_lv3"]
+        * params["scale_lv2"]
+        * params["scale_factor"]
+    )
+    return dense.flatten(start_dim=-4, end_dim=-1)
+
+
+_SMOOTH_SOFT_CLAMP = True
+_SMOOTH_SOFT_CLAMP_MIN_RATIO = 8.0
+
+
+def _hadamard_matrix(
+    size: int,
+    device: torch.device,
+    dtype: torch.dtype,
+) -> torch.Tensor:
+    """Return a normalized Sylvester Hadamard matrix (size power of 2, >= 4)."""
+
+    n = int(size)
+    if n < 4 or (n & (n - 1)) != 0:
+        raise ValueError(
+            f"block_smooth_size must be a power of 2 >= 4, got {n}"
+        )
+    h = torch.ones(1, 1, dtype=dtype, device=device)
+    while int(h.shape[0]) < n:
+        h = torch.cat(
+            (torch.cat((h, h), dim=1), torch.cat((h, -h), dim=1)), dim=0
+        )
+    return h * (1.0 / math.sqrt(float(n)))
+
+def _block_hadamard_transform(
+    dense: torch.Tensor,
+    block_size: int,
+    seed: int = 0,
+) -> torch.Tensor:
+    """Apply a deterministic signed orthogonal transform to feature blocks.
+
+    The signs avoid concentrating positively correlated channels in the DC
+    Hadamard coefficient.  They are derived from the absolute feature index,
+    so calibration and dynamic quantization only share ``block_size`` and a
+    small integer ``seed``.
+    """
+
+    size = int(block_size)
+    if size == 0:
+        return dense
+    channels = int(dense.shape[-1])
+    if channels % size != 0:
+        raise ValueError(
+            f"Feature width {channels} is not divisible by block size {size}"
+        )
+    indices = torch.arange(channels, dtype=torch.int64, device=dense.device)
+    bits = (
+        indices * 1_103_515_245 + int(seed) * 214_013 + 12_345
+    ).bitwise_and(1 << 30)
+    signs = torch.where(bits == 0, 1.0, -1.0).to(dtype=dense.dtype)
+    grouped = dense.reshape(*dense.shape[:-1], channels // size, size)
+    grouped = grouped * signs.reshape(channels // size, size)
+    h = _hadamard_matrix(size, dense.device, dense.dtype)
+    return torch.matmul(grouped, h).reshape_as(dense)
+
+
+def _cpu_state_tensor(x: torch.Tensor) -> torch.Tensor:
+    return torch.nan_to_num(
+        x.detach().to(device="cpu", dtype=torch.float32),
+        nan=0.0,
+        posinf=0.0,
+        neginf=0.0,
+    ).contiguous()
+
+def _activation_gptq_quantize(
+    dense: torch.Tensor,
+    h_inv: torch.Tensor,
+    *,
+    importance: Optional[torch.Tensor] = None,
+    group_gram: Optional[torch.Tensor] = None,
+    search_offsets: Optional[Union[Sequence[int], torch.Tensor]] = None,
+    error_threshold: float = 0.0,
+    accept_margin: float = 0.0,
+    max_refine_ratio: float = 0.0,
+    max_refine_blocks: Optional[int] = None,
+) -> dict[str, torch.Tensor]:
+    """GPTQ-style activation quantization with sequential block compensation.
+
+    Processes 64-element blocks sequentially along the channel dimension.
+    After quantizing block b, the remaining unquantized columns are updated:
+
+        X[:, rest] -= δ_b @ solve(H_inv_bb, H_inv_bc)
+
+    where δ_b = X[:, batch] - X̂[:, batch] is the quantization error,
+    H_inv = (W^TW + reg·I)^{-1} is the precomputed weight Hessian inverse.
+
+    For activations (2D: [tokens, channels]), each row is processed
+    independently. The GPTQ update propagates quantization error from
+    earlier blocks to later blocks, reducing the overall output MSE.
+    """
+    channels = int(dense.shape[-1])
+    block_size = _HIF4_BLOCK_SIZE
+    num_blocks = channels // block_size
+
+    if num_blocks < 2:
+        return _dense_to_hif4(
+            dense,
+            importance=importance,
+            group_gram=group_gram,
+            search_offsets=search_offsets,
+            error_threshold=error_threshold,
+            accept_margin=accept_margin,
+            max_refine_ratio=max_refine_ratio,
+            max_refine_blocks=max_refine_blocks,
+        )
+
+    h_inv_dev = h_inv.to(device=dense.device, dtype=torch.float32)
+    X = dense.clone()
+
+    # Collect quantization results for each block
+    all_scale_factor = []
+    all_scale_lv2 = []
+    all_scale_lv3 = []
+    all_sign = []
+    all_mant = []
+
+    # Pre-compute block-level importance
+    block_importance = None
+    if importance is not None:
+        block_importance = importance.reshape(num_blocks, block_size)
+
+    for b in range(num_blocks):
+        start = b * block_size
+        end = start + block_size
+
+        # Extract the Gram sub-matrix for this block's 4-element sub-groups
+        if group_gram is not None:
+            prefix = tuple(int(v) for v in X.shape[:-1])
+            bg = group_gram.reshape(*prefix, num_blocks, 8, 2, 4, 4)[:, b:b+1]
+        else:
+            bg = None
+
+        # Quantize this block
+        b_importance = (
+            block_importance[b] if block_importance is not None else None
+        )
+        block_result = _dense_to_hif4(
+            X[..., start:end],
+            importance=b_importance,
+            group_gram=bg,
+            search_offsets=search_offsets,
+            error_threshold=error_threshold,
+            accept_margin=accept_margin,
+            max_refine_ratio=max_refine_ratio,
+            max_refine_blocks=max_refine_blocks,
+        )
+
+        all_scale_factor.append(block_result["scale_factor"])
+        all_scale_lv2.append(block_result["scale_lv2"])
+        all_scale_lv3.append(block_result["scale_lv3"])
+        all_sign.append(block_result["sign"])
+        all_mant.append(block_result["mant"])
+
+        # GPTQ error compensation: update remaining columns
+        if b < num_blocks - 1:
+            # Dequantize the block to get the reconstructed values
+            X_hat_block = _dequantize_hif4(block_result).to(torch.float32)
+            delta = X[..., start:end] - X_hat_block  # [..., 64]
+
+            # Skip update if the error is negligible
+            if float(delta.square().sum()) < _EPS:
+                continue
+
+            rest_start = end
+            H_inv_bb = h_inv_dev[start:end, start:end]  # [64, 64]
+            H_inv_bc = h_inv_dev[start:end, rest_start:]  # [64, channels - end]
+
+            try:
+                update_coeffs = torch.linalg.solve(
+                    H_inv_bb, H_inv_bc
+                )  # [64, channels - end]
+                X[..., rest_start:] -= delta @ update_coeffs
+            except RuntimeError:
+                pass  # Solve failed, skip this update
+
+    # Merge all block results
+    scale_factor = torch.cat(all_scale_factor, dim=-4 if all_scale_factor[0].ndim >= 4 else -1)
+    scale_lv2 = torch.cat(all_scale_lv2, dim=-4 if all_scale_lv2[0].ndim >= 4 else -1)
+    scale_lv3 = torch.cat(all_scale_lv3, dim=-4 if all_scale_lv3[0].ndim >= 4 else -1)
+    sign = torch.cat(all_sign, dim=-4 if all_sign[0].ndim >= 4 else -1)
+    mant = torch.cat(all_mant, dim=-4 if all_mant[0].ndim >= 4 else -1)
+
+    # Canonical zero
+    sign = torch.where(mant == 0.0, torch.zeros_like(sign), sign)
+
+    return {
+        "scale_factor": scale_factor,
+        "scale_lv2": scale_lv2,
+        "scale_lv3": scale_lv3,
+        "sign": sign,
+        "mant": mant,
+    }
+
+
+@torch.no_grad()
+
