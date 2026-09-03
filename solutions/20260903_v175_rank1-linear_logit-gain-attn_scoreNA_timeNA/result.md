@@ -1,6 +1,6 @@
 # v175 候选：组合（v166 rank-1 Linear + v168 A1 logits 增益 Attention）
 
-> 状态：**RETAINED（官方 2026-09-04 回传 `17594 / 245s`，精确等于可加预测 S_pred，成为
+> 状态：**RETAINED（官方 2026-09-04 回传** **`17594 / 245s`，精确等于可加预测 S\_pred，成为
 > 新完整官方父版本）**
 >
 > 构造：v166 基底（v160 Linear + rank-1，官方 `4590 / 226s`）删除 standard Attention
@@ -14,23 +14,26 @@
 ## 1. 唯一构造（预注册，计划 §6/§13 组合规则）
 
 两个独立官方父侧组合为单文件：
+
 - **Linear** = v166（fold-median rank-1 残差重分布，官方 `4590/226s`，+3 over v163）；
+
 - **Attention** = v168（per-KV-head 解析 logits 增益 folded into multiplier，官方
   `14005/210s`，+60 over v164）；
+
 - 非目标侧零污染：组合中 Linear 与 v166 逐位一致、Attention 与 v168 逐位一致
   （case 级 max |Δgain| = 0.0 已实测）。
 
 ## 2. 本地验证（描述性；官方裁决）
 
-| 项目 | 结果 |
-| --- | --- |
-| 隔离导入 + 六 API | OK（六 API 各唯一） |
-| linear compact 56（配对 v166） | candidate_mean `0.705628`，**mean_delta 0.0**（rank-1 逐位保留） |
-| attention compact 4（配对 v168） | attention_mean `0.797753`，**max |Δgain| = 0.0**（A1 逐位保留） |
-| gpt2 linear 72（配对 v159-lin 父） | **mean Δgain +0.000786**、median −0.000383、34+/38−/0=（win 0.472）；跨模型中性 |
-| gpt2 attn compact 4（配对 v160 attn 父） | **mean Δgain +0.002447**、median +0.001125、3+/1−/0=（与 v168 同值，逐位保留） |
-| opt-125m attn 60（配对 v160 父）          | **mean Δgain −0.001390**、median −0.001657、26+/34−/0=（win 0.433）——轻微负向、方向一致性弱 |
-| API 时间 | linear compact 53.8s / attention compact 11.5s（同父侧） |
+| 项目                                  | 结果                                                                           |
+| ----------------------------------- | ---------------------------------------------------------------------------- |
+| 隔离导入 + 六 API                        | OK（六 API 各唯一）                                                                |
+| linear compact 56（配对 v166）          | candidate\_mean `0.705628`，**mean\_delta 0.0**（rank-1 逐位保留）                  |
+| attention compact 4（配对 v168）        | attention\_mean `0.797753`，**max Δgain = 0.0**（A1 逐位保留）                      |
+| gpt2 linear 72（配对 v159-lin 父）       | **mean Δgain +0.000786**、median −0.000383、34+/38−/0=（win 0.472）；跨模型中性        |
+| gpt2 attn compact 4（配对 v160 attn 父） | **mean Δgain +0.002447**、median +0.001125、3+/1−/0=（与 v168 同值，逐位保留）           |
+| opt-125m attn 60（配对 v160 父）         | **mean Δgain −0.001390**、median −0.001657、26+/34−/0=（win 0.433）——轻微负向、方向一致性弱 |
+| API 时间                              | linear compact 53.8s / attention compact 11.5s（同父侧）                          |
 
 ## 3. 判读（§3.3 / §13）
 
@@ -44,7 +47,7 @@ closure     = (17594 − 17532) / 4233 = 0.0146
 官方 `S(v175) = 17594 = S_pred`，**interaction = 0 精确成立**——侧向可加性在官方总分上
 得到验证（v166 官方父侧 + v168 官方父侧组合无交互）。`17594 > 17532` → **组合成为新
 完整官方父版本**，当前最高官方分数。时间 245s < 300s 通过（分量和 290s，共享折扣后
-~262s 预测成立）。距榜首 21765 仍差 4171 分。
+\~262s 预测成立）。距榜首 21765 仍差 4171 分。
 
 ## 4. 复现
 
@@ -53,3 +56,4 @@ closure     = (17594 − 17532) / 4233 = 0.0146
 
 .venv\Scripts\python.exe -u evaluator\official_eval.py --solution solutions\20260903_v175_rank1-linear_logit-gain-attn_scoreNA_timeNA\solution.py --attention-only --compact-panel --cache-mode read --nvfp4-cache-mode auto --capture-device cuda --algorithm-device cuda --baseline-json artifacts\official_eval\v168-compact-attn.json --output artifacts\official_eval\v175-compact-attn.json --report logs\official_eval\v175-compact-attn.md
 ```
+
