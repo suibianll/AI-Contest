@@ -24,6 +24,29 @@
 完整提交仍未同步，不能把两者视为同一源码。完整执行顺序见
 [`活动计划`](superpowers/plans/2026-09-02-linear-attention-dual-track-generalization-plan.md)。
 
+## 0.1 v160 本地集成（2026-09-03，未提交官方）
+
+官方事实未变（v159 = 17532 / timeNA）。v160 是本地集成归档
+`solutions/20260903_v160_v159-linear-l1batch_v158-attn-a2_scoreNA_timeNA/`
+（SHA `33B1D061…`，仅六 API、单文件），内容：
+
+- **Linear**：v159（用户 17816 实现 + 官方 17532 基底）+ L1 逐位等价批编码
+  （ec18a88）；default 168 linear_mean `0.633526`（与 L1 前逐位一致），
+  calib API `166.6s`。
+- **Attention**：v158 + A2（`_ATTN_SCALE_AWARE_CENTER_GQA=True`，mode 4 进入 GQA
+  竞争，`_candidate_is_safe` 兜底）+ A1 等价清理（K 居中/旋转 signs 候选共享，
+  120/120 + GPT-2 60/60 逐位一致）。default 120 attention_mean `0.742354`
+  （v158 的 0.735752 → +0.0066，17+/3−/100z，全长度正向；已知尾部 layer11 len10
+  −0.17、layer14 len128/512 ≈ −0.02）。
+- **L2 消融 4 项全 REJECTED**：seeds/sizes/RMS-smooth/wide-alphas 均承重，无安全消融。
+- **完整 default 集成审计**：overall `0.678871`，六 API `290.7s`
+  （calib_w 166.6 / dyn_a 60.7 / calib_a 60.0 / dyn Q/K/V 3.4），wall `318.4s`；
+  本地时间不能换算官方 `<300s`。
+- **GPT-2 完整集成**：linear `0.603115` / attention `0.389583`（与各自 parent 逐位
+  一致，无跨模型回归），API `113.8s`。
+
+L3（Linear block 精度）与 Pythia/OPT 二次架构验证尚未执行；决定继续或提交 v160 官方。
+
 ## 1. 版本结论
 
 - **当前仓库内最高已绑定源码的官方分数：v159，17532 分 / 时间未知。** v158
