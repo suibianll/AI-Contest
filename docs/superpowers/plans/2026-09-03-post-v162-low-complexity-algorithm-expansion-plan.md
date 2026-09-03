@@ -1,12 +1,13 @@
 # v162 侧向计划完成后的低复杂度算法扩展实施计划
 
-> 状态：**QUEUED / INACTIVE**
+> 状态：**ACTIVE**
 >
 > 创建：2026-09-03
 >
-> 本文件是可执行实施计划，但当前不生效。当前唯一活动计划
-> [`2026-09-03-v162-official-side-isolation-optimization-plan.md`](../2026-09-03-v162-official-side-isolation-optimization-plan.md)
-> 完成并归档前，不得依据本文件实现代码、运行评测、分配版本号或提交官方。
+> 激活：2026-09-03（用户指示切换；§13 执行顺序改为 Attention 优先）。移交自
+> [`侧向隔离计划`](../../archive/plans/2026-09-03-v162-official-side-isolation-optimization-plan-superseded.md)：
+> v165 timeout、v167 本地 REJECTED、v166 已官方提交待回传。激活时父版本：
+> `P_L = v163（4587/202s；v166 回传 S_L > 4587 则更新）`、`P_A = v164（13945/204s）`。
 
 ## 1. 激活条件与边界
 
@@ -671,17 +672,20 @@ state:                   O((D/64) * 128)
 
 ```text
 A1 logits gain
--> L1 WUSH/CAT audit（等价则不分配版本）
--> L2 Babai
 -> A2 V bias
 -> A3 fixed-offset compiler
--> L3 trellis
 -> A4 rounding threshold
+-> L1 WUSH/CAT audit（等价则不分配版本）
+-> L2 Babai
+-> L3 trellis
 -> L4 Kronecker CAT
 ```
 
-排序依据：先测在线几乎零新增成本的 Attention A1，再补 Linear 中真正改变离散解码的 L2；A3
-优先于 A4，因为它同时降低动态候选复杂度；L4 最后执行，因为与既有 CAT 家族重叠最大。
+排序依据（2026-09-03 激活时按用户指示改为 Attention 优先）：官方两侧贡献
+`12944:3586 ≈ 3.61:1`，Attention 候选的单次官方提交期望回报更高；且 Linear 侧 v166
+rank-1 已在官方通道中待回传，Linear 名额暂有在途测量。侧内相对顺序不变：A3 优先于
+A4，因为它同时降低动态候选复杂度；L1 审计先行确认 WUSH 与既有 CAT-64 的关系；
+L4 最后执行，因为与既有 CAT 家族重叠最大。
 
 两侧出现新的官方最好版本后，才构造一个组合版本，实测：
 
@@ -717,3 +721,11 @@ gap         = 21765 - S_LA
 - KVLinC：<https://arxiv.org/abs/2510.05373>
 
 这些论文只提供数学来源；论文分数、kernel 加速或模型结论不用于预测本竞赛官方结果。
+
+## 16. 执行记录
+
+- **2026-09-03 激活**（用户指示，§13 改为 Attention 优先）：侧向隔离计划归档移交；
+  v165 官方 timeout、v167 低秩 Gram 码本本地 REJECTED（真实 QK 交叉 Gram 高秩，
+  rank-2 耦合破坏深层哨兵，λ=0 消融与父版本逐位一致证明实现正确）、v166 rank-1
+  Linear 已官方提交待回传。父版本：`P_L = v163`（若 v166 回传 `S_L > 4587` 则更新
+  并在此登记）、`P_A = v164`。下一动作：A1 解析 logits 增益校正（从 P_A = v164 构造）。

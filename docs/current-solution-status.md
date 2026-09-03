@@ -670,21 +670,26 @@ v86 的部分 scale-aware/output-aware 机制。此前把它描述为"v86 级静
 ## 6. 当前活动计划
 
 唯一活动计划是
-[`2026-09-03-v162-official-side-isolation-optimization-plan.md`](superpowers/plans/2026-09-03-v162-official-side-isolation-optimization-plan.md)：
-以 v162 双标准编码为共同官方零点，分别测量 Linear 与 Attention 新机制。v165 已官方
-timeout，当前计划继续首轮 Linear rank-1 可逆残差重分布，以及一次保持 Gram 目标的低复杂度
-rank-2 残差码本重构。local panel 只记录风险，官方分数相对 v163/v164 是否增加是唯一准确率
-裁决；正向不设最低分门槛。两侧取得独立官方结果后，组合版本另测 interaction、真实时间和对
-榜首差距的闭合率。已拒绝的 A/B/C 计划已归档，不从其参数邻域重启。
+[`2026-09-03-post-v162-low-complexity-algorithm-expansion-plan.md`](superpowers/plans/2026-09-03-post-v162-low-complexity-algorithm-expansion-plan.md)：
+侧向隔离计划收官后的低复杂度算法扩展，**Attention 优先**（用户指示，官方两侧贡献
+`12944:3586 ≈ 3.61:1`）：A1 解析 logits 增益校正 → A2 V 输出偏差质心补偿 → A3 动态
+scale 静态策略编译 → A4 矩匹配 mantissa 阈值，随后 Linear L1-L4（WUSH/CAT 审计、
+Babai 解码、Trellis/VQ、Kronecker CAT）。候选从 v162 双标准零点单侧构造：Linear 父侧
+`P_L = v163（4587/202s）`——v166 rank-1 已官方提交、结果待回传，若 `S_L > 4587` 则父侧
+更新（登记写入新计划 §16 执行记录）；Attention 父侧 `P_A = v164（13945/204s）`。官方差分
+按计划 §3.3（step_gain、side_contrib、相对 v160 侧贡献的固定口径比例）；每包一个候选、
+失败换机制不扫邻域；v165 约束（动态 API 无 Gram contraction、无候选循环、复杂计算只在
+calibration）对全部 A 包强制。
 
-当前计划完成后的算法扩展已单独写入
-[`排队计划`](superpowers/plans/queued/2026-09-03-post-v162-low-complexity-algorithm-expansion-plan.md)。
-它目前为 `QUEUED / INACTIVE`，不与当前活动计划并行；只有当前计划完成并归档后才能移入
-`plans/` 根目录激活。
+侧向隔离计划收官状态：v165 官方 timeout（Cross-Gram64 per-call 官方增量成本下界 >96s）、
+v167 低秩 Gram 码本本地 REJECTED（真实 QK 交叉 Gram 高秩，top-2 off-diag ≈7% 特征质量，
+rank-2 耦合破坏深层哨兵；λ=0 消融与父版本逐位一致证明实现正确）、v166 待官方回传。
+Attention 侧内部机制在该计划内耗尽，新机制只来自本扩展计划 A1-A4。
 
-当日已归档：官方两侧比重校准计划（v162/v163/v164 已完成且可加性残差为 1）、Attention
-per-call 序列自适应精化计划（v161 官方 timeout）、Attention 解析式宽域计划和 Householder
-快速验证计划。旧的动态 per-call、full64/Householder 与参数邻域族继续关闭。
+当日已归档：v162 官方侧向隔离优化计划、官方两侧比重校准计划（v162/v163/v164 已完成且
+可加性残差为 1）、Attention per-call 序列自适应精化计划（v161 官方 timeout）、Attention
+解析式宽域计划和 Householder 快速验证计划。旧的动态 per-call、full64/Householder 与参数
+邻域族继续关闭。
 
 ## 7. 归档现状与待整理项
 

@@ -8,20 +8,18 @@
 `real_model_suite.py` 已退役。
 
 **当前活动计划（2026-09-03）**：
-[`2026-09-03-v162-official-side-isolation-optimization-plan.md`](2026-09-03-v162-official-side-isolation-optimization-plan.md)
-——以 v162 `1001/146s` 的双标准 HiF4 为共同零点，分别构造“候选 Linear + 标准 Attention”
-和“标准 Linear + 候选 Attention”，由官方结果直接计算两侧绝对贡献、相对 v160 侧贡献的提升率、
-组合交互项及榜首差距闭合率。本地只保留接口、合法性、可达性和 control 检查；不再用严格的
-compact/default 准确率门禁替代官方裁决。v165 Attention 隔离测量已官方
-`timeout（>300s，无分数）`；当前计划继续 Linear rank-1 可逆残差重分布和一次预注册的
-低复杂度 rank-2 Gram 残差码本重构，后续仅按官方结果保留或更换数学机制。
+[`2026-09-03-post-v162-low-complexity-algorithm-expansion-plan.md`](2026-09-03-post-v162-low-complexity-algorithm-expansion-plan.md)
+——侧向隔离计划收官后的低复杂度算法扩展，**Attention 优先**（A1 解析 logits 增益校正 →
+A2 V 输出偏差质心补偿 → A3 动态 scale 静态策略编译 → A4 矩匹配 mantissa 阈值），随后
+Linear L1-L4（WUSH/CAT 审计、Babai 解码、Trellis/VQ、Kronecker CAT）。候选仍从 v162
+双标准零点单侧构造（`P_L = v163 4587/202s`，v166 rank-1 待官方回传；`P_A = v164
+13945/204s`），官方差分按计划 §3.3 登记；每个工作包一个候选、失败换机制不扫邻域，
+v165 约束（动态 API 无 Gram contraction、无候选循环、复杂计算只在 calibration）对
+全部 A 包强制。
 
-**排队计划（未激活）**：
-[`queued/2026-09-03-post-v162-low-complexity-algorithm-expansion-plan.md`](queued/2026-09-03-post-v162-low-complexity-algorithm-expansion-plan.md)
-——收录当前计划完成后的低复杂度 Attention 偏差补偿与 Linear 格/trellis 编码方向。该文件
-状态为 `QUEUED / INACTIVE`，当前活动计划完成并归档前不执行、不评测、不分配版本号、不提交。
-
-当日已归档：官方两侧分数比重校准计划（v162 `1001/146s`、v163 `4587/202s`、v164
+当日已归档：v162 官方侧向隔离优化计划（v165 timeout、v167 低秩 Gram 码本本地
+REJECTED、v166 rank-1 已提交待回传，`-superseded`）、官方两侧分数比重校准计划
+（v162 `1001/146s`、v163 `4587/202s`、v164
 `13945/204s`，score interaction 为 1，当前已实现 Attention:Linear 官方贡献约 `3.61:1`）、
 Attention per-call 序列自适应精化计划（v161 官方 timeout，per-call 动态族关闭）、Attention
 解析式宽域计划（A1a 4×4 REJECTED、A2 无病因、A3 未启动）与 Householder 快速验证计划

@@ -3,12 +3,13 @@
 > **最新官方进展（2026-09-03）**：v160 官方结果为 **17532/232s**；v162/v163/v164 两侧校准
 > 分别为 **1001/146s、4587/202s、13945/204s**，端点可加性残差仅 1 分。用户确认的榜首为
 > **21765/290s**，当前差 **4233 分**。v165（standard Linear + v161 Attention）已官方
-> **timeout（>300s，无分数）**，确认 Cross-Gram64 per-call 动态精化超出时间预算。当前按
-> [`v162 官方侧向隔离优化计划`](docs/superpowers/plans/2026-09-03-v162-official-side-isolation-optimization-plan.md)
-> 分别构造“候选 Linear + 标准 Attention”和“标准 Linear + 候选 Attention”，由官方结果
-> 直接测量两侧贡献与优化比例；本地只保留合法性、可达性和 control 检查。当前计划完成后的
-> 新算法已放入[排队计划](docs/superpowers/plans/queued/2026-09-03-post-v162-low-complexity-algorithm-expansion-plan.md)，
-> 尚未激活。
+> **timeout（>300s，无分数）**，确认 Cross-Gram64 per-call 动态精化超出时间预算。侧向
+> 隔离计划已收官归档（v167 低秩 Gram 码本本地 REJECTED；v166 rank-1 Linear 已官方提交
+> 待回传）。当前按
+> [`低复杂度算法扩展计划`](docs/superpowers/plans/2026-09-03-post-v162-low-complexity-algorithm-expansion-plan.md)
+> **Attention 优先**推进（A1 解析 logits 增益校正 → A2 V 偏差质心 → A3 静态 scale 编译
+> → A4 矩匹配阈值，随后 Linear L1-L4）；候选仍从 v162 双标准零点单侧构造，本地只保留
+> 合法性、可达性和 control 检查，官方差分按计划 §3.3 登记。
 
 更新时间：2026-09-03。当前仓库只认一套本地评测协议：
 [`evaluator/official_eval.py`](evaluator/official_eval.py)。旧的
