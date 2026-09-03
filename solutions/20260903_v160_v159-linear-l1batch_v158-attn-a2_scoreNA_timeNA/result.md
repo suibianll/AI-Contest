@@ -26,12 +26,15 @@
 
 ## Official status
 
-`score NA / time NA / runtime status unknown` — v160 has NOT been submitted to
-the official evaluator.  The archived source is for local mechanism and
-time-budget control only.  The v159 Linear component itself previously
-received an official `17532 / timeNA` reply (pre-L1 source, SHA
-`0508045A…`); the L1 re-encoding is bit-exact so the official score basis is
-unchanged, but no official time was ever returned for it.
+`official score 17532 / time 232s / runtime PASS` — submitted 2026-09-03.
+v160 is **identical to v159** (17532; 232s passes the <300s limit): the A2/A1
+attention changes and the L1 batched Linear encoding produced **zero official
+delta**.  The L1 re-encoding being bit-exact is thereby confirmed on the
+official panel; the A2 mode-4 gate apparently never selected a different
+candidate on the official hidden data (matching the GPT-2 no-op behaviour).
+No official score improvement over v159 was obtained, so v160 is a no-op
+submission, not a promotion.  Root copy is still
+`solution.py` SHA `33B1D061…`.
 
 ## Source identity
 
