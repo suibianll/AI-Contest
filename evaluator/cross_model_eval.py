@@ -35,7 +35,7 @@ from official_eval import CALIBRATION_LENGTHS, DATA_DIR, PROTOCOL, ROOT, TEST_LE
 
 GPT_ROLES = ("q", "k", "v", "o", "ffn_in", "proj")
 PROBE_PROTOCOL = "cross-model-probe-v1"
-SUPPORTED_MODELS = ("gpt2", "gpt2-medium")
+SUPPORTED_MODELS = ("gpt2", "gpt2-medium", "opt-125m")
 
 
 def _cpu_float(value: torch.Tensor) -> torch.Tensor:
@@ -244,6 +244,213 @@ def capture_gpt2_pack(model_name: str, device_name: str) -> RawPack:
             torch.cuda.empty_cache()
 
 
+def _load_opt(model_name: str, device: torch.device) -> tuple[Any, torch.nn.Module, Path]:
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+
+    model_path = ROOT / "models" / model_name
+    if not model_path.is_dir():
+        raise FileNotFoundError(f"model directory does not exist: {model_path}")
+    tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True, use_fast=True)
+    # float32 throughout: capture-consistency acceptance is <1e-5 against a
+    # float32 reference forward; an fp16 checkpoint would leak ~1e-3 rounding.
+    model = AutoModelForCausalLM.from_pretrained(
+        model_path,
+        local_files_only=True,
+        dtype=torch.float32,
+    )
+    model.eval().to(device)
+    if hasattr(model.config, "use_cache"):
+        model.config.use_cache = False
+    # Force the eager attention backend so captured Q/K/V reproduce the exact
+    # eager path (sdpa/flash kernels differ from eager at ~1e-4 in fp32 and
+    # would fail the <1e-5 capture-consistency acceptance).
+    model.config._attn_implementation = "eager"
+    if getattr(model.config, "model_type", None) != "opt":
+        raise ValueError(f"{model_name} is not an OPT checkpoint")
+    return tokenizer, model, model_path
+
+
+def _capture_opt_windows(
+    model: torch.nn.Module,
+    windows: Sequence[evaluator.Window],
+    device: torch.device,
+) -> tuple[dict[str, list[list[torch.Tensor]]], list[list[tuple[torch.Tensor, torch.Tensor, torch.Tensor]]]]:
+    """Capture the same API operands as Qwen, using OPT's standard QKV modules.
+
+    OPT uses learned absolute position embeddings (no RoPE), a pre-attention
+    LN, and a ReLU MLP (fc1 -> relu -> fc2).  Q/K/V are independent Linear
+    projections, so each captured tensor is already the exact operand the
+    candidate API sees.
+    """
+
+    blocks = list(model.model.decoder.layers)
+    hidden = int(model.config.hidden_size)
+    captures: list[dict[str, torch.Tensor]] = [{} for _ in blocks]
+    handles: list[Any] = []
+
+    def capture_input(name: str, module: torch.nn.Module, index: int) -> None:
+        def hook(
+            _module: torch.nn.Module,
+            inputs: tuple[Any, ...],
+            _value: Any,
+            key: str = name,
+            layer_index: int = index,
+        ) -> None:
+            if not inputs or not torch.is_tensor(inputs[0]):
+                raise RuntimeError(f"OPT {key} received no tensor input")
+            captures[layer_index][key] = _cpu_float(inputs[0])
+        handles.append(module.register_forward_hook(hook))
+
+    def capture_output(name: str, module: torch.nn.Module, index: int) -> None:
+        def hook(
+            _module: torch.nn.Module,
+            _inputs: tuple[Any, ...],
+            value: Any,
+            key: str = name,
+            layer_index: int = index,
+        ) -> None:
+            if not torch.is_tensor(value):
+                raise RuntimeError(f"OPT {key} returned no tensor output")
+            captures[layer_index][key] = _cpu_float(value)
+        handles.append(module.register_forward_hook(hook))
+
+    for index, block in enumerate(blocks):
+        attn = block.self_attn
+        capture_input("attn_in", attn.q_proj, index)  # q/k/v share this input
+        capture_output("q_out", attn.q_proj, index)
+        capture_output("k_out", attn.k_proj, index)
+        capture_output("v_out", attn.v_proj, index)
+        capture_input("o_in", attn.out_proj, index)
+        capture_input("ffn_in", block.fc1, index)
+        capture_input("proj_in", block.fc2, index)
+
+    activations = {role: [] for role in GPT_ROLES}
+    qkv_store: list[list[tuple[torch.Tensor, torch.Tensor, torch.Tensor]]] = []
+    try:
+        for window in windows:
+            captures = [{} for _ in blocks]
+            input_ids = torch.tensor(window.input_ids, dtype=torch.long, device=device).unsqueeze(0)
+            with torch.no_grad():
+                model(input_ids=input_ids, use_cache=False)
+            per_layer_qkv: list[tuple[torch.Tensor, torch.Tensor, torch.Tensor]] = []
+            per_layer_activations = {role: [] for role in GPT_ROLES}
+            for index, captured in enumerate(captures):
+                required = {"attn_in", "q_out", "k_out", "v_out", "o_in", "ffn_in", "proj_in"}
+                missing = required - set(captured)
+                if missing:
+                    raise RuntimeError(f"OPT layer {index} capture missing {sorted(missing)}")
+                attn_input = _flat(captured["attn_in"])
+                per_layer_qkv.append((
+                    _flat(captured["q_out"]).contiguous(),
+                    _flat(captured["k_out"]).contiguous(),
+                    _flat(captured["v_out"]).contiguous(),
+                ))
+                per_layer_activations["q"].append(attn_input)
+                per_layer_activations["k"].append(attn_input)
+                per_layer_activations["v"].append(attn_input)
+                per_layer_activations["o"].append(_flat(captured["o_in"]))
+                per_layer_activations["ffn_in"].append(_flat(captured["ffn_in"]))
+                per_layer_activations["proj"].append(_flat(captured["proj_in"]))
+            for role in GPT_ROLES:
+                activations[role].append(per_layer_activations[role])
+            qkv_store.append(per_layer_qkv)
+    finally:
+        for handle in handles:
+            handle.remove()
+    return activations, qkv_store
+
+
+def capture_opt_pack(model_name: str, device_name: str) -> RawPack:
+    device = torch.device(device_name)
+    tokenizer, model, model_path = _load_opt(model_name, device)
+    try:
+        paths = {split: DATA_DIR / filename for split, filename in WIKITEXT_FILES.items()}
+        missing = [str(path) for path in paths.values() if not path.is_file()]
+        if missing:
+            raise FileNotFoundError("missing pinned WikiText files: " + ", ".join(missing))
+        train_rows = evaluator._load_rows(paths["train"])
+        validation_rows = evaluator._load_rows(paths["validation"])
+        test_rows = evaluator._load_rows(paths["test"])
+        calibration_windows = evaluator._select_calibration_windows(tokenizer, train_rows)
+        test_windows = evaluator._select_test_windows(
+            tokenizer,
+            {"validation": validation_rows, "test": test_rows},
+        )
+        blocks = list(model.model.decoder.layers)
+        hidden = int(model.config.hidden_size)
+        weights: list[dict[str, torch.Tensor]] = []
+        for block in blocks:
+            attn = block.self_attn
+            weights.append({
+                "q": _cpu_float(attn.q_proj.weight),
+                "k": _cpu_float(attn.k_proj.weight),
+                "v": _cpu_float(attn.v_proj.weight),
+                "o": _cpu_float(attn.out_proj.weight),
+                "ffn_in": _cpu_float(block.fc1.weight),
+                "proj": _cpu_float(block.fc2.weight),
+            })
+        calibration_activations, calibration_qkv = _capture_opt_windows(
+            model, calibration_windows, device
+        )
+        test_activations, test_qkv = _capture_opt_windows(model, test_windows, device)
+        q_heads = int(model.config.num_attention_heads)
+        head_dim = hidden // q_heads
+        config = model.config
+        metadata = {
+            "protocol": PROBE_PROTOCOL,
+            "base_protocol": PROTOCOL,
+            "model": model_name,
+            "model_path": str(model_path),
+            "model_revision": "local-checkpoint",
+            "architecture": "OPTForCausalLM",
+            "dataset": "Salesforce/wikitext",
+            "dataset_config": evaluator.WIKITEXT_CONFIG,
+            "dataset_revision": evaluator.WIKITEXT_REVISION,
+            "calibration_lengths": list(CALIBRATION_LENGTHS),
+            "test_lengths": list(TEST_LENGTHS),
+            "test_window_count": len(test_windows),
+            "test_splits": sorted({window.split for window in test_windows}),
+            "capture_device": str(device),
+            "weights_dtype": "float32",
+            "weight_layout": "[out_features, in_features]",
+            "input_codec": evaluator.NVFP4_INPUT_CODEC,
+            "input_mode": evaluator.NVFP4_MODE,
+            "linear_roles": list(GPT_ROLES),
+            "role_mapping": {
+                "q/k/v": "independent attn q_proj/k_proj/v_proj (pre-attention LN input)",
+                "o": "attn.out_proj",
+                "ffn_in": "fc1 (ReLU MLP input; activation_fn=relu)",
+                "proj": "fc2",
+            },
+            "positional_encoding": "learned absolute position embeddings; no rotary transform",
+            "attention_formula": "public full softmax QK^T V; OPT causal mask is not applied in the proxy score",
+            "attention_heads": {"q": q_heads, "kv": q_heads, "head_dim": head_dim},
+            "layer_norm_before": bool(getattr(config, "do_layer_norm_before", True)),
+            "ffn_activation": "relu",
+            "data_sha256": {split: evaluator.sha256_file(path) for split, path in paths.items()},
+        }
+        return RawPack(
+            weights,
+            calibration_activations,
+            test_activations,
+            calibration_qkv,
+            test_qkv,
+            calibration_windows,
+            test_windows,
+            len(blocks),
+            hidden,
+            q_heads,
+            q_heads,
+            head_dim,
+            metadata,
+            GPT_ROLES,
+        )
+    finally:
+        del model
+        if device.type == "cuda":
+            torch.cuda.empty_cache()
+
+
 def _write_json(path: Path, value: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2, default=str) + "\n", encoding="utf-8")
@@ -417,7 +624,11 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             )
         source = "cache"
     else:
-        raw = capture_gpt2_pack(model_name, args.capture_device)
+        raw = (
+            capture_gpt2_pack(model_name, args.capture_device)
+            if model_name.startswith("gpt2")
+            else capture_opt_pack(model_name, args.capture_device)
+        )
         source = "model_forward"
         if args.cache_mode in {"auto", "write"}:
             evaluator.save_pack(raw, cache_path)
