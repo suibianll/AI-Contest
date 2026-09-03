@@ -4,6 +4,9 @@
 >
 > 创建：2026-09-03
 >
+> 修订：2026-09-03（预执行修订：A 数值界、B 在线硬约束与失败隔离、C 逐元素准则、
+> 组合官方时间账、并行外部搜索工作流、期望校准注记）
+>
 > 官方父版本：v160，`17532 / 232s`，归档源码 SHA256
 > `33B1D061CE6BFCD92659C597BE4830BB9B910E646FF518433DA67B925AE8680D`
 >
@@ -29,6 +32,12 @@ score interaction = 17532 - 4587 - 13945 + 1001 = 1
 因此在 standard/v160 两个端点上，官方分数近似按侧可加；但 `12944:3586=3.61:1`
 是当前已实现贡献比，不是公开评分权重，也不是本地 gain 到官方分的换算率。研发目标按
 Attention `+3000~3300`、Linear `+900~1200` 分解，只作为资源规划，不用于预测单个候选。
+
+量级注记（期望校准）：已测 Attention 信号天花板是 v161 本地 default `0.794856`；按当前
+Attention 官方边际做的粗略比例检查显示，`+3000` 官方分对应本地 mean 约 `0.91` 量级，远超
+已验证信号。A+B 预计落在 `+300~1500` 官方分区间，§6 的"合计 <1000 即转向"分支触发概率
+高；M2（20000）不是 A+B+C 的预期产出，而是需要外部代差机制参与才能接近的目标。该注记
+只用于期望管理与转向预判，禁止作为本地 gain 到官方分的换算率，也不得用于候选参数选择。
 
 执行原则：
 
@@ -95,7 +104,7 @@ Fk_j = E[sum_ts ||J_ts||^2 * Q_tj^2 / d]
 
 ```text
 z_fj = log(F_fj + eps) - mean_j(log(F_fj + eps))
-mu_j = median_f(z_fj)
+mu_j = clip(median_f(z_fj), -2, 2)
 signal = Var_j(mu_j)
 noise = median_f(Var_j(z_fj - mu_j))
 rho = max(0, 1 - noise / (signal + eps))
@@ -103,7 +112,9 @@ I_new_j = normalize_head(I_parent_j * exp(rho * mu_j))
 ```
 
 `rho` 由折间信噪比解析确定，不设置 blend 网格。折间不稳定时 `rho -> 0`，自然退回父版本；
-稳定时才增强输出敏感通道。禁止直接开启根文件中旧 `_ATTN_FISHER_IMPORTANCE` 的
+稳定时才增强输出敏感通道。数值界 `c=2` 是预注册公式常数（通道最大增强 `e^2 ≈ 7.4×`、
+最大抑制 `e^-2 ≈ 0.14×`），防止 log-Fisher 大动态范围下 `exp` 溢出或 importance 塌缩；
+不由 A0 统计数据调整。禁止直接开启根文件中旧 `_ATTN_FISHER_IMPORTANCE` 的
 `3 blend × Q-only/K-only/QK` 九候选搜索和 calibration-output gate。
 
 ### 3.3 冻结与代码边界
@@ -166,6 +177,12 @@ total dynamic: O(TD), 常数高于 parent
 state: diagonal + one rank-1 vector per head/block
 ```
 
+在线实现硬约束（预注册）：五候选选择必须整批向量化，只允许 elementwise/reduction 类大张量
+算子；禁止 per-microblock Python 循环、gather/topk/scatter 类小张量算子和任何迭代结构。
+v161 官方 timeout 已证明该类算子在官方机的成本不可由本地外推，"动态 API 增量超过 20%
+即停止"只是必要条件而非充分条件。失败隔离：B 作为独立候选在 A 的官方结果入账后单独提交；
+B 官方 timeout 只损失一次提交机会，不回退 A 的已入账收益。
+
 真实形状 smoke 中动态 API 增量超过 20% 即停止，不进入 default。其余门禁完全复用 A2-A5，
 不得因 B 的候选更强而放宽负 case、长度尾部或跨模型条件。
 
@@ -206,6 +223,10 @@ Delta L_f = 2 * delta * g_fj + delta^2 * H_fjj
 g_f <- g_f + delta * H_f[:, j]
 ```
 
+逐元素选择准则（预注册，与 §5.1 字典序目标同构）：每个元素在三个合法码字中，按各自五折
+delta 向量在字典序 `(max_f Delta L_f, median_f Delta L_f, mean_f Delta L_f)` 下取最小者；
+不引入新的聚合权重、折间投票或逐折贪心。
+
 沿用 v159 已有固定通道顺序，只执行一次 sweep。整个 block 完成后用五折完整二次型复核；
 只有字典序目标严格改善才接受，否则恢复 parent block。必须记录 attempted blocks、accepted
 blocks、changed codes、各折 before/after、W-only/Both/interaction 和各 role 接受率。
@@ -245,14 +266,30 @@ Attention 与 Linear 候选必须分别获得独立官方正向，才允许进�
 集成，检查六 API、state、单文件导入和时间；由于侧向校准的 score interaction 为 1，可把
 两侧官方增量相加作为结构性预期，但不得自动执行官方 2×2，也不得把本地 delta 换算为官方分。
 
+组合候选的官方时间预算账（预注册）：Attention 候选与 Linear 候选各自官方提交回传后，用实测
+官方总时间投影组合时间 `T_combo ≈ T_Attn_official + T_Linear_official - 232`（扣除重复计入
+的 v160 基线；时间交互按 0 计，v163+v164 侧向测量观察到的 -28s 共享抵扣不可依赖）。投影
+`>285s` 时先做时间削减审计再提交，硬上限 `290s`（榜首 290s 证明该量级在官方机上可行）；
+本地 wall 时间不进入该门禁。
+
 若首轮 Attention + Linear 官方合计仍 `<1000`，说明当前两种目标修正不足以承担 4233 分差，
 停止局部扩展并转向新的编码架构或外部高分方案分析。若合计 `>=1000`，以新官方父版本重新做
 一次证据审计，再决定 M2 的第二个独立机制。
 
+### 6.1 并行外部搜索工作流（零风险，即刻启动）
+
+§6 的"合计 <1000 即转向"分支大概率触发（见 §1 量级注记），转向输入不应等到失败后才开始
+准备。外部 SOTA 搜索作为独立工作流与 A/C 并行推进：优先 KV-cache 量化方向（KIVI、Atom、
+QuaRot、KVQuant、MiKV 等 4-bit Q/K/V + rotation/outlier-prevention 机制），筛选标准是能否
+映射到六 API 约束、HiF4 层级码字结构与"calibration 编译、动态 O(TD)"边界。该工作流只读
+文献与公开源码、不跑本地 panel、不产生候选版本号，不违反"两侧不并行调参"纪律；产出为
+候选机制清单与可行性注记，作为 §6 转向分支的即用输入。
+
 ## 7. 固定执行顺序与产物
 
-1. 归档 v162/v163/v164 侧向校准计划并修正索引；
+1. 归档 v162/v163/v164 侧向校准计划并修正索引（已完成，commit `66b3336`）；
 2. A0-A5：跨折收缩 Softmax-Fisher；
+   并行（零风险）：外部 SOTA 搜索工作流（§6.1）即刻启动，不依赖 A/C 裁决；
 3. A 官方强正向后才考虑 B；A 失败则跳过 B；
 4. C0-C5：Linear 跨折 minimax 部署 A@W；
 5. 两侧分别官方正向后才做一次组合审计；
