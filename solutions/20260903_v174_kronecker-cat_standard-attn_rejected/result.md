@@ -1,8 +1,9 @@
-# v174 候选：Kronecker 压缩解析 CAT（L4）Linear（未提交/未知官方） + 标准 Attention
+# v174 候选：Kronecker 压缩解析 CAT（L4）Linear（REJECTED） + 标准 Attention
 
-> 状态：**ARCHIVED — 官方未提交，`scoreNA / timeNA`**
+> 状态：**REJECTED（官方 2026-09-04 回传 `4508 / 190s`，相对官方父侧 v166 `4590/226s`
+> step_gain −82）**
 >
-> 工作包：`docs/superpowers/plans/2026-09-03-post-v162-low-complexity-algorithm-expansion-plan.md` §11
+> 工作包：`docs/superpowers/archive/plans/2026-09-03-post-v162-low-complexity-algorithm-expansion-plan-superseded.md` §11
 > （Linear 工作包 L4：Kronecker 压缩的解析 CAT）。计划执行顺序：A1/A2/A3/A4 已收官或
 > 已 REJECTED，L1 审计判 DUPLICATE 概念、L2/L3 在 v172/v173 处理；本包为 L4。
 >
@@ -11,6 +12,8 @@
 > L4 从 v166 复制，只改 `hif4_calibration_and_quantize_weight` 与
 > `hif4_dynamic_quantize_activation` 及其直接 helper；四个 Attention API 与 v162 standard
 > 逐位一致。
+>
+> 官方结果：`4508 / 190s`（2026-09-04 回传）
 
 ## 1. 唯一算法机制（预注册，§11）
 
@@ -73,9 +76,9 @@ R_right = expm(B)
 
 ## 3. 判读与 version
 
-- 待官方首批回传后判读：`step_gain = S(v174) − 4590`、`side_contrib = S(v174) − 1001`、
-  `Linear ratio = (S(v174) − 4587)/3586`（v160 固定口径）。`S > 4590` 且 `<300s` → RETAINED
-  成为新 Linear 父侧；否则 REJECTED；`>300s` → TIMEOUT。
+- 官方 2026-09-04 回传 `4508 / 190s`：`step_gain = S(v174) − S(v166) = 4508 − 4590 = −82`、
+  `Linear ratio = −82/3586 = −2.29%`。`4508 < 4590` → **REJECTED**（官方负），L4 家族
+  关闭。时间 190s < 300s 通过，负向归因于算法而非超时。
 - version：activation_state `4 → 5`；state 新增 `kron_left`/`kron_right`。
 - 控制：Attention 四 API 未被触碰；linear compact 内 Attention 臂未运行（0 case）。
 

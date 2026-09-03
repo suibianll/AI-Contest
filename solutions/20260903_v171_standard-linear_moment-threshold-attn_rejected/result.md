@@ -1,13 +1,13 @@
 # v171 候选：A4 矩匹配 mantissa 阈值 + standard Linear（低复杂度扩展计划第四包）
 
-> 状态：**CANDIDATE — 本地机制完整、控制干净；按用户指示纳入官方提交队列（本地 proxy
-> 不裁决，官方判定）**
+> 状态：**REJECTED（官方 2026-09-04 回传 `13657 / 214s`，相对官方父侧 v168 `14005/210s`
+> step_gain −348）**
 >
 > Attention 官方父侧：v168（A1 晋级，`14005 / 210s`，同日修正：初报 17248/237s 有误）
 >
 > 候选 SHA256：`4469B85B53F5ADEFC6CFE4FBF136BDD4D7FF9FFC48A815592C95864A7287A844`
 >
-> 官方结果：`unregistered / NA`
+> 官方结果：`13657 / 214s`（2026-09-04 回传）
 
 ## 1. 唯一算法机制（预注册，低复杂度扩展计划 §7）
 
@@ -34,15 +34,16 @@ floor 替代 round，无候选循环。新增 `_params_denominator`/`_round_mant
 证据：`v171-compact-attn.json`、`v171-attn-default.json`、`v171-gpt2-attn-compact.json`
 （`artifacts/official_eval/`，对应 `logs/official_eval/` report）。
 
-## 3. 判读（按计划 §3.3）
+## 3. 判读（按计划 §3.3 / 当前父侧 v168 口径）
 
 ```text
-step_gain    = S(v171) − 13945
-Attention ratio = step_gain / 12944
+step_gain       = S(v171) − S(v168) = 13657 − 14005 = −348
+Attention ratio = step_gain / 12944 = −2.69%
 ```
 
-`S(v171) > 13945` → A4 RETAINED 成为新 Attention 父侧；`≤` → REJECTED 转 L1-L4
-（Linear 侧）。按用户指示所有计划内优化均实现并提交官方裁决，本地 proxy 不否决。
+官方 `13657 < 14005` → A4 **REJECTED**（官方负），A4 家族关闭。时间 214s < 300s 通过，
+负向归因于算法而非超时。本地 proxy 近中性（−0.0007）、GPT-2 +0.0096、opt −0.0042 均与
+官方负向一致或轻微，官方裁决为准。按用户指示已提交官方裁决，本地 proxy 不否决。
 
 ## 4. 复现
 
