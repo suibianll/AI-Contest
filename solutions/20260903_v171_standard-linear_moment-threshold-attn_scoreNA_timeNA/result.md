@@ -28,6 +28,7 @@ floor 替代 round，无候选循环。新增 `_params_denominator`/`_round_mant
 | attention compact 4（配对 v168） | 0.797457 vs 父 0.797753（−0.0003，近中性） |
 | attention default 120（配对 v168） | 0.740808 vs 父 0.741474（**−0.0007**、median −0.0003、`56+/64−`、worst −0.027）——与 v168 本地信号同量级 |
 | GPT-2 compact 4（配对 v168） | **+0.009573**（`2+/2−`，worst −0.005）——不构成结构性反向 |
+| opt-125m attn 60（配对 v160 父） | **mean Δgain −0.004172**、median −0.004290、26+/34−/0=（win 0.433）——轻微负向，同 Qwen 方向一致 |
 | API 时间 | default 120：64.0s vs v168 72.1s（本地 −8s） |
 
 证据：`v171-compact-attn.json`、`v171-attn-default.json`、`v171-gpt2-attn-compact.json`

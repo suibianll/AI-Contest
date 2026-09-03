@@ -28,6 +28,7 @@
 | attention compact 4（配对 v168） | attention_mean `0.797753`，**max |Δgain| = 0.0**（A1 逐位保留） |
 | gpt2 linear 72（配对 v159-lin 父） | **mean Δgain +0.000786**、median −0.000383、34+/38−/0=（win 0.472）；跨模型中性 |
 | gpt2 attn compact 4（配对 v160 attn 父） | **mean Δgain +0.002447**、median +0.001125、3+/1−/0=（与 v168 同值，逐位保留） |
+| opt-125m attn 60（配对 v160 父）          | **mean Δgain −0.001390**、median −0.001657、26+/34−/0=（win 0.433）——轻微负向、方向一致性弱 |
 | API 时间 | linear compact 53.8s / attention compact 11.5s（同父侧） |
 
 ## 3. 判读（§3.3 / §13）
