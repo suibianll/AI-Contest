@@ -38,12 +38,12 @@ median、worst case 或经验时间比例取消首次官方提交。算法是否
 
 ## 2. 已有官方锚点
 
-| 记号 | 版本 | Linear | Attention | 官方分数 | 官方时间 |
-| --- | --- | --- | --- | ---: | ---: |
-| `S00` | v162 | standard | standard | `1001` | `146s` |
-| `S10` | v163 | v160 | standard | `4587` | `202s` |
-| `S01` | v164 | standard | v160 | `13945` | `204s` |
-| `S11` | v160 | v160 | v160 | `17532` | `232s` |
+| 记号    | 版本   | Linear   | Attention |    官方分数 |   官方时间 |
+| ----- | ---- | -------- | --------- | ------: | -----: |
+| `S00` | v162 | standard | standard  |  `1001` | `146s` |
+| `S10` | v163 | v160     | standard  |  `4587` | `202s` |
+| `S01` | v164 | standard | v160      | `13945` | `204s` |
+| `S11` | v160 | v160     | v160      | `17532` | `232s` |
 
 当前两侧官方贡献为：
 
@@ -130,11 +130,16 @@ S_pred = S_L + S_A - S00
 门禁放宽不等于允许围绕官方榜单调参：
 
 - 每个候选只改变一个可解释机制，配置在读取本地 holdout 和官方结果前固定；
+
 - calibration、local holdout 和 official 三者用途分离；本地结果只作描述和查错；
+
 - 同一机制首次官方负向后，不扫描 threshold、rank、seed、block size、fold 权重或 role/layer 路由；
+
 - 官方 timeout 可以对同一数学目标做一次纯复杂度重构，但必须说明输出是否等价；
+
 - 官方正向无论大小都如实保留；是否成为主线根据绝对增量和时间决定，不设 `+300`、`+1000`
   等人为准确率门槛；
+
 - 不重复提交相同 SHA 或逐位等价候选估计评测噪声。
 
 ## 6. Linear 路线
@@ -281,3 +286,24 @@ Linear 和 Attention 始终单独获得官方结果后再组合：
 
 每个候选 result 必须包含：父侧版本、standard control 来源、唯一机制、源码 SHA、本地 scope、
 官方分数/时间、四个侧向指标、状态和下一决策。未回传官方结果时写 `unregistered / NA`。
+
+## 10. 执行记录（2026-09-03）
+
+- v165 官方 **timeout**（>300s，无分数）：v161 Cross-Gram64 per-call 动态路径在官方
+  机超预算；无 Attention 精度结论，按 §7.1 允许一次保持 Gram 目标的低复杂度重构。
+
+- v167（§7.2 低秩 Gram 码本）**本地 REJECTED（compact 阶段，未提交官方）**：实现
+  正确性由 λ=0 消融证明（与父版本逐位一致，mean 0.797462——对角项对最近邻编码
+  数学上恒 no-op）。真实 QK 交叉 Gram 为高秩（top-2 off-diag ≈7% 特征质量），
+  rank-2 耦合项是被接受 bump 的唯一收益来源且在真实数据上破坏深层哨兵
+  （L15 0.735→−0.54、L23 0.606→−0.05；median 与 mean 折聚合均如此）。按 §5 不做
+  rank 邻域扫描。**v165 的低复杂度重构额度已用完；Attention 侧内部机制耗尽**——
+  per-call 全 Gram 官方超预算、rank-2 编译本地破坏、对角-only 恒 no-op、
+  Softmax-Fisher importance 已在前计划否决。Gram 信号确证存在（v161 本地 +0.0525）
+  但不可在预算内部署。证据：
+  [`v167 result`](../../solutions/20260903_v167_standard-linear_lowrank-gram-attn_rejected/result.md)。
+
+- v166（§6 rank-1 Linear）候选已归档等待官方提交，不受 v167 影响。
+
+- 下一步：Attention 侧需新数学机制或外部 SOTA 搜索；Linear 侧等 v166 官方回传。
+
