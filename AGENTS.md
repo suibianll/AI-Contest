@@ -23,13 +23,14 @@
 
 - **官方提交配额（用户约束，2026-09-04 目标设置起）**：提交通过版本 ≤10。v171/v174/
   v175 为目标设置前已排期队列（不占配额）；**v176 为第 1 个（1/10，官方负不退还），
-  剩余 9**。每新增一个候选扣 1 配额，官方负向不退还。SOTA 搜索（二至五轮：KVLinC/
+  v180 为第 2 个（2/10，本地 Qwen 正向、GPT-2 轻微负标记 model-specific-risk），
+  剩余 8**。每新增一个候选扣 1 配额，官方负向不退还。SOTA 搜索（二至五轮：KVLinC/
   VecInfer/ResQ/OTT、ScaleSweep/H-Scale、MXFP4 误差三分量/HCP/ARCQuant、QuantVLA
   温度匹配/SageBwd/谱界）均落入已闭合域或 A1 已覆盖域，不注册新候选。官方裁决后
   新一轮计划 [`2026-09-04-post-official-a1-freedom-plan.md`](docs/superpowers/plans/2026-09-04-post-official-a1-freedom-plan.md)：
   以侧向可加性成立（v175 interaction=0）与 A1 为唯一官方正向 Attention 机制为锚点，
-  **D1**（A1 Q/K 非对称折叠分配，本地预研 v180 不占配额）→ D2（per-Q-head 对照）→
-  D3（组合延伸，占 1 配额）。
+  **D1**（A1 Q/K 非对称折叠分配 = v180 本地 Qwen 正向、已提交官方）→ D2（per-Q-head
+  对照）→ D3（组合延伸，占 1 配额）。
 
 - v159 原始 SHA `0508045A...4242` 的官方分数为 **17532**、时间未知；v159 修正归档 SHA
   `13C9CF0B...5EC79` 只增加数学等价的 GPU device 修复与中间量复用，尚未官方复测。v158
