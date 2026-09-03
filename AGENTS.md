@@ -41,6 +41,14 @@
   不占配额）→ **D3 已由 v180 的 v175+D1 组合完成，不另占配额**。本轮计划完成；
   禁止围绕 alpha 或 per-head 粒度邻域继续扫描。
 
+- **V 侧方向结构性关闭（2026-09-04 穷尽审计）**：V 的量化自由度全部排除——
+  per-head importance 无法改变 HiF4 64 块内离散解（64 块恰 = 1 head 1 token 的 64 维，
+  per-head 常量只整体缩放块损失，A3/v170 实测 −0.06pp 且单层退化）；per-channel
+  multiplier 在当前编码器语义下是「编码前缩放、解码不逆缩放」（`_dequantize_hif4`
+  无 multiplier），对 Q/K 是 logits 缩放（softmax 容错），对 V 直接破坏输出 O（无
+  softmax 容错）；per-token scale 因 HiF4 五字段无 per-token 表不可行（C4）；A2
+  V-bias、C1 K 侧 per-channel 等化均官方负。V 侧不注册新候选。
+
 - v159 原始 SHA `0508045A...4242` 的官方分数为 **17532**、时间未知；v159 修正归档 SHA
   `13C9CF0B...5EC79` 只增加数学等价的 GPU device 修复与中间量复用，尚未官方复测。v158
   **16861 / 223s** 仍是时间与源码均完整的安全父版本，其 Attention Matrix-Smooth 继续冻结。
