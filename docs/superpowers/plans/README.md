@@ -1,24 +1,23 @@
 # 计划入口
 
-> 最后更新：2026-09-03
+> 最后更新：2026-09-04
 
 本目录只保留一份活跃计划。执行优化时只读取下面这份文件、根 `solution.py`、最新
 `proxy-v2` 评测和官方规则；归档目录中的计划不具有指令效力。本地主评测只调用
 `evaluator/official_eval.py`，跨模型泛化调用 `evaluator/cross_model_eval.py`；旧
 `real_model_suite.py` 已退役。
 
-**当前活动计划（2026-09-03）**：
-[`2026-09-03-post-v162-low-complexity-algorithm-expansion-plan.md`](2026-09-03-post-v162-low-complexity-algorithm-expansion-plan.md)
-——侧向隔离计划收官后的低复杂度算法扩展，**Attention 优先**（A1 解析 logits 增益校正 →
-A2 V 输出偏差质心补偿 → A3 动态 scale 静态策略编译 → A4 矩匹配 mantissa 阈值），随后
-Linear L1-L4（WUSH/CAT 审计、Babai 解码、Trellis/VQ、Kronecker CAT）。候选仍从 v162
-双标准零点单侧构造（`P_L = v166 4590/226s`（v166 rank-1 官方 `+3`，已按 §16 更新父侧）；
-`P_A = v164
-13945/204s`），官方差分按计划 §3.3 登记；每个工作包一个候选、失败换机制不扫邻域，
-v165 约束（动态 API 无 Gram contraction、无候选循环、复杂计算只在 calibration）对
-全部 A 包强制。
+**当前活动计划（2026-09-04）**：
+[`2026-09-04-sota-candidate-list.md`](2026-09-04-sota-candidate-list.md)
+——低复杂度扩展计划全部裁决/实现后的下一阶段候选清单（KVQuant/ChannelQuant 配方
+C1 K 侧 outlier 等化 = v176 官方批测中；C2 A1 细粒度化双分支 v177/v178 本地
+REJECTED；C3 固定 8×8 随机正交对照 v179 本地 REJECTED；SOTA 搜索五轮收敛）。
+父版本：`P_L = v166（4590/226s）`、`P_A = v168（14005/210s）`；官方批测队列
+v171/v174/v175/v176（A4/L4/组合/C1），配额账本 v176 = 1/15。官方回传后按计划
+§2/§3 预注册规则裁决并登记组合条件 `S_pred = 4590 + S_c1 − 1001`。
 
-当日已归档：v162 官方侧向隔离优化计划（v165 timeout、v167 低秩 Gram 码本本地
+当日已归档：低复杂度算法扩展计划（A1-A4/L1-L4/组合全覆盖，
+`-superseded`）、v162 官方侧向隔离优化计划（v165 timeout、v167 本地
 REJECTED、v166 rank-1 官方 `4590/226s` RETAINED 为新 Linear 父侧，`-superseded`）、官方两侧分数比重校准计划
 （v162 `1001/146s`、v163 `4587/202s`、v164
 `13945/204s`，score interaction 为 1，当前已实现 Attention:Linear 官方贡献约 `3.61:1`）、
