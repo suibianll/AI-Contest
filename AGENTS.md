@@ -29,8 +29,10 @@
   温度匹配/SageBwd/谱界）均落入已闭合域或 A1 已覆盖域，不注册新候选。官方裁决后
   新一轮计划 [`2026-09-04-post-official-a1-freedom-plan.md`](docs/superpowers/plans/2026-09-04-post-official-a1-freedom-plan.md)：
   以侧向可加性成立（v175 interaction=0）与 A1 为唯一官方正向 Attention 机制为锚点，
-  **D1**（A1 Q/K 非对称折叠分配 = v180 本地 Qwen 正向、已提交官方）→ D2（per-Q-head
-  对照）→ D3（组合延伸，占 1 配额）。
+  **D1**（A1 Q/K 非对称折叠分配 = v180 本地 Qwen 正向、已提交官方，等待裁决）→
+  **D2**（per-Q-head 对照 = v181 本地 REJECTED：默认 120 纯 D2 mean −0.002746、
+  median −0.000086、54+/66−，D1+D2 叠加亦负，确认 A1 group-consistent 结构承重；
+  不占配额）→ D3（组合延伸，等 v180 官方结果后构造，占 1 配额）。
 
 - v159 原始 SHA `0508045A...4242` 的官方分数为 **17532**、时间未知；v159 修正归档 SHA
   `13C9CF0B...5EC79` 只增加数学等价的 GPU device 修复与中间量复用，尚未官方复测。v158
