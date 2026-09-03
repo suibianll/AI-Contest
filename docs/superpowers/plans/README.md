@@ -7,12 +7,14 @@
 `evaluator/official_eval.py`，跨模型泛化调用 `evaluator/cross_model_eval.py`；旧
 `real_model_suite.py` 已退役。
 
-**当前活动计划（2026-09-04）**：
-[`2026-09-04-post-official-a1-freedom-plan.md`](2026-09-04-post-official-a1-freedom-plan.md)
-——官方裁决后的 A1 结构内自由度计划。**D1 v180 官方 `17597/242s`，相对 v175
-`+3/−3s`，已 RETAINED 为新完整父版本**；D2 v181 per-Q-head gain 本地 REJECTED；
-D3 的 v175+D1 组合已由 v180 本身完成，不另耗配额。当前距榜首 21765 差 4168，官方
-配额 2/10、剩余 8。D1 无在线新增算子，242s 只记实测，不把 −3s 宣称为稳定加速。
+**当前活动计划**：**无 active 计划（2026-09-04，方向穷尽）**。
+A1 结构内自由度计划已裁决完毕并归档
+（[`2026-09-04-post-official-a1-freedom-plan-completed.md`](../archive/plans/2026-09-04-post-official-a1-freedom-plan-completed.md)）：
+D1 v180 官方 `17597/242s` RETAINED 为新完整父、D2 v181 本地 REJECTED、D3 由 v180 完成；
+C 候选清单全部裁决归档（`2026-09-04-sota-candidate-list-closed.md`）；V 侧量化自由度
+结构性关闭（per-head importance 无法改变 64 块内解、per-channel multiplier 破坏输出、
+per-token 不可行）。距榜首 21765 差 4168，官方配额 2/10、剩余 8。新候选需外部触发
+（新官方裁决、新机制方向、或约束调整）。
 
 当日已归档：低复杂度算法扩展计划（A1-A4/L1-L4/组合全覆盖，
 `-superseded`）、v162 官方侧向隔离优化计划（v165 timeout、v167 本地
