@@ -104,6 +104,16 @@ C   = 0.5 * (C_A + C_W)
 
 ## 5. 结果解释与停止条件
 
+### 5.1 首个候选实测（2026-09-03）
+
+Qwen Linear compact 已按阶段 B 完成，父子使用同一 NVFP4 cache 和 56 个配对 case：
+
+- Householder `0.699190`，父版本 `0.705508`，mean Δ `-0.006318`；median Δ `-0.005958`；
+  `8/48/0`（改善/回归/不变），worst-quartile Δ 为负；
+- API total `47.387s`，父版本 `46.052s`（约 `+2.9%`）；wall `52.390s`；
+- 违反 Qwen compact 门禁，按失败即停，不运行 GPT-2/OPT 和 Qwen default；
+- Householder 代码保留为研究实现，但正式根目录默认关闭，v160 基线行为不变。
+
 | 结果 | 决定 |
 | --- | --- |
 | Qwen compact 失败 | 立即拒绝，耗时控制在 2 分钟内 |

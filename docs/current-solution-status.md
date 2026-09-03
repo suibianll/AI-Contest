@@ -61,7 +61,10 @@ L3 首次 full64 探针因死分支判为 **INVALID EXPERIMENT**；修正 reacha
 重跑一次 compact：24 次 refine attempted `659456` row-blocks、accepted `657540`，但 Linear
 `0.705508→0.687588`，paired `6+/42-/8=`、mean delta `-0.017920`。W-only delta `+0.107169`
 被 interaction `-0.118818` 反转，说明块内 full-H 目标与最终 `Q(A)Q(W)^T` 不一致。该实验
-正式 `REJECTED`，不再调参或扩大测试；下一算法实验为活动计划 E3 Householder。
+正式 `REJECTED`，不再调参或扩大测试；下一算法实验为活动计划 E3 Householder。E3 首个
+固定 64-block Householder 候选已完成 Qwen Linear compact：`0.705508→0.699190`，paired
+`8+/48-/0=`，API `46.052→47.387s`，违反 compact 门禁，正式根已保持该研究臂默认关闭；
+不运行跨模型和 default。
 
 ## 1. 版本结论
 
@@ -562,6 +565,9 @@ v86 的部分 scale-aware/output-aware 机制。此前把它描述为“v86 级�
 3. 按 Qwen compact → GPT-2/OPT compact → Qwen Linear default 失败即停，完整本地运行预算
    首个候选 `10–12 分钟`（含一次性跨模型 parent），后续候选 `8–10 分钟`；
 4. 全部门禁通过后只允许一次官方候选，官方结果不反向用于阈值或候选网格调参。
+
+当前 Householder 首个候选已在 Qwen compact 阶段拒绝；在用户指定下一机制前不继续跨模型或
+default 测试。
 
 ## 7. 归档现状与待整理项
 

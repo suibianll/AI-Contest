@@ -268,6 +268,21 @@ _WEIGHT_FULL64_SECOND_COORDINATE = False
 _WEIGHT_FULL64_DATA_DRIVEN_COVERAGE = False
 _WEIGHT_FULL64_TARGET_COVERAGE = 0.97
 _WEIGHT_FULL64_DATA_DRIVEN_MAX_RATIO = 1.0
+
+# Fixed low-freedom coordinate redistribution.  The same symmetric
+# Householder reflection is applied to the final Linear coordinates of X and
+# W, so the continuous product is unchanged before either operand is encoded.
+# There is deliberately no candidate/grid search: one rule is fitted per
+# matrix from calibration-only operand covariances and the vectors alone are
+# retained in the activation state.
+# Research arm; the formal root keeps it disabled until the paired compact
+# gate is passed on Qwen and the cross-model holdouts.
+_HOUSEHOLDER_ENABLED = False
+_HOUSEHOLDER_BLOCK_SIZE = 64
+_HOUSEHOLDER_POWER_ITERS = 4
+_HOUSEHOLDER_MAX_ROWS = 256
+_HOUSEHOLDER_EPS = 1.0e-8
+
 # C45f: static adaptive-headroom candidate.  It reruns the existing
 # CAT-coordinate FULL64 solve with a wider E6M2 neighbourhood, but only after
 # activation_state has been frozen.  A@W then chooses parent vs headroom as a
@@ -4140,6 +4155,7 @@ def _nvfp4_to_hif4(
     block_smooth_size: int = 0,
     block_smooth_seed: int = 0,
     cat_transform: Optional[torch.Tensor] = None,
+    householder_v: Optional[torch.Tensor] = None,
     center_mode: int = 0,
     center_num_heads: Optional[int] = None,
     center_head_dim: Optional[int] = None,
@@ -4230,6 +4246,8 @@ def _nvfp4_to_hif4(
         )
     if cat_transform is not None:
         dense = _apply_cat64_rows(dense, cat_transform, inverse=False)
+    if householder_v is not None:
+        dense = _apply_householder_blocks(dense, householder_v)
     gram = None
     if group_gram is not None:
         gram = group_gram.detach().to(
@@ -4745,6 +4763,116 @@ def _linear_pair_transform(
     return _apply_cat64_rows(
         transformed, cat_transform, inverse=bool(weight_side)
     )
+
+
+def _fit_householder_vectors(
+    weight_smooth: torch.Tensor,
+    activation_samples: Sequence[torch.Tensor],
+) -> Optional[torch.Tensor]:
+    """Fit one fixed 64-channel Householder vector per final-coordinate block."""
+
+    block = int(_HOUSEHOLDER_BLOCK_SIZE)
+    if (
+        not _HOUSEHOLDER_ENABLED
+        or weight_smooth.ndim != 2
+        or not activation_samples
+    ):
+        return None
+    channels = int(weight_smooth.shape[1])
+    if channels < block or channels % block != 0:
+        return None
+    try:
+        activation_rows = torch.cat(
+            [sample.to(dtype=torch.float32) for sample in activation_samples],
+            dim=0,
+        )
+        activation_rows = _sample_rows(
+            activation_rows, int(_HOUSEHOLDER_MAX_ROWS)
+        )
+        weight_rows = _sample_rows(
+            weight_smooth.to(dtype=torch.float32), int(_HOUSEHOLDER_MAX_ROWS)
+        )
+        blocks = channels // block
+        x_grouped = activation_rows.reshape(-1, blocks, block)
+        w_grouped = weight_rows.reshape(-1, blocks, block)
+        x_cov = torch.einsum("tbi,tbj->bij", x_grouped, x_grouped)
+        w_cov = torch.einsum("obi,obj->bij", w_grouped, w_grouped)
+        x_trace = x_cov.diagonal(dim1=-2, dim2=-1).sum(dim=-1)
+        w_trace = w_cov.diagonal(dim1=-2, dim2=-1).sum(dim=-1)
+        identity = torch.eye(
+            block, dtype=torch.float32, device=weight_smooth.device
+        ).expand(blocks, -1, -1)
+        x_cov = torch.where(
+            x_trace[:, None, None] > float(_HOUSEHOLDER_EPS),
+            x_cov / x_trace[:, None, None].clamp_min(float(_HOUSEHOLDER_EPS)),
+            identity,
+        )
+        w_cov = torch.where(
+            w_trace[:, None, None] > float(_HOUSEHOLDER_EPS),
+            w_cov / w_trace[:, None, None].clamp_min(float(_HOUSEHOLDER_EPS)),
+            identity,
+        )
+        covariance = torch.nan_to_num(
+            0.5 * (x_cov + w_cov), nan=0.0, posinf=0.0, neginf=0.0
+        )
+        vector = torch.full(
+            (blocks, block),
+            1.0 / math.sqrt(float(block)),
+            dtype=torch.float32,
+            device=weight_smooth.device,
+        )
+        for _ in range(int(_HOUSEHOLDER_POWER_ITERS)):
+            vector = torch.bmm(
+                covariance, vector.unsqueeze(-1)
+            ).squeeze(-1)
+            norm = vector.norm(dim=-1, keepdim=True).clamp_min(
+                float(_HOUSEHOLDER_EPS)
+            )
+            vector = vector / norm
+        target = torch.where(vector >= 0.0, 1.0, -1.0) / math.sqrt(
+            float(block)
+        )
+        difference = vector - target
+        difference_norm = difference.norm(dim=-1, keepdim=True)
+        valid = torch.isfinite(difference_norm) & (
+            difference_norm > float(_HOUSEHOLDER_EPS)
+        )
+        vectors = torch.where(
+            valid,
+            difference / difference_norm.clamp_min(float(_HOUSEHOLDER_EPS)),
+            torch.zeros_like(difference),
+        )
+        return torch.nan_to_num(
+            vectors, nan=0.0, posinf=0.0, neginf=0.0
+        ).contiguous()
+    except (RuntimeError, ValueError, TypeError):
+        return None
+
+
+def _apply_householder_blocks(
+    dense: torch.Tensor,
+    vectors: Optional[torch.Tensor],
+) -> torch.Tensor:
+    """Apply stored block reflections with one vectorized projection."""
+
+    if vectors is None:
+        return dense
+    block = int(_HOUSEHOLDER_BLOCK_SIZE)
+    channels = int(dense.shape[-1])
+    if channels < block or channels % block != 0:
+        raise ValueError("Householder width must be divisible by 64")
+    v = vectors.detach().to(device=dense.device, dtype=torch.float32)
+    expected = (channels // block, block)
+    if tuple(v.shape) != expected:
+        raise ValueError(
+            f"Householder vector shape {tuple(v.shape)} != {expected}"
+        )
+    grouped = dense.to(dtype=torch.float32).reshape(
+        *dense.shape[:-1], channels // block, block
+    )
+    projection = (grouped * v).sum(dim=-1, keepdim=True)
+    reflected = grouped - 2.0 * projection * v
+    return reflected.reshape_as(dense)
 
 
 def _transformed_second_moment(
@@ -6792,6 +6920,10 @@ def _jdrq_calibration_products(
                 weight_side=False,
                 cat_transform=cat_transform,
             )
+            if state.get("householder_v") is not None:
+                exact_t = _apply_householder_blocks(
+                    exact_t, state.get("householder_v")
+                )
             frozen_params = _nvfp4_to_hif4(
                 quant_rows,
                 scale_rows,
@@ -6800,6 +6932,7 @@ def _jdrq_calibration_products(
                 block_smooth_size=int(state.get("block_smooth_size", 0)),
                 block_smooth_seed=int(state.get("block_smooth_seed", 0)),
                 cat_transform=state.get("cat_transform"),
+                householder_v=state.get("householder_v"),
                 importance=state.get("importance"),
                 group_gram=state.get("gram"),
                 group_gram8=state.get("gram8"),
@@ -8142,7 +8275,6 @@ def hif4_calibration_and_quantize_weight(
         best_perm,
         best_block_smooth_size,
     )
-    weight_group_gram = None
     gram_full = None
     if use_quadratic:
         gram_full = _transformed_covariance(
@@ -8152,6 +8284,55 @@ def hif4_calibration_and_quantize_weight(
             best_block_smooth_size,
             best_block_smooth_seed,
         )
+
+    # Build the final pre-quantization activation coordinates once.  The
+    # Householder vectors are fitted only from these calibration samples and
+    # then applied identically to the static weight and activation operands.
+    transformed_activation_samples = [
+        _linear_pair_transform(
+            sample.to(dtype=torch.float32),
+            best_d,
+            best_perm,
+            best_block_smooth_size,
+            best_block_smooth_seed,
+            weight_side=False,
+        )
+        for sample in activation_samples
+    ]
+    householder_v = _fit_householder_vectors(
+        weight_smooth, transformed_activation_samples
+    )
+    if householder_v is not None:
+        weight_smooth = _apply_householder_blocks(weight_smooth, householder_v)
+        transformed_activation_samples = [
+            _apply_householder_blocks(sample, householder_v)
+            for sample in transformed_activation_samples
+        ]
+        if gram_full is not None:
+            block = int(_HOUSEHOLDER_BLOCK_SIZE)
+            blocks = in_features // block
+            vectors = householder_v.to(
+                device=gram_full.device, dtype=torch.float32
+            )
+            matrices = torch.eye(
+                block, dtype=torch.float32, device=gram_full.device
+            ).unsqueeze(0) - 2.0 * torch.einsum(
+                "bi,bj->bij", vectors, vectors
+            )
+            grouped = gram_full.to(dtype=torch.float32).reshape(
+                blocks, block, blocks, block
+            )
+            left = torch.einsum("bpi,bicj->bpcj", matrices, grouped)
+            gram_full = torch.einsum(
+                "bpcj,cqj->bpcq", left, matrices
+            ).reshape_as(gram_full)
+        if transformed_activation_samples:
+            h_x_smooth = torch.cat(
+                transformed_activation_samples, dim=0
+            ).square().mean(dim=0)
+
+    weight_group_gram = None
+    if gram_full is not None:
         blocks = in_features // _HIF4_BLOCK_SIZE
         weight_group_gram = _flat_group_gram(gram_full, in_features).reshape(
             blocks, 8, 2, 4, 4
@@ -8234,23 +8415,6 @@ def hif4_calibration_and_quantize_weight(
     smooth_inv_state = None
     if not torch.equal(best_d, identity_d):
         smooth_inv_state = _cpu_state_tensor(best_d.reciprocal())
-    smooth_inv_work = None if smooth_inv_state is None else best_d.reciprocal()
-    permutation_work = None if permutation_state is None else best_perm
-
-    transformed_activation_samples = []
-    for sample in activation_samples:
-        transformed = sample.to(dtype=torch.float32)
-        if smooth_inv_work is not None:
-            transformed = transformed * smooth_inv_work.reshape(1, -1)
-        if permutation_work is not None:
-            transformed = transformed.index_select(-1, permutation_work)
-        if best_block_smooth_size != 0:
-            transformed = _block_hadamard_transform(
-                transformed,
-                best_block_smooth_size,
-                best_block_smooth_seed,
-            )
-        transformed_activation_samples.append(transformed)
 
     if _DATA_DRIVEN_RATIO:
         loss_parts = [
@@ -8438,6 +8602,11 @@ def hif4_calibration_and_quantize_weight(
     activation_state = {
         "smooth_inv": smooth_inv_state,
         "permutation": permutation_state,
+        "householder_v": (
+            _cpu_state_tensor(householder_v)
+            if householder_v is not None
+            else None
+        ),
         "block_smooth_size": int(best_block_smooth_size),
         "block_smooth_seed": int(best_block_smooth_seed),
         "importance": _cpu_state_tensor(activation_importance),
@@ -8449,7 +8618,7 @@ def hif4_calibration_and_quantize_weight(
         "max_refine_ratio": float(activation_ratio),
         "max_refine_blocks": _ACTIVATION_REFINE_MAX_BLOCKS,
         "in_features": int(in_features),
-        "version": 3,
+        "version": 4,
     }
     return {
         "weight_params": weight_params,
@@ -8491,6 +8660,9 @@ def hif4_dynamic_quantize_activation(
         dense = _block_hadamard_transform(
             dense, block_smooth_size, block_smooth_seed
         )
+    householder_v = activation_state.get("householder_v")
+    if householder_v is not None:
+        dense = _apply_householder_blocks(dense, householder_v)
 
     gram = None
     gram_state = activation_state.get("gram")
