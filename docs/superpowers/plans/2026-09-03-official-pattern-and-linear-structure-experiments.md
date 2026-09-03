@@ -7,18 +7,17 @@
 > 官方父版本：v160，`17532 / 232s`，归档源码 SHA256
 > `33B1D061CE6BFCD92659C597BE4830BB9B910E646FF518433DA67B925AE8680D`
 >
-> 根 `solution.py` 额外含默认关闭的 L3 接线 gate，SHA 与 v160 归档不同；所有实验必须从
-> v160 归档源码分支，不能把根文件当作逐位相同的源码父本。
+> 根 `solution.py` SHA 与 v160 归档不同；所有实验必须从 v160 归档源码分支，不能把根文件
+> 当作逐位相同的源码父本。
 
 ## 1. 目标与边界
 
-本阶段不尝试拟合官方隐藏 case 权重，只回答四个可证伪问题：
+本阶段不尝试拟合官方隐藏 case 权重，只回答三个可证伪问题：
 
 1. v158 Attention Matrix-Smooth 在 v159 Linear 上是否仍贡献约同量级收益，还是存在明显
    Linear×Attention 交互；
 2. 本地等价批处理的时间收益是否能迁移到官方硬件；
-3. v159 的同坐标 Weight 码字是否真的已经收敛；
-4. 若同坐标码字已收敛，统一的低自由度坐标重分布能否产生跨 shape 的大范围收益。
+3. 统一的低自由度坐标重分布能否产生跨 shape 的大范围收益。
 
 Attention 新门控、seed/alpha/offset 扫描、ROAB、PAWV、length/layer/role 路由继续冻结。
 官方反馈只用于接受或拒绝上述预注册假设；每个假设最多提交一个算法候选，不根据官方分数
@@ -38,20 +37,6 @@ Attention 新门控、seed/alpha/offset 扫描、ROAB、PAWV、length/layer/role
 v155/v156 的 `10^-4` 级局部变化没有迁移；v158 的较广 Attention 变化得到 `+117`；v159
 的大范围联合 Linear 变化得到 `+671`。因此本计划把“影响覆盖面”和“父版本交互”作为观察量，
 不再把本地 aggregate mean 当作官方分数代理。
-
-### 2.2 L3 reachability 审计
-
-提交 `b4031ae` 把 `_refine_weight_blocks64` 放在：
-
-```python
-if _WEIGHT_E2E_REFINE and len(activation_samples) > 0:
-    if _WEIGHT_FULL64_APPLY and gram_full is not None:
-        ...
-```
-
-但父版本 `_WEIGHT_E2E_REFINE=False`，且 `workbench/l3_full64_on.py` 只把
-`_WEIGHT_FULL64_APPLY=True`。所以所谓 L3 no-op 没有执行目标函数。原 JSON/report 保留为审计
-证据，但不得再引用“块级已收敛”结论。正确实验见 E3。
 
 ## 3. 通用实验纪律
 
@@ -155,78 +140,10 @@ L1 在本地把 Linear default API 从约 `269.4s` 降到 `231.4s`，但官方�
 
 E2 只研究时间，不作为新父版本，也不继续做 A1 的 1 秒级官方 A/B。
 
-## 7. E3：修正 reachability 后的 full64 同坐标码字实验（DONE / REJECTED）
+## 7. E3：统一 64-block Householder 坐标重分布
 
-### 一次性执行结果（2026-09-03）
-
-- 候选 SHA `05DC0261...8619`，只执行一次 Qwen Linear compact；
-- 24 个具有 `gram_full` 的 Weight state 真实进入 refine；4 个 `proj` state 因输入宽度 4864
-  超过 quadratic 上限而保持 control；
-- attempted row-blocks `659456`，accepted `657540`（99.71%），改变 code 元素 `15124875`；
-- Linear `0.705507633 → 0.687587782`，mean/median delta
-  `-0.017919850/-0.016153218`，`6+/42-/8=`；
-- family delta：fc `-0.021504`、o `-0.056900`、qkv `-0.008510`、proj `0`；
-- 来源 delta：W-only `+0.107169`、A-only `-0.006271`、interaction `-0.118818`，说明块内
-  Weight criterion 的收益被最终 Q(A)Q(W) 配对交互完全抵消并反转。
-
-结论：E3 确认存在大量同坐标码字余量，但当前 damped block-full-H 接受准则与最终联合输出
-目标不一致。它不是“无余量”，而是“错误目标下几乎全量接受”。按预注册门禁直接 REJECTED，
-不跑 default/GPT-2/OPT，不提交官方，不调整 damping、beam、coverage 或 offsets。下一步为 E4。
-
-### 假设
-
-现有 `_gptq_quantize_weight` 之后可能仍有 full-H 块内离散余量。此前实验没有执行目标分支，
-因此必须重新验证，不能直接跳到新算法。
-
-### 唯一代码变化
-
-从 v160 归档创建 `workbench/e3_full64_reachable.py`，把调用改成两个独立条件：
-
-```python
-if _WEIGHT_FULL64_APPLY and gram_full is not None:
-    weight_params = _refine_weight_blocks64(...)
-
-if _WEIGHT_E2E_REFINE and len(activation_samples) > 0:
-    weight_params = _weight_e2e_refine(...)
-```
-
-候选只设 `_WEIGHT_FULL64_APPLY=True`；`_WEIGHT_E2E_REFINE` 继续为 `False`。第一次实验完全沿用
-现有 full64 offsets、beam、damping 和 narrow/wide coverage，不修改任何数值。
-
-### 必须记录的 reachability 证据
-
-workbench 计数器按 shape 汇总：
-
-- `eligible_blocks`、`attempted_blocks`；
-- `accepted_blocks`；
-- 改变的 HiF4 code 元素数；
-- refine 前后 full-H loss；
-- Weight calibration 增量时间。
-
-计数器只写日志，不进入正式 state。`attempted_blocks=0` 是实现错误；`attempted>0` 且
-`accepted=0` 才能支持“当前码字已局部收敛”。
-
-### 晋级门禁
-
-1. Qwen compact：mean delta > 0、median delta >= 0、至少 14/56 case 改善、各 shape family
-   mean 不为负、worst-quartile mean delta >= -1e-3；
-2. Qwen default：正 case 多于负 case，validation/test 成对同号率 >= 75%，未修改 Attention
-   120/120 逐位一致；
-3. GPT-2/OPT：W/A/Both/interaction 主来源与 Qwen 同构，不能只在一个模型的 fc/proj 生效；
-4. 在线 Activation 路径和 state 不增加算子；本地完整 API total 不超过 v160 同机父版本 +30s。
-
-失败即 `REJECTED`，不调整 damping、beam、coverage 或 offsets。通过才允许一次官方提交。
-
-### 官方解释
-
-- 官方正向：隐藏评测仍奖励同坐标 full-H 离散码字优化；
-- 本地广泛正向但官方零/负：本地 Hessian/采样不能迁移，同坐标 refine 路线关闭；
-- 本地 `accepted=0`：无需官方提交，直接进入 E4。
-
-## 8. E4：统一 64-block Householder 坐标重分布
-
-E4 只在 E3 真正执行后为 no-op 或被本地门禁拒绝时启动。它测试与 E3 正交的假设：v159 的
-瓶颈不在同坐标码字，而在进入 HiF4 前的通道几何。
+E3 测试一个独立假设：v159 的剩余瓶颈可能在进入 HiF4 前的通道几何，固定的低自由度正交
+重分布能否改善最终 `Q(A)Q(W)^T`。
 
 ### 固定算法
 
@@ -256,14 +173,17 @@ C   = 0.5 * (C_A + C_W)
 
 1. CPU/CUDA、三类 Linear shape 上连续域相对误差 `<1e-5`；
 2. 静态复杂度为每个 tensor 一次 block projection + axpy，在线 O(nC)，不改变 API 次数；
-3. Qwen compact/default 使用 E3 同一分布门禁，且非零变化覆盖至少 25% case；
+3. Qwen compact 要求 mean delta > 0、median delta >= 0、正 case 多于负 case、各 shape family
+   mean 不为负、worst-quartile mean delta >= -1e-3，且非零变化覆盖至少 25% case；Qwen
+   default 要求正 case 多于负 case、validation/test 成对同号率 >= 75%，未修改 Attention
+   120/120 逐位一致；
 4. GPT-2 与 OPT 的 shape-family 主效应、W/A interaction 与 Qwen 同构；
 5. 本地完整 API total 不超过 v160 同机父版本 +30s。
 
 任一失败即关闭该固定 Householder 机制，不尝试 2/8 次迭代、其他 target、rank-2、不同 block
 或 role gate。全部通过才提交一次官方。
 
-## 9. 实验结果如何回答官方规律
+## 8. 实验结果如何回答官方规律
 
 | 结果组合 | 可支持的结论 | 后续动作 |
 | --- | --- | --- |
@@ -271,21 +191,18 @@ C   = 0.5 * (C_A + C_W)
 | E1 interaction 明显非零 | 官方结果强依赖父版本组合 | 所有机制必须做 2×2 或 exact-parent A/B |
 | E2 官方明显变慢 | 官方时间受 Weight candidate encoding 支配 | 保留批处理，时间预算按该路径控制 |
 | E2 落入噪声 | 无法从官方计时识别该热点 | 不宣称无效，只停止该时间探针 |
-| E3 正向、E4 失败 | 主要余量在同坐标离散码字 | 研究一次性块内求解，不扩坐标搜索 |
-| E3 no-op、E4 正向 | 主要余量在坐标几何 | 研究低秩正交变换，不增加码字 sweep |
-| E3/E4 均失败 | 当前可见 Linear 家族缺少可迁移余量 | 停止本地微调，等待新机制或外部材料 |
+| E3 本地与官方均正向 | 官方可能奖励低自由度坐标几何改善 | 下一计划研究同一固定低秩族，不回调本实验参数 |
+| E3 本地广泛正向、官方零或负向 | 本地坐标收益不能迁移 | 关闭该机制，不围绕参数调优 |
+| E3 本地门禁失败 | 当前固定 Householder 机制缺少泛化收益 | 不提交官方，等待新机制或外部材料 |
 
 以上结论都只限已观测父版本与机制，不写成官方模型、权重或隐藏 case 的事实。
 
-## 10. 执行顺序与停止条件
+## 9. 执行顺序与停止条件
 
-1. **已完成**：旧 L3 no-op 标为 invalid；正确 reachability compact 已执行一次并因
-   `6+/42-/8=`、mean delta `-0.017920` 判为 REJECTED；
-2. **E1**：先补齐唯一缺失的 2×2 官方单元，这是最高信息量的一次提交；
-3. **E0/E2（可选）**：只有用户希望专门研究官方时间时执行，必须成对；
-4. **E3 已关闭**：不得重复或调整 full64 参数；
-5. **E4 是下一算法实验**：通过三模型和复杂度门禁才提交；
-6. 每个官方候选只提交一次。官方失败后不做邻域调参，不把官方分数回填成本地 loss 权重。
+1. **E1**：先补齐唯一缺失的 2×2 官方单元，这是最高信息量的一次提交；
+2. **E0/E2（可选）**：只有用户希望专门研究官方时间时执行，必须成对；
+3. **E3**：实现并测试固定 Householder；只有通过三模型和复杂度门禁才提交；
+4. 每个官方候选只提交一次。官方失败后不做邻域调参，不把官方分数回填成本地 loss 权重。
 
-若 E1、E3、E4 均结束，本计划归档；下一计划必须依据这些正交实验的结论重新定义算法族，不能
+若 E1、E3 均结束，本计划归档；下一计划必须依据这些正交实验的结论重新定义算法族，不能
 恢复已关闭的 seed/alpha/offset/ROAB/PAWV/Attention 小门控。

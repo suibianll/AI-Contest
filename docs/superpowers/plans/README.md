@@ -7,7 +7,7 @@
 `evaluator/official_eval.py`，跨模型泛化调用 `evaluator/cross_model_eval.py`；旧
 `real_model_suite.py` 已退役。
 
-- [`2026-09-03-official-pattern-and-linear-structure-experiments.md`](2026-09-03-official-pattern-and-linear-structure-experiments.md)：当前唯一有效计划。先用一个缺失的 Linear×Attention 官方 2×2 单元识别父版本交互，再正确执行此前不可达的 full64 实验；若同坐标码字确实无余量，才测试统一的 64-block Householder 坐标重分布。逐位等价官方时间 A/B 为可选实验。
+- [`2026-09-03-official-pattern-and-linear-structure-experiments.md`](2026-09-03-official-pattern-and-linear-structure-experiments.md)：当前唯一有效计划。先用一个缺失的 Linear×Attention 官方 2×2 单元识别父版本交互，再测试统一的 64-block Householder 坐标重分布。逐位等价官方时间 A/B 为可选实验。
 
 快速机制迭代使用 `--compact-panel`：Linear 为 28 个 selected Weight state + 56 个跨
 validation/test holdout case，读取 median、尾部分布、负 case、cross-holdout 一致性和 W/A

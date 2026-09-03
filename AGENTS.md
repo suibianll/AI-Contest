@@ -24,9 +24,9 @@
 - 本地 proxy 只用于同机机制诊断和时间记录，不能换算官方分数或官方 `<300s`；已知历史中
   存在本地排序与官方排序反转，任何本地正向都必须等待官方回传确认。
 
-- 当前活动计划改为官方规律辨识与 Linear 结构实验：先补齐 `v159 Linear × v86 Attention` 的
-  官方 2×2 缺失单元，再正确执行 full64；只有同坐标 refine 确认无效后才测试统一 64-block
-  Householder。17816 源码无法提供，不再作为等待项。
+- 当前活动计划是官方规律辨识与 Linear 结构实验：先补齐 `v159 Linear × v86 Attention` 的
+  官方 2×2 缺失单元，再测试统一 64-block Householder；逐位等价官方时间 A/B 仅为可选。
+  17816 源码无法提供，不再作为等待项。
 
 - 2026-09-03 的首次 L3 full64 no-op 结果无效：`_WEIGHT_FULL64_APPLY=True` 被
   `_WEIGHT_E2E_REFINE=False` 外层死分支遮蔽，目标函数未执行。不得引用该结果证明块级收敛；
@@ -34,7 +34,8 @@
 
 - 修正 reachability 后已仅重跑一次 L3 compact：attempted `659456`、accepted `657540`，但
   paired mean delta `-0.017920`、`6+/42-/8=`；W-only `+0.107169` 被 interaction
-  `-0.118818` 反转。E3 为 `REJECTED`，禁止再次运行或调整 full64 参数，下一算法实验为 E4。
+  `-0.118818` 反转。该实验为 `REJECTED`，禁止再次运行或调整 full64 参数；活动计划中的下一
+  算法实验为 E3 Householder。
 
 ## 2. 提交代码约束
 

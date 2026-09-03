@@ -60,8 +60,8 @@ v160 = v159 Linear（L1 逐位等价编码）+ A2/A1（Attention）。官方回�
 L3 首次 full64 探针因死分支判为 **INVALID EXPERIMENT**；修正 reachability 后已按用户要求仅
 重跑一次 compact：24 次 refine attempted `659456` row-blocks、accepted `657540`，但 Linear
 `0.705508→0.687588`，paired `6+/42-/8=`、mean delta `-0.017920`。W-only delta `+0.107169`
-被 interaction `-0.118818` 反转，说明块内 full-H 目标与最终 `Q(A)Q(W)^T` 不一致。E3 正式
-`REJECTED`，不再调参或扩大测试；下一算法实验为活动计划 E4。
+被 interaction `-0.118818` 反转，说明块内 full-H 目标与最终 `Q(A)Q(W)^T` 不一致。该实验
+正式 `REJECTED`，不再调参或扩大测试；下一算法实验为活动计划 E3 Householder。
 
 ## 1. 版本结论
 
@@ -75,8 +75,8 @@ L3 首次 full64 探针因死分支判为 **INVALID EXPERIMENT**；修正 reacha
   官方泛化结论。候选说明见
   [`v159 result`](../solutions/20260902_v159_linear-gptq17816_v158-attention_score17532_timeNA/result.md)。
 - CUDA device 错误已经修复；L1 batching 已把 v160 Linear calibration 降至约 `166.6s`，
-  输出逐位不变。下一步不再消融已证明承重的搜索维度，转为官方 2×2 交互实验与正确可达的
-  full64 单机制验证。
+  输出逐位不变。下一步不再消融已证明承重的搜索维度，转为官方 2×2 交互实验与统一
+  64-block Householder 单机制验证。
 - v138/v139 虽在官方 `<300s` 内通过，但只有 `15715/15716`，比 v86 低约 1029 分；
   v138–v145 这条“压缩 Attention 后继续叠 Linear 局部模块”的路线已经失败并关闭。
 - v155 官方 `16581 / 208.5s`、v156 官方 `16580 / 204.3s`，两者时间均通过但分别低于 v86
@@ -560,10 +560,8 @@ v86 的部分 scale-aware/output-aware 机制。此前把它描述为“v86 级�
 
 1. 补齐 `v159 Linear × v86 Attention` 官方单元，形成 Linear×Attention 2×2 因子对照；
 2. 可选执行 exact-v160 重跑与 L1 unbatched 逐位等价时间 A/B；
-3. 把 full64 调用移出 `_WEIGHT_E2E_REFINE=False` 死分支，以 attempted/accepted block 计数
-   验证真实执行；
-4. full64 确认无效后，才测试无 seed/alpha/rank 搜索的统一 64-block Householder 坐标重分布；
-5. 每个机制只允许一次官方候选，官方结果不反向用于阈值或候选网格调参。
+3. 测试无 seed/alpha/rank 搜索的统一 64-block Householder 坐标重分布；
+4. 每个机制只允许一次官方候选，官方结果不反向用于阈值或候选网格调参。
 
 ## 7. 归档现状与待整理项
 
