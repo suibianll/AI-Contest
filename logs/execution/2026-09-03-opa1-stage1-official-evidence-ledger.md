@@ -1,0 +1,122 @@
+# OPA-1 Stage 1：官方证据账本（零提交，纯整理）
+
+日期：2026-09-03
+状态：**DONE**（文档与 JSON replay，不创建版本，不提交官方）
+
+## 0. 目的与边界
+
+OPA-1（Official Pattern Analysis）Stage 1 目标：把新权重口径（v084 起）的全部官方单变量
+对比补齐本地 case 级维度（mean/median Δ、touch rate、role 分布、回归数），检验此前提出的
+规律 P1–P9 在全部官方数据点上是否成立，产出 Stage 2 可预注册的判别器。
+
+- 本阶段不运行任何候选 API、不做官方提交、不新建版本目录；
+- case 级数字来自既有 JSON 的零 API replay（`workbench/opa1_stage1_ledger_pairs.ps1`）；
+- 官方分数为用户回传的历史事实，本地 proxy 维度只做归因描述，不拟合官方分数。
+
+## 1. 数据来源
+
+- **reeval5 系列**（`artifacts/official_eval/reeval5-v084/v086/v138/v139/v140/v147/v155/v156/v157/v158-default.json`）：
+  10 版本同一 Qwen cache、同一 proxy-v2 default panel（168L+120A）、CUDA 的 5 折校准重测。
+  折数与当前 2 折 baseline 不同，**只与同为 5 折的数据可比**；reeval5 日志已确认规律结论
+  不依赖折数。本账本用它做跨版本一致协议配对。
+- **2 折 proxy-v2 default**：`v158-v86-attention-matrix-smooth-default.json`、
+  `v160-a2-attn-default-candidate.json`、`v160-final-integration-default.json`。
+- **v159 compact 配对**：`v159-v158-compact-paired-final.json`（56 case，身份精确匹配）。
+- **官方分数/时间**：`solutions/README.md` 与 `docs/current-solution-status.md` 的回传记录。
+- **外部归因**：`logs/execution/2026-09-01-hif4-external-role-attribution-v140-v86.md`、
+  `logs/execution/2026-09-02-A1/A2/A3-*`（Linear 负相关调查三部曲）。
+
+case 身份匹配键 `(layer, role, test_window, test_split, test_length)`，并要求
+`mse_standard` 一致；全部 8 组对比 `mism=0`，配对有效。
+
+## 2. 主账本：官方单变量对比 × 本地 case 级维度
+
+Δ 为候选减父版本的逐 case gain 差；touch = 改变 case 比例；imp/reg/unch = 改善/回归/不变。
+
+| # | 对比 | 机制类 | 本地协议 | mean Δ | median Δ | imp/reg/unch | touch | role / 结构签名 | 官方 Δ | 方向 |
+|---|---|---|---|---:|---:|---|---:|---|---:|---|
+| 1 | v84→v86 | Attention block-final（解析宽域） | reeval5 | +0.015344 | 0 | 47/28/45 | 62.5% | 全层；Linear control 0/0/168 | **+227** | ✓ |
+| 2 | v86→v158 | Attention Matrix-Smooth（解析宽域） | proxy-v2 2折 | +0.011018 | 0 | 49/16/55 | 54.2% | 全层；Linear control 0/0/168 | **+117** | ✓ |
+| 3 | v140→v147 | Attention 恢复 v86（宽域还原） | reeval5 | +0.002448 | +0.013757 | 73/47/0 | 100% | 全层；Linear control 1/1/166 | **+741** | ✓ |
+| 4 | v159→v160 | A2 GQA mode-4 门控（数据依赖） | proxy-v2 2折 | +0.006601 | 0 | 17/3/100 | 16.7% | 门控仅本地触发；GPT-2 60/60 zero-delta | **0** | ✗ |
+| 5 | v158→v159 | Linear GPTQ+变换搜索（结构重写） | compact 56 | +0.149191 | +0.138823 | 56/0/0 | 100% | 全 role 正（fc +0.109 / o +0.264 / proj +0.124 / qkv +0.146）；最差 case 仍 +0.071 | **+671** | ✓ |
+| 6 | v138→v140 | Linear ROAB-P2（v138 上下文） | reeval5 | +0.002912 | 0 | 3/2/163 | 3.0% | proj 集中（role mean +0.0208，单 case max +0.535） | **+123** | ✓ |
+| 7 | v86→v157 | Linear ROAB-P2（v86 上下文） | reeval5 | −0.002262 | 0 | 7/41/120 | 28.6% | 6/7 role 负；Attention control 0/0/120 | **−15** | ✓ |
+| 8 | v86→v147 | Linear v134 变换族（伪增益家族） | reeval5 | +0.063198 | +0.063620 | 144/24/0 | 100% | k +0.163 / v +0.124 / q +0.084 大幅正，**fc_up −0.010 为负**，min case −0.564；Attention control 0/0/120 | **−165** | ✗ 反转 |
+| 9 | v138→v139 | Linear output-aware gain | reeval5 | −0.000090 | 0 | 65/62/41 | 75.6% | 全 role 混合符号零均值噪声 | **+1** | ≈0 |
+| 10 | v147→v155 | L5a 四分位 interleave | reeval5 | +0.000619 | 0 | 4/2/162 | 3.6% | fc_gate/proj 少量 | **+2** | ≈0 |
+| 11 | v147→v156 | L4 stored-scale | reeval5 | +0.000523 | 0 | 19/7/142 | 15.5% | fc family | **+1** | ≈0 |
+| 12 | v138 vs v86 | 双变量（reduced Attn + 变换族 Linear） | official-shape-v1 | L +0.1007 / A −0.0038 | — | — | — | 家族级组合 | **−1029** | ✗ |
+
+上下文行：v160 = v159 L1 逐位等价 + A2 → 官方 **17532 / 232s**（逐位等价部分分数不变，
++9s 为 v159 Linear 流水线官方成本）。17816 外部锚点 − 17532 = **+284** 未解释。
+
+注意事项：
+- v147 归档曾被原地替换（A3 合并源），提交 SHA 未确认；但 v155/v156/v147 官方分差仅 1–2 分，
+  "≈0 official delta" 的结论对父本歧义稳健。
+- official-shape-v1 的绝对 mean 与 proxy-v2/reeval5 不可混排；本账本跨协议行只引用各自文档
+  已确认的差值方向。
+
+## 3. 规律验证结果（P1–P9 逐条裁定）
+
+- **P1 确定性与细粒度：成立。** 逐位等价 → 分数完全相同（v159=v160=17532）；存在 1 分差
+  （15715/15716、16580/16581）→ 官方是连续细粒度聚合。
+- **P2 宽域迁移律：3/3 成立但作为充分条件被证伪。** #1/#2/#3（+#5）宽域解析机制全部官方正向；
+  但 #8 touch 100%、mean +0.063 却官方 −165。**touch 率和本地均值都不是充分判别器**。
+- **P3 微增益零迁移：4/6，被 #6 证伪为必要条件。** A2（0）、v139（+1）、v155（+2）、v156（+1）
+  确实 ≈0；但 v138→v140 本地 touch 3%、mean +0.0029 却官方 **+123**——少 case 大效应
+  （单 case Δmax +0.535）也能显著迁移。v157（−15）则是小幅同向而非零迁移。
+- **P4 role 偏斜判别：成立且被强化。** 唯一强反转行 #8 的签名是 fc_up 负 + 24 回归 + min −0.564，
+  与外部 GPT-2 归因（fc 12/12 层负）及 A1/A2 调查（q/k/v 窄层高估）三方一致；成功迁移的 #5
+  是零回归 + 全 role 正。**"回归数 + 负 role 存在性" 是比 mean/touch 更强的判别面。**
+- **P5 上下文不可移植：成立。** 同一 ROAB-P2：v138 上下文 +123、v86 上下文 −15。
+- **P6 数据依赖门控不可靠：成立，且新增预测器。** A2 门控官方数据 0 触发；**跨模型 zero-effect
+  （GPT-2 60/60）预判了官方 no-op**——跨模型一致性检查对门控类机制是有效的事前信号。
+- **P7 无稳定汇率：成立并量化。** 官方Δ/本地meanΔ：#1 ≈14.8k、#2 ≈10.6k、#3 ≈303k、
+  #5 ≈4.5k、#6 ≈42k，跨度 ~67×；#4 为 0。任何"本地Δ×汇率"的分数预测都不成立。
+  **旧记忆中 "官方分 ≈ 658 + 25945×Linear mean" 的估计公式正式作废**（v158/v159/v160
+  及 10 版本 Pearson −0.608 均不支持）。
+- **P8 两侧均高敏感 + 时间非瓶颈：成立。** Attention 轴最大 +741、Linear 轴最大 +671；
+  官方通过时间 202–252.6s，v160 距 300s 余 68s。时间补充事实：**本地秒数不能双向框定官方
+  超时**——v129 本地 248s 官方 timeout，而 v86 本地 299s 官方 222.7s 通过；本地时间只作
+  同机 A/B 诊断。
+- **P9（17816 缺口 284 归因 Attention 侧）：未检验**，保留为 Stage 3a 假设。
+
+## 4. Linear 反转的精确定位（对既有结论的细化）
+
+既有结论"本地 Linear proxy 不可外推"（reeval5 Pearson −0.608；A1/A2/A3 伪增益调查）在账本中
+被细化为**两层**：
+
+1. **家族间**（cross-family）：v134 变换族 Linear（v138/v140/v147/v155/v156 共享基底）本地
+   ~0.58 高于 v86 族 ~0.52，但官方低 165–1029 分。A3 transform-off 控制已证明其本地增益
+   几乎全部来自等效变换族伪增益（W-only/A-only 负、Both 正的耦合签名）。这是反转的全部来源。
+2. **家族内**（within-family）：小机制增量的本地方向与官方方向**全部同向或同为噪声**——
+   v138→v140（+0.0029→+123）、v86→v157（−0.0023→−15）、v147→v155/v156（+0.0006→+2/+1）、
+   v138→v139（−0.00009→+1）。
+
+v159 打破了"变换族必反转"的家族规则：它同样含变换搜索，但 compact 56/56 零回归、全 role 正、
+跨 validation/test holdout 28/28 同号，官方 +671。判别差异不在"是否用变换"，而在
+**增益的分布质量**（回归数、负 role、最差 case）。
+
+## 5. Stage 2 预注册判别器（绑定下一次官方提交）
+
+对下一个通过全部门禁的官方候选（无论机制），提交前写下：
+
+- **D1（Attention 宽域）**：touch ≥ 50% 且 improved > regressed 且 median Δ ≥ 0 → 预测官方 Δ > 0。
+  现有证据 3/3（#1/#2/#3）。
+- **D2（Linear 结构）**：compact/default 零回归（或回归可忽略）且无负 role family 且跨
+  validation/test 同号 → 预测官方 Δ > 0。现有证据 1/1（#5）；反例 #8 不满足 D2。
+- **D3（零效应类）**：数据依赖门控 + 跨模型 zero-effect，或混合符号零均值噪声，或 touch < 20%
+  且 fired-case 效应小 → 预测官方 |Δ| ≤ 2。现有证据 3/3（#4/#10/#11；#9 属噪声类）。
+  已知例外：少 case 大效应（#6 类）可给 ±100 级官方 delta，D3 不适用于此类。
+
+证伪条款：候选满足 D2 但官方 Δ ≤ 0 → D2 降级为"v159 特有"；D1 反例同理。无论结果如何，
+不调参、不追加邻域版本，只更新本账本。
+
+## 6. 决定
+
+- Stage 1 完成，本账本作为 OPA-1 的基线证据文件；
+- Stage 2 判别器（D1/D2/D3）待下一个官方候选提交时启用，预注册内容以本文件第 5 节为准；
+- Stage 3a（v159 Linear 冻结 + 新解析宽域 Attention 候选，检验 P9 的 +284 假设）与
+  Stage 3b（LOO 消融）均需用户单独批准消耗官方提交，本阶段不执行；
+- 复现脚本：`workbench/opa1_stage1_ledger_pairs.ps1`（零 API，纯 JSON replay）。
