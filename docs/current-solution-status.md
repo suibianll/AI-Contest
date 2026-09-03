@@ -703,15 +703,15 @@ v86 的部分 scale-aware/output-aware 机制。此前把它描述为"v86 级静
 ## 6. 当前活动计划
 
 唯一活动计划是
-[`2026-09-04-post-official-a1-freedom-plan.md`](superpowers/plans/2026-09-04-post-official-a1-freedom-plan.md)。
-D1 已由 v180 获得官方 `+3` 并成为新完整父版本 `17597/242s`；D2（v181 per-Q-head gain）
-在本地两分支负向后 REJECTED；D3 的“v175 + D1”组合已由 v180 本身完成，不再额外消耗
-配额。该轮证明 A1 结构内仍有可迁移自由度，但剩余收益只有 3 分，不支持继续扫描 alpha
-或 head 粒度邻域。官方配额仍为 `2/10`，剩余 8。
+[`2026-09-04-post-v180-linear-rank2-plan.md`](superpowers/plans/2026-09-04-post-v180-linear-rank2-plan.md)。
+下一阶段只注册 L-R2：保留 v166 的第一 rank-1 方向，在其正交补空间用固定 folds/median/
+128 次 power iteration 提取第二对方向，融合成 `R=I+UV^T`、`V^TU=0` 的 rank-2 更新。
+Linear 连续输出严格不变，动态只执行一次固定 rank-2 乘法；候选从完整父 v180 构造，
+Attention 逐位冻结。硬检查通过后由一次官方结果相对 17597 裁决，不设置本地准确率门槛。
 
-历史侧向父保持 `P_L = v166 4590/226s`、`P_A = v168 14005/210s`；它们用于独立归因，
-不覆盖当前完整父 v180。旧的动态 per-call、full64/Householder、A1 通道/逐 Q-head 细化与
-参数邻域族继续关闭。
+Attention 侧因 Q/K 与 V 可表达自由度已经穷尽而冻结；alpha/head/channel、V multiplier、
+动态 per-call、full64/Householder 与码本重写继续关闭。官方配额仍为 `2/10`，剩余 8，
+本计划最多使用 1 个新名额。
 
 ## 7. 归档现状与待整理项
 

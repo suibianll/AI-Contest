@@ -7,7 +7,7 @@
 
 ## 1. 当前状态
 
-- **v180（v175 + D1 A1 Q/K 非对称折叠）官方 `17597/242s`，相对 v175 `+3/−3s`，
+- **v180（v175 + D1 A1 Q/K 非对称折叠）官方** **`17597/242s`，相对 v175** **`+3/−3s`，
   RETAINED 成为新完整官方父版本**（SHA `2BA40122...8AA3`）。D1 只改 Attention state
   multiplier、Linear 与 v175 逐位一致，故 +3 可归因 D1；无在线新增算子，−3s 只记实测
   不宣称稳定加速。当前距榜首 21765 差 4168，时间余量 58s。v180 是完整组合版本，
@@ -15,9 +15,9 @@
   `P_A=v168（14005/210s）`。
 
 - 低复杂度扩展计划全部裁决完毕（A1-A4 + L1-L4 + 组合 v175）。官方 2026-09-04 批测
-  回传：**v175（组合 v166+v168）`17594/245s` RETAINED**——
+  回传：**v175（组合 v166+v168）`17594/245s`** **RETAINED**——
   interaction = 0，侧向可加性在官方总分上精确成立；**v171（A4）`13657/214s`、v174
-  （L4）`4508/190s`、v176（C1）`13964/205s` 均官方负 REJECTED**（step_gain −348/−82/−41，
+  （L4）`4508/190s`、v176（C1）`13964/205s`** **均官方负 REJECTED**（step\_gain −348/−82/−41，
   时间均 <300s，负向归因算法而非超时）。A4/L4/C1 家族关闭。v175 的 interaction=0
   证明侧向可加性，现为 v180 的精确父版本。
 
@@ -33,13 +33,12 @@
   剩余 8**。每新增一个候选扣 1 配额，官方负向不退还。SOTA 搜索（二至五轮：KVLinC/
   VecInfer/ResQ/OTT、ScaleSweep/H-Scale、MXFP4 误差三分量/HCP/ARCQuant、QuantVLA
   温度匹配/SageBwd/谱界）均落入已闭合域或 A1 已覆盖域，不注册新候选。官方裁决后
-  新一轮计划 [`2026-09-04-post-official-a1-freedom-plan.md`](docs/superpowers/plans/2026-09-04-post-official-a1-freedom-plan.md)：
-  以侧向可加性成立（v175 interaction=0）与 A1 为唯一官方正向 Attention 机制为锚点，
-  **D1**（A1 Q/K 非对称折叠分配 = v180 官方 +3 RETAINED）→
-  **D2**（per-Q-head 对照 = v181 本地 REJECTED：默认 120 纯 D2 mean −0.002746、
-  median −0.000086、54+/66−，D1+D2 叠加亦负，确认 A1 group-consistent 结构承重；
-  不占配额）→ **D3 已由 v180 的 v175+D1 组合完成，不另占配额**。本轮计划完成；
-  禁止围绕 alpha 或 per-head 粒度邻域继续扫描。
+  A1-freedom 计划已经归档：D1 v180 官方 +3 RETAINED，D2 v181 本地 REJECTED，D3
+  由 v180 完成。用户已明确触发下一阶段，当前唯一活动计划为
+  [`2026-09-04-post-v180-linear-rank2-plan.md`](docs/superpowers/plans/2026-09-04-post-v180-linear-rank2-plan.md)：
+  只注册 **L-R2**，把 v166 的 rank-1 官方正向结构推广为融合 rank-2 正交残差重分布；
+  连续域乘积严格不变，Attention 冻结为 v180。只设接口/合法 state/有限输出/reachability/
+  不变量/control 硬检查，首次官方结果决定提升；不扫 rank、系数、fold 或 role 路由。
 
 - **V 侧方向结构性关闭（2026-09-04 穷尽审计）**：V 的量化自由度全部排除——
   per-head importance 无法改变 HiF4 64 块内离散解（64 块恰 = 1 head 1 token 的 64 维，
@@ -53,19 +52,19 @@
   `13C9CF0B...5EC79` 只增加数学等价的 GPU device 修复与中间量复用，尚未官方复测。v158
   **16861 / 223s** 仍是时间与源码均完整的安全父版本，其 Attention Matrix-Smooth 继续冻结。
 
-- v160 归档 SHA `33B1D061...680D` 的官方结果为 **17532 / 232s**，相对 v159 分数 no-op；它是
-  当前源码与官方时间均绑定的实验父版本。根 `solution.py` SHA `36A39A3C...E507` 额外含默认
-  关闭的 L3 gate，行为不变但 SHA 不同，规律实验必须从 v160 归档分支。
+- v160 归档 SHA `33B1D061...680D` 的官方结果为 **17532 / 232s**，相对 v159 分数 no-op；
+  它保留为历史实验父版本。根 `solution.py` 已同步为 v180 官方父，SHA
+  `2BA40122...8AA3`；新实验必须从根/v180 归档复制，不从 v160 或旧研究臂继续。
 
 - 用户已确认官方评测稳定；禁止为验证确定性、估计时间噪声或单独研究批处理而提交相同 SHA
   或逐位等价时间 A/B。候选时间只作为算法验证的附带门禁。
 
 - 用户确认的当前官方榜首是 **21765 / 290s**，源码和配置未知；它只作为外部目标锚点，
-  不能伪造归档或替代本地实验结果。当前可复现最好 v160 距榜首 `4233` 分、官方时间余量
-  `68s`，不能靠已有局部调参族填补。
+  不能伪造归档或替代本地实验结果。当前可复现最好 v180 距榜首 `4168` 分、官方时间余量
+  `58s`，不能靠已有局部调参族填补。
 
-- 根目录 `solution.py` 与现有 v159 归档同步；设备修复和同算法复杂度优化直接更新该归档，
-  不创建新版本。必须同时保留官方计分 SHA 与当前归档 SHA，不能把未复测 SHA 写成官方结果。
+- 根目录 `solution.py` 与 v180 归档同步，SHA `2BA40122...8AA3`。新候选从该父复制并单独
+  归档；必须同时保留官方计分 SHA 与候选归档 SHA，不能把未复测 SHA 写成官方结果。
 
 - 本地 proxy 只用于同机机制诊断和时间记录，不能换算官方分数或官方 `<300s`；已知历史中
   存在本地排序与官方排序反转，任何本地正向都必须等待官方回传确认。
@@ -94,17 +93,18 @@
   fold/Jacobi/coverage/邻域、不提交官方；根 `solution.py` 未改。
 
 - 低复杂度算法扩展计划已全部裁决/实现（记忆完整性）：A1 v168 官方晋级（`14005/210s`，
-  step_gain `+60`）；A2 v169 REJECTED（跨模型结构性反向）；A3 v170 REJECTED（双模型
+  step\_gain `+60`）；A2 v169 REJECTED（跨模型结构性反向）；A3 v170 REJECTED（双模型
   一致回归，动态 refine 是官方 12944 Attention 承重组件）；A4 v171 候选（近中性）；
   L2 v172 / L3 v173 REJECTED（明确负优化）；L4 v174 候选；组合 v175 候选。候选仍从
   v162 双标准零点单侧构造：`P_L = v166 4590/226s`、`P_A = v168 14005/210s`；官方差分
-  按计划 §3.3 登记 step_gain 与相对 `3586/12944` 的固定口径比例；每包一个候选、失败
+  按计划 §3.3 登记 step\_gain 与相对 `3586/12944` 的固定口径比例；每包一个候选、失败
   换机制不扫邻域；v165 约束（动态 API 无 Gram contraction、无候选循环、复杂计算只在
   calibration）对 Attention 新候选仍强制。**组合条件已满足**：`S_pred = 4590 + 14005 −
   1001 = 17594`（仅比 v160 高 `+62`，距榜首 `4171`）；组合时间余量充裕。
   本地 panel 只作描述性诊断，不再用轻微 mean/median/尾部负向取消首次官方测量；
   硬检查仅为接口、合法 state、有限输出、机制 reachability 和非目标 standard
   control。每个机制仍只允许一个预注册配置，官方负向后不得邻域扫描。
+
 - 2026-09-03 的首次 L3 full64 no-op 结果无效：`_WEIGHT_FULL64_APPLY=True` 被
   `_WEIGHT_E2E_REFINE=False` 外层死分支遮蔽，目标函数未执行。不得引用该结果证明块级收敛；
   后续必须记录 attempted/accepted block 计数验证 reachability。
@@ -117,7 +117,7 @@
   （`8+/48-/0=`），五个 C 源变体（amax/rms/xrms/x-only/w-only）全部低于基线；研究臂在根
   `solution.py` 默认关闭。Linear 侧同坐标码字与坐标几何两个正交假设均无本地余量，Linear
   原 full64/Householder/单折邻域族闭环，禁止复跑或改参数。最后一个预注册例外 cross-fold
-  minimax 部署 A@W 已在 C2 因系统性 holdout 回归关闭；不得改 fold 聚合、Jacobi/Gauss-Seidel、
+  minimax 部署 A\@W 已在 C2 因系统性 holdout 回归关闭；不得改 fold 聚合、Jacobi/Gauss-Seidel、
   coverage、邻域或 role 路由重启。
 
 ## 2. 提交代码约束
@@ -202,16 +202,21 @@ Linear/Attention 权重。只有同一 `proxy-v2` cache、同一 panel、同一 
 
 - 本地 proxy 只用于否定机制、定位误差和比较同机成本，不得凭本地均值正向直接晋级；官方结果
   只验证预先声明的单一假设，失败后不得围绕 threshold、seed、alpha、offset 或候选数量做邻域调参。
-- 校准、候选选择和验证必须分离。A@W/GPTQ 的参数只用 calibration folds 学习，晋级读取独立
+
+- 校准、候选选择和验证必须分离。A\@W/GPTQ 的参数只用 calibration folds 学习，晋级读取独立
   holdout；不得用同一 fold 同时选规则和证明收益。多折选择使用 median、worst-fold 或固定 robust
   聚合，禁止只取第一折或最好一折。
+
 - 每个版本只改变一个可解释机制，候选数量固定且与数据结果无关。优先使用低自由度解析结构、
   block-Schur/块对角/低秩补偿和预先固定的正则；不得通过扩大 permutation、Hadamard seed、搜索
   网格或多机制叠加换取本地分数。
+
 - Linear 必须评估最终部署目标 `Q(A)Q(W)^T`，并在最终变换坐标系计算 Hessian/Gram；operand MSE、
   对角 importance 和 aggregate mean 只能用于诊断，不能代替输出误差与跨折证据。
+
 - 晋级至少同时检查 focus 的 median、worst-quartile、负 case、跨 holdout 同号率和未修改 control。
   收益若集中在少数 layer/role/fold、依赖单一模型形状，或 control 发生变化，按过拟合处理。
+
 - 官方 mini 用例只做接口、合法性和真实形状复杂度 smoke，不用于选算法或参数；Qwen/GPT-2 等
   本地结构只作机制压力测试。发生本地与官方排序反转后，立即停止用该 proxy 为同一路线晋级。
 
