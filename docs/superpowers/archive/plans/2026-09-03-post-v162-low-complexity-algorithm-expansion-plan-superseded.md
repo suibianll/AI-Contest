@@ -1,7 +1,7 @@
 # v162 侧向计划完成后的低复杂度算法扩展实施计划
 
 > 状态：**SUPERSEDED — 2026-09-04 全部工作包裁决完毕（A1 v168 官方晋级、A4/L4/组合 v171/v174/v175 官方批测队列，A2/A3/L2/L3 REJECTED），由
-> [`2026-09-04-sota-candidate-list`](../2026-09-04-sota-candidate-list.md) 取代；本文件只作历史决策记录，不提供下一步指令**
+> [`2026-09-04-sota-candidate-list`](../2026-09-04-sota-candidate-list.md)** **取代；本文件只作历史决策记录，不提供下一步指令**
 >
 > 创建：2026-09-03
 >
@@ -758,11 +758,11 @@ gap         = 21765 - S_LA
   `(S_new − 4587)/3586`。Attention 侧父版本 `P_A = v164` 不变。
 
 - **A1 v168 候选完成本地漏斗（2026-09-03，待官方）**：SHA
-  `5988AE47EAC2E7DDE7488E06B8F91939F5660A585034280A6D68A8FB6701AC79`，从 P_A = v164
+  `5988AE47EAC2E7DDE7488E06B8F91939F5660A585034280A6D68A8FB6701AC79`，从 P\_A = v164
   构造。机制合法（隔离导入/state 校验/V 与 Linear control 逐位）、可达（24 层
   multiplier 全变化）、校准 +5%、动态零增量（v165 约束满足）。前提被证实但量级小：
   折间一致（离散 0.002–0.006 << 偏置量）的稳定乘性 logits 偏置 ≤1.5%，fitted
-  gamma ∈ [0.988, 1.006]（48 head）。Qwen default 120 mean −0.00088（median +0.0002、
+  gamma ∈ \[0.988, 1.006]（48 head）。Qwen default 120 mean −0.00088（median +0.0002、
   `66+/54−`，回归集中 layer 16——其 gamma 0.9876 为全网络最大校正量，校准→测试
   不迁移，worst −0.16）；GPT-2 +0.002447（`3+/1−`，无整体结构性反向）。按 §12
   step 9 进入官方提交；判读按 §3.3：`S_A > 13945` RETAINED 成为新 Attention 父侧，
@@ -770,7 +770,7 @@ gap         = 21765 - S_LA
   [`v168 result`](../../solutions/20260903_v168_standard-linear_logit-gain-attn_scoreNA_timeNA/result.md)。
 
 - **A2 v169 本地 REJECTED（2026-09-03，未提交官方）**：SHA
-  `3E9307BC45EDE56E240380E09905C9FEF8577C9A461FC752ACDD8105EF67DAE8`，从 P_A = v164
+  `3E9307BC45EDE56E240380E09905C9FEF8577C9A461FC752ACDD8105EF67DAE8`，从 P\_A = v164
   构造（v168 官方未回传，不叠加）。控制全部通过（Q/K state 与父逐位一致、V 基础
   字段一致仅新增两键），但三层独立证据否决：①机制级——真实输出偏置修正仅
   `−1.7%..+0.6%`，父输出偏置由 Q/K 量化误差主导，A2 的补偿目标基本不存在；
@@ -781,7 +781,7 @@ gap         = 21765 - S_LA
   [`v169 result`](../../solutions/20260903_v169_standard-linear_v-bias-attn_rejected/result.md)。
 
 - **2026-09-03 v168 官方回传（同日用户修正）：`14005 / 210s`**（初报 17248/237s
-  有误）**→ A1 RETAINED，父侧更新 `P_A：v164 → v168`。** SHA
+  有误）**→ A1 RETAINED，父侧更新** **`P_A：v164 → v168`。** SHA
   `5988AE47EAC2E7DDE7488E06B8F91939F5660A585034280A6D68A8FB6701AC79`；判读按 §3.3：
   `step_gain = 14005 − 13945 = +60`、`side_contrib = 13004`、
   `Attention ratio = 60/12944 ≈ 0.0046`；`210s < 300s` 时间通过（相对 v164 仅
@@ -796,29 +796,32 @@ gap         = 21765 - S_LA
   [`v168 result`](../../solutions/20260903_v168_standard-linear_logit-gain-attn_scoreNA_timeNA/result.md)。
 
 - **A3 v170 本地 REJECTED（2026-09-03，未提交官方）**：SHA
-  `2CF06B0A5EAFF8FD9AE8543809282934DC7460A713A359130D1FE2DD370BBBDB`，从 P_A = v168
+  `2CF06B0A5EAFF8FD9AE8543809282934DC7460A713A359130D1FE2DD370BBBDB`，从 P\_A = v168
   构造（A1 multiplier 逐位保留）。机制合法且可达（winner 11/12 = 0——输出感知选择
   确认标准 scale；Q mant 25–35% 变化来自精确 hierarchy + 去 refine）。**跨模型结构性
   反向，证据远强于 v169**：Qwen default `−0.0506`（`9+/111−`，四个长度组全负）、
-  GPT-2 `−0.0551`（`1+/3−`，k_only `−0.093`）。结论：动态 refine 是官方 12944
+  GPT-2 `−0.0551`（`1+/3−`，k\_only `−0.093`）。结论：动态 refine 是官方 12944
   Attention 贡献的承重组件，静态 offset 编译无法替代。按 §12 step 9 + §14 记
   REJECTED，不消耗官方提交，不调候选集/权重/token 数。**A3 关闭，下一包 A4（矩匹配
   mantissa 阈值）**。战略注记：A3 原含为组合候选降时间的目标——否决后组合时间风险
-  （朴素 290s / v160 式折扣 ~262s）维持原判。证据：
+  （朴素 290s / v160 式折扣 \~262s）维持原判。证据：
   [`v170 result`](../../solutions/20260903_v170_standard-linear_fixed-offset-attn_rejected/result.md)。
 
 - **2026-09-04 批量收官（用户指示）**："继续按照计划进行优化，不要轻易拒绝，但是明确
   负优化的需要拒绝提交。把计划中的所有优化都实现并提交推送，所有都完成之后我会告诉
   你官方评分和时间"。据此实现/分类全部剩余工作包：
+
   - **REJECTED（明确负优化，不提交）**：v169（A2，Qwen `−0.0093`/GPT-2 `0/4`）、
     v170（A3，Qwen `−0.0506`/GPT-2 `−0.0551`）、v172（L2 Babai，compact `0+/48−`）、
     v173（L3 Trellis，compact `1+/47−`）——终判按用户指示拒绝提交；
+
   - **CANDIDATE（提交官方）**：v171（A4 矩匹配阈值，SHA
     `4469B85B...7A844`，近中性：Qwen `56+/64−`、GPT-2 `+0.0096`）、v174（L4 Kronecker
     CAT，SHA `2A5B7416...F84A7D`，近中性：compact `34+/22−`、`−0.0027`、乘积保持
     1e-7、Kron 因子 100% 非恒等）。
-  - 官方批测对象：A 系 **v171** 对 `13945`（P_A = v168）、L 系 **v174** 对 `4590`
-    （P_L = v166）；判读按 §3.3（step_gain / ratio）。用户回传后逐一登记。
+
+  - 官方批测对象：A 系 **v171** 对 `13945`（P\_A = v168）、L 系 **v174** 对 `4590`
+    （P\_L = v166）；判读按 §3.3（step\_gain / ratio）。用户回传后逐一登记。
 
   - **v175 组合候选（2026-09-04）**：计划 §13 最后一步。v166 Linear + v168 Attention
     组合为单文件，两侧 compact 与各自官方父侧逐位一致（Linear Δ=0.0 vs v166、
@@ -833,3 +836,4 @@ gap         = 21765 - S_LA
     搜索（KV-cache 量化 / rotation / outlier-prevention 方向，§6.1 预注册工作流）
     与代差机制，本计划归档。官方批测清单：v171（对 13945）、v174（对 4590）、
     v175（组合，完整调用图）。
+
