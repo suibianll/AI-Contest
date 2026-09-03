@@ -71,45 +71,45 @@ silently assigned a score.
 > v084 起为**新权重**官方分数（当前口径）。v074 另有当前评测集回传 `14561 / 188.9s`
 > （2026-09-02），旧权重 `22750` 已失效。
 
-| Version | Source directory | Official score | Official time | Outcome |
-|---|---|---:|---:|---|
-| v001 | `20260826_v001_current-baseline_score10250_time127s` | 10250 | 127 s | pass |
-| v002 | `20260826_v002_youxilee-hif4_score15000plus_timeNA` | 15313 | 137 s | pass |
-| v013 | `20260827_v013_c10-wide-activation-quadratic_score15799_time144s` | 15799 | 144 s | pass |
-| v024 | `20260827_v024_c21-gated-exact-cross-selection_score16043_time174s` | 16043 | 173.8 s | pass |
-| v025 | `20260827_v025_c21c-compliance-baseline` | 14437 | 166.6 s | pass |
-| v030 | `20260828_v030_c38-beam2-fullcov-official14092_time170.6s` | 14092 | 170.57 s | pass |
-| v031 | `20260828_v031_c39-fw-official21864_time161.3s` | 21864 | 161.3 s | pass |
-| v032 | `20260828_v032_c40-robust-blockldlq_official-score14432_time216.667s` | 14432 | 216.667 s | pass |
-| v034 | `20260829_v034_c41b-mha-k-center_scoreNA_timeNA` | 21864 | 159.4 s | pass |
-| v051 | `20260829_v051_c47b-grouping-threshold005_scoreNA_timeNA` | 22451 | 234 s | pass |
-| v066 | `20260829_v066_c66-activation-ratio100_scoreNA_timeNA` | 22557 | 217.2 s | pass |
-| v072 | `20260829_v072_c74-jdrq-hierarchy_scoreNA_timeNA` | 22662 | 226 s | pass |
-| v074 | `20260829_v074_c75-rowwise-jdrq_scoreNA_timeNA` | 22750（旧权重）→ **14561**（当前评测集回传，2026-09-02） | 239.387 s → 188.9 s | pass（**非安全基线**，低于 v84/v86） |
-| v084 | `20260830_v084_c84-gram64-sweep5_scoreNA_timeNA` | 16517 | 252.563 s | pass (revised weights) |
-| v086 | `20260830_v086_c86-attn-block-final_scoreNA_timeNA` | **16744** | **222.7 s** | **pass (revised weights, new best)** |
-| v098 | `20260830_v098_b1-gqrb-margin-active_score293.793700_time406s` | — | >300 s | timeout |
-| v100 | `20260830_v100_b2-pawv-diagonly-active_score293.797301_time392s` | — | >300 s | Attention WA / timeout |
-| v107 | `20260830_v107_l3-global-lrh-precision-parent_score295.157057_time481s` | — | — | Attention WA |
-| v121 | `20260831_v121_c1b-structured-refresh2-accepted_score295.811281_time2180s` | — | >300 s | timeout |
-| v128 | `20260901_v128_fixed-attn-budget_timeout` | — | >300 s | **timeout (official, user confirmed)** |
-| v129 | `20260901_v129_fixed-attn-budget-sweep1_timeout` | — | >300 s | **timeout (official, user confirmed)** |
-| v130 | `20260901_v130_output-weight_timeout` | — | >300 s | **timeout (official, user confirmed)** |
-| v131 | `20260901_v131_output-weight-qwgram_timeout` | — | >300 s | **timeout (official, user confirmed)** |
-| v138 | `20260901_v138_attention-static-v86-budget_scoreNA_timeNA` | **15715** | **208 s** | **pass (official, user reported)** |
-| v139 | `20260901_v139_linear-output-aware-gain_scoreNA_timeNA` | **15716** | **202 s** | **pass (official, user reported)** |
-| v140 | `20260901_v140_linear-roab-pair_rejected` | **15838** | **207 s** | **pass, but rejected: below v86 and 17816** |
-| v147 | `20260901_v147_v86-attention-v140-linear_rejected` | **16579** | **211 s** | **pass, but rejected: 165 points below v86; submitted SHA unconfirmed** |
-| v155 | `20260902_v155_l5a-permutation-stability_rejected` | **16581** | **208.5 s** | **pass, but rejected: 163 points below v86** |
-| v156 | `20260902_v156_l4-weight-decoupled_rejected` | **16580** | **204.3 s** | **pass, but rejected: 164 points below v86** |
-| v157 | `20260902_v157_v86-roab-only_rejected` | **16729** | **218.96 s** | **pass, but rejected: 15 points below v86** |
-| v158 | `20260902_v158_v86-attention-matrix-smooth_retained` | **16861** | **223 s** | **pass; retained, +117 vs v86** |
-| v159 | `20260902_v159_linear-gptq17816_v158-attention_score17532_timeNA` | **17532** | — | **official score reported; runtime unknown** |
-| v160 | `20260903_v160_v159-linear-l1batch_v158-attn-a2_scoreNA_timeNA` | **17532** | **232 s** | **pass; score no-op vs v159, source/time-complete experiment parent** |
-| v161 | `20260903_v161_v160-attn-s1-qk-gram-refine_scoreNA_timeout` | — | >300 s | **timeout (official, user confirmed); local funnel passed (Qwen default 120 paired +0.0525, 106+/14−; GPT-2 +0.0678 same sign; D1 satisfied locally) but per-call dynamic refinement exceeds the official runtime budget — per-call family closed** |
-| v162 | `20260903_v162_standard-baseline-both_scoreNA_timeNA` | **1001** | **146 s** | **pass; calibration anchor measured — official non-zero base score or official STD differs from the local reference codec (local means both exactly 0.0); also establishes the ~146 s official harness time floor** |
-| v163 | `20260903_v163_v160-linear_standard-attn_scoreNA_timeNA` | — | — | **candidate; v160 Linear (168 cases bit-identical to v160, mean 0.633526) + standard Attention (mean 0.0); measures the official Linear-side contribution Δ_L = S(v163)−S(v162)** |
-| v164 | `20260903_v164_standard-linear_v160-attn_scoreNA_timeNA` | — | — | **candidate; standard Linear (mean 0.0) + v160 Attention (120 cases bit-identical to v160, mean 0.742354); measures the official Attention-side contribution Δ_A = S(v164)−S(v162)** |
+| Version | Source directory | Official score | Official time | Outcome 
+|---|---|---:|---:|---
+| v001 | `20260826_v001_current-baseline_score10250_time127s` | 10250 | 127 s | pass 
+| v002 | `20260826_v002_youxilee-hif4_score15000plus_timeNA` | 15313 | 137 s | pass 
+| v013 | `20260827_v013_c10-wide-activation-quadratic_score15799_time144s` | 15799 | 144 s | pass 
+| v024 | `20260827_v024_c21-gated-exact-cross-selection_score16043_time174s` | 16043 | 173.8 s | pass 
+| v025 | `20260827_v025_c21c-compliance-baseline` | 14437 | 166.6 s | pass 
+| v030 | `20260828_v030_c38-beam2-fullcov-official14092_time170.6s` | 14092 | 170.57 s | pass 
+| v031 | `20260828_v031_c39-fw-official21864_time161.3s` | 21864 | 161.3 s | pass 
+| v032 | `20260828_v032_c40-robust-blockldlq_official-score14432_time216.667s` | 14432 | 216.667 s | pass 
+| v034 | `20260829_v034_c41b-mha-k-center_scoreNA_timeNA` | 21864 | 159.4 s | pass 
+| v051 | `20260829_v051_c47b-grouping-threshold005_scoreNA_timeNA` | 22451 | 234 s | pass 
+| v066 | `20260829_v066_c66-activation-ratio100_scoreNA_timeNA` | 22557 | 217.2 s | pass 
+| v072 | `20260829_v072_c74-jdrq-hierarchy_scoreNA_timeNA` | 22662 | 226 s | pass 
+| v074 | `20260829_v074_c75-rowwise-jdrq_scoreNA_timeNA` | 22750（旧权重）→ **14561**（当前评测集回传，2026-09-02） | 239.387 s → 188.9 s | pass（**非安全基线**，低于 v84/v86） 
+| v084 | `20260830_v084_c84-gram64-sweep5_scoreNA_timeNA` | 16517 | 252.563 s | pass (revised weights) 
+| v086 | `20260830_v086_c86-attn-block-final_scoreNA_timeNA` | **16744** | **222.7 s** | **pass (revised weights, new best)** 
+| v098 | `20260830_v098_b1-gqrb-margin-active_score293.793700_time406s` | — | >300 s | timeout 
+| v100 | `20260830_v100_b2-pawv-diagonly-active_score293.797301_time392s` | — | >300 s | Attention WA / timeout 
+| v107 | `20260830_v107_l3-global-lrh-precision-parent_score295.157057_time481s` | — | — | Attention WA 
+| v121 | `20260831_v121_c1b-structured-refresh2-accepted_score295.811281_time2180s` | — | >300 s | timeout 
+| v128 | `20260901_v128_fixed-attn-budget_timeout` | — | >300 s | **timeout (official, user confirmed)** 
+| v129 | `20260901_v129_fixed-attn-budget-sweep1_timeout` | — | >300 s | **timeout (official, user confirmed)** 
+| v130 | `20260901_v130_output-weight_timeout` | — | >300 s | **timeout (official, user confirmed)** 
+| v131 | `20260901_v131_output-weight-qwgram_timeout` | — | >300 s | **timeout (official, user confirmed)** 
+| v138 | `20260901_v138_attention-static-v86-budget_scoreNA_timeNA` | **15715** | **208 s** | **pass (official, user reported)** 
+| v139 | `20260901_v139_linear-output-aware-gain_scoreNA_timeNA` | **15716** | **202 s** | **pass (official, user reported)** 
+| v140 | `20260901_v140_linear-roab-pair_rejected` | **15838** | **207 s** | **pass, but rejected: below v86 and 17816** 
+| v147 | `20260901_v147_v86-attention-v140-linear_rejected` | **16579** | **211 s** | **pass, but rejected: 165 points below v86; submitted SHA unconfirmed** 
+| v155 | `20260902_v155_l5a-permutation-stability_rejected` | **16581** | **208.5 s** | **pass, but rejected: 163 points below v86** 
+| v156 | `20260902_v156_l4-weight-decoupled_rejected` | **16580** | **204.3 s** | **pass, but rejected: 164 points below v86** 
+| v157 | `20260902_v157_v86-roab-only_rejected` | **16729** | **218.96 s** | **pass, but rejected: 15 points below v86** 
+| v158 | `20260902_v158_v86-attention-matrix-smooth_retained` | **16861** | **223 s** | **pass; retained, +117 vs v86** 
+| v159 | `20260902_v159_linear-gptq17816_v158-attention_score17532_timeNA` | **17532** | — | **official score reported; runtime unknown** 
+| v160 | `20260903_v160_v159-linear-l1batch_v158-attn-a2_scoreNA_timeNA` | **17532** | **232 s** | **pass; score no-op vs v159, source/time-complete experiment parent** 
+| v161 | `20260903_v161_v160-attn-s1-qk-gram-refine_scoreNA_timeout` | — | >300 s | **timeout (official, user confirmed); local funnel passed (Qwen default 120 paired +0.0525, 106+/14−; GPT-2 +0.0678 same sign; D1 satisfied locally) but per-call dynamic refinement exceeds the official runtime budget — per-call family closed** 
+| v162 | `20260903_v162_standard-baseline-both_scoreNA_timeNA` | **1001** | **146 s** | **pass; calibration anchor measured — official non-zero base score or official STD differs from the local reference codec (local means both exactly 0.0); also establishes the ~146 s official harness time floor** 
+| v163 | `20260903_v163_v160-linear_standard-attn_scoreNA_timeNA` | **4587** | **202 s** | **pass; official Linear-side contribution Δ_L = 4587−1001 = 3586, local linear mean 0.633526 (bit-identical to v160, 168 cases), attention mean 0.0; time 202s vs predicted ~186s, within margin** | 
+| v164 | `20260903_v164_standard-linear_v160-attn_scoreNA_timeNA` | — | — | **candidate; standard Linear (mean 0.0) + v160 Attention (120 cases bit-identical to v160, mean 0.742354); measures the official Attention-side contribution Δ_A = S(v164)−S(v162)** 
 
 ## 2026-09-01 official-shape-v1 local candidates
 
@@ -117,32 +117,32 @@ These are local reproductions only; no official score/time is inferred from them
 directories follow the same immutable naming rule as the historical archive:
 `YYYYMMDD_vNNN_<description>_scoreNA_timeNA`.
 
-| Version | Source directory | Linear mean | Attention mean | API total | Decision |
-|---|---|---:|---:|---:|---|
-| v086 (idle rerun) | `20260830_v086_c86-attn-block-final_scoreNA_timeNA` | 0.406668 | 0.719696 | 299.302 s | clean rerun; official 16744/222.7 s pass |
-| v128 | `20260901_v128_fixed-attn-budget_timeout` | 0.465655 | 0.837789 | 310.732 s | **official timeout (user confirmed)** |
-| v129 | `20260901_v129_fixed-attn-budget-sweep1_timeout` | 0.465655 | 0.836579 | 248.363 s | **official timeout (user confirmed)** |
-| v130 | `20260901_v130_output-weight_timeout` | 0.471837 | 0.836579 | 295.437 s | **official timeout (user confirmed); Attention-time risk** |
-| v131 | `20260901_v131_output-weight-qwgram_timeout` | 0.473131 | 0.836579 | 294.835 s | **official timeout; high-cost Attention family** |
-| v132 | `20260901_v132_output-weight-qwgram-dynsweep2_scoreNA_timeNA` | 0.473131 | 0.834256 | 290.936 s | historical parent; 2 idle runs API<300 |
-| v133 | `20260901_v133_output-weight-qwgram-gain_scoreNA_timeNA` | 0.483610 | 0.834256 | 287.941 s | historical parent |
-| v134 | `20260901_v134_linear-output-activation-cross64_scoreNA_timeNA` | 0.507320 | 0.834256 | 289.042/289.832 s | Linear precision parent; Attention-time risk |
-| v135–v137 | three directories explicitly suffixed `_rejected` | 0.500132–0.507163 | 0.834256 | 287.816–296.755 s | **rejected Jacobi/sweep variants** |
-| v138 | `20260901_v138_attention-static-v86-budget_scoreNA_timeNA` | **0.507320** | 0.715942 | **192.996/187.935 s** | **official 15715/208 s pass; time parent** |
-| v139 | `20260901_v139_linear-output-aware-gain_scoreNA_timeNA` | 0.507278 | 0.715942 | 193.389 s | **official 15716/202 s pass; retained official-result archive** |
-| v140 | `20260901_v140_linear-roab-pair_rejected` | 0.507355 | 0.715942 | 205.365 s | **rejected; official 15838/207 s, local-only gain `+0.000035`** |
-| v141–v145 (BDLR family) | — (source snapshots deleted; logs/artifacts retained) | 0.281760–0.506256 | 0.715942 | 204.681–211.460 s | **rejected family; selected-column BDLR closed** |
-| v147 | `20260901_v147_v86-attention-v140-linear_rejected` | **0.507355 / 0.510050†** | **0.719696** | **222.227 / 300.351 s†** | **official 16579/211s; rejected below v86; submitted SHA unconfirmed** |
-| v148 | `20260901_v148_joint-wa-v86-attention-v140-linear_rejected` | **0.509729** | **0.719696** | **369.038 s** | **rejected; A3 precision gain but local time over 300 s** |
-| v151 | `20260902_v151_proj-roab-off_rejected` | **0.582528 (targeted)** | **0.942927 (targeted)** | **193.213 s** | **rejected; Qwen role panel no-op, GPT-2 proj-only gain** |
-| v152 | `20260902_v152_fc-cat-off_rejected` | **0.583139 / 0.542553 (14/56-case)** | **0.942927** | **199.578/200.432 s** | **rejected; small mixed-sign fc gain** |
-| v153 | `20260902_v153_fc-decoupled-activation_rejected` | **0.568754 (targeted)** | **0.942927** | **197.656 s** | **rejected; direct s_q assignment regresses fc** |
-| v154 | `20260902_v154_fc-decoupled-scale-fit_rejected` | **0.568754 (targeted)** | **0.942927** | **198.098 s** | **rejected; fitted s_d is a no-op after v153** |
-| v155 | `20260902_v155_l5a-permutation-stability_rejected` | **0.570999 (default)** / 0.588162 (effect) | **0.724735 (default)** / 0.757433 (effect) | **248.121 s (default-equivalent)** / 207.196 s (effect) | **rejected; official 16581/208.5s, 163 points below v86** |
-| v156 | `20260902_v156_l4-weight-decoupled_rejected` | 0.588131 (effect; default not run) | 0.757433 (effect) | 203.994 s (effect) | **rejected; official 16580/204.3s, 164 points below v86** |
-| v157 | `20260902_v157_v86-roab-only_rejected` | NA (legality smoke only) | NA (frozen field-equality check) | NA | **rejected; official 16729/218.96s, 15 points below v86** |
-| v158 | `20260902_v158_v86-attention-matrix-smooth_retained` | 0.448180 (default; frozen) | 0.735752 (default) | 295.069 s (default) | **retained; official 16861/223s, +117 vs v86** |
-| v159 | `20260902_v159_linear-gptq17816_v158-attention_score17532_timeNA` | **0.705508 CUDA compact / 0.633526 CUDA Linear default** | frozen v158 | **51.055s compact after exact reuse / 269.435s pre-reuse default API** | **official 17532 binds original SHA; current archive not yet resubmitted** |
+| Version | Source directory | Linear mean | Attention mean | API total | Decision 
+|---|---|---:|---:|---:|---
+| v086 (idle rerun) | `20260830_v086_c86-attn-block-final_scoreNA_timeNA` | 0.406668 | 0.719696 | 299.302 s | clean rerun; official 16744/222.7 s pass 
+| v128 | `20260901_v128_fixed-attn-budget_timeout` | 0.465655 | 0.837789 | 310.732 s | **official timeout (user confirmed)** 
+| v129 | `20260901_v129_fixed-attn-budget-sweep1_timeout` | 0.465655 | 0.836579 | 248.363 s | **official timeout (user confirmed)** 
+| v130 | `20260901_v130_output-weight_timeout` | 0.471837 | 0.836579 | 295.437 s | **official timeout (user confirmed); Attention-time risk** 
+| v131 | `20260901_v131_output-weight-qwgram_timeout` | 0.473131 | 0.836579 | 294.835 s | **official timeout; high-cost Attention family** 
+| v132 | `20260901_v132_output-weight-qwgram-dynsweep2_scoreNA_timeNA` | 0.473131 | 0.834256 | 290.936 s | historical parent; 2 idle runs API<300 
+| v133 | `20260901_v133_output-weight-qwgram-gain_scoreNA_timeNA` | 0.483610 | 0.834256 | 287.941 s | historical parent 
+| v134 | `20260901_v134_linear-output-activation-cross64_scoreNA_timeNA` | 0.507320 | 0.834256 | 289.042/289.832 s | Linear precision parent; Attention-time risk 
+| v135–v137 | three directories explicitly suffixed `_rejected` | 0.500132–0.507163 | 0.834256 | 287.816–296.755 s | **rejected Jacobi/sweep variants** 
+| v138 | `20260901_v138_attention-static-v86-budget_scoreNA_timeNA` | **0.507320** | 0.715942 | **192.996/187.935 s** | **official 15715/208 s pass; time parent** 
+| v139 | `20260901_v139_linear-output-aware-gain_scoreNA_timeNA` | 0.507278 | 0.715942 | 193.389 s | **official 15716/202 s pass; retained official-result archive** 
+| v140 | `20260901_v140_linear-roab-pair_rejected` | 0.507355 | 0.715942 | 205.365 s | **rejected; official 15838/207 s, local-only gain `+0.000035`** 
+| v141–v145 (BDLR family) | — (source snapshots deleted; logs/artifacts retained) | 0.281760–0.506256 | 0.715942 | 204.681–211.460 s | **rejected family; selected-column BDLR closed** 
+| v147 | `20260901_v147_v86-attention-v140-linear_rejected` | **0.507355 / 0.510050†** | **0.719696** | **222.227 / 300.351 s†** | **official 16579/211s; rejected below v86; submitted SHA unconfirmed** 
+| v148 | `20260901_v148_joint-wa-v86-attention-v140-linear_rejected` | **0.509729** | **0.719696** | **369.038 s** | **rejected; A3 precision gain but local time over 300 s** 
+| v151 | `20260902_v151_proj-roab-off_rejected` | **0.582528 (targeted)** | **0.942927 (targeted)** | **193.213 s** | **rejected; Qwen role panel no-op, GPT-2 proj-only gain** 
+| v152 | `20260902_v152_fc-cat-off_rejected` | **0.583139 / 0.542553 (14/56-case)** | **0.942927** | **199.578/200.432 s** | **rejected; small mixed-sign fc gain** 
+| v153 | `20260902_v153_fc-decoupled-activation_rejected` | **0.568754 (targeted)** | **0.942927** | **197.656 s** | **rejected; direct s_q assignment regresses fc** 
+| v154 | `20260902_v154_fc-decoupled-scale-fit_rejected` | **0.568754 (targeted)** | **0.942927** | **198.098 s** | **rejected; fitted s_d is a no-op after v153** 
+| v155 | `20260902_v155_l5a-permutation-stability_rejected` | **0.570999 (default)** / 0.588162 (effect) | **0.724735 (default)** / 0.757433 (effect) | **248.121 s (default-equivalent)** / 207.196 s (effect) | **rejected; official 16581/208.5s, 163 points below v86** 
+| v156 | `20260902_v156_l4-weight-decoupled_rejected` | 0.588131 (effect; default not run) | 0.757433 (effect) | 203.994 s (effect) | **rejected; official 16580/204.3s, 164 points below v86** 
+| v157 | `20260902_v157_v86-roab-only_rejected` | NA (legality smoke only) | NA (frozen field-equality check) | NA | **rejected; official 16729/218.96s, 15 points below v86** 
+| v158 | `20260902_v158_v86-attention-matrix-smooth_retained` | 0.448180 (default; frozen) | 0.735752 (default) | 295.069 s (default) | **retained; official 16861/223s, +117 vs v86** 
+| v159 | `20260902_v159_linear-gptq17816_v158-attention_score17532_timeNA` | **0.705508 CUDA compact / 0.633526 CUDA Linear default** | frozen v158 | **51.055s compact after exact reuse / 269.435s pre-reuse default API** | **official 17532 binds original SHA; current archive not yet resubmitted** 
 
 † The first v147 values come from the original pre-A3 JSON (SHA `9B3EA5...B656`); the second come
 from the later direct-merge A3 JSON (SHA `25C245...9C1B`). The archive was modified in place before
