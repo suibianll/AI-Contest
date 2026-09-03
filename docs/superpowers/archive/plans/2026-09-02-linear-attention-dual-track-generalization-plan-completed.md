@@ -1,6 +1,6 @@
 # HiF4 双线优化与跨模型泛化计划
 
-> 状态：**ACTIVE**
+> 状态：**COMPLETED / SUPERSEDED（2026-09-03）**
 >
 > 更新：2026-09-03
 >
@@ -387,13 +387,13 @@ ROAB、无约束 sweep、PAWV 或多轮在线搜索。
 2. **等价省时通道**（L1/A1 类）：官方端到端时间不变（232=232），官方时间支配项
    非本地校准热点；
 3. **L2 剪维度**：seeds/sizes/RMS-smooth/wide-alphas 四消融全 REJECTED（承重维度）；
-4. **L3 C23 full-64 接线**（_refine_weight_blocks64 未接线孤岛）：Qwen compact
-   56/56 zero delta，weight 块级已收敛，非 17816-17532 差距来源（gate 保留默认关）；
+4. **L3 C23 full-64 首次接线结论作废**：`_WEIGHT_FULL64_APPLY=True` 仍位于
+   `_WEIGHT_E2E_REFINE=False` 的外层死分支中，实际没有调用 `_refine_weight_blocks64`；
+   Qwen compact 56/56 zero delta 只能证明候选与父版本相同，不能证明 weight 块级已收敛；
 5. 跨模型架构验证：GPT-2 + opt-125m（1e-5 验收 2.86e-6）已完成，pythia-160m 可选非必需。
 
 **规律锚点**：本地 mean 微调不迁移官方（ρ=0.224）；bit-exact 等价改动获官方 panel
 正向验证；官方机 ≈ 本地 1.25×（232 vs 290.7s），余量 ~68s。
 
-**下一步候选（需用户提供新材料或授权新机制设计）**：17816 的 284 分差距无可见 diff
-实体，所有既有机制通道已收敛。若继续：必须设计改变官方候选行为的新机制（非现计划
-范围），或等待 17816 任何历史材料。
+**后续计划**：官方规律辨识与 Linear 结构实验转入
+`2026-09-03-official-pattern-and-linear-structure-experiments.md`。旧计划不再追加实验。

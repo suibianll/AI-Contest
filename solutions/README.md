@@ -1,8 +1,8 @@
 # HiF4 solutions archive
 
-> **Official update (2026-09-02):** the exact v159 merged source is user-confirmed at **17532**;
-> official runtime is still unknown. The separate 17816 result remains an external anchor because
-> its complete source and Attention configuration are unavailable.
+> **Official update (2026-09-03):** v160 archive SHA `33B1D061...680D` scored **17532 / 232s**;
+> its score is unchanged from v159, whose runtime remains unknown. The separate 17816 result remains
+> an external anchor because its complete source and Attention configuration are unavailable.
 
 `solutions/` contains immutable `solution.py` snapshots. The active code is only the repository
 root [`solution.py`](../solution.py). Every snapshot below was submitted or retained as an
@@ -40,8 +40,9 @@ cohort ordering inversions without fitting them.
 
 ### Current best and scope rule (2026-09-02)
 
-The highest official score bound to a repository source is **v159: 17532 / time unknown**. v158
-**16861 / 223 s** remains the highest source-and-runtime-complete pass. The separate **17816** result
+The highest official score bound to a repository source is **v159/v160: 17532**; v160 additionally
+binds that score to a **232 s** official runtime. v158 **16861 / 223 s** remains the lower-risk
+source-and-runtime-complete baseline. The separate **17816** result
 has no synchronized full source or Attention configuration, so it remains an external anchor. v147 is **16579 / 211 s**
 (time pass but below v86, rejected); v140 is **15838 / 207 s** (rejected). The pre-A3 parent effect
 control is local-only (`Linear=0.588023229`, `Attention=0.757433277`, API `202.317 s`) and is not
@@ -104,6 +105,7 @@ silently assigned a score.
 | v157 | `20260902_v157_v86-roab-only_rejected` | **16729** | **218.96 s** | **pass, but rejected: 15 points below v86** |
 | v158 | `20260902_v158_v86-attention-matrix-smooth_retained` | **16861** | **223 s** | **pass; retained, +117 vs v86** |
 | v159 | `20260902_v159_linear-gptq17816_v158-attention_score17532_timeNA` | **17532** | — | **official score reported; runtime unknown** |
+| v160 | `20260903_v160_v159-linear-l1batch_v158-attn-a2_scoreNA_timeNA` | **17532** | **232 s** | **pass; score no-op vs v159, source/time-complete experiment parent** |
 
 ## 2026-09-01 official-shape-v1 local candidates
 

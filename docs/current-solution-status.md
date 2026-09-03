@@ -34,7 +34,7 @@
 
 用户提供的 `linear.txt`/`linear_dep.txt` 已合成为 v159，并已获得 17532 官方分数；17816 的
 完整提交仍未同步，不能把两者视为同一源码。完整执行顺序见
-[`活动计划`](superpowers/plans/2026-09-02-linear-attention-dual-track-generalization-plan.md)。
+[`活动计划`](superpowers/plans/2026-09-03-official-pattern-and-linear-structure-experiments.md)。
 
 ## 0.1 v160 本地集成（2026-09-03，官方 = 17532/232s no-op）
 
@@ -57,25 +57,25 @@ v160 = v159 Linear（L1 逐位等价编码）+ A2/A1（Attention）。官方回�
 - **GPT-2 完整集成**：linear `0.603115` / attention `0.389583`（与各自 parent 逐位
   一致，无跨模型回归），API `113.8s`。
 
-L3（Linear block 精度）尚未执行；opt-125m 第二架构已于 2026-09-03 完成（捕获一致性
-2.86e-6 < 1e-5，v160-opt-parent 归档）。v160 官方 no-op 后，下一步决策：L3 或
-17816 源码同步（官方 17532 到 17816 差 284 分）。
+L3 首次 full64 探针已判定为 **INVALID EXPERIMENT**：`_WEIGHT_FULL64_APPLY=True` 仍嵌套在
+`_WEIGHT_E2E_REFINE=False` 的死分支内，目标 refine 从未执行，不能据 56/56 zero delta 得出
+块级收敛结论。opt-125m 第二架构已完成（捕获一致性 2.86e-6 < 1e-5）。下一步按新活动计划先
+补齐官方 Linear×Attention 2×2 单元，再正确执行 L3 reachability 实验。
 
 ## 1. 版本结论
 
-- **当前仓库内最高已绑定源码的官方分数：v159，17532 分 / 时间未知。** v158
-  `16861/223s` 仍是时间与源码均完整的安全基线；17816 仍只作为外部锚点。
-- 根目录与 v159 归档已同步数学等价 GPU 修复及中间量复用，当前 SHA256
-  `13C9CF0BFCF2277F0828D8CC1A18A8F7414DB183F3E27DD898D52597ACC5EC79`；17532 仍绑定修复前
-  SHA `0508045A...4242`。CUDA compact 为 `0.705508`、56/0，API `52.321s`；CUDA Linear
-  default 为 `0.633526`、167/1，API `269.435s`、wall `291.145s`。这些仍不是官方时间。
+- **当前仓库内最高已绑定源码的官方分数：v159/v160，17532 分；v160 时间为 232s。** v160
+  归档 SHA `33B1D061...680D` 是当前 score/time 均完整的实验父版本；v158 `16861/223s` 是
+  更低复杂度的安全基线，17816 仍只作为外部锚点。
+- 根 `solution.py` 在 v160 后只增加默认关闭的 L3 gate，行为不变但 SHA 已不同；规律实验必须从
+  v160 归档分支。v159 的 17532 仍绑定原始 SHA `0508045A...4242`，其官方时间未知。
 - v159 与同 cache 的 v158 compact 配对 mean Δ 为 `+0.149191`（56 改善、0 回归）；`proj`
   八个 case 的配对 Δ 也为正（`+0.124209`）。这仍只是 compact Qwen proxy 证据，不能外推为
   官方泛化结论。候选说明见
   [`v159 result`](../solutions/20260902_v159_linear-gptq17816_v158-attention_score17532_timeNA/result.md)。
-- CUDA device 错误已经修复；default 中 Weight calibration 占 `208.971/269.435s`，下一步
-  对校准热点做单项消融。transformed samples 与 Weight Gram 已完成等价复用，compact
-  56/56 输出不变，API `52.321→51.055s`；不创建新版本。
+- CUDA device 错误已经修复；L1 batching 已把 v160 Linear calibration 降至约 `166.6s`，
+  输出逐位不变。下一步不再消融已证明承重的搜索维度，转为官方 2×2 交互实验与正确可达的
+  full64 单机制验证。
 - v138/v139 虽在官方 `<300s` 内通过，但只有 `15715/15716`，比 v86 低约 1029 分；
   v138–v145 这条“压缩 Attention 后继续叠 Linear 局部模块”的路线已经失败并关闭。
 - v155 官方 `16581 / 208.5s`、v156 官方 `16580 / 204.3s`，两者时间均通过但分别低于 v86
@@ -555,14 +555,14 @@ v86 的部分 scale-aware/output-aware 机制。此前把它描述为“v86 级�
 ## 6. 当前活动计划
 
 唯一活动计划是
-[`2026-09-02-linear-attention-dual-track-generalization-plan.md`](superpowers/plans/2026-09-02-linear-attention-dual-track-generalization-plan.md)。顺序固定为：
+[`2026-09-03-official-pattern-and-linear-structure-experiments.md`](superpowers/plans/2026-09-03-official-pattern-and-linear-structure-experiments.md)。顺序固定为：
 
-1. 扩展跨模型评测器的 Linear/Attention 场景隔离和父子配对，并适配一个 Pythia/OPT 真实前向；
-2. Linear 固定 v158 Attention，先做校准热点分解和等价降复杂度，再做单一联合 A/W 机制；
-3. Attention 固定当前 v159 Linear，建立 Attention-only compact/default/GPT-2 父基线，再优化；
-4. 每个方向通过 Qwen default 后必须通过 GPT-2，最终候选再通过 Pythia/OPT；跨模型结果不用于
-   参数搜索，方向冲突直接判为 model-specific；
-5. 两条线分别通过后才运行一次完整集成审计，不增加模型/layer/role 专属路由或旧式搜索网格。
+1. 补齐 `v159 Linear × v86 Attention` 官方单元，形成 Linear×Attention 2×2 因子对照；
+2. 可选执行 exact-v160 重跑与 L1 unbatched 逐位等价时间 A/B；
+3. 把 full64 调用移出 `_WEIGHT_E2E_REFINE=False` 死分支，以 attempted/accepted block 计数
+   验证真实执行；
+4. full64 确认无效后，才测试无 seed/alpha/rank 搜索的统一 64-block Householder 坐标重分布；
+5. 每个机制只允许一次官方候选，官方结果不反向用于阈值或候选网格调参。
 
 ## 7. 归档现状与待整理项
 
