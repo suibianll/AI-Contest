@@ -35,35 +35,34 @@ unchanged, but no official time was ever returned for it.
 
 ## Source identity
 
-- Archived `solution.py` SHA256: `33B1D061…` (L1 + A2 + A1).  Full SHA in
-  `artifacts/official_eval/v160-integration-default.json` is for the A2-only
-  build (`29AA1863…`); the A1 re-run is bit-exact so the archive identity is
-  `33B1D061…` (see `source_sha256` in the A1 candidate JSONs).
+- Archived `solution.py` SHA256: `33B1D061…` (L1 + A2 + A1).  Final
+  authoritative integration audit: `artifacts/official_eval/v160-final-
+  integration-default.json` (`source_sha256` `33b1d061…`).
 - Single-file, self-contained; exposes only the six required APIs.
 
 ## Local proxy-v2 evidence (mechanism/time diagnostics only)
 
-Complete default-panel integration audit (168 Linear + 120 Attention cases),
-same cache, same device:
-`artifacts/official_eval/v160-integration-default.json` +
-`logs/official_eval/v160-integration-default.md`.
+Final complete default-panel integration audit (168 Linear + 120 Attention
+cases), same cache, same device:
+`artifacts/official_eval/v160-final-integration-default.json` +
+`logs/official_eval/v160-final-integration-default.md`.
 
 | Metric | v160 |
 |---|---:|
 | Linear mean gain | 0.633526 |
 | Attention mean gain | 0.742354 |
 | Overall mean | 0.678871 |
-| API total | 296.0 s |
-| Wall time | 324.5 s |
+| API total | 290.7 s |
+| Wall time | 318.4 s |
 
 | API | seconds | calls |
 |---|---:|---:|
-| `hif4_calibration_and_quantize_weight` | 170.04 | 168 |
-| `hif4_dynamic_quantize_activation` | 61.1 | 168 |
-| `hif4_calibration_attention` | 61.43 | 24 |
-| `hif4_dynamic_quantize_q` | 1.45 | 120 |
-| `hif4_dynamic_quantize_k` | 1.06 | 120 |
-| `hif4_dynamic_quantize_v` | 0.92 | 120 |
+| `hif4_calibration_and_quantize_weight` | 166.64 | 168 |
+| `hif4_dynamic_quantize_activation` | 60.65 | 168 |
+| `hif4_calibration_attention` | 60.0 | 24 |
+| `hif4_dynamic_quantize_q` | 1.43 | 120 |
+| `hif4_dynamic_quantize_k` | 1.09 | 120 |
+| `hif4_dynamic_quantize_v` | 0.87 | 120 |
 
 Per-side baselines and pairing evidence:
 
