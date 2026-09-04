@@ -7,14 +7,15 @@
 `evaluator/official_eval.py`，跨模型泛化调用 `evaluator/cross_model_eval.py`；旧
 `real_model_suite.py` 已退役。
 
-**当前活动计划**：**无 active 计划（2026-09-04）**。
-L-R2 计划已裁决完毕并归档
-（[`2026-09-04-post-v180-linear-rank2-plan-completed.md`](../archive/plans/2026-09-04-post-v180-linear-rank2-plan-completed.md)）：
-v182 官方 `17598/273s` RETAINED 为新完整官方父，step_gain `+1`（残差低秩族接近
-饱和），**rank-3/系数扫描/fold 邻域明确关闭**。官方父 v182 距榜首 21765 差 4167，
-只闭合原差距约 `0.024%`，却比 v180 多耗 31s：这确认现有局部扩展与榜首之间是机制
-代际差距。v182 作为分数父，v180 作为只少 1 分但多 31s 余量的时间预算父。官方配额
-3/10、剩余 7。新候选需外部触发（新官方裁决、新机制方向、或约束调整）。
+**当前活动计划（2026-09-04）**：
+[`2026-09-04-v183-attn-bsm-full-refine-plan.md`](2026-09-04-v183-attn-bsm-full-refine-plan.md)
+——榜首差距机制假设审计（门控 firing 率 + 覆盖率 COV-A 诊断，见
+[`诊断日志`](../../../logs/execution/2026-09-04-gate-audit-and-coverage-diag.md)）产出
+的单一候选：v182 + attention block-smooth 搜索 refine 覆盖 0.50→1.00（仅 2 常量，
+校准侧、在线零新增）。本地 Qwen default +0.000511（D1 量级）、GPT-2 轻微负标记
+model-specific-risk、OPT 不变；等待官方裁决（配额 4/10）。v182 为分数父
+（17598/273s），v180 为时间预算父。次级条件方向（v183 官方后视结果）：方向 3 的
+weight block-smooth 门 mmi 放宽（Qwen 92.9% vs GPT-2/OPT 68-70% Qwen-locked 证据）。
 
 当日已归档：低复杂度算法扩展计划（A1-A4/L1-L4/组合全覆盖，
 `-superseded`）、v162 官方侧向隔离优化计划（v165 timeout、v167 本地

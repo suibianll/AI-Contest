@@ -10,20 +10,21 @@
   monkey-patch `_candidate_is_safe`（按 `min_mean_improvement` 分标签）、
   `_a1_gate_passes`、`_fit_attention_pair_matrix_smooth`，profile
   `_dense_to_hif4` 调用（按 refine ratio/blocks），atexit 打印。
+
 - `logs/execution/diag_covA.py`：v182 副本，仅提高 12 个校准侧 cap
   （diff 已核验 caps-only；在线 Q/K/V/activation refine ratios 未动）。
 
 ## 方向 3 结果：跨模型门控 firing 率
 
-| 门 | Qwen | GPT-2 | OPT-125m |
-| --- | ---: | ---: | ---: |
-| `_candidate_is_safe` 总体 | 93.8% (1119) | 80.6% (583) | 87.8% (596) |
+| 门                                   |            Qwen |           GPT-2 |        OPT-125m |
+| ----------------------------------- | --------------: | --------------: | --------------: |
+| `_candidate_is_safe` 总体             |    93.8% (1119) |     80.6% (583) |     87.8% (596) |
 | **weight block smooth (mmi=0.005)** | **92.9% (425)** | **68.4% (196)** | **70.1% (184)** |
-| smooth 候选 (mmi=0.01) | 97.4% | 86.9% | 97.0% |
-| mmi=0.02 | 88.5% | 86.3% | 90.5% |
-| attention block (mmi=0.001) | 98.1% (54) | 88.5% (26) | 100% (14) |
-| A1 终验门 | 24.4% (336) | 45.8% (24) | 37.5% (24) |
-| pair-matrix smooth 接受 | 24/24 | 12/12 | 12/12 |
+| smooth 候选 (mmi=0.01)                |           97.4% |           86.9% |           97.0% |
+| mmi=0.02                            |           88.5% |           86.3% |           90.5% |
+| attention block (mmi=0.001)         |      98.1% (54) |      88.5% (26) |       100% (14) |
+| A1 终验门                              |     24.4% (336) |      45.8% (24) |      37.5% (24) |
+| pair-matrix smooth 接受               |           24/24 |           12/12 |           12/12 |
 
 证据：`logs/execution/diag-qwen-linear.out`、`diag-gpt2.out`、`diag-opt.out`
 （Qwen attention 数字来自 diag-v182-attn-default 运行 stdout）。
@@ -41,9 +42,9 @@
 
 ## 方向 1 结果：COV-A 覆盖率放大变体（Qwen default 配对 v182/v180）
 
-| 侧 | 改动 caps | 结果 |
-| --- | --- | --- |
-| Linear 168 | weight quad8/16 ratio 0.05/0.02→0.30/0.12、groups 4×、activation quad8/16 0.08/0.10→0.40/0.50、C75 0.25→1.0 | **0/0/168 bit-identical no_effect**（API 337.9s，+5.5s） |
+| 侧             | 改动 caps                                                                                                       | 结果                                                                   |
+| ------------- | ------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| Linear 168    | weight quad8/16 ratio 0.05/0.02→0.30/0.12、groups 4×、activation quad8/16 0.08/0.10→0.40/0.50、C75 0.25→1.0      | **0/0/168 bit-identical no\_effect**（API 337.9s，+5.5s）               |
 | Attention 120 | `_ATTN_BLOCK_SMOOTH_REFINE_RATIO 0.50→1.00`、`REFINE_BLOCKS 24_576→131_072`（attention-only 运行天然隔离 linear caps） | **mean +0.000511、11+/14−/95=、median 0、时间中性**（wall 69.1s / API 63.9s） |
 
 证据：`artifacts/official_eval/diag-covA-{attn,linear}-default.json`、
@@ -65,6 +66,7 @@
 - **v183 候选（单机制、零在线新增）**：v182 + attention block-smooth refine
   覆盖 0.50→1.00 / blocks 131072。本地弱正混合（11/14/95）按现行规则不阻止
   首次官方测量；预期小幅正（D1 同量级），校准时间中性。官方配额 4/10。
+
 - 方向 3 的 mmi 放宽列为 v183 之后的条件方向（跨模型证据支持但不定号）。
 
 ## 运行清单
@@ -80,3 +82,4 @@
 .venv\Scripts\python.exe -u evaluator\official_eval.py --solution logs\execution\diag_covA.py --attention-only --baseline-json artifacts\official_eval\v180-attn-default.json ...
 .venv\Scripts\python.exe -u evaluator\official_eval.py --solution logs\execution\diag_covA.py --linear-only --baseline-json artifacts\official_eval\v182-linear-default.json ...
 ```
+
