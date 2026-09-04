@@ -10903,6 +10903,11 @@ def hif4_calibration_attention(
             )
 
         sensitivity_deltas = []
+        _diag_gate = {
+            "parent_causal": list(parent_causal),
+            "parent_safety": list(parent_safety),
+            "folds": [],
+        }
         for held_out in range(len(q_folds)):
             q_fold_train = [
                 value
@@ -10943,6 +10948,12 @@ def hif4_calibration_attention(
                 (parent_safety[held_out] - held_safety[0])
                 / max(parent_safety[held_out], _EPS)
             )
+            _diag_gate["folds"].append(
+                {
+                    "held_causal": held_causal[0],
+                    "held_safety": held_safety[0],
+                }
+            )
         if len(sensitivity_deltas) >= 2:
             delta_tensor = torch.tensor(
                 sensitivity_deltas, dtype=torch.float64
@@ -10960,6 +10971,53 @@ def hif4_calibration_attention(
                 k_state["importance"] = _cpu_state_tensor(
                     _aggregate_sensitivity(k_folds).reshape(-1)
                 )
+        _diag_accepted = False
+        if len(sensitivity_deltas) >= 2:
+            _diag_accepted = bool(
+                float(delta_tensor.median()) > _ATTENTION_SENSITIVITY_MIN_GAIN
+                and float(delta_tensor.min())
+                > -_ATTENTION_SENSITIVITY_WORST_TOLERANCE
+            )
+        _diag_gate["accepted"] = _diag_accepted
+        _diag_gate["deltas"] = sensitivity_deltas
+        _diag_q_imp = _aggregate_sensitivity(q_folds).repeat_interleave(
+            group_size, dim=0
+        ).reshape(-1)
+        _diag_k_imp = _aggregate_sensitivity(k_folds).reshape(-1)
+        _diag_q_parent = q_state["importance"].to(
+            device=_diag_q_imp.device, dtype=torch.float32
+        ).reshape(-1)
+        _diag_k_parent = k_state["importance"].to(
+            device=_diag_k_imp.device, dtype=torch.float32
+        ).reshape(-1)
+        _diag_gate["q_rel_dist"] = float(
+            (_diag_q_imp - _diag_q_parent).norm().item()
+            / max(float(_diag_q_parent.norm().item()), _EPS)
+        )
+        _diag_gate["k_rel_dist"] = float(
+            (_diag_k_imp - _diag_k_parent).norm().item()
+            / max(float(_diag_k_parent.norm().item()), _EPS)
+        )
+        _diag_gate["q_imp_range"] = [
+            float(_diag_q_imp.min().item()),
+            float(_diag_q_imp.max().item()),
+        ]
+        _diag_gate["k_imp_range"] = [
+            float(_diag_k_imp.min().item()),
+            float(_diag_k_imp.max().item()),
+        ]
+        _diag_gate["q_parent_range"] = [
+            float(_diag_q_parent.min().item()),
+            float(_diag_q_parent.max().item()),
+        ]
+        _diag_gate["k_parent_range"] = [
+            float(_diag_k_parent.min().item()),
+            float(_diag_k_parent.max().item()),
+        ]
+        import json as _diag_json
+
+        with open("diag_v188_gate.jsonl", "a", encoding="utf-8") as _diag_f:
+            _diag_f.write(_diag_json.dumps(_diag_gate) + "\n")
     return {"q_state": q_state, "k_state": k_state, "v_state": v_state}
 
 
