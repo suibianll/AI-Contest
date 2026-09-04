@@ -12,7 +12,7 @@ sys.path.insert(0, str(ROOT))
 from evaluator.reference_hif4 import validate_hif4_params, validate_state
 
 
-SOURCE = ROOT / "solutions" / "20260904_v185_cleanroom-robust-operator_scoreNA_timeNA" / "solution.py"
+SOURCE = ROOT / "solutions" / "20260904_v185_cleanroom-robust-operator_rejected" / "solution.py"
 
 
 def load_module():

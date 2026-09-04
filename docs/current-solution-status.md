@@ -4,6 +4,12 @@
 
 ## 0. 最新官方进展
 
+**v185 clean-room 重写已本地 REJECTED（未提交、不占配额）。** 按用户要求完全从六 API
+和 HiF4 合法域重写：Linear 只用解析对角等价变换，Attention 只用 K center、KV-head
+Q/K balance、收缩 logits gain 和门控 `+4`。接口与真实调用图全部通过；Linear compact
+`0.417231`、56/56 优于标准，但 Attention default `0.403767`，相对 v182
+`-0.338062`、116/120 case 回归，故停止跨模型/官方。源码保留为研究基线，根文件未切换。
+
 **❌ v183 官方回传（2026-09-04）：`17598 / 279.7s`，与父 v182 同分，REJECTED。**
 v183 仅将 Attention block-smooth 搜索的 final-quantizer refine 覆盖从 0.50 提高到
 1.00（blocks `24576→131072`），Linear 与在线路径不变。相对 v182
@@ -743,7 +749,8 @@ v86 的部分 scale-aware/output-aware 机制。此前把它描述为"v86 级静
 
 ## 6. 当前活动计划
 
-**当前无 active 计划。** v183 覆盖率计划已按官方 `17598/279.7s` 裁决为 REJECTED 并归档
+**当前无 active 计划。** v185 clean-room 重写因相对 v182 大幅回归已本地拒绝并归档；
+v183 覆盖率计划已按官方 `17598/279.7s` 裁决为 REJECTED 并归档
 （[`2026-09-04-v183-attn-bsm-full-refine-plan-rejected.md`](superpowers/archive/plans/2026-09-04-v183-attn-bsm-full-refine-plan-rejected.md)）；
 其相对 v182 `step_gain=0`、时间 `+6.7s`，覆盖率族关闭。v182 继续作为分数父，v180
 继续作为时间预算父。新候选需单独注册新机制计划。

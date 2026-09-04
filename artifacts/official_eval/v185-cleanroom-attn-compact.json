@@ -1,0 +1,752 @@
+{
+  "protocol": "proxy-v2",
+  "evaluation_scope": {
+    "kind": "attention-only-compact-generalization-panel",
+    "intent": "attention-only-low-cost-cross-holdout-mechanism-diagnosis",
+    "comparable_for_proxy_ranking": false,
+    "paired_only": true,
+    "stress_only": false,
+    "smoke_only": false,
+    "official_score_equivalent": false,
+    "scenario": "attention"
+  },
+  "created_at": "2026-09-04 11:42:08",
+  "data_source": "nvfp4_cache",
+  "capture_seconds": 0.04439150006510317,
+  "cache": "D:\\工作内容\\AI竞赛\\artifacts\\official_eval\\cache\\qwen2.5-0.5b-proxy-v2.pt",
+  "protocol_config": {
+    "model": "qwen2.5-0.5b",
+    "linear_roles": [
+      "q",
+      "k",
+      "v",
+      "o",
+      "fc_gate",
+      "fc_up",
+      "proj"
+    ],
+    "calibration_lengths": [
+      10,
+      128,
+      512,
+      1024,
+      1024
+    ],
+    "test_length": 128,
+    "test_lengths": [
+      10,
+      128,
+      512,
+      1024,
+      1024,
+      10,
+      128,
+      512,
+      1024,
+      1024,
+      128,
+      512
+    ],
+    "test_windows": 12,
+    "linear_cases": 0,
+    "attention_cases": 4,
+    "evaluation_scenario": "attention",
+    "case_design_scope": "--compact-panel is the low-cost cross-holdout research screen with selected states; default is the all-layer/role audit panel; --effect-panel preserves the full calibration graph; --full-cases enables Cartesian stress; optional CLI limits are prefix smoke-only",
+    "case_design": "compact-generalization-panel-v1",
+    "panel_window_indices": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "compact_window_indices": [
+      1,
+      2,
+      6,
+      7
+    ],
+    "calibration_call_graph": "selected-layer-role-once; selected-attention-layer-once",
+    "input_codec": "e4m3-subnormal-ceil-v1",
+    "runtime_limit_seconds": 300.0,
+    "score_formula": "proxy gain=(MSE_STD-MSE_PLAYER)/MSE_STD per case; means are unweighted over actual captured cases",
+    "runtime_measurement": "sum of elapsed six-API calls; wall_seconds is reported separately and neither is official time",
+    "error_source_decomposition": "candidate API outputs are reused in evaluator-only Linear W/A and Attention Q/K/V control arms; it does not alter proxy means or API call counts",
+    "trend_validation": "same-cohort pairwise ordering against user-confirmed anchors; diagnostic-only",
+    "paired_effect": "reuse an immutable parent JSON and compare exact layer/role/window output errors; report focus/control signs and W/A or Q/K/V source deltas",
+    "scope_contract": "only default-panel runs are comparable for local proxy ranking; compact/effect panels are mechanism diagnosis only; full-cartesian is stress-only; explicit limits are smoke-only; none are official-score equivalents"
+  },
+  "data_metadata": {
+    "protocol": "proxy-v2",
+    "model": "qwen2.5-0.5b",
+    "model_path": "D:\\工作内容\\AI竞赛\\models\\qwen2.5-0.5b",
+    "model_revision": "Qwen/Qwen2.5-0.5B@060db6499f32faf8b98477b0a26969ef7d8b9987",
+    "dataset": "Salesforce/wikitext",
+    "dataset_config": "wikitext-2-raw-v1",
+    "dataset_revision": "b08601e04326c79dfdd32d625aee71d232d685c3",
+    "calibration_lengths": [
+      10,
+      128,
+      512,
+      1024,
+      1024
+    ],
+    "test_length": 128,
+    "test_lengths": [
+      10,
+      128,
+      512,
+      1024,
+      1024,
+      10,
+      128,
+      512,
+      1024,
+      1024,
+      128,
+      512
+    ],
+    "test_window_count": 12,
+    "test_splits": [
+      "test",
+      "validation"
+    ],
+    "capture_device": "cuda",
+    "weights_dtype": "float32",
+    "weight_layout": "[out_features, in_features]",
+    "input_codec": "e4m3-subnormal-ceil-v1",
+    "input_mode": "amax6",
+    "data_sha256": {
+      "train": "e83889baabc497075506f91975be5fac0d45c5290b6b20582c8cd1e853d0c9f7",
+      "validation": "204929b7ff9d6184953f867dedb860e40aa69c078fc1e54b3baaa8fb28511c4c",
+      "test": "5f1bea067869d04849c0f975a2b29c4ff47d867f484f5010ea5e861eab246d91"
+    },
+    "linear_case_count": 56,
+    "attention_case_count": 4,
+    "nvfp4_mode": "amax6",
+    "case_design": "compact-generalization-panel-v1",
+    "panel_window_indices": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "full_cases": false,
+    "effect_panel": false,
+    "compact_panel": true,
+    "linear_case_limit": null,
+    "attention_case_limit": null,
+    "linear_calibration_indices": [
+      1,
+      2
+    ],
+    "calibration_call_graph": "selected-layer-role-once; selected-attention-layer-once",
+    "evaluation_scenario": "attention",
+    "linear_state_keys": [],
+    "attention_state_layers": [
+      0,
+      8,
+      15,
+      23
+    ],
+    "linear_roles": [
+      "q",
+      "k",
+      "v",
+      "o",
+      "fc_gate",
+      "fc_up",
+      "proj"
+    ],
+    "nvfp4_cache_hit": true,
+    "nvfp4_cache_path": "D:\\工作内容\\AI竞赛\\artifacts\\official_eval\\cache\\qwen2.5-0.5b-proxy-v2-attention-compact-nvfp4.pt"
+  },
+  "trend_diagnostics": {
+    "eligible_candidates": [],
+    "cohort": [],
+    "pair_count": 0,
+    "concordant_pairs": 0,
+    "inverted_pairs": 0,
+    "tied_pairs": 0,
+    "status": "insufficient_anchors",
+    "inversions": [],
+    "note": "diagnostic only; official scores are never used to alter proxy means"
+  },
+  "linear_candidate_role_diagnostics": {
+    "enabled": false,
+    "reason": "at least two successful candidates with Linear decomposition are required"
+  },
+  "paired_effect": null,
+  "results": [
+    {
+      "candidate": "v185-cleanroom-attn-compact",
+      "evaluation_scope": {
+        "kind": "attention-only-compact-generalization-panel",
+        "intent": "attention-only-low-cost-cross-holdout-mechanism-diagnosis",
+        "comparable_for_proxy_ranking": false,
+        "paired_only": true,
+        "stress_only": false,
+        "smoke_only": false,
+        "official_score_equivalent": false,
+        "scenario": "attention"
+      },
+      "source": "D:\\工作内容\\AI竞赛\\solutions\\20260904_v185_cleanroom-robust-operator_scoreNA_timeNA\\solution.py",
+      "source_sha256": "3ea046594fb18dd86fd8ccfd2364a391039b0112e29986c8f949f9af526c136c",
+      "score": {
+        "linear_sum": 0.0,
+        "attention_sum": 2.746165585910374,
+        "total_sum": 2.746165585910374,
+        "linear_mean": 0.0,
+        "attention_mean": 0.6865413964775935,
+        "overall_mean": 0.6865413964775935,
+        "linear_role_macro_mean": 0.0,
+        "attention_layer_macro_mean": 0.6865413964775935,
+        "linear_cases": 0,
+        "attention_cases": 4,
+        "linear_by_role": {},
+        "linear_by_role_family": {
+          "fc": 0.0,
+          "o": 0.0,
+          "proj": 0.0,
+          "qkv": 0.0
+        },
+        "attention_by_layer": {
+          "0": 0.8807636513337851,
+          "8": 0.889600339732094,
+          "15": 0.43545726160117515,
+          "23": 0.5403443332433195
+        }
+      },
+      "timing": {
+        "api_seconds": {
+          "hif4_calibration_and_quantize_weight": 0.0,
+          "hif4_dynamic_quantize_activation": 0.0,
+          "hif4_calibration_attention": 3.6224876998458058,
+          "hif4_dynamic_quantize_q": 0.04805149999447167,
+          "hif4_dynamic_quantize_k": 0.04676019959151745,
+          "hif4_dynamic_quantize_v": 0.04850029991939664
+        },
+        "api_total_seconds": 3.7657996993511915,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 0,
+          "hif4_dynamic_quantize_activation": 0,
+          "hif4_calibration_attention": 4,
+          "hif4_dynamic_quantize_q": 4,
+          "hif4_dynamic_quantize_k": 4,
+          "hif4_dynamic_quantize_v": 4
+        },
+        "wall_seconds": 3.926787299802527,
+        "local_api_under_300_indicator": true,
+        "wall_under_300_indicator": true
+      },
+      "case_scores": {
+        "linear": [],
+        "attention": [
+          {
+            "mse_standard": 0.00017675624985713512,
+            "mse_player": 2.1075769836897962e-05,
+            "reference_energy": 0.0004612655902747065,
+            "relative_player_mse": 0.045691181569269664,
+            "gain": 0.8807636513337851,
+            "mse_q_only": 0.00016282728756777942,
+            "mse_k_only": 6.591797864530236e-05,
+            "mse_v_only": 0.000177234600414522,
+            "mse_qk_only": 2.1081028535263613e-05,
+            "mse_both": 2.1075769836897962e-05,
+            "gain_q_only": 0.07880322365185903,
+            "gain_k_only": 0.6270684702884273,
+            "gain_v_only": -0.0027062723822976922,
+            "gain_qk_only": 0.8807339002026658,
+            "gain_both": 0.8807636513337851,
+            "qk_interaction_mse": -3.090798782068305e-05,
+            "qk_interaction_gain": 0.1748622062623795,
+            "qkv_interaction_mse": -4.836092557525262e-07,
+            "qkv_interaction_gain": 0.0027360235134169675,
+            "logit_mse_standard": 706.634521484375,
+            "logit_mse_player": 157773.09375,
+            "probability_mse_standard": 0.001713032484985888,
+            "probability_mse_player": 0.00024368119193241,
+            "probability_kl_standard_to_reference": 0.00807589665055275,
+            "probability_kl_player_to_reference": 0.0006183834047988057,
+            "case_id": 0,
+            "layer": 0,
+            "calibration_indices": [
+              0,
+              1,
+              2,
+              3,
+              4
+            ],
+            "test_window": 1,
+            "test_split": "test",
+            "test_length": 128
+          },
+          {
+            "mse_standard": 0.05646072328090668,
+            "mse_player": 0.00623324466869235,
+            "reference_energy": 0.08426132053136826,
+            "relative_player_mse": 0.07397516000680145,
+            "gain": 0.889600339732094,
+            "mse_q_only": 0.07124537229537964,
+            "mse_k_only": 0.07019998878240585,
+            "mse_v_only": 0.057017162442207336,
+            "mse_qk_only": 0.006290833465754986,
+            "mse_both": 0.00623324466869235,
+            "gain_q_only": -0.26185723730309857,
+            "gain_k_only": -0.2433420031327403,
+            "gain_v_only": -0.00985533179467487,
+            "gain_qk_only": 0.8885803599352339,
+            "gain_both": 0.889600339732094,
+            "qk_interaction_mse": -0.07869380433112383,
+            "qk_interaction_gain": 1.3937796003710727,
+            "qkv_interaction_mse": -0.0006140279583632946,
+            "qkv_interaction_gain": 0.010875311591535004,
+            "logit_mse_standard": 98.48973846435547,
+            "logit_mse_player": 21114.12109375,
+            "probability_mse_standard": 0.0004546629497781396,
+            "probability_mse_player": 5.8028497733175755e-05,
+            "probability_kl_standard_to_reference": 0.004505233373492956,
+            "probability_kl_player_to_reference": 0.00016616584616713226,
+            "case_id": 1,
+            "layer": 8,
+            "calibration_indices": [
+              0,
+              1,
+              2,
+              3,
+              4
+            ],
+            "test_window": 2,
+            "test_split": "validation",
+            "test_length": 512
+          },
+          {
+            "mse_standard": 0.008874143473803997,
+            "mse_player": 0.005009833257645369,
+            "reference_energy": 0.1071123257279396,
+            "relative_player_mse": 0.04677177181615975,
+            "gain": 0.43545726160117515,
+            "mse_q_only": 0.03073229268193245,
+            "mse_k_only": 0.07691266387701035,
+            "mse_v_only": 0.008871451020240784,
+            "mse_qk_only": 0.0050105624832212925,
+            "mse_both": 0.005009833257645369,
+            "gain_q_only": -2.463127768066017,
+            "gain_k_only": -7.667052105259788,
+            "gain_v_only": 0.0003034043309262837,
+            "gain_qk_only": 0.43537508740846836,
+            "gain_both": 0.43545726160117515,
+            "qk_interaction_mse": -0.0937602506019175,
+            "qk_interaction_gain": 10.565554960734275,
+            "qkv_interaction_mse": 1.9632279872894287e-06,
+            "qkv_interaction_gain": -0.0002212301382195109,
+            "logit_mse_standard": 0.5688457489013672,
+            "logit_mse_player": 0.37699684500694275,
+            "probability_mse_standard": 0.0001868150575319305,
+            "probability_mse_player": 0.00012116038851672783,
+            "probability_kl_standard_to_reference": 0.0008599447319284081,
+            "probability_kl_player_to_reference": 0.0005776857142336667,
+            "case_id": 2,
+            "layer": 15,
+            "calibration_indices": [
+              0,
+              1,
+              2,
+              3,
+              4
+            ],
+            "test_window": 6,
+            "test_split": "validation",
+            "test_length": 128
+          },
+          {
+            "mse_standard": 0.016864696517586708,
+            "mse_player": 0.007751953322440386,
+            "reference_energy": 0.4971889853477478,
+            "relative_player_mse": 0.015591562868228978,
+            "gain": 0.5403443332433195,
+            "mse_q_only": 0.023044008761644363,
+            "mse_k_only": 0.027633609250187874,
+            "mse_v_only": 0.016723668202757835,
+            "mse_qk_only": 0.007718059234321117,
+            "mse_both": 0.007751953322440386,
+            "gain_q_only": -0.3664051847961684,
+            "gain_k_only": -0.6385476739158167,
+            "gain_v_only": 0.008362339321185333,
+            "gain_qk_only": 0.5423540989146983,
+            "gain_both": 0.5403443332433195,
+            "qk_interaction_mse": -0.026094862259924412,
+            "qk_interaction_gain": 1.5473069576266834,
+            "qkv_interaction_mse": 0.0001749224029481411,
+            "qkv_interaction_gain": -0.010372104992564196,
+            "logit_mse_standard": 0.3252297341823578,
+            "logit_mse_player": 17.979516983032227,
+            "probability_mse_standard": 1.8273127352586016e-05,
+            "probability_mse_player": 6.816198037995491e-06,
+            "probability_kl_standard_to_reference": 0.0001460299827158451,
+            "probability_kl_player_to_reference": 4.987205829820596e-05,
+            "case_id": 3,
+            "layer": 23,
+            "calibration_indices": [
+              0,
+              1,
+              2,
+              3,
+              4
+            ],
+            "test_window": 7,
+            "test_split": "test",
+            "test_length": 512
+          }
+        ]
+      },
+      "decomposition": {
+        "linear": {
+          "enabled": false,
+          "reason": "scenario-disabled"
+        },
+        "attention": {
+          "enabled": true,
+          "formula": {
+            "arms": "E000=standard Q/K/V; E100=candidate Q; E010=candidate K; E001=candidate V; E110=candidate Q+K; E111=candidate Q+K+V",
+            "qk_interaction_gain": "(E100+E010-E000-E110)/E000; positive means super-additive complementarity",
+            "qkv_interaction_gain": "(E110+E001-E000-E111)/E000; positive means super-additive complementarity"
+          },
+          "overall": {
+            "case_count": 4,
+            "mse": {
+              "standard": 0.02059407988053863,
+              "q_only": 0.03129612525663106,
+              "k_only": 0.043703044972062344,
+              "v_only": 0.02069737906640512,
+              "qk_only": 0.004760134052958165,
+              "both": 0.004754026754653751
+            },
+            "gain": {
+              "q_only": -0.7531467416283563,
+              "k_only": -1.9804683280049795,
+              "v_only": -0.0009739651312152362,
+              "qk_only": 0.6867608616152666,
+              "both": 0.6865413964775935,
+              "qk_interaction": 3.4203759312486026,
+              "qkv_interaction": 0.0007544999935420662
+            },
+            "intermediate": {
+              "logit_mse_standard": 201.50458385795355,
+              "logit_mse_player": 44726.39283939451,
+              "probability_mse_standard": 0.000593195904912136,
+              "probability_mse_player": 0.00010742156905507727,
+              "probability_kl_standard_to_reference": 0.0033967761846724898,
+              "probability_kl_player_to_reference": 0.00035302675587445265
+            },
+            "interpretation": "paired_qk_coupling_likely"
+          },
+          "by_layer": {
+            "0": {
+              "case_count": 1,
+              "mse": {
+                "standard": 0.00017675624985713512,
+                "q_only": 0.00016282728756777942,
+                "k_only": 6.591797864530236e-05,
+                "v_only": 0.000177234600414522,
+                "qk_only": 2.1081028535263613e-05,
+                "both": 2.1075769836897962e-05
+              },
+              "gain": {
+                "q_only": 0.07880322365185903,
+                "k_only": 0.6270684702884273,
+                "v_only": -0.0027062723822976922,
+                "qk_only": 0.8807339002026658,
+                "both": 0.8807636513337851,
+                "qk_interaction": 0.1748622062623795,
+                "qkv_interaction": 0.0027360235134169675
+              },
+              "intermediate": {
+                "logit_mse_standard": 706.634521484375,
+                "logit_mse_player": 157773.09375,
+                "probability_mse_standard": 0.001713032484985888,
+                "probability_mse_player": 0.00024368119193241,
+                "probability_kl_standard_to_reference": 0.00807589665055275,
+                "probability_kl_player_to_reference": 0.0006183834047988057
+              },
+              "interpretation": "qk_dominant"
+            },
+            "15": {
+              "case_count": 1,
+              "mse": {
+                "standard": 0.008874143473803997,
+                "q_only": 0.03073229268193245,
+                "k_only": 0.07691266387701035,
+                "v_only": 0.008871451020240784,
+                "qk_only": 0.0050105624832212925,
+                "both": 0.005009833257645369
+              },
+              "gain": {
+                "q_only": -2.463127768066017,
+                "k_only": -7.667052105259788,
+                "v_only": 0.0003034043309262837,
+                "qk_only": 0.43537508740846836,
+                "both": 0.43545726160117515,
+                "qk_interaction": 10.565554960734275,
+                "qkv_interaction": -0.0002212301382195109
+              },
+              "intermediate": {
+                "logit_mse_standard": 0.5688457489013672,
+                "logit_mse_player": 0.37699684500694275,
+                "probability_mse_standard": 0.0001868150575319305,
+                "probability_mse_player": 0.00012116038851672783,
+                "probability_kl_standard_to_reference": 0.0008599447319284081,
+                "probability_kl_player_to_reference": 0.0005776857142336667
+              },
+              "interpretation": "paired_qk_coupling_likely"
+            },
+            "23": {
+              "case_count": 1,
+              "mse": {
+                "standard": 0.016864696517586708,
+                "q_only": 0.023044008761644363,
+                "k_only": 0.027633609250187874,
+                "v_only": 0.016723668202757835,
+                "qk_only": 0.007718059234321117,
+                "both": 0.007751953322440386
+              },
+              "gain": {
+                "q_only": -0.3664051847961684,
+                "k_only": -0.6385476739158167,
+                "v_only": 0.008362339321185333,
+                "qk_only": 0.5423540989146983,
+                "both": 0.5403443332433195,
+                "qk_interaction": 1.5473069576266834,
+                "qkv_interaction": -0.010372104992564196
+              },
+              "intermediate": {
+                "logit_mse_standard": 0.3252297341823578,
+                "logit_mse_player": 17.979516983032227,
+                "probability_mse_standard": 1.8273127352586016e-05,
+                "probability_mse_player": 6.816198037995491e-06,
+                "probability_kl_standard_to_reference": 0.0001460299827158451,
+                "probability_kl_player_to_reference": 4.987205829820596e-05
+              },
+              "interpretation": "paired_qk_coupling_likely"
+            },
+            "8": {
+              "case_count": 1,
+              "mse": {
+                "standard": 0.05646072328090668,
+                "q_only": 0.07124537229537964,
+                "k_only": 0.07019998878240585,
+                "v_only": 0.057017162442207336,
+                "qk_only": 0.006290833465754986,
+                "both": 0.00623324466869235
+              },
+              "gain": {
+                "q_only": -0.26185723730309857,
+                "k_only": -0.2433420031327403,
+                "v_only": -0.00985533179467487,
+                "qk_only": 0.8885803599352339,
+                "both": 0.889600339732094,
+                "qk_interaction": 1.3937796003710727,
+                "qkv_interaction": 0.010875311591535004
+              },
+              "intermediate": {
+                "logit_mse_standard": 98.48973846435547,
+                "logit_mse_player": 21114.12109375,
+                "probability_mse_standard": 0.0004546629497781396,
+                "probability_mse_player": 5.8028497733175755e-05,
+                "probability_kl_standard_to_reference": 0.004505233373492956,
+                "probability_kl_player_to_reference": 0.00016616584616713226
+              },
+              "interpretation": "paired_qk_coupling_likely"
+            }
+          },
+          "by_test_length": {
+            "128": {
+              "case_count": 2,
+              "mse": {
+                "standard": 0.004525449861830566,
+                "q_only": 0.015447559984750114,
+                "k_only": 0.038489290927827824,
+                "v_only": 0.004524342810327653,
+                "qk_only": 0.002515821755878278,
+                "both": 0.0025154545137411333
+              },
+              "gain": {
+                "q_only": -1.192162272207079,
+                "k_only": -3.5199918174856806,
+                "v_only": -0.0012014340256857044,
+                "qk_only": 0.6580544938055671,
+                "both": 0.6581104564674801,
+                "qk_interaction": 5.370208583498327,
+                "qkv_interaction": 0.0012573966875987284
+              },
+              "intermediate": {
+                "logit_mse_standard": 353.6016836166382,
+                "logit_mse_player": 78886.7353734225,
+                "probability_mse_standard": 0.0009499237712589093,
+                "probability_mse_player": 0.00018242079022456892,
+                "probability_kl_standard_to_reference": 0.004467920691240579,
+                "probability_kl_player_to_reference": 0.0005980345595162362
+              },
+              "interpretation": "paired_qk_coupling_likely"
+            },
+            "512": {
+              "case_count": 2,
+              "mse": {
+                "standard": 0.03666270989924669,
+                "q_only": 0.047144690528512,
+                "k_only": 0.048916799016296864,
+                "v_only": 0.036870415322482586,
+                "qk_only": 0.007004446350038052,
+                "both": 0.006992598995566368
+              },
+              "gain": {
+                "q_only": -0.3141312110496335,
+                "k_only": -0.44094483852427846,
+                "v_only": -0.000746496236744768,
+                "qk_only": 0.7154672294249661,
+                "both": 0.7149723364877067,
+                "qk_interaction": 1.470543278998878,
+                "qkv_interaction": 0.0002516032994854039
+              },
+              "intermediate": {
+                "logit_mse_standard": 49.40748409926891,
+                "logit_mse_player": 10566.050305366516,
+                "probability_mse_standard": 0.0002364680385653628,
+                "probability_mse_player": 3.242234788558562e-05,
+                "probability_kl_standard_to_reference": 0.0023256316781044006,
+                "probability_kl_player_to_reference": 0.00010801895223266911
+              },
+              "interpretation": "paired_qk_coupling_likely"
+            }
+          },
+          "by_split": {
+            "test": {
+              "case_count": 2,
+              "mse": {
+                "standard": 0.008520726383721922,
+                "q_only": 0.011603418024606071,
+                "k_only": 0.013849763614416588,
+                "v_only": 0.008450451401586179,
+                "qk_only": 0.0038695701314281905,
+                "both": 0.003886514546138642
+              },
+              "gain": {
+                "q_only": -0.14380098057215468,
+                "k_only": -0.005739601813694706,
+                "v_only": 0.0028280334694438204,
+                "qk_only": 0.7115439995586821,
+                "both": 0.7105539922885523,
+                "qk_interaction": 0.8610845819445314,
+                "qkv_interaction": -0.003818040739573614
+              },
+              "intermediate": {
+                "logit_mse_standard": 353.4798756092787,
+                "logit_mse_player": 78895.53663349152,
+                "probability_mse_standard": 0.000865652806169237,
+                "probability_mse_player": 0.00012524869498520275,
+                "probability_kl_standard_to_reference": 0.004110963316634297,
+                "probability_kl_player_to_reference": 0.00033412773154850584
+              },
+              "interpretation": "paired_qk_coupling_likely"
+            },
+            "validation": {
+              "case_count": 2,
+              "mse": {
+                "standard": 0.03266743337735534,
+                "q_only": 0.050988832488656044,
+                "k_only": 0.0735563263297081,
+                "v_only": 0.03294430673122406,
+                "qk_only": 0.005650697974488139,
+                "both": 0.0056215389631688595
+              },
+              "gain": {
+                "q_only": -1.3624925026845578,
+                "k_only": -3.9551970541962644,
+                "v_only": -0.004775963731874293,
+                "qk_only": 0.6619777236718511,
+                "both": 0.6625288006666346,
+                "qk_interaction": 5.979667280552674,
+                "qkv_interaction": 0.005327040726657746
+              },
+              "intermediate": {
+                "logit_mse_standard": 49.52929210662842,
+                "logit_mse_player": 10557.249045297503,
+                "probability_mse_standard": 0.00032073900365503505,
+                "probability_mse_player": 8.95944431249518e-05,
+                "probability_kl_standard_to_reference": 0.002682589052710682,
+                "probability_kl_player_to_reference": 0.00037192578020039946
+              },
+              "interpretation": "paired_qk_coupling_likely"
+            }
+          }
+        }
+      },
+      "analysis": {
+        "linear_generalization": {
+          "enabled": false,
+          "overall": {
+            "case_count": 0,
+            "gain": {
+              "count": 0,
+              "mean": 0.0,
+              "median": 0.0,
+              "q25": 0.0,
+              "q75": 0.0,
+              "minimum": 0.0,
+              "maximum": 0.0,
+              "worst_quartile_mean": 0.0,
+              "positive_cases": 0,
+              "negative_cases": 0,
+              "zero_cases": 0
+            },
+            "player_to_standard_mse_ratio": {
+              "count": 0,
+              "mean": 0.0,
+              "median": 0.0,
+              "q25": 0.0,
+              "q75": 0.0,
+              "minimum": 0.0,
+              "maximum": 0.0,
+              "worst_quartile_mean": 0.0,
+              "positive_cases": 0,
+              "negative_cases": 0,
+              "zero_cases": 0
+            },
+            "coverage": {
+              "layers": [],
+              "roles": [],
+              "splits": [],
+              "test_lengths": [],
+              "test_windows": []
+            }
+          },
+          "cross_holdout_consistency": {
+            "enabled": false,
+            "reason": "no layer/role/length has both validation and test holdouts"
+          },
+          "by_role": {},
+          "by_role_family": {},
+          "by_layer": {},
+          "by_shape": {},
+          "by_split": {},
+          "by_test_length": {}
+        }
+      },
+      "diagnostic_config": {
+        "error_source_decomposition": true,
+        "evaluation_scenario": "attention",
+        "score_unchanged": true,
+        "candidate_api_calls_match_full_graph": false
+      },
+      "protocol": "proxy-v2",
+      "official": {
+        "score": null,
+        "time_seconds": null,
+        "status": "unregistered",
+        "cohort": null
+      },
+      "status": "ok"
+    }
+  ]
+}

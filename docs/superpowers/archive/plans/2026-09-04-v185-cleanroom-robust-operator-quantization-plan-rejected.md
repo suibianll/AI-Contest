@@ -1,6 +1,8 @@
 # v185 计划：clean-room 稳健算子量化重写（2026-09-04）
 
-> 状态：ACTIVE / IMPLEMENTATION
+> 状态：**COMPLETE / LOCAL REJECTED**。独立实现与真实调用图合法；Linear compact
+> `0.417231`（56/56 正向标准基线）、Attention default `0.403767`，但相对 v182
+> Attention `-0.338062`、116/120 case 回归，因此不进入跨模型或官方。
 >
 > 本计划不继承或复制现有 `solution.py` 的实现，只使用公开接口、
 > `evaluator/reference_hif4.py` 的合法格式定义和已经确认的机制经验。
@@ -116,7 +118,7 @@ Attention 同时检查 causal 与 non-causal 两个固定视图。门只负责 o
 
 ## 5. 文件与版本边界
 
-- 新源码：`solutions/20260904_v185_cleanroom-robust-operator_scoreNA_timeNA/solution.py`
+- 新源码：`solutions/20260904_v185_cleanroom-robust-operator_rejected/solution.py`
 - 结果：同目录 `result.md`
 - 根 `solution.py` 保持 v182，除非未来官方 RETAINED；
 - 不读取或修改 v184 工作区；
@@ -142,3 +144,12 @@ Attention 同时检查 causal 与 non-causal 两个固定视图。门只负责 o
 - 本地 mixed 但机制可达、control 正确、复杂度有界：保留为候选，由用户决定是否消耗配额；
 - 若未来官方 `>17598` 且 `<300s`：RETAINED；否则 REJECTED/TIMEOUT；
 - 不围绕 fold、阈值、收缩、offset 集或 refine ratio 做邻域扫描。
+
+## 8. 执行结果
+
+- 六 API、五字段、CPU state、finite、真实 Qwen shape：通过；
+- Linear compact：mean `0.417230809`、`56+/0-/0=`、API `3.860s`；
+- Attention compact：mean `0.686541396`、API `3.766s`；
+- Attention default：mean `0.403767322`，相对 v182 `-0.338062`、`4+/116-/0=`，
+  API `23.599s`；
+- 裁决：LOCAL REJECTED，不提交、不扣配额。计划归档。

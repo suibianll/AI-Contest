@@ -7,12 +7,11 @@
 `evaluator/official_eval.py`，跨模型泛化调用 `evaluator/cross_model_eval.py`；旧
 `real_model_suite.py` 已退役。
 
-**当前活动计划（2026-09-04）**：
-[`2026-09-04-v185-cleanroom-robust-operator-quantization-plan.md`](2026-09-04-v185-cleanroom-robust-operator-quantization-plan.md)
-——按用户要求不继承现有实现，从六 API 和 HiF4 合法域开始重写一个低有效自由度的稳健
-算子量化器。Linear 使用 identity-shrunk 解析对角等价变换和跨折 MatMul gate；Attention
-使用 K 精确中心化、KV-head 共享 Q/K 平衡、收缩 logits gain 与跨折门控 `+4` scale code。
-v182/v180 父版本和 v184 工作区均不修改。
+**当前无活动计划（2026-09-04）**。v185 clean-room 重写已完成并本地 REJECTED：六 API
+与真实调用图合法，Linear compact `0.417231`（56/56 正向标准基线），但 Attention default
+仅 `0.403767`，相对 v182 `-0.338062`、116/120 case 回归。计划见
+[`归档记录`](../archive/plans/2026-09-04-v185-cleanroom-robust-operator-quantization-plan-rejected.md)。
+根 v182 与 v184 工作区均未修改。
 
 v183 官方 `17598/279.7s`，与 v182 同分且慢 `6.7s`，已按预注册规则 REJECTED；
 attention block-smooth refine 覆盖率族关闭，计划见

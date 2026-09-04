@@ -19,6 +19,9 @@
 - v183 只把 Attention block-smooth 搜索的 final-quantizer refine 覆盖从 0.50 提到
   1.00；官方 `17598/279.7s` 相对 v182 `step_gain=0`、时间 `+6.7s`，已拒绝且不再扫描
   ratio/blocks 邻域。根源码未切换。
+- v185 clean-room 重写从空白实现六 API，接口与真实调用图通过；Linear compact
+  `0.417231` 且 56/56 优于标准，但 Attention default 相对 v182 `-0.338062`
+  （116/120 回归），已本地拒绝、未提交。它保留为快速低自由度研究基线。
 - 已知官方面板曾使用 **250 Linear + 200 Attention**，总运行时间要求严格小于 **300 s**。
   本地 `proxy-v2` 不再人为限制分数比例，默认使用固定分层的真实 W/A panel；官方最近
   减少了 Linear 评分权重但没有公开新权重，因此本地不能从代理分数换算官方绝对分。

@@ -16,6 +16,12 @@
 
 ## 1. 当前状态
 
+- **v185 clean-room 稳健算子量化重写已本地 REJECTED（未提交、不占配额）**：不继承现有
+  `solution.py`，从六 API/HiF4 合法域实现解析 Linear 对角平衡与 Attention K-center、
+  KV-head Q/K balance、收缩 logits gain、门控 `+4`。接口/状态/真实调用图全过；Linear
+  compact `0.417231`、56/56 优于标准，但 Attention default `0.403767`，相对 v182
+  `-0.338062`、116/120 回归。源码保留研究，根 v182/v184 均未改。
+
 - **v183（Attention block-smooth final-quantizer refine 全覆盖）官方 `17598/279.7s`，
   与 v182 同分、慢 6.7s，REJECTED。** `step_gain=0` 且时间通过 `<300s`，因此失败归因
   于覆盖率扩展没有官方收益而非超时；按预注册规则覆盖率族关闭，不扫 ratio/blocks 邻域。
