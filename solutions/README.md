@@ -15,17 +15,23 @@ proxy scores.
 
 ## Canonical re-evaluation
 
-Use [`evaluator/official_eval.py`](../evaluator/official_eval.py), never the retired
-`real_model_suite.py`.  The current evaluator is `proxy-v2`; the older v1 archive is
-immutable historical evidence only:
+Use [`evaluator/eval.py`](../evaluator/eval.py), never the retired `real_model_suite.py`.
+The current evaluator is `eval-v3`: it reuses the fixed `proxy-v2` dense cache, splits the panel
+into six shards, caches calibration artifacts, and emits per-case evidence. `official_eval.py`
+is intentionally left unchanged as a `proxy-v2` compatibility/reference backend; the older v1
+archive is immutable historical evidence only:
 
 ```powershell
-.venv\Scripts\python.exe -u evaluator\official_eval.py --archive `
+.venv\Scripts\python.exe -u evaluator\eval.py --official-audit `
+  --cohort new-weight --scenario both --shards 0,1,2,3,4,5 `
   --cache artifacts\official_eval\cache\qwen2.5-0.5b-proxy-v2.pt `
-  --cache-mode read --algorithm-device cuda `
-  --output artifacts\official_eval\archive-proxy-v2.json `
-  --report logs\official_eval\archive-proxy-v2.md
+  --calibration-cache-mode auto --algorithm-device cuda `
+  --output-dir artifacts\proxy_v3\official-audit
 ```
+
+The generated audit is diagnostic: official score/time remain independent observations and no
+local-to-official score conversion is fitted. Use `--cohort old-weight` explicitly for historical
+rows; a cache-cohort mismatch is reported rather than silently mixed.
 
 The protocol fixes Qwen2.5-0.5B, the five Attention calibration lengths
 `[10,128,512,1024,1024]`, validation/test holdout windows, independent HiF4 validation, and the
@@ -41,6 +47,11 @@ Q/K/V/QK controls, and logits/softmax metrics. These controls reuse candidate ou
 change API call counts; use `--no-decomposition` only for a fast smoke run. Local seconds are
 same-machine A/B data, not an official-time conversion; `trend_diagnostics` reports known same-
 cohort ordering inversions without fitting them.
+
+The eval-v3 audit deliberately uses six balanced shards (336 Linear + 48 Attention cases per
+version) so a dense cache is loaded once and calibration artifacts can be reused. Those shard
+statistics are diagnostic and must not be mixed with the compatibility backend's 168+120 default
+panel.
 
 ### Current best and scope rule (2026-09-04)
 

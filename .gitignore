@@ -18,6 +18,12 @@ artifacts/real_model_suite/cache/
 # intentionally kept as reviewable, versioned evidence.
 /artifacts/official_eval/cache/
 
+# eval-v3 shard outputs and calibration artifacts are reproducible local evidence;
+# keep the source manifests/reports in the workspace without committing hundreds
+# of generated per-case files.
+/artifacts/proxy_v3/
+/artifacts/test-tmp-proxy-v3/
+
 # 校准与合成测试生成的文本输出（脚本仍可入库）
 /artifacts/calibration/*.txt
 /artifacts/synthetic_attention/*.txt

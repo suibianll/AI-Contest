@@ -1,11 +1,13 @@
 # 运行产物归档
 
-这里存放运行报告，机器可读结果存放在 `artifacts/official_eval/`。源码归档在
+这里存放运行报告，机器可读结果存放在 `artifacts/proxy_v3/`（旧 `proxy-v2` 兼容结果仍在
+`artifacts/official_eval/`）。源码归档在
 `solutions/`，设计文档在 `docs/`；不要把三类内容混写。
 
-## 当前唯一评测入口
+## 当前评测入口
 
-`evaluator/official_eval.py` 使用 `proxy-v2`：Qwen2.5-0.5B、共享校准调用图
+日常使用 [`evaluator/eval.py`](../evaluator/eval.py) 的 `eval-v3`：它底层读取 `proxy-v2`
+dense cache，按 shard 复用校准产物，并生成逐 case 证据。Qwen2.5-0.5B、共享校准调用图
 （168 个 layer/role Weight state + 24 个 Attention state）、默认 168 Linear +
 120 Attention 分层真实 W/A panel、Attention calibration `[10,128,512,1024,1024]`、
 独立 HiF4 codec（标准分母由 `reference_hif4.py` 冻结）和六个官方 API。
@@ -14,20 +16,24 @@
 旧 `official-shape-v1` 只作历史诊断，其 JSON 已隔离到
 `artifacts/official_eval/legacy-v1/`。
 
-```powershell
-# 批量复测（proxy-v2 全量分层 panel）
-.venv\Scripts\python.exe -u evaluator\official_eval.py --archive `
-  --cache artifacts\official_eval\cache\qwen2.5-0.5b-proxy-v2.pt `
-  --cache-mode read --algorithm-device cuda `
-  --output artifacts\official_eval\archive-proxy-v2.json `
-  --report logs\official_eval\archive-proxy-v2.md
+`evaluator/official_eval.py` 保持未修改，仅作为 `proxy-v2` 兼容/参考后端；如需复现旧协议，
+应显式调用它，不要把旧 JSON 当作 eval-v3 结果。下方命令均为 eval-v3 用法。
 
-# 机制迭代：56+5 配对面板（focus role 可加 --focus-linear-roles fc）
-.venv\Scripts\python.exe -u evaluator\official_eval.py --solution <path>\solution.py `
-  --name <vNNN> --effect-panel --baseline-json <parent.json> `
+```powershell
+# 日常复测（eval-v3 六 shard）
+.venv\Scripts\python.exe -u evaluator\eval.py --solution solution.py --name candidate `
+  --scenario both --shards 0,1,2,3,4,5 `
   --cache artifacts\official_eval\cache\qwen2.5-0.5b-proxy-v2.pt `
-  --cache-mode read --algorithm-device cuda `
-  --output artifacts\official_eval\<vNNN>.json --report logs\official_eval\<vNNN>.md
+  --calibration-cache-mode auto --algorithm-device cuda `
+  --output-dir artifacts\proxy_v3\system
+
+# 机制迭代：父子配对与 focus 诊断
+.venv\Scripts\python.exe -u evaluator\eval.py --solution <path>\solution.py `
+  --baseline-solution <parent-path>\solution.py --name <vNNN> --scenario both `
+  --focus-linear-roles fc `
+  --cache artifacts\official_eval\cache\qwen2.5-0.5b-proxy-v2.pt `
+  --calibration-cache-mode auto --algorithm-device cuda `
+  --output-dir artifacts\proxy_v3\<vNNN>
 ```
 
 `logs/official_eval/` 是活动报告目录。旧 `logs/evaluations/`、`artifacts/real_model_suite/`

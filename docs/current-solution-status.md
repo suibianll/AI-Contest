@@ -2,6 +2,16 @@
 
 更新：2026-09-04。
 
+## 0.0 评测入口（2026-09-04）
+
+日常本地评测已切换到 [`evaluator/eval.py`](../evaluator/eval.py) 的 `eval-v3`：固定
+`proxy-v2` dense cache 只加载一次，按六个分片复用 calibration artifact，并为每个 case
+保存可配对的 JSON/Markdown 证据。`--official-audit` 会重新评测所有已登记官方成绩的源码，
+检查 shard 覆盖、case identity、有限输出、cohort 一致性和官方超时，但官方分数仍是独立观测，
+不做本地 gain 到官方分数的换算。[`evaluator/official_eval.py`](../evaluator/official_eval.py)
+保持未修改，仅作为 `proxy-v2` 兼容/参考后端；下文历史记录中的 `proxy-v2` 数字不自动改写。
+最新复评报告见 [`eval-v3 official audit`](../artifacts/proxy_v3/official-audit/audit.md)。
+
 ## 0. 最新官方进展
 
 **❌ v188（v186 + v187 Jacobian 敏感度移植）官方回传：`17595 / 268s`，相对父 v186
@@ -283,8 +293,9 @@ compact 门禁；五个 C 源构造变体（amax/rms/xrms/x-only/w-only）全部
 
 ## 2. 评测口径
 
-本地主评测仍使用 [`evaluator/official_eval.py`](../evaluator/official_eval.py) 的
-`proxy-v2`：Qwen2.5-0.5B、24 层、默认固定分层真实 W/A panel（Linear 为每层每 role 一个真实
+本地主评测入口是 [`evaluator/eval.py`](../evaluator/eval.py) 的 `eval-v3`，底层读取
+[`evaluator/official_eval.py`](../evaluator/official_eval.py) 生成的 `proxy-v2` cache：
+Qwen2.5-0.5B、24 层、默认固定分层真实 W/A panel（Linear 为每层每 role 一个真实
 窗口，共 168 cases；Attention 为每层五个官方长度，共 120 cases；窗口是固定、可复现的 holdout
 capture），Attention calibration 长度 `[10,128,512,1024,1024]`，validation/test 交替 holdout。
 但必须明确：[`赛事说明书.txt`](../赛事说明书.txt) 没有公开指定 Qwen、层数、hidden size、GQA 或

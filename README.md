@@ -7,9 +7,12 @@
 > 用户确认的榜首为 **21765/290s**，当前差 **4166 分**，时间余量 **28s**。两侧独立父
 > 仍为 `P_L=v166（4590/226s）`、`P_A=v168（14005/210s）`；v186 不是单侧测量。
 
-更新时间：2026-09-04。当前仓库只认一套本地评测协议：
-[`evaluator/official_eval.py`](evaluator/official_eval.py)。旧的
-`real_model_suite.py`、`sampled-means-v1/v2` 和旧 JSON 不再用于排名、时间判断或调参。
+更新时间：2026-09-04。当前仓库的日常评测入口是
+[`evaluator/eval.py`](evaluator/eval.py)（`eval-v3`）。它复用固定的 `proxy-v2` 输入缓存，
+按六个分片执行、复用校准产物，并输出可供诊断工具消费的逐 case 证据；
+[`evaluator/official_eval.py`](evaluator/official_eval.py) 保留为未修改的 `proxy-v2` 兼容/参考后端，
+不再作为日常入口。旧的 `real_model_suite.py`、`sampled-means-v1/v2` 和旧 JSON 不再用于排名、
+时间判断或调参。
 
 ## 当前结论
 
@@ -89,11 +92,16 @@
   CUDA/CPU device-mix 错误被原样记录。完整明细只看
   [`archive-official-shape-v1.json`](artifacts/official_eval/legacy-v1/archive-official-shape-v1.json)（历史 v1 证据，已隔离到 `legacy-v1/`）。
 
-## 当前协议：`proxy-v2`（旧 `official-shape-v1` 仅作历史诊断）
+## 当前协议：`eval-v3`（底层读取 `proxy-v2` cache）
 
-评测器将官方已知的接口、形状、合法性和调用结构集中在一个文件中。`proxy-v2` 是诚实的
+`evaluator/eval.py` 将官方已知的接口、形状、合法性和调用结构集中在分片运行器与诊断报告中。
+底层 `proxy-v2` 是诚实的
 同机趋势代理，不声称复制隐藏官方数据或鲲鹏硬件；旧 `official-shape-v1` cache 不能被新协议
 静默读取。
+
+兼容后端的 `default-panel`（168 Linear + 120 Attention）仍用于低频基准；`eval-v3` 日常审计
+采用六个均衡 shard（每版本 336 个 Linear + 48 个 Attention case），用于更快的机制筛选与
+故障定位，二者结果不能混排。
 
 | 项目 | 固定值 |
 |---|---|
@@ -102,7 +110,7 @@
 | Attention calibration | **`[10, 128, 512, 1024, 1024]`**，每个 Q/K/V 样本保持自己的序列长度 |
 | Linear calibration | default audit 每个 layer/role 使用前两折；compact 使用 128/512 两折并只建立选中 state |
 | Test windows | 12 个互不重复的 validation/test 文档窗口，长度按 `[10,128,512,1024,1024,10,128,512,1024,1024,128,512]` 轮换 |
-| 用例 | 默认 168 Linear + 120 Attention 仅作低频 audit；日常 `--compact-panel` 为 28 个 Weight state + 56 个跨 validation/test Linear case（4 个纵深层×7 role×2 holdout）；`--effect-panel` 保留完整校准图专项诊断；`--full-cases` 才展开 stress |
+| 用例 | 兼容 `default-panel` 为 168 Linear + 120 Attention；eval-v3 日常六 shard 为 336 Linear + 48 Attention；`--full-cases` 只作 stress |
 | API | 六个赛事接口，顺序和参数形状与 `赛事说明书.txt` 一致 |
 | 参数校验 | 独立校验 E6M2、`scale_lv2/lv3`、sign、mant、state 深度/节点数和 CPU tensor 规则 |
 | 标准基线 | `evaluator/reference_hif4.py` 的固定标准 codec；候选代码不能改变分母 |
@@ -177,6 +185,33 @@ W/A 四臂分解互补，不增加六个 API 调用。ROAB/BOAT/CAT 这类私有
 - `timing.api_calls`：实际调用次数。两种本地秒数都不能直接换算为鲲鹏官方秒数。
 
 ## 运行方式
+
+日常评测（一次 dense cache 加载，六分片复用校准产物）：
+
+```powershell
+.venv\Scripts\python.exe -u evaluator\eval.py `
+  --solution solution.py --name candidate --scenario both `
+  --shards 0,1,2,3,4,5 `
+  --cache artifacts\official_eval\cache\qwen2.5-0.5b-proxy-v2.pt `
+  --calibration-cache-mode auto --algorithm-device cuda `
+  --output-dir artifacts\proxy_v3\system
+```
+
+对已有官方成绩的版本做统一复评和合理性检查：
+
+```powershell
+.venv\Scripts\python.exe -u evaluator\eval.py `
+  --official-audit --cohort new-weight --scenario both `
+  --shards 0,1,2,3,4,5 `
+  --cache artifacts\official_eval\cache\qwen2.5-0.5b-proxy-v2.pt `
+  --calibration-cache-mode auto --algorithm-device cuda `
+  --output-dir artifacts\proxy_v3\official-audit
+```
+
+审计报告将官方分数/时间作为独立观测，只做同 cohort 的顺序诊断和数据完整性检查，
+不会把本地 gain 换算成官方绝对分数；旧权重必须显式指定 `--cohort old-weight`，且与当前
+new-weight cache 的不匹配会被记录。以下 `official_eval.py` 命令仅保留为底层 `proxy-v2`
+兼容/历史复现方式。
 
 首次采集固定公开数据包（需要本地模型和数据）：
 
@@ -330,7 +365,8 @@ v031 目录名已从旧面板 `official14613` 更正为官方 `21864`，v125 scr
 | 路径 | 内容 |
 |---|---|
 | `solutions/` | 唯一版本源码快照（只读归档，`retained/rejected/timeout` 标注） |
-| `evaluator/official_eval.py` | 当前唯一评测入口（proxy-v2；v1 只读历史诊断） |
+| `evaluator/eval.py` | 当前本地评测入口（eval-v3；分片、校准缓存、官方复评） |
+| `evaluator/official_eval.py` | 未修改的 proxy-v2 兼容/参考后端（非日常入口） |
 | `evaluator/archive/legacy-20260901/` | 旧评测器源码（real_model_suite 等） |
 | `artifacts/official_eval/` | 当前协议 JSON 与 cache |
 | `logs/official_eval/` | 当前协议报告 |

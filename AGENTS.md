@@ -14,6 +14,11 @@
 > `T ≈ 170.3 + 0.115·W_calib + 0.694·A_calib + 0.734·dyn_act − 1.58·dyn_qkv`
 > （R² = 0.799），**预测 < 280 s 才提交**。
 
+> **评测入口更新（2026-09-04）**：日常本地评测使用
+> `evaluator/eval.py`（`eval-v3`）；它复用 `proxy-v2` dense cache 并按六个 shard 输出逐 case
+> 诊断。`evaluator/official_eval.py` 保持未修改，作为 `proxy-v2` 兼容/参考后端；旧命令和下文
+> 的 `proxy-v2` 统计仍表示底层协议，不应把二者的输出混排。
+
 ## 1. 当前状态
 
 - **v186（v182 + 在线 scale 窗口 +4 单码）官方** **`17599/272s`，相对 v182** **`+1/−1s`，
@@ -266,9 +271,9 @@
 
 ## 3. 唯一评测口径
 
-- 唯一本地主评测器是 [`evaluator/official_eval.py`](evaluator/official_eval.py)，协议是
-  `proxy-v2`。`official-shape-v1`、GPT-2 和外部 hif4 只作历史/跨结构诊断，不能与当前结果
-  混排。
+- 日常本地主评测入口是 [`evaluator/eval.py`](evaluator/eval.py) 的 `eval-v3`；底层
+  [`evaluator/official_eval.py`](evaluator/official_eval.py) 仍提供 `proxy-v2` cache/codec。
+  `official-shape-v1`、GPT-2 和外部 hif4 只作历史/跨结构诊断，不能与当前结果混排。
 
 - 本地固定结构假设：Qwen2.5-0.5B、24 层、WikiText-2 raw v1、Attention calibration
   lengths `[10,128,512,1024,1024]`，以及独立的 HiF4 validation。说明书没有公开这些隐藏
@@ -374,22 +379,22 @@ Linear/Attention 权重。只有同一 `proxy-v2` cache、同一 panel、同一 
    panel、device 和 evaluator，不重复运行父版本。
 3. **接口 smoke**：选定一个目标场景，运行目标侧最小 smoke，检查六 API/状态合法性和
    `--nvfp4-cache-mode auto` 是否可用；smoke 只判接口，不判效果。
-4. **compact 配对**：
+4. **shard 配对**：
 
-   - Linear：`--linear-only --compact-panel`；
+   - Linear：`evaluator/eval.py --linear-only --shards 0,1,2,3,4,5`；
 
-   - Attention：`--attention-only --compact-panel`。
-     候选使用 `--baseline-json`，先看 focus 的 mean/median signed delta、正负 case、未修改
+   - Attention：`evaluator/eval.py --attention-only --shards 0,1,2,3,4,5`。
+     候选使用 `--baseline-solution`，先看 focus 的 mean/median signed delta、正负 case、未修改
      control、W/A 或 Q/K/V 来源、最坏 layer/role/shape/split/length 和 API 时间。必须精确匹配
      `(layer, role, test_window, split, length)`、`mse_standard`、`reference_energy`；已有同 panel
-     JSON 用 `--candidate-json` 零 API 重放。
+     JSON 使用 `--reuse-existing` 零 API 重放。
 5. **泛化判断**：Linear 至少记录 median、q25/q75、worst-quartile、negative cases、
    validation/test 同号率和 interaction；Attention 至少检查 Q/K/V、QK/QKV interaction、
    logits/probability 误差和最坏长度/层。不得用 aggregate mean 单独宣称本地泛化；当前计划中
    这些结果只作官方回传后的归因证据。
-6. **单侧 default audit**：完成 compact、control、尾部和复杂度记录后，运行目标侧
-   default panel（Linear 168 或 Attention 120）。旧 `--effect-panel` 只在需要“完整校准图 +
-   缩减动态 case”的专项审计时使用，不是默认必经步骤。
+6. **单侧 default audit**：完成 shard、control、尾部和复杂度记录后，运行目标侧
+   eval-v3 全部六 shard。兼容后端的 default panel（Linear 168 或 Attention 120）和旧
+   `--effect-panel` 只在需要“完整校准图 + 缩减动态 case”的专项审计时使用，不是默认必经步骤。
 7. **跨模型泛化记录**：目标侧 Qwen default 完成后，用其他模型真实前向捕获的 W/A/Q/K/V
    做同 cache、同 device 的父子配对。`gpt2` 为强制验证，最终候选再使用一个不同架构的本地
    `pythia-160m` 或 `opt-125m`。跨模型只作封存 holdout，不能反向调参数；若 Qwen 正向而
@@ -402,8 +407,9 @@ Linear/Attention 权重。只有同一 `proxy-v2` cache、同一 panel、同一 
    > 不得晋级也不得否决。过拟合判据改用 `L1 < 0.02`。见
    > [修订清单 §2](docs/stale-information-inventory-2026-09-04.md)。
 8. **完整端到端审计**：只有明确需要检查集成调用图时，才省略 `--linear-only/--attention-only`
-   跑完整 168 + 120 panel，六 API 全部执行；`--full-cases` 仍只作压力测试。完整测试必须
-   保存 JSON 和 Markdown report，并把 local proxy、API total、wall time、official 状态分开写。
+   跑 eval-v3 全部六 shard（336 Linear + 48 Attention）；兼容后端的 168 + 120 panel 仅作
+   低频基准，`--full-cases` 仍只作压力测试。完整测试必须保存 JSON 和 Markdown report，并把
+   local proxy、API total、wall time、official 状态分开写。
 9. **决策与归档**：接口/环境失败记 `ERROR`；机制证据否定记 `REJECTED`；官方明确超时记
    `TIMEOUT`；官方未知写 `unregistered/NA`，不能用本地秒数填充。没有实质算法/复杂度变化的
    运行不分配版本号。正式版本归档前只做一次脱离仓库单文件导入检查。
@@ -411,14 +417,14 @@ Linear/Attention 权重。只有同一 `proxy-v2` cache、同一 panel、同一 
 推荐命令模板：
 
 ```powershell
-# Linear compact / cached input（必须使用 CUDA venv；系统 Python 是 CPU-only）
-.venv\Scripts\python.exe evaluator/official_eval.py --solution solution.py --linear-only --compact-panel --cache-mode read --nvfp4-cache-mode auto --capture-device cuda --algorithm-device cuda
+# Linear shard / cached input（必须使用 CUDA venv；系统 Python 是 CPU-only）
+.venv\Scripts\python.exe evaluator/eval.py --solution solution.py --linear-only --shards 0,1,2,3,4,5 --cache artifacts\official_eval\cache\qwen2.5-0.5b-proxy-v2.pt --calibration-cache-mode auto --algorithm-device cuda --output-dir artifacts\proxy_v3\system
 
-# Attention compact / cached input
-.venv\Scripts\python.exe evaluator/official_eval.py --solution solution.py --attention-only --compact-panel --cache-mode read --nvfp4-cache-mode auto --capture-device cuda --algorithm-device cuda
+# Attention shard / cached input
+.venv\Scripts\python.exe evaluator/eval.py --solution solution.py --attention-only --shards 0,1,2,3,4,5 --cache artifacts\official_eval\cache\qwen2.5-0.5b-proxy-v2.pt --calibration-cache-mode auto --algorithm-device cuda --output-dir artifacts\proxy_v3\system
 
-# Complete default-panel integration audit
-.venv\Scripts\python.exe evaluator/official_eval.py --solution solution.py --cache-mode read --nvfp4-cache-mode auto --capture-device cuda --algorithm-device cuda
+# Complete eval-v3 integration audit
+.venv\Scripts\python.exe evaluator/eval.py --solution solution.py --scenario both --shards 0,1,2,3,4,5 --cache artifacts\official_eval\cache\qwen2.5-0.5b-proxy-v2.pt --calibration-cache-mode auto --algorithm-device cuda --output-dir artifacts\proxy_v3\system
 ```
 
 ## 6. 证据、比较和 Git
