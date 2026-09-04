@@ -498,7 +498,7 @@ _IMPORTANCE_FLOOR = 0.05
 # overshooting codes.  -2 is kept for weights (calibration-only cost) as
 # insurance for finer-grained input encodings where it wins up to a few
 # percent of blocks, but dropped from the per-sample dynamic path.
-_DYNAMIC_OFFSETS = (-1, 1, 2, 3)
+_DYNAMIC_OFFSETS = (-1, 1, 2, 3, 4)  # v186: add +4 E6M2 scale code to the online Q/K/V search window (single pre-registered value; oracle diag: captures 99.6% of exhaustive gain, edge-extension hill-climb cannot reach it across binades)
 _WEIGHT_OFFSETS = (-1, 1, 2, 3)
 
 # The per-block scale error over E6M2 codes is locally unimodal, so if the
