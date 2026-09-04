@@ -2,20 +2,16 @@
 
 > 最后更新：2026-09-04
 
-本目录只保留一份活跃计划。执行优化时只读取下面这份文件、根 `solution.py`、最新
+本目录最多保留一份活跃计划。执行优化时只读取下面的活动状态、根 `solution.py`、最新
 `proxy-v2` 评测和官方规则；归档目录中的计划不具有指令效力。本地主评测只调用
 `evaluator/official_eval.py`，跨模型泛化调用 `evaluator/cross_model_eval.py`；旧
 `real_model_suite.py` 已退役。
 
-**当前活动计划（2026-09-04）**：
-[`2026-09-04-v183-attn-bsm-full-refine-plan.md`](2026-09-04-v183-attn-bsm-full-refine-plan.md)
-——榜首差距机制假设审计（门控 firing 率 + 覆盖率 COV-A 诊断，见
-[`诊断日志`](../../../logs/execution/2026-09-04-gate-audit-and-coverage-diag.md)）产出
-的单一候选：v182 + attention block-smooth 搜索 refine 覆盖 0.50→1.00（仅 2 常量，
-校准侧、在线零新增）。本地 Qwen default +0.000511（D1 量级）、GPT-2 轻微负标记
-model-specific-risk、OPT 不变；等待官方裁决（配额 4/10）。v182 为分数父
-（17598/273s），v180 为时间预算父。次级条件方向（v183 官方后视结果）：方向 3 的
-weight block-smooth 门 mmi 放宽（Qwen 92.9% vs GPT-2/OPT 68-70% Qwen-locked 证据）。
+**当前无活动计划（2026-09-04）**。v183 官方 `17598/279.7s`，与 v182 同分且慢
+`6.7s`，已按预注册规则 REJECTED；attention block-smooth refine 覆盖率族关闭，计划见
+[`归档记录`](../archive/plans/2026-09-04-v183-attn-bsm-full-refine-plan-rejected.md)。
+v182 仍是分数父（`17598/273s`），v180 仍是时间预算父（`17597/242s`）；配额 `4/10`，
+剩余 6。任何下一候选须先注册新的单机制计划。
 
 当日已归档：低复杂度算法扩展计划（A1-A4/L1-L4/组合全覆盖，
 `-superseded`）、v162 官方侧向隔离优化计划（v165 timeout、v167 本地

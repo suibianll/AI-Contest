@@ -7,6 +7,11 @@
 
 ## 1. 当前状态
 
+- **v183（Attention block-smooth final-quantizer refine 全覆盖）官方 `17598/279.7s`，
+  与 v182 同分、慢 6.7s，REJECTED。** `step_gain=0` 且时间通过 `<300s`，因此失败归因
+  于覆盖率扩展没有官方收益而非超时；按预注册规则覆盖率族关闭，不扫 ratio/blocks 邻域。
+  根 `solution.py` 与完整官方父继续保持 v182，提交账本 `4/10`、剩余 6。
+
 - **v182（v180 + L-R2 融合 rank-2 残差重分布）官方 `17598/273s`，相对 v180 `+1/+31s`，
   RETAINED 成为新完整官方父版本**（SHA `F3E39E99...A438`）。step_gain `+1`（计划 §11
   `0<G_L≤20`：残差低秩族接近饱和），**rank-3/系数/fold 邻域明确关闭**。273s 在 300s
@@ -38,8 +43,8 @@
   v175 为目标设置前已排期队列（不占配额）；**v176 为第 1 个（1/10，官方负不退还），
   v180 为第 2 个（2/10，官方 +3 RETAINED；GPT-2 轻微负风险记录保留），
   v182 为第 3 个（3/10，官方 +1 RETAINED 成为新完整父），
-  v183 为第 4 个（4/10，方向 1 覆盖率诊断产物待官方：Qwen default +0.000511、
-  GPT-2 −0.005 model-specific-risk、OPT 不变），剩余 6**。每新增一个候选扣 1
+  v183 为第 4 个（4/10，官方 `17598/279.7s` 与父持平 step_gain 0 → REJECTED，
+  覆盖率族关闭；官方父保持 v182），剩余 6**。每新增一个候选扣 1
   配额，官方负向不退还。SOTA 搜索（二至五轮：KVLinC/
   VecInfer/ResQ/OTT、ScaleSweep/H-Scale、MXFP4 误差三分量/HCP/ARCQuant、QuantVLA
   温度匹配/SageBwd/谱界）均落入已闭合域或 A1 已覆盖域，不注册新候选。官方裁决后

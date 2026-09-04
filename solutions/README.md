@@ -1,8 +1,9 @@
 # HiF4 solutions archive
 
-> **Official update (2026-09-04):** v182 archive SHA `F3E39E99...A438` scored **17598 / 273s**,
-> a `+1/+31s` step over v180 `17597/242s`, and is the new score parent. It adds the L-R2 fused
-> rank-2 Linear residual direction while keeping v180 Attention bit-identical. The independent side
+> **Official update (2026-09-04):** v183 scored **17598 / 279.7s**, tying v182 while taking
+> `6.7s` longer, so it is REJECTED under its pre-registered rule and the attention block-smooth
+> coverage family is closed. v182 archive SHA `F3E39E99...A438` remains the score parent at
+> **17598 / 273s**. The independent side
 > parents remain `P_L=v166（4590/226s）` and `P_A=v168（14005/210s）`; v182 is not an isolated
 > Linear measurement. The user-reported leaderboard best is **21765 / 290s**, leaving a
 > **4167-point** gap. v180 remains the time-budget parent because it gives up only 1 point for 31s.
@@ -45,7 +46,8 @@ cohort ordering inversions without fitting them.
 
 The highest official score bound to a repository source is **v182: 17598 / 273s**. Its exact
 complete parent v180 is **17597 / 242s**; both are Pareto-optimal, so v182 is the score parent and
-v180 remains the time-budget parent. The independent side parents remain v166 and v168. The
+v180 remains the time-budget parent. v183 `17598/279.7s` is dominated by v182 and rejected. The
+independent side parents remain v166 and v168. The
 user-reported leaderboard best **21765 / 290s** is 4167 points above v182 and has no synchronized
 source or configuration, so it is a target only. v147 is **16579 / 211 s**
 (time pass but below v86, rejected); v140 is **15838 / 207 s** (rejected). The pre-A3 parent effect
@@ -121,7 +123,7 @@ silently assigned a score.
 | v180 | `20260904_v180_a1-asym-fold-attn_scoreNA_timeNA` | **17597** | **242 s** | **pass, RETAINED as new full official parent; post-official plan D1 A1 Q/K asymmetric fold (alpha=0.3, exponent-sum keeps logits=gamma, only Q/K dynamic-range reallocation; alpha=0 bit-identical to v175). step_gain +3 vs v175 17594; time −3s is recorded but not claimed as a stable speedup because D1 adds no online operator. Compact 4 paired v175 mean +0.000088 (3+/1−); default 120 paired v168 mean +0.000356 (69+/51−, win 0.575), QK interaction +0.01106; GPT-2 −0.008984 model-specific-risk; opt-125m vs v160 −0.000208 (28+/32−) but D1 increment vs v175 +0.00118 (win 0.467, weak positive, not fully agreeing with GPT-2 sign). Gap to 21765 is 4168** |
 | v181 | `20260904_v181_a1-qhead-gain-attn_rejected` | — | — | **rejected (local pre-research, clearly negative); post-official plan D2 per-Q-head logits gain control (each Q head own multiplicative gain on top of A1, K per-KV-head shared — breaks GQA group consistency). Clean D2 (D1 fold OFF, A1 symmetric parent): default 120 paired v168 mean −0.002746, median −0.000086, 54+/66−, median MSE ratio 1.000333; D1+D2 stacked was also negative (mean −0.002019, 60/60). Confirms A1 group-consistent structure is load-bearing; D2 family closed, not submitted (no quota spent)** |
 | v182 | `20260904_v182_rank2-linear_v180-attn_scoreNA_timeNA` | **17598** | **273 s** | **pass, RETAINED as new full official parent; post-v180 plan L-R2 fused rank-2 residual redistribution (v166 rank-1 → rank-2 U=[u1,u2]/V=[v1,v2], V^T U≈0, Woodbury R^-1=I-UV^T, continuous product exactly preserved; Attention v180 bit-identical). step_gain +1 vs v180 17597; rank-2 family saturated (0<G_L≤20 → close rank-3/coef scan). Hard checks: reachability all 1, vtu_cross_max ~1e-8, continuous-domain rel err 3.96e-7 (float32). Local paired v180: Qwen compact −0.000093, Qwen default +0.000020, GPT-2 +0.001171, OPT +0.025632 — non-negative, no model-specific-risk. Time 273s (+31) within 300s but margin 27s. Gap to 21765 is 4167** |
-| v183 | `20260904_v183_attn-bsm-full-refine_scoreNA_timeNA` | — | — | **candidate; direction-1 coverage diag product: v182 + attention block-smooth search refine coverage 0.50→1.00 / blocks 131072 (2 constants only, calibration-side, zero online additions; Linear v182 bit-identical). Qwen default 120 paired +0.000511 (11+/14−/95=, D1-magnitude); GPT-2 default 60 −0.005042 (4+/6−/50=, model-specific-risk, within D1 precedent band); OPT 60 0/0/60 no_effect; calibration time +0.4s/12 states. Official: awaiting (quota 4/10)** |
+| v183 | `20260904_v183_attn-bsm-full-refine_rejected` | **17598** | **279.7 s** | **rejected (official 2026-09-04); direction-1 coverage diag product: v182 + attention block-smooth search refine coverage 0.50→1.00 / blocks 131072 (2 constants only, calibration-side, zero online additions; Linear v182 bit-identical). step_gain 0 vs v182 17598 (score tie, no improvement) per pre-registered rule S≤17598 → REJECTED, coverage family closed. Time 279.7s < 300s (+6.7s calibration refine cost, not timeout). Local: Qwen default +0.000511, GPT-2 −0.005, OPT no_effect. Official parent remains v182** |
 | v169 | `20260903_v169_standard-linear_v-bias-attn_rejected` | — | — | **rejected (local, clearly negative); expansion plan A2 V output-bias centroid: local Qwen -0.0093 (21+/99-) and GPT-2 0/4 all-negative - final classification per user 'reject clearly-negative optimizations'** |
 | v170 | `20260903_v170_standard-linear_fixed-offset-attn_rejected` | — | — | **rejected (local, clearly negative); expansion plan A3 static fixed-offset compile: Qwen -0.0506 (9+/111-) and GPT-2 -0.0551 (1+/3-) - final classification per user** |
 | v171 | `20260903_v171_standard-linear_moment-threshold-attn_rejected` | **13657** | **214 s** | **rejected (official 2026-09-04); expansion plan A4 moment-matched mantissa rounding threshold. step_gain −348 vs v168 (14005), Attention ratio −2.69%. Time 214s < 300s; negative from algorithm not timeout. A4 family closed** |

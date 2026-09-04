@@ -4,6 +4,13 @@
 
 ## 0. 最新官方进展
 
+**❌ v183 官方回传（2026-09-04）：`17598 / 279.7s`，与父 v182 同分，REJECTED。**
+v183 仅将 Attention block-smooth 搜索的 final-quantizer refine 覆盖从 0.50 提高到
+1.00（blocks `24576→131072`），Linear 与在线路径不变。相对 v182
+`step_gain=0`、时间 `+6.7s`，且 `279.7s<300s`，负向裁决来自无分数收益而非超时。
+按预注册规则 `S(v183)≤17598`，覆盖率族关闭，不扫 ratio/blocks 邻域；完整官方父保持
+v182，根 `solution.py` 不切换。提交账本更新为 `4/10`，剩余 6。
+
 **✅ v182 官方回传（2026-09-04）：`17598 / 273s`，成为新完整官方父版本。** v182 =
 v180 + L-R2 融合 rank-2 残差重分布（SHA `F3E39E99...A438`），Linear 侧 rank-1→rank-2
 （U=[u1,u2]/V=[v1,v2]，V^T U≈0，连续域乘积严格不变），Attention 与 v180 逐位一致；
@@ -715,13 +722,13 @@ v86 的部分 scale-aware/output-aware 机制。此前把它描述为"v86 级静
 
 ## 6. 当前活动计划
 
-**当前无 active 计划。** L-R2 计划已裁决完毕并归档
-（[`2026-09-04-post-v180-linear-rank2-plan-completed.md`](superpowers/archive/plans/2026-09-04-post-v180-linear-rank2-plan-completed.md)）：
-v182 官方 `17598/273s` RETAINED 为新完整官方父，step_gain `+1`（残差低秩族接近饱和），
-rank-3/系数/fold 邻域明确关闭。新候选需外部触发（新官方裁决、新机制方向、或约束调整）。
+**当前无 active 计划。** v183 覆盖率计划已按官方 `17598/279.7s` 裁决为 REJECTED 并归档
+（[`2026-09-04-v183-attn-bsm-full-refine-plan-rejected.md`](superpowers/archive/plans/2026-09-04-v183-attn-bsm-full-refine-plan-rejected.md)）；
+其相对 v182 `step_gain=0`、时间 `+6.7s`，覆盖率族关闭。v182 继续作为分数父，v180
+继续作为时间预算父。新候选需单独注册新机制计划。
 
-Attention 侧因 Q/K 与 V 可表达自由度已经穷尽而冻结；alpha/head/channel、V multiplier、
-动态 per-call、full64/Householder 与码本重写继续关闭。官方配额现为 `3/10`，剩余 7。
+Attention 的 coverage、alpha/head/channel、V multiplier、动态 per-call、
+full64/Householder 与码本重写继续关闭。官方配额现为 `4/10`，剩余 6。
 
 ## 7. 归档现状与待整理项
 

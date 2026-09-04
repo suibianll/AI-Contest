@@ -1,6 +1,8 @@
 # v183 候选：attention block-smooth 搜索 refine 全覆盖（Attention）
 
-> 状态：**候选待官方评测；硬检查全部通过；GPT-2 轻微负标记 model-specific-risk**
+> 状态：**REJECTED（官方 2026-09-04）— v183 `17598/279.7s`，与父 v182 分数持平
+> （step_gain 0），按预注册规则 `S≤17598` → REJECTED，覆盖率族关闭；
+> 时间 279.7s < 300s（+6.7s 校准 refine 覆盖成本，非超时）。官方父保持 v182。**
 >
 > 来源诊断：[`2026-09-04-gate-audit-and-coverage-diag.md`](../../logs/execution/2026-09-04-gate-audit-and-coverage-diag.md)
 > 方向 1（时间预算→覆盖率）唯一有正余量的 cap。
@@ -45,18 +47,21 @@
   **model-specific-risk**，在 D1 先例带内（D1 GPT-2 compact −0.009 → 官方 +3）。
 - OPT 全不变：机制 reachability 模型相关，但无输出破坏。
 
-## 4. 官方裁决（待回传）
+## 4. 官方裁决
 
 配额账本：v183 为第 4 个（4/10）。裁决规则：
 `S(v183) > 17598` 且 `<300s` → RETAINED；`≤ 17598` 且 `<300s` → REJECTED
 （覆盖率族关闭，不扫 ratio 邻域）；`>300s` → TIMEOUT。
 
+官方回传 `17598/279.7s`：相对 v182 `step_gain=0`、时间 `+6.7s`。因此按上述
+预注册规则判为 **REJECTED**，覆盖率族关闭；v182 保持完整官方父。配额不退还，账本
+为 `4/10`，剩余 6。
+
 ## 5. 复现
 
 ```powershell
-.venv\Scripts\python.exe -u evaluator\official_eval.py --solution solutions\20260904_v183_attn-bsm-full-refine_scoreNA_timeNA\solution.py --attention-only --cache-mode read --nvfp4-cache-mode auto --capture-device cuda --algorithm-device cuda --baseline-json artifacts\official_eval\v180-attn-default.json --output artifacts\official_eval\v183-attn-default.json --report logs\official_eval\v183-attn-default.md
+.venv\Scripts\python.exe -u evaluator\official_eval.py --solution solutions\20260904_v183_attn-bsm-full-refine_rejected\solution.py --attention-only --cache-mode read --nvfp4-cache-mode auto --capture-device cuda --algorithm-device cuda --baseline-json artifacts\official_eval\v180-attn-default.json --output artifacts\official_eval\v183-attn-default.json --report logs\official_eval\v183-attn-default.md
 ```
 
 源码 SHA256：`d94f37cc7b5370b1c2bc070157166d060936371c4e65e354dad3746090771f24`
-（v183 候选归档）。根 `solution.py` 保持 v182 官方父 `F3E39E99...A438`，
-v183 官方 RETAINED 前不切换。
+（v183 官方拒绝归档）。根 `solution.py` 保持 v182 官方父 `F3E39E99...A438`。
