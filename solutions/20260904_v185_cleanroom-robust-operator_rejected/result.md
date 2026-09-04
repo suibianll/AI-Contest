@@ -1,6 +1,6 @@
 # v185 clean-room 稳健算子量化
 
-> 状态：**REJECTED（本地）— clean-room 实现与真实调用图合法，但相对 v182 精度明显不足**
+> 状态：**REJECTED（官方 `8446/165s`）— clean-room 实现合法，但算法表达能力不足**
 >
 > 该版本从空白文件实现，不继承任何历史 `solution.py` 源码。根 `solution.py` 仍为
 > v182 官方父；v184 工作区未修改。
@@ -35,11 +35,12 @@
 ## 结论
 
 低有效自由度方案非常快且稳定优于标准 HiF4，但仅靠对角平衡、K center、收缩 logits gain
-和稀疏 scale 邻域无法恢复成熟父版本的块级离散优化收益。v185 按计划 `REJECTED`，不提交
-官方、不扣配额、不围绕阈值/refine ratio 调参；源码保留为干净研究基线。
+和稀疏 scale 邻域无法恢复成熟父版本的块级离散优化收益。v185 官方结果确认本地大幅回归
+不是 proxy 假象。该版本按计划 `REJECTED`，计入第 7 个官方提交；不围绕阈值/refine ratio
+调参，源码保留为干净研究基线。
 
 ## 官方
 
-- Score：NA
-- Time：NA
-- Status：not submitted / local REJECTED
+- Score：8446
+- Time：165s
+- Status：official REJECTED

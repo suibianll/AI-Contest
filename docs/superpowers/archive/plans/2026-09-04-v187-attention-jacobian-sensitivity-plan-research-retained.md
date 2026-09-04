@@ -1,6 +1,6 @@
 # v187 计划：Attention Jacobian 敏感度加权 HiF4（2026-09-04）
 
-> 状态：ACTIVE。
+> 状态：COMPLETE / RESEARCH RETAINED / NOT SUBMITTED。
 >
 > 父实现为 v185 clean-room 六 API，仅用于验证一个新的解析机制；不读取或复制 v182/v186
 > 的实现。v185 官方 `8446/165s`，因此本计划首先是机制研究，不因小幅本地正向直接提交。
@@ -61,7 +61,7 @@ dO_i / dK_jc = P_ij (V_j - O_i) Q_ic / sqrt(d)
 
 ## 5. 产物
 
-- 源码：`solutions/20260904_v187_attn-jacobian-sensitivity_scoreNA_timeNA/solution.py`
+- 源码：`solutions/20260904_v187_attn-jacobian-sensitivity_research-retained/solution.py`
 - 结果：同目录 `result.md`
 - 本地原始结果：`artifacts/official_eval/v187-*`
 - 本地报告：`logs/official_eval/v187-*`
@@ -72,3 +72,20 @@ dO_i / dK_jc = P_ij (V_j - O_i) Q_ic / sqrt(d)
 - Jacobian gate 不可达或 compact `Δmean≤0`：REJECTED，关闭该机制；
 - 相对 v185 正向但仍远低于 v182：RESEARCH RETAINED，不提交；
 - 接近或超过 v182 且 R2/时间门禁通过：候选，等待用户决定是否使用配额。
+
+## 7. 执行结果
+
+- 六 API smoke、HiF4 五字段、CPU state、finite：通过；
+- compact：Attention mean `0.694529177`；相对 v185 `+0.007988`，`1+/0-/3=`；
+- default：Attention mean `0.418953857`；相对 v185 `+0.015186535`，
+  L1 `0.016199247`，`32+/3-/85=`；
+- reachability：7/24 层启用（3/5/7/14/15/17/20），importance 实际范围
+  `0.5491–2.0`；
+- 相对 v186 default：`-0.333219550`、`4+/116-/0=`，median MSE ratio `2.261583`；
+- Attention API：`26.770s`，相对 v185 `+3.171s`；按时间模型约增加 `2.2s`，不是瓶颈；
+- `tests/test_official_eval.py + tests/test_reference_hif4.py`：`43 passed`；
+- 源码 SHA256：`086535FB4205703524C5DF2378CF2557B7F4652DF03E6FA201C074F2094F8F65`。
+
+裁决：Jacobian importance 的解析假设成立且通过 R2，但它只改善弱 clean-room 父，无法恢复
+成熟 v186 的块级机制。归档为 RESEARCH RETAINED，不提交、不占配额；不扫描收缩/clamp/gate
+邻域。

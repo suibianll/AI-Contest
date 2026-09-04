@@ -4,11 +4,19 @@
 
 ## 0. 最新官方进展
 
-**v185 clean-room 重写已本地 REJECTED（未提交、不占配额）。** 按用户要求完全从六 API
-和 HiF4 合法域重写：Linear 只用解析对角等价变换，Attention 只用 K center、KV-head
-Q/K balance、收缩 logits gain 和门控 `+4`。接口与真实调用图全部通过；Linear compact
-`0.417231`、56/56 优于标准，但 Attention default `0.403767`，相对 v182
-`-0.338062`、116/120 case 回归，故停止跨模型/官方。源码保留为研究基线，根文件未切换。
+**v187 Attention Jacobian 坐标敏感度已完成，本地 RESEARCH RETAINED、不提交。** 它只在
+v185 clean-room 上增加一个解析机制：用最终 Attention 输出的一阶 Jacobian 形成 Q/K
+`KV-head×64` importance，跨 fold median、向 identity 固定收缩并经 leave-one-fold-out gate。
+7/24 层启用；相对 v185 default `Δmean +0.015187`、L1 `0.016199<0.02`、`32+/3-/85=`；
+但相对 v186 `-0.333220`、116/120 回归，仍不具官方竞争力。源码只保留为研究父。
+
+**❌ v185 clean-room 官方回传：`8446 / 165s`，REJECTED。** 相对当前父 v186 少 `9153`
+分，时间远低于 300s，因此失败明确来自算法表达能力，不是超时。balance/gamma/refine
+邻域关闭；该次官方提交计为第 7 个，当前配额 `7/10`、剩余 3。根 `solution.py` 不切换。
+
+**✅ v186 官方回传：`17599 / 272s`，RETAINED 为当前完整官方父。** v186 在 v182 上只把
+Attention 在线 E6M2 scale 邻域增加 `+4` 单码，官方 `+1/−1s`；根 `solution.py` 已同步
+SHA `F8495DCA...7EB8`。当前距榜首 21765 为 `4166` 分，时间余量 28s。
 
 **❌ v183 官方回传（2026-09-04）：`17598 / 279.7s`，与父 v182 同分，REJECTED。**
 v183 仅将 Attention block-smooth 搜索的 final-quantizer refine 覆盖从 0.50 提高到
@@ -749,14 +757,15 @@ v86 的部分 scale-aware/output-aware 机制。此前把它描述为"v86 级静
 
 ## 6. 当前活动计划
 
-**当前无 active 计划。** v185 clean-room 重写因相对 v182 大幅回归已本地拒绝并归档；
+**当前无 active 计划。** v187 Jacobian 敏感度机制相对 v185 正向、但远低于 v186，已作为
+clean-room 研究父归档且不提交；v185 官方 `8446/165s` 已拒绝；
 v183 覆盖率计划已按官方 `17598/279.7s` 裁决为 REJECTED 并归档
 （[`2026-09-04-v183-attn-bsm-full-refine-plan-rejected.md`](superpowers/archive/plans/2026-09-04-v183-attn-bsm-full-refine-plan-rejected.md)）；
 其相对 v182 `step_gain=0`、时间 `+6.7s`，覆盖率族关闭。v182 继续作为分数父，v180
 继续作为时间预算父。新候选需单独注册新机制计划。
 
 Attention 的 coverage、alpha/head/channel、V multiplier、动态 per-call、
-full64/Householder 与码本重写继续关闭。官方配额现为 `4/10`，剩余 6。
+full64/Householder 与码本重写继续关闭。官方配额现为 `7/10`，剩余 3。
 
 ## 7. 归档现状与待整理项
 

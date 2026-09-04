@@ -25,11 +25,18 @@
   `P_L=v166（4590/226s）`、`P_A=v168（14005/210s）`。oracle 分解方法论
   （穷举→二分定位→最小产物）首次产出官方晋级。
 
-- **v185 clean-room 稳健算子量化重写已本地 REJECTED（未提交、不占配额）**：不继承现有
+- **v187（v185 clean-room + Attention Jacobian 坐标敏感度）本地 RESEARCH RETAINED，
+  不提交**：唯一新机制把完整 Attention 输出的一阶 Jacobian 压缩为 KV-group 共享的
+  Q/K `KV-head×64` importance，经 leave-one-fold-out gate 后在线只应用固定权重；Linear/V
+  不变。7/24 层可达；相对 v185 default `Δmean +0.015187`、L1 `0.016199<0.02`、
+  `32+/3-/85=`，但相对 v186 仍 `-0.333220`、116/120 回归。机制解析假设成立，保留为
+  clean-room 研究父；未接近官方父，不占配额、不移根文件。
+
+- **v185 clean-room 稳健算子量化重写官方 `8446/165s`，REJECTED**：不继承历史
   `solution.py`，从六 API/HiF4 合法域实现解析 Linear 对角平衡与 Attention K-center、
-  KV-head Q/K balance、收缩 logits gain、门控 `+4`。接口/状态/真实调用图全过；Linear
-  compact `0.417231`、56/56 优于标准，但 Attention default `0.403767`，相对 v182
-  `-0.338062`、116/120 回归。源码保留研究，根 v182/v184 均未改。
+  KV-head Q/K balance、收缩 logits gain、门控 `+4`。官方相对 v186 少 `9153` 分；165s
+  说明失败来自算法表达能力而非超时。原 balance/gamma/refine 邻域关闭，作为第 7 个提交
+  计入配额；根 `solution.py` 保持 v186。
 
 - **v183（Attention block-smooth final-quantizer refine 全覆盖）官方 `17598/279.7s`，
   与 v182 同分、慢 6.7s，REJECTED。** `step_gain=0` 且时间通过 `<300s`，因此失败归因
@@ -79,7 +86,8 @@
   66.1s）；按预注册规则 TIMEOUT，不缩窗重试，+4 窗口族待单窗重构评估），
   v186 为第 6 个（6/10，官方 `17599/272s` +1 RETAINED 成为新完整父；
   oracle 分解方法论首产官方晋级），
-  剩余 4**。每新增一个候选扣 1
+  v185 为第 7 个（7/10，官方 `8446/165s`，算法大幅负向 REJECTED），
+  剩余 3**。每新增一个候选扣 1
   配额，官方负向不退还。SOTA 搜索（二至五轮：KVLinC/
   VecInfer/ResQ/OTT、ScaleSweep/H-Scale、MXFP4 误差三分量/HCP/ARCQuant、QuantVLA
   温度匹配/SageBwd/谱界）均落入已闭合域或 A1 已覆盖域，不注册新候选。官方裁决后

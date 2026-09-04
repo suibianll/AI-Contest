@@ -12,7 +12,7 @@ sys.path.insert(0, str(ROOT))
 from evaluator.reference_hif4 import validate_hif4_params, validate_state
 
 
-SOURCE = ROOT / "solutions" / "20260904_v187_attn-jacobian-sensitivity_scoreNA_timeNA" / "solution.py"
+SOURCE = ROOT / "solutions" / "20260904_v187_attn-jacobian-sensitivity_research-retained" / "solution.py"
 
 
 def load_module():
@@ -74,4 +74,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
