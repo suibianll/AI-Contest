@@ -1,0 +1,82 @@
+# 巨大提升空间定位诊断（2026-09-04，零配额本地诊断）
+
+目的：回答「+0.1 量级本地提升的空间在哪里」。三项诊断全部完成。
+
+## 诊断 1：Oracle 编码器余量（给定坐标下 scale 穷举搜索）
+
+方法：v182 副本把 `_DYNAMIC_OFFSETS`/`_WEIGHT_OFFSETS` 从 `(-1,1,2,3)` 扩到
+±24（49 码近穷举；给定 scale 后 `_solve_exact_hierarchy` 已是精确解，scale
+选择是编码器唯一剩余自由度）。
+
+| Panel | 结果 |
+| --- | --- |
+| Linear compact 56（双侧穷举） | **+0.000169**（31/25）→ **Linear 编码器饱和** |
+| Attention default 120 | **+0.010386**（65/53/2） |
+
+**增益来源分解**（关键实验链）：
+
+| 变体 | 在线 offsets | Attention default 120 Δgain |
+| --- | --- | --- |
+| 校准侧宽搜索、在线标准 | (-1,1,2,3) | **0/0/120 位级不变** |
+| 全宽 ±24 | 49 码 | +0.010386 |
+| ±8 | 17 码 | +0.010386（位级同上） |
+| ±4 | 9 码 | +0.010386（位级同上） |
+| 仅补负侧 {-4..-1,+1..+3} | 7 码 | +0.000102 |
+| 显式 0 {(-1,0,1,2,3)} | 5 码 | 0/0/120 no_effect |
+| **仅加 +4 {(-1,1,2,3,4)}** | **5 码** | **+0.010344（99.6% of oracle）** |
+
+**根因**：全部增益来自**在线 Q/K/V 动态编码的 scale 搜索窗口缺一个 +4 码**。
+`_REFINE_EDGE_EXTENSION` 是爬山式（只在边缘码 +3 获胜时扩展到 +4/+5），但
+E6M2 跨 binade 时损失在 code 空间非单峰：最优在 +4 的块，+3 常比标准更差，
+不触发扩展。校准侧完全无贡献（0/0/120）。
+
+## 诊断 1b：跨模型与层结构（+4 单码探针）
+
+| 模型 | Δgain | 主导层 |
+| --- | ---: | --- |
+| Qwen default 120 | **+0.010344**（65/53/2） | L11 +0.158、L16 +0.093；L13/L14 微负 |
+| GPT-2 default 60 | **+0.023123**（36/24） | L8 +0.245；L2 −0.029 |
+| OPT-125m default 60 | **−0.018267**（30/30） | **L8 −0.215**；其余 ±0.004 |
+
+每模型效应都由 1-2 个特定层主导（该层块的 scale 最优恰在 +4）。OPT L8 的
+大负与 Qwen L11/L16、GPT-2 L8 的大正同构——**层级现象，可用 calibration
+deployed-MSE 门（与 block-smooth 选块同模式，官方 12944 已验证的机制类）逐层
+接受/拒绝 +4**。
+
+## 诊断 2：剩余误差集中度（v182/v183 default JSON）
+
+- **无少数 case 集中**：Linear top 10/168 case 仅占 19.1% 剩余误差；
+  Attention top 6/120 占 17.3%。「修少数坏块」策略天花板极低。
+- Linear 剩余误差：weight operand rel-MSE 2.19 > activation 1.52（权重侧更大）；
+  深层 16-23 占 ~50%；role 分布 fc_gate 23%/k 20%/fc_up 18%。
+- Attention 剩余误差：L21/L23 占 26%；长度近似按 case 数比例分布。
+
+## 诊断 3：L3 full64 interaction 反转归因（归档 JSON）
+
+- k role：W-only **+2.09**（巨大）被 interaction −2.15 反转（net −0.007）；
+  o role：W-only −0.606 直接受伤（worst cases 全为 o）。
+- 结论：权重坐标变换在 k 上有真实大余量，但联合 A 侧编码抵消——家族关闭
+  判定正确；未解的「联合坐标设计」是 Linear 侧唯一理论大空间。
+
+## 综合结论
+
+1. **Linear 编码器与坐标已双重饱和**（oracle +0.000169；坐标族全关闭）。
+   Linear 大提升需全新坐标范式，无近期路径。
+2. **Attention 在线 scale 窗口 +4 是 A1 以来最大本地信号**（+0.0103，为 D1
+   本地信号的 30 倍、v182 的 500 倍），且机制极简（候选集加 1 码）。
+3. 风险：OPT L8 −0.215（model-specific-risk，D1 先例：GPT-2 负 → 官方 +3）；
+   在线成本 +25%（4→5 码 refine），官方时间余量 27s 下有界风险。
+
+## v184 提案（待用户批准）
+
+**v184 = 父版本 + per-layer 门控 +4**：校准期对每层用 deployed-MSE 门
+（block-smooth 同模式）比较 offsets `(-1,1,2,3)` vs `(-1,1,2,3,4)`，
+仅在接受的层编译 +4。预期保留 Qwen L11/L16 与 GPT-2 L8 增益、门掉 OPT-L8
+型回归；在线成本只在接受层 +25%。父版本取决于 v183 官方结果
+（RETAINED→v183，REJECTED→v182）。单预注册配置，不扫其他码。
+
+## 工件
+
+- `logs/execution/diag_oracle*.py`、`diag_w8/w4/neg7/zero5/plus4.py`（探针变体）
+- `artifacts/official_eval/diag-{oracle,oracle-calib,w8,w4,neg7,zero5,plus4}-*.json`
+- `logs/execution/diag2_diag3_analysis.py`、`diag_oracle_attn_analysis.py` 等
