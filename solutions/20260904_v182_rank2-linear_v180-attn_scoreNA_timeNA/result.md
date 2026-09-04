@@ -1,24 +1,28 @@
 # v182 候选：L-R2 融合 rank-2 残差重分布（Linear）
 
-> 状态：**RETAINED（官方 2026-09-04）— v182 `17598/273s`，成为新完整官方父版本**
+> 状态：**RETAINED（官方 2026-09-04）— v182** **`17598/273s`，成为新完整官方父版本**
 >
-> 计划：[`2026-09-04-post-v180-linear-rank2-plan.md`](../../docs/superpowers/plans/2026-09-04-post-v180-linear-rank2-plan.md)
+> 计划：[`2026-09-04-post-v180-linear-rank2-plan-completed.md`](../../docs/superpowers/archive/plans/2026-09-04-post-v180-linear-rank2-plan-completed.md)
 >
 > 构造：v180 完整官方父 + Linear 侧把 v166 的 rank-1 残差重分布推广为一次融合
-> rank-2 正交更新（U=[u1,u2]、V=[v1,v2]、V^T U≈0、连续域乘积严格不变）；
+> rank-2 正交更新（U=\[u1,u2]、V=\[v1,v2]、V^T U≈0、连续域乘积严格不变）；
 > Attention 与 v180 逐位一致（未触碰 Attention API）。
 
 ## 1. 机制（L-R2）
 
 - 父 rank-1：`R1 = I + u1 v1^T`，`v1^T u1 = 0`，`u1 = 0.25 d2`（v166 原逻辑不变）。
+
 - L-R2 在 span(v1,u1) 正交补上用部署坐标基础 HiF4 残差算子
   `C(x) = Ea^T(Ea x)/||Ea||^2 + Ew^T(Ew x)/||Ew||^2` 做固定 128 次 power
   iteration，提取 d3/d4，sign-align + median 聚合 + Gram-Schmidt，固定
   `v2 = d3`（单位）、`u2 = 0.25 d4`（范数 0.25）。
+
 - 融合 rank-2：`U=[u1,u2]`、`V=[v1,v2]`、`V^T U ≈ 0` →
   `R = I + U V^T`、`R^-1 = I - U V^T`（Woodbury），
   `A' = A + (A U) V^T`、`W' = W - (W V) U^T`，`A'W'^T = AW^T` 严格保持。
+
 - Gram/Hessian 用最终坐标 rank-2 公式精确更新，之后沿用父 GPTQ/hierarchy/encode。
+
 - 动态激活：一次融合 `dense + (dense @ U) @ V^T`（单 GEMM 对，无循环/无候选/Gram）。
 
 ## 2. 固定参数（不允许调参）
@@ -33,35 +37,43 @@ aggregation = component-wise median
 
 ## 3. 硬检查（全部通过）
 
-| 检查项 | 结果 |
-| --- | --- |
-| 单文件脱离仓库导入六 API | OK（compact/default/GPT-2/OPT 全跑通） |
-| reference_hif4 state/五字段合法 | OK（无 state 错误） |
-| 无 NaN/Inf、有限输出 | OK |
-| rank-2 reachability | compact 28/28、default 168/168、GPT-2 72/72、OPT 72/72 全部 = 1 |
-| `||V^T U||F` 接近 0 | vtu_cross_max 实测 6.99e-10 ~ 1.86e-08 |
-| 连续域乘积不变 | 数值验证：`\|A'W'^T − AW^T\| / \|AW^T\| = 3.96e-7`（float32 舍入量级，V^T U 传播理论 ~2e-9）；脚本 `logs/execution/check_lr2_continuity.py` |
-| Attention control | 与 v180 逐位一致（diff 仅 Linear 权重校准 + 激活路径 6 个 hunk） |
-| 动态 API 无 Gram contraction/候选循环 | OK（融合 [D,2] GEMM） |
+| 检查项                            | 结果                                                                                      |
+| ------------------------------ | --------------------------------------------------------------------------------------- |
+| 单文件脱离仓库导入六 API                 | OK（compact/default/GPT-2/OPT 全跑通）                                                       |
+| reference\_hif4 state/五字段合法    | OK（无 state 错误）                                                                          |
+| 无 NaN/Inf、有限输出                 | OK                                                                                      |
+| rank-2 reachability            | compact 28/28、default 168/168、GPT-2 72/72、OPT 72/72 全部 = 1                              |
+| Frobenius norm(V^T U) 接近 0     | vtu\_cross\_max 实测 6.99e-10 至 1.86e-08                                                  |
+| 连续域乘积不变                        | 相对误差 3.96e-7（float32 舍入量级，V^T U 传播理论约 2e-9）；脚本 `logs/execution/check_lr2_continuity.py` |
+| Attention control              | 与 v180 逐位一致（diff 仅 Linear 权重校准 + 激活路径 6 个 hunk）                                         |
+| 动态 API 无 Gram contraction/候选循环 | OK（融合 \[D,2] GEMM）                                                                      |
 
 ## 4. 本地描述性评测（配对 v180；官方不参与决策）
 
-| 场景 | cases | mean Δgain | median Δgain | 改善/回归 | median MSE ratio |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| Qwen compact linear | 56 | −0.000093 | +0.000073 | 30/26 | 0.999585 |
-| Qwen default linear | 168 | +0.000020 | +0.000048 | 85/83 | 0.999897 |
-| GPT-2 linear | 72 | +0.001171 | +0.000307 | 37/35 | 0.998737 |
-| OPT-125m linear | 72 | +0.025632 | +0.000787 | 40/32 | 0.998331 |
+| 场景                  | cases | mean Δgain | median Δgain | 改善/回归 | median MSE ratio |
+| ------------------- | ----: | ---------: | -----------: | ----: | ---------------: |
+| Qwen compact linear |    56 |  −0.000093 |    +0.000073 | 30/26 |         0.999585 |
+| Qwen default linear |   168 |  +0.000020 |    +0.000048 | 85/83 |         0.999897 |
+| GPT-2 linear        |    72 |  +0.001171 |    +0.000307 | 37/35 |         0.998737 |
+| OPT-125m linear     |    72 |  +0.025632 |    +0.000787 | 40/32 |         0.998331 |
 
 - Qwen compact cross-holdout：28/28 对 validation/test 同号；gain gap median 0.0165。
+
 - Qwen default 其余 role/family/层分布与父同构（W/A 深度负、interaction 巨大正）。
+
 - 跨模型整体非负/微弱正，无 `model-specific-risk` 标记。
+
 - 本地 proxy 只作描述；官方结果决定提升与否。
 
 ## 5. 时间记录（本地，非官方）
 
 - Qwen default linear API total：v182 332.4s vs v180 282.4s（+50s，主要来自 rank-2
   校准 power iteration 增量；在线仅增加一列融合 GEMM）。
+
+- 完整 default 集成审计（同一 v182 SHA，168 Linear + 120 Attention）：Linear
+  `0.636609487`、Attention `0.741829266`、overall `0.680451062`；API `414.138s`、wall
+  `439.469s`。这是本地调用图证据，不换算官方 273s。
+
 - 官方时间由官方评测回传后登记；不提交等价时间 A/B。
 
 ## 6. 官方裁决
@@ -71,11 +83,15 @@ aggregation = component-wise median
 **官方结果（2026-09-04 用户回传）：`17598 / 273s`，RETAINED，成为新完整官方父。**
 
 - `S(v182) = 17598 > S(v180) = 17597`，且 `273s < 300s` → RETAINED。
-- step_gain `+1`（计划 §11 `0 < G_L ≤ 20`：微增益，残差低秩族接近饱和）。
+
+- step\_gain `+1`（计划 §11 `0 < G_L ≤ 20`：微增益，残差低秩族接近饱和）。
+
 - 时间 `+31s` vs v180（242s）；rank-2 第二列校准 power iteration 是主要增量，
   273s 在硬限内但余量收窄至 27s。
+
 - **明确关闭 rank-3 / 系数扫描 / fold 邻域**（计划 §11 + §9：官方负即关闭，
   任何正增益均保留，不设置晋级门槛，不升 rank）。
+
 - v182 是完整组合版本；隐含 Attention 单侧不登记为独立测量。
 
 ## 7. 复现
@@ -86,8 +102,11 @@ aggregation = component-wise median
 
 # default
 .venv\Scripts\python.exe -u evaluator\official_eval.py --solution solutions\20260904_v182_rank2-linear_v180-attn_scoreNA_timeNA\solution.py --linear-only --cache-mode read --nvfp4-cache-mode auto --capture-device cuda --algorithm-device cuda --baseline-json artifacts\official_eval\v180-linear-default.json --output artifacts\official_eval\v182-linear-default.json --report logs\official_eval\v182-linear-default.md
+
+# complete integration audit
+.venv\Scripts\python.exe -u evaluator\official_eval.py --solution solutions\20260904_v182_rank2-linear_v180-attn_scoreNA_timeNA\solution.py --cache-mode read --nvfp4-cache-mode auto --capture-device cuda --algorithm-device cuda --output artifacts\official_eval\v182-integration.json --report logs\official_eval\v182-integration.md
 ```
 
 源码 SHA256：`f3e39e993a436e217cb4811525c81239f82a6ec58845a0646e183a824c33a438`
-（v182 候选归档）。根 `solution.py` 保持 v180 官方父 SHA
-`2BA40122...8AA3`；正式提交入口在 v182 官方 RETAINED 前不改为候选。
+（v182 官方归档）。根 `solution.py` 已同步为同一 v182 官方计分 SHA
+`F3E39E99...A438`。v180 归档仍保留为只少 1 分、节省 31s 的时间预算父。

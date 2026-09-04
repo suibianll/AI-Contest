@@ -1,10 +1,11 @@
 # HiF4 solutions archive
 
-> **Official update (2026-09-04):** v180 archive SHA `2BA40122...8AA3` scored **17597 / 242s**,
-> a `+3` step over v175 `17594/245s`, and is the new complete official parent. It combines v166
-> rank-1 Linear with v168 A1 Attention plus D1 asymmetric Q/K folding. The independent side parents
-> remain `P_L=v166（4590/226s）` and `P_A=v168（14005/210s）`; v180 is not an isolated Attention
-> measurement. The user-reported leaderboard best is **21765 / 290s**, leaving a **4168-point** gap.
+> **Official update (2026-09-04):** v182 archive SHA `F3E39E99...A438` scored **17598 / 273s**,
+> a `+1/+31s` step over v180 `17597/242s`, and is the new score parent. It adds the L-R2 fused
+> rank-2 Linear residual direction while keeping v180 Attention bit-identical. The independent side
+> parents remain `P_L=v166（4590/226s）` and `P_A=v168（14005/210s）`; v182 is not an isolated
+> Linear measurement. The user-reported leaderboard best is **21765 / 290s**, leaving a
+> **4167-point** gap. v180 remains the time-budget parent because it gives up only 1 point for 31s.
 
 `solutions/` contains immutable `solution.py` snapshots. The active code is only the repository
 root [`solution.py`](../solution.py). Every snapshot below was submitted or retained as an
@@ -42,10 +43,11 @@ cohort ordering inversions without fitting them.
 
 ### Current best and scope rule (2026-09-04)
 
-The highest official score bound to a repository source is **v180: 17597 / 242s**. v175
-**17594 / 245s** is its exact complete parent, while the independent side parents remain v166 and
-v168. The user-reported leaderboard best **21765 / 290s** is 4168 points above v180 and has no
-synchronized source or configuration, so it is a target only. v147 is **16579 / 211 s**
+The highest official score bound to a repository source is **v182: 17598 / 273s**. Its exact
+complete parent v180 is **17597 / 242s**; both are Pareto-optimal, so v182 is the score parent and
+v180 remains the time-budget parent. The independent side parents remain v166 and v168. The
+user-reported leaderboard best **21765 / 290s** is 4167 points above v182 and has no synchronized
+source or configuration, so it is a target only. v147 is **16579 / 211 s**
 (time pass but below v86, rejected); v140 is **15838 / 207 s** (rejected). The pre-A3 parent effect
 control is local-only (`Linear=0.588023229`, `Attention=0.757433277`, API `202.317 s`) and is not
 an official score.

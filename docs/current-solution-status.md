@@ -12,6 +12,9 @@ v180 + L-R2 融合 rank-2 残差重分布（SHA `F3E39E99...A438`），Linear �
 `27s`。v182 是完整组合版本；两侧独立父仍为 `P_L = v166（4590/226s）`、
 `P_A = v168（14005/210s）`。证据见
 [`v182 官方记录`](../logs/execution/2026-09-04-v182-official-result.md)。
+这一结果只闭合原 `4168` 分差的 `1/4168 ≈ 0.024%`，而耗费 31s；与已知 A1 `+60`、
+rank-1 `+3`、D1 `+3` 一起说明现有局部扩展和榜首之间是机制代际差距。v182 是分数父；
+v180 仅少 1 分但快 31s，继续作为高复杂度全新机制的时间预算父。
 
 **✅ v180 官方回传（2026-09-04）：`17597 / 242s`，成为新完整官方父版本。** v180 =
 v175 + D1 A1 Q/K 非对称折叠（SHA `2BA40122...8AA3`），Linear 与 v175 逐位一致；相对
@@ -51,7 +54,7 @@ v161 Attention Cross-Gram64 per-call 动态精化，SHA
 Linear 侧逐位一致，因此这次超时直接确认当前 Attention 动态精化实现复杂度不可接受。v164
 官方为 `13945 / 204s`，在官方评测稳定的已知条件下，精化的官方增量成本下界约为 `>96s`；
 完整官方时间没有返回。本地 `+0.052502`、`106+/14-` 和 GPT-2 同号不能替代官方分数，故
-Attention 精度结论仍未知，不计算 `C_A/G_A/P_A/R_A`。当前活动计划只允许一次 rank-2 Gram
+Attention 精度结论仍未知，不计算 `C_A/G_A/P_A/R_A`。当时活动计划只允许一次 rank-2 Gram
 残差码本复杂度重构，不重试 v165。证据见
 [`v165 官方超时日志`](../logs/execution/2026-09-03-v165-official-timeout.md)和
 [`v165 result`](../solutions/20260903_v165_standard-linear_v161-attn_scoreNA_timeout/result.md)。
@@ -102,7 +105,7 @@ per-call 小张量算子成本远超本地 CUDA 外推，v160 的 68s 官方余�
 （v161 无官方分数，不计入）；P9 检验无法记录。证据：
 [`v161 官方超时日志`](../logs/execution/2026-09-03-v161-official-timeout.md)、
 [`v161 result`](../solutions/20260903_v161_v160-attn-s1-qk-gram-refine_scoreNA_timeout/result.md)。
-**当前唯一活动计划**：
+**当时唯一活动计划**：
 [`v162 基线的 Linear / Attention 官方侧向隔离优化计划`](superpowers/plans/2026-09-03-v162-official-side-isolation-optimization-plan.md)。
 以 v162 `1001/146s` 双标准 HiF4 为共同零点，分别构造“候选 Linear + standard Attention”
 和“standard Linear + 候选 Attention”。官方结果直接给出每侧绝对贡献、相对 v160 侧贡献
@@ -192,7 +195,8 @@ compact 门禁；五个 C 源构造变体（amax/rms/xrms/x-only/w-only）全部
 - **当前仓库内最高已绑定源码的官方分数：v182，17598 分 / 273s。** v182 归档 SHA
   `F3E39E99...A438` 是当前完整官方父版本；v180 `17597/242s` 是其精确父版本，v175
   `17594/245s` 为 v180 的父版本，v160 `17532/232s` 保留为旧实验父，v158
-  `16861/223s` 是更低复杂度安全基线。
+  `16861/223s` 是更低复杂度安全基线。按分数—时间双目标，v182 是分数父，v180 只少
+  1 分但快 31s，仍是高复杂度新机制的时间预算父；二者共同位于当前 Pareto 前沿。
 
 - 根 `solution.py` 在 v160 后只增加默认关闭的 L3 gate，行为不变但 SHA 已不同；规律实验必须从
   v160 归档分支。v159 的 17532 仍绑定原始 SHA `0508045A...4242`，其官方时间未知。
