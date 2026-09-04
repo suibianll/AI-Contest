@@ -244,6 +244,13 @@
   compact 只保留四个深度/长度哨兵。它只做父子机制和跨 holdout 泛化诊断，不能冒充 default
   panel 或官方调用图。
 
+- `--ood` 是 OOD 泛化面板（`data/ood-suite-v1`，code/news/zh 三域 15 个测试窗口）：
+  校准保持 WikiText（与部署一致），只换测试文本；case 数与默认面板相同（168 Linear +
+  120 Attention，Attention 用 8 层深度铺开 × 15 窗口）。它只做过拟合诊断，与同 SHA 的
+  in-dist proxy-v2 运行相减得 `gain_in − gain_ood`（v182 基线：Linear `+0.015903`、
+  Attention `+0.020590`），**不参与 proxy 排名、不能与 in-dist 结果混排**。语料由
+  `workbench/build_ood_corpus.py` 确定性重建。
+
 - 单侧场景必须隔离：`--linear-only` 不调用 Attention API，`--attention-only` 不调用 Linear
   API；本侧校准仍按共享 state 调用图执行，不按 case 制造 oracle。
 
@@ -284,6 +291,13 @@ Linear/Attention 权重。只有同一 `proxy-v2` cache、同一 panel、同一 
   > **`L1`（逐 case gain 的平均绝对变化）< 0.02**，且 `L1` 与官方 Δ 负相关（ρ = −0.469）：
   > **本地改得越狠，官方越可能负**。「control 发生变化」仍然有效。见
   > [修订清单 §2 / §9.2](docs/stale-information-inventory-2026-09-04.md)。
+
+- OOD 判据（2026-09-04 起可用）：候选过拟合的补充量化信号是
+  **`Δ(gain_in − gain_ood)`**——同 solution 在 `--ood` 与 in-dist proxy-v2 各跑一次，
+  与父版本的两侧差值相减；本地增益上升而 OOD gain 同步大幅下降即拟合型机制
+  （v140/v155/v156 失败模式）。v182 父基线 gap：Linear `+0.015903`、Attention
+  `+0.020590`。见 [拟合分析 §6](docs/official-local-fitting-analysis-2026-09-04.md) 与
+  [基线执行记录](logs/execution/2026-09-04-ood-suite-baseline-v182.md)。
 
 - 官方 mini 用例只做接口、合法性和真实形状复杂度 smoke，不用于选算法或参数；Qwen/GPT-2 等
   本地结构只作机制压力测试。发生本地与官方排序反转后，立即停止用该 proxy 为同一路线晋级。

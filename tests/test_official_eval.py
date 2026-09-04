@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -19,6 +20,10 @@ from official_eval import (  # noqa: E402
     EFFECT_CASE_DESIGN,
     LINEAR_CASE_COUNT,
     NVFP4_INPUT_CODEC,
+    OOD_ATTENTION_LAYERS,
+    OOD_CASE_DESIGN,
+    OOD_SUITE,
+    OOD_WINDOW_LENGTHS,
     PANEL_WINDOW_INDICES,
     PROTOCOL,
     REQUIRED_APIS,
@@ -550,3 +555,183 @@ def test_reference_codec_round_trip_has_expected_logical_shape() -> None:
     restored = decode_standard_hif4(params)
     assert restored.shape == dense.shape
     assert torch.isfinite(restored).all()
+
+
+# ---------------------------------------------------------------------------
+# OOD generalization suite (--ood)
+# ---------------------------------------------------------------------------
+
+
+def _ood_fake_pack() -> SimpleNamespace:
+    return SimpleNamespace(
+        layers=24,
+        calibration_windows=[None] * len(CALIBRATION_LENGTHS),
+        test_windows=[
+            Window(domain, f"{domain}-doc", 0, 0, 0, length, tuple(range(length)))
+            for domain in ("code", "news", "zh")
+            for length in (10, 128, 512, 1024, 1024)
+        ],
+    )
+
+
+def test_ood_constants_and_cli_flag() -> None:
+    assert OOD_SUITE == "ood-suite-v1"
+    assert OOD_CASE_DESIGN == "ood-generalization-panel-v1"
+    assert OOD_WINDOW_LENGTHS == (10, 128, 512, 1024, 1024)
+    assert OOD_ATTENTION_LAYERS == 8
+    args = build_parser().parse_args([])
+    assert args.ood is False
+    assert build_parser().parse_args(["--ood"]).ood is True
+
+
+def test_ood_profile_key_is_present_only_when_enabled() -> None:
+    base = _nvfp4_cache_profile(
+        linear_count=None,
+        attention_count=None,
+        full_cases=False,
+        effect_panel=False,
+        compact_panel=False,
+        evaluation_scenario="both",
+    )
+    assert "ood" not in base  # keeps pre-existing cache profiles valid
+    ood = _nvfp4_cache_profile(
+        linear_count=None,
+        attention_count=None,
+        full_cases=False,
+        effect_panel=False,
+        compact_panel=False,
+        evaluation_scenario="both",
+        ood=True,
+    )
+    assert ood["ood"] is True
+
+
+def test_ood_panel_uses_all_windows_with_depth_spread_attention() -> None:
+    pack = _ood_fake_pack()
+    attention_layers = _depth_spread_indices(pack.layers, min(OOD_ATTENTION_LAYERS, pack.layers))
+    linear, attention = _choose_cases(
+        pack,
+        panel_window_indices=tuple(range(len(pack.test_windows))),
+        attention_layer_indices=attention_layers,
+    )
+    assert len(linear) == pack.layers * 7  # same Linear case count as in-dist
+    assert len(attention) == len(attention_layers) * len(pack.test_windows)
+    assert len(attention) == 120  # same Attention case count as in-dist
+    assert {case.test_window for case in linear} == set(range(len(pack.test_windows)))
+    assert {case.test_window for case in attention} == set(range(len(pack.test_windows)))
+    assert {case.layer for case in attention} == set(attention_layers)
+    # In-dist default stays unchanged when the overrides are None.
+    default_linear, default_attention = _choose_cases(pack)
+    assert all(case.test_window < 5 for case in default_linear)
+    assert {case.test_window for case in default_attention} == set(PANEL_WINDOW_INDICES)
+
+
+def _ood_raw_pack_payload(tmp_path: Path) -> dict[str, object]:
+    from official_eval import OOD_SUITE, NVFP4_MODE, PROTOCOL, TEST_LENGTH
+
+    hidden = 2
+    kv_width = 2
+    weights = [{
+        "q": torch.eye(hidden), "k": torch.eye(kv_width), "v": torch.eye(kv_width),
+        "o": torch.eye(hidden), "fc_gate": torch.randn(4, hidden),
+        "fc_up": torch.randn(4, hidden), "proj": torch.randn(hidden, 4),
+    }]
+    calibration_windows = [
+        Window("train", f"cal-{index}", 0, 0, 0, length, tuple(range(length)))
+        for index, length in enumerate(CALIBRATION_LENGTHS)
+    ]
+    ood_windows = [
+        Window(domain, f"{domain}-doc-{index}", 0, 0, 0, length, tuple(range(length)))
+        for index, (domain, length) in enumerate(
+            (domain, length)
+            for domain in ("code", "news", "zh")
+            for length in (10, 128, 512, 1024, 1024)
+        )
+    ]
+    role_widths = {
+        "q": hidden, "k": hidden, "v": hidden, "o": hidden,
+        "fc_gate": hidden, "fc_up": hidden, "proj": weights[0]["proj"].shape[1],
+    }
+    cal_act = {
+        role: [[torch.randn(length, role_widths[role]) for _ in range(1)] for length in CALIBRATION_LENGTHS]
+        for role in ("q", "k", "v", "o", "fc_gate", "fc_up", "proj")
+    }
+    test_act = {
+        role: [[torch.randn(length, role_widths[role]) for _ in range(1)] for length in (10, 128, 512, 1024, 1024) * 3]
+        for role in ("q", "k", "v", "o", "fc_gate", "fc_up", "proj")
+    }
+    cal_qkv = [
+        [(torch.randn(length, 2), torch.randn(length, kv_width), torch.randn(length, kv_width))]
+        for length in CALIBRATION_LENGTHS
+    ]
+    test_qkv = [
+        [(torch.randn(length, 2), torch.randn(length, kv_width), torch.randn(length, kv_width))]
+        for length in (10, 128, 512, 1024, 1024) * 3
+    ]
+    metadata = {
+        "protocol": PROTOCOL,
+        "dataset": OOD_SUITE,
+        "input_codec": NVFP4_INPUT_CODEC,
+        "input_mode": NVFP4_MODE,
+        "weight_layout": "[out_features, in_features]",
+        "test_splits": ["code", "news", "zh"],
+        "ood_window_lengths": [10, 128, 512, 1024, 1024],
+        "test_length": TEST_LENGTH,
+    }
+    return {
+        "protocol": PROTOCOL,
+        "weights": weights,
+        "calibration_activations": cal_act,
+        "test_activations": test_act,
+        "calibration_qkv": cal_qkv,
+        "test_qkv": test_qkv,
+        "calibration_windows": [dataclasses.asdict(w) for w in calibration_windows],
+        "test_windows": [dataclasses.asdict(w) for w in ood_windows],
+        "layers": 1,
+        "hidden_size": hidden,
+        "q_heads": 1,
+        "kv_heads": 1,
+        "head_dim": 2,
+        "roles": ["q", "k", "v", "o", "fc_gate", "fc_up", "proj"],
+        "metadata": metadata,
+    }
+
+
+def test_ood_pack_round_trip_and_rejects_mislabeled_in_dist(tmp_path: Path) -> None:
+    import dataclasses
+
+    from official_eval import save_pack
+
+    path = tmp_path / "ood-raw.pt"
+    torch.save(_ood_raw_pack_payload(tmp_path), path)
+    pack = load_pack(path)
+    assert pack.metadata["dataset"].startswith("ood")
+    assert {window.split for window in pack.test_windows} == {"code", "news", "zh"}
+    assert len(pack.test_windows) == 15
+    assert [len(w.input_ids) for w in pack.calibration_windows] == list(CALIBRATION_LENGTHS)
+
+    # A pack that claims the in-dist dataset must still satisfy the fixed
+    # 12-window validation/test plan.
+    payload = _ood_raw_pack_payload(tmp_path)
+    payload["metadata"] = {**payload["metadata"], "dataset": "Salesforce/wikitext"}  # type: ignore[union-attr]
+    bad = tmp_path / "bad.pt"
+    torch.save(payload, bad)
+    with pytest.raises(RuntimeError):
+        load_pack(bad)
+
+
+def test_ood_suite_summary_groups_gains_by_domain() -> None:
+    from official_eval import _ood_suite_summary
+
+    linear_details = [
+        {"gain": 0.5, "test_split": "code"},
+        {"gain": -0.1, "test_split": "code"},
+        {"gain": 0.2, "test_split": "zh"},
+    ]
+    attention_details = [{"gain": 0.3, "test_split": "news"}]
+    summary = _ood_suite_summary(linear_details, attention_details)
+    assert summary["suite"] == OOD_SUITE
+    assert summary["linear"]["by_domain"]["code"]["count"] == 2
+    assert summary["linear"]["by_domain"]["zh"]["count"] == 1
+    assert summary["linear"]["overall"]["count"] == 3
+    assert summary["attention"]["by_domain"]["news"]["mean"] == pytest.approx(0.3)

@@ -309,6 +309,15 @@ T_official ≈ 170.3 + 0.1154·W_calib + 0.6939·A_calib + 0.7344·dyn_act − 1
 
 ## 6. 让本地真正"能拟合"的唯一路径：加 OOD 测试集
 
+> **[2026-09-04 已实现]** OOD 测试集已落地：语料 `data/ood-suite-v1/`（code/news/zh 三域，
+> 由 `workbench/build_ood_corpus.py` 确定性生成），评测器新增 `--ood` 模式（校准保持
+> WikiText，15 个 OOD 测试窗口 → 168 Linear + 120 Attention，case 数与默认面板一致，
+> NVFP4 缓存独立、不触碰 in-dist 缓存）。v182 基线：`gain_in − gain_ood` =
+> Linear `+0.015903`（0.636609 → 0.620706）、Attention `+0.020590`（0.741829 → 0.721239）。
+> 候选判读用**相对父版本的差值变化 `Δ(gain_in − gain_ood)`**，不用绝对差值。
+> 数据：`artifacts/official_eval/ood.json`、`logs/official_eval/ood.md`；执行记录
+> `logs/execution/2026-09-04-ood-suite-baseline-v182.md`。
+
 所有本地失效的根源是同一条：**本地校准窗口与测试窗口同源于 WikiText-2**，
 因此"拟合本地窗口统计"的解在本地永远看不出问题，只在官方隐藏数据上崩。
 

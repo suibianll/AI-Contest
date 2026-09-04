@@ -64,6 +64,16 @@ MODEL_PATH = ROOT / "models" / MODEL_NAME
 DATA_DIR = ROOT / "data" / "wikitext-2-raw-v1"
 CACHE_DIR = ROOT / "artifacts" / "official_eval" / "cache"
 DEFAULT_CACHE = CACHE_DIR / f"{MODEL_NAME}-{PROTOCOL}.pt"
+# OOD generalization suite: same calibration (WikiText), different test text.
+# Detects candidates whose local gain comes from fitting local window
+# statistics; the actionable metric is ``gain_in_dist - gain_ood`` against a
+# matching proxy-v2 run.  See ``docs/official-local-fitting-analysis-2026-09-04.md`` §6.
+OOD_DATA_DIR = ROOT / "data" / "ood-suite-v1"
+OOD_SUITE = "ood-suite-v1"
+OOD_CACHE = CACHE_DIR / f"{MODEL_NAME}-{PROTOCOL}-ood.pt"
+OOD_WINDOW_LENGTHS = (10, 128, 512, 1024, 1024)
+OOD_ATTENTION_LAYERS = 8
+OOD_CASE_DESIGN = "ood-generalization-panel-v1"
 CALIBRATION_LENGTHS = (10, 128, 512, 1024, 1024)
 TEST_LENGTH = 128
 TEST_LENGTHS = (10, 128, 512, 1024, 1024, 10, 128, 512, 1024, 1024, 128, 512)
@@ -367,6 +377,66 @@ def _select_test_windows(tokenizer: Any, rows_by_split: Mapping[str, Sequence[st
     return selected
 
 
+def _discover_ood_files() -> dict[str, Path]:
+    """Map OOD domain name -> parquet path from ``data/ood-suite-v1``."""
+    if not OOD_DATA_DIR.is_dir():
+        return {}
+    files: dict[str, Path] = {}
+    for path in sorted(OOD_DATA_DIR.glob("*-00000-of-00001.parquet")):
+        files[path.name.split("-")[0]] = path
+    return files
+
+
+def _select_ood_windows(tokenizer: Any) -> list[Window]:
+    """Pick deterministic, non-overlapping holdout windows per OOD domain.
+
+    One window per entry of ``OOD_WINDOW_LENGTHS`` per domain; the window
+    ``split`` carries the domain name (``code``/``news``/``zh``) so per-case
+    rows and summaries group by domain without schema changes.
+    """
+    files = _discover_ood_files()
+    if not files:
+        raise FileNotFoundError(
+            f"OOD suite is empty: {OOD_DATA_DIR} (run workbench/build_ood_corpus.py)"
+        )
+    selected: list[Window] = []
+    for domain, path in files.items():
+        rows = _load_rows(path)
+        docs = _tokenized_documents(tokenizer, rows, domain)
+        used: list[tuple[int, int]] = []
+        for index, length in enumerate(OOD_WINDOW_LENGTHS):
+            candidates: list[Window] = []
+            for document_id, row_start, row_end, ids in docs:
+                if len(ids) < length:
+                    continue
+                max_start = len(ids) - length
+                starts = {0, max_start}
+                for candidate_index in range(8):
+                    starts.add(
+                        int.from_bytes(
+                            hashlib.sha256(
+                                f"ood:{domain}:{index}:{candidate_index}:{document_id}".encode("utf-8")
+                            ).digest()[:8],
+                            "big",
+                        )
+                        % (max_start + 1)
+                    )
+                for start in sorted(starts):
+                    end = start + length
+                    if any(max(start, left) < min(end, right) for left, right in used):
+                        continue
+                    candidates.append(
+                        Window(domain, document_id, row_start, row_end, start, end, tuple(ids[start:end]))
+                    )
+            candidates.sort(key=lambda item: hashlib.sha256(repr(item).encode("utf-8")).hexdigest())
+            if not candidates:
+                raise RuntimeError(f"OOD domain '{domain}' has no non-overlapping window of length {length}")
+            found = candidates[0]
+            selected.append(found)
+            used.append((found.token_start, found.token_end))
+    return selected
+
+
 def _apply_rope(q: torch.Tensor, k: torch.Tensor, rope: tuple[torch.Tensor, torch.Tensor]) -> tuple[torch.Tensor, torch.Tensor]:
     from transformers.models.qwen2.modeling_qwen2 import apply_rotary_pos_emb
 
@@ -532,6 +602,59 @@ def capture_pack(device_name: str) -> RawPack:
             torch.cuda.empty_cache()
 
 
+def capture_ood_pack(device_name: str, base_cache_path: Path) -> RawPack:
+    """Capture OOD test tensors while reusing in-dist weights and calibration.
+
+    Calibration deliberately stays WikiText: the deployment question is
+    "how does the calibrated operator behave on text it was not calibrated
+    for", so the OOD pack differs from the in-dist pack only in test windows.
+    """
+    device = torch.device(device_name)
+    if base_cache_path.is_file():
+        base = load_pack(base_cache_path)
+    else:
+        base = capture_pack(device_name)
+        save_pack(base, base_cache_path)
+    files = _discover_ood_files()
+    tokenizer, model = _load_qwen(device)
+    try:
+        ood_windows = _select_ood_windows(tokenizer)
+        test_act, test_qkv = _capture_windows(model, ood_windows, device)
+        metadata = {
+            "protocol": PROTOCOL,
+            "model": MODEL_NAME,
+            "linear_roles": list(ROLES),
+            "model_path": str(MODEL_PATH),
+            "model_revision": base.metadata.get("model_revision"),
+            "dataset": OOD_SUITE,
+            "base_dataset": base.metadata.get("dataset"),
+            "ood_files": {domain: path.name for domain, path in sorted(files.items())},
+            "calibration_source": "wikitext-2-raw-v1 (shared with the in-dist pack)",
+            "calibration_lengths": list(CALIBRATION_LENGTHS),
+            "ood_window_lengths": list(OOD_WINDOW_LENGTHS),
+            "test_length": TEST_LENGTH,
+            "test_lengths": list(OOD_WINDOW_LENGTHS),
+            "test_window_count": len(ood_windows),
+            "test_splits": sorted({window.split for window in ood_windows}),
+            "capture_device": str(device),
+            "weights_dtype": "float32",
+            "weight_layout": "[out_features, in_features]",
+            "input_codec": NVFP4_INPUT_CODEC,
+            "input_mode": NVFP4_MODE,
+            "data_sha256": {domain: sha256_file(path) for domain, path in files.items()},
+        }
+        return RawPack(
+            base.weights, base.calibration_activations, test_act,
+            base.calibration_qkv, test_qkv,
+            base.calibration_windows, ood_windows, base.layers, base.hidden_size,
+            base.q_heads, base.kv_heads, base.head_dim, metadata,
+        )
+    finally:
+        del model
+        if device.type == "cuda":
+            torch.cuda.empty_cache()
+
+
 def save_pack(pack: RawPack, path: Path) -> None:
     payload = {
         "protocol": PROTOCOL,
@@ -579,12 +702,31 @@ def load_pack(path: Path) -> RawPack:
         )
     calibration_windows = [_window_from_payload(item) for item in payload["calibration_windows"]]
     test_windows = [_window_from_payload(item) for item in payload["test_windows"]]
+    metadata_early = payload.get("metadata")
+    ood_suite = isinstance(metadata_early, Mapping) and str(metadata_early.get("dataset", "")).startswith("ood")
     if [len(window.input_ids) for window in calibration_windows] != list(CALIBRATION_LENGTHS):
         raise RuntimeError("calibration data pack has wrong variable-length schedule")
-    if len(test_windows) != TEST_WINDOW_COUNT:
-        raise RuntimeError(f"data pack has {len(test_windows)} test windows; expected {TEST_WINDOW_COUNT}")
-    if [len(window.input_ids) for window in test_windows] != list(TEST_LENGTHS):
-        raise RuntimeError("test data pack has wrong variable-length schedule")
+    if ood_suite:
+        # OOD suite: one window per (domain, OOD_WINDOW_LENGTHS); the schedule
+        # is recorded in metadata instead of the fixed 12-window in-dist plan.
+        declared_splits = {str(split) for split in metadata_early.get("test_splits", [])}
+        declared_lengths = {
+            int(length) for length in metadata_early.get("ood_window_lengths", OOD_WINDOW_LENGTHS)
+        }
+        if {window.split for window in test_windows} != declared_splits:
+            raise RuntimeError("OOD data pack splits do not match its metadata")
+        expected_ood_windows = len(declared_splits) * len(OOD_WINDOW_LENGTHS)
+        if len(test_windows) != expected_ood_windows:
+            raise RuntimeError(
+                f"OOD data pack has {len(test_windows)} test windows; expected {expected_ood_windows}"
+            )
+        if any(len(window.input_ids) not in declared_lengths for window in test_windows):
+            raise RuntimeError("OOD data pack has windows outside the declared length schedule")
+    else:
+        if len(test_windows) != TEST_WINDOW_COUNT:
+            raise RuntimeError(f"data pack has {len(test_windows)} test windows; expected {TEST_WINDOW_COUNT}")
+        if [len(window.input_ids) for window in test_windows] != list(TEST_LENGTHS):
+            raise RuntimeError("test data pack has wrong variable-length schedule")
     weights = payload["weights"]
     layers = int(payload["layers"])
     hidden_size = int(payload["hidden_size"])
@@ -706,7 +848,7 @@ def load_pack(path: Path) -> RawPack:
     ]
     if len(set(window_keys)) != len(window_keys):
         raise RuntimeError("test data pack contains duplicate holdout windows")
-    if {window.split for window in test_windows} != {"validation", "test"}:
+    if not ood_suite and {window.split for window in test_windows} != {"validation", "test"}:
         raise RuntimeError("test data pack must contain both validation and test holdout windows")
     return RawPack(
         weights, payload["calibration_activations"], payload["test_activations"],
@@ -743,6 +885,8 @@ def _choose_cases(
     full_cases: bool = False,
     effect_panel: bool = False,
     compact_panel: bool = False,
+    panel_window_indices: tuple[int, ...] | None = None,
+    attention_layer_indices: tuple[int, ...] | None = None,
 ) -> tuple[list[LinearCase], list[AttentionCase]]:
     """Select a deterministic real-W/A panel; optional limits are smoke-only.
 
@@ -754,8 +898,12 @@ def _choose_cases(
     plus five depth/length-spread Attention sentinels for paired iteration.
     ``compact_panel`` uses four depth-spread layers and paired validation/test
     holdouts while creating only the states reachable from those cases.
-    All modes use captured tensors; ``linear_count`` and ``attention_count``
-    are only development prefix limits and are never a ranking panel.
+    ``panel_window_indices``/``attention_layer_indices`` override the default
+    default-panel window set and Attention depth set (OOD mode uses all OOD
+    windows with a depth-spread Attention subset); both are None for every
+    in-dist panel.  All modes use captured tensors; ``linear_count`` and
+    ``attention_count`` are only development prefix limits and are never a
+    ranking panel.
     """
     if len(pack.test_windows) == 0 or len(pack.calibration_windows) == 0:
         raise RuntimeError("case pool has no calibration/test windows")
@@ -781,7 +929,13 @@ def _choose_cases(
         ]
     else:
         panel_windows = tuple(
-            index for index in PANEL_WINDOW_INDICES if index < len(pack.test_windows)
+            index
+            for index in (
+                panel_window_indices
+                if panel_window_indices is not None
+                else PANEL_WINDOW_INDICES
+            )
+            if index < len(pack.test_windows)
         )
         if not panel_windows:
             raise RuntimeError("case pool has no windows in the default panel")
@@ -871,7 +1025,11 @@ def _choose_cases(
             attention_pool = [
                 (layer, test_window)
                 for test_window in panel_windows
-                for layer in range(pack.layers)
+                for layer in (
+                    attention_layer_indices
+                    if attention_layer_indices is not None
+                    else range(pack.layers)
+                )
             ]
     if linear_count is not None:
         if linear_count <= 0:
@@ -904,6 +1062,7 @@ def prepare_pack(
     effect_panel: bool = False,
     compact_panel: bool = False,
     evaluation_scenario: str = "both",
+    ood: bool = False,
 ) -> PreparedPack:
     # Keep every calibration window available for Attention.  Linear follows
     # the public call graph: one calibration state per layer/role, using the
@@ -920,6 +1079,17 @@ def prepare_pack(
         raise RuntimeError("data pack has no Linear calibration windows")
     linear_calibration_windows = [raw.calibration_windows[index] for index in linear_calibration_indices]
     roles = tuple(raw.roles)
+    # OOD mode: every OOD test window enters the Linear rotation, while
+    # Attention uses a depth-spread subset so case counts stay comparable
+    # with the in-dist default panel (168 Linear + 120 Attention).
+    if ood:
+        ood_panel_windows = tuple(range(len(raw.test_windows)))
+        ood_attention_layers = _depth_spread_indices(
+            raw.layers, min(OOD_ATTENTION_LAYERS, raw.layers)
+        )
+    else:
+        ood_panel_windows = None
+        ood_attention_layers = None
     linear_cases, attention_cases = _choose_cases(
         raw,
         linear_count,
@@ -927,6 +1097,8 @@ def prepare_pack(
         full_cases=full_cases,
         effect_panel=effect_panel,
         compact_panel=compact_panel,
+        panel_window_indices=ood_panel_windows,
+        attention_layer_indices=ood_attention_layers,
     )
     run_linear = evaluation_scenario in {"both", "linear"}
     run_attention = evaluation_scenario in {"both", "attention"}
@@ -983,7 +1155,10 @@ def prepare_pack(
         "nvfp4_mode": NVFP4_MODE,
         "input_codec": NVFP4_INPUT_CODEC,
         "case_design": (
-            FULL_CASE_DESIGN
+            OOD_CASE_DESIGN
+            if ood and linear_count is None and attention_count is None
+            and not full_cases and not effect_panel and not compact_panel
+            else FULL_CASE_DESIGN
             if full_cases and linear_count is None and attention_count is None
             else EFFECT_CASE_DESIGN
             if effect_panel and linear_count is None and attention_count is None
@@ -993,7 +1168,12 @@ def prepare_pack(
             if not full_cases and linear_count is None and attention_count is None
             else "explicit-smoke-prefix-v4"
         ),
-        "panel_window_indices": list(PANEL_WINDOW_INDICES),
+        "panel_window_indices": list(
+            ood_panel_windows if ood_panel_windows is not None else PANEL_WINDOW_INDICES
+        ),
+        "attention_panel_layers": (
+            list(ood_attention_layers) if ood_attention_layers is not None else None
+        ),
         "full_cases": full_cases,
         "effect_panel": effect_panel,
         "compact_panel": compact_panel,
@@ -1024,9 +1204,10 @@ def _nvfp4_cache_profile(
     effect_panel: bool,
     compact_panel: bool,
     evaluation_scenario: str,
+    ood: bool = False,
 ) -> dict[str, Any]:
     """Return the exact evaluator-input profile covered by one NVFP4 cache."""
-    return {
+    profile = {
         "protocol": PROTOCOL,
         "input_codec": NVFP4_INPUT_CODEC,
         "nvfp4_mode": NVFP4_MODE,
@@ -1037,6 +1218,10 @@ def _nvfp4_cache_profile(
         "compact_panel": bool(compact_panel),
         "evaluation_scenario": evaluation_scenario,
     }
+    # Keyed only when set so pre-existing in-dist cache profiles compare equal.
+    if ood:
+        profile["ood"] = True
+    return profile
 
 
 def _default_nvfp4_cache_path(source_path: Path, profile: Mapping[str, Any]) -> Path:
@@ -1206,6 +1391,16 @@ def _evaluation_scope(pack: PreparedPack) -> dict[str, Any]:
     linear_cases = len(pack.linear_cases)
     attention_cases = len(pack.attention_cases)
     default_counts = pack.layers * len(pack.roles), pack.layers * len(PANEL_WINDOW_INDICES)
+    if design == OOD_CASE_DESIGN:
+        return scoped({
+            "kind": "ood-generalization-panel",
+            "intent": "overfitting-diagnosis-only-gain-in-minus-gain-ood",
+            "comparable_for_proxy_ranking": False,
+            "paired_only": True,
+            "stress_only": False,
+            "smoke_only": False,
+            "official_score_equivalent": False,
+        })
     if design == DEFAULT_CASE_DESIGN and (linear_cases, attention_cases) == default_counts:
         return scoped({
             "kind": "default-panel",
@@ -1516,6 +1711,41 @@ def _distribution_summary(values: Sequence[float]) -> dict[str, Any]:
         "negative_cases": sum(value < 0.0 for value in ordered),
         "zero_cases": sum(value == 0.0 for value in ordered),
     }
+
+
+def _ood_suite_summary(
+    linear_details: Sequence[Mapping[str, Any]],
+    attention_details: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Per-domain gain summary for an OOD-suite run.
+
+    ``gain`` keeps the proxy-v2 definition; the actionable overfitting signal
+    is ``gain_in_dist - gain_ood`` computed against a matching in-dist run of
+    the same solution (paired by candidate, not by case identity).
+    """
+    summary: dict[str, Any] = {
+        "suite": OOD_SUITE,
+        "definition": (
+            "per-case gain = (MSE_STD - MSE_PLAYER)/MSE_STD; overfitting signal "
+            "= gain_in_dist - gain_ood against a matching proxy-v2 run of the same solution"
+        ),
+        "calibration": "in-dist WikiText calibration (shared with the base pack)",
+    }
+    for name, items in (("linear", linear_details), ("attention", attention_details)):
+        gains = [float(item["gain"]) for item in items if "gain" in item]
+        domains = sorted({str(item.get("test_split")) for item in items})
+        summary[name] = {
+            "overall": _distribution_summary(gains),
+            "by_domain": {
+                domain: _distribution_summary([
+                    float(item["gain"])
+                    for item in items
+                    if item.get("test_split") == domain and "gain" in item
+                ])
+                for domain in domains
+            },
+        }
+    return summary
 
 
 def _linear_generalization_summary(items: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
@@ -2541,6 +2771,11 @@ def evaluate_solution(
             "reason": "scenario-disabled" if not run_attention else "decomposition-disabled",
         }
     scope = _evaluation_scope(pack)
+    ood_summary = (
+        _ood_suite_summary(linear_details, attention_details)
+        if str(pack.metadata.get("dataset", "")).startswith("ood")
+        else None
+    )
     linear_generalization = {
         "enabled": bool(run_linear and linear_details),
         "overall": _linear_generalization_summary(linear_details),
@@ -2598,6 +2833,7 @@ def evaluate_solution(
         "analysis": {
             "linear_generalization": linear_generalization,
         },
+        **({"ood_summary": ood_summary} if ood_summary is not None else {}),
         "diagnostic_config": {
             "error_source_decomposition": decomposition,
             "evaluation_scenario": scenario,
@@ -2839,6 +3075,38 @@ def _write_report(
         f"| Candidate wall | {timing['wall_seconds']:.3f}s |",
         f"| Candidate API total | {timing['api_total_seconds']:.3f}s |",
     ]
+    ood_summary = result.get("ood_summary")
+    if ood_summary:
+        lines.extend([
+            "",
+            "## OOD 泛化摘要",
+            "",
+            f"- suite: `{ood_summary.get('suite')}`；calibration: `{ood_summary.get('calibration')}`",
+            f"- 定义：{ood_summary.get('definition')}",
+            "",
+            "| 侧 | 域 | cases | gain mean | median | worst-quartile | 正/负/零 |",
+            "|---|---|---:|---:|---:|---:|---:|",
+        ])
+        for side in ("linear", "attention"):
+            side_summary = ood_summary.get(side, {})
+            if not side_summary:
+                continue
+            for domain, stats in side_summary.get("by_domain", {}).items():
+                lines.append(
+                    f"| {side} | {domain} | {stats.get('count', 0)} | {stats.get('mean', 0.0):.6f} | "
+                    f"{stats.get('median', 0.0):.6f} | {stats.get('worst_quartile_mean', 0.0):.6f} | "
+                    f"{stats.get('positive_cases', 0)}/{stats.get('negative_cases', 0)}/{stats.get('zero_cases', 0)} |"
+                )
+            overall = side_summary.get("overall", {})
+            lines.append(
+                f"| {side} | **overall** | {overall.get('count', 0)} | {overall.get('mean', 0.0):.6f} | "
+                f"{overall.get('median', 0.0):.6f} | {overall.get('worst_quartile_mean', 0.0):.6f} | "
+                f"{overall.get('positive_cases', 0)}/{overall.get('negative_cases', 0)}/{overall.get('zero_cases', 0)} |"
+            )
+        lines.extend([
+            "",
+            "OOD 均值不参与 proxy 排名；候选是否过拟合看 `gain_in − gain_ood`（与同 solution 的 in-dist proxy-v2 运行相减）。",
+        ])
     linear_generalization = analysis.get("linear_generalization", {})
     if linear_generalization.get("enabled"):
         lines.extend([
@@ -3304,6 +3572,17 @@ def _run_saved_comparison(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def run(args: argparse.Namespace) -> dict[str, Any]:
+    ood_mode = bool(getattr(args, "ood", False))
+    if ood_mode and (args.archive or args.full_cases or args.effect_panel or args.compact_panel):
+        raise ValueError(
+            "--ood runs the fixed OOD generalization panel only; it cannot be combined "
+            "with --archive/--full-cases/--effect-panel/--compact-panel"
+        )
+    if ood_mode:
+        if args.output == ROOT / "artifacts" / "official_eval" / "archive.json":
+            args.output = ROOT / "artifacts" / "official_eval" / "ood.json"
+        if args.report == ROOT / "logs" / "official_eval" / "archive.md":
+            args.report = ROOT / "logs" / "official_eval" / "ood.md"
     if args.candidate_json is not None:
         if args.solution is not None or args.archive:
             raise ValueError("--candidate-json cannot be combined with --solution or --archive")
@@ -3318,6 +3597,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         )
     focus_roles = _focus_selectors(args.focus_linear_roles)
     cache_path = args.cache.resolve()
+    if ood_mode and args.cache == DEFAULT_CACHE:
+        cache_path = OOD_CACHE.resolve()
     nvfp4_profile = _nvfp4_cache_profile(
         linear_count=args.linear_cases,
         attention_count=args.attention_cases,
@@ -3325,6 +3606,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         effect_panel=args.effect_panel,
         compact_panel=args.compact_panel,
         evaluation_scenario=args.evaluation_scenario,
+        ood=ood_mode,
     )
     nvfp4_cache_path = (
         args.nvfp4_cache.resolve()
@@ -3354,8 +3636,12 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         elif args.cache_mode == "read":
             raise FileNotFoundError(f"dense data cache does not exist: {cache_path}")
         else:
-            raw = capture_pack(args.capture_device)
-            data_source = "model_forward"
+            if ood_mode:
+                raw = capture_ood_pack(args.capture_device, DEFAULT_CACHE)
+                data_source = "model_forward_ood"
+            else:
+                raw = capture_pack(args.capture_device)
+                data_source = "model_forward"
             if args.cache_mode in {"auto", "write"}:
                 save_pack(raw, cache_path)
         prepared = prepare_pack(
@@ -3366,6 +3652,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             effect_panel=args.effect_panel,
             compact_panel=args.compact_panel,
             evaluation_scenario=args.evaluation_scenario,
+            ood=ood_mode,
         )
         prepared.metadata["nvfp4_cache_hit"] = False
         prepared.metadata["nvfp4_cache_path"] = str(nvfp4_cache_path)
@@ -3574,6 +3861,15 @@ def build_parser() -> argparse.ArgumentParser:
         "--compact-panel",
         action="store_true",
         help="low-cost generalization panel: four depth-spread layers, two cross-split holdouts per Linear role, and only selected calibration states",
+    )
+    parser.add_argument(
+        "--ood",
+        action="store_true",
+        help=(
+            "evaluate on the OOD generalization suite (data/ood-suite-v1): calibration stays "
+            "WikiText, test windows come from code/news/zh domains; per-domain gains plus "
+            "gain_in - gain_ood against a matching proxy-v2 run detect local-distribution overfitting"
+        ),
     )
     parser.add_argument("--capture-device", default="cuda" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--algorithm-device", default="cuda" if torch.cuda.is_available() else "cpu")
