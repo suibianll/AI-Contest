@@ -398,7 +398,7 @@ ROAB、无约束 sweep、PAWV 或多轮在线搜索。
 > 2026-09-04 LOO 定量检验：最优逐 case 特征组合 MAE ≈ **1108 分**，而单步官方增益只有 1~123 分；
 > 且 L1 与官方 Δ **负相关**（ρ = −0.469）。应读作「本地数值对官方绝对分不携带可用信息」，
 > 而非「弱迁移」。见
-> [修订清单 §9.1](../../../../stale-information-inventory-2026-09-04.md)。
+> [修订清单 §9.1](../../../stale-information-inventory-2026-09-04.md)。
 
 **后续计划**：官方规律辨识与 Linear 结构实验转入
 `2026-09-03-official-pattern-and-linear-structure-experiments.md`。旧计划不再追加实验。

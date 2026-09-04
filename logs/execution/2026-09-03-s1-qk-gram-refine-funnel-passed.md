@@ -31,6 +31,10 @@ dyn refine 实测 `0.095s/call`。
 | B Qwen compact | `+0.021571`（2+/2−），API 持平 |
 | C Qwen default 120 | **`+0.052502`（106+/14−，touch 88.3%，median +0.040）**，API +28.0s ≤ +40s 门禁 |
 | C GPT-2 compact | **`+0.067751`（3+/1−）同号** |
+> **[2026-09-04 修订]** 「GPT-2 同号」**不计入漏斗通过项**（探针与官方排序 ρ = −0.071）。
+> 本表 "C GPT-2" 行与下方 "D1 全过 → 预测官方正向" 的判断依据中，GPT-2 一项失效；
+> 最终 v161 官方 timeout 也印证了本地正向（含跨模型同号）不迁移官方。
+> 见 [修订清单 §1](../../docs/stale-information-inventory-2026-09-04.md)。
 | D | SHA `27EEE471...1848`；隔离导入 ✓；归档 `solutions/20260903_v161_v160-attn-s1-qk-gram-refine_scoreNA_timeNA/` |
 
 **D1 预注册判别器全过 → 预测官方正向**（3/3 → 若正向 4/4）。

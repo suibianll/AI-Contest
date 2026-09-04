@@ -26,6 +26,9 @@ Q/K Cross-Gram64 per-call 动态精化。v164 官方为 `13945 / 204s`，v165 �
 
 - 本地 Qwen Attention default paired `+0.052502`、`106+/14-`，GPT-2 同号；这些结果不能
   推断官方精度。
+  > **[2026-09-04 修订]** 本句结论方向正确但可更明确：不仅是"不能推断"，而是**任何本地数值
+  > 都不能换算官方分**（LOO MAE ≈ 1108 分）；GPT-2 探针本身与官方排序 ρ = −0.071，连旁证都
+  > 不算。见 [修订清单 §1 / §9.1](../../docs/stale-information-inventory-2026-09-04.md)。
 - v165 不重试，不缩原 Cross-Gram64 路径的 sweep、block 或阈值。
 - 当前活动计划继续执行一次同数学目标的低复杂度 rank-2 Gram 残差码本重构。
 - 若该重构仍 timeout，当前动态 Gram Attention 目标关闭。
