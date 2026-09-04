@@ -25,12 +25,14 @@
   `P_L=v166（4590/226s）`、`P_A=v168（14005/210s）`。oracle 分解方法论
   （穷举→二分定位→最小产物）首次产出官方晋级。
 
-- **v187（v185 clean-room + Attention Jacobian 坐标敏感度）本地 RESEARCH RETAINED，
-  不提交**：唯一新机制把完整 Attention 输出的一阶 Jacobian 压缩为 KV-group 共享的
+- **v187（v185 clean-room + Attention Jacobian 坐标敏感度）官方 `9167/169s`，
+  相对 v185 `+721/+4s`，机制 RETAINED、但不作为完整父**：唯一新机制把完整 Attention
+  输出的一阶 Jacobian 压缩为 KV-group 共享的
   Q/K `KV-head×64` importance，经 leave-one-fold-out gate 后在线只应用固定权重；Linear/V
   不变。7/24 层可达；相对 v185 default `Δmean +0.015187`、L1 `0.016199<0.02`、
-  `32+/3-/85=`，但相对 v186 仍 `-0.333220`、116/120 回归。机制解析假设成立，保留为
-  clean-room 研究父；未接近官方父，不占配额、不移根文件。
+  `32+/3-/85=`；官方大幅正向确认机制有效且时间代价仅 4s。但总分仍比 v186 少 `8432`，
+  所以只保留为 clean-room 研究父，不移根文件；下一步应把相同解析机制单独移植到 v186，
+  不扫描收缩/clamp/gate 邻域。
 
 - **v185 clean-room 稳健算子量化重写官方 `8446/165s`，REJECTED**：不继承历史
   `solution.py`，从六 API/HiF4 合法域实现解析 Linear 对角平衡与 Attention K-center、
@@ -87,7 +89,8 @@
   v186 为第 6 个（6/10，官方 `17599/272s` +1 RETAINED 成为新完整父；
   oracle 分解方法论首产官方晋级），
   v185 为第 7 个（7/10，官方 `8446/165s`，算法大幅负向 REJECTED），
-  剩余 3**。每新增一个候选扣 1
+  v187 为第 8 个（8/10，官方 `9167/169s`，相对 v185 +721，机制 RETAINED），
+  剩余 2**。每新增一个候选扣 1
   配额，官方负向不退还。SOTA 搜索（二至五轮：KVLinC/
   VecInfer/ResQ/OTT、ScaleSweep/H-Scale、MXFP4 误差三分量/HCP/ARCQuant、QuantVLA
   温度匹配/SageBwd/谱界）均落入已闭合域或 A1 已覆盖域，不注册新候选。官方裁决后

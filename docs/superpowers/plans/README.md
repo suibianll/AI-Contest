@@ -9,7 +9,8 @@
 
 **当前无活动计划（2026-09-04）**。v187 Attention Jacobian 敏感度机制相对 v185
 default `+0.015187`、L1 `0.016199`，证明解析 importance 有效；但相对 v186仍
-`-0.333220`、116/120 回归，已归档为 RESEARCH RETAINED，不提交。计划见
+`-0.333220`、116/120 回归，已归档为 RESEARCH RETAINED。随后官方 `9167/169s`，
+相对 v185 `+721/+4s`，确认机制有效但仍不足以替换 v186。计划见
 [`归档记录`](../archive/plans/2026-09-04-v187-attention-jacobian-sensitivity-plan-research-retained.md)。
 
 v185 官方 `8446/165s`，相对 v186 少 `9153` 分；原 K-center/QK-balance/gamma/refine

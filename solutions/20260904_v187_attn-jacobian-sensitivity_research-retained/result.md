@@ -1,6 +1,6 @@
 # v187 Attention Jacobian 敏感度加权 HiF4
 
-> 状态：RESEARCH RETAINED / NOT SUBMITTED
+> 状态：OFFICIAL POSITIVE / RESEARCH RETAINED — `9167 / 169s`
 >
 > Parent：v185 clean-room（官方 8446 / 165s）。Linear 与 V 不变；唯一改动是把解析
 > Attention 输出 Jacobian 对角敏感度用于 Q/K HiF4 坐标加权，并经 leave-one-fold-out gate。
@@ -28,11 +28,12 @@ Linear 与 V 完全不变。
 
 ## 裁决
 
-该解析机制通过 R2，说明最终输出敏感度比等权重建更合理；但它无法弥补 v185 与成熟 v186
-之间的机制差距。保留为 clean-room RESEARCH RETAINED 父，不提交、不占配额、不扫描参数邻域。
+该解析机制通过 R2，说明最终输出敏感度比等权重建更合理。官方相对 v185 `+721/+4s`，
+进一步确认它能泛化到隐藏评测；但它无法弥补 v185 与成熟 v186 之间的机制差距。保留为
+clean-room RESEARCH RETAINED 父，不扫描参数邻域；根文件继续使用 v186。
 
 ## 官方
 
-- Score：NA
-- Time：NA
-- Status：not submitted
+- Score：9167
+- Time：169s
+- Status：official positive vs v185 / research retained / not full parent
