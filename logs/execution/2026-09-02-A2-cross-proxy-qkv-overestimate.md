@@ -59,4 +59,6 @@
   并以官方单变量回传为最终裁决；
 
 - Attention（非静态 q/k/v 编码）仍是与官方同序（Spearman 0.85）的有效面，保持不变。
+  > **[2026-09-04 作废]** 「Attention 与官方 Spearman 0.85」来自 5 折 cluster，不外推。
+  > 见 [修订清单 §8](../../../docs/stale-information-inventory-2026-09-04.md)。
 

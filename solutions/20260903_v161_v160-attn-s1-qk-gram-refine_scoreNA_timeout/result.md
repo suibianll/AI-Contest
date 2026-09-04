@@ -32,6 +32,10 @@ Attention Q/K 的 per-call 交叉算子 Gram64 精化（v128 家族机制的 v16
 | B Qwen compact 4 哨兵 | `0.797462→0.819033`，paired `+0.021571`（2+/2−），median `+0.000561`，API `10.4s`（parent `10.8s`） | `s1-gram-refine-attn-compact.json` |
 | C Qwen default 120 | `0.742354→0.794856`，**paired `+0.052502`（106+/14−/0，touch 88.3%）**，median `+0.040285`，MSE ratio `0.817`；attention API `85.995s` vs parent `57.97s`（+28.0s，通过本地 +40s 门禁；dyn Q/K `0.092s/call` CUDA，calib `2.62s/call`） | `s1-gram-refine-attn-default.json` |
 | C GPT-2 compact 同号 | `+0.067751`（3+/1−），median `+0.056450`，与 Qwen 同向同量级 | `s1-gram-refine-gpt2-attn-compact.json` |
+> **[2026-09-04 修订]** 「GPT-2 同号」**不构成晋级旁证**：GPT-2 / opt 探针与官方排序
+> Spearman ρ = −0.071 / −0.200，不携带官方排序信息。v161 官方 timeout 的真正解释由时间分解
+> 模型给出（本地 Attention 动态 1 秒在官方值 0.734 秒）。见
+> [修订清单 §1 / §3](../../../docs/stale-information-inventory-2026-09-04.md)。
 | D | SHA、单文件隔离导入、本 result.md | — |
 | **E 官方** | **timeout（`>300s`，无分数）** | 用户回传 2026-09-03 |
 
@@ -52,6 +56,8 @@ timeout 使精度方向未被检验——D1 证据维持 3/3，v161 不计入（
   官方机上也超预算**——此前"dyn refine 仅 0.08s/call"的本地 CUDA 口径核算不适用于
   官方硬件；
 - 精度余量（本地 default +0.0525、GPT-2 同号）在官方 300s 预算内无法回收，per-call
+  > **[2026-09-04 修订]** 「本地 +0.0525、GPT-2 同号」均不作为官方方向的依据（见上标注）。
+  > 见 [修订清单 §1](../../../docs/stale-information-inventory-2026-09-04.md)。
   动态自适应族结构性关闭。
 
 ## 4. 官方提交与解释（预注册，已回传）

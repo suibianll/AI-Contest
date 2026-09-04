@@ -7,17 +7,26 @@
 `evaluator/official_eval.py`，跨模型泛化调用 `evaluator/cross_model_eval.py`；旧
 `real_model_suite.py` 已退役。
 
-**当前无活动计划（2026-09-04）**。v183 官方 `17598/279.7s`，与 v182 同分且慢
-`6.7s`，已按预注册规则 REJECTED；attention block-smooth refine 覆盖率族关闭，计划见
+**当前活动计划（2026-09-04）**：
+[`2026-09-04-v185-cleanroom-robust-operator-quantization-plan.md`](2026-09-04-v185-cleanroom-robust-operator-quantization-plan.md)
+——按用户要求不继承现有实现，从六 API 和 HiF4 合法域开始重写一个低有效自由度的稳健
+算子量化器。Linear 使用 identity-shrunk 解析对角等价变换和跨折 MatMul gate；Attention
+使用 K 精确中心化、KV-head 共享 Q/K 平衡、收缩 logits gain 与跨折门控 `+4` scale code。
+v182/v180 父版本和 v184 工作区均不修改。
+
+v183 官方 `17598/279.7s`，与 v182 同分且慢 `6.7s`，已按预注册规则 REJECTED；
+attention block-smooth refine 覆盖率族关闭，计划见
 [`归档记录`](../archive/plans/2026-09-04-v183-attn-bsm-full-refine-plan-rejected.md)。
-v182 仍是分数父（`17598/273s`），v180 仍是时间预算父（`17597/242s`）；配额 `4/10`，
-剩余 6。任何下一候选须先注册新的单机制计划。
 
 当日已归档：低复杂度算法扩展计划（A1-A4/L1-L4/组合全覆盖，
 `-superseded`）、v162 官方侧向隔离优化计划（v165 timeout、v167 本地
 REJECTED、v166 rank-1 官方 `4590/226s` RETAINED 为新 Linear 父侧，`-superseded`）、官方两侧分数比重校准计划
 （v162 `1001/146s`、v163 `4587/202s`、v164
 `13945/204s`，score interaction 为 1，当前已实现 Attention:Linear 官方贡献约 `3.61:1`）、
+> **[2026-09-04 复核]** `3.61:1` 正确（v182 口径 `C_A/C_L = 13007/3590 = 3.62` 一致）。但
+> `official-local-fitting-analysis-2026-09-04.md` §3.2 初版误用侧隔离总分当侧贡献，得出 `3.05`
+> ——算术错误（未扣 1001 零点），已在原文勘误，不得引用。见
+> [修订清单 §10](../../stale-information-inventory-2026-09-04.md)。
 Attention per-call 序列自适应精化计划（v161 官方 timeout，per-call 动态族关闭）、Attention
 解析式宽域计划（A1a 4×4 REJECTED、A2 无病因、A3 未启动）与 Householder 快速验证计划
 （全族 REJECTED），见

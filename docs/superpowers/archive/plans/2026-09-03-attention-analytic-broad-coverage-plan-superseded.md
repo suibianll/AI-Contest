@@ -37,6 +37,9 @@ Linear 侧两个正交结构假设均已闭环否定（full64 REJECTED；Househo
    +741（v140→v147），轴向余量远未饱和；
 2. 本地 Attention 与官方 Spearman `0.846`（Linear 为 `−0.61`）：QK 误差耦合是
    `softmax(QK^T)V` 的算术性质，跨模型成立，不依赖模型特异几何；
+   > **[2026-09-04 作废]** 「0.846 / −0.61」来自 5 折 cluster（reeval5），不外推；跨模型探针
+   > 与官方排序 ρ = −0.071。见
+   > [修订清单 §1 / §8](../../../../stale-information-inventory-2026-09-04.md)。
 3. 误差集中点已被 v160-a2 default 分解定位：深层 K 是最大剩余单侧源
    （layer 22/23 K-only `−66/−201`，QK interaction `+142/+221`）；短序列 regime 误差更大
    （len10 Q-only `−36` vs len1024 `−13`）；V 近中性（`−0.0007`）不是目标；
