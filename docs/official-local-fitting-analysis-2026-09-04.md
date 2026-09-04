@@ -317,6 +317,14 @@ T_official ≈ 170.3 + 0.1154·W_calib + 0.6939·A_calib + 0.7344·dyn_act − 1
 > 候选判读用**相对父版本的差值变化 `Δ(gain_in − gain_ood)`**，不用绝对差值。
 > 数据：`artifacts/official_eval/ood.json`、`logs/official_eval/ood.md`；执行记录
 > `logs/execution/2026-09-04-ood-suite-baseline-v182.md`。
+>
+> **[2026-09-04 标定完成]** 五版本标定（v158/v160/v168/v171/v176，SHA 均与台账核对）
+> 结论：gap 家族带稳定（Attention +0.015~0.022、当前 Linear 谱系 ≈+0.016）；**小幅官方负
+> （v171 −348 / v176 −41）在 OOD 上无特征**（v176 的 OOD 增益甚至高于父，负向来自
+> in-dist），故 OOD 判据只拦截分布拟合型大失败（v140/v155/v156 的 −1163 级，不在本
+> 标定集内），可执行阈值为 **|Δgap| > 0.01（家族带 ±0.007 之外）**；带内不作为门禁。
+> Linear 谱系演进（v158→v182）同时改善 in-dist 增益与 OOD 稳健性，与官方分互证非纯
+> 分布拟合。详见 `logs/execution/2026-09-04-ood-calibration-five-versions.md`。
 
 所有本地失效的根源是同一条：**本地校准窗口与测试窗口同源于 WikiText-2**，
 因此"拟合本地窗口统计"的解在本地永远看不出问题，只在官方隐藏数据上崩。

@@ -249,7 +249,10 @@
   120 Attention，Attention 用 8 层深度铺开 × 15 窗口）。它只做过拟合诊断，与同 SHA 的
   in-dist proxy-v2 运行相减得 `gain_in − gain_ood`（v182 基线：Linear `+0.015903`、
   Attention `+0.020590`），**不参与 proxy 排名、不能与 in-dist 结果混排**。语料由
-  `workbench/build_ood_corpus.py` 确定性重建。
+  `workbench/build_ood_corpus.py` 确定性重建。五版本标定（v158–v176）确认：小幅官方负
+  在 OOD 上无特征，OOD 只拦截分布拟合型大失败，**可执行阈值为
+  `|Δ(gain_in − gain_ood)| > 0.01`（家族带 ±0.007 之外）**，带内不作门禁；见
+  [标定记录](logs/execution/2026-09-04-ood-calibration-five-versions.md)。
 
 - 单侧场景必须隔离：`--linear-only` 不调用 Attention API，`--attention-only` 不调用 Linear
   API；本侧校准仍按共享 state 调用图执行，不按 case 制造 oracle。
@@ -296,7 +299,9 @@ Linear/Attention 权重。只有同一 `proxy-v2` cache、同一 panel、同一 
   **`Δ(gain_in − gain_ood)`**——同 solution 在 `--ood` 与 in-dist proxy-v2 各跑一次，
   与父版本的两侧差值相减；本地增益上升而 OOD gain 同步大幅下降即拟合型机制
   （v140/v155/v156 失败模式）。v182 父基线 gap：Linear `+0.015903`、Attention
-  `+0.020590`。见 [拟合分析 §6](docs/official-local-fitting-analysis-2026-09-04.md) 与
+  `+0.020590`。五版本标定确认小幅官方负无 OOD 特征，**只在 `|Δgap| > 0.01`
+  （家族带 ±0.007 之外）时作为提交禁止门禁**，带内不作门禁。见
+  [拟合分析 §6](docs/official-local-fitting-analysis-2026-09-04.md) 与
   [基线执行记录](logs/execution/2026-09-04-ood-suite-baseline-v182.md)。
 
 - 官方 mini 用例只做接口、合法性和真实形状复杂度 smoke，不用于选算法或参数；Qwen/GPT-2 等
