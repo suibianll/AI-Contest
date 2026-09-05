@@ -16,11 +16,10 @@
 
 ## 当前结论
 
-- [同坐标系误差诊断、官方贡献探针与新机制验证计划](docs/superpowers/archive/plans/2026-09-05-coordinate-consistent-error-and-official-probes-plan-completed.md)
-  已完成并归档（P0–P3 + 官方回传）：误差几乎全为纯量化扰动、Q/K 占 Attention 官方增益
-  85%、v160 Linear 官方增益全在 fc/proj 大形状桶、P4 判定 `NO_SUPPORTED_MECHANISM`，
-  当前无活动计划。执行总账见
-  [`logs/execution/2026-09-05-coordinate-error-and-probes.md`](logs/execution/2026-09-05-coordinate-error-and-probes.md)。
+- 当前唯一活动计划：[合法编码复核与最终输出优化](docs/superpowers/plans/2026-09-05-legal-codec-and-output-objective-plan.md)，
+  状态 DESIGN_ONLY。先修复最新 cb1/cb2 实验的证据缺陷，再验证合法编码及实际输出优化，
+  最后按门禁构造单机制候选。官方探针支持优先研究 Q/K 与 fc/proj；不证明这些对象的
+  剩余空间比例或编码饱和。见[证据审计](logs/execution/2026-09-05-next-plan-evidence-audit.md)。
 - 根目录 [`solution.py`](solution.py) 已同步为 v186 官方计分源码，SHA256
   `F8495DCA20334ACBDAD16FC18EE41A4970F31E1837FDEEDCEE9C70AEE54E7EB8`。v186 是分数父；
   v180 `17597/242s` 少 2 分、快 30s，继续保留为高复杂度新机制的时间预算父。两者共同构成

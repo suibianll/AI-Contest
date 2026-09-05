@@ -44,4 +44,20 @@ v176–v188 的官方分数、时间、提交先后、RETAINED/REJECTED/TIMEOUT 
 - 时间模型仍保留，但只能使用与拟合一致的 default panel 六 API 实测。分片、OOD、诊断
   附加计算及 calibration artifact 命中的耗时不能直接代入，缺失时间不按零处理。
 
-以上为解释和后续计划修订，尚未执行新诊断来量化各误差分量，也未修改旧 JSON/report。
+以上登记时尚未执行新诊断；随后诊断与官方探针已完成，旧 JSON/report 保持原样。
+
+## 4. 同日 codebook 实验及饱和推论修订
+
+依据[下一步计划证据审计](../logs/execution/2026-09-05-next-plan-evidence-audit.md)：
+
+- cb1 的精确计数混淆 dense/carrier，cb1/cb2 均未将 E_v 兼容表用于精确计数；cb2 mant
+  漏乘 NVFP4 输入 scale，并使用固定零指数 seed。负数值只代表旧程序，不能证明机制无效。
+- cb1/cb2 测的是 operand MSE，不是完整 v186 的 A@W/Attention 输出；旧“端到端证伪”失效。
+- P0 单元素可表示值并集不保证 4/8 元素共享层级可同时达到，精确率必须用合法五字段复核。
+- 连续 B² 小不证明变换空间耗尽；约 4.6% 饱和元素数量不等于裁剪误差能量占比。
+- P2 单变量非法放宽不提供合法天花板，R2/R3“全无余量”与报告部分表值不符。
+- `next-research-direction-analysis-2026-09-05.md` 的榜首本地换算、901/3266 差距归属、
+  三种天花板和全部饱和推断不作为行动依据；不同算法小分差不等于已验证随机噪声。
+
+旧实验源文件和报告不改写；新计划只允许针对已确认错误修复证据，不重开有效失败家族的邻域。
+当前计划见[合法编码复核与最终输出优化](superpowers/plans/2026-09-05-legal-codec-and-output-objective-plan.md)。

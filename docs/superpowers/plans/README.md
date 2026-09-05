@@ -10,12 +10,14 @@
 `evaluator/eval.py`（其 proxy-v2/reference 后端 `evaluator/official_eval.py` 仅兼容旧缓存与协议），
 跨模型泛化调用 `evaluator/cross_model_eval.py`；旧 `real_model_suite.py` 已退役。
 
-**当前唯一活动计划（2026-09-05）**：[`2026-09-05-nvfp4-codebook-exact-conversion-plan`](2026-09-05-nvfp4-codebook-exact-conversion-plan.md)
-P0–P4：P0 数据事实证明 ✅ G0 PASS（fc/proj exact 均值 0.789 / mse_ratio 0.476，远超
-阈值 0.20/0.85）；Q/K W 0.74/0.70、V/O W 0.81/0.84；X fc_gate/proj 0.47/0.53。
-P1 单元证明 ❌ G1 CLOSE_W：hybrid MSE 58–60× v186 baseline、exact 占比 0——P0 精确上界
-建立在 NVFP4 严格码本上，dense 输入下不成立。W 侧机制族正式关闭。
-下一步 P4 attention 运行时精确转换（待 cb0 扩抽样 attention X NVFP4 数据）。
+**当前唯一活动计划（2026-09-05）**：
+[`合法编码复核与最终输出优化计划`](2026-09-05-legal-codec-and-output-objective-plan.md)，
+状态 **DESIGN_ONLY**。顺序：缺陷测试 → 合法层级精确解 → 最终输出联合舍入诊断 →
+单机制部署 → 官方裁决；代码入口、固定抽样、算法公式、CLI 和失败门均已写明。
+旧 [codebook 计划](../archive/plans/2026-09-05-nvfp4-codebook-exact-conversion-plan-closed.md)
+已结束归档。其结果解释受[新审计](../../../logs/execution/2026-09-05-next-plan-evidence-audit.md)
+修订：cb1/cb2 编码错误及 operand/output 目标混淆，不能证明合法空间耗尽。
+根 v186 不变，新实验尚未执行。
 
 proxy-v3 分片评测与诊断工具已完成并归档，见
 [`归档记录`](../archive/plans/2026-09-04-proxy-v3-evaluator-and-analysis-tools-completed.md)。

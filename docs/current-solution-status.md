@@ -784,7 +784,16 @@ v86 的部分 scale-aware/output-aware 机制。此前把它描述为"v86 级静
 
 ## 6. 当前活动计划
 
-**无当前 active 计划（2026-09-05）。** 定向研究计划
+**当前唯一活动计划（2026-09-05）：**
+[`合法编码复核与最终输出优化计划`](superpowers/plans/2026-09-05-legal-codec-and-output-objective-plan.md)，
+状态 **DESIGN_ONLY**。R0 先复现 cb1/cb2 具体缺陷，R1 构造合法层级精确块解，R2 针对
+真实量化操作数优化最终输出，只有门禁通过才形成一个候选。根 v186 和官方分数均未变。
+旧 [codebook 计划](superpowers/archive/plans/2026-09-05-nvfp4-codebook-exact-conversion-plan-closed.md)
+已关闭归档，但其编码错误、计数错误和目标错位使“整个机制被证伪”推论无效。
+详见[审计说明](../logs/execution/2026-09-05-next-plan-evidence-audit.md)。
+
+**以下保留旧执行记录；其中“连续变换耗尽、R2/R3 全部饱和、无合法优化空间”的解释
+已由审计说明修订，不能作为新实验的否决依据。** 定向研究计划
 [`fc/proj 与 Q/K 定向机制研究计划`](superpowers/archive/plans/2026-09-05-targeted-fcproj-qk-mechanism-research-plan-closed.md)
 已 **COMPLETED-CLOSED 归档**（S1 解剖：目标对象剩余误差为 3-bit mantissa 网格主导
 round-limited + ~4.6% 离群饱和，无可编译合法目标 → S2/S3 未触发）。前一份

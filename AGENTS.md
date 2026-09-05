@@ -23,12 +23,11 @@
 > 的 `proxy-v2` 统计仍表示底层协议，不应把二者的输出混排。
 
 > **当前唯一活动计划（2026-09-05）**：
-> [`NVFP4 codebook 精确转换计划`](docs/superpowers/plans/2026-09-05-nvfp4-codebook-exact-conversion-plan.md)
-> **P0 PASS**（fc/proj exact 均值 0.789、mse_ratio 0.476；远过阈值 0.20/0.85）。
-> **P1 G1 CLOSE_W**：hybrid MSE 58–60× v186 baseline、exact 占比 0——P0 精确上界
-> 建立在 NVFP4 严格码本上，dense 输入下不成立；W 侧机制族正式关闭。
-> 下一步 P4 attention 运行时精确转换（待 cb0 扩抽样 attention X NVFP4 数据复测）。
-> 根 solution.py 保持 v186。
+> [`合法编码复核与最终输出优化计划`](docs/superpowers/plans/2026-09-05-legal-codec-and-output-objective-plan.md)
+> **DESIGN_ONLY**：R0 缺陷复现 → R1 合法层级精确块解 → R2 实际输出目标 → R3 单机制候选
+> → R4 官方裁决。旧 codebook 计划已关闭归档，但 cb1/cb2 存在具体实现缺陷，其负结果
+> 不能证明编码空间饱和。先读[证据审计](logs/execution/2026-09-05-next-plan-evidence-audit.md)；
+> 只修复无效实验，不重开已有有效负结果的参数族。尚未执行新实验，根 solution.py 保持 v186。
 
 ## 1. 当前状态
 
