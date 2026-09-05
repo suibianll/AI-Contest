@@ -46,7 +46,7 @@ import proxy_v3_eval as v3  # noqa: E402
 import solution as sol  # noqa: E402
 
 CACHE = ROOT / "artifacts" / "official_eval" / "cache" / "qwen2.5-0.5b-proxy-v2.pt"
-OUT = ROOT / "artifacts" / "proxy_v3" / "cb0-codebook-proof-20260905" / "run-001"
+OUT = ROOT / "artifacts" / "proxy_v3" / "cb0-codebook-proof-20260905" / "run-002-attnX"
 
 CODES = (0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 6.0)
 S_FRACTIONS = sorted(
@@ -64,9 +64,9 @@ BIG = 1.0e30
 # sampling plan (global layer indices)
 FC_LAYER_MOD = 3          # fc roles: every 3rd layer
 QKVO_LAYER_MOD = 6        # q/k/v/o: every 6th layer
-X_WINDOWS = 2
+X_WINDOWS = 4
 X_LAYER_MOD = 8
-X_ROW_CAP = 256
+X_ROW_CAP = 1024
 ANCHOR_LAYERS = 2         # real _dense_to_hif4 anchor layers for fc roles
 CHUNK = 2048
 
@@ -382,13 +382,14 @@ def main() -> None:
         del pack
     report["activations"] = x_results
 
-    # ---- QKV side ----
+    # ---- QKV side (attention X) ----
     qkv_results: list[dict[str, Any]] = []
     for shard in range(1):
         pack = v3.prepare_shard(raw, shard, "both", ood=False)
-        for w in range(min(1, len(pack.test_qkv))):
+        n_windows = min(4, len(pack.test_qkv))  # 4 windows for attention X coverage
+        for w in range(n_windows):
             for layer in range(pack.layers):
-                if layer % X_LAYER_MOD != 0 or layer >= len(pack.test_qkv[w]):
+                if layer % QKVO_LAYER_MOD != 0 or layer >= len(pack.test_qkv[w]):
                     continue
                 triple = pack.test_qkv[w][layer]
                 if triple is None:

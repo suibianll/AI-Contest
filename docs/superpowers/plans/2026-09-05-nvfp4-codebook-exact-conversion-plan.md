@@ -1,38 +1,40 @@
 # NVFP4 Codebook 精确转换计划（2026-09-05）
 
-> 状态：**ACTIVE**（P0 PASS → **P1 CLOSED-W → P4 评估中**）。前两个研究计划
-> （同坐标系误差诊断 + 官方贡献探针；定向 fc/proj·Q/K 解剖）均已闭环，本计划是其后续
-> 机制方向。父版本：v186 = **17599 / 272s**（完整官方父，SHA `F8495DCA...7EB8`）；
-> 时间预算父 v180 = 17597 / 242s。距榜首 21765 差 4166 分。
+> 状态：**CLOSED**（P0 PASS → P1 CLOSED-W → P4 CLOSED-ATTN）。本计划无新增可提交
+> 候选；根 solution.py 保持 v186 = `17599/272s`。前两个研究计划（同坐标系误差诊断
+> + 官方贡献探针；定向 fc/proj·Q/K 解剖）均已闭环，本计划是其后续机制方向。
+> 父版本：v186（SHA `F8495DCA...7EB8`）；时间预算父 v180 = 17597 / 242s。
+> 距榜首 21765 差 4166 分。
 >
-> **P0 完成（2026-09-05）**：
-> G0 **PASS → P1**。
-> - W fc_gate/fc_up/proj 聚合：best-sf 非零精确占比 = **0.789**，表法 MSE 比 = **0.476**
->   （远过阈值 0.20 / 0.85）。
-> - 全 role exact 均值：fc_gate 0.7746 / fc_up 0.7903 / proj 0.8017 / q 0.7376 / k 0.7046
->   / v 0.8090 / o 0.8384。
-> - X（calibration 缓存抽样）：fc_gate 0.4668 / proj 0.5291（n=1/role，但已证明结构上限）。
-> - F1 偶八分尾数比例 ~0.49、次正规 scale 占比 fc_gate 0%、proj 6.5%、attention ~0%；
->   exp_spread p50=1, p90=2；跨行对偶相等性低（pair_m4_eq_mean 0.13）——说明 16 粒度
->   perm 信号弱，与计划 §2 推断一致。
-> - 实测报告：`artifacts/proxy_v3/cb0-codebook-proof-20260905/run-001/cb0_report.json`，
->   56 秒，40 W + 2 X 样本；脚本 `workbench/cb0_codebook_proof.py`。
+> **P0 完成（2026-09-05）**：G0 PASS
+> - W fc_gate/fc_up/proj 聚合：exact = 0.789，mse_ratio = 0.476（远过阈值 0.20/0.85）
+> - 全 role exact 均值：fc_gate 0.7746 / fc_up 0.7903 / proj 0.8017 / q 0.7376 / k 0.7046 / v 0.8090 / o 0.8384
+> - X（calibration 抽样）：fc_gate 0.4668 / proj 0.5291
+> - 实测报告：`artifacts/proxy_v3/cb0-codebook-proof-20260905/run-001/cb0_report.json`
+> - QKV 复测 run-002-attnX：q=0.4692 / k=0.4202 / v=0.5328（n=4 windows × 1 layer × 4 layers）
 >
-> **P1 完成（2026-09-05）：G1 CLOSE_W → P4 评估**。
-> - 混合 W pipeline（per-(row, 64-block) sf 选择 + mant RTN）在 dense 输入上跑通，
->   但 MSE 是 v186 baseline 的 58–60 倍（fc_gate 60.6 / proj 57.7），精确占比 = 0。
-> - **机制证伪**：P0 精确占比 0.789 建立在 NVFP4 (quant, scale) 严格码本结构上；
->   P1 hybrid 在 dense 输入（含 BF16 snap）下，mant = RTN(dense/denom) 不再保证
->   落位 HiF4 格点。**新机制没有提供超越 `_dense_to_hif4` 联合搜索 sf+mant 的解空间**。
-> - W 侧机制族**正式关闭**，不作为可提交候选。
-> - 实测报告：`artifacts/proxy_v3/cb1-exact-encoder-20260905/run-001/cb1_report.json`，
->   14 秒 quick；脚本 `workbench/cb1_exact_encoder.py`；日志
->   `logs/execution/2026-09-05-cb1-exact-encoder.md`。
+> **P1 完成（2026-09-05）**：G1 CLOSE_W
+> - hybrid W pipeline 在 dense 输入上 MSE 是 v186 的 58–60 倍（fc_gate 60.6 / proj 57.7），exact = 0
+> - 机制证伪：P0 精确占比建立在 NVFP4 (quant, scale) **严格码本**上，dense 输入含
+>   BF16 snap 后精确路径不成立；新机制没有超越 `_dense_to_hif4` 联合搜索 sf+mant 的解空间
+> - 实测报告：`artifacts/proxy_v3/cb1-exact-encoder-20260905/run-001/cb1_report.json`
 >
-> **P4 评估中（待启动）**：attention 侧运行时精确转换。开启条件已部分满足
-> （P0-F2 W 侧 Q/K 精确占比 0.74/0.70 > 0.20）；但 P1 证伪了"dense → HiF4 严格
-> 精确"路径——P4 应改为对 **Q/K NVFP4 (quant, scale) 输入端**做精确路径分支。
-> 启动前需复用 cb0 脚本扩抽样 attention X 的 NVFP4 数据复测精确占比。
+> **P4 完成（2026-09-05）**：G4 NO-GAIN
+> - exact encoder 强制 lv2=lv3=1，attention Q/K/V 全员 MSE 比 v186 baseline 差 51–26566×
+> - exact subs ~41% 但强制 lv2=lv3=1 损失 v186 的 lv2/lv3=2 动态范围
+> - 实测报告：`artifacts/proxy_v3/cb2-attn-exact-branch-20260905/run-001/cb2_report.json`
+>
+> **关闭族合规表**
+>
+> | 已尝试方向 | P0 数据上界 | P1/P4 实证 | 结论 |
+> |---|---|---|---|
+> | W sf-only 搜索（hybrid mant RTN） | exact=0.789 | MSE 60× v186 | CLOSED-W |
+> | Attention 精确路径（lv2=lv3=1 强制） | exact=0.42–0.53 | MSE 51–26566× v186 | CLOSED-ATTN |
+> | v168 baseline 已联合搜索 sf+mant+lv2/lv3 | — | — | 不可超越 |
+>
+> **根因总结**：P0 的"精确占比"测的是 NVFP4 严格码本下的可达上界，但 v186
+> `_dense_to_hif4` 已经通过 sf+mant+lv2/lv3 联合搜索达到近最优解；任何把搜索空间
+> 约束得更窄（只搜 sf、或强制 lv2=lv3=1）的机制都不会赢。本计划作为完整方向已穷尽。
 
 ## 1. 机制来源与证据链（全部可复查）
 
