@@ -115,3 +115,21 @@ Linear 校准路径中**没有调用点**，不产生 state 字段——只读�
 - 新增文件：`evaluator/coordinate_diagnostics.py`、`tests/test_coordinate_diagnostics.py`；
   产物 `artifacts/proxy_v3/coordinate-diagnostics-v186/run-001|run-all-1-5/`（不入库）。
 
+## P2 格式误差定位（DONE，2026-09-05）
+
+专项报告见 [`2026-09-05-format-error-location-p2.md`](2026-09-05-format-error-location-p2.md)。
+运行：`coordinate_diagnostics.py --relax` 六 shard 全层（48 Attention + 336 Linear）。
+
+结果（输出 MSE，均值）：
+- **R1 mantissa 连续化是唯一有系统余量的字段约束**：Q/K 单侧量化误差下降 82%、
+  V 61%、Linear W 77%、X 51%。改善率 100%（Q 24/24 层、W 168/168 pairs），跨
+  test/validation 无混合符号，深层同样成立。
+- **R2 scale 连续化、R3 lv2/lv3 连续化无余量**（放宽≈player 或更差，≤2% case 差）：
+  E6M2 scale 与层级求解器已饱和。
+- 判定：R1 通过研究筛选但**无合法实现路径**（3-bit 0.25 网格依法固定）→
+  `DIAGNOSTIC_FINDING`；R2/R3 → `NO_MARGIN`。P4 注册条件不满足 → 记为
+  `NO_SUPPORTED_MECHANISM`。官方 4166 分差距归因于 3-bit mantissa 表示能力代际差，
+  不是本机剩余合法自由度。不重启已关闭家族。
+- 按计划继续 P3：官方贡献探针获取分桶证据。
+
+
