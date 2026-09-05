@@ -10,14 +10,13 @@
 `evaluator/eval.py`（其 proxy-v2/reference 后端 `evaluator/official_eval.py` 仅兼容旧缓存与协议），
 跨模型泛化调用 `evaluator/cross_model_eval.py`；旧 `real_model_suite.py` 已退役。
 
-**当前无 active 计划（2026-09-05）。** 上一份
-[`2026-09-05-coordinate-consistent-error-and-official-probes-plan`](../archive/plans/2026-09-05-coordinate-consistent-error-and-official-probes-plan-completed.md)
-已 **COMPLETED 归档**：P0–P3 完成且官方回传到账（P1 同坐标分解：误差几乎全为纯量化扰动；
-P2：仅 mantissa 网格有不可合法编译余量 → P4 `NO_SUPPORTED_MECHANISM`；P3 官方：Q/K 占
-Attention 增益 85%，v160 Linear 增益全在 fc/proj 大形状桶，P3-B 长度桶 DESIGN_BLOCKED）。
-原[系统辨识计划](../archive/plans/2026-09-05-official-evaluation-system-identification-plan-superseded.md)
-已归档：Q/K 改为配对切换，分桶只解释机制贡献，不恢复隐藏权重；时间门禁保留 default
-协议实测要求。根源码仍为 v186 `17599/272s`，v180 `17597/242s` 保留为时间预算父。
+**当前无 active 计划（2026-09-05）。** 定向研究计划
+[`2026-09-05-targeted-fcproj-qk-mechanism-research-plan`](../archive/plans/2026-09-05-targeted-fcproj-qk-mechanism-research-plan-closed.md)
+已 **COMPLETED-CLOSED 归档**：S1 结构解剖确认 fc/proj 与 Q/K 剩余误差为 3-bit mantissa
+网格主导（round-limited）+ ~4.6% 离群饱和，未发现新的合法编译目标。上一份
+[`coordinate/probes 计划`](../archive/plans/2026-09-05-coordinate-consistent-error-and-official-probes-plan-completed.md)
+亦已 COMPLETED 归档。原[系统辨识计划](../archive/plans/2026-09-05-official-evaluation-system-identification-plan-superseded.md)
+已归档。根源码仍为 v186 `17599/272s`，v180 `17597/242s` 保留为时间预算父。
 新计划须在本目录写就并注明父证据与官方边界后方可执行。
 
 proxy-v3 分片评测与诊断工具已完成并归档，见
