@@ -784,12 +784,12 @@ v86 的部分 scale-aware/output-aware 机制。此前把它描述为"v86 级静
 
 ## 6. 当前活动计划
 
-**当前唯一 active 计划：**
-[`同坐标系误差诊断、官方贡献探针与新机制验证计划`](superpowers/plans/2026-09-05-coordinate-consistent-error-and-official-probes-plan.md)。
-P0–P5 依次为证据冻结、同坐标诊断、格式误差定位、官方贡献探针、条件单机制候选及官方裁决。
-原系统辨识计划已 superseded 归档。混坐标消融不再解释为纯量化贡献，分桶收益不解释为隐藏
-样本权重；提交计时须使用与模型一致的 default 协议，不能将 shard 或校准缓存命中时间直接代入。
-详见新计划 §2。
+**无当前 active 计划。** 2026-09-05 的
+[`同坐标系误差诊断、官方贡献探针与新机制验证计划`](superpowers/archive/plans/2026-09-05-coordinate-consistent-error-and-official-probes-plan-completed.md)
+已 **COMPLETED 归档**（P0–P3 完成 + 官方回传；P4 判 `NO_SUPPORTED_MECHANISM` 后按计划
+§8 结束，未产生新完整父）。原系统辨识计划已 superseded 归档。混坐标消融不再解释为纯量化
+贡献，分桶收益不解释为隐藏样本权重；提交计时须使用与模型一致的 default 协议，不能将
+shard 或校准缓存命中时间直接代入。
 
 **执行状态（2026-09-05 更新）**：P0–P3 已完成，官方回传全部到账。
 

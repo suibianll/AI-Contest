@@ -10,13 +10,15 @@
 `evaluator/eval.py`（其 proxy-v2/reference 后端 `evaluator/official_eval.py` 仅兼容旧缓存与协议），
 跨模型泛化调用 `evaluator/cross_model_eval.py`；旧 `real_model_suite.py` 已退役。
 
-**当前唯一 active 计划：**
-[`2026-09-05-coordinate-consistent-error-and-official-probes-plan.md`](2026-09-05-coordinate-consistent-error-and-official-probes-plan.md)。
-按 P0–P5 完成证据冻结、同坐标误差诊断、固定格式放宽诊断、10 个核心官方贡献探针，以及
-有证据时的单机制验证与官方裁决；当前仅完成计划，尚未实现或提交。
+**当前无 active 计划（2026-09-05）。** 上一份
+[`2026-09-05-coordinate-consistent-error-and-official-probes-plan`](../archive/plans/2026-09-05-coordinate-consistent-error-and-official-probes-plan-completed.md)
+已 **COMPLETED 归档**：P0–P3 完成且官方回传到账（P1 同坐标分解：误差几乎全为纯量化扰动；
+P2：仅 mantissa 网格有不可合法编译余量 → P4 `NO_SUPPORTED_MECHANISM`；P3 官方：Q/K 占
+Attention 增益 85%，v160 Linear 增益全在 fc/proj 大形状桶，P3-B 长度桶 DESIGN_BLOCKED）。
 原[系统辨识计划](../archive/plans/2026-09-05-official-evaluation-system-identification-plan-superseded.md)
 已归档：Q/K 改为配对切换，分桶只解释机制贡献，不恢复隐藏权重；时间门禁保留 default
 协议实测要求。根源码仍为 v186 `17599/272s`，v180 `17597/242s` 保留为时间预算父。
+新计划须在本目录写就并注明父证据与官方边界后方可执行。
 
 proxy-v3 分片评测与诊断工具已完成并归档，见
 [`归档记录`](../archive/plans/2026-09-04-proxy-v3-evaluator-and-analysis-tools-completed.md)。

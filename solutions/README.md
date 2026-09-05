@@ -1,8 +1,11 @@
 # HiF4 solutions archive
 
-> **Planning update (2026-09-05):** the sole active plan is
-> [coordinate-consistent diagnostics and official contribution probes](../docs/superpowers/plans/2026-09-05-coordinate-consistent-error-and-official-probes-plan.md).
-> It specifies P0–P5 and 10 core probes; no implementation, new evaluation, or submission has occurred.
+> **Planning update (2026-09-05):** the coordinate-consistent diagnostics and
+> official contribution probes plan is **completed and archived**
+> ([plan](../docs/superpowers/archive/plans/2026-09-05-coordinate-consistent-error-and-official-probes-plan-completed.md)).
+> P0–P3 finished with all official returns: Q/K carry 85% of the Attention gain,
+> v160 Linear gain lives entirely in the fc/proj shape buckets, and P4 was
+> judged `NO_SUPPORTED_MECHANISM`; there is currently no active plan.
 > The root remains official v186 `17599/272s`; v180 `17597/242s` is the time-budget parent.
 > The previous system-identification design is archived as superseded; no new solution version is assigned.
 

@@ -16,9 +16,11 @@
 
 ## 当前结论
 
-- 当前唯一活动计划为[同坐标系误差诊断、官方贡献探针与新机制验证](docs/superpowers/plans/2026-09-05-coordinate-consistent-error-and-official-probes-plan.md)：
-  先修正误差归因，再做 10 个核心官方贡献探针，有证据后注册一个新机制。当前仅完成计划，
-  尚未修改算法或运行新实验；原系统辨识计划已归档。
+- [同坐标系误差诊断、官方贡献探针与新机制验证计划](docs/superpowers/archive/plans/2026-09-05-coordinate-consistent-error-and-official-probes-plan-completed.md)
+  已完成并归档（P0–P3 + 官方回传）：误差几乎全为纯量化扰动、Q/K 占 Attention 官方增益
+  85%、v160 Linear 官方增益全在 fc/proj 大形状桶、P4 判定 `NO_SUPPORTED_MECHANISM`，
+  当前无活动计划。执行总账见
+  [`logs/execution/2026-09-05-coordinate-error-and-probes.md`](logs/execution/2026-09-05-coordinate-error-and-probes.md)。
 - 根目录 [`solution.py`](solution.py) 已同步为 v186 官方计分源码，SHA256
   `F8495DCA20334ACBDAD16FC18EE41A4970F31E1837FDEEDCEE9C70AEE54E7EB8`。v186 是分数父；
   v180 `17597/242s` 少 2 分、快 30s，继续保留为高复杂度新机制的时间预算父。两者共同构成

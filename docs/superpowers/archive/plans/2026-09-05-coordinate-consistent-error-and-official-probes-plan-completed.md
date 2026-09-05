@@ -1,9 +1,21 @@
 # 同坐标系误差诊断、官方贡献探针与新机制验证计划
 
-> 状态：PLANNED。2026-09-05 仅完成计划；尚未修改算法或评测器、运行新实验、提交探针。
-> 本文件是唯一活动计划，替代原官方系统辨识计划；原计划已按 superseded 归档。
+> 状态：**COMPLETED（2026-09-05 归档）**。P0–P3 全部完成、官方回传到账；P4/P5 为条件阶段，
+> P2 判定 `NO_SUPPORTED_MECHANISM` 后按 §8 结束分支正常终止，未产生新完整父。
+> 执行账本：`logs/execution/2026-09-05-coordinate-error-and-probes.md`、
+> `logs/execution/2026-09-05-coordinate-diagnostics-v186.md`（P1）、
+> `logs/execution/2026-09-05-format-error-location-p2.md`（P2）、
+> `logs/execution/2026-09-05-p3-official-contribution-probes.md`（P3）；官方回填见
+> `solutions/20260905_p3*`。原官方系统辨识计划按 superseded 归档。
 > 目标：定位成熟方案尚未消除的输出误差，以官方证据选择新机制，争取超过 v186。
 > 不承诺达到 21765，不把本地误差下降换算成官方分数。
+>
+> 结果摘要：P1 误差几乎全是纯量化扰动（Attn E²/B²≈4000×，Q/K 量化误差≈V 的 2.5–2.8×；
+> Linear 权重侧≈激活侧 1.9×）；P2 仅 R1 mantissa 0.25 网格有系统余量（不可合法编译），
+> scale/lv2/lv3 求解器饱和 → 无合法新机制可注册；P3 官方：Q/K 占 Attention 增益 85%
+> （C_QK=11009 vs C_V=1973，交互 −38），v160 Linear 官方增益 100% 落在 fc(W2=1818)+proj
+> (W3=1767) 大形状桶，q/o 方形与 k/v rows≤256 桶零收益；P3-B（A1 长度桶）DESIGN_BLOCKED。
+> 根 `solution.py` 保持 v186（`F8495DCA…7EB8`）。
 
 ## 1. 固定事实与范围
 

@@ -31,7 +31,7 @@ v176–v188 的官方分数、时间、提交先后、RETAINED/REJECTED/TIMEOUT 
 
 ## 3. 同日诊断与探针解释修订
 
-依据代码审读及[新活动计划 §2/§7](superpowers/plans/2026-09-05-coordinate-consistent-error-and-official-probes-plan.md)：
+依据代码审读及[已归档诊断与探针计划 §2/§7](superpowers/archive/plans/2026-09-05-coordinate-consistent-error-and-official-probes-plan-completed.md)：
 
 - `official_eval.py` 旧 Q-only/K-only、W-only/A-only 混合变换后 player 与原坐标 STD，
   表示单侧整条路径替换，不是固定同坐标下的纯量化误差；完整 player 分数不受此解释修订影响。
