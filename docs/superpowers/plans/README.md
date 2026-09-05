@@ -1,16 +1,24 @@
 # 计划入口
 
-> 最后更新：2026-09-04
+> 最后更新：2026-09-05
+
+> **规则更正**：官方提交次数没有限制；历史 `9/10`、`剩余 1`、`最后一次配额` 等表述
+> 已全部作废，见 [`2026-09-05 过期信息清单`](../../stale-information-inventory-2026-09-05.md)。
 
 本目录最多保留一份活跃计划。执行优化时只读取下面的活动状态、根 `solution.py`、最新
 `proxy-v3` 评测和官方规则；归档目录中的计划不具有指令效力。本地主评测调用稳定入口
 `evaluator/eval.py`（其 proxy-v2/reference 后端 `evaluator/official_eval.py` 仅兼容旧缓存与协议），
 跨模型泛化调用 `evaluator/cross_model_eval.py`；旧 `real_model_suite.py` 已退役。
 
-**当前无活动计划（2026-09-04）**。proxy-v3 分片评测与诊断工具已完成并归档，见
+**当前唯一 active 计划：**
+[`2026-09-05-official-evaluation-system-identification-plan.md`](2026-09-05-official-evaluation-system-identification-plan.md)。
+该计划利用提交次数无限这一更正，以 14 个核心官方探针辨识 Q/K/V 交互、Attention 长度权重、
+Linear 形状族权重和六 API 时间映射；当前仅完成设计，尚未实现或提交探针。
+
+proxy-v3 分片评测与诊断工具已完成并归档，见
 [`归档记录`](../archive/plans/2026-09-04-proxy-v3-evaluator-and-analysis-tools-completed.md)。
 它新增并切换默认评测入口，不修改 `solution.py` 或 `evaluator/official_eval.py`、不产生算法候选、
-不消耗官方配额；六个平衡 shard、可审计的校准产物复用和自动故障定位现可直接使用。
+也不涉及官方提交；六个平衡 shard、可审计的校准产物复用和自动故障定位现可直接使用。
 命令与判读见 [`proxy-v3 使用说明`](../../proxy-v3.md)。
 
 v187 Attention Jacobian 坐标敏感度机制相对 v185
