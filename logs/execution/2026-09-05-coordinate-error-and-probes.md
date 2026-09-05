@@ -96,3 +96,22 @@ Linear 校准路径中**没有调用点**，不产生 state 字段——只读�
 2. `tests/test_coordinate_diagnostics.py`：FP64 合成数据（配对缩放/旋转/K-center 行平移/
    GQA/causal mask/Linear 残差），残差 ≤1e-10；真实链 ≤1e-4。
 3. 先跑目标侧 shard0（复用 official-audit-smoke3 的 v186 产物做 111 臂复现对照）。
+
+## P1 同坐标误差分解（DONE，2026-09-05）
+
+专项报告见 [`2026-09-05-coordinate-diagnostics-v186.md`](2026-09-05-coordinate-diagnostics-v186.md)。
+六 shard 全层完成：48 Attention + 336 Linear case。
+
+正确性：Linear X_tW_t vs ref = 0.0 全 case；B/E 分解最大残差 2.3e-10；111 臂 player gain
+与官方审计逐位一致（layer0 case0 = 0.9233616316569982）。`tests/test_coordinate_diagnostics.py`
+5 passed（FP64 恒等式、GQA/causal、镜像一致性、残差 shape 修正为 1-D 向量后全绿）。
+
+关键结论：
+- 误差几乎全部是纯量化扰动（Attention mean(E²)/mean(B²) ≈ 4000×；Linear 连续偏差恒为 0）。
+- Attention：Q/K 量化影响 ≈ V 的 2.5–2.8×，Q/K 与 V 可加（无抵消）；误差随层单调增大
+  （浅层 1e-5 → 深层 8e-3，L21 最差）。
+- Linear：权重静态编码误差 ≈ 激活动态编码的 1.9×（proj 4.4×、qkv 2.4×）；两侧近似可加。
+- 新机制优先级：深层 Q/K 与深层权重编码质量；浅层余量已很低。
+- 新增文件：`evaluator/coordinate_diagnostics.py`、`tests/test_coordinate_diagnostics.py`；
+  产物 `artifacts/proxy_v3/coordinate-diagnostics-v186/run-001|run-all-1-5/`（不入库）。
+
