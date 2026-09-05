@@ -1,6 +1,6 @@
 # W2 probe（P3-C）
 
-- 状态：**PROBE_COMPLETE（本地 control 通过，待官方回传）**
+- 状态：**PROBE_COMPLETE（官方回传已完成，结果已记录）**
 - 构造：Linear 形状桶 W2（rows>256 且 rows/cols>1.33，本地 fc_gate/fc_up）保持 v160 Linear；其余桶 standard。
 - 源码：`./20260905_p3c_w2_linear-bucket_probe/solution.py`，SHA256 `5B51BB4B5A343748...`
 - 归档基：v164（官方 13945/204s）→ A10/A01；v163（官方 4587/202s）→ W0-W3。

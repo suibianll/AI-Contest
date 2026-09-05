@@ -1,6 +1,6 @@
 # W0 probe（P3-C）
 
-- 状态：**PROBE_COMPLETE（本地 control 通过，待官方回传）**
+- 状态：**PROBE_COMPLETE（官方回传已完成，结果已记录）**
 - 构造：Linear 形状桶 W0（rows<=256，本地 k/v 权重）保持 v160 Linear；其余桶 standard。Attention standard（v163 基）。
 - 源码：`./20260905_p3c_w0_linear-bucket_probe/solution.py`，SHA256 `8408647A1F3CCA15...`
 - 归档基：v164（官方 13945/204s）→ A10/A01；v163（官方 4587/202s）→ W0-W3。

@@ -1,6 +1,6 @@
 # A10 probe（P3-A）
 
-- 状态：**PROBE_COMPLETE（本地 control 通过，待官方回传）**
+- 状态：**PROBE_COMPLETE（官方回传已完成，结果已记录）**
 - 构造：Q/K 用 v160 路径、V 用 standard codec、Linear standard。从 v164 归档构造，仅重定义 hif4_dynamic_quantize_v 为 standard（_ref codec），Q/K 与校准保持不变。
 - 源码：`./20260905_p3a_a10_qk-v160_v-std_probe/solution.py`，SHA256 `3D613D035026DD53...`
 - 归档基：v164（官方 13945/204s）→ A10/A01；v163（官方 4587/202s）→ W0-W3。

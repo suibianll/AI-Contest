@@ -1,6 +1,6 @@
 # 同坐标系误差诊断与官方探针计划 · P0–P5 总账
 
-> 计划：[`docs/superpowers/plans/2026-09-05-coordinate-consistent-error-and-official-probes-plan.md`](../docs/superpowers/plans/2026-09-05-coordinate-consistent-error-and-official-probes-plan.md)
+> 计划：[`docs/superpowers/archive/plans/2026-09-05-coordinate-consistent-error-and-official-probes-plan-completed.md`](../../docs/superpowers/archive/plans/2026-09-05-coordinate-consistent-error-and-official-probes-plan-completed.md)
 > 根 manifest：`artifacts/proxy_v3/coordinate-diagnostics-v186/manifest.json`
 > 开始：2026-09-05。规则：官方提交无次数限制；分数不换算（本地只做 Δmean>0 且 L1<0.02
 > 符号门禁）；时间用分解模型、预测 <280s 才提交；官方硬限 <300s。
@@ -153,6 +153,5 @@ P3-B 记 DESIGN_BLOCKED（Q/K 独立 API 无共同场景键）→ 构造并提�
 (k/v) 桶为零收益——future Linear 候选只应瞄准 expansive/wide 形状。P2 的
 `NO_SUPPORTED_MECHANISM` 判定保持，无新机制可注册，P4/P5 不启动；根 solution.py 保持
 v186。提交（官方回填）见 solutions/20260905_p3*。
-
 
 

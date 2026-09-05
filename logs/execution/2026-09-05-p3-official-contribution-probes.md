@@ -1,8 +1,8 @@
-# P3 官方贡献探针：构造、本地 control 与待提交清单
+# P3 官方贡献探针：构造、本地 control 与官方回传归档
 
 > 计划 §7。2026-09-05。生成器 `workbench/p3_build_probes.py`，逐位控制
 > `workbench/p3_local_control.py`。6 个单文件探针位于 `solutions/20260905_p3*`。
-> P3-B（A1 长度桶）记 **DESIGN_BLOCKED**，理由见 §3。官方提交待平台入口执行。
+> P3-B（A1 长度桶）记 **DESIGN_BLOCKED**，理由见 §3；其余 6 个 P3-A/P3-C 探针均已完成官方回传并归档。
 
 ## 1. P3-A 配对 QK / V 路径效应（2 个新提交）
 
@@ -39,8 +39,8 @@ standard 侧与 v162 逐位一致（shard0 全部 attention case）。
 `tensor.shape[0]` 独立切换，只有当官方保证 Q_len==K_len 才可能对齐；合同未排除 Q_len≠K_len
 （decode 场景）。在无共同键下按本地长度切换不满足"同逻辑场景同一桶"要求 → 按计划
 §7.3 记 `DESIGN_BLOCKED`。核心矩阵相应为 6 个新提交（2 + 4），已全部构造。
-补充：A1 官方正向（v168 相对 v164 +60）已在整体层面确认；长度维度内部分配留待官方数据或
-其他信息渠道。
+补充：A1 官方正向（v168 相对 v164 +60）已在整体层面确认；长度维度内部分配因缺少跨调用
+场景键保持 `DESIGN_BLOCKED`，本计划不再启动该方向。
 
 ## 4. 时间安全性
 
@@ -81,6 +81,6 @@ standard 侧与 v162 逐位一致（shard0 全部 attention case）。
 ## 7. P4/P5 状态
 
 P2 已判 `NO_SUPPORTED_MECHANISM`；P3 官方证据没有产生新的可编译合法机制构想，只给出
-"收益形状/路径分布"结构性结论。因此 P4 保持 CONDITIONAL 且不启动新候选，P5 无对象；
+"收益形状/路径分布"结构性结论。因此 P4 **CLOSED**（`NO_SUPPORTED_MECHANISM`），P5
+**NOT STARTED**（无候选对象）；
 本轮计划以诊断与探针证据结束，根 `solution.py` 保持 v186（`F8495DCA…7EB8`）。
-
