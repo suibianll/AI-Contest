@@ -263,14 +263,139 @@ def linear_arms(
 
 
 # --------------------------------------------------------------------------- #
-# Case drivers
+# P2 relaxed-format reconstruction (legal_candidate=false diagnostic math)
 # --------------------------------------------------------------------------- #
+def relaxed_reconstruction(
+    dense: torch.Tensor,
+    params: Mapping[str, torch.Tensor],
+    mode: str,
+) -> torch.Tensor:
+    """Reconstruct a tensor after relaxing exactly one format constraint.
+
+    ``dense`` is the pre-quantization continuous operand (deployed coordinate);
+    ``params`` is the player HiF4 five-field encoding of that operand.  All
+    reconstruction is diagnostic-only and never legal HiF4.
+
+    Modes:
+      r1_mant  - keep sign/scale/lv2/lv3; mantissa continuous in [0, 1.75]
+                 (remove the 0.25 rounding grid).
+      r2_scale - keep sign/mantissa(discrete)/lv2/lv3; fit one non-negative
+                 per-64-block base scale by least squares.
+      r3_lv2   - keep sign/mantissa/scale/lv3; project an independent lv2
+                 multiplier onto [1, 2] per 8-channel group.
+      r3_lv3   - keep sign/mantissa/scale/lv2; project lv3 onto [1, 2] per
+                 4-channel group.
+    """
+    x = dense.to(torch.float32)
+    device = x.device
+    prefix = tuple(int(v) for v in x.shape[:-1])
+    channels = int(x.shape[-1])
+    blocks = channels // 64
+    zb = x.reshape(*prefix, blocks, 8, 2, 4)
+    sf = params["scale_factor"].to(device=device, dtype=torch.float32)
+    lv2 = params["scale_lv2"].to(device=device, dtype=torch.float32)
+    lv3 = params["scale_lv3"].to(device=device, dtype=torch.float32)
+    sign = params["sign"].to(device=device, dtype=torch.float32)
+    mant = params["mant"].to(device=device, dtype=torch.float32)
+    if mode == "r1_mant":
+        denom = sf * lv2 * lv3
+        mant_c = torch.clamp(zb.abs() / denom.clamp_min(1.0e-30), max=1.75)
+        return (sign * mant_c * denom).flatten(start_dim=-4)
+    if mode == "r2_scale":
+        pat = sign * mant * lv2 * lv3
+        num = (pat * zb).sum(dim=(-1, -2, -3))
+        den = (pat * pat).sum(dim=(-1, -2, -3))
+        scale = torch.where(den > 0.0, num / den.clamp_min(1.0e-30), torch.zeros_like(num))
+        scale = torch.clamp(scale, min=0.0).reshape(*prefix, blocks, 1, 1, 1)
+        return (scale * pat).flatten(start_dim=-4)
+    if mode == "r3_lv2":
+        pat = sign * mant * sf * lv3
+        num = (pat * zb).sum(dim=(-1, -2))
+        den = (pat * pat).sum(dim=(-1, -2))
+        t = torch.where(den > 0.0, num / den.clamp_min(1.0e-30), torch.ones_like(num))
+        t = torch.clamp(t, min=1.0, max=2.0).reshape(*prefix, blocks, 8, 1, 1)
+        return (sign * mant * sf * t * lv3).flatten(start_dim=-4)
+    if mode == "r3_lv3":
+        pat = sign * mant * sf * lv2
+        num = (pat * zb).sum(dim=-1)
+        den = (pat * pat).sum(dim=-1)
+        t = torch.where(den > 0.0, num / den.clamp_min(1.0e-30), torch.ones_like(num))
+        t = torch.clamp(t, min=1.0, max=2.0).reshape(*prefix, blocks, 8, 2, 1)
+        return (sign * mant * sf * lv2 * t).flatten(start_dim=-4)
+    raise ValueError(f"unknown relaxed mode: {mode}")
+
+
+_RELAX_MODES = ("r1_mant", "r2_scale", "r3_lv2", "r3_lv3")
+
+
+def single_relax_substitution_output(
+    operand: str,
+    q_t: torch.Tensor,
+    k_t: torch.Tensor,
+    v_t: torch.Tensor,
+    q_params: Mapping[str, torch.Tensor] | None,
+    k_params: Mapping[str, torch.Tensor] | None,
+    v_params: Mapping[str, torch.Tensor] | None,
+    q_heads: int,
+    kv_heads: int,
+    head_dim: int,
+    o_t: torch.Tensor,
+) -> dict[str, float]:
+    """Single-operand relaxed-format effect measured in output MSE vs O_t."""
+    device = q_t.device
+    out: dict[str, float] = {}
+    pairs = {
+        "q": (q_t, q_params, q_heads),
+        "k": (k_t, k_params, kv_heads),
+        "v": (v_t, v_params, kv_heads),
+    }
+    if operand not in pairs:
+        raise ValueError(f"unknown operand {operand}")
+    base, params, _heads = pairs[operand]
+    if params is None:
+        return {mode: 0.0 for mode in _RELAX_MODES}
+    base = base.to(device)
+    for mode in _RELAX_MODES:
+        relaxed = relaxed_reconstruction(base, params, mode).to(device)
+        tensors = [q_t.to(device), k_t.to(device), v_t.to(device)]
+        index = {"q": 0, "k": 1, "v": 2}[operand]
+        tensors[index] = relaxed
+        out_out = v2._attention(
+            *(value[None] for value in tensors), q_heads, kv_heads, head_dim
+        )
+        out[mode] = _mse(out_out, o_t)
+    return out
+
+
+def linear_single_relax_mse(
+    operand: str,
+    x_t: torch.Tensor,
+    w_t: torch.Tensor,
+    x_params: Mapping[str, torch.Tensor],
+    w_params: Mapping[str, torch.Tensor],
+    ref: torch.Tensor,
+) -> dict[str, float]:
+    """Single-operand relaxed effect for Linear measured in output MSE vs ref."""
+    device = x_t.device
+    x_t = x_t.to(device)
+    w_t = w_t.to(device)
+    out: dict[str, float] = {}
+    for mode in _RELAX_MODES:
+        if operand == "x":
+            relaxed = relaxed_reconstruction(x_t, x_params, mode).to(device)
+            y = relaxed @ w_t.t()
+        else:
+            relaxed = relaxed_reconstruction(w_t, w_params, mode).to(device)
+            y = x_t @ relaxed.t()
+        out[mode] = _mse(y, ref)
+    return out
 def run_attention_cases(
     sol: Any,
     pack: v2.PreparedPack,
     attention_states: Mapping[int, Mapping[str, Any]],
     device: torch.device,
     details_seed: Sequence[Mapping[str, Any]],
+    relax: bool = False,
 ) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     for case, seed in zip(pack.attention_cases, details_seed):
@@ -319,6 +444,21 @@ def run_attention_cases(
             "test_length": seed.get("test_length"),
             "seed_player_gain": seed.get("gain"),
         })
+        if relax:
+            o_t = v2._attention(
+                *(value[None] for value in (q_t, k_t, v_t)),
+                pack.q_heads, pack.kv_heads, pack.head_dim,
+            )
+            relax_info: dict[str, dict[str, float]] = {}
+            for operand in ("q", "k", "v"):
+                relax_info[operand] = single_relax_substitution_output(
+                    operand, q_t, k_t, v_t,
+                    q_params if operand == "q" else None,
+                    k_params if operand == "k" else None,
+                    v_params if operand == "v" else None,
+                    pack.q_heads, pack.kv_heads, pack.head_dim, o_t,
+                )
+            info["relax"] = relax_info
         out.append(info)
     return out
 
@@ -329,6 +469,7 @@ def run_linear_cases(
     weight_states: Mapping[tuple[int, str], tuple[Any, Mapping[str, torch.Tensor]]],
     device: torch.device,
     details_seed: Sequence[Mapping[str, Any]],
+    relax: bool = False,
 ) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     standard_weight_cache: dict[tuple[int, str], torch.Tensor] = {}
@@ -368,6 +509,16 @@ def run_linear_cases(
             "shape_bucket": seed.get("shape_bucket"),
             "seed_player_gain": seed.get("gain"),
         })
+        if relax:
+            relax_info = {
+                "x": linear_single_relax_mse(
+                    "x", x_t, w_t, activation_params, weight_params, ref
+                ),
+                "w": linear_single_relax_mse(
+                    "w", x_t, w_t, activation_params, weight_params, ref
+                ),
+            }
+            info["relax"] = relax_info
         out.append(info)
     return out
 
@@ -387,6 +538,7 @@ def diagnose(
     device_name: str,
     output_dir: Path,
     calibration_cache_mode: str = "auto",
+    relax: bool = False,
 ) -> dict[str, Any]:
     output_dir.mkdir(parents=True, exist_ok=True)
     device = torch.device(device_name)
@@ -426,11 +578,11 @@ def diagnose(
         }
         if pack.attention_cases and scenario in {"both", "attention"}:
             side["attention"] = run_attention_cases(
-                sol, pack, attention_states, device, seed_attention
+                sol, pack, attention_states, device, seed_attention, relax
             )
         if pack.linear_cases and scenario in {"both", "linear"}:
             side["linear"] = run_linear_cases(
-                sol, pack, weight_states, device, seed_linear
+                sol, pack, weight_states, device, seed_linear, relax
             )
         rows.append(side)
         v3.cleanup_solution_modules()
@@ -446,6 +598,7 @@ def diagnose(
         "cache": str(cache_path.resolve()),
         "device": str(device),
         "created_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "relax_diagnostics": relax,
         "shards": [int(value) for value in shards],
         "rows": rows,
     }
@@ -550,6 +703,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--shards", default="0", help="comma separated shard ids")
     parser.add_argument("--device", default="cuda")
     parser.add_argument("--calibration-cache-mode", choices=("off", "auto", "read", "write"), default="auto")
+    parser.add_argument("--relax", action="store_true", help="enable P2 relaxed-format (R1-R3) diagnostics")
     parser.add_argument("--output-dir", type=Path, required=True)
     return parser
 
@@ -566,6 +720,7 @@ def main() -> int:
         args.device,
         output_dir,
         args.calibration_cache_mode,
+        args.relax,
     )
     run_id = output_dir.name
     json_path = output_dir / f"diagnostics-{run_id}.json"
