@@ -1,6 +1,6 @@
 # v188 Attention Jacobian 敏感度移植（v186 + v187 机制）
 
-> 状态：OFFICIAL PENDING — scoreNA / timeNA（提交队列，第 9 个配额 9/10）
+> 状态：OFFICIAL REJECTED — `17595 / 268s`
 >
 > Parent：v186（官方 17599 / 272s，SHA `F8495DCA...7EB8`）。唯一改动：把 v187 的
 > attention 输出 Jacobian 一阶敏感度 importance 作为校准最终步移植进 v186，
@@ -56,7 +56,7 @@ V 与 Linear 完全不变。
 ## 裁决与教训
 
 按预注册规则 REJECTED：根 `solution.py` 已回滚 v186，Jacobian 移植族关闭
-（不扫收缩/clamp/gate 邻域）。第 9 个配额提交（9/10），剩余 1。
+（不扫收缩/clamp/gate 邻域）。官方提交次数没有限制；历史配额解释已作废。
 
 1. **符号门禁首次失手**：本地 Δmean +0.000426 / L1 0.001114 满足
    `Δmean>0 且 L1<0.02`，官方却 −4。该门禁历史 5/5 零误的记录被打破——

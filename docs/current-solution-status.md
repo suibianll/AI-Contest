@@ -1,6 +1,10 @@
 # 当前状态：目标 21765，启动 Attention/Linear 双路线稳健优化
 
-更新：2026-09-04。
+更新：2026-09-05。
+
+> **规则更正（2026-09-05）**：官方提交次数没有限制。历史文档中的 `9/10`、`剩余 1`、
+> “最后一个配额”等表述全部失效，见
+> [`stale-information-inventory-2026-09-05.md`](stale-information-inventory-2026-09-05.md)。
 
 ## 0.0 评测入口（2026-09-04）
 
@@ -15,7 +19,7 @@
 ## 0. 最新官方进展
 
 **❌ v188（v186 + v187 Jacobian 敏感度移植）官方回传：`17595 / 268s`，相对父 v186
-`−4/−4s`，REJECTED（第 9 个配额，9/10，剩余 1）。** v188 把 v187 的一阶 Jacobian
+`−4/−4s`，REJECTED。** v188 把 v187 的一阶 Jacobian
 敏感度 importance 作为校准最终步移植进 v186（v187 预注册常量，LOO 部署 MSE 门）。
 本地 default 120：Δmean `+0.000426`、L1 `0.001114`（门控仅 L12/L22 两层通过，
 静态 importance 槽位已被 pair-smooth 占据）；官方 −4 属近零净效应落在测量噪声带。
@@ -30,11 +34,11 @@ v185 clean-room 上增加一个解析机制：用最终 Attention 输出的一�
 `KV-head×64` importance，跨 fold median、向 identity 固定收缩并经 leave-one-fold-out gate。
 7/24 层启用；相对 v185 default `Δmean +0.015187`、L1 `0.016199<0.02`、`32+/3-/85=`；
 官方结果确认该解析机制不是本地假象，且时间增量很小；但总分仍比 v186 少 `8432`，
-因此源码只保留为研究父，根 `solution.py` 不切换。第 8 个提交已使用，配额 `8/10`、剩余 2。
+因此源码只保留为研究父，根 `solution.py` 不切换。
 
 **❌ v185 clean-room 官方回传：`8446 / 165s`，REJECTED。** 相对当前父 v186 少 `9153`
 分，时间远低于 300s，因此失败明确来自算法表达能力，不是超时。balance/gamma/refine
-邻域关闭；该次官方提交计为第 7 个，当前配额 `7/10`、剩余 3。根 `solution.py` 不切换。
+邻域关闭；根 `solution.py` 不切换。
 
 **✅ v186 官方回传：`17599 / 272s`，RETAINED 为当前完整官方父。** v186 在 v182 上只把
 Attention 在线 E6M2 scale 邻域增加 `+4` 单码，官方 `+1/−1s`；根 `solution.py` 已同步
@@ -45,7 +49,7 @@ v183 仅将 Attention block-smooth 搜索的 final-quantizer refine 覆盖从 0.
 1.00（blocks `24576→131072`），Linear 与在线路径不变。相对 v182
 `step_gain=0`、时间 `+6.7s`，且 `279.7s<300s`，负向裁决来自无分数收益而非超时。
 按预注册规则 `S(v183)≤17598`，覆盖率族关闭，不扫 ratio/blocks 邻域；完整官方父保持
-v182，根 `solution.py` 不切换。提交账本更新为 `4/10`，剩余 6。
+v182，根 `solution.py` 不切换。
 
 **✅ v182 官方回传（2026-09-04）：`17598 / 273s`，成为新完整官方父版本。** v182 =
 v180 + L-R2 融合 rank-2 残差重分布（SHA `F3E39E99...A438`），Linear 侧 rank-1→rank-2
@@ -780,7 +784,12 @@ v86 的部分 scale-aware/output-aware 机制。此前把它描述为"v86 级静
 
 ## 6. 当前活动计划
 
-**当前无 active 计划。** v187 Jacobian 敏感度机制官方 `9167/169s`，相对 v185
+**当前唯一 active 计划：**
+[`官方评测规律系统辨识计划`](superpowers/plans/2026-09-05-official-evaluation-system-identification-plan.md)。
+计划预注册 14 个核心官方探针：Q/K/V 2³ 析因的 6 个缺失单元、4 个 Attention 长度桶、
+4 个 Linear 形状桶；另有仅在重构残差超门时启动的确认组。当前只完成设计，尚未实现或提交。
+
+v187 Jacobian 敏感度机制官方 `9167/169s`，相对 v185
 `+721/+4s`，已作为官方正向 clean-room 研究父归档；因仍低于 v186 `8432` 分，根版本不切换；
 v185 官方 `8446/165s` 已拒绝；
 v183 覆盖率计划已按官方 `17598/279.7s` 裁决为 REJECTED 并归档
@@ -789,7 +798,8 @@ v183 覆盖率计划已按官方 `17598/279.7s` 裁决为 REJECTED 并归档
 继续作为时间预算父。新候选需单独注册新机制计划。
 
 Attention 的 coverage、alpha/head/channel、V multiplier、动态 per-call、
-full64/Householder 与码本重写继续关闭。官方配额现为 `8/10`，剩余 2。
+full64/Householder 与码本重写继续关闭。官方提交次数没有限制；v188 是当时记录序列中的
+第 9 次提交，不代表配额。本轮两个本地候选因未通过本地门禁而未提交。
 
 ## 7. 归档现状与待整理项
 
