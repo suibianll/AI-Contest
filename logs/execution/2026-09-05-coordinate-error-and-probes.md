@@ -132,4 +132,27 @@ Linear 校准路径中**没有调用点**，不产生 state 字段——只读�
   不是本机剩余合法自由度。不重启已关闭家族。
 - 按计划继续 P3：官方贡献探针获取分桶证据。
 
+## P3 官方贡献探针（DONE，2026-09-05 官方回传全部到账）
+
+专项日志见 [`2026-09-05-p3-official-contribution-probes.md`](2026-09-05-p3-official-contribution-probes.md)。
+P3-B 记 DESIGN_BLOCKED（Q/K 独立 API 无共同场景键）→ 构造并提交 6 个探针
+（A10/A01/W0-W3），本地逐位 control 全过（0 失败），官方回传：
+
+| 探针 | 官方 | 贡献 |
+|---|---|---|
+| A10（Q/K v160，V std） | 12010 / 203s | C_QK = 11009 |
+| A01（Q/K std，V v160） | 2974 / 175s | C_V = 1973 |
+| W0（k/v rows≤256） | 1001 / 149s | C=0 |
+| W1（q/o 方形） | 1001 / 147s | C=0 |
+| W2（fc） | 2819 / 195s | C=1818 |
+| W3（proj） | 2768 / 162s | C=1767 |
+
+交互 I = −38（Q/K 与 V 可加）；Linear 桶残差 R = +1（全覆盖可加）。
+**结论**：① Attention 官方增益 ≈85% 在 Q/K、15% 在 V（与 P1 诊断一致）；② v160 Linear
+官方增益 100% 落在 fc+proj 大形状桶（W2+W3=3585），hidden_to_hidden/q/o 与小输出权重
+(k/v) 桶为零收益——future Linear 候选只应瞄准 expansive/wide 形状。P2 的
+`NO_SUPPORTED_MECHANISM` 判定保持，无新机制可注册，P4/P5 不启动；根 solution.py 保持
+v186。提交（官方回填）见 solutions/20260905_p3*。
+
+
 

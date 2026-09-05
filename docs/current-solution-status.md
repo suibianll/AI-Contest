@@ -787,10 +787,29 @@ v86 的部分 scale-aware/output-aware 机制。此前把它描述为"v86 级静
 **当前唯一 active 计划：**
 [`同坐标系误差诊断、官方贡献探针与新机制验证计划`](superpowers/plans/2026-09-05-coordinate-consistent-error-and-official-probes-plan.md)。
 P0–P5 依次为证据冻结、同坐标诊断、格式误差定位、官方贡献探针、条件单机制候选及官方裁决。
-核心矩阵为配对 QK/V 2 个、Attention 长度桶 4 个、Linear 形状桶 4 个，共 10 个新探针；
-当前仅完成计划，未修改算法/评测器、未运行或提交新实验。原系统辨识计划已 superseded 归档。
-混坐标消融不再解释为纯量化贡献，分桶收益不解释为隐藏样本权重；提交计时须使用与模型一致
-的 default 协议，不能将 shard 或校准缓存命中时间直接代入。详见新计划 §2。
+原系统辨识计划已 superseded 归档。混坐标消融不再解释为纯量化贡献，分桶收益不解释为隐藏
+样本权重；提交计时须使用与模型一致的 default 协议，不能将 shard 或校准缓存命中时间直接代入。
+详见新计划 §2。
+
+**执行状态（2026-09-05 更新）**：P0–P3 已完成，官方回传全部到账。
+
+- P0：manifest + v186 变换链审计（`logs/execution/2026-09-05-coordinate-error-and-probes.md`）。
+- P1（同坐标分解，48 attn + 336 linear 全层）：误差几乎全部是纯量化扰动（Attn E²/B²≈
+  4000×）；Q/K 量化误差 ≈ V 的 2.5–2.8× 且可加；Linear 权重侧 ≈ 激活侧 1.9×（proj 4.4×）；
+  深层误差最大。工具 `evaluator/coordinate_diagnostics.py` + 合成测试（5 passed）。
+  报告 `logs/execution/2026-09-05-coordinate-diagnostics-v186.md`。
+- P2（放宽格式诊断）：R1 mantissa 0.25 网格是唯一有系统余量的字段约束（Attn Q/K −82%、
+  Linear W −77%，100% 同号）；R2 scale / R3 lv2/lv3 求解器饱和无余量。R1 无合法实现路径 →
+  P4 记 `NO_SUPPORTED_MECHANISM`。报告 `logs/execution/2026-09-05-format-error-location-p2.md`。
+- P3（官方贡献探针）：P3-B（A1 长度桶）`DESIGN_BLOCKED`（Q/K 独立 API 无共同场景键）；
+  构造并本地 control 6 个探针（A10/A01/W0-W3，逐位 0 失败）。**官方回传**：A10
+  `12010/203s`（C_QK=11009）、A01 `2974/175s`（C_V=1973，交互 −38）、W0/W1 均 `1001`
+  （零收益桶）、W2 `2819/195s`（C=1818）、W3 `2768/162s`（C=1767，桶残差 +1）。
+  结论：Attention 官方增益 ≈85% 在 Q/K；v160 Linear 官方增益 100% 落在 fc+proj 大形状桶，
+  hidden_to_hidden（q/o）与小输出权重（k/v）桶零收益 → future Linear 候选只瞄准
+  expansive/wide 形状；P2 的 `NO_SUPPORTED_MECHANISM` 保持，P4/P5 不启动。根 solution.py
+  保持 v186。归档 `solutions/20260905_p3*`，日志
+  `logs/execution/2026-09-05-p3-official-contribution-probes.md`。
 
 v187 Jacobian 敏感度机制官方 `9167/169s`，相对 v185
 `+721/+4s`，已作为官方正向 clean-room 研究父归档；因仍低于 v186 `8432` 分，根版本不切换；
