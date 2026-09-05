@@ -10,14 +10,12 @@
 `evaluator/eval.py`（其 proxy-v2/reference 后端 `evaluator/official_eval.py` 仅兼容旧缓存与协议），
 跨模型泛化调用 `evaluator/cross_model_eval.py`；旧 `real_model_suite.py` 已退役。
 
-**当前无 active 计划（2026-09-05）。** 定向研究计划
-[`2026-09-05-targeted-fcproj-qk-mechanism-research-plan`](../archive/plans/2026-09-05-targeted-fcproj-qk-mechanism-research-plan-closed.md)
-已 **COMPLETED-CLOSED 归档**：S1 结构解剖确认 fc/proj 与 Q/K 剩余误差为 3-bit mantissa
-网格主导（round-limited）+ ~4.6% 离群饱和，未发现新的合法编译目标。上一份
-[`coordinate/probes 计划`](../archive/plans/2026-09-05-coordinate-consistent-error-and-official-probes-plan-completed.md)
-亦已 COMPLETED 归档。原[系统辨识计划](../archive/plans/2026-09-05-official-evaluation-system-identification-plan-superseded.md)
-已归档。根源码仍为 v186 `17599/272s`，v180 `17597/242s` 保留为时间预算父。
-新计划须在本目录写就并注明父证据与官方边界后方可执行。
+**当前唯一活动计划（2026-09-05）**：[`2026-09-05-nvfp4-codebook-exact-conversion-plan`](2026-09-05-nvfp4-codebook-exact-conversion-plan.md)
+P0–P4：P0 数据事实证明 ✅ G0 PASS（fc/proj exact 均值 0.789 / mse_ratio 0.476，远超
+阈值 0.20/0.85）；Q/K W 0.74/0.70、V/O W 0.81/0.84；X fc_gate/proj 0.47/0.53。
+P1 单元证明 ❌ G1 CLOSE_W：hybrid MSE 58–60× v186 baseline、exact 占比 0——P0 精确上界
+建立在 NVFP4 严格码本上，dense 输入下不成立。W 侧机制族正式关闭。
+下一步 P4 attention 运行时精确转换（待 cb0 扩抽样 attention X NVFP4 数据）。
 
 proxy-v3 分片评测与诊断工具已完成并归档，见
 [`归档记录`](../archive/plans/2026-09-04-proxy-v3-evaluator-and-analysis-tools-completed.md)。

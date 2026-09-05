@@ -22,16 +22,12 @@
 > 诊断。`evaluator/official_eval.py` 保持未修改，作为 `proxy-v2` 兼容/参考后端；旧命令和下文
 > 的 `proxy-v2` 统计仍表示底层协议，不应把二者的输出混排。
 
-> **当前无活动计划（2026-09-05）**。上一份
-> [`fc/proj 与 Q/K 定向机制研究计划`](docs/superpowers/archive/plans/2026-09-05-targeted-fcproj-qk-mechanism-research-plan-closed.md)
-> 已 COMPLETED-CLOSED 归档：S1 解剖确认目标对象剩余误差为 3-bit mantissa 网格主导
-> （round-limited）+ ~4.6% 离群饱和，未发现新的合法编译目标，S2/S3 未触发。
-> 此前
-> [`coordinate/probes 计划`](docs/superpowers/archive/plans/2026-09-05-coordinate-consistent-error-and-official-probes-plan-completed.md)
-> 已 COMPLETED 归档（P1 误差几乎全为纯量化扰动；P2 仅 mantissa 网格有不可合法编译余量 →
-> P4 `NO_SUPPORTED_MECHANISM`；P3 官方 Q/K 占 Attention 增益 85%、v160 Linear 增益全在
-> fc+proj 大形状桶、P3-B DESIGN_BLOCKED）。混坐标消融不是纯量化误差；分桶贡献不是隐藏
-> 权重；不同算法 ±4 分不证明随机噪声；shard/校准缓存耗时不代入 default 时间模型。
+> **当前唯一活动计划（2026-09-05）**：
+> [`NVFP4 codebook 精确转换计划`](docs/superpowers/plans/2026-09-05-nvfp4-codebook-exact-conversion-plan.md)
+> **P0 PASS**（fc/proj exact 均值 0.789、mse_ratio 0.476；远过阈值 0.20/0.85）。
+> **P1 G1 CLOSE_W**：hybrid MSE 58–60× v186 baseline、exact 占比 0——P0 精确上界
+> 建立在 NVFP4 严格码本上，dense 输入下不成立；W 侧机制族正式关闭。
+> 下一步 P4 attention 运行时精确转换（待 cb0 扩抽样 attention X NVFP4 数据复测）。
 > 根 solution.py 保持 v186。
 
 ## 1. 当前状态
