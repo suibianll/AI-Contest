@@ -23,8 +23,10 @@
 > 的 `proxy-v2` 统计仍表示底层协议，不应把二者的输出混排。
 
 > **当前唯一活动计划（2026-09-05）**：
-> [`官方评测规律系统辨识计划`](docs/superpowers/plans/2026-09-05-official-evaluation-system-identification-plan.md)，
-> 预注册 14 个核心官方探针；当前仅完成设计，尚未实现或提交。
+> [`同坐标系误差诊断、官方贡献探针与新机制验证计划`](docs/superpowers/plans/2026-09-05-coordinate-consistent-error-and-official-probes-plan.md)，
+> P0–P5：冻结证据 → 同坐标诊断 → 格式误差定位 → 10 个核心官方贡献探针 → 条件单机制候选
+> → 官方裁决。当前仅完成计划，尚未实现或提交。混坐标消融不是纯量化误差；分桶贡献不是隐藏
+> 权重；不同算法 ±4 分不证明随机噪声；shard/校准缓存耗时不代入 default 时间模型。详见新计划 §2。
 
 ## 1. 当前状态
 

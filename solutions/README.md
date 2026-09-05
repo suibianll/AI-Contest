@@ -1,5 +1,11 @@
 # HiF4 solutions archive
 
+> **Planning update (2026-09-05):** the sole active plan is
+> [coordinate-consistent diagnostics and official contribution probes](../docs/superpowers/plans/2026-09-05-coordinate-consistent-error-and-official-probes-plan.md).
+> It specifies P0–P5 and 10 core probes; no implementation, new evaluation, or submission has occurred.
+> The root remains official v186 `17599/272s`; v180 `17597/242s` is the time-budget parent.
+> The previous system-identification design is archived as superseded; no new solution version is assigned.
+
 > **Rule correction (2026-09-05):** official submissions are unlimited. Historical
 > `x/10`, “remaining slot”, and quota wording is obsolete; see
 > [`stale-information-inventory-2026-09-05.md`](../docs/stale-information-inventory-2026-09-05.md).

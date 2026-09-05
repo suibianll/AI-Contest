@@ -11,9 +11,12 @@
 跨模型泛化调用 `evaluator/cross_model_eval.py`；旧 `real_model_suite.py` 已退役。
 
 **当前唯一 active 计划：**
-[`2026-09-05-official-evaluation-system-identification-plan.md`](2026-09-05-official-evaluation-system-identification-plan.md)。
-该计划利用提交次数无限这一更正，以 14 个核心官方探针辨识 Q/K/V 交互、Attention 长度权重、
-Linear 形状族权重和六 API 时间映射；当前仅完成设计，尚未实现或提交探针。
+[`2026-09-05-coordinate-consistent-error-and-official-probes-plan.md`](2026-09-05-coordinate-consistent-error-and-official-probes-plan.md)。
+按 P0–P5 完成证据冻结、同坐标误差诊断、固定格式放宽诊断、10 个核心官方贡献探针，以及
+有证据时的单机制验证与官方裁决；当前仅完成计划，尚未实现或提交。
+原[系统辨识计划](../archive/plans/2026-09-05-official-evaluation-system-identification-plan-superseded.md)
+已归档：Q/K 改为配对切换，分桶只解释机制贡献，不恢复隐藏权重；时间门禁保留 default
+协议实测要求。根源码仍为 v186 `17599/272s`，v180 `17597/242s` 保留为时间预算父。
 
 proxy-v3 分片评测与诊断工具已完成并归档，见
 [`归档记录`](../archive/plans/2026-09-04-proxy-v3-evaluator-and-analysis-tools-completed.md)。

@@ -785,17 +785,20 @@ v86 的部分 scale-aware/output-aware 机制。此前把它描述为"v86 级静
 ## 6. 当前活动计划
 
 **当前唯一 active 计划：**
-[`官方评测规律系统辨识计划`](superpowers/plans/2026-09-05-official-evaluation-system-identification-plan.md)。
-计划预注册 14 个核心官方探针：Q/K/V 2³ 析因的 6 个缺失单元、4 个 Attention 长度桶、
-4 个 Linear 形状桶；另有仅在重构残差超门时启动的确认组。当前只完成设计，尚未实现或提交。
+[`同坐标系误差诊断、官方贡献探针与新机制验证计划`](superpowers/plans/2026-09-05-coordinate-consistent-error-and-official-probes-plan.md)。
+P0–P5 依次为证据冻结、同坐标诊断、格式误差定位、官方贡献探针、条件单机制候选及官方裁决。
+核心矩阵为配对 QK/V 2 个、Attention 长度桶 4 个、Linear 形状桶 4 个，共 10 个新探针；
+当前仅完成计划，未修改算法/评测器、未运行或提交新实验。原系统辨识计划已 superseded 归档。
+混坐标消融不再解释为纯量化贡献，分桶收益不解释为隐藏样本权重；提交计时须使用与模型一致
+的 default 协议，不能将 shard 或校准缓存命中时间直接代入。详见新计划 §2。
 
 v187 Jacobian 敏感度机制官方 `9167/169s`，相对 v185
 `+721/+4s`，已作为官方正向 clean-room 研究父归档；因仍低于 v186 `8432` 分，根版本不切换；
 v185 官方 `8446/165s` 已拒绝；
 v183 覆盖率计划已按官方 `17598/279.7s` 裁决为 REJECTED 并归档
 （[`2026-09-04-v183-attn-bsm-full-refine-plan-rejected.md`](superpowers/archive/plans/2026-09-04-v183-attn-bsm-full-refine-plan-rejected.md)）；
-其相对 v182 `step_gain=0`、时间 `+6.7s`，覆盖率族关闭。v182 继续作为分数父，v180
-继续作为时间预算父。新候选需单独注册新机制计划。
+其相对 v182 `step_gain=0`、时间 `+6.7s`，覆盖率族关闭。当前 v186 为分数父，v180
+为时间预算父。新候选须先按活动计划注册机制卡，不并列新增第二份活动计划。
 
 Attention 的 coverage、alpha/head/channel、V multiplier、动态 per-call、
 full64/Householder 与码本重写继续关闭。官方提交次数没有限制；v188 是当时记录序列中的
