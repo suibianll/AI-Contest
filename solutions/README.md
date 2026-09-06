@@ -1,6 +1,10 @@
 # HiF4 solutions archive
 
 > **Execution update (2026-09-06):** there is currently no active optimization plan.
+> [Linear dynamic block-energy act-order](20260906_linear-dynamic-block-energy_time-rejected/result.md)
+> was closed as **CLOSED / R3_REJECTED_TIME**: its fresh default Overall was
+> `0.688967415343` (above the local high `0.687776303363`), but the official-time predictor was
+> `286.022476s`, so it was archived without official submission and the root remains v189.
 > [Integrated Linear carrier-energy act-order](20260906_linear-integrated-carrier-energy_time-rejected/result.md)
 > was closed as **CLOSED / R3_REJECTED_TIME**: it preserved the preceding carrier-energy
 > local Overall `0.687776303`, but its fresh predictor was `284.291453s` and it did not

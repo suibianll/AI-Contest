@@ -9,6 +9,13 @@
 ## 0.1 当前计划状态（2026-09-06）
 
 当前没有活动优化计划。最近的
+[`Linear 动态块能量块序计划`](superpowers/plans/2026-09-06-linear-dynamic-block-energy-plan.md)
+已按 R0→R3 关闭为 **CLOSED / R3_REJECTED_TIME**：fresh default Linear/Attention/Overall
+为 `0.643820278430/0.752173407020/0.688967415343`，超过本地最高
+`0.687776303363`，但时间模型预测 `286.022476s`，未通过 `<280s` 提交门；候选已归档于
+[`动态块能量时间拒绝归档`](../solutions/20260906_linear-dynamic-block-energy_time-rejected/result.md)，
+未提交官方，根仍为 v189。执行记录见
+[`动态块能量执行记录`](../logs/execution/2026-09-06-linear-dynamic-block-energy-plan.md)。此前最近的
 [`Linear 校准内 carrier-energy 块序计划`](superpowers/plans/2026-09-06-linear-integrated-carrier-energy-plan.md)
 已按 R0→R3 关闭为 **CLOSED / R3_REJECTED_TIME**：候选复用版保持上一 carrier-energy
 候选的 Linear `0.641778372`、Overall `0.687776303`，但时间模型预测 `284.291453s`
