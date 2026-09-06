@@ -1,0 +1,728 @@
+diff --git a/solutions/20260903_v163_v160-linear_standard-attn_scoreNA_timeNA/solution.py b/solutions/20260904_v182_rank2-linear_v180-attn_scoreNA_timeNA/solution.py
+index a8eafe8..7879d68 100644
+--- a/solutions/20260903_v163_v160-linear_standard-attn_scoreNA_timeNA/solution.py
++++ b/solutions/20260904_v182_rank2-linear_v180-attn_scoreNA_timeNA/solution.py
+@@ -71,6 +71,13 @@ _WEIGHT_GPTQ = True
+ _WEIGHT_GPTQ_REGULARIZATION = 0.2
+ _WEIGHT_GPTQ_REGULARIZATION_WIDE = 0.3
+ _WEIGHT_GPTQ_BLOCK_SIZE = 64
++# L-R2 (post-v180 plan 2026-09-04): fused rank-2 residual redistribution.
++# v166 rank-1 keeps its own hardcoded logic; these constants only extend it
++# with one extra orthogonal residual direction pair.  rank=1 keeps the
++# legacy single-pair path bit-identical; rank=2 fuses U=[u1,u2], V=[v1,v2].
++_WEIGHT_RESIDUAL_RANK = 2
++_WEIGHT_RESIDUAL_COEFF = 0.25  # inherited from v166
++_WEIGHT_RESIDUAL_POWER_ITERS = 128  # inherited from v166
+ _ACTIVATION_GPTQ = True
+ _ACTIVATION_GPTQ_REGULARIZATION = 0.2
+ _ACTIVATION_GPTQ_REGULARIZATION_WIDE = 0.1
+@@ -365,6 +372,20 @@ if _ATTN_SCALE_AWARE_CENTER:
+ # discarding the aggregate gain.
+ _ATTN_OUTPUT_SELECTOR = True
+ _ATTN_A1_MAX_TOKENS = 256
++_ATTN_LOGIT_GAIN = True
++_ATTN_LOGIT_GAIN_MIN = 0.5
++_ATTN_LOGIT_GAIN_MAX = 2.0
++_ATTN_LOGIT_GAIN_LOG_SHRINK = 0.5
++_ATTN_LOGIT_GAIN_TOKENS = 128
++# D1: plan-2026-09-04 post-official A1 freedom — Q/K asymmetric fold of the
++# per-KV-head logits gain. A1 folds sqrt(gamma) symmetrically into Q and K.
++# D1 redistributes it: q_mult *= sqrt(g)^(1-alpha), k_mult *= sqrt(g)^alpha
++# with a per-KV-head alpha in [0,1] chosen in calibration to minimize the
++# deployed output error. The continuous QK^T product is unchanged for any
++# alpha (product of the two exponents = gamma), so only the quantization
++# dynamic-range allocation between Q and K moves.
++_ATTN_A1_ASYMMETRIC_FOLD = True
++_ATTN_A1_ASYMMETRIC_ALPHA = 0.3  # D1 gate: asymmetric fold (alpha=0 = A1 baseline); single pre-registered value
+ # C76.1: after the tied Q/K hierarchy ordering, let the real-output A1 scorer
+ # test a small set of *independent* Q-only and K-only head permutations.  The
+ # tied permutation is exactly equivalent before quantization; the independent
+@@ -8155,6 +8176,274 @@ def hif4_calibration_and_quantize_weight(
+         ).unsqueeze(0).expand(
+             int(weight.shape[0]), blocks, 8, 2, 4, 4
+         )
++    # ------------------------------------------------------------------
++    # v166 rank-1 residual redistribution (side-isolation plan section 6).
++    #
++    # Deployment-coordinate base-codec residual probes define an exactly
++    # product-preserving rank-1 mix R = I + u v^T: v = d1 is the
++    # fold-median top residual direction, u = c * d2 with c = 1/4 and d2
++    # the fold-median second direction orthogonalized against d1, so u is
++    # orthogonal to v and R^{-T} = I - v u^T exactly.  Folds are the
++    # pre-fixed even/odd row split of each calibration window's deployment
++    # sample (4 folds); directions are sign-aligned to fold 0 and
++    # component-wise median aggregated.  Residual probes use the base
++    # HiF4 codec (_dense_to_hif4) in deployment coordinates.  The mix is
++    # applied before the weight encode by rebinding the deployment
++    # operands (weight_smooth, transformed samples, Hessian gram, block
++    # grams, importance), so the entire downstream pipeline (GPTQ encode,
++    # importance, gram, h_inv) runs on the transformed operands; the
++    # dynamic path applies A R = A + (A u) v^T in O(TD).
++    # ------------------------------------------------------------------
++    transformed_activation_samples = []
++    for _sample in activation_samples:
++        _t = _sample.to(dtype=torch.float32) * best_d.reciprocal().reshape(1, -1)
++        _t = _t.index_select(-1, best_perm)
++        if best_block_smooth_size != 0:
++            _t = _block_hadamard_transform(
++                _t, best_block_smooth_size, best_block_smooth_seed
++            )
++        transformed_activation_samples.append(_t)
++
++    weight_residual = weight_smooth - _dequantize_hif4(
++        _dense_to_hif4(weight_smooth)
++    ).to(torch.float32)
++    fold_residuals = []
++    for _sample in transformed_activation_samples:
++        for _fold in (_sample[0::2], _sample[1::2]):
++            fold_residuals.append(
++                _fold
++                - _dequantize_hif4(_dense_to_hif4(_fold)).to(torch.float32)
++            )
++
++    def _rank1_top2(act_res, w_res):
++        ta = float(act_res.square().sum())
++        tw = float(w_res.square().sum())
++        na = 1.0 / ta if ta > _EPS else 0.0
++        nw = 1.0 / tw if tw > _EPS else 0.0
++
++        def _mv(x):
++            return (
++                na * act_res.t().mv(act_res.mv(x))
++                + nw * w_res.t().mv(w_res.mv(x))
++            )
++
++        diag = na * act_res.square().sum(dim=0) + nw * w_res.square().sum(dim=0)
++        d1 = torch.zeros_like(diag)
++        d1[int(diag.argmax())] = 1.0
++        for _ in range(128):
++            d1 = _mv(d1)
++            d1 = d1 / d1.norm().clamp_min(_EPS)
++        lam1 = float(d1 @ _mv(d1))
++        diag2 = diag - lam1 * d1.square()
++        d2 = torch.zeros_like(diag)
++        d2[int(diag2.argmax())] = 1.0
++        for _ in range(128):
++            d2 = _mv(d2) - lam1 * d1 * float(d1 @ d2)
++            d2 = d2 / d2.norm().clamp_min(_EPS)
++        return d1, d2
++
++    def _rank1_fix_sign(d):
++        if float(d[int(d.abs().argmax())]) < 0.0:
++            return -d
++        return d
++
++    def _rank2_residual_complement(
++        parent_u: torch.Tensor, parent_v: torch.Tensor
++    ) -> tuple[torch.Tensor, torch.Tensor, dict[str, float]]:
++        """Plan L-R2: extract one extra residual direction pair in the
++        orthogonal complement of the v166 rank-1 span.
++
++        parent_v = v1 (unit), parent_u = u1 (norm c = 0.25).  For each
++        calibration fold, run fixed power iterations of the deployment-
++        coordinate base-codec residual operator
++            C(x) = Ea^T(Ea x)/||Ea||^2 + Ew^T(Ew x)/||Ew||^2
++        restricted to span(v1, u1)^perp, deflating the top direction to get
++        d3, d4.  Sign align to fold 0, component-wise median across folds,
++        Gram-Schmidt against the parent span, then fix v2 = d3 (unit) and
++        u2 = c*d4 (norm c) with a final projection so V^T U ~= 0.
++        """
++        b1 = parent_v / parent_v.norm().clamp_min(_EPS)
++        pu_norm = float(parent_u.norm())
++        b2 = (
++            parent_u / pu_norm
++            if pu_norm > _EPS
++            else torch.zeros_like(parent_v)
++        )
++
++        def _rank2_top2(act_res):
++            ta = float(act_res.square().sum())
++            tw = float(weight_residual.square().sum())
++            na = 1.0 / ta if ta > _EPS else 0.0
++            nw = 1.0 / tw if tw > _EPS else 0.0
++
++            def _mv(x):
++                return (
++                    na * act_res.t().mv(act_res.mv(x))
++                    + nw * weight_residual.t().mv(weight_residual.mv(x))
++                )
++
++            def _proj(x):
++                x = x - b1 * float(b1 @ x)
++                x = x - b2 * float(b2 @ x)
++                return x
++
++            diag = (
++                na * act_res.square().sum(dim=0)
++                + nw * weight_residual.square().sum(dim=0)
++            )
++            diag3 = _proj(diag)
++            d3 = torch.zeros_like(diag)
++            d3[int(diag3.argmax())] = 1.0
++            for _ in range(_WEIGHT_RESIDUAL_POWER_ITERS):
++                d3 = _proj(_mv(d3))
++                d3 = d3 / d3.norm().clamp_min(_EPS)
++            lam3 = float(d3 @ _mv(d3))
++            diag4 = diag3 - lam3 * d3.square()
++            d4 = torch.zeros_like(diag)
++            d4[int(diag4.argmax())] = 1.0
++            for _ in range(_WEIGHT_RESIDUAL_POWER_ITERS):
++                d4 = _proj(_mv(d4))
++                d4 = d4 - d3 * float(d3 @ d4)
++                d4 = d4 / d4.norm().clamp_min(_EPS)
++            return d3, d4
++
++        d3_list = []
++        d4_list = []
++        for _fold_res in fold_residuals:
++            _d3, _d4 = _rank2_top2(_fold_res)
++            d3_list.append(_rank1_fix_sign(_d3))
++            d4_list.append(_rank1_fix_sign(_d4))
++        for _i in range(1, len(d3_list)):
++            if float(d3_list[_i] @ d3_list[0]) < 0.0:
++                d3_list[_i] = -d3_list[_i]
++            if float(d4_list[_i] @ d4_list[0]) < 0.0:
++                d4_list[_i] = -d4_list[_i]
++        d3_med = torch.stack(d3_list).median(dim=0).values
++        d4_med = torch.stack(d4_list).median(dim=0).values
++
++        d3_med = d3_med - b1 * float(b1 @ d3_med) - b2 * float(b2 @ d3_med)
++        d4_med = d4_med - b1 * float(b1 @ d4_med) - b2 * float(b2 @ d4_med)
++        d4_med = d4_med - d3_med * float(d3_med @ d4_med)
++        d3_norm = float(d3_med.norm())
++        d4_norm = float(d4_med.norm())
++        if d3_norm < 1.0e-6 or d4_norm < 1.0e-6:
++            stats = {
++                "reachable": 0,
++                "d3_norm": d3_norm,
++                "d4_norm": d4_norm,
++                "vtu_cross_max": 0.0,
++            }
++            return (
++                torch.zeros_like(parent_v),
++                torch.zeros_like(parent_v),
++                stats,
++            )
++        v2 = d3_med / d3_norm
++        u2 = _WEIGHT_RESIDUAL_COEFF * d4_med / d4_norm
++        # Final projection to force the cross inner products near zero.
++        v2 = v2 - b1 * float(b1 @ v2) - b2 * float(b2 @ v2)
++        u2 = u2 - b1 * float(b1 @ u2) - b2 * float(b2 @ u2)
++        u2 = u2 - v2 * float(v2 @ u2)
++        v2 = v2 / v2.norm().clamp_min(_EPS)
++        u2 = (
++            u2 / u2.norm().clamp_min(_EPS) * _WEIGHT_RESIDUAL_COEFF
++        )
++        stats = {
++            "reachable": 1,
++            "d3_norm": float(v2.norm()),
++            "d4_norm": float((u2 / _WEIGHT_RESIDUAL_COEFF).norm()),
++            "vtu_cross_max": float(
++                max(
++                    abs(float(v2 @ u2)),
++                    abs(float(b1 @ u2)),
++                    abs(float(b2 @ u2)),
++                    abs(float(v2 @ b2)),
++                )
++            ),
++        }
++        return u2, v2, stats
++
++    d1_list = []
++    d2_list = []
++    for _fold_res in fold_residuals:
++        _d1, _d2 = _rank1_top2(_fold_res, weight_residual)
++        d1_list.append(_rank1_fix_sign(_d1))
++        d2_list.append(_rank1_fix_sign(_d2))
++    for _i in range(1, len(d1_list)):
++        if float(d1_list[_i] @ d1_list[0]) < 0.0:
++            d1_list[_i] = -d1_list[_i]
++        if float(d2_list[_i] @ d2_list[0]) < 0.0:
++            d2_list[_i] = -d2_list[_i]
++    rank1_v = torch.stack(d1_list).median(dim=0).values
++    if float(rank1_v.norm()) < 1.0e-6:
++        rank1_v = d1_list[0]
++    rank1_v = rank1_v / rank1_v.norm().clamp_min(_EPS)
++    d2_med = torch.stack(d2_list).median(dim=0).values
++    d2_med = d2_med - float(d2_med @ rank1_v) * rank1_v
++    d2_norm = float(d2_med.norm())
++    if d2_norm < 1.0e-6:
++        rank1_u = torch.zeros_like(rank1_v)
++    else:
++        rank1_u = 0.25 * d2_med / d2_norm
++    vtu = float(rank1_v @ rank1_u)
++    if abs(vtu) > 0.5:
++        rank1_u = rank1_u * (0.5 / abs(vtu))
++
++    if float(rank1_u.square().sum()) > 0.0:
++        if _WEIGHT_RESIDUAL_RANK >= 2:
++            u2, v2, r2_stats = _rank2_residual_complement(rank1_u, rank1_v)
++            if not int(r2_stats.get("reachable", 0)):
++                u2 = torch.zeros_like(rank1_u)
++                v2 = torch.zeros_like(rank1_v)
++            residual_u = torch.stack([rank1_u, u2], dim=1)  # [D,2]
++            residual_v = torch.stack([rank1_v, v2], dim=1)  # [D,2]
++        else:
++            residual_u = rank1_u.unsqueeze(1)  # [D,1]
++            residual_v = rank1_v.unsqueeze(1)  # [D,1]
++        # Fused rank-r update: W' = W - (W V) U^T, A' = A + (A U) V^T.
++        # For rank=1 this is bit-identical to the legacy outer-product pair.
++        weight_smooth = weight_smooth - (weight_smooth @ residual_v) @ residual_u.t()
++        transformed_activation_samples = [
++            _sample + (_sample @ residual_u) @ residual_v.t()
++            for _sample in transformed_activation_samples
++        ]
++        if gram_full is not None:
++            g_u = gram_full.mm(residual_u)          # [D,r]
++            ugu = residual_u.t().mm(g_u)            # [r,r]
++            h_x_smooth = (
++                h_x_smooth
++                + 2.0 * (residual_v * g_u).sum(dim=1)
++                + (residual_v.mm(ugu) * residual_v).sum(dim=1)
++            )
++            gram_full = (
++                gram_full
++                + residual_v.mm(g_u.t())
++                + g_u.mm(residual_v.t())
++                + residual_v.mm(ugu).mm(residual_v.t())
++            )
++            weight_group_gram = _flat_group_gram(
++                gram_full, in_features
++            ).reshape(
++                blocks, 8, 2, 4, 4
++            ).unsqueeze(0).expand(
++                int(weight.shape[0]),
++                blocks,
++                8, 2, 4, 4,
++            )
++        else:
++            h_x_smooth = torch.cat(
++                transformed_activation_samples
++            ).square().mean(dim=0)
++    else:
++        residual_u = None
++        residual_v = None
++        r2_stats = {"reachable": 0}
++
++    if _WEIGHT_RESIDUAL_RANK >= 2:
++        print(f"[L-R2] rank2 reachable={r2_stats.get('reachable', 0)} "
++              f"vtu_cross_max={float(r2_stats.get('vtu_cross_max', 0.0)):.3e}",
++              flush=True)
++
+     refine_ratio = (
+         _WEIGHT_REFINE_MAX_RATIO_SMALL
+         if int(weight.numel()) <= 4_194_304
+@@ -8218,20 +8507,8 @@ def hif4_calibration_and_quantize_weight(
+     smooth_inv_work = None if smooth_inv_state is None else best_d.reciprocal()
+     permutation_work = None if permutation_state is None else best_perm
+ 
+-    transformed_activation_samples = []
+-    for sample in activation_samples:
+-        transformed = sample.to(dtype=torch.float32)
+-        if smooth_inv_work is not None:
+-            transformed = transformed * smooth_inv_work.reshape(1, -1)
+-        if permutation_work is not None:
+-            transformed = transformed.index_select(-1, permutation_work)
+-        if best_block_smooth_size != 0:
+-            transformed = _block_hadamard_transform(
+-                transformed,
+-                best_block_smooth_size,
+-                best_block_smooth_seed,
+-            )
+-        transformed_activation_samples.append(transformed)
++    # v166: transformed_activation_samples are built before the weight
++    # encode by the rank-1 residual redistribution block.
+ 
+     if _DATA_DRIVEN_RATIO:
+         loss_parts = [
+@@ -8429,8 +8706,16 @@ def hif4_calibration_and_quantize_weight(
+         "accept_margin": _ACTIVATION_REFINE_ACCEPT_MARGIN,
+         "max_refine_ratio": float(activation_ratio),
+         "max_refine_blocks": _ACTIVATION_REFINE_MAX_BLOCKS,
++        "rank1_u": _cpu_state_tensor(rank1_u),
++        "rank1_v": _cpu_state_tensor(rank1_v),
++        "residual_u": (
++            _cpu_state_tensor(residual_u) if residual_u is not None else None
++        ),
++        "residual_v": (
++            _cpu_state_tensor(residual_v) if residual_v is not None else None
++        ),
+         "in_features": int(in_features),
+-        "version": 3,
++        "version": 4,
+     }
+     return {
+         "weight_params": weight_params,
+@@ -8473,6 +8758,22 @@ def hif4_dynamic_quantize_activation(
+             dense, block_smooth_size, block_smooth_seed
+         )
+ 
++    residual_u = activation_state.get("residual_u")
++    residual_v = activation_state.get("residual_v")
++    if residual_u is not None and residual_v is not None:
++        # L-R2 fused rank update: A' = A + (A U) V^T, single GEMM pair.
++        u = residual_u.to(device=dense.device, dtype=torch.float32)
++        v = residual_v.to(device=dense.device, dtype=torch.float32)
++        dense = dense + (dense @ u) @ v.transpose(0, 1)
++    else:
++        rank1_u = activation_state["rank1_u"].to(
++            device=dense.device, dtype=torch.float32
++        )
++        rank1_v = activation_state["rank1_v"].to(
++            device=dense.device, dtype=torch.float32
++        )
++        dense = dense + (dense @ rank1_u).unsqueeze(-1) * rank1_v
++
+     gram = None
+     gram_state = activation_state.get("gram")
+     if gram_state is not None:
+@@ -8761,6 +9062,153 @@ def _attention_candidate_metrics(
+ 
+ 
+ @torch.no_grad()
++def _fit_attention_logit_gain(
++    q_pairs: list,
++    k_pairs: list,
++    q_state: dict,
++    k_state: dict,
++    q_num_heads: int,
++    kv_num_heads: int,
++    head_dim: int,
++) -> tuple[torch.Tensor, dict[str, float]]:
++    """Fit the plan-A1 per-KV-head multiplicative logit gain.
++
++    Row-centered causal logits of the float (NVFP4-dequantized) Q/K are
++    compared with the deployed quantization on even/odd folds of the
++    calibration windows.  ``raw_gamma = <Lq, L> / <Lq, Lq>`` per fold
++    regresses the float logits on the quantized ones; gamma is the
++    log-domain shrunk median fold gain per KV head, so folding
++    ``sqrt(gamma)`` into both Q and K multipliers rescales the deployed
++    logits by gamma.
++    """
++
++    group = int(q_num_heads) // int(kv_num_heads)
++    kv = int(kv_num_heads)
++    sqrt_d = math.sqrt(float(head_dim))
++
++    def _pass(states_q: dict, states_k: dict):
++        fold_num = [torch.zeros(kv, dtype=torch.float64) for _ in range(2)]
++        fold_den = [torch.zeros(kv, dtype=torch.float64) for _ in range(2)]
++        slope_num = 0.0
++        slope_den = 0.0
++        for index in range(min(len(q_pairs), len(k_pairs))):
++            q_pair = q_pairs[index]
++            k_pair = k_pairs[index]
++            take = _ATTN_LOGIT_GAIN_TOKENS
++            q_quant = q_pair[0][:take]
++            q_scale = q_pair[1][:take]
++            k_quant = k_pair[0][:take]
++            k_scale = k_pair[1][:take]
++            q_dense = _dequantize_nvfp4_float32(q_quant, q_scale)
++            k_dense = _dequantize_nvfp4_float32(k_quant, k_scale)
++            q_hat = _dequantize_hif4(
++                hif4_dynamic_quantize_q(
++                    q_quant, q_scale, q_num_heads, head_dim, states_q
++                )
++            ).to(torch.float32)
++            k_hat = _dequantize_hif4(
++                hif4_dynamic_quantize_k(
++                    k_quant, k_scale, kv_num_heads, head_dim, states_k
++                )
++            ).to(torch.float32)
++            seq = int(q_dense.shape[0])
++            tri = torch.ones(
++                seq, seq, device=q_dense.device, dtype=torch.float32
++            ).tril()
++            counts = torch.arange(
++                1, seq + 1, device=q_dense.device, dtype=torch.float32
++            )[:, None]
++            q_f = q_dense.reshape(seq, q_num_heads, head_dim).transpose(0, 1)
++            k_f = (
++                k_dense.reshape(seq, kv, head_dim)
++                .transpose(0, 1)
++                .repeat_interleave(group, dim=0)
++            )
++            q_q = q_hat.reshape(seq, q_num_heads, head_dim).transpose(0, 1)
++            k_q = (
++                k_hat.reshape(seq, kv, head_dim)
++                .transpose(0, 1)
++                .repeat_interleave(group, dim=0)
++            )
++            logits = (q_f @ k_f.transpose(-1, -2)) / sqrt_d
++            logits_q = (q_q @ k_q.transpose(-1, -2)) / sqrt_d
++            center = (
++                logits - (logits * tri).sum(-1, keepdim=True) / counts
++            ) * tri
++            center_q = (
++                logits_q - (logits_q * tri).sum(-1, keepdim=True) / counts
++            ) * tri
++            fold = index % 2
++            fold_num[fold] += (
++                (center_q * center)
++                .reshape(kv, group, -1)
++                .sum(dim=(1, 2))
++                .to(torch.float64)
++                .cpu()
++            )
++            fold_den[fold] += (
++                (center_q * center_q)
++                .reshape(kv, group, -1)
++                .sum(dim=(1, 2))
++                .to(torch.float64)
++                .cpu()
++            )
++            slope_num += float((center_q * center).sum())
++            slope_den += float((center * center).sum())
++        return fold_num, fold_den, slope_num, slope_den
++
++    fold_num, fold_den, slope_num, slope_den = _pass(q_state, k_state)
++    raw = torch.stack(
++        [fold_num[f] / (fold_den[f] + 1.0e-12) for f in range(2)]
++    )
++    finite = (
++        torch.isfinite(raw).all(dim=0)
++        & (fold_den[0] > 0)
++        & (fold_den[1] > 0)
++    )
++    raw = torch.nan_to_num(
++        raw, nan=1.0, posinf=1.0, neginf=1.0
++    ).clamp(_ATTN_LOGIT_GAIN_MIN, _ATTN_LOGIT_GAIN_MAX)
++    gain = (
++        _ATTN_LOGIT_GAIN_LOG_SHRINK * raw.log().median(dim=0).values
++    ).exp()
++    gain = torch.where(finite, gain, torch.ones_like(gain))
++    gain = torch.nan_to_num(
++        gain, nan=1.0, posinf=1.0, neginf=1.0
++    ).clamp(
++        math.sqrt(_ATTN_LOGIT_GAIN_MIN), math.sqrt(_ATTN_LOGIT_GAIN_MAX)
++    )
++
++    q_gain = gain.repeat_interleave(group)
++    q_gain = q_gain[:, None].expand(-1, head_dim).reshape(-1).sqrt()
++    k_gain = gain[:, None].expand(-1, head_dim).reshape(-1).sqrt()
++    q_corr = dict(q_state)
++    k_corr = dict(k_state)
++    q_base = (
++        torch.ones(int(q_num_heads) * int(head_dim), dtype=torch.float32)
++        if q_state.get("multiplier") is None
++        else q_state["multiplier"].to(dtype=torch.float32)
++    )
++    k_base = (
++        torch.ones(kv * int(head_dim), dtype=torch.float32)
++        if k_state.get("multiplier") is None
++        else k_state["multiplier"].to(dtype=torch.float32)
++    )
++    q_corr["multiplier"] = q_base * q_gain
++    k_corr["multiplier"] = k_base * k_gain
++    _, _, corr_num, corr_den = _pass(q_corr, k_corr)
++
++    stats = {
++        "valid_heads": int(finite.sum().item()),
++        "gamma_min": float(gain.min().item()),
++        "gamma_median": float(gain.median().item()),
++        "gamma_max": float(gain.max().item()),
++        "slope_parent": slope_num / slope_den if slope_den > 0.0 else 1.0,
++        "slope_corrected": corr_num / corr_den if corr_den > 0.0 else 1.0,
++    }
++    return gain.to(torch.float32), stats
++
++
+ def hif4_calibration_attention(
+     calib_qkv_list: list,
+     q_num_heads: int,
+@@ -10188,6 +10636,46 @@ def hif4_calibration_attention(
+                 safety_tolerance=0.0,
+             ):
+                 q_state, k_state = candidate_q_state, candidate_k_state
++    if _ATTN_LOGIT_GAIN and a1_q_pairs and a1_k_pairs:
++        gain, _logit_gain_stats = _fit_attention_logit_gain(
++            a1_q_pairs,
++            a1_k_pairs,
++            q_state,
++            k_state,
++            q_num_heads,
++            kv_num_heads,
++            head_dim,
++        )
++        group = int(q_num_heads) // int(kv_num_heads)
++        if _ATTN_A1_ASYMMETRIC_FOLD:
++            # D1: asymmetric fold.  q_mult *= sqrt(g)^(1-alpha) and
++            # k_mult *= sqrt(g)^(1+alpha); the exponent sum is 1 so the
++            # continuous logits scale stays gamma == A1 for any alpha
++            # (alpha=0 is exactly the A1 symmetric baseline).  alpha is a
++            # single pre-registered constant; a per-head analytic alpha
++            # would be the follow-up only if this gate shows a local signal.
++            alpha = float(_ATTN_A1_ASYMMETRIC_ALPHA)
++            q_gain = gain.repeat_interleave(group)
++            q_gain = q_gain[:, None].expand(-1, head_dim).reshape(-1) ** (0.5 * (1.0 - alpha))
++            k_gain = gain[:, None].expand(-1, head_dim).reshape(-1) ** (0.5 * (1.0 + alpha))
++        else:
++            q_gain = gain.repeat_interleave(group)
++            q_gain = q_gain[:, None].expand(-1, head_dim).reshape(-1).sqrt()
++            k_gain = gain[:, None].expand(-1, head_dim).reshape(-1).sqrt()
++        q_base = (
++            torch.ones(q_channels, dtype=torch.float32)
++            if q_state.get("multiplier") is None
++            else q_state["multiplier"].to(dtype=torch.float32)
++        )
++        k_base = (
++            torch.ones(kv_channels, dtype=torch.float32)
++            if k_state.get("multiplier") is None
++            else k_state["multiplier"].to(dtype=torch.float32)
++        )
++        q_state["multiplier"] = _cpu_state_tensor(q_base * q_gain)
++        k_state["multiplier"] = _cpu_state_tensor(k_base * k_gain)
++        q_state["logit_gain"] = _cpu_state_tensor(gain)
++        k_state["logit_gain"] = _cpu_state_tensor(gain)
+     return {"q_state": q_state, "k_state": k_state, "v_state": v_state}
+ 
+ 
+@@ -10295,148 +10783,3 @@ def hif4_dynamic_quantize_v(
+         max_refine_ratio=float(state["max_refine_ratio"]),
+         max_refine_blocks=int(state["max_refine_blocks"]),
+     )
+-
+-
+-# ---------------------------------------------------------------------------
+-# Official side-weight calibration (v163): standard HiF4 Attention codec.
+-#
+-# The four Attention APIs below redefine their v160 versions to mirror the
+-# reference codec exactly: decode the NVFP4 input through the official BF16
+-# intermediate, then apply the standard amax/7 E6M2 scale with the
+-# MSE-optimal lv2/lv3 hierarchy.  No calibration statistic is used and the
+-# states stay empty.  The v160 Linear path above is untouched, so Linear
+-# outputs remain bit-identical to the v160 archive; the local Attention
+-# proxy gain is zero by construction.
+-# ---------------------------------------------------------------------------
+-
+-
+-def _ref_solve_standard_hierarchy(
+-    absolute: torch.Tensor,
+-    scale_factor: torch.Tensor,
+-) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+-    """Reference lv2/lv3 selection: minimum MSE over the eight configs."""
+-
+-    losses: list[torch.Tensor] = []
+-    for total_exponent in (0, 1, 2):
+-        local_scale = scale_factor[..., None, None, None] * float(
+-            1 << total_exponent
+-        )
+-        mantissa = (
+-            torch.round(absolute * (4.0 / local_scale)).clamp_(0.0, 7.0) * 0.25
+-        )
+-        losses.append((absolute - mantissa * local_scale).square().sum(dim=-1))
+-
+-    loss_0, loss_1, loss_2 = losses
+-    choose_01 = loss_1 < loss_0
+-    choose_12 = loss_2 < loss_1
+-    cost_lv2_1 = torch.minimum(loss_0, loss_1).sum(dim=-1)
+-    cost_lv2_2 = torch.minimum(loss_1, loss_2).sum(dim=-1)
+-    use_lv2_2 = cost_lv2_2 < cost_lv2_1
+-    use_lv3_2 = torch.where(use_lv2_2[..., None], choose_12, choose_01)
+-
+-    scale_lv2 = 1.0 + use_lv2_2.to(torch.float32)
+-    scale_lv3 = 1.0 + use_lv3_2.to(torch.float32)
+-    denominator = (
+-        scale_factor[..., None, None, None]
+-        * scale_lv2[..., None, None]
+-        * scale_lv3[..., None]
+-    )
+-    mantissa = (
+-        torch.round(absolute * (4.0 / denominator)).clamp_(0.0, 7.0) * 0.25
+-    )
+-    return scale_lv2, scale_lv3, mantissa
+-
+-
+-def _ref_encode_standard_hif4(dense: torch.Tensor) -> dict[str, torch.Tensor]:
+-    """Quantize a dense tensor with the standard HiF4 codec."""
+-
+-    if dense.ndim < 1:
+-        raise ValueError("dense must have at least one dimension")
+-    prefix = tuple(int(v) for v in dense.shape[:-1])
+-    channels = int(dense.shape[-1])
+-    if channels % _HIF4_BLOCK_SIZE != 0:
+-        raise ValueError(
+-            f"Last dim {channels} is not divisible by HiF4 block size 64"
+-        )
+-    blocks = channels // _HIF4_BLOCK_SIZE
+-
+-    x = torch.nan_to_num(
+-        dense.detach().to(torch.float32),
+-        nan=0.0,
+-        posinf=_E6M2_MAX * _HIF4_MAX_INNER,
+-        neginf=-_E6M2_MAX * _HIF4_MAX_INNER,
+-    )
+-    x_grouped = x.reshape(*prefix, blocks, 8, 2, 4)
+-    x_abs = x_grouped.abs()
+-    sign = torch.sign(x_grouped)
+-
+-    amax = x_abs.amax(dim=(-1, -2, -3))
+-    _, standard_scale = _standard_e6m2_scale(amax)
+-    scale_lv2, scale_lv3, mantissa = _ref_solve_standard_hierarchy(
+-        x_abs, standard_scale
+-    )
+-
+-    sign_out = sign.reshape(*prefix, blocks, 8, 2, 4)
+-    mantissa_out = mantissa.reshape(*prefix, blocks, 8, 2, 4)
+-    sign_out = torch.where(
+-        mantissa_out == 0.0, torch.zeros_like(sign_out), sign_out
+-    )
+-    return {
+-        "scale_factor": standard_scale.reshape(*prefix, blocks, 1, 1, 1),
+-        "scale_lv2": scale_lv2.reshape(*prefix, blocks, 8, 1, 1),
+-        "scale_lv3": scale_lv3.reshape(*prefix, blocks, 8, 2, 1),
+-        "sign": sign_out,
+-        "mant": mantissa_out,
+-    }
+-
+-
+-@torch.no_grad()
+-def hif4_calibration_attention(
+-    calib_qkv_list: list,
+-    q_num_heads: int,
+-    kv_num_heads: int,
+-    head_dim: int,
+-) -> dict[str, Any]:
+-    """Standard baseline: no attention state is needed."""
+-
+-    return {"q_state": {}, "k_state": {}, "v_state": {}}
+-
+-
+-@torch.no_grad()
+-def hif4_dynamic_quantize_q(
+-    q_quant: torch.Tensor,
+-    q_scale: torch.Tensor,
+-    q_num_heads: int,
+-    head_dim: int,
+-    q_state: Any,
+-) -> dict[str, torch.Tensor]:
+-    return _ref_encode_standard_hif4(
+-        _dequantize_nvfp4_float32(q_quant, q_scale)
+-    )
+-
+-
+-@torch.no_grad()
+-def hif4_dynamic_quantize_k(
+-    k_quant: torch.Tensor,
+-    k_scale: torch.Tensor,
+-    kv_num_heads: int,
+-    head_dim: int,
+-    k_state: Any,
+-) -> dict[str, torch.Tensor]:
+-    return _ref_encode_standard_hif4(
+-        _dequantize_nvfp4_float32(k_quant, k_scale)
+-    )
+-
+-
+-@torch.no_grad()
+-def hif4_dynamic_quantize_v(
+-    v_quant: torch.Tensor,
+-    v_scale: torch.Tensor,
+-    kv_num_heads: int,
+-    head_dim: int,
+-    v_state: Any,
+-) -> dict[str, torch.Tensor]:
+-    return _ref_encode_standard_hif4(
+-        _dequantize_nvfp4_float32(v_quant, v_scale)
+-    )
+-
