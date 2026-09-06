@@ -1,0 +1,38 @@
+{
+  "candidate": "linear-dynamic-carrier-scale",
+  "status": "REJECTED_TIME",
+  "parent": "v189",
+  "source_sha256": "a9c8ce0eb2649c0b968b46a0f8fa41f88c13b214779d936f67da7a4f9db3368d",
+  "official": {
+    "score": "unregistered/NA",
+    "time_seconds": "unregistered/NA",
+    "submitted": false
+  },
+  "local_default": {
+    "linear_mean": 0.642028877050815,
+    "attention_mean": 0.7521734070200701,
+    "overall_mean": 0.6879224312046713,
+    "local_highest_overall": 0.688994940507429,
+    "delta_over_local_highest": -0.0010725093027577,
+    "api_total_seconds": 404.4033735031262,
+    "wall_seconds": 431.13860550010577
+  },
+  "official_time_prediction": {
+    "W_calib_seconds": 277.4857209005859,
+    "A_calib_seconds": 62.427184499800205,
+    "dyn_act_seconds": 61.54220500122756,
+    "dyn_qkv_seconds": 2.9482631015125665,
+    "predicted_seconds": 286.049046717,
+    "gate": "predicted_seconds < 280",
+    "passed": false
+  },
+  "proxy_evidence": {
+    "eval_v3_linear_six_shard_delta_mean": 0.0016478369352464428,
+    "ood_delta_mean": 0.0017211608474710521,
+    "ood_delta_gap_change": -0.00007332391222460936,
+    "ood_gate": "abs(delta_gap_change) <= 0.01",
+    "ood_gate_passed": true,
+    "finite_outputs": true,
+    "dynamic_order_reachable": true
+  }
+}
