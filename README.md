@@ -19,7 +19,9 @@
 
 ## 当前结论
 
-- 当前没有活动优化计划；[Linear 动态样本能量 GPTQ 块序计划](docs/superpowers/plans/2026-09-06-linear-dynamic-actorder-plan.md)
+- 当前没有活动优化计划；[Linear 校准内 carrier-energy 块序计划](docs/superpowers/plans/2026-09-06-linear-integrated-carrier-energy-plan.md)
+  已 CLOSED / R3_REJECTED_TIME：复用版保持上一候选 Overall `0.687776303`，但时间预测
+  `284.291453s` 且没有超过本地最高，已归档且未提交官方；[Linear 动态样本能量 GPTQ 块序计划](docs/superpowers/plans/2026-09-06-linear-dynamic-actorder-plan.md)
   已 CLOSED / R3_REJECTED_TIME：候选 default Overall `0.688994940507` 高于本地最高
   `0.687776303363`，但时间预测 `284.775756s` 未通过 `<280s` 门，已归档且未提交官方；
   根仍为 v189。[Attention mask-aligned output selector](docs/superpowers/plans/2026-09-06-attention-noncausal-selector-plan.md)

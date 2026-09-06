@@ -10,7 +10,10 @@
 `evaluator/eval.py`（其 proxy-v2/reference 后端 `evaluator/official_eval.py` 仅兼容旧缓存与协议），
 跨模型泛化调用 `evaluator/cross_model_eval.py`；旧 `real_model_suite.py` 已退役。
 
-**当前没有活动计划。** [`Linear 动态样本能量 GPTQ 块序计划`](2026-09-06-linear-dynamic-actorder-plan.md)
+**当前没有活动计划。** [`Linear 校准内 carrier-energy 块序计划`](2026-09-06-linear-integrated-carrier-energy-plan.md)
+已按 R0 → R3 关闭为 **CLOSED / R3_REJECTED_TIME**：复用版保持上一版的本地分数，
+但时间预测为 `284.291453s` 且未超过本地最高，未达到提交门。上一份
+[`Linear 动态样本能量 GPTQ 块序计划`](2026-09-06-linear-dynamic-actorder-plan.md)
 已按 R0 → R3 关闭为 **CLOSED / R3_REJECTED_TIME**：候选的 default proxy 分数超过
 本地最高，但官方时间预测为 `284.775756s`，未达到 `<280s` 提交门，根仍为 v189。
 该计划不重开已归档排序/曲率邻域。
