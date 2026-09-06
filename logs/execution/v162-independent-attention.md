@@ -92,4 +92,65 @@ Attention 输出目标不同面板不同目标，不构成本机制的反证。
   a2-gate / a2-h / a2-learned / a2-strong-v168 / a2-strong-v189；臂变体 SHA：
   h=`F156D719D561A3C5…`、learned=`8C7C88B7C658501E…`。
 
-（后续条目按 run 追加）
+## A2 四臂结果（2026-09-06，shards 0,2,3,5，32 case，baseline=v162 零点 gain=0）
+
+| 臂 | mean Δ0 | median | +/0/- | L1_neg | val mean | test mean |
+|---|---|---|---|---|---|---|
+| **a2-gate（部署）** | **+0.421328** | +0.473353 | 26/6/0 | **0.000000** | +0.433259 | +0.409397 |
+| a2-h | +0.376753 | +0.424341 | 26/6/0 | 0.000000 | +0.387913 | +0.365593 |
+| a2-learned（未门控） | +0.168222 | +0.489186 | 27/0/5 | 0.260514 | +0.136286 | +0.200157 |
+| a2-strong-v168 | +0.749391 | +0.723832 | 32/0/0 | — | +0.754768 | +0.744015 |
+| a2-strong-v189 | +0.757064 | +0.728972 | 32/0/0 | — | +0.761906 | +0.752221 |
+
+- **CLEAN_ROOM_PROGRESS**：相对 v162 mean/median 均正、两个 split mean 均正 ✓。
+- gate 完全消除 learned 臂的负 case（层 0 灾难性劣化被 identity 回退拦截）；
+  gate 优于纯 H 臂（+0.4213 vs +0.3768），学习旋转在 H 之上有材料增量。
+- 未超过强对照 v168/v189 → 按任务书记 **RECOVERY_ONLY**，不作为填补榜首差距的新机制。
+  突破研究目标（D_strong≥20% vs 强对照）未达：D_strong = −1.309（vs v168）/ −1.382（vs v189）。
+- L1_total（仅记录）= 0.421328；L1_negative = 0 < 0.02 ✓。
+- 依据任务书不调学习率/步数/seed/自由度；后续增益走新机制（含历史机制 RECOVERY 迁入）。
+
+## A3 六 shard 完整评测（2026-09-06，48 case + OOD）
+
+- **ID**：mean **+0.429820**、median +0.465527、42 正/6 零/0 负、L1_neg **0.000000**；
+  split：test +0.434912 / validation +0.424728 均正。
+- **逐层部署状态**（gain=0 即 identity 回退）：层 0/2/8 → identity；其余 21 层部署旋转，
+  逐层 mean +0.077（层23，H 臂）～ +0.749（层3）。门控按层独立决策，无正层挑选。
+- **OOD**：candidate in-dist +0.429820 / ood **+0.438459**；Δgap_mean = **−0.008639**，
+  |Δgap| ≤ 0.01 → **OOD 门通过**（未 blocked）；无分布拟合失败特征。
+- 强对照（同协议 A2 面板读数）：v168 +0.7494 / v189 +0.7571；本机制从 v162 零点单独贡献
+  +0.43 量级，未超强对照栈。
+- control 与脱离仓库单文件导入检查：见下节。
+
+## A3 default 面板、计时与门禁裁决（2026-09-06）
+
+- **fresh default（兼容后端 168+120，nvfp4-cache hit，总实测 56.5s）**：
+  Attention mean **0.422443**、Linear 0.0（standard 冻结 ✓）、Overall 0.176018。
+  与六 shard 面板 +0.4298 一致。
+- 六 API 计时（default 面板实测）：W_calib 0.680s、A_calib **23.706s**（24 层 × ~1s 训练）、
+  dyn_act 1.697s、dyn_q 0.352s、dyn_k 0.260s、dyn_v 0.231s。
+- **官方时间预测**：`T ≈ 170.3 + 0.115·0.680 + 0.694·23.706 + 0.734·1.697 − 1.58·0.843
+  = 186.744s < 280s` ✓（官方硬限 300s；对 v189 290s 锚点余量充足）。
+- **真实 control**：60 项比较（4 层 × {weight calib, dyn act} × 7 role + dyn V）全部
+  与 v162 逐位一致 ✓（`REAL-INPUT CONTROL PASS`）。
+- **脱离仓库单文件导入**：临时目录独立导入，六 API 组全部可用 ✓。
+- **门禁裁决（run_id a3-id/a3-ood/a3-default）**：
+
+  | 门 | 结果 |
+  |---|---|
+  | 合法性/five-field/state | PASS（evaluator 全 case 校验 + reference_hif4.validate_state）|
+  | 未修改侧 control | PASS（60 项逐位）|
+  | 校准/holdout 隔离 | PASS（gate 窗独立；val/test 双 split 正）|
+  | L1_negative < 0.02 | PASS（= 0.000000；L1_total 0.429820 仅记录）|
+  | mean Δ>0 vs v162 与直接父 | PASS（直接父=v162 零点）|
+  | OOD \\|Δgap\\| ≤ 0.01 | PASS（−0.008639）|
+  | 时间预测 < 280s | PASS（186.744s）|
+  | 单配置/无邻域扫描 | PASS（config.json 冻结）|
+  | reachability | 21/24 层部署旋转（attempted 24，accepted 21），层 0/2/8 gate 回退 identity |
+  | 强对照 | 未超 v168（+0.7494）/ v189（+0.7571）→ RECOVERY_ONLY 标签维持 |
+  | 官方 | unregistered/NA（提交由用户执行）|
+
+- **结论**：候选 `workbench/v162_attention/candidate/solution.py`（arm=gate）通过全部本地门，
+  记 CLEAN_ROOM_PROGRESS / RECOVERY_ONLY，作为 v162 Attention 分支第一个可登记机制。
+  分支本地最高 Attention：default 0.422443 / shard48 0.429820（父 v162=0）。
+  官方贡献待用户提交后按 `S_A − 1001` 登记。

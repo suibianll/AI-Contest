@@ -21,7 +21,7 @@ RUNS = ("a2-gate", "a2-h", "a2-learned", "a2-strong-v168", "a2-strong-v189")
 def load_cases(run: str, kind: str) -> dict[tuple, float]:
     cases: dict[tuple, float] = {}
     for shard in SHARDS:
-        path = BASE / run / f"{kind}-attention-shard{shard}.json"
+        path = BASE / run / run / f"{kind}-attention-shard{shard}.json"
         if not path.exists():
             raise FileNotFoundError(path)
         payload = json.loads(path.read_text(encoding="utf-8"))
