@@ -236,3 +236,22 @@ Attention 输出目标不同面板不同目标，不构成本机制的反证。
   分布鲁棒性下降；后续新机制需在校准目标中直接体现部署路径或使用分布更稳的参数化。
 - **分支状态保持：最佳候选 = R1（`candidate_v2/solution.py`，default 0.752173 / shard48 +0.752772），
   全门通过，官方 unregistered/NA。**
+
+## 官方回传与 WA 根因（2026-09-06 深夜）
+
+- **R1 官方 `14009 / 211s`**：`C_A = 13008`，与 v189 加性 Attention 侧锚一致；时间预测
+  211.8s vs 实测 211s。R1 成为分支官方锚（归档 manifest 已更新）。
+- **A2 / R2 官方 attention wrong answer**（同 SHA 重提交仍 WA，确定性非法）。
+- 根因（本地复现，工具 `workbench/v162_attention/fuzz_official_contract.py`）：
+  1. **官方 harness 在 inference 上下文调用六 API**——旋转训练 `backward()` 在 inference
+     张量/模式下抛 `RuntimeError`（`torch.enable_grad()` 无法逃逸 inference_mode）→ A2 未设防 → WA；
+  2. R2 的 v189 校准调用在总 try 之外、动态注入路径无守卫 → WA；
+  3. 次要雷：L_q<L_kv 时 `index_select` 越界 → CUDA device-side assert 毒化后续全部用例。
+- 按 v107 判例（任一用例异常 = 整次失败；回退应产生负分而非异常）完成加固：
+  - **A2b**（`CDB49A02...A879`）：训练气泡（inference-off/grad-on + normal 张量重建）+
+    校准/动态全路径 `except Exception` 回退 v162 标准 + 越界修复；
+  - **R2b**（`58B1214F...57A8`）：同气泡 + v189 调用入 try + 注入守卫 + 失败时精确回退 R1。
+- 验证：模糊测试全 CLEAN（inference_mode/no_grad/变长/5 几何/5000 长序列/极端值/重复性）；
+  screen 精度逐位一致（A2b +0.421328 = A2；R2b +0.776965 = R2）。
+- 官方 WA 的备选假设（state 自定义键触发官方校验）未排除——若 A2b/R2b 重提交仍 WA，
+  则下一轮把自定义 state 键全部移除后重验。

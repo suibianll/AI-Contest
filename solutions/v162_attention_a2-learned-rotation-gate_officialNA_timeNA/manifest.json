@@ -1,6 +1,6 @@
 {
   "version": "v162_attention_A2",
-  "status": "PASSED_ALL_LOCAL_GATES / CLEAN_ROOM_PROGRESS / RECOVERY_ONLY / OFFICIAL_NA",
+  "status": "OFFICIAL_WRONG_ANSWER (attention)",
   "mechanism": "per-KV-group learnable orthogonal rotation (Cayley+Hadamard), gate identity/H/learned on calibration window",
   "parent": {
     "version": "v162 zero",
@@ -27,6 +27,7 @@
   "official": {
     "score": "NA",
     "time_seconds": "NA",
-    "status": "unregistered"
+    "status": "official_wrong_answer_attention",
+    "note": "rotation code paths unguarded; WA per v107 precedent = any runtime exception"
   }
 }

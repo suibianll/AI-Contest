@@ -1,6 +1,6 @@
 {
   "version": "v162_attention_R1",
-  "status": "PASSED_ALL_LOCAL_GATES / OFFICIAL_NA",
+  "status": "OFFICIAL_PASS / NEW_ATTENTION_SIDE_ANCHOR",
   "mechanism": "RECOVERY: v189 (v186 attention stack) verbatim + appended standard v162 Linear shadow defs",
   "parent": {
     "version": "v162 zero",
@@ -24,8 +24,10 @@
     "l1_negative": 0.0
   },
   "official": {
-    "score": "NA",
-    "time_seconds": "NA",
-    "status": "unregistered"
+    "score": 14009,
+    "time_seconds": 211,
+    "status": "official_result_returned",
+    "C_A": 13008,
+    "note": "matches v189 additive attention-side anchor; time prediction 211.8s vs actual 211s"
   }
 }

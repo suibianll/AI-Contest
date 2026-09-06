@@ -1,6 +1,6 @@
 {
   "version": "v162_attention_R2",
-  "status": "REJECTED / OOD_GATE",
+  "status": "REJECTED / OOD_GATE + OFFICIAL_WRONG_ANSWER (attention)",
   "mechanism": "A2 rotation deployed inside v189 stack (after all transforms, before encode), gated on true path",
   "parent": {
     "version": "v162_attention_R1",
@@ -24,6 +24,7 @@
   "official": {
     "score": "NA",
     "time_seconds": "NA",
-    "status": "not_submitted_rejected"
+    "status": "official_wrong_answer_attention",
+    "note": "dynamic-path rotation injection unguarded; same SHA resubmitted as _test and WA'd again"
   }
 }

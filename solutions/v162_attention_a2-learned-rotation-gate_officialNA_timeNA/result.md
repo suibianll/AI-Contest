@@ -40,4 +40,5 @@ T4 五字段合法 + decoded==研究前向 / T5 STE 梯度有限非零 + 训练�
 
 - 状态：**CLEAN_ROOM_PROGRESS / RECOVERY_ONLY**，全门通过，分支第一可登记机制；
   被 R1（v189 栈迁入）超越后不再是分支最佳，但保持独立登记资格。
-- **official score：unregistered / NA**；官方贡献按 `C_A = S_A − 1001` 登记（若单独提交）。
+- **official：wrong answer（Attention 场景）**（2026-09-06 用户回传）。本地全门通过但官方 WA，
+  按 v107 判例 = 任意用例运行异常即整次失败；旋转路径存在未设防异常出口，待加固（A2b）与官方契约模糊测试后重验。

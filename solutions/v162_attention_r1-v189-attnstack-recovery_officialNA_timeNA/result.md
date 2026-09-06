@@ -35,7 +35,9 @@
 
 ## 官方结果
 
-- **official score：unregistered / NA**（等待协调者提交官方并回传）。
+- **official score：14009 / 211s**（2026-09-06 用户回传）。`C_A = S_A − 1001 = 13008`，
+  与 v189 加性模型的 Attention 侧锚（≈13008）一致；时间预测 211.832s vs 官方实测 211s。
+  本包成为 Attention 分支官方锚：`S_A = 14009`。
 - 预注册判读：`C_A = S_A − 1001`；机制来源为 v189 Attention 栈（其完整组合官方锚 17616/275s，
   本包以标准 Linear 替换 static-actorder Linear，W_calib 项更小，时间余量更大）。
 - 分支本地最高 Attention：default **0.752173** / shard48 **+0.752772**。
