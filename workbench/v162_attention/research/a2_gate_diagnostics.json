@@ -1,0 +1,51 @@
+{
+  "device": "cuda",
+  "q_heads": 14,
+  "kv_heads": 2,
+  "head_dim": 64,
+  "calibration_window_lengths": [
+    10,
+    128,
+    512,
+    1024,
+    1024
+  ],
+  "layers": {
+    "0": {
+      "calibration_seconds": 3.1,
+      "deployed_arm": "identity",
+      "mode": "identity",
+      "gate_loss_identity": 1.0,
+      "gate_loss_h": 6.2481504777920875,
+      "gate_loss_learned": 5.970764674055247,
+      "trained_steps": 32
+    },
+    "8": {
+      "calibration_seconds": 0.987,
+      "deployed_arm": "identity",
+      "mode": "identity",
+      "gate_loss_identity": 1.0,
+      "gate_loss_h": 1.0953248552845476,
+      "gate_loss_learned": 1.1257867405225364,
+      "trained_steps": 32
+    },
+    "15": {
+      "calibration_seconds": 0.931,
+      "deployed_arm": "learned",
+      "mode": "rotation",
+      "gate_loss_identity": 1.0,
+      "gate_loss_h": 0.6838614999869115,
+      "gate_loss_learned": 0.6191290182325235,
+      "trained_steps": 32
+    },
+    "23": {
+      "calibration_seconds": 0.971,
+      "deployed_arm": "h",
+      "mode": "rotation",
+      "gate_loss_identity": 1.0,
+      "gate_loss_h": 0.7921645234540693,
+      "gate_loss_learned": 0.795394704269046,
+      "trained_steps": 32
+    }
+  }
+}

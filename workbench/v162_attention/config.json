@@ -1,0 +1,46 @@
+{
+  "plan": "v162-independent attention workpackage A2",
+  "mechanism": "per-KV-group learnable orthogonal rotation R_g applied to Q heads of the group and the group K head; continuous QK invariant; V frozen standard",
+  "parent": {
+    "name": "v162_standard-baseline-both",
+    "sha256": "56101559D267D962084CD67A9F9AF8EB924501B17AB408EAF676081876CC000A",
+    "official_score": 1001,
+    "official_time_s": 146
+  },
+  "small_panel_layers": [0, 8, 15, 23],
+  "kv_groups": "all (no head preselection)",
+  "initialization": "normalized Sylvester Hadamard H when head_dim is a power of two, else identity; no seed sweep",
+  "parameterization": "A = Theta - Theta^T; C = (I-A)(I+A)^-1 via linear solve; R = H C; Theta init zeros",
+  "optimizer": {
+    "name": "adam",
+    "lr": 0.01,
+    "steps": 32,
+    "grad_clip_norm": 1.0,
+    "scheduler": "none",
+    "early_best_selection": false
+  },
+  "regularizer": "1e-3 * mean((C-I)^2)",
+  "forward_encoding": "v162 standard HiF4 hard code; STE only for backward: x + (decode(encode(x)) - x).detach()",
+  "parameters_per_layer": "G * D^D storage; D(D-1)/2 effective DOF per group",
+  "research_sampling": {
+    "kv_tokens_per_window": 128,
+    "q_tokens_per_window": 32,
+    "selection": "deterministic evenly spaced indices, Q rows drawn from the K/V subset"
+  },
+  "fold_selection": "last calibration window in input order is the gate; the others train; no length/effect reordering",
+  "training_aggregation": "windows equal-weight normalized output loss, heads averaged; each step accumulates the gradient over all training windows",
+  "state_selection": "final-step learned R only; learned must beat fixed H strictly on the gate, then the winner must beat identity strictly; ties resolve to identity first, then H",
+  "training_loss": "per window mean((O_hat - O_ref)^2) / max(MSE_STD_window, 1e-12); O_ref = softmax(QK^T/sqrt(D)) V on NVFP4-decoded values; O_hat uses rotated+hard-encoded Q/K and standard-encoded V",
+  "dtype": "FP32 training; orthogonality and invariants re-checked; non-finite => ERROR (no silent best-step)",
+  "research_target": "D_strong >= 20 percent mean standardized residual reduction vs strong control, >= 3/4 small-panel layers positive, independent split same sign",
+  "gates": {
+    "l1_total": "record only",
+    "l1_negative": "< 0.02",
+    "mean_delta": "> 0 vs v162 and vs direct parent",
+    "split_means": "validation and test both positive",
+    "ood": "|Delta(gain_in - gain_ood)| <= 0.01",
+    "time_prediction": "< 280 s (official hard limit 300 s)"
+  },
+  "frozen": ["both Linear APIs", "dynamic V", "standard codec", "_standard_params"],
+  "saved_before_reading_training_results": "2026-09-06"
+}
