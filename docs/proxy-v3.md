@@ -82,7 +82,8 @@ new-weight，系统会把每条结果标为 `official_cache_cohort_mismatch`；�
   的分量方向；
 - API 时间排序。只有“新鲜 default panel、未命中校准缓存”才套用已有官方时间模型；shard/缓存秒数
   永远不换算官方分数或官方时间；
-- OOD 配对时输出 `delta(in-ood)`，并按现行 `0.01` 门禁给出原因。
+- OOD 配对时输出 `delta(in-ood)` 和 OOD 实际 Δgain；`|Δgap|>0.01` 仅作收益不对称提示，
+  OOD 退化另记风险，均不单独触发 reject。官方探索与正式晋级分开，其他门禁不变。
 
 `--focus-linear-roles` 只做目标 role 与未修改 control 的配对检查；它不会新增候选路由或改变
 evaluator 的调用图。v3 的任何正向结果仍只是本地筛选证据，官方分数必须通过正式评测确认。

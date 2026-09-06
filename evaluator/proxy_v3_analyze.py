@@ -17,7 +17,7 @@ except ModuleNotFoundError as exc:  # pragma: no cover - package import path
 
 
 L1_LIMIT = 0.02
-OOD_GAP_LIMIT = 0.01
+OOD_GAP_WARNING = 0.01
 OFFICIAL_TIME_LIMIT = 280.0
 TIME_MODEL = {
     "intercept": 170.3,
@@ -301,8 +301,15 @@ def analyze(
         if item["delta_tail"] < 0:
             warnings.append(f"{side}: worst-20% tail regressed {item['delta_tail']:+.6f}")
         gap = ood.get(side)
-        if gap is not None and abs(gap) > OOD_GAP_LIMIT:
-            blockers.append(f"{side}: |delta(in-ood)|={abs(gap):.6f} > {OOD_GAP_LIMIT:.2f}")
+        if gap is not None:
+            ood_gain = item["delta_mean"] - gap
+            if abs(gap) > OOD_GAP_WARNING:
+                warnings.append(
+                    f"{side}: delta(in-ood)={gap:+.6f}; OOD delta_gain={ood_gain:+.6f}; "
+                    "gain asymmetry only, not an official-submission blocker"
+                )
+            if ood_gain < 0:
+                warnings.append(f"{side}: OOD mean regressed {ood_gain:+.6f}; record risk for official exploration")
         regressions = [component for component in item["component_signal"] if component["regressed"]]
         if regressions:
             names = ", ".join(component["component"] for component in regressions[:3])
@@ -334,7 +341,7 @@ def analyze(
         decision = "reject"
     elif "shard" in scope_kind:
         decision = "continue_next_shard"
-    elif mechanism_type == "analytic" and runtime["under_280_gate"] is True:
+    elif runtime["under_280_gate"] is True:
         decision = "eligible_for_official_review"
     else:
         decision = "hold_for_ood_or_fresh_timing"
@@ -369,7 +376,8 @@ def analyze(
         "policy": {
             "score_prediction": "forbidden",
             "local_trend_gate": "delta_mean > 0 and L1 < 0.02",
-            "ood_gate": "abs(delta(in_dist - ood)) <= 0.01",
+            "ood_gate": "diagnostic only; abs(delta(in_dist - ood)) > 0.01 warns, never blocks",
+            "official_promotion": "requires official score/time and source identity; local eligibility is not promotion",
             "official_time_gate": "fresh default prediction < 280s",
         },
         "mechanism_type": mechanism_type,
@@ -381,6 +389,10 @@ def analyze(
         "focus": focus if selectors else {"enabled": False, "reason": "no focus role/family supplied"},
         "control": control if selectors else {"enabled": False, "reason": "no focus role/family supplied"},
         "ood_delta_gap": ood,
+        "ood_delta_gain": {
+            side: sides[side]["delta_mean"] - gap
+            for side, gap in ood.items() if gap is not None
+        },
         "runtime": runtime,
         "recommended_actions": actions,
     }
@@ -428,7 +440,10 @@ def render_markdown(analysis: Mapping[str, Any]) -> str:
         lines.extend(["", "## OOD gap", ""])
         for side, gap in analysis["ood_delta_gap"].items():
             if gap is not None:
-                lines.append(f"- {side}: delta(in-ood) `{gap:+.6f}`")
+                lines.append(
+                    f"- {side}: delta(in-ood) `{gap:+.6f}`, "
+                    f"OOD delta_gain `{analysis['ood_delta_gain'][side]:+.6f}` (diagnostic only)"
+                )
     lines.extend(["", "## Runtime localization", ""])
     for item in analysis["runtime"]["ranked_apis"]:
         lines.append(

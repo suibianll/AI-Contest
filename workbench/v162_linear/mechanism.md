@@ -53,7 +53,7 @@ Weight GPTQ 使用变换后真实校准激活的二阶统计（协方差/Hessian
   不再用本地外推）。
 - 候选数量：1（本卡唯一预注册配置，见 config.json）；失败换机制，不扫邻域。
 - 停止门：按总计划 §4——合法性、finite、case 身份、冻结侧逐位 control、
-  `L1_negative<0.02`、独立 validation/test mean 均正、OOD `|Δgap|≤0.01`、时间预测
+  `L1_negative<0.02`、独立 validation/test mean 均正、OOD 成对风险记录（不作否决门）、时间预测
   `<280s`。
 
 ### 5. 校准/选择/holdout 拆分

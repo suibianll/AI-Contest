@@ -167,6 +167,38 @@ def test_analysis_rejects_regression_and_locates_group() -> None:
     assert report["policy"]["score_prediction"] == "forbidden"
 
 
+@pytest.mark.parametrize("ood_delta", [-0.02, 0.001, 0.03])
+@pytest.mark.parametrize("default_panel", [False, True])
+def test_ood_asymmetry_does_not_reject_official_exploration(ood_delta: float, default_panel: bool) -> None:
+    baseline = _result("parent", [0.2] * 4)
+    candidate = _result("child", [0.215] * 4)
+    baseline_ood = _result("parent", [0.3] * 4)
+    candidate_ood = _result("child", [0.3 + ood_delta] * 4)
+    if default_panel:
+        for result in (baseline, candidate):
+            result["evaluation_scope"]["kind"] = "default-panel"
+    report = analyze(baseline, candidate, "fitted", baseline_ood, candidate_ood)
+    assert report["decision"] == ("eligible_for_official_review" if default_panel else "continue_next_shard")
+    assert report["blockers"] == []
+    assert report["ood_delta_gain"]["linear"] == pytest.approx(ood_delta)
+    assert report["ood_delta_gap"]["linear"] == pytest.approx(0.015 - ood_delta)
+    assert any("gain asymmetry" in warning for warning in report["warnings"])
+    assert any("OOD mean regressed" in warning for warning in report["warnings"]) == (ood_delta < 0)
+
+
+def test_ood_warning_policy_preserves_pairing_and_other_blockers() -> None:
+    baseline = _result("parent", [0.2] * 4)
+    candidate = _result("child", [0.19] * 4)
+    baseline_ood = _result("parent", [0.3] * 4)
+    candidate_ood = _result("child", [0.35] * 4)
+    report = analyze(baseline, candidate, "analytic", baseline_ood, candidate_ood)
+    assert report["decision"] == "reject"
+    assert any("delta_mean" in blocker for blocker in report["blockers"])
+    candidate_ood["case_scores"]["linear"][0]["test_window"] = 99
+    with pytest.raises(ValueError):
+        analyze(baseline, candidate, "analytic", baseline_ood, candidate_ood)
+
+
 def test_runtime_prediction_requires_fresh_default_panel() -> None:
     seconds = {name: 0.0 for name in v2.REQUIRED_APIS}
     seconds["hif4_calibration_and_quantize_weight"] = 100.0

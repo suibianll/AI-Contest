@@ -3105,7 +3105,7 @@ def _write_report(
             )
         lines.extend([
             "",
-            "OOD 均值不参与 proxy 排名；候选是否过拟合看 `gain_in − gain_ood`（与同 solution 的 in-dist proxy-v2 运行相减）。",
+            "OOD 均值不参与 proxy 排名；同 SHA 配对记录 ID/OOD Δgain 与 Δgap，只作风险诊断，不据此判定过拟合或禁止官方探索。",
         ])
     linear_generalization = analysis.get("linear_generalization", {})
     if linear_generalization.get("enabled"):
