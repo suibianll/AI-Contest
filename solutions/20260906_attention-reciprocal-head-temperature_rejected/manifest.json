@@ -1,0 +1,34 @@
+{
+  "candidate": "attention-reciprocal-head-temperature",
+  "status": "CLOSED / T1_NOOP_REJECTED",
+  "date": "2026-09-06",
+  "parent": {
+    "version": "v189",
+    "source_sha256": "261202248a0146a2ee45f3df60bd1979bb8171b7c162921013b0024c848617af"
+  },
+  "source_sha256": "162cfcf2c0403d38176b16328fce1a4d5ded010e196924286b9588d7757fc013",
+  "mechanism": "fixed reciprocal per-KV-head Q/K temperature allocation",
+  "t0": {
+    "py_compile": "PASS",
+    "six_api_import": "PASS",
+    "state_validation": "PASS",
+    "finite_outputs": "PASS"
+  },
+  "t1": {
+    "scope": "attention-only sequential shards 0,1",
+    "cases": 16,
+    "candidate_mean": 0.7918142800239717,
+    "delta_mean": 0.0,
+    "l1": 0.0,
+    "positive_cases": 0,
+    "negative_cases": 0,
+    "zero_cases": 16,
+    "decision": "NOOP_REJECTED",
+    "evidence": "artifacts/proxy_v3/attention-reciprocal-head-temperature-20260906/t1/candidate/manifest.json"
+  },
+  "official": {
+    "score": "unregistered/NA",
+    "time": "unregistered/NA"
+  },
+  "root_solution_changed": false
+}

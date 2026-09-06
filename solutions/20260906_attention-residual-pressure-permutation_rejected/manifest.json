@@ -1,0 +1,37 @@
+{
+  "candidate": "attention-residual-pressure-permutation",
+  "status": "CLOSED / R1_REJECTED",
+  "date": "2026-09-06",
+  "parent": {
+    "version": "v189",
+    "source_sha256": "261202248a0146a2ee45f3df60bd1979bb8171b7c162921013b0024c848617af"
+  },
+  "source_sha256": "87375d16f2a71827243e633c4c464121e853393e63e91a2939efc112b5285cae",
+  "mechanism": "calibration HiF4 residual-pressure tied KV-head permutation",
+  "r0": {
+    "py_compile": "PASS",
+    "six_api_import": "PASS",
+    "state_validation": "PASS",
+    "continuous_qk_invariant": "PASS",
+    "finite_outputs": "PASS"
+  },
+  "r1": {
+    "scope": "attention-only sequential shards 0,1",
+    "cases": 16,
+    "shard0_delta_mean": -0.005305,
+    "shard0_l1": 0.020938,
+    "shard0_positive_cases": 2,
+    "shard0_negative_cases": 2,
+    "shard0_zero_cases": 4,
+    "shard0_worst_delta": -0.061995,
+    "shard1_delta_mean": 0.0,
+    "shard1_l1": 0.0,
+    "decision": "REJECTED",
+    "evidence": "artifacts/proxy_v3/attention-residual-pressure-permutation-20260906/r1/candidate/manifest.json"
+  },
+  "official": {
+    "score": "unregistered/NA",
+    "time": "unregistered/NA"
+  },
+  "root_solution_changed": false
+}
