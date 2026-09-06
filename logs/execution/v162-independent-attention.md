@@ -205,7 +205,7 @@ Attention 输出目标不同面板不同目标，不构成本机制的反证。
 
 - 机制：R1 栈之上，按 A2 冻结配置训练每 KV group 旋转（标准编码器 surrogate），部署在
   `_nvfp4_to_hif4` 全部栈变换之后、编码之前（连续 QK 与 R1 严格不变），gate 在真实部署路径上
-  逐层决策（identity 严格更优则回退）。候选 `candidate_v3/solution.py`，SHA 前缀 `2E1B23AA1E41C3B2`。
+  逐层决策（identity 严格更优则回退）。候选 `candidate_v3/solution.py`，评测版完整 SHA `0B56CCA1F557E44CC6409822C64D29919D6955ABC164C59105138594022A9C7C`（typing 导入修正后、评测前定稿）。
 - **ID 48-case：+0.773821**（vs R1 +0.752772，+0.021），48 正/0 负，双 split 正
   （test +0.772 / val +0.775）；**default attention_mean 0.767021**（vs R1 0.752173，+0.0148）。
 - 时间：A_calib 89.873s（含 24 层训练+gate 评估），**预测 228.936s < 280s** ✓。
@@ -223,7 +223,7 @@ Attention 输出目标不同面板不同目标，不构成本机制的反证。
 
 - 机制：R1 栈之上，按 A2 冻结配置训练每 KV group 旋转（标准编码器 surrogate），部署在
   `_nvfp4_to_hif4` 全部栈变换之后、编码之前（连续 QK 与 R1 严格不变），gate 在真实部署路径上
-  逐层决策（identity 严格更优则回退）。候选 `candidate_v3/solution.py`，SHA 前缀 `2E1B23AA1E41C3B2`。
+  逐层决策（identity 严格更优则回退）。候选 `candidate_v3/solution.py`，评测版完整 SHA `0B56CCA1F557E44CC6409822C64D29919D6955ABC164C59105138594022A9C7C`（typing 导入修正后、评测前定稿）。
 - **ID 48-case：+0.773821**（vs R1 +0.752772，+0.021），48 正/0 负，双 split 正
   （test +0.772 / val +0.775）；**default attention_mean 0.767021**（vs R1 0.752173，+0.0148）。
 - 时间：A_calib 89.873s（含 24 层训练+gate 评估），**预测 228.936s < 280s** ✓。

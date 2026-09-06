@@ -1,0 +1,32 @@
+{
+  "version": "v162_attention_A2",
+  "status": "PASSED_ALL_LOCAL_GATES / CLEAN_ROOM_PROGRESS / RECOVERY_ONLY / OFFICIAL_NA",
+  "mechanism": "per-KV-group learnable orthogonal rotation (Cayley+Hadamard), gate identity/H/learned on calibration window",
+  "parent": {
+    "version": "v162 zero",
+    "source_sha256": "56101559d267d962084cd67a9f9af8eb924501b17ab408eaf676081876cc000a",
+    "official_score": 1001,
+    "official_time_seconds": 146
+  },
+  "source": {
+    "path": "solution.py",
+    "sha256": "19159ab9904fb3f10cd89fc20d188cf3428546ae0b8b0e96e4afbac28f841940"
+  },
+  "local": {
+    "shard48_mean_delta": 0.42982,
+    "default_attention_mean": 0.422443,
+    "default_linear_mean": 0.0,
+    "ood_delta_gap": -0.008639,
+    "ood_gate": "pass",
+    "time_prediction_s": 186.744,
+    "time_gate": "pass (<280)",
+    "layers_deployed": "21/24",
+    "l1_negative": 0.0,
+    "config": "workbench/v162_attention/config.json (frozen A2 table)"
+  },
+  "official": {
+    "score": "NA",
+    "time_seconds": "NA",
+    "status": "unregistered"
+  }
+}
