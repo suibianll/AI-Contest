@@ -1,0 +1,38 @@
+{
+  "candidate": "linear-dynamic-block-energy32",
+  "status": "REJECTED_TIME",
+  "parent": "v189",
+  "source_sha256": "325f9bbe616ab6f308f190c9b4b9cce4f767f9ea5e9c94895177700f51a02e6e",
+  "official": {
+    "score": "unregistered/NA",
+    "time_seconds": "unregistered/NA",
+    "submitted": false
+  },
+  "local_default": {
+    "linear_mean": 0.6432805573597773,
+    "attention_mean": 0.7521734070200701,
+    "overall_mean": 0.6886525780515659,
+    "local_highest_overall": 0.688994940507429,
+    "delta_over_local_highest": -0.0003423624558631,
+    "api_total_seconds": 400.2371239948552,
+    "wall_seconds": 427.5325962000061
+  },
+  "official_time_prediction": {
+    "W_calib_seconds": 272.077215497149,
+    "A_calib_seconds": 62.6514158998616,
+    "dyn_act_seconds": 62.2131399014033,
+    "dyn_qkv_seconds": 3.295352696441108,
+    "predicted_seconds": 285.526749844,
+    "gate": "predicted_seconds < 280",
+    "passed": false
+  },
+  "proxy_evidence": {
+    "eval_v3_linear_six_shard_delta_mean": 0.002531234538081189,
+    "ood_delta_mean": 0.003227747211506737,
+    "ood_delta_gap_change": -0.0006965126734255482,
+    "ood_gate": "abs(delta_gap_change) <= 0.01",
+    "ood_gate_passed": true,
+    "finite_outputs": true,
+    "dynamic_order_reachable": true
+  }
+}

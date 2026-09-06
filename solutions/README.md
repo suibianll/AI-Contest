@@ -1,6 +1,10 @@
 # HiF4 solutions archive
 
 > **Execution update (2026-09-06):** there is currently no active optimization plan.
+> [Linear dynamic 32-row block-energy act-order](20260906_linear-dynamic-block-energy32_time-rejected/result.md)
+> was closed as **CLOSED / R3_REJECTED_TIME**: its fresh default Overall was `0.688652578052`,
+> below the measured local high `0.688994940507`, and the official-time predictor was
+> `285.526750s`, so it was archived without official submission and the root remains v189.
 > [Linear dynamic carrier-scale act-order](20260906_linear-dynamic-carrier-scale_time-rejected/result.md)
 > was closed as **CLOSED / R3_REJECTED_TIME**: its fresh default Overall was `0.687922431205`,
 > below the measured local high `0.688994940507`, and the official-time predictor was

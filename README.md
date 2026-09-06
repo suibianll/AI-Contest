@@ -19,7 +19,10 @@
 
 ## 当前结论
 
-- 当前没有活动优化计划；[Linear 动态 carrier-scale 块序计划](docs/superpowers/plans/2026-09-06-linear-dynamic-carrier-scale-plan.md)
+- 当前没有活动优化计划；[Linear 动态 32 行块能量块序计划](docs/superpowers/plans/2026-09-06-linear-dynamic-block-energy32-plan.md)
+  已 CLOSED / R3_REJECTED_TIME：fresh default Overall `0.688652578052` 低于已测本地最高
+  `0.688994940507`，且时间预测 `285.526750s` 未通过 `<280s` 门，已归档且未提交官方；
+  [Linear 动态 carrier-scale 块序计划](docs/superpowers/plans/2026-09-06-linear-dynamic-carrier-scale-plan.md)
   已 CLOSED / R3_REJECTED_TIME：fresh default Overall `0.687922431205` 低于已测本地最高
   `0.688994940507`，且时间预测 `286.049047s` 未通过 `<280s` 门，已归档且未提交官方；
   [Linear 动态块能量块序计划](docs/superpowers/plans/2026-09-06-linear-dynamic-block-energy-plan.md)

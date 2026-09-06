@@ -10,7 +10,10 @@
 `evaluator/eval.py`（其 proxy-v2/reference 后端 `evaluator/official_eval.py` 仅兼容旧缓存与协议），
 跨模型泛化调用 `evaluator/cross_model_eval.py`；旧 `real_model_suite.py` 已退役。
 
-**当前没有活动计划。** [`Linear 动态 carrier-scale 块序计划`](2026-09-06-linear-dynamic-carrier-scale-plan.md)
+**当前没有活动计划。** [`Linear 动态 32 行块能量块序计划`](2026-09-06-linear-dynamic-block-energy32-plan.md)
+已按 R0 → R3 关闭为 **CLOSED / R3_REJECTED_TIME**：fresh default Overall
+`0.688652578052` 低于已测本地最高 `0.688994940507`，且时间预测 `285.526750s`，
+未达到 `<280s` 提交门；候选已归档，根仍为 v189。上一份 [`Linear 动态 carrier-scale 块序计划`](2026-09-06-linear-dynamic-carrier-scale-plan.md)
 已按 R0 → R3 关闭为 **CLOSED / R3_REJECTED_TIME**：fresh default Overall
 `0.687922431205` 低于已测本地最高 `0.688994940507`，且时间预测 `286.049047s`，
 未达到 `<280s` 提交门；候选已归档，根仍为 v189。上一份 [`Linear 动态块能量块序计划`](2026-09-06-linear-dynamic-block-energy-plan.md)

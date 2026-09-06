@@ -1,0 +1,325 @@
+{
+  "policy": {
+    "score_prediction": "forbidden",
+    "local_trend_gate": "delta_mean > 0 and L1 < 0.02",
+    "ood_gate": "abs(delta(in_dist - ood)) <= 0.01",
+    "official_time_gate": "fresh default prediction < 280s"
+  },
+  "mechanism_type": "analytic",
+  "decision": "continue_next_shard",
+  "blockers": [],
+  "warnings": [
+    "no official-time prediction: run a fresh default panel without calibration cache"
+  ],
+  "sides": {
+    "linear": {
+      "cases": 56,
+      "delta_mean": 0.005470510969899573,
+      "delta_median": 0.0025454473499969543,
+      "l1": 0.005641753101706751,
+      "linf": 0.07199112515481804,
+      "delta_tail": 0.013234469099423052,
+      "positive_cases": 47,
+      "negative_cases": 9,
+      "zero_cases": 0,
+      "worst_groups": [
+        {
+          "dimension": "role",
+          "value": "v",
+          "cases": 8,
+          "mean_delta": 0.00020542940454784664,
+          "negative_cases": 3,
+          "min_delta": -0.0006890026512935687
+        },
+        {
+          "dimension": "role",
+          "value": "fc_up",
+          "cases": 8,
+          "mean_delta": 0.0007171406258083268,
+          "negative_cases": 2,
+          "min_delta": -0.001035388883595889
+        },
+        {
+          "dimension": "role_family",
+          "value": "fc",
+          "cases": 16,
+          "mean_delta": 0.0016721909724750454,
+          "negative_cases": 5,
+          "min_delta": -0.001035388883595889
+        },
+        {
+          "dimension": "shape_bucket",
+          "value": "hidden_to_wide",
+          "cases": 32,
+          "mean_delta": 0.002230468140140064,
+          "negative_cases": 8,
+          "min_delta": -0.001035388883595889
+        },
+        {
+          "dimension": "length",
+          "value": "512",
+          "cases": 28,
+          "mean_delta": 0.0025111570482671463,
+          "negative_cases": 5,
+          "min_delta": -0.001035388883595889
+        },
+        {
+          "dimension": "role",
+          "value": "fc_gate",
+          "cases": 8,
+          "mean_delta": 0.002627241319141764,
+          "negative_cases": 3,
+          "min_delta": -0.0007787674944046974
+        },
+        {
+          "dimension": "role",
+          "value": "q",
+          "cases": 8,
+          "mean_delta": 0.0026285973081006803,
+          "negative_cases": 0,
+          "min_delta": 0.0005381413078073827
+        },
+        {
+          "dimension": "role_family",
+          "value": "qkv",
+          "cases": 24,
+          "mean_delta": 0.0027353626412369484,
+          "negative_cases": 3,
+          "min_delta": -0.0006890026512935687
+        },
+        {
+          "dimension": "shape_bucket",
+          "value": "hidden_to_hidden",
+          "cases": 16,
+          "mean_delta": 0.003153267769624296,
+          "negative_cases": 1,
+          "min_delta": -5.2039781876511704e-05
+        },
+        {
+          "dimension": "layer",
+          "value": "14",
+          "cases": 14,
+          "mean_delta": 0.0031991119240492743,
+          "negative_cases": 2,
+          "min_delta": -0.0006890026512935687
+        },
+        {
+          "dimension": "layer",
+          "value": "8",
+          "cases": 14,
+          "mean_delta": 0.0033586542215175985,
+          "negative_cases": 3,
+          "min_delta": -0.0007620506355937584
+        },
+        {
+          "dimension": "role_family",
+          "value": "o",
+          "cases": 8,
+          "mean_delta": 0.003677938231147912,
+          "negative_cases": 1,
+          "min_delta": -5.2039781876511704e-05
+        }
+      ],
+      "worst_cases": [
+        {
+          "delta": -0.001035388883595889,
+          "baseline_gain": 0.4209477829841482,
+          "candidate_gain": 0.4199123941005523,
+          "layer": 2,
+          "role": "fc_up",
+          "role_family": "fc",
+          "shape_bucket": "hidden_to_wide",
+          "split": "validation",
+          "length": 512
+        },
+        {
+          "delta": -0.0007787674944046974,
+          "baseline_gain": 0.44068636016580554,
+          "candidate_gain": 0.43990759267140084,
+          "layer": 2,
+          "role": "fc_gate",
+          "role_family": "fc",
+          "shape_bucket": "hidden_to_wide",
+          "split": "test",
+          "length": 128
+        },
+        {
+          "delta": -0.0007620506355937584,
+          "baseline_gain": 0.5606193128976538,
+          "candidate_gain": 0.55985726226206,
+          "layer": 8,
+          "role": "fc_gate",
+          "role_family": "fc",
+          "shape_bucket": "hidden_to_wide",
+          "split": "test",
+          "length": 512
+        },
+        {
+          "delta": -0.0006890026512935687,
+          "baseline_gain": 0.7294777167104575,
+          "candidate_gain": 0.7287887140591639,
+          "layer": 14,
+          "role": "v",
+          "role_family": "qkv",
+          "shape_bucket": "hidden_to_wide",
+          "split": "validation",
+          "length": 128
+        },
+        {
+          "delta": -0.0004976954458334459,
+          "baseline_gain": 0.4581386769041462,
+          "candidate_gain": 0.4576409814583128,
+          "layer": 2,
+          "role": "fc_gate",
+          "role_family": "fc",
+          "shape_bucket": "hidden_to_wide",
+          "split": "validation",
+          "length": 128
+        },
+        {
+          "delta": -0.00046311710354041136,
+          "baseline_gain": 0.525284027505112,
+          "candidate_gain": 0.5248209104015716,
+          "layer": 8,
+          "role": "fc_up",
+          "role_family": "fc",
+          "shape_bucket": "hidden_to_wide",
+          "split": "test",
+          "length": 128
+        },
+        {
+          "delta": -0.0003793951847476107,
+          "baseline_gain": 0.7372449149739925,
+          "candidate_gain": 0.7368655197892449,
+          "layer": 20,
+          "role": "v",
+          "role_family": "qkv",
+          "shape_bucket": "hidden_to_wide",
+          "split": "test",
+          "length": 512
+        },
+        {
+          "delta": -0.00013732250971509874,
+          "baseline_gain": 0.7975946935537142,
+          "candidate_gain": 0.797457371043999,
+          "layer": 8,
+          "role": "v",
+          "role_family": "qkv",
+          "shape_bucket": "hidden_to_wide",
+          "split": "test",
+          "length": 512
+        },
+        {
+          "delta": -5.2039781876511704e-05,
+          "baseline_gain": 0.4845640077358078,
+          "candidate_gain": 0.4845119679539313,
+          "layer": 14,
+          "role": "o",
+          "role_family": "o",
+          "shape_bucket": "hidden_to_hidden",
+          "split": "test",
+          "length": 512
+        },
+        {
+          "delta": 4.559422064565055e-05,
+          "baseline_gain": 0.7458723831351809,
+          "candidate_gain": 0.7459179773558265,
+          "layer": 2,
+          "role": "v",
+          "role_family": "qkv",
+          "shape_bucket": "hidden_to_wide",
+          "split": "test",
+          "length": 128
+        },
+        {
+          "delta": 0.00016055569300765793,
+          "baseline_gain": 0.7592967474853758,
+          "candidate_gain": 0.7594573031783834,
+          "layer": 2,
+          "role": "v",
+          "role_family": "qkv",
+          "shape_bucket": "hidden_to_wide",
+          "split": "validation",
+          "length": 128
+        },
+        {
+          "delta": 0.00016789602893363398,
+          "baseline_gain": 0.5467303435064849,
+          "candidate_gain": 0.5468982395354185,
+          "layer": 14,
+          "role": "fc_up",
+          "role_family": "fc",
+          "shape_bucket": "hidden_to_wide",
+          "split": "validation",
+          "length": 512
+        }
+      ],
+      "component_delta_mean": {},
+      "component_signal": []
+    }
+  },
+  "focus_linear_roles": [],
+  "focus": {
+    "enabled": false,
+    "reason": "no focus role/family supplied"
+  },
+  "control": {
+    "enabled": false,
+    "reason": "no focus role/family supplied"
+  },
+  "ood_delta_gap": {},
+  "runtime": {
+    "api_total_seconds": 63.124794302042574,
+    "calibration_wall_seconds": 47.29304199991748,
+    "calibration_api_seconds": 46.06801970093511,
+    "calibration_cache_load_seconds": 0.0,
+    "scoring_api_seconds": 17.056774601107463,
+    "scoring_wall_seconds": 21.554551200009882,
+    "ranked_apis": [
+      {
+        "api": "hif4_calibration_and_quantize_weight",
+        "seconds": 46.06801970093511,
+        "share": 0.729792789193207,
+        "calls": 28
+      },
+      {
+        "api": "hif4_dynamic_quantize_activation",
+        "seconds": 17.056774601107463,
+        "share": 0.270207210806793,
+        "calls": 56
+      },
+      {
+        "api": "hif4_calibration_attention",
+        "seconds": 0.0,
+        "share": 0.0,
+        "calls": 0
+      },
+      {
+        "api": "hif4_dynamic_quantize_q",
+        "seconds": 0.0,
+        "share": 0.0,
+        "calls": 0
+      },
+      {
+        "api": "hif4_dynamic_quantize_k",
+        "seconds": 0.0,
+        "share": 0.0,
+        "calls": 0
+      },
+      {
+        "api": "hif4_dynamic_quantize_v",
+        "seconds": 0.0,
+        "share": 0.0,
+        "calls": 0
+      }
+    ],
+    "timing_faithful": true,
+    "default_panel": false,
+    "predicted_official_seconds": null,
+    "under_280_gate": null
+  },
+  "recommended_actions": [
+    "profile Weight calibration candidate loops, matrix factorizations, and repeated quantization",
+    "inspect linear role=v first (mean delta=+0.000205, min delta=-0.000689)"
+  ]
+}
