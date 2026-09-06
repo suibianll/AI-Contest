@@ -1,0 +1,29 @@
+{
+  "version": "v162_attention_R2c",
+  "status": "OFFICIAL_PASS / NEW_ATTENTION_SIDE_BEST",
+  "mechanism": "A2 per-KV-group manual-gradient rotation deployed inside the v189 stack (after all transforms, before encode), gated per layer on the true path",
+  "parent": {
+    "version": "v162_attention_R1",
+    "source_sha256": "3619bfeb0e017555bd8fe31410888f80950a0128e3a2b94f643bd3f20b30bfc8",
+    "official_score": 14009,
+    "official_time_seconds": 211
+  },
+  "source": {
+    "path": "solution.py",
+    "sha256": "cfddced7886a0cabc7251c57387536b86169185e7a6d8be7a8647fefae677cd6"
+  },
+  "local": {
+    "shard48_mean_delta_vs_v162": 0.776564,
+    "default_attention_mean": 0.767788,
+    "ood_delta_gap": 0.012242,
+    "ood_gate_literal": "blocked (>0.01 positive)",
+    "time_prediction_s": 225.56
+  },
+  "official": {
+    "score": 14387.8,
+    "time_seconds": 240,
+    "status": "official_result_returned",
+    "C_A": 13386.8,
+    "note": "new attention side best (+378.8 over R1); official evidence supersedes the literal OOD gate block for this candidate"
+  }
+}
