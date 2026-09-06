@@ -179,3 +179,15 @@ coverage/reachability/api_times/time_prediction/official_score/official_time/sta
 - 归档 `result.md` 官方字段 unregistered/NA；全局版本号、根替换、组合由协调者
   负责（本包不动根 v189、不改全局索引）。
 - 待官方回传后记录 S_L/时间，C_L = S_L − 1001。
+
+## L4 官方回传（2026-09-06，官方正裁决）
+
+- 提交包：`solutions/v162_linear_l4-v189-linear-exact_officialNA_timeNA/solution.py`
+  （SHA `ACB16F76...F5263`，与全部本地评测/门禁同一 SHA）。
+- **官方结果：4607 / 247s**。
+- 账本：C_L = 4607 − 1001 = **3606**；本分支 L1→L4 官方 step 合计 vs v163 锚
+  **+20**（4587→4607），vs 强对照 v166 **+17**（4590→4607），与 rank-2(+1)/
+  块序(+17)/码窗(+1) 的完整父锚点之和在 ±1~4 噪声带内一致。
+- 时间：247s < 280s 提交门；时间模型预测 249.4s，实测 −2.4s。
+- 状态：**L4 RETAINED 为本分支 Linear 侧官方最优包**；根 v189 不变，
+  交互检验（S_additive/S_combined）待 Attention 侧官方结果，由协调者执行。
