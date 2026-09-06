@@ -16,7 +16,8 @@
 [`Linear 编译校准样本能量块序`](superpowers/archive/plans/2026-09-06-linear-compiled-sample-energy-plan-score-tie.md)
 已按 R1→R2→R3 关闭为 **CLOSED / R3_REJECTED_SCORE_TIE**：最终 direct-core fresh
 Overall `0.688994940507` 与本地最高严格持平，时间预测 `279.445203s` 通过；完整证据
-已归档，根仍 v189。最近的
+已归档。用户后来补充该归档官方结果为 `17636/264s`（相对 v189 `+20/-11s`）；
+原始本地 score-tie 裁决仍保留，根仍 v189。最近的
 [`Linear 编译校准稳健窗口极值块序`](superpowers/archive/plans/2026-09-06-linear-compiled-robust-window-order-plan-r1-rejected.md)
 已按 R0→R1 关闭为 **CLOSED / R1_REJECTED**：shard0 Linear mean/median
 `-0.000043038/-0.000117686`，worst-20% `-0.001098366`，未运行 R2；候选与证据

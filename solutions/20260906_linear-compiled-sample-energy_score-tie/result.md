@@ -1,12 +1,13 @@
-# Linear compiled calibration sample-energy block order — REJECTED_SCORE_TIE
+# Linear compiled calibration sample-energy block order — OFFICIAL POSITIVE / LOCAL SCORE TIE
 
 ## Source and status
 
 - Final implementation: `solution.py` (direct core calibration)
 - Final SHA256: `d66128a62e7e068edc50c91f4d8e212f586a6edcaee5bea7d3564166e258b0f6`
 - Parent: v189, official `17616/275s`
-- Official: `unregistered/NA` (not submitted)
-- Root: unchanged v189
+- Official result (user-reported): `17636/264s` (`+20` score, `-11s` vs v189)
+- Local R3 decision: `REJECTED_SCORE_TIE`; the later official result is recorded here
+- Root: unchanged v189; this archive is not promoted by this metadata update
 
 The mechanism compiles one legal 64-channel block order during Linear weight
 calibration. It averages final-transformed calibration-window block energy,
@@ -35,8 +36,10 @@ The direct-core implementation produced:
 - Official-time predictor: `279.445203s`
 
 The score exactly tied the current local high `0.688994940507429`. Because
-the submission rule requires a strict improvement, this is archived as
-`REJECTED_SCORE_TIE` and no official submission was made.
+the local submission rule required a strict improvement, the local R3 decision
+was `REJECTED_SCORE_TIE`. The user subsequently supplied an official result
+of `17636/264s` for this archive; that later official positive result is
+recorded separately from the original local gate decision.
 
 The initial wrapper SHA is
 `f6541fadbac21e2876000729cf6a87a0761c7f796ff5fd65365c752207758626`; its

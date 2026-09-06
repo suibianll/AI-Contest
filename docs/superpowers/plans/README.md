@@ -31,7 +31,8 @@ Overall `0.687211924573` 低于本地最高 `0.688994940507429`，虽时间预�
 上一份 [`Linear 编译校准样本能量块序`](../archive/plans/2026-09-06-linear-compiled-sample-energy-plan-score-tie.md)
 已按 R1 → R2 → R3 关闭为 **CLOSED / R3_REJECTED_SCORE_TIE**：最终直连核心实现的
 fresh default Overall `0.688994940507` 与本地最高严格持平，但时间预测 `279.445203s`
-通过；三种实现和完整证据已归档，根仍为 v189，未提交官方。
+通过；三种实现和完整证据已归档。用户后来补充该归档的官方结果为
+`17636/264s`（相对 v189 `+20/-11s`）；原始本地 score-tie 裁决仍保留，根仍为 v189。
 
 此前 [`Linear 动态 32 行块能量块序计划`](2026-09-06-linear-dynamic-block-energy32-plan.md)
 已按 R0 → R3 关闭为 **CLOSED / R3_REJECTED_TIME**：fresh default Overall

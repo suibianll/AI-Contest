@@ -35,3 +35,10 @@ tied the local high `0.688994940507429`. Under the strict-improvement rule it
 was not submitted. The root remains v189. Complete source and evidence are
 archived at
 `solutions/20260906_linear-compiled-sample-energy_score-tie/`.
+
+## Later official result
+
+The user later supplied the archive's official result as `17636/264s`, or
+`+20/-11s` versus v189. The original local R3 score-tie decision is retained
+as the local gate outcome; the official positive result is recorded in the
+archive manifest/result, and the root remains v189.

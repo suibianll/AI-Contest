@@ -72,3 +72,12 @@ submitted. The complete source variants, raw proxy evidence, fresh audits,
 hashes, and execution record are archived under
 `solutions/20260906_linear-compiled-sample-energy_score-tie/`. Root
 `solution.py` remains v189.
+
+## Later official result
+
+The user subsequently reported an official result of `17636/264s` for this
+archive. This is `+20` score and `-11s` versus v189. The original local R3
+decision remains `CLOSED / R3_REJECTED_SCORE_TIE` because the local fresh
+Overall tied the local high; the later official positive result is recorded
+in the solution manifest and result file. The root is not changed by this
+metadata correction.

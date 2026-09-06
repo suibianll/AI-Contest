@@ -15,7 +15,8 @@
 > [Compiled calibration sample-energy block order](20260906_linear-compiled-sample-energy_score-tie/result.md)
 > was closed as **CLOSED / R3_REJECTED_SCORE_TIE**: its direct-core fresh default Overall
 > `0.688994940507` tied the measured local high, while the official-time predictor passed at
-> `279.445203s`; it was archived without official submission and the root remains v189.
+> `279.445203s`. The user later reported an official result of `17636/264s` (`+20/-11s` vs v189);
+> the original local score-tie decision is retained, and the root remains v189.
 > [Linear dynamic 32-row block-energy act-order](20260906_linear-dynamic-block-energy32_time-rejected/result.md)
 > was closed as **CLOSED / R3_REJECTED_TIME**: its fresh default Overall was `0.688652578052`,
 > below the measured local high `0.688994940507`, and the official-time predictor was
