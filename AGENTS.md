@@ -65,6 +65,9 @@
   本地与官方排序反转后，停止用该 proxy 为同一路线晋级。
 - 通用符号/风险门为 `Δmean > 0 且 L1 < 0.02`，L1 是逐 case gain 平均绝对变化。
   v188 已出现通过门禁但官方 −4；门禁不保证官方非负，不再宣称“零误”。
+- 用户已确认 [v162 两侧独立计划](docs/superpowers/plans/2026-09-06-v162-independent-linear-attention-plan.md)
+  的专项规则：总 L1 只记录，改用 `mean(max(-Δgain,0))<0.02`；独立验证/OOD/control/时间门不变。
+  仅适用于该计划的 Linear、Attention 两个工作包，不需重复确认。
 - OOD 补充禁止门为 `|Δgap| > 0.01`，其中 `gap = gain_in - gain_ood`，Δ 为候选减父。
   带内不作门禁；父子须用各自同 SHA 的 in-dist/OOD 配对，不能套用旧父基线数值。
 - 跨模型运行保留并写日志，只描述机制鲁棒性；不得支持或否决晋级、标记 `model-specific-risk`

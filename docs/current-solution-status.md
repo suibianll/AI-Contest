@@ -8,10 +8,11 @@
 
 ## 0.1 当前计划状态（2026-09-06）
 
-当前活动计划为
-[`Linear 编译校准残差压力块序`](superpowers/plans/2026-09-06-linear-compiled-residual-pressure-order-plan.md)，
-正在执行 R0：从根 v189 测试校准激活能量与最终权重量化残差形成的固定 64-block 块序，
-不继承上一候选的样本能量、输出协方差或窗口极值块序。上一份
+当前活动总计划为
+[`v162 两侧独立优化`](superpowers/plans/2026-09-06-v162-independent-linear-attention-plan.md)，
+状态 DESIGN_ONLY。用户将分别委托 L/A 代理，从 v162 原始双标准单文件起步、冻结另一侧，
+独立比较累计/单步/历史强对照收益。负向损失门已获用户确认，根 v189 不变，新实验尚未执行。
+此前 v189 残差压力块序计划已被取代，旧结果仍由原执行者封存。上一份
 [`Linear 编译校准样本能量块序`](superpowers/archive/plans/2026-09-06-linear-compiled-sample-energy-plan-score-tie.md)
 已按 R1→R2→R3 关闭为 **CLOSED / R3_REJECTED_SCORE_TIE**：最终 direct-core fresh
 Overall `0.688994940507` 与本地最高严格持平，时间预测 `279.445203s` 通过；完整证据

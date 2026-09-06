@@ -1,8 +1,10 @@
 # HiF4 solutions archive
 
-> **Execution update (2026-09-06):** active plan is
-> [`Linear compiled residual-pressure block order`](../docs/superpowers/plans/2026-09-06-linear-compiled-residual-pressure-order-plan.md),
-> currently at R0 from root v189.
+> **Planning update (2026-09-06):** the active umbrella plan is
+> [independent Linear / Attention optimization from v162](../docs/superpowers/plans/2026-09-06-v162-independent-linear-attention-plan.md)
+> (DESIGN_ONLY). Both branches start from the original v162 source and freeze the other side to standard.
+> The user approved the negative-change risk gate for this plan. Root v189 remains unchanged.
+> The following entries are previous execution records, not the new branches' results.
 > [Linear compiled robust calibration-window max block order](20260906_linear-compiled-robust-window-order_rejected/result.md)
 > was closed as **CLOSED / R1_REJECTED** after shard0 Linear mean/median deltas of
 > `-0.000043038/-0.000117686`; it was archived without R2 or official submission.
