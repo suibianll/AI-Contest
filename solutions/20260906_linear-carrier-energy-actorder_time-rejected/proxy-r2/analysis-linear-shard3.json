@@ -1,0 +1,325 @@
+{
+  "policy": {
+    "score_prediction": "forbidden",
+    "local_trend_gate": "delta_mean > 0 and L1 < 0.02",
+    "ood_gate": "abs(delta(in_dist - ood)) <= 0.01",
+    "official_time_gate": "fresh default prediction < 280s"
+  },
+  "mechanism_type": "analytic",
+  "decision": "continue_next_shard",
+  "blockers": [],
+  "warnings": [
+    "no official-time prediction: run a fresh default panel without calibration cache"
+  ],
+  "sides": {
+    "linear": {
+      "cases": 56,
+      "delta_mean": 0.0005573676099183461,
+      "delta_median": 0.0005570349514365247,
+      "l1": 0.002018102304532087,
+      "linf": 0.012506011531270733,
+      "delta_tail": 0.001074826565831244,
+      "positive_cases": 33,
+      "negative_cases": 23,
+      "zero_cases": 0,
+      "worst_groups": [
+        {
+          "dimension": "role_family",
+          "value": "proj",
+          "cases": 8,
+          "mean_delta": -0.0023402485357592456,
+          "negative_cases": 6,
+          "min_delta": -0.010874707800102246
+        },
+        {
+          "dimension": "role",
+          "value": "proj",
+          "cases": 8,
+          "mean_delta": -0.0023402485357592456,
+          "negative_cases": 6,
+          "min_delta": -0.010874707800102246
+        },
+        {
+          "dimension": "shape_bucket",
+          "value": "wide_to_hidden",
+          "cases": 8,
+          "mean_delta": -0.0023402485357592456,
+          "negative_cases": 6,
+          "min_delta": -0.010874707800102246
+        },
+        {
+          "dimension": "role_family",
+          "value": "o",
+          "cases": 8,
+          "mean_delta": -0.001463977431158843,
+          "negative_cases": 7,
+          "min_delta": -0.006933479815919075
+        },
+        {
+          "dimension": "role",
+          "value": "o",
+          "cases": 8,
+          "mean_delta": -0.001463977431158843,
+          "negative_cases": 7,
+          "min_delta": -0.006933479815919075
+        },
+        {
+          "dimension": "shape_bucket",
+          "value": "hidden_to_hidden",
+          "cases": 16,
+          "mean_delta": -0.0007322496057935897,
+          "negative_cases": 12,
+          "min_delta": -0.006933479815919075
+        },
+        {
+          "dimension": "layer",
+          "value": "15",
+          "cases": 14,
+          "mean_delta": -0.00014424920305490332,
+          "negative_cases": 5,
+          "min_delta": -0.006933479815919075
+        },
+        {
+          "dimension": "layer",
+          "value": "21",
+          "cases": 14,
+          "mean_delta": -0.00011624156974117592,
+          "negative_cases": 8,
+          "min_delta": -0.010874707800102246
+        },
+        {
+          "dimension": "role",
+          "value": "q",
+          "cases": 8,
+          "mean_delta": -5.217804283363936e-07,
+          "negative_cases": 5,
+          "min_delta": -0.0009914955806015202
+        },
+        {
+          "dimension": "split",
+          "value": "test",
+          "cases": 28,
+          "mean_delta": 0.000379434587375652,
+          "negative_cases": 12,
+          "min_delta": -0.006933479815919075
+        },
+        {
+          "dimension": "length",
+          "value": "128",
+          "cases": 28,
+          "mean_delta": 0.0005046193517464928,
+          "negative_cases": 13,
+          "min_delta": -0.010874707800102246
+        },
+        {
+          "dimension": "length",
+          "value": "512",
+          "cases": 28,
+          "mean_delta": 0.0006101158680901993,
+          "negative_cases": 10,
+          "min_delta": -0.002734466565525673
+        }
+      ],
+      "worst_cases": [
+        {
+          "delta": -0.010874707800102246,
+          "baseline_gain": 0.7227936214628231,
+          "candidate_gain": 0.7119189136627209,
+          "layer": 21,
+          "role": "proj",
+          "role_family": "proj",
+          "shape_bucket": "wide_to_hidden",
+          "split": "validation",
+          "length": 128
+        },
+        {
+          "delta": -0.006933479815919075,
+          "baseline_gain": 0.4845692063826629,
+          "candidate_gain": 0.4776357265667438,
+          "layer": 15,
+          "role": "o",
+          "role_family": "o",
+          "shape_bucket": "hidden_to_hidden",
+          "split": "test",
+          "length": 128
+        },
+        {
+          "delta": -0.003654766812328125,
+          "baseline_gain": 0.7170851001997786,
+          "candidate_gain": 0.7134303333874504,
+          "layer": 21,
+          "role": "proj",
+          "role_family": "proj",
+          "shape_bucket": "wide_to_hidden",
+          "split": "test",
+          "length": 128
+        },
+        {
+          "delta": -0.002734466565525673,
+          "baseline_gain": 0.5787659042169866,
+          "candidate_gain": 0.5760314376514609,
+          "layer": 15,
+          "role": "proj",
+          "role_family": "proj",
+          "shape_bucket": "wide_to_hidden",
+          "split": "test",
+          "length": 512
+        },
+        {
+          "delta": -0.001915614306876201,
+          "baseline_gain": 0.4326757887111038,
+          "candidate_gain": 0.4307601744042276,
+          "layer": 15,
+          "role": "o",
+          "role_family": "o",
+          "shape_bucket": "hidden_to_hidden",
+          "split": "validation",
+          "length": 128
+        },
+        {
+          "delta": -0.0016899517851040047,
+          "baseline_gain": 0.6943981988616579,
+          "candidate_gain": 0.6927082470765539,
+          "layer": 21,
+          "role": "o",
+          "role_family": "o",
+          "shape_bucket": "hidden_to_hidden",
+          "split": "test",
+          "length": 512
+        },
+        {
+          "delta": -0.0016125090247128826,
+          "baseline_gain": 0.6158097239350838,
+          "candidate_gain": 0.6141972149103709,
+          "layer": 3,
+          "role": "o",
+          "role_family": "o",
+          "shape_bucket": "hidden_to_hidden",
+          "split": "test",
+          "length": 128
+        },
+        {
+          "delta": -0.0015785980526011878,
+          "baseline_gain": 0.7096771143834149,
+          "candidate_gain": 0.7080985163308137,
+          "layer": 21,
+          "role": "o",
+          "role_family": "o",
+          "shape_bucket": "hidden_to_hidden",
+          "split": "validation",
+          "length": 512
+        },
+        {
+          "delta": -0.0014885187261629573,
+          "baseline_gain": 0.8533964908678864,
+          "candidate_gain": 0.8519079721417234,
+          "layer": 21,
+          "role": "k",
+          "role_family": "qkv",
+          "shape_bucket": "hidden_to_wide",
+          "split": "test",
+          "length": 512
+        },
+        {
+          "delta": -0.001258002788421142,
+          "baseline_gain": 0.8496294535762031,
+          "candidate_gain": 0.848371450787782,
+          "layer": 9,
+          "role": "v",
+          "role_family": "qkv",
+          "shape_bucket": "hidden_to_wide",
+          "split": "test",
+          "length": 128
+        },
+        {
+          "delta": -0.001173814703311793,
+          "baseline_gain": 0.5299016400435873,
+          "candidate_gain": 0.5287278253402755,
+          "layer": 9,
+          "role": "proj",
+          "role_family": "proj",
+          "shape_bucket": "wide_to_hidden",
+          "split": "test",
+          "length": 128
+        },
+        {
+          "delta": -0.0011197677350673896,
+          "baseline_gain": 0.5733880455651149,
+          "candidate_gain": 0.5722682778300475,
+          "layer": 3,
+          "role": "proj",
+          "role_family": "proj",
+          "shape_bucket": "wide_to_hidden",
+          "split": "test",
+          "length": 512
+        }
+      ],
+      "component_delta_mean": {},
+      "component_signal": []
+    }
+  },
+  "focus_linear_roles": [],
+  "focus": {
+    "enabled": false,
+    "reason": "no focus role/family supplied"
+  },
+  "control": {
+    "enabled": false,
+    "reason": "no focus role/family supplied"
+  },
+  "ood_delta_gap": {},
+  "runtime": {
+    "api_total_seconds": 61.437468198593706,
+    "calibration_wall_seconds": 46.07238420005888,
+    "calibration_api_seconds": 44.85009929980151,
+    "calibration_cache_load_seconds": 0.0,
+    "scoring_api_seconds": 16.587368898792192,
+    "scoring_wall_seconds": 20.85757560003549,
+    "ranked_apis": [
+      {
+        "api": "hif4_calibration_and_quantize_weight",
+        "seconds": 44.85009929980151,
+        "share": 0.7300121670838663,
+        "calls": 28
+      },
+      {
+        "api": "hif4_dynamic_quantize_activation",
+        "seconds": 16.587368898792192,
+        "share": 0.26998783291613365,
+        "calls": 56
+      },
+      {
+        "api": "hif4_calibration_attention",
+        "seconds": 0.0,
+        "share": 0.0,
+        "calls": 0
+      },
+      {
+        "api": "hif4_dynamic_quantize_q",
+        "seconds": 0.0,
+        "share": 0.0,
+        "calls": 0
+      },
+      {
+        "api": "hif4_dynamic_quantize_k",
+        "seconds": 0.0,
+        "share": 0.0,
+        "calls": 0
+      },
+      {
+        "api": "hif4_dynamic_quantize_v",
+        "seconds": 0.0,
+        "share": 0.0,
+        "calls": 0
+      }
+    ],
+    "timing_faithful": true,
+    "default_panel": false,
+    "predicted_official_seconds": null,
+    "under_280_gate": null
+  },
+  "recommended_actions": [
+    "profile Weight calibration candidate loops, matrix factorizations, and repeated quantization",
+    "inspect linear role_family=proj first (mean delta=-0.002340, min delta=-0.010875)"
+  ]
+}

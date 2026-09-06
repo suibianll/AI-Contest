@@ -1,0 +1,35 @@
+{
+  "protocol": "hierarchy-partition-activation-20260906",
+  "parent_version": "v186",
+  "parent_official": {
+    "score": 17599,
+    "time_seconds": 272,
+    "sha256": "F8495DCA20334ACBDAD16FC18EE41A4970F31E1837FDEEDCEE9C70AEE54E7EB8"
+  },
+  "cache_protocol": "proxy-v2",
+  "layers": [0, 8, 15, 23],
+  "linear": {
+    "roles": ["q", "k", "v", "o", "fc_gate", "fc_up", "proj"],
+    "focus_roles": ["fc_gate", "fc_up", "proj"],
+    "calibration_windows": "all",
+    "activation_tokens": 32,
+    "weight_rows": 32,
+    "blocks": 4,
+    "pressure": "max(log2(rms_activation/median), log2(rms_weight/median))",
+    "objective": "exact legal fixed partition versus shared-pressure block-local partition; selected X_hat W_hat^T output MSE"
+  },
+  "attention": {
+    "calibration_windows": "all",
+    "q_head": 0,
+    "kv_head": "last",
+    "tokens": 32,
+    "pressure": "shared max of median-normalized Q/K RMS in one 64-channel head block",
+    "objective": "Q-only, K-only and joint GQA output/logits/probability MSE"
+  },
+  "gate": {
+    "focus_layer_median_gain": 0.01,
+    "positive_focus_layers": 3,
+    "require_deep_layer": "layer >= 15",
+    "require_non_deep_layer": "layer < 15"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "version": "linear-carrier-energy-fused",
+  "status": "REJECTED_TIME",
+  "source": "solution.py",
+  "source_sha256": "5fda25e6771434ddce66616b0c78d00151de15066aa0b220404a44b3f2a2593f",
+  "parent": "v189 static-actorder-hdiag-recovered",
+  "official": {
+    "status": "unregistered",
+    "score": null,
+    "time_seconds": null
+  },
+  "local": {
+    "linear_mean": 0.6417783721801803,
+    "attention_mean": 0.7521734070200701,
+    "overall_mean": 0.6877763033634677,
+    "linear_six_shard_delta": 0.001045,
+    "ood_delta_gap_change": 0.000046,
+    "time_predictor_seconds": 281.400628,
+    "api_total_seconds": 401.638718,
+    "wall_seconds": 428.579657
+  },
+  "reason": "higher local proxy but fused implementation still exceeds the official time predictor gate"
+}

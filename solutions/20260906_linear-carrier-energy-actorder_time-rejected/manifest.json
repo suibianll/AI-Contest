@@ -1,0 +1,23 @@
+{
+  "version": "linear-carrier-energy-actorder",
+  "status": "REJECTED_TIME",
+  "source": "solution.py",
+  "source_sha256": "c382bd4fe4acdbb21b4aacd6b009051093d3fd92a264ae645956f96def26958c",
+  "parent": "v189 static-actorder-hdiag-recovered",
+  "official": {
+    "status": "unregistered",
+    "score": null,
+    "time_seconds": null
+  },
+  "local": {
+    "linear_mean": 0.6417783721801803,
+    "attention_mean": 0.7521734070200701,
+    "overall_mean": 0.6877763033634677,
+    "linear_six_shard_delta": 0.001045,
+    "ood_delta_gap_change": 0.000046,
+    "time_predictor_seconds": 280.622241,
+    "api_total_seconds": 391.320094,
+    "wall_seconds": 417.378135
+  },
+  "reason": "higher local proxy but official time predictor is not below 280 seconds"
+}

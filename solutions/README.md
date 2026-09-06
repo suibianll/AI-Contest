@@ -1,8 +1,36 @@
 # HiF4 solutions archive
 
-> **Planning update (2026-09-05):** the only active plan is
-> [legal codec verification and output-objective optimization](../docs/superpowers/plans/2026-09-05-legal-codec-and-output-objective-plan.md)
-> (**DESIGN_ONLY**). It specifies defect tests, a legal hierarchical block solver,
+> **Execution update (2026-09-06):** the current active plan is
+> [Attention output-Jacobian weighted 2×2 Q/K transform](../docs/superpowers/plans/2026-09-06-attention-output-jacobian-pair-matrix-plan.md)
+> (**ACTIVE / ATTENTION-OUTPUT-JACOBIAN-PAIR-MATRIX**). The recovered fixed-order candidate is archived as
+> [v189](20260906_v189_static-actorder-hdiag_recovered_scoreNA_timeNA/result.md): local gates pass and
+> `solution.zip` is ready, while the official result remains `unregistered/NA`; the root remains v186.
+> The fixed-state output-aware JDRQ integration is closed as **CLOSED / J1_REJECTED** after
+> 112 paired Linear cases were negative; see the
+> [execution record](../logs/execution/2026-09-06-linear-fixed-state-output-aware-jdrq-plan.md)
+> and [rejected archive](20260906_linear-fixed-state-output-aware-jdrq_rejected/result.md).
+> The conditional-curvature block-order review is closed as **CLOSED / C1_REJECTED**; see the
+> [execution record](../logs/execution/2026-09-06-linear-static-gptq-conditional-curvature-plan.md).
+> The corrected legal-lattice output oracle is closed as
+> **CLOSED / R1_NO_SUPPORTED_MECHANISM**; see the
+> [execution record](../logs/execution/2026-09-06-corrected-legal-lattice-output-plan.md).
+> The raw Attention source-scale extension is also closed as
+> **CLOSED / NOOP_REJECTED**; see the
+> [execution record](../logs/execution/2026-09-06-attention-source-scale-proposal-plan.md).
+> The aligned Attention source-scale extension is closed as
+> **CLOSED / NOOP_REJECTED**; see the
+> [execution record](../logs/execution/2026-09-06-attention-aligned-source-scale-plan.md).
+> The Linear multi-fold cross-block Hessian extension is closed as
+> **CLOSED / B1_REJECTED**; see the
+> [execution record](../logs/execution/2026-09-06-linear-crossblock-robust-hessian-plan.md).
+> J0 is closed as
+> **CLOSED / J0_REJECTED**; see the
+> [J0 execution record](../logs/execution/2026-09-06-joint-output-gauge-plan.md). The previous D-A/D-B plan was executed and closed
+> without a deployable mechanism. See the
+> [execution record](../logs/execution/2026-09-06-hierarchy-partition-activation-plan.md) and stage artifacts.
+> The plan was:
+> [legal codec verification and output-objective optimization](../docs/superpowers/archive/plans/2026-09-05-legal-codec-and-output-objective-plan-r2-rejected.md)
+> (now **CLOSED / R2_REJECTED**). It specified defect tests, a legal hierarchical block solver,
 > output-objective diagnostics, and gated candidate validation. The completed codebook
 > plan is archived; its broad saturation claims are superseded by this
 > [evidence audit](../logs/execution/2026-09-05-next-plan-evidence-audit.md).
@@ -175,6 +203,7 @@ directories follow the same immutable naming rule as the historical archive:
 
 | Version | Source directory | Linear mean | Attention mean | API total | Decision 
 |---|---|---:|---:|---:|---
+| v189 | `20260906_v189_static-actorder-hdiag_recovered_scoreNA_timeNA` | **0.640258** | **0.752173** | **388.175 s** API / `279.956 s` predicted | **local retained; official upload package ready; official score/time NA** |
 | v086 (idle rerun) | `20260830_v086_c86-attn-block-final_scoreNA_timeNA` | 0.406668 | 0.719696 | 299.302 s | clean rerun; official 16744/222.7 s pass 
 | v128 | `20260901_v128_fixed-attn-budget_timeout` | 0.465655 | 0.837789 | 310.732 s | **official timeout (user confirmed)** 
 | v129 | `20260901_v129_fixed-attn-budget-sweep1_timeout` | 0.465655 | 0.836579 | 248.363 s | **official timeout (user confirmed)** 

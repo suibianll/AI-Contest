@@ -1,0 +1,48 @@
+{
+  "version": "v189",
+  "status": "LOCAL-RETAINED / UNREGISTERED",
+  "mechanism": "static deployed-Hessian activation-GPTQ complete 64-channel block ordering",
+  "parent": {
+    "version": "v186",
+    "source_sha256": "f8495dca20334acbdad16fc18ee41a4970f31e1837fdeedcee9c70aee54e7eb8",
+    "official_score": 17599,
+    "official_time_seconds": 272
+  },
+  "source": {
+    "path": "solution.py",
+    "sha256": "261202248a0146a2ee45f3df60bd1979bb8171b7c162921013b0024c848617af"
+  },
+  "submission": {
+    "package": "solution.zip",
+    "contains": ["solution.py"],
+    "official_score": null,
+    "official_time_seconds": null,
+    "status": "prepared_for_manual_upload"
+  },
+  "local_eval": {
+    "protocol": "eval-v3",
+    "linear_cases": 336,
+    "linear_candidate_mean": 0.6367996275406851,
+    "linear_baseline_mean": 0.6328215064197137,
+    "linear_delta_mean": 0.0039781211209714,
+    "linear_delta_median": 0.002777959610,
+    "linear_delta_l1": 0.005497954666,
+    "linear_positive_negative_zero": [288, 38, 10],
+    "default_candidate_linear_mean": 0.6402583244298936,
+    "default_parent_linear_mean": 0.6366094868343939,
+    "default_candidate_attention_mean": 0.7521734070200701,
+    "default_parent_attention_mean": 0.7521734070200701,
+    "default_candidate_overall_mean": 0.6868896088424672,
+    "default_parent_overall_mean": 0.6847611202450923,
+    "default_overall_delta": 0.0021284885973749113,
+    "ood_delta_gap": 0.000294570038,
+    "time_prediction_seconds": 279.956116270,
+    "time_gate": "PASS (<280s)"
+  },
+  "evidence": {
+    "linear_eval_dir": "artifacts/proxy_v3/static-actorder-hdiag-recovered-20260906/full-r5/static-actorder-hdiag-recovered-full",
+    "ood_eval_dir": "artifacts/proxy_v3/static-actorder-hdiag-recovered-20260906/ood-r6/static-actorder-hdiag-recovered-ood",
+    "default_json": "artifacts/official_eval/static-actorder-hdiag-recovered-fresh-default-r9.json",
+    "default_report": "logs/official_eval/static-actorder-hdiag-recovered-fresh-default-r9.md"
+  }
+}

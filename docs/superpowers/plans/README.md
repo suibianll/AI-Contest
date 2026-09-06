@@ -1,6 +1,6 @@
 # 计划入口
 
-> 最后更新：2026-09-05
+> 最后更新：2026-09-06
 
 > **规则更正**：官方提交次数没有限制；历史 `9/10`、`剩余 1`、`最后一次配额` 等表述
 > 已全部作废，见 [`2026-09-05 过期信息清单`](../../stale-information-inventory-2026-09-05.md)。
@@ -10,14 +10,56 @@
 `evaluator/eval.py`（其 proxy-v2/reference 后端 `evaluator/official_eval.py` 仅兼容旧缓存与协议），
 跨模型泛化调用 `evaluator/cross_model_eval.py`；旧 `real_model_suite.py` 已退役。
 
-**当前唯一活动计划（2026-09-05）**：
-[`合法编码复核与最终输出优化计划`](2026-09-05-legal-codec-and-output-objective-plan.md)，
-状态 **DESIGN_ONLY**。顺序：缺陷测试 → 合法层级精确解 → 最终输出联合舍入诊断 →
-单机制部署 → 官方裁决；代码入口、固定抽样、算法公式、CLI 和失败门均已写明。
+**当前唯一活动计划：** [`Attention logit-Fisher 配对 2×2 Q/K 变换计划`](2026-09-06-attention-logit-fisher-pair-plan.md)，
+状态 **ACTIVE / ATTN-LOGIT-FISHER-PAIR**。它在 v189 已冻结的 Q/K 状态之后按 softmax
+logit Fisher 权重拟合一次合法 GQA-local pair transform；根 v186 保持不变。
+
+[`Linear 冻结激活状态输出感知 JDRQ 计划`](../archive/plans/2026-09-06-linear-fixed-state-output-aware-jdrq-plan-rejected.md)
+已按 J0 → J1 执行并以 **CLOSED / J1_REJECTED** 结束：112 个配对 case 的前两个 shard
+整体负向，执行记录见 [`2026-09-06 Linear JDRQ 执行记录`](../../../logs/execution/2026-09-06-linear-fixed-state-output-aware-jdrq-plan.md)。
+
+[`Linear 静态 activation-GPTQ 条件曲率块序计划`](../archive/plans/2026-09-06-linear-static-gptq-conditional-curvature-order-plan-rejected.md)
+已按 C0 → C1 执行并以 **CLOSED / C1_REJECTED** 结束；执行记录见
+[`2026-09-06 条件曲率执行记录`](../../../logs/execution/2026-09-06-linear-static-gptq-conditional-curvature-plan.md)。
+
+[`Linear 多折 cross-block Hessian 联合坐标计划`](../archive/plans/2026-09-06-linear-crossblock-robust-hessian-plan-rejected.md)
+已按 B0 → B1 执行并以 **CLOSED / B1_REJECTED** 结束：112 个配对 case 中 96 个回退，
+执行记录见 [`2026-09-06 Linear cross-block 执行记录`](../../../logs/execution/2026-09-06-linear-crossblock-robust-hessian-plan.md)。
+
+[`Attention 变换坐标对齐 source-scale 优化计划`](../archive/plans/2026-09-06-attention-aligned-source-scale-plan-rejected.md)
+已按 A0 → A1 执行并以 **CLOSED / NOOP_REJECTED** 结束：16 个配对 case 逐位不变，
+执行记录见 [`2026-09-06 Attention 对齐 source-scale 执行记录`](../../../logs/execution/2026-09-06-attention-aligned-source-scale-plan.md)。
+
+[`Attention source-scale proposal 优化计划`](../archive/plans/2026-09-06-attention-source-scale-proposal-plan-rejected.md)
+已按 S0 → S1 执行并以 **CLOSED / NOOP_REJECTED** 结束：实际 16 个配对 case 逐位
+不变，执行记录见 [`2026-09-06 Attention source-scale 执行记录`](../../../logs/execution/2026-09-06-attention-source-scale-proposal-plan.md)。
+
+[`修正版合法离散网格与输出目标优化计划`](../archive/plans/2026-09-06-corrected-legal-lattice-output-plan-rejected.md)
+已按 R0 → R1 执行并以 **CLOSED / R1_NO_SUPPORTED_MECHANISM** 结束：真实 NVFP4 输入的
+合法联合 output oracle 没有材料余量，执行记录见
+[`2026-09-06 修正版执行记录`](../../../logs/execution/2026-09-06-corrected-legal-lattice-output-plan.md)。
+
+静态 activation-GPTQ 块序复核已完成并归档为 v189：本地 default-panel 高于 v186 组合父基线，
+OOD/时间门通过，官方结果仍 `unregistered/NA`；计划记录见
+[`归档计划`](../archive/plans/2026-09-06-static-activation-gptq-order-plan-candidate-archived.md)。
+
+[`联合输出坐标规范化诊断计划`](../archive/plans/2026-09-06-joint-output-gauge-plan-rejected.md)
+已关闭为 **CLOSED / J0_REJECTED**，执行记录见
+[`2026-09-06 J0 执行记录`](../../../logs/execution/2026-09-06-joint-output-gauge-plan.md)。
+
+上一张 [`64-block 层级分区与激活误差解剖计划`](../archive/plans/2026-09-06-hierarchy-partition-and-activation-anatomy-plan-rejected.md)
+已按 D-A → D-B 执行并以 **CLOSED / D_B_REJECTED** 结束：clip/grid 非主导，Linear
+子组分区未产生材料收益，Attention joint 也为负；未创建候选。
+
+上一份 [`合法编码复核与最终输出优化计划`](../archive/plans/2026-09-05-legal-codec-and-output-objective-plan-r2-rejected.md)
+已于 2026-09-06 按 R0 → R1 → R2 执行并以 **CLOSED / R2_REJECTED** 结束：R0 通过，
+R1 G1-A 未通过，R2-L G2-L 未通过，R2-A 仅 ORACLE_ONLY。执行记录见
+[`2026-09-06 执行记录`](../../../logs/execution/2026-09-06-legal-codec-output-plan.md)。
+未创建可部署候选，根 v186 不变。
 旧 [codebook 计划](../archive/plans/2026-09-05-nvfp4-codebook-exact-conversion-plan-closed.md)
 已结束归档。其结果解释受[新审计](../../../logs/execution/2026-09-05-next-plan-evidence-audit.md)
 修订：cb1/cb2 编码错误及 operand/output 目标混淆，不能证明合法空间耗尽。
-根 v186 不变，新实验尚未执行。
+根 v186 不变。
 
 proxy-v3 分片评测与诊断工具已完成并归档，见
 [`归档记录`](../archive/plans/2026-09-04-proxy-v3-evaluator-and-analysis-tools-completed.md)。

@@ -42,5 +42,5 @@ P0 的 S 是单元素可表示值并集。逐元素存在某个 lv2/lv3 不保�
 
 ## 3. 后续执行
 
-见[合法编码复核与最终输出优化计划](../../docs/superpowers/plans/2026-09-05-legal-codec-and-output-objective-plan.md)。
+见[合法编码复核与最终输出优化计划](../../docs/superpowers/archive/plans/2026-09-05-legal-codec-and-output-objective-plan-r2-rejected.md)。
 本次仅注册计划、修正导航和证据解释；未改算法、未跑新评测、未提交官方。

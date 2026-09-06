@@ -1,6 +1,6 @@
 # HiF4 竞赛工作记忆
 
-> 最后整理：2026-09-05。这里只保留当前可执行规则和不可误读的状态；旧实验细节、失败版本
+> 最后整理：2026-09-06。这里只保留当前可执行规则和不可误读的状态；旧实验细节、失败版本
 > 和历史分数只在 `docs/current-solution-status.md`、`solutions/README.md`、`artifacts/`、
 > `logs/` 中保留，不复制到本文件。读历史文档前先看全部过期信息清单：
 > **[2026-09-05 修订版](docs/stale-information-inventory-2026-09-05.md)**（官方提交次数无限制；
@@ -22,12 +22,34 @@
 > 诊断。`evaluator/official_eval.py` 保持未修改，作为 `proxy-v2` 兼容/参考后端；旧命令和下文
 > 的 `proxy-v2` 统计仍表示底层协议，不应把二者的输出混排。
 
-> **当前唯一活动计划（2026-09-05）**：
-> [`合法编码复核与最终输出优化计划`](docs/superpowers/plans/2026-09-05-legal-codec-and-output-objective-plan.md)
-> **DESIGN_ONLY**：R0 缺陷复现 → R1 合法层级精确块解 → R2 实际输出目标 → R3 单机制候选
-> → R4 官方裁决。旧 codebook 计划已关闭归档，但 cb1/cb2 存在具体实现缺陷，其负结果
-> 不能证明编码空间饱和。先读[证据审计](logs/execution/2026-09-05-next-plan-evidence-audit.md)；
-> 只修复无效实验，不重开已有有效负结果的参数族。尚未执行新实验，根 solution.py 保持 v186。
+> **当前唯一活动计划（2026-09-06）**：
+> [`Attention logit-Fisher 配对 2×2 Q/K 变换计划`](docs/superpowers/plans/2026-09-06-attention-logit-fisher-pair-plan.md)，
+> **ACTIVE / ATTN-LOGIT-FISHER-PAIR**：在 v189 已冻结 Q/K 状态后，按 softmax logit Fisher
+> 权重拟合一次合法 2×2 GQA-local pair transform；根 `solution.py` 保持 v186。
+> 静态 activation-GPTQ 块序候选已归档为 v189，本地通过但官方 `unregistered/NA`。
+> 上一份 Linear 冻结激活状态的输出感知 JDRQ 接入已 **CLOSED / J1_REJECTED**，112 个
+> 配对 case 的前两个 shard 为负，执行记录见
+> `logs/execution/2026-09-06-linear-fixed-state-output-aware-jdrq-plan.md`。
+> 条件曲率块序复核已 **CLOSED / C1_REJECTED**，执行记录见
+> `logs/execution/2026-09-06-linear-static-gptq-conditional-curvature-plan.md`。
+> 上一份 Attention raw source-scale 计划已 **CLOSED / NOOP_REJECTED**，其 16 个配对
+> case 逐位不变，执行记录见 `logs/execution/2026-09-06-attention-source-scale-proposal-plan.md`。
+> 上一份 Attention 坐标对齐 source-scale 计划已 **CLOSED / NOOP_REJECTED**，其 16 个
+> 配对 case 逐位不变，执行记录见 `logs/execution/2026-09-06-attention-aligned-source-scale-plan.md`。
+> 上一份 Linear 多折 cross-block Hessian 计划已 **CLOSED / B1_REJECTED**，112 个配对
+> case 中 96 个回退，执行记录见 `logs/execution/2026-09-06-linear-crossblock-robust-hessian-plan.md`。
+> 修正版合法离散网格计划已 **CLOSED / R1_NO_SUPPORTED_MECHANISM**，其真实输入
+> output oracle 未显示材料余量，执行记录见
+> `logs/execution/2026-09-06-corrected-legal-lattice-output-plan.md`；未创建候选。
+> 上一张联合输出坐标计划已 **CLOSED / J0_REJECTED**，其执行记录见
+> `logs/execution/2026-09-06-joint-output-gauge-plan.md`；上一张 64-block 层级分区计划已
+> **CLOSED / D_B_REJECTED**，其执行记录见
+> `logs/execution/2026-09-06-hierarchy-partition-activation-plan.md`；未创建候选。
+> 上一份合法编码计划已 **CLOSED / R2_REJECTED**，其执行记录见
+> [2026-09-06 执行记录](logs/execution/2026-09-06-legal-codec-output-plan.md)；旧 codebook
+> 计划已关闭归档，但 cb1/cb2 存在具体实现缺陷，其负结果不能证明编码空间饱和。先读[证据审计]
+> (logs/execution/2026-09-05-next-plan-evidence-audit.md)。v189 已归档为本地通过、官方
+> `unregistered/NA` 候选，根目录仍保持 v186。
 
 ## 1. 当前状态
 

@@ -7,7 +7,7 @@
 > 用户确认的榜首为 **21765/290s**，当前差 **4166 分**，时间余量 **28s**。两侧独立父
 > 仍为 `P_L=v166（4590/226s）`、`P_A=v168（14005/210s）`；v186 不是单侧测量。
 
-更新时间：2026-09-05。当前仓库的日常评测入口是
+更新时间：2026-09-06。当前仓库的日常评测入口是
 [`evaluator/eval.py`](evaluator/eval.py)（`eval-v3`）。它复用固定的 `proxy-v2` 输入缓存，
 按六个分片执行、复用校准产物，并输出可供诊断工具消费的逐 case 证据；
 [`evaluator/official_eval.py`](evaluator/official_eval.py) 保留为未修改的 `proxy-v2` 兼容/参考后端，
@@ -16,10 +16,29 @@
 
 ## 当前结论
 
-- 当前唯一活动计划：[合法编码复核与最终输出优化](docs/superpowers/plans/2026-09-05-legal-codec-and-output-objective-plan.md)，
-  状态 DESIGN_ONLY。先修复最新 cb1/cb2 实验的证据缺陷，再验证合法编码及实际输出优化，
-  最后按门禁构造单机制候选。官方探针支持优先研究 Q/K 与 fc/proj；不证明这些对象的
-  剩余空间比例或编码饱和。见[证据审计](logs/execution/2026-09-05-next-plan-evidence-audit.md)。
+- 当前活动计划：[Attention logit-Fisher 配对 2×2 Q/K 变换](docs/superpowers/plans/2026-09-06-attention-logit-fisher-pair-plan.md)，
+  状态 ACTIVE / ATTN-LOGIT-FISHER-PAIR；在 v189 已冻结的 Q/K 状态之后按 softmax
+  logit Fisher 权重拟合一次合法 GQA-local pair transform，根 v186 未变；v189 候选已
+  归档，官方 `unregistered/NA`。上一份 Linear 冻结激活状态输出感知 JDRQ 计划已
+  CLOSED / J1_REJECTED；条件曲率块序计划已 CLOSED / C1_REJECTED。
+- Linear 多折 cross-block Hessian 计划已 CLOSED / B1_REJECTED，前两 shard 的 112 个
+  配对 case 中 96 个回退，未进入 default/OOD/官方。
+- 修正版合法离散网格计划已 CLOSED / R1_NO_SUPPORTED_MECHANISM：真实 NVFP4 输入的合法
+  scale×lv2×lv3×mantissa output oracle holdout mean `-0.0003232`、L1 `0.0004041`、
+  正 case `10/112`，未产生部署候选，详见[执行记录](logs/execution/2026-09-06-corrected-legal-lattice-output-plan.md)。
+- 上一份 Attention raw source-scale 扩展已 CLOSED / NOOP_REJECTED：前两 shard 的 16 个
+  case 逐位不变；现转入变换坐标对齐版本，详见[执行记录](logs/execution/2026-09-06-attention-source-scale-proposal-plan.md)。
+- v189 当前本地 default-panel：Linear `0.640258324430`、Attention `0.752173407020`、
+  Overall `0.686889608842`，高于 v186 组合父基线 `0.684761120245`；时间模型预测
+  `279.956116s`，仅作为官方提交资格审计，不是官方实测时间。
+- [64-block 层级分区与激活误差解剖](docs/superpowers/archive/plans/2026-09-06-hierarchy-partition-and-activation-anatomy-plan-rejected.md)
+  已 CLOSED / D_B_REJECTED；Linear 子组分区和 Attention joint 均未形成可部署机制。
+- 上一份[合法编码复核与最终输出优化](docs/superpowers/archive/plans/2026-09-05-legal-codec-and-output-objective-plan-r2-rejected.md)
+  已 CLOSED / R2_REJECTED。R0 通过，R1 G1-A 未通过，R2-L G2-L 未通过，R2-A 仅
+  ORACLE_ONLY，无可部署候选；详细结果见[执行记录](logs/execution/2026-09-06-legal-codec-output-plan.md)。
+- v189 静态 activation-GPTQ 块序候选已完成 eval-v3/OOD/时间审计并归档；官方要求的
+  `solution.zip` 已生成，官方网页上传与官方回传仍待完成。详细记录见
+  [v189 结果](solutions/20260906_v189_static-actorder-hdiag_recovered_scoreNA_timeNA/result.md)。
 - 根目录 [`solution.py`](solution.py) 已同步为 v186 官方计分源码，SHA256
   `F8495DCA20334ACBDAD16FC18EE41A4970F31E1837FDEEDCEE9C70AEE54E7EB8`。v186 是分数父；
   v180 `17597/242s` 少 2 分、快 30s，继续保留为高复杂度新机制的时间预算父。两者共同构成

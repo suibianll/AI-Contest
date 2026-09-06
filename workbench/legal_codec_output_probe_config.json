@@ -1,0 +1,51 @@
+{
+  "protocol": "legal-codec-output-20260905",
+  "parent_version": "v186",
+  "parent_official": {
+    "score": 17599,
+    "time_seconds": 272,
+    "sha256": "F8495DCA20334ACBDAD16FC18EE41A4970F31E1837FDEEDCEE9C70AEE54E7EB8"
+  },
+  "time_parent_version": "v180",
+  "cache_protocol": "proxy-v2",
+  "linear_calibration_indices": [0, 1],
+  "r1": {
+    "layers": [0, 8, 15, 23],
+    "roles": ["q", "k", "v", "o", "fc_gate", "fc_up", "proj"],
+    "focus_roles": ["fc_gate", "fc_up", "proj"],
+    "rows": 8,
+    "blocks": 4,
+    "index_rule": "floor(k*(n-1)/(m-1)), deduplicate and sort",
+    "objective": "unweighted operand SSE in the fixed coordinate",
+    "tie_rule": "lowest E6M2 code after first minimum; parent tie is recorded by caller"
+  },
+  "r2_linear": {
+    "focus_layers": [0, 8, 15, 23],
+    "focus_roles": ["fc_gate", "fc_up", "proj"],
+    "states": 12,
+    "group_size": 8,
+    "candidate_count": 256,
+    "fold_rule": "leave-one-fold-out over calibration windows",
+    "holdout_windows": [1, 2, 6, 7],
+    "objective": "X_hat W_ref^T versus X_ref W_ref^T with parent weight fixed",
+    "gate": "median LOO > 0; worst LOO >= 0; holdout mean/median positive; L1 < 0.02"
+  },
+  "r2_attention": {
+    "head": 0,
+    "kv_group": "last",
+    "query_tokens": 4,
+    "objective": "full masked Attention output MSE with evaluator GQA semantics"
+  },
+  "r3": {
+    "linear_candidate_parent": "v180",
+    "attention_candidate_parent": "v186",
+    "single_mechanism": true,
+    "online_search": false,
+    "ood_gap_abs_max": 0.01
+  },
+  "r4": {
+    "time_formula": "170.3 + 0.115*W_calib + 0.694*A_calib + 0.734*dyn_act - 1.58*dyn_qkv",
+    "time_prediction_gate_seconds": 280,
+    "official_hard_limit_seconds": 300
+  }
+}

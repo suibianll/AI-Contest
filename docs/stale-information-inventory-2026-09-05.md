@@ -60,4 +60,4 @@ v176–v188 的官方分数、时间、提交先后、RETAINED/REJECTED/TIMEOUT 
   三种天花板和全部饱和推断不作为行动依据；不同算法小分差不等于已验证随机噪声。
 
 旧实验源文件和报告不改写；新计划只允许针对已确认错误修复证据，不重开有效失败家族的邻域。
-当前计划见[合法编码复核与最终输出优化](superpowers/plans/2026-09-05-legal-codec-and-output-objective-plan.md)。
+当前计划见[合法编码复核与最终输出优化](superpowers/archive/plans/2026-09-05-legal-codec-and-output-objective-plan-r2-rejected.md)。

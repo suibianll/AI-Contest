@@ -1,0 +1,38 @@
+{
+  "protocol": "joint-output-gauge-20260906",
+  "parent_version": "v186",
+  "parent_official": {
+    "score": 17599,
+    "time_seconds": 272,
+    "sha256": "F8495DCA20334ACBDAD16FC18EE41A4970F31E1837FDEEDCEE9C70AEE54E7EB8"
+  },
+  "cache_protocol": "proxy-v2",
+  "layers": [0, 8, 15, 23],
+  "linear": {
+    "roles": ["q", "k", "v", "o", "fc_gate", "fc_up", "proj"],
+    "focus_roles": ["fc_gate", "fc_up", "proj"],
+    "activation_tokens": 32,
+    "weight_rows": 32,
+    "blocks": 4,
+    "group_width": 8,
+    "gauge_exponents": [-0.25, 0.0, 0.25],
+    "gauge_values": [0.8408964152537145, 1.0, 1.189207115002721],
+    "objective": "LOO actual X_hat W_hat^T MSE; fixed-coordinate exact legal arm versus paired group gauge"
+  },
+  "attention": {
+    "q_head": 0,
+    "kv_head": "last",
+    "tokens": 32,
+    "group_width": 8,
+    "gauge_exponents": [-0.25, 0.0, 0.25],
+    "gauge_values": [0.8408964152537145, 1.0, 1.189207115002721],
+    "objective": "LOO actual GQA output/logits/probability MSE; paired Q*G and K*G^-T"
+  },
+  "gate": {
+    "linear_focus_layer_gain": 0.01,
+    "linear_positive_layers": 3,
+    "linear_control_floor": -0.01,
+    "attention_positive_layers": 3,
+    "require_shallow_and_deep": true
+  }
+}

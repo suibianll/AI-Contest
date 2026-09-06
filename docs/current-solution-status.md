@@ -1,10 +1,67 @@
-# 当前状态：目标 21765，启动 Attention/Linear 双路线稳健优化
+# 当前状态：目标 21765，v189 待官方裁决并继续修复合法离散网格
 
-更新：2026-09-05。
+更新：2026-09-06。
 
 > **规则更正（2026-09-05）**：官方提交次数没有限制。历史文档中的 `9/10`、`剩余 1`、
 > “最后一个配额”等表述全部失效，见
 > [`stale-information-inventory-2026-09-05.md`](stale-information-inventory-2026-09-05.md)。
+
+## 0.1 当前计划（2026-09-06）
+
+当前唯一活动计划是
+[`Attention logit-Fisher 配对 2×2 Q/K 变换计划`](superpowers/plans/2026-09-06-attention-logit-fisher-pair-plan.md)，
+状态 **ACTIVE / ATTN-LOGIT-FISHER-PAIR**。它在 v189 已冻结的 Q/K 状态之后按 softmax
+logit Fisher 权重拟合一次合法 GQA-local pair transform；根 `solution.py` 保持 v186。
+
+静态 activation-GPTQ 块序候选已归档为
+[`v189`](../solutions/20260906_v189_static-actorder-hdiag_recovered_scoreNA_timeNA/result.md)：
+当前本地 default-panel 为 Linear `0.640258324430`、Attention `0.752173407020`、Overall
+`0.686889608842`，高于 v186 组合父基线 `0.684761120245`；OOD 和时间门也通过。官方字段
+仍为 `unregistered/NA`，根目录未切换；`solution.zip` 已生成，网页上传需在官方平台完成。
+
+J0 联合输出坐标计划已关闭为 **CLOSED / J0_REJECTED**；执行记录见
+[`2026-09-06 J0 执行记录`](../logs/execution/2026-09-06-joint-output-gauge-plan.md)。
+
+Linear 冻结激活状态输出感知 JDRQ 计划已关闭为 **CLOSED / J1_REJECTED**；前两个
+shard 的 112 个配对 case 为负，执行记录见
+[`2026-09-06 JDRQ 执行记录`](../logs/execution/2026-09-06-linear-fixed-state-output-aware-jdrq-plan.md)。
+
+Linear 静态 activation-GPTQ 条件曲率块序计划已关闭为 **CLOSED / C1_REJECTED**；执行
+记录见 [`2026-09-06 条件曲率执行记录`](../logs/execution/2026-09-06-linear-static-gptq-conditional-curvature-plan.md)。
+
+上一张 64-block 层级分区计划已按 D-A → D-B 执行并关闭为 **CLOSED / D_B_REJECTED**：
+clip/grid 非主导，Linear 子组分区未产生材料收益，Attention joint 为负。执行记录见
+[`2026-09-06 D-A/D-B 执行记录`](../logs/execution/2026-09-06-hierarchy-partition-activation-plan.md)。
+
+### 上一计划裁决
+
+上一份活动计划已按 R0 → R1 → R2 执行并关闭，详细记录见
+[`2026-09-06 执行记录`](../logs/execution/2026-09-06-legal-codec-output-plan.md)。R0 通过；
+R1 按 v186 固定 refine 配置复核后 G1-A 未通过（最终坐标 exact-vs-encoder 中位收益 `0`，
+正层 `0/4`）；R2-L 的 12 个 focus state LOO gate 为 `0/12`，holdout mean/median
+`-0.0006448984/-0.0015624767`，固定 8 码分支关闭；R2-A 仅得到离线 oracle（Q/K
+mean gain `-0.0001224617/+0.0017271334`），没有可部署在线规则。根 `solution.py`
+保持 v186；随后静态 activation-GPTQ 块序候选已按独立计划归档为 v189，官方字段仍为
+`unregistered/NA`，本地 proxy 结果仍不换算官方分数。
+
+修正版合法离散网格计划已按 R0 → R1 执行并关闭为
+**CLOSED / R1_NO_SUPPORTED_MECHANISM**。真实 NVFP4 输入上的 28 个 state、112 个
+holdout case 的合法 scale×lv2×lv3×mantissa output oracle：holdout mean/median
+`-0.0003232/-0.0000542`、L1 `0.0004041`、正 case `10/112`，四个 focus layer
+median 全负；R2 未执行，根 v186 未变。执行记录见
+[`修正版执行记录`](../logs/execution/2026-09-06-corrected-legal-lattice-output-plan.md)。
+
+上一份 Attention raw source-scale 扩展已关闭为 **CLOSED / NOOP_REJECTED**：前两 shard
+的 16 个配对 case 逐位不变，未运行默认/OOD，执行记录见
+[`Attention source-scale 执行记录`](../logs/execution/2026-09-06-attention-source-scale-proposal-plan.md)。
+
+上一份 Attention 变换坐标对齐 source-scale 扩展已关闭为 **CLOSED / NOOP_REJECTED**：
+前两 shard 的 16 个配对 case 逐位不变，未运行默认/OOD，执行记录见
+[`Attention 对齐 source-scale 执行记录`](../logs/execution/2026-09-06-attention-aligned-source-scale-plan.md)。
+
+上一份 Linear 多折 cross-block Hessian 计划已关闭为 **CLOSED / B1_REJECTED**：前两
+shard 共 112 个配对 case 中 96 个回退，未运行 default/OOD，执行记录见
+[`Linear cross-block 执行记录`](../logs/execution/2026-09-06-linear-crossblock-robust-hessian-plan.md)。
 
 ## 0.0 评测入口（2026-09-04）
 
@@ -782,12 +839,51 @@ v86 的部分 scale-aware/output-aware 机制。此前把它描述为"v86 级静
 这些路线要么官方超时，要么官方分数低于 v86，要么只有固定本地 panel 上的 `10^-5–10^-4`
 级差值，不能支撑继续投入。
 
-## 6. 当前活动计划
+## 6. 最近执行计划
 
-**当前唯一活动计划（2026-09-05）：**
-[`合法编码复核与最终输出优化计划`](superpowers/plans/2026-09-05-legal-codec-and-output-objective-plan.md)，
-状态 **DESIGN_ONLY**。R0 先复现 cb1/cb2 具体缺陷，R1 构造合法层级精确块解，R2 针对
-真实量化操作数优化最终输出，只有门禁通过才形成一个候选。根 v186 和官方分数均未变。
+**当前活动优化计划（2026-09-06）：**
+[`Attention logit-Fisher 配对 2×2 Q/K 变换计划`](superpowers/plans/2026-09-06-attention-logit-fisher-pair-plan.md)，
+状态 **ACTIVE / ATTN-LOGIT-FISHER-PAIR**。在 v189 已冻结的 Q/K 状态之后按 softmax
+logit Fisher 权重拟合一次合法 GQA-local pair transform；根 v186 保持不变。静态 activation-GPTQ 计划
+已归档为 [`v189 候选复核计划`](superpowers/archive/plans/2026-09-06-static-activation-gptq-order-plan-candidate-archived.md)。
+
+Linear 冻结激活状态输出感知 JDRQ 计划已关闭为 **CLOSED / J1_REJECTED**：前两个
+shard 的 112 个配对 case 整体负向，执行记录见
+[`Linear JDRQ 执行记录`](../logs/execution/2026-09-06-linear-fixed-state-output-aware-jdrq-plan.md)。
+
+Linear 静态 activation-GPTQ 条件曲率计划已关闭为 **CLOSED / C1_REJECTED**，执行记录见
+[`条件曲率执行记录`](../logs/execution/2026-09-06-linear-static-gptq-conditional-curvature-plan.md)。
+
+Attention 变换坐标对齐 source-scale 计划已关闭为 **CLOSED / NOOP_REJECTED**：16 个
+配对 case 逐位不变，执行记录见 [`Attention 对齐 source-scale 执行记录`](../logs/execution/2026-09-06-attention-aligned-source-scale-plan.md)。
+
+Linear 多折 cross-block Hessian 计划已关闭为 **CLOSED / B1_REJECTED**：112 个配对 case
+中 96 个回退，执行记录见 [`Linear cross-block 执行记录`](../logs/execution/2026-09-06-linear-crossblock-robust-hessian-plan.md)。
+
+**刚完成计划（2026-09-06）：**
+[`修正版合法离散网格与输出目标优化计划`](superpowers/archive/plans/2026-09-06-corrected-legal-lattice-output-plan-rejected.md)，
+状态 **CLOSED / R1_NO_SUPPORTED_MECHANISM**。真实合法联合 output oracle 的 holdout
+mean/median `-0.0003232/-0.0000542`、L1 `0.0004041`、正 case `10/112`；R2 未执行，
+执行记录见 [`修正版执行记录`](../logs/execution/2026-09-06-corrected-legal-lattice-output-plan.md)。
+
+上一份 Attention raw source-scale 扩展已 **CLOSED / NOOP_REJECTED**，前两 shard 16 个
+case 逐位不变，执行记录见 [`Attention source-scale 执行记录`](../logs/execution/2026-09-06-attention-source-scale-proposal-plan.md)。
+
+**刚完成计划（2026-09-06）：**
+[`联合输出坐标规范化诊断计划`](superpowers/archive/plans/2026-09-06-joint-output-gauge-plan-rejected.md)，
+状态 **CLOSED / J0_REJECTED**。固定 J0 group-gauge oracle 未通过，执行记录见
+[`2026-09-06 J0 执行记录`](../logs/execution/2026-09-06-joint-output-gauge-plan.md)。
+
+**最近已完成计划（2026-09-06）：**
+[`64-block 层级分区与激活误差解剖计划`](superpowers/archive/plans/2026-09-06-hierarchy-partition-and-activation-anatomy-plan-rejected.md)，
+状态 **CLOSED / D_B_REJECTED**。Linear 子组分区和 Attention joint 均未形成可部署机制，执行记录见
+[`2026-09-06 D-A/D-B 执行记录`](../logs/execution/2026-09-06-hierarchy-partition-activation-plan.md)。
+
+**更早已完成计划（2026-09-06）：**
+[`合法编码复核与最终输出优化计划`](superpowers/archive/plans/2026-09-05-legal-codec-and-output-objective-plan-r2-rejected.md)，
+状态 **CLOSED / R2_REJECTED**。R0 通过，R1 G1-A 未通过，R2-L G2-L 未通过，R2-A 仅
+ORACLE_ONLY，无可部署候选。根 v186 和官方分数均未变，执行记录见
+[`2026-09-06 执行记录`](../logs/execution/2026-09-06-legal-codec-output-plan.md)。
 旧 [codebook 计划](superpowers/archive/plans/2026-09-05-nvfp4-codebook-exact-conversion-plan-closed.md)
 已关闭归档，但其编码错误、计数错误和目标错位使“整个机制被证伪”推论无效。
 详见[审计说明](../logs/execution/2026-09-05-next-plan-evidence-audit.md)。
