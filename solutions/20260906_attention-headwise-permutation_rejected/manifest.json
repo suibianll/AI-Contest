@@ -1,0 +1,34 @@
+{
+  "candidate": "attention-headwise-permutation",
+  "status": "CLOSED / P1_NOOP_REJECTED",
+  "date": "2026-09-06",
+  "parent": {
+    "version": "v189",
+    "source_sha256": "261202248a0146a2ee45f3df60bd1979bb8171b7c162921013b0024c848617af"
+  },
+  "source_sha256": "5f94099dafd5f44201430a943ddec75ebce3ab8f735c90eed5774d92eca69683",
+  "mechanism": "output-aware independent Q-only/K-only headwise permutation",
+  "p0": {
+    "py_compile": "PASS",
+    "six_api_import": "PASS",
+    "state_validation": "PASS",
+    "finite_outputs": "PASS"
+  },
+  "p1": {
+    "scope": "attention-only sequential shards 0,1",
+    "cases": 16,
+    "candidate_mean": 0.7918142800239717,
+    "delta_mean": 0.0,
+    "l1": 0.0,
+    "positive_cases": 0,
+    "negative_cases": 0,
+    "zero_cases": 16,
+    "decision": "NOOP_REJECTED",
+    "evidence": "artifacts/proxy_v3/attention-headwise-permutation-20260906/p1/candidate/manifest.json"
+  },
+  "official": {
+    "score": "unregistered/NA",
+    "time": "unregistered/NA"
+  },
+  "root_solution_changed": false
+}

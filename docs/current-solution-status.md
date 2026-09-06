@@ -9,9 +9,9 @@
 ## 0.1 当前计划（2026-09-06）
 
 当前唯一活动计划是
-[`Attention 相邻 pair 的 4×4 GQA 配对变换计划`](superpowers/plans/2026-09-06-attention-crosspair-4x4-plan.md)，
-状态 **ACTIVE / ATTN-CROSSPAIR-4X4**。它在 v189 已冻结的 Q/K 状态之后按相邻 pair 的交叉
-协方差拟合一次合法 GQA-local 4×4 pair transform；根 `solution.py` 保持 v186。
+[`Attention Q/K 独立 headwise permutation 计划`](superpowers/plans/2026-09-06-attention-headwise-permutation-plan.md)，
+状态 **ACTIVE / ATTN-HEADWISE-PERM**。它在 v189 已冻结的 Q/K 状态之后仅启用已有的
+输出感知 Q-only/K-only 独立 headwise permutation 候选；根 `solution.py` 保持 v186。
 
 静态 activation-GPTQ 块序候选已归档为
 [`v189`](../solutions/20260906_v189_static-actorder-hdiag_recovered_scoreNA_timeNA/result.md)：

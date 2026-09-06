@@ -1,8 +1,8 @@
 # HiF4 solutions archive
 
 > **Execution update (2026-09-06):** the current active plan is
-> [Attention adjacent-pair 4×4 GQA transform](../docs/superpowers/plans/2026-09-06-attention-crosspair-4x4-plan.md)
-> (**ACTIVE / ATTN-CROSSPAIR-4X4**). The recovered fixed-order candidate is archived as
+> [Attention Q/K independent headwise permutation](../docs/superpowers/plans/2026-09-06-attention-headwise-permutation-plan.md)
+> (**ACTIVE / ATTN-HEADWISE-PERM**). The recovered fixed-order candidate is archived as
 > [v189](20260906_v189_static-actorder-hdiag_recovered_scoreNA_timeNA/result.md): local gates pass and
 > `solution.zip` is ready, while the official result remains `unregistered/NA`; the root remains v186.
 > The fixed-state output-aware JDRQ integration is closed as **CLOSED / J1_REJECTED** after

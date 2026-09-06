@@ -23,9 +23,9 @@
 > 的 `proxy-v2` 统计仍表示底层协议，不应把二者的输出混排。
 
 > **当前唯一活动计划（2026-09-06）**：
-> [`Attention 相邻 pair 的 4×4 GQA 配对变换计划`](docs/superpowers/plans/2026-09-06-attention-crosspair-4x4-plan.md)，
-> **ACTIVE / ATTN-CROSSPAIR-4X4**：在 v189 已冻结 Q/K 状态后，按相邻 pair 的交叉协方差
-> 拟合一次合法 4×4 GQA-local pair transform；根 `solution.py` 保持 v186。
+> [`Attention Q/K 独立 headwise permutation 计划`](docs/superpowers/plans/2026-09-06-attention-headwise-permutation-plan.md)，
+> **ACTIVE / ATTN-HEADWISE-PERM**：在 v189 已冻结状态后，仅启用已有的输出感知 Q-only/K-only
+> 独立 headwise permutation 候选；根 `solution.py` 保持 v186。
 > 静态 activation-GPTQ 块序候选已归档为 v189，本地通过但官方 `unregistered/NA`。
 > 上一份 Linear 冻结激活状态的输出感知 JDRQ 接入已 **CLOSED / J1_REJECTED**，112 个
 > 配对 case 的前两个 shard 为负，执行记录见

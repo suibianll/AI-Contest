@@ -16,10 +16,10 @@
 
 ## 当前结论
 
-- 当前活动计划：[Attention 相邻 pair 的 4×4 GQA 配对变换](docs/superpowers/plans/2026-09-06-attention-crosspair-4x4-plan.md)，
-  状态 ACTIVE / ATTN-CROSSPAIR-4X4；在 v189 已冻结的 Q/K 状态之后按相邻 pair 的交叉
-  协方差拟合一次合法 GQA-local 4×4 pair transform，根 v186 未变；v189 候选已
-  归档，官方 `unregistered/NA`。上一份 Linear 冻结激活状态输出感知 JDRQ 计划已
+- 当前活动计划：[Attention Q/K 独立 headwise permutation](docs/superpowers/plans/2026-09-06-attention-headwise-permutation-plan.md)，
+  状态 ACTIVE / ATTN-HEADWISE-PERM；在 v189 已冻结的 Q/K 状态之后仅启用已有输出感知
+  Q-only/K-only 独立 headwise permutation 候选，根 v186 未变；v189 候选已归档，官方
+  `unregistered/NA`。上一份 Linear 冻结激活状态输出感知 JDRQ 计划已
   CLOSED / J1_REJECTED；条件曲率块序计划已 CLOSED / C1_REJECTED。
 - Linear 多折 cross-block Hessian 计划已 CLOSED / B1_REJECTED，前两 shard 的 112 个
   配对 case 中 96 个回退，未进入 default/OOD/官方。
