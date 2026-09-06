@@ -10,9 +10,9 @@
 `evaluator/eval.py`（其 proxy-v2/reference 后端 `evaluator/official_eval.py` 仅兼容旧缓存与协议），
 跨模型泛化调用 `evaluator/cross_model_eval.py`；旧 `real_model_suite.py` 已退役。
 
-**当前唯一活动计划：** [`v189 官方提交与回传准备计划`](2026-09-06-v189-official-return-plan.md)，
-状态 **ACTIVE / WAIT-OFFICIAL**。开放机制审计已完成，当前保留 v189 本地通过候选并
-等待官方平台回传；根 v186 保持不变。
+**当前唯一活动计划：** [`Attention 无因果 logit-gain 拟合执行计划`](2026-09-06-attention-noncausal-logit-fit-plan.md)，
+状态 **ACTIVE / R0**。v189 已收到官方 `17616/275s` 并 RETAINED 为当前完整父版本；
+根 `solution.py` 已切换为 v189。
 
 [`Linear 冻结激活状态输出感知 JDRQ 计划`](../archive/plans/2026-09-06-linear-fixed-state-output-aware-jdrq-plan-rejected.md)
 已按 J0 → J1 执行并以 **CLOSED / J1_REJECTED** 结束：112 个配对 case 的前两个 shard

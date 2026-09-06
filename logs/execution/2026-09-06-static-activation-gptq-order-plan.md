@@ -6,8 +6,8 @@
 
 ## 裁决
 
-R0、R1、R2 全部通过，候选按 R3 归档为 v189。根 `solution.py` 未修改。官方结果尚未
-返回，状态为 `UNREGISTERED / NA`；已生成赛事要求的仅含 `solution.py` 的
+R0、R1、R2 全部通过，候选按 R3 归档为 v189。官方已回传 `17616/275s`，相对 v186
+`17599/272s` 提升 `+17/+3s`，因此 v189 RETAINED；根 `solution.py` 已切换为 v189。已生成赛事要求的仅含 `solution.py` 的
 `solutions/20260906_v189_static-actorder-hdiag_recovered_scoreNA_timeNA/solution.zip`。
 
 ## R0：恢复与合法性
@@ -57,5 +57,5 @@ Attention default 记录；两侧同属 proxy-v2 default-panel 口径。
 - Default report：`logs/official_eval/static-actorder-hdiag-recovered-fresh-default-r9.md`
 - v189 source SHA：`261202248a0146a2ee45f3df60bd1979bb8171b7c162921013b0024c848617af`
 
-当前仓库没有官方竞赛网页的自动上传接口，因此只能确认提交包已准备完成，不能把
-网页上传写成已完成。收到官方回传后再追加裁决，不重复提交相同 SHA。
+官方回传已确认；不重复提交相同 SHA。v189 归档源码 SHA
+`261202248a0146a2ee45f3df60bd1979bb8171b7c162921013b0024c848617af` 与根源码一致。

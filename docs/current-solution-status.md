@@ -1,4 +1,4 @@
-# 当前状态：目标 21765，v189 待官方裁决并继续修复合法离散网格
+# 当前状态：目标 21765，v189 官方保留并继续优化 Attention
 
 更新：2026-09-06。
 
@@ -9,15 +9,15 @@
 ## 0.1 当前计划（2026-09-06）
 
 当前唯一活动计划是
-[`v189 官方提交与回传准备计划`](superpowers/plans/2026-09-06-v189-official-return-plan.md)，
-状态 **ACTIVE / WAIT-OFFICIAL**。开放机制审计已完成，当前保留 v189 本地通过候选并
-等待官方平台回传；根 `solution.py` 保持 v186。
+[`Attention 无因果 logit-gain 拟合执行计划`](superpowers/plans/2026-09-06-attention-noncausal-logit-fit-plan.md)，
+状态 **ACTIVE / R0**。v189 已收到官方 `17616/275s` 并 RETAINED 为当前完整官方父；
+根 `solution.py` 已切换为 v189。
 
 静态 activation-GPTQ 块序候选已归档为
 [`v189`](../solutions/20260906_v189_static-actorder-hdiag_recovered_scoreNA_timeNA/result.md)：
 当前本地 default-panel 为 Linear `0.640258324430`、Attention `0.752173407020`、Overall
-`0.686889608842`，高于 v186 组合父基线 `0.684761120245`；OOD 和时间门也通过。官方字段
-仍为 `unregistered/NA`，根目录未切换；`solution.zip` 已生成，网页上传需在官方平台完成。
+`0.686889608842`，高于 v186 组合父基线 `0.684761120245`；OOD 和时间门也通过。官方
+回传为 `17616/275s`，相对 v186 `+17/+3s`；根目录已切换，`solution.zip` 已归档。
 
 J0 联合输出坐标计划已关闭为 **CLOSED / J0_REJECTED**；执行记录见
 [`2026-09-06 J0 执行记录`](../logs/execution/2026-09-06-joint-output-gauge-plan.md)。
@@ -75,6 +75,12 @@ shard 共 112 个配对 case 中 96 个回退，未运行 default/OOD，执行�
 
 ## 0. 最新官方进展
 
+**✅ v189（v186 + 静态部署 Hessian activation-GPTQ 完整 64-block 块序）官方回传：
+`17616 / 275s`，RETAINED 为当前完整官方父。** 相对 v186 `17599/272s`，step_gain
+`+17`，时间 `+3s` 且低于 300s。归档源码 SHA
+`261202248a0146a2ee45f3df60bd1979bb8171b7c162921013b0024c848617af`，根 `solution.py`
+已同步该 SHA。当前距榜首 `21765` 差 `4149`，距 `290s` 时间锚点余量 `15s`。
+
 **❌ v188（v186 + v187 Jacobian 敏感度移植）官方回传：`17595 / 268s`，相对父 v186
 `−4/−4s`，REJECTED。** v188 把 v187 的一阶 Jacobian
 敏感度 importance 作为校准最终步移植进 v186（v187 预注册常量，LOO 部署 MSE 门）。
@@ -97,7 +103,7 @@ v185 clean-room 上增加一个解析机制：用最终 Attention 输出的一�
 分，时间远低于 300s，因此失败明确来自算法表达能力，不是超时。balance/gamma/refine
 邻域关闭；根 `solution.py` 不切换。
 
-**✅ v186 官方回传：`17599 / 272s`，RETAINED 为当前完整官方父。** v186 在 v182 上只把
+**✅ v186 官方回传：`17599 / 272s`，作为 v189 的直接官方父保留。** v186 在 v182 上只把
 Attention 在线 E6M2 scale 邻域增加 `+4` 单码，官方 `+1/−1s`；根 `solution.py` 已同步
 SHA `F8495DCA...7EB8`。当前距榜首 21765 为 `4166` 分，时间余量 28s。
 

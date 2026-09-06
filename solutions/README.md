@@ -1,10 +1,10 @@
 # HiF4 solutions archive
 
 > **Execution update (2026-09-06):** the current active plan is
-> [v189 official submission and return preparation](../docs/superpowers/plans/2026-09-06-v189-official-return-plan.md)
-> (**ACTIVE / WAIT-OFFICIAL**). The recovered fixed-order candidate is archived as
-> [v189](20260906_v189_static-actorder-hdiag_recovered_scoreNA_timeNA/result.md): local gates pass and
-> `solution.zip` is ready, while the official result remains `unregistered/NA`; the root remains v186.
+> [Attention non-causal logit-gain fitting](../docs/superpowers/plans/2026-09-06-attention-noncausal-logit-fit-plan.md)
+> (**ACTIVE / R0**). The recovered fixed-order candidate is archived as
+> [v189](20260906_v189_static-actorder-hdiag_recovered_scoreNA_timeNA/result.md): official
+> `17616/275s`, RETAINED as the current full parent; the root is now v189.
 > The fixed-state output-aware JDRQ integration is closed as **CLOSED / J1_REJECTED** after
 > 112 paired Linear cases were negative; see the
 > [execution record](../logs/execution/2026-09-06-linear-fixed-state-output-aware-jdrq-plan.md)
@@ -184,6 +184,7 @@ silently assigned a score.
 | v186 | `20260904_v186_attn-plus4-single-window_scoreNA_timeNA` | **17599** | **272 s** | **pass, RETAINED as new full official parent; oracle-decomposition minimal product: v182 + 1-line `_DYNAMIC_OFFSETS (-1,1,2,3)→(-1,1,2,3,4)` (add single +4 E6M2 code to online Q/K/V scale window; hill-climb edge extension cannot reach it across binades). step_gain +1 vs v182 17598; time −1s (time-model predicted 274.0s, actual 272s, within MAE 10.1s — calibration-neutral prediction validated). Local Δmean +0.010344 (largest post-A1 signal, 29x D1) → official +1: reconfirms local mean does not convert to official points but sign gates (Δmean>0, L1=0.0155<0.02) were zero-error. Family officially positive; no code-neighborhood scan (+5/-2 etc.). Gap to 21765 is 4166; time margin 28s** |
 | v187 | `20260904_v187_attn-jacobian-sensitivity_research-retained` | **9167** | **169 s** | **official positive / RESEARCH RETAINED; v185 clean-room + analytic final-Attention Jacobian importance for Q/K, KV-group shared and leave-one-fold-out gated. Official +721/+4s vs v185 confirms transfer. 7/24 layers active; local Δmean +0.015187, L1 0.016199. Still −8432 vs v186, so not a full parent; root unchanged** |
 | v188 | `20260904_v188_attn-jacobian-port_rejected` | **17595** | **268 s** | **rejected (official 2026-09-04); v186 + v187 Jacobian sensitivity importance ported as final calibration step on the fully-transformed Q/K coordinates (causal/non-causal 0.5, cross-fold median, log shrink 0.25, clamp [0.5,2], LOO deployed-MSE gate; v187 pre-registered constants, no neighborhood scan). step_gain −4 vs v186 17599; time 268s (model predicted 274s, within MAE). Local default 120 vs v186: Δmean +0.000426, L1 0.001114, 6+/4−/110=; gate accepted only 2/24 layers (L12/L22 — the pair-transform-free layers; pair-smooth output-fitted importance wins elsewhere). First sign-gate miss on a near-zero local signal (110/120 cases unchanged): the gate blocks large losses (−165~−1164) but does not guarantee non-negative official deltas for near-zero signals; official ±1~4 is the effective noise band (single-point gains v182/v186 were +1/+1/+3). Jacobian port family closed; root rolled back to v186** |
+| v189 | `20260906_v189_static-actorder-hdiag_recovered_scoreNA_timeNA` | **17616** | **275 s** | **RETAINED (official 2026-09-06); v186 + static deployed-Hessian activation-GPTQ complete 64-block ordering; step_gain +17 vs v186, root switched to v189; local default Overall `0.686889608842` remains a proxy-only value** |
 | v169 | `20260903_v169_standard-linear_v-bias-attn_rejected` | — | — | **rejected (local, clearly negative); expansion plan A2 V output-bias centroid: local Qwen -0.0093 (21+/99-) and GPT-2 0/4 all-negative - final classification per user 'reject clearly-negative optimizations'** |
 | v170 | `20260903_v170_standard-linear_fixed-offset-attn_rejected` | — | — | **rejected (local, clearly negative); expansion plan A3 static fixed-offset compile: Qwen -0.0506 (9+/111-) and GPT-2 -0.0551 (1+/3-) - final classification per user** |
 | v171 | `20260903_v171_standard-linear_moment-threshold-attn_rejected` | **13657** | **214 s** | **rejected (official 2026-09-04); expansion plan A4 moment-matched mantissa rounding threshold. step_gain −348 vs v168 (14005), Attention ratio −2.69%. Time 214s < 300s; negative from algorithm not timeout. A4 family closed** |
@@ -206,7 +207,7 @@ directories follow the same immutable naming rule as the historical archive:
 
 | Version | Source directory | Linear mean | Attention mean | API total | Decision 
 |---|---|---:|---:|---:|---
-| v189 | `20260906_v189_static-actorder-hdiag_recovered_scoreNA_timeNA` | **0.640258** | **0.752173** | **388.175 s** API / `279.956 s` predicted | **local retained; official upload package ready; official score/time NA** |
+| v189 | `20260906_v189_static-actorder-hdiag_recovered_scoreNA_timeNA` | **0.640258** | **0.752173** | **388.175 s** API / `279.956 s` predicted | **local retained; official `17616/275s`; root switched to v189** |
 | v086 (idle rerun) | `20260830_v086_c86-attn-block-final_scoreNA_timeNA` | 0.406668 | 0.719696 | 299.302 s | clean rerun; official 16744/222.7 s pass 
 | v128 | `20260901_v128_fixed-attn-budget_timeout` | 0.465655 | 0.837789 | 310.732 s | **official timeout (user confirmed)** 
 | v129 | `20260901_v129_fixed-attn-budget-sweep1_timeout` | 0.465655 | 0.836579 | 248.363 s | **official timeout (user confirmed)** 

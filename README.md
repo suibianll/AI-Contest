@@ -1,6 +1,9 @@
 # HiF4 优化实验仓库（官方对齐版）
 
-> **最新官方进展（2026-09-04）**：v186 官方 **17599/272s**，相对父 v182 `+1/−1s`，
+> **最新官方进展（2026-09-06）**：v189 官方 **17616/275s**，相对父 v186 `+17/+3s`，
+> RETAINED 成为当前完整官方父（静态部署 Hessian activation-GPTQ 完整 64-block 块序；
+> 官方时间低于 300s）。当前距榜首 `21765/290s` 差 `4149` 分、时间锚点余量 `15s`。
+> v186 仍为 v189 的直接官方父：**17599/272s**，相对父 v182 `+1/−1s`，
 > RETAINED 成为新完整官方父（Attention 在线 scale 搜索窗口 +4 单码，1 行改动；
 > oracle 分解方法论首次产出官方晋级）。v184 双窗版 TIMEOUT（>300s，时间模型
 > 归因于双窗×2 校准）；v183 平分 REJECTED。v180 `17597/242s` 仍为时间预算父。
@@ -16,10 +19,9 @@
 
 ## 当前结论
 
-- 当前活动计划：[v189 官方提交与回传准备](docs/superpowers/plans/2026-09-06-v189-official-return-plan.md)，
-  状态 ACTIVE / WAIT-OFFICIAL；开放机制审计已完成，当前保留 v189 本地通过候选并等待
-  官方平台回传，根 v186 未变；v189 候选已归档，官方
-  `unregistered/NA`。上一份 Linear 冻结激活状态输出感知 JDRQ 计划已
+- 当前活动计划：[Attention 无因果 logit-gain 拟合](docs/superpowers/plans/2026-09-06-attention-noncausal-logit-fit-plan.md)，
+  状态 ACTIVE / R0；v189 已官方 `17616/275s` 并 RETAINED，根已切换到 v189。上一份
+  Linear 冻结激活状态输出感知 JDRQ 计划已
   CLOSED / J1_REJECTED；条件曲率块序计划已 CLOSED / C1_REJECTED。
 - Linear 多折 cross-block Hessian 计划已 CLOSED / B1_REJECTED，前两 shard 的 112 个
   配对 case 中 96 个回退，未进入 default/OOD/官方。
@@ -37,10 +39,10 @@
   已 CLOSED / R2_REJECTED。R0 通过，R1 G1-A 未通过，R2-L G2-L 未通过，R2-A 仅
   ORACLE_ONLY，无可部署候选；详细结果见[执行记录](logs/execution/2026-09-06-legal-codec-output-plan.md)。
 - v189 静态 activation-GPTQ 块序候选已完成 eval-v3/OOD/时间审计并归档；官方要求的
-  `solution.zip` 已生成，官方网页上传与官方回传仍待完成。详细记录见
+  `solution.zip` 已生成并收到 `17616/275s` 回传。详细记录见
   [v189 结果](solutions/20260906_v189_static-actorder-hdiag_recovered_scoreNA_timeNA/result.md)。
-- 根目录 [`solution.py`](solution.py) 已同步为 v186 官方计分源码，SHA256
-  `F8495DCA20334ACBDAD16FC18EE41A4970F31E1837FDEEDCEE9C70AEE54E7EB8`。v186 是分数父；
+- 根目录 [`solution.py`](solution.py) 已同步为 v189 官方计分源码，SHA256
+  `261202248A0146A2EE45F3DF60BD1979BB8171B7C162921013B0024C848617AF`。v189 是当前分数父；
   v180 `17597/242s` 少 2 分、快 30s，继续保留为高复杂度新机制的时间预算父。两者共同构成
   当前 Pareto 前沿，不能为多 1 分而默认放弃 v180 的 31s 余量。
 - v183 只把 Attention block-smooth 搜索的 final-quantizer refine 覆盖从 0.50 提到
@@ -53,7 +55,7 @@
 - 已知官方面板曾使用 **250 Linear + 200 Attention**，总运行时间要求严格小于 **300 s**。
   本地 `proxy-v2` 不再人为限制分数比例，默认使用固定分层的真实 W/A panel；官方最近
   减少了 Linear 评分权重但没有公开新权重，因此本地不能从代理分数换算官方绝对分。
-- 官方锚点：v182 **`17598/273s`** 是当前最高可复现通过点，v180
+- 官方锚点：v189 **`17616/275s`** 是当前最高已回传通过点，v180
   **`17597/242s`** 是时间预算父；历史锚点包括 v84 `16517 / 252.563 s`、v86
   `16744 / 222.7 s`、v158 **`16861 / 223s`**。
   **v74 在当前官方评测集为 `14561 / 188.9s`**
