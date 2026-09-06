@@ -3,10 +3,17 @@
   "source": {
     "path": "solution.py"
   },
-  "status": "COORDINATOR_EXEMPTED (negative OOD gap direction) / READY_FOR_OFFICIAL",
+  "status": "OFFICIAL_PASS / A2 MECHANISM OFFICIAL VALUE REGISTERED",
   "ood": {
     "delta_gap": -0.013751,
     "literal_gate": "blocked (>0.01)",
     "coordinator_ruling": "2026-09-07 user exempted the negative direction (OOD better than in-dist; opposite of distribution fitting)"
+  },
+  "official": {
+    "score": 9538,
+    "time_seconds": 175,
+    "status": "official_result_returned",
+    "C_A": 8537,
+    "note": "manual trainer deployed on official harness (score != parent 1001 proves training ran); time prediction 185.9s vs actual 175s; C_A = 8537 = 65.6% of the v189 stack anchor (13008)"
   }
 }
