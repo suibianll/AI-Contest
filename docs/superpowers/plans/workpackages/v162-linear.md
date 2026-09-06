@@ -1,6 +1,7 @@
 # L 代理任务书：从 v162 独立优化 Linear
 
-> 状态：DESIGN_ONLY / L0_PENDING。主契约：[总计划](../2026-09-06-v162-independent-linear-attention-plan.md)。
+> 状态：CLOSED / SUPERSEDED，2026-09-07。历史工作包，仅保留执行设计。
+> 当前任务见 [Linear 持续优化](continuous-linear.md)，从L4官方4607/247s继续，不重做恢复实验。
 > 本任务书负责独立实验边界与比较，不自动继承正在进行的 v189 块序实验。
 > 用户将另行委托 L 代理；A 代理的算法、结果与提交不能进入本任务。
 

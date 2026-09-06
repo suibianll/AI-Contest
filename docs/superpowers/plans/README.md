@@ -1,6 +1,6 @@
 # 计划入口
 
-> 最后更新：2026-09-06
+> 最后更新：2026-09-07
 
 > **门禁修订（2026-09-07）**：OOD 超阈值改为风险提示，不再单独禁止官方探索或关闭方向；
 > 正式晋级仍须官方分数、时间和源码身份确认。当前规则以 AGENTS 和
@@ -15,10 +15,13 @@
 跨模型泛化调用 `evaluator/cross_model_eval.py`；旧 `real_model_suite.py` 已退役。
 
 **当前唯一活动总计划：**
-[`v162 零点下的 Linear / Attention 独立优化`](2026-09-06-v162-independent-linear-attention-plan.md)，
-状态 DESIGN_ONLY；用户自行委托两代理分别执行 [Linear 任务书](workpackages/v162-linear.md)
-和 [Attention 详细计划](workpackages/v162-attention.md)。两侧实际从 v162 起步，冻结另一侧
-standard，独立源码/结果/官方贡献，根 v189 不变。用户已确认总 L1 仅记录、采用负向损失门。
+[`Linear / Attention 持续优化`](2026-09-07-continuous-linear-attention-plan.md)，
+状态 READY；分别执行 [Linear 工作包](workpackages/continuous-linear.md) 和
+[Attention 工作包](workpackages/continuous-attention.md)。L 从 L4 官方4607/247s继续，
+A 从 R2c 官方14387.8/240s继续，非目标侧保持 v162 standard，A的V保持R2c既有路径。
+持续循环为机制登记→验证→官方探索→保留/换机制→补充队列；负向损失门、OOD风险诊断与正式晋级分开。
+旧v162恢复计划已[归档](../archive/plans/2026-09-06-v162-independent-linear-attention-plan-superseded.md)。
+协调者另排 L4+R2c 集成验证；当前只有侧隔离结果，根仍v189。本次仅计划交接，未启动实验。
 
 此前 [v189 Linear 残差压力块序计划](../archive/plans/2026-09-06-linear-compiled-residual-pressure-order-plan-superseded.md)
 由本总计划取代；旧运行由原执行者封存，不删除、不混入 v162 新分支。

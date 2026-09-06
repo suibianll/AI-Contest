@@ -1,6 +1,7 @@
 # A 代理任务书：从 v162 独立优化 Attention
 
-> 状态：DESIGN_ONLY / A0_PENDING。主契约：[总计划](../2026-09-06-v162-independent-linear-attention-plan.md)。
+> 状态：CLOSED / SUPERSEDED，2026-09-07。历史工作包，仅保留执行设计。
+> 当前任务见 [Attention 持续优化](continuous-attention.md)，从R2c官方14387.8/240s继续；新任务V冻结为R2c现有路径。
 > 目标：从双标准 v162 出发，构造更低完整 Attention 输出误差的合法 Q/K 编码算法。
 > Linear、V 全程保持 v162。不要启动或操作另一代理；不改根 v189。
 

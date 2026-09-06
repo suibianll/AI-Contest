@@ -1,6 +1,6 @@
 # 当前状态：目标 21765，v189 官方保留并继续优化
 
-更新：2026-09-06。
+更新：2026-09-07。
 
 > **门禁修订（2026-09-07）**：R2c 官方相对 R1 +378.8，证明 OOD 固定阈值存在误拦。
 > OOD 改为成对风险诊断，不单独否决官方探索或关闭机制；历史 OOD_BLOCKED 不等于官方证伪。
@@ -10,12 +10,14 @@
 > “最后一个配额”等表述全部失效，见
 > [`stale-information-inventory-2026-09-05.md`](stale-information-inventory-2026-09-05.md)。
 
-## 0.1 当前计划状态（2026-09-06）
+## 0.1 当前计划状态（2026-09-07）
 
 当前活动总计划为
-[`v162 两侧独立优化`](superpowers/plans/2026-09-06-v162-independent-linear-attention-plan.md)，
-状态 DESIGN_ONLY。用户将分别委托 L/A 代理，从 v162 原始双标准单文件起步、冻结另一侧，
-独立比较累计/单步/历史强对照收益。负向损失门已获用户确认，根 v189 不变，新实验尚未执行。
+[`Linear / Attention 持续优化`](superpowers/plans/2026-09-07-continuous-linear-attention-plan.md)，
+状态 READY。L 从L4官方4607/247s、A从R2c官方14387.8/240s继续；独立冻结非目标侧standard，
+A的V保持R2c既有路径。每轮固定机制→验证→官方探索→补充队列，不因OOD阈值或20%材料指标关闭方向。
+L1为结构化可逆变换，A1为训练/部署目标对齐，后续按各自工作包去重后推进。
+旧恢复计划归档；新计划尚未开始实验。L4+R2c完整组合待验证，加性参考17993.8不是官方成绩，根仍v189。
 此前 v189 残差压力块序计划已被取代，旧结果仍由原执行者封存。上一份
 [`Linear 编译校准样本能量块序`](superpowers/archive/plans/2026-09-06-linear-compiled-sample-energy-plan-score-tie.md)
 已按 R1→R2→R3 关闭为 **CLOSED / R3_REJECTED_SCORE_TIE**：最终 direct-core fresh
