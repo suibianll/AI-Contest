@@ -255,3 +255,21 @@ Attention 输出目标不同面板不同目标，不构成本机制的反证。
   screen 精度逐位一致（A2b +0.421328 = A2；R2b +0.776965 = R2）。
 - 官方 WA 的备选假设（state 自定义键触发官方校验）未排除——若 A2b/R2b 重提交仍 WA，
   则下一轮把自定义 state 键全部移除后重验。
+
+## A2c：手工梯度训练器（2026-09-07 凌晨）
+
+- 官方回传 A2b=1001/90s、R2b=14009/212s → WA 根治（守卫生效）但训练在官方环境全部回退
+  （分数与父逐分相同 ⇒ 旋转未部署）。结论：官方 harness 连 `inference_mode(False)` 重入都
+  击败（疑似 C++ RAII guard 或旧版 torch），autograd 在校准调用内不可用。
+- 应对：A2c 把 A2 冻结配置的训练改为解析梯度手写实现（attention 反传 + Cayley 雅可比
+  `dL/dA = -(I+C)^T G M^-T` + 手写 Adam），无任何 autograd/inference 依赖。
+  梯度 parity：attention 1.1e-07、Cayley dΘ 4.5e-06；真实层 15 gate loss 手工 0.494 vs
+  autograd 0.554（identity=1.0）。
+- 评测：ID 48-case +0.4348（41/6/1，L1_neg 0.0009）、双 split 正、default 0.4185、
+  时间 185.9s ✓；**OOD Δgap −0.0138，|·|>0.01 字面 BLOCKED**（方向为 OOD 更好，非分布拟合；
+  门禁语义问题上报协调者裁决）。
+- 产物：`solutions/v162_attention_a2c-rotation-manual-trainer_oodblocked/`、
+  `workbench/v162_attention/manual_trainer.py`、`test_manual_trainer_parity.py`、
+  `candidate_c/solution.py`（SHA 前缀 FD902933ADF9AB70）。
+- 提交矩阵现状：R1=14009/211s（分支锚）；A2b=1001（WA 免疫回退）；R2b=14009（=R1）；
+  A2c 待协调者对 OOD 门语义裁决。
