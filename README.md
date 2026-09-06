@@ -19,7 +19,10 @@
 
 ## 当前结论
 
-- 当前没有活动优化计划；[Attention mask-aligned output selector](docs/superpowers/plans/2026-09-06-attention-noncausal-selector-plan.md)
+- 当前没有活动优化计划；[Linear 动态样本能量 GPTQ 块序计划](docs/superpowers/plans/2026-09-06-linear-dynamic-actorder-plan.md)
+  已 CLOSED / R3_REJECTED_TIME：候选 default Overall `0.688994940507` 高于本地最高
+  `0.687776303363`，但时间预测 `284.775756s` 未通过 `<280s` 门，已归档且未提交官方；
+  根仍为 v189。[Attention mask-aligned output selector](docs/superpowers/plans/2026-09-06-attention-noncausal-selector-plan.md)
   已 CLOSED / R2_REJECTED，因 fresh default 分数和时间门均未通过；v189 已官方
   `17616/275s` 并 RETAINED，根已切换到 v189。上一份无因果 logit-gain 拟合已 CLOSED / R1_REJECTED；Linear 冻结激活状态输出感知 JDRQ 计划已
   CLOSED / J1_REJECTED；条件曲率块序计划已 CLOSED / C1_REJECTED。

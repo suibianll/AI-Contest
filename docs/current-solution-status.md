@@ -1,4 +1,4 @@
-# 当前状态：目标 21765，v189 官方保留并继续优化 Attention
+# 当前状态：目标 21765，v189 官方保留并继续优化
 
 更新：2026-09-06。
 
@@ -9,6 +9,14 @@
 ## 0.1 当前计划状态（2026-09-06）
 
 当前没有活动优化计划。最近的
+[`Linear 动态样本能量 GPTQ 块序计划`](superpowers/plans/2026-09-06-linear-dynamic-actorder-plan.md)
+已按 R0→R3 关闭为 **CLOSED / R3_REJECTED_TIME**：候选 default Overall
+`0.688994940507` 高于本地最高 `0.687776303363`，但时间模型预测 `284.775756s`，未通过
+`<280s` 提交门；候选已归档于
+[`Linear 动态样本能量时间拒绝归档`](../solutions/20260906_linear-dynamic-actorder_time-rejected/result.md)，
+未进行官方提交，根仍为 v189。执行记录见
+[`动态样本能量执行记录`](../logs/execution/2026-09-06-linear-dynamic-actorder-plan.md)。
+此前最近的
 [`Attention mask-aligned output selector 执行计划`](superpowers/plans/2026-09-06-attention-noncausal-selector-plan.md)
 已按 R0→R2 关闭为 **CLOSED / R2_REJECTED**；执行记录见
 [`mask selector 执行记录`](../logs/execution/2026-09-06-attention-noncausal-selector.md)。v189 已收到官方

@@ -1,0 +1,41 @@
+{
+  "candidate": "linear-dynamic-actorder",
+  "status": "REJECTED_TIME",
+  "parent": "v189",
+  "source_sha256": "7b1494ce5467e1797319cf02103d232c055615dc7538025475a044250005f432",
+  "r2_original_source_sha256": "3ca71a9d5edc1833a5b62f0ffaf0afa6156197f802585c58ceeb160f078b1189",
+  "official": {
+    "score": "unregistered/NA",
+    "time_seconds": "unregistered/NA",
+    "submitted": false
+  },
+  "local_default": {
+    "linear_mean": 0.643867464426971,
+    "attention_mean": 0.75217340702007,
+    "overall_mean": 0.688994940507429,
+    "local_highest_overall": 0.687776303363468,
+    "delta_over_local_highest": 0.001218637143961,
+    "api_total_seconds": 402.96906489986,
+    "wall_seconds": 429.64129249995
+  },
+  "official_time_prediction": {
+    "W_calib_seconds": 277.721118999915,
+    "A_calib_seconds": 61.44775489949,
+    "dyn_act_seconds": 60.802673699855,
+    "dyn_qkv_seconds": 2.9975173006,
+    "predicted_seconds": 284.775756,
+    "gate": "predicted_seconds < 280",
+    "passed": false
+  },
+  "proxy_evidence": {
+    "eval_v3_linear_six_shard_delta_mean": 0.00298129569112662,
+    "eval_v3_linear_six_shard_delta_median": 0.00142444453813099,
+    "eval_v3_linear_six_shard_L1": 0.00325895409300553,
+    "eval_v3_linear_six_shard_positive_negative_zero": "292/44/0",
+    "ood_delta_mean": 0.00351876293923101,
+    "ood_delta_gap_change": -0.000537467248104387,
+    "ood_gate": "abs(delta_gap_change) <= 0.01",
+    "ood_gate_passed": true,
+    "r3_r1_output_matches_r2": true
+  }
+}

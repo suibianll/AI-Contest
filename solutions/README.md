@@ -1,6 +1,10 @@
 # HiF4 solutions archive
 
 > **Execution update (2026-09-06):** there is currently no active optimization plan.
+> [Linear dynamic sample-energy act-order](20260906_linear-dynamic-actorder_time-rejected/result.md)
+> was closed as **CLOSED / R3_REJECTED_TIME**: its local default Overall was `0.688994940507`
+> (above the local high `0.687776303363`), but the official-time predictor was `284.775756s`,
+> so it was archived without official submission and the root remains v189.
 > [Attention mask-aligned output selector](../docs/superpowers/plans/2026-09-06-attention-noncausal-selector-plan.md)
 > was closed as **CLOSED / R2_REJECTED** after the fresh default gate. The previous non-causal
 > logit-gain fitting was closed as **CLOSED / R1_REJECTED**. The recovered fixed-order candidate is archived as
@@ -38,7 +42,7 @@
 > output-objective diagnostics, and gated candidate validation. The completed codebook
 > plan is archived; its broad saturation claims are superseded by this
 > [evidence audit](../logs/execution/2026-09-05-next-plan-evidence-audit.md).
-> The root remains official v186 `17599/272s`; v180 `17597/242s` is the time-budget parent.
+> The root remains official v189 `17616/275s`; v180 `17597/242s` is the time-budget parent.
 > The previous system-identification design is archived as superseded; no new solution version is assigned.
 
 > **Rule correction (2026-09-05):** official submissions are unlimited. Historical
@@ -186,6 +190,7 @@ silently assigned a score.
 | v187 | `20260904_v187_attn-jacobian-sensitivity_research-retained` | **9167** | **169 s** | **official positive / RESEARCH RETAINED; v185 clean-room + analytic final-Attention Jacobian importance for Q/K, KV-group shared and leave-one-fold-out gated. Official +721/+4s vs v185 confirms transfer. 7/24 layers active; local Δmean +0.015187, L1 0.016199. Still −8432 vs v186, so not a full parent; root unchanged** |
 | v188 | `20260904_v188_attn-jacobian-port_rejected` | **17595** | **268 s** | **rejected (official 2026-09-04); v186 + v187 Jacobian sensitivity importance ported as final calibration step on the fully-transformed Q/K coordinates (causal/non-causal 0.5, cross-fold median, log shrink 0.25, clamp [0.5,2], LOO deployed-MSE gate; v187 pre-registered constants, no neighborhood scan). step_gain −4 vs v186 17599; time 268s (model predicted 274s, within MAE). Local default 120 vs v186: Δmean +0.000426, L1 0.001114, 6+/4−/110=; gate accepted only 2/24 layers (L12/L22 — the pair-transform-free layers; pair-smooth output-fitted importance wins elsewhere). First sign-gate miss on a near-zero local signal (110/120 cases unchanged): the gate blocks large losses (−165~−1164) but does not guarantee non-negative official deltas for near-zero signals; official ±1~4 is the effective noise band (single-point gains v182/v186 were +1/+1/+3). Jacobian port family closed; root rolled back to v186** |
 | v189 | `20260906_v189_static-actorder-hdiag_recovered_scoreNA_timeNA` | **17616** | **275 s** | **RETAINED (official 2026-09-06); v186 + static deployed-Hessian activation-GPTQ complete 64-block ordering; step_gain +17 vs v186, root switched to v189; local default Overall `0.686889608842` remains a proxy-only value** |
+| — | `20260906_linear-dynamic-actorder_time-rejected` | — | — | **REJECTED_TIME (local only); default Overall `0.688994940507` exceeded the local proxy high by `+0.001218637144`, but predicted official time `284.775756s` failed the `<280s` gate; no official submission** |
 | v169 | `20260903_v169_standard-linear_v-bias-attn_rejected` | — | — | **rejected (local, clearly negative); expansion plan A2 V output-bias centroid: local Qwen -0.0093 (21+/99-) and GPT-2 0/4 all-negative - final classification per user 'reject clearly-negative optimizations'** |
 | v170 | `20260903_v170_standard-linear_fixed-offset-attn_rejected` | — | — | **rejected (local, clearly negative); expansion plan A3 static fixed-offset compile: Qwen -0.0506 (9+/111-) and GPT-2 -0.0551 (1+/3-) - final classification per user** |
 | v171 | `20260903_v171_standard-linear_moment-threshold-attn_rejected` | **13657** | **214 s** | **rejected (official 2026-09-04); expansion plan A4 moment-matched mantissa rounding threshold. step_gain −348 vs v168 (14005), Attention ratio −2.69%. Time 214s < 300s; negative from algorithm not timeout. A4 family closed** |
@@ -209,6 +214,7 @@ directories follow the same immutable naming rule as the historical archive:
 | Version | Source directory | Linear mean | Attention mean | API total | Decision 
 |---|---|---:|---:|---:|---
 | v189 | `20260906_v189_static-actorder-hdiag_recovered_scoreNA_timeNA` | **0.640258** | **0.752173** | **388.175 s** API / `279.956 s` predicted | **local retained; official `17616/275s`; root switched to v189** |
+| — | `20260906_linear-dynamic-actorder_time-rejected` | **0.643867** | **0.752173** | **402.969 s** API / `284.776 s` predicted | **local score high, rejected by official-time gate; root remains v189** |
 | v086 (idle rerun) | `20260830_v086_c86-attn-block-final_scoreNA_timeNA` | 0.406668 | 0.719696 | 299.302 s | clean rerun; official 16744/222.7 s pass 
 | v128 | `20260901_v128_fixed-attn-budget_timeout` | 0.465655 | 0.837789 | 310.732 s | **official timeout (user confirmed)** 
 | v129 | `20260901_v129_fixed-attn-budget-sweep1_timeout` | 0.465655 | 0.836579 | 248.363 s | **official timeout (user confirmed)** 
