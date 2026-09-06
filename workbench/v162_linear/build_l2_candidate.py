@@ -145,7 +145,7 @@ def main() -> int:
 
     assembled = apply_hunks(src, hunks, APPLY_OLD_STARTS)
 
-    if TARGET in ("l3", "l4"):
+    if TARGET in ("l3", "l4", "l5"):
         diff189_path = ROOT / "workbench" / "v162_linear" / "v182_v189.diff"
         diff189 = parse_hunks(diff189_path.read_text(encoding="utf-8"))
         assert [h["old_start"] for h in diff189] == [498, L3_APPEND_OLD_START], (
@@ -168,7 +168,7 @@ def main() -> int:
                 "frozen-side discipline: v186 +4 window must not leak into L3"
             )
         else:
-            # L4 = L3 + the v186 shared-constant widening (+4 E6M2 offset
+            # L4/L5 = L3 + the v186 shared-constant widening (+4 E6M2 offset
             # code).  In this candidate the live Attention path is the
             # appended standard block, which never reads _DYNAMIC_OFFSETS,
             # so the widening only affects the Linear dynamic path — it is
@@ -181,14 +181,90 @@ def main() -> int:
             assembled = assembled.replace(old_line + "\n", new_line + "\n", 1)
             assert new_line in assembled and "_DYNAMIC_OFFSETS = (-1, 1, 2, 3)\n" not in assembled
 
+    if TARGET == "l5":
+        # L5 = L4 + quantization-aware weight GPTQ Hessian.  Deployment
+        # multiplies the quantized weight by the HiF4-encoded TRANSFORMED
+        # activation, so the GPTQ Hessian must be the Gram of the encoded
+        # transformed samples.  Quantization is nonlinear (Q(T x) != T Q(x)),
+        # so the roundtrip runs POST-transform on the same 512-row stats
+        # samples that currently feed the ideal covariance.  Transform search
+        # statistics stay ideal; single pre-registered config, pure
+        # replacement, no blending.
+        part1_old = (
+            "    if use_quadratic:\n"
+            "        cov_sum = torch.zeros(\n"
+            "            in_features, in_features, dtype=torch.float32, device=weight.device\n"
+            "        )\n"
+        )
+        part1_new = (
+            "    if use_quadratic:\n"
+            "        cov_sum = torch.zeros(\n"
+            "            in_features, in_features, dtype=torch.float32, device=weight.device\n"
+            "        )\n"
+            "    stats_samples: list[torch.Tensor] = []\n"
+        )
+        part2_old = (
+            "        stats_sample = _sample_rows(activation, _LINEAR_STATS_TOKENS)\n"
+            "        sum_square += stats_sample.square().sum(dim=0)\n"
+            "        if use_quadratic:\n"
+            "            cov_sum += stats_sample.t().mm(stats_sample)\n"
+        )
+        part2_new = (
+            "        stats_sample = _sample_rows(activation, _LINEAR_STATS_TOKENS)\n"
+            "        sum_square += stats_sample.square().sum(dim=0)\n"
+            "        if use_quadratic:\n"
+            "            cov_sum += stats_sample.t().mm(stats_sample)\n"
+            "        stats_samples.append(stats_sample)\n"
+        )
+        part3_old = (
+            "    weight_group_gram = None\n"
+            "    gram_full = None\n"
+            "    if use_quadratic:\n"
+            "        gram_full = _transformed_covariance(\n"
+            "            cov_sum / float(max(token_count, 1)),\n"
+            "            best_d,\n"
+            "            best_perm,\n"
+            "            best_block_smooth_size,\n"
+            "            best_block_smooth_seed,\n"
+            "        )\n"
+        )
+        part3_new = (
+            "    weight_group_gram = None\n"
+            "    gram_full = None\n"
+            "    if use_quadratic:\n"
+            "        # L5 (quantization-aware weight GPTQ Hessian): deployment\n"
+            "        # multiplies the quantized weight by the HiF4-encoded\n"
+            "        # TRANSFORMED activation, so the Hessian accumulates the Gram\n"
+            "        # of the standard encode roundtrip of the transformed stats\n"
+            "        # samples.  Quantization is nonlinear (Q(T x) != T Q(x)), so\n"
+            "        # the roundtrip runs post-transform.  Search statistics stay\n"
+            "        # ideal; single pre-registered config, no blending.\n"
+            "        quant_gram = torch.zeros(\n"
+            "            in_features, in_features, dtype=torch.float32, device=weight.device\n"
+            "        )\n"
+            "        for _stats_sample in stats_samples:\n"
+            "            _t = _stats_sample.to(dtype=torch.float32) * best_d.reciprocal().reshape(1, -1)\n"
+            "            _t = _t.index_select(-1, best_perm)\n"
+            "            if best_block_smooth_size != 0:\n"
+            "                _t = _block_hadamard_transform(\n"
+            "                    _t, best_block_smooth_size, best_block_smooth_seed\n"
+            "                )\n"
+            "            _q = _dequantize_hif4(_dense_to_hif4(_t)).to(torch.float32)\n"
+            "            quant_gram += _q.t().mm(_q)\n"
+            "        gram_full = quant_gram / float(max(token_count, 1))\n"
+        )
+        for name, old, new in (("p1", part1_old, part1_new), ("p2", part2_old, part2_new), ("p3", part3_old, part3_new)):
+            assert assembled.count(old) == 1, f"L5 patch site {name} not unique"
+            assembled = assembled.replace(old, new, 1)
+
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(assembled, encoding="utf-8", newline="")
     py_compile.compile(str(OUT), doraise=True)
 
     text = assembled
-    # Linear APIs: the base definition plus, for L3/L4, the appended override.
+    # Linear APIs: the base definition plus, for L3/L4/L5, the appended override.
     n_linear_defs = text.count("def hif4_calibration_and_quantize_weight(")
-    assert n_linear_defs == (2 if TARGET in ("l3", "l4") else 1), n_linear_defs
+    assert n_linear_defs == (2 if TARGET in ("l3", "l4", "l5") else 1), n_linear_defs
     # Attention APIs: two each (overridden v160 body + appended standard block).
     for attn_api in ("hif4_calibration_attention", "hif4_dynamic_quantize_q",
                      "hif4_dynamic_quantize_k", "hif4_dynamic_quantize_v"):
@@ -197,9 +273,14 @@ def main() -> int:
     assert "_ATTN_LOGIT_GAIN" not in text, "attention-side constants must not leak"
     assert "Official side-weight calibration (v163)" in text, "std attention block lost"
     assert "residual_u" in text and "rank1_u" in text
-    if TARGET in ("l3", "l4"):
+    if TARGET in ("l3", "l4", "l5"):
         assert "_STATIC_ACTORDER_BASE_CALIBRATION" in text
         assert text.rstrip().endswith(")"), "unexpected tail"
+    if TARGET == "l5":
+        assert "quant_gram += _q.t().mm(_q)" in text
+        assert "stats_samples.append(stats_sample)" in text
+        assert text.count("gram_full = quant_gram") == 1
+        assert "gram_full = _transformed_covariance" not in text
 
     print("written:", OUT)
     print("v163 sha256:", sha256(V163))

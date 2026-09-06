@@ -122,6 +122,34 @@
   仅记录不使用。
 - 结果报告：`workbench/v162_linear/result-ladder.md`。
 
+## L5 l5-quant-aware-hessian（2026-09-06，RUNNING / 新机制第 1 步）
+
+- 机制（预注册）：**量化感知 Weight GPTQ Hessian**。部署时与量化权重相乘的是
+  **变换后**激活的 HiF4 编码 `Q(T·X)`；量化非线性（`Q(T·x) ≠ T·Q(x)`），故
+  Hessian 必须在变换后坐标累积编码回写样本的 Gram。实现：同一 512 行 stats
+  样本先经搜索选定的变换管线（d⁻¹/perm/block-Hadamard，与 8183 行 eval 样本
+  管线一致），再做 `_dense_to_hif4`/`_dequantize_hif4` 标准回写，累积
+  `quant_gram` 替换 `_transformed_covariance(cov_sum/…)`；搜索统计
+  （sum_square/second moment）保持理想。单一预注册配置：纯替换、无混合。
+- 设计修正记录：第一版补丁在理想坐标做回写再变换协方差（坐标组合错误），
+  已在启动评测前废弃重写（旧 SHA 79768C17 的评测中止，未产生任何结果数据）。
+- 历史去重：v104/A7 为反方向（部署权重 Gram→激活侧，拒绝）；本方向（量化
+  激活 Gram→权重侧）不在归档摘要与 AGENTS §7 关闭族内。
+- 预期量级：W 侧占剩余误差 ~2/3（P1），Hessian 一阶对齐收益估计
+  +0.001～+0.01；代价每校准 call 两次 512 行样本的标准回写。
+- SHA `E3292B68DA989ACA6FA4F9B63F9558EE80AD6F64F07794FA277C927F81711F3B`，
+  文件 `workbench/v162_linear/candidate/l5_solution.py`。
+- 冻结侧 control：**0 failures**。
+- 六 shard ID（baseline=v162）：mean **0.6367277255581202** / median 0.630102，
+  n=336；api_total 372.0s（+15s vs L4，标准回写代价符合预期）。
+- **配对裁决（vs 直接父 L4，336 case 逐对）**：mean Δ **−0.000072**、median
+  +0.000000、139+/149−/48=、L1_total 0.002163、L1_negative 0.001117（<0.02）。
+  分 role 全部 |Δ|≤0.0004，无方向性。
+- **裁决：REJECTED（预注册规则 mean Δ ≤ 0）**。结论：GPTQ 权重舍入对标准回写
+  量级的 Hessian 扰动不敏感（二阶效应），量化感知 Hessian 一阶对齐无可测收益；
+  该机制族关闭，不再尝试两遍 GPTQ/精修版 Gram（扰动更小）。输出
+  `artifacts/proxy_v3/v162-independent/linear/l5-quant-aware-hessian/id/`。
+
 ## L 链 OOD 成对门禁（2026-09-06，全链 PASS）
 
 | 版本 | ID mean | OOD mean | gap=ID−OOD | \|Δgap\| vs 直接父 |
