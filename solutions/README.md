@@ -1,8 +1,9 @@
 # HiF4 solutions archive
 
-> **Execution update (2026-09-06):** the current active plan is
-> [Attention non-causal logit-gain fitting](../docs/superpowers/plans/2026-09-06-attention-noncausal-logit-fit-plan.md)
-> (**ACTIVE / R0**). The recovered fixed-order candidate is archived as
+> **Execution update (2026-09-06):** there is currently no active optimization plan.
+> [Attention mask-aligned output selector](../docs/superpowers/plans/2026-09-06-attention-noncausal-selector-plan.md)
+> was closed as **CLOSED / R2_REJECTED** after the fresh default gate. The previous non-causal
+> logit-gain fitting was closed as **CLOSED / R1_REJECTED**. The recovered fixed-order candidate is archived as
 > [v189](20260906_v189_static-actorder-hdiag_recovered_scoreNA_timeNA/result.md): official
 > `17616/275s`, RETAINED as the current full parent; the root is now v189.
 > The fixed-state output-aware JDRQ integration is closed as **CLOSED / J1_REJECTED** after

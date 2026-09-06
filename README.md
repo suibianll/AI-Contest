@@ -19,9 +19,9 @@
 
 ## 当前结论
 
-- 当前活动计划：[Attention 无因果 logit-gain 拟合](docs/superpowers/plans/2026-09-06-attention-noncausal-logit-fit-plan.md)，
-  状态 ACTIVE / R0；v189 已官方 `17616/275s` 并 RETAINED，根已切换到 v189。上一份
-  Linear 冻结激活状态输出感知 JDRQ 计划已
+- 当前没有活动优化计划；[Attention mask-aligned output selector](docs/superpowers/plans/2026-09-06-attention-noncausal-selector-plan.md)
+  已 CLOSED / R2_REJECTED，因 fresh default 分数和时间门均未通过；v189 已官方
+  `17616/275s` 并 RETAINED，根已切换到 v189。上一份无因果 logit-gain 拟合已 CLOSED / R1_REJECTED；Linear 冻结激活状态输出感知 JDRQ 计划已
   CLOSED / J1_REJECTED；条件曲率块序计划已 CLOSED / C1_REJECTED。
 - Linear 多折 cross-block Hessian 计划已 CLOSED / B1_REJECTED，前两 shard 的 112 个
   配对 case 中 96 个回退，未进入 default/OOD/官方。

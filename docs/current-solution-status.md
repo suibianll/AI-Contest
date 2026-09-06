@@ -6,12 +6,15 @@
 > “最后一个配额”等表述全部失效，见
 > [`stale-information-inventory-2026-09-05.md`](stale-information-inventory-2026-09-05.md)。
 
-## 0.1 当前计划（2026-09-06）
+## 0.1 当前计划状态（2026-09-06）
 
-当前唯一活动计划是
-[`Attention 无因果 logit-gain 拟合执行计划`](superpowers/plans/2026-09-06-attention-noncausal-logit-fit-plan.md)，
-状态 **ACTIVE / R0**。v189 已收到官方 `17616/275s` 并 RETAINED 为当前完整官方父；
-根 `solution.py` 已切换为 v189。
+当前没有活动优化计划。最近的
+[`Attention mask-aligned output selector 执行计划`](superpowers/plans/2026-09-06-attention-noncausal-selector-plan.md)
+已按 R0→R2 关闭为 **CLOSED / R2_REJECTED**；执行记录见
+[`mask selector 执行记录`](../logs/execution/2026-09-06-attention-noncausal-selector.md)。v189 已收到官方
+`17616/275s` 并 RETAINED 为当前完整官方父，根 `solution.py` 已切换为 v189。上一份无因果 logit-gain 拟合已
+**CLOSED / R1_REJECTED**，执行记录见
+[`无因果拟合执行记录`](../logs/execution/2026-09-06-attention-noncausal-logit-fit.md)。
 
 静态 activation-GPTQ 块序候选已归档为
 [`v189`](../solutions/20260906_v189_static-actorder-hdiag_recovered_scoreNA_timeNA/result.md)：

@@ -22,11 +22,14 @@
 > 诊断。`evaluator/official_eval.py` 保持未修改，作为 `proxy-v2` 兼容/参考后端；旧命令和下文
 > 的 `proxy-v2` 统计仍表示底层协议，不应把二者的输出混排。
 
-> **当前唯一活动计划（2026-09-06）**：
-> [`Attention 无因果 logit-gain 拟合执行计划`](docs/superpowers/plans/2026-09-06-attention-noncausal-logit-fit-plan.md)，
-> **ACTIVE / R0**：v189 已收到官方 `17616/275s` 并 RETAINED，根 `solution.py` 已切换
-> 为 v189；新实验以 v189 为父，未改变官方结果。
+> **当前计划状态（2026-09-06）**：当前没有活动优化计划。v189 已收到官方 `17616/275s`
+> 并 RETAINED，根 `solution.py` 已切换为 v189；最近的
+> [`Attention mask-aligned output selector 执行计划`](docs/superpowers/plans/2026-09-06-attention-noncausal-selector-plan.md)
+> 已按 R0→R2 关闭为 **CLOSED / R2_REJECTED**，详细证据见
+> `logs/execution/2026-09-06-attention-noncausal-selector.md`。
 > 静态 activation-GPTQ 块序候选已归档为 v189，官方正向但距榜首仍有 `4149` 分。
+> 上一份无因果 logit-gain 拟合已 **CLOSED / R1_REJECTED**，执行记录见
+> `logs/execution/2026-09-06-attention-noncausal-logit-fit.md`。
 > 上一份 Linear 冻结激活状态的输出感知 JDRQ 接入已 **CLOSED / J1_REJECTED**，112 个
 > 配对 case 的前两个 shard 为负，执行记录见
 > `logs/execution/2026-09-06-linear-fixed-state-output-aware-jdrq-plan.md`。
