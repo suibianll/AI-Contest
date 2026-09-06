@@ -65,8 +65,12 @@ role 路由。v160 栈本身的多折聚合规则随源码冻结迁移，不重�
 ## 后续版本阶梯（预注册顺序，每版一个机制）
 
 1. **L2（RECOVERY）**：rank-2 残差重分布（v182 Linear 侧，官方 step_gain +1 锚）。
-2. **L3（RECOVERY）**：v189 静态部署 Hessian activation-GPTQ 64-block 块序（官方
-   step_gain +17 锚，eval-v3 Linear 0.6368 = 当前本地最高参考）。
-3. **L4+（新机制）**：仅在完成上述 RECOVERY 阶梯后提出，必须相对强对照
+2. **L3（RECOVERY）**：v189 静态部署 Hessian activation-GPTQ 64-block 块序（不含
+   +4 码窗，用于单机制归因）。
+3. **L4（RECOVERY，阶梯终点）**：+ `_DYNAMIC_OFFSETS` 增加 +4 码（v186 常量；
+   本侧活动 Attention 路径不读该常量，只影响 Linear 动态编码）。L4 = v189
+   Linear 侧的逐字节精确复现（结构验证：diff(L4, v189) 全部 hunk 仅落在
+   attention 区与标准块尾部）。官方锚 v189 17616/275s；eval-v3 参考0.6368。
+4. **L5+（新机制）**：仅在完成上述 RECOVERY 阶梯后提出，必须相对强对照
    v166（SHA `9C0EAC6A...B4646`）有材料进展（研究目标 `D_strong≥20%`），且不在
    AGENTS.md §7 已关闭族内。

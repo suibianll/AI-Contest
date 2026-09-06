@@ -61,7 +61,7 @@
     `artifacts/proxy_v3/v162-independent/linear/l2-rank2-recovery/id/`。
 - 状态：**DONE（RECOVERY_ONLY）**；OOD 门随 L3 成对运行补齐。
 
-## L3 l3-static-actorder-recovery（2026-09-06，RUNNING）
+## L3 l3-static-actorder-recovery（2026-09-06，DONE / RECOVERY 确认）
 
 - 机制：+ v189 静态部署 Hessian activation-GPTQ 64-block 块序（预注册阶梯第 3
   步；官方锚 v189 17616/275s step_gain +17）。构建：`build_l2_candidate.py l3`
@@ -70,20 +70,69 @@
   v186 attention 侧改动，冻结纪律要求排除）。SHA
   `7A89A87B146F06C6E8CA27B91B2798474385C1A496FAC3B0C96DAB51F3EEED3A`，文件
   `workbench/v162_linear/candidate/l3_solution.py`。
-- 状态：RUNNING（control → 六 shard ID）。
+- 冻结侧 control：**0 failures**。
+- 六 shard ID（baseline=v162）：**mean 0.6367051523985937 / median 0.630845**，
+  n=336，非正 case 0；单步 vs L2 **+0.003943566109755325**；相对本地最高
+  **−9.45e-05**。api_total 391.8s。输出
+  `artifacts/proxy_v3/v162-independent/linear/l3-static-actorder-recovery/id/`。
+- 状态：**DONE（RECOVERY_ONLY，单机制归因步）**。
 
-## L4 l4-v189-linear-exact（2026-09-06，PENDING）
+## L4 l4-v189-linear-exact（2026-09-06，DONE / RECOVERY 完成，逐位复现）
 
 - 定位修正：`_DYNAMIC_OFFSETS` 是 v160 栈内 Linear/Attention 共享常量；本候选的
-  活动注意力路径是追加标准块，**不读该常量**，因此 v186 的 +4 码窗改动在本侧
-  文件中只影响 Linear 动态路径。v189 的本地最高参考（eval-v3 0.6368）是在 +4
-  窗下测得的；要精确复现 v189 Linear 侧必须包含它。
-- L4 = L3 + 该一行常量（取自 v189 原文）。结构验证：`diff(L4, v189)` 的全部
+  活动 Attention 路径是追加标准块，**不读该常量**，因此 v186 的 +4 码窗在本侧
+  文件中只影响 Linear 动态路径。v189 的本地最高参考（eval-v3 0.6368）在 +4 窗
+  下测得；精确复现必须包含。
+- L4 = L3 + 该一行常量（取自 v189 原文）。结构验证：`diff(L4, v189)` 全部
   hunk 只落在 attention 常量/代码区与标准块尾部——**L4 的 Linear 侧与 v189
   逐字节一致，Attention 侧与 v162 标准块逐字节一致**。SHA
   `ACB16F764DB80EDA94EB77FE497A7965C716B527571C241C79B2319529FF5263`，文件
   `workbench/v162_linear/candidate/l4_solution.py`。
-- 状态：PENDING（L3 评测后运行 control → 六 shard ID → OOD → fresh default）。
+- 冻结侧 control：**0 failures**（shard0 真实输入、五字段/state/输出、逆序重放）。
+- 六 shard ID（baseline=v162）：**mean 0.6367994885532791 / median
+  0.6311913371890324**，min 0.15793560695103903、max 0.9333204049812948——
+  median/min/max 与 v189 Linear 侧参考**逐位相同**，mean 差 **−1.4e-07**
+  （聚合浮点噪声级）＝逐位复现；非正 case 0。
+  - 分 role：q 0.7535 / k 0.7789 / v 0.7714 / o 0.5337 / fc_gate 0.5537 /
+    fc_up 0.5023 / proj 0.5642（与参考一致）；
+  - 单步 vs L3 +9.43e-05（+4 窗的 Linear 侧贡献）；相对 v162 零点累计
+    **+0.6368**；
+  - api_seconds（本地）：W_calib 289.5、dyn_act 109.2；输出
+    `artifacts/proxy_v3/v162-independent/linear/l4-v189-linear-exact/id/`。
+- **时间门注意**：用本机本次实测代入时间模型 ≈ 170.3+33.3+80.2+标准注意力项
+  ≈ 283s，名义上高于 280s 提交门；但同机制 v189 完整栈官方实测 275s，而本侧
+  用标准 Attention 替换优化 Attention（A_calib 项更小），官方时间预期显著低于
+  v189。本地跨会话 CUDA 计时漂移（同机制 hdiag 运行 W_calib 256s vs 本次
+  289s）使单次本地外推不可靠；fresh default 实测与官方锚点共同记录，提交
+  裁决归协调者。
+- 状态：**DONE（RECOVERY_ONLY，阶梯终点）**。本地精度追平已知最高；要“超过
+  本地最高”进入 L5+ 新机制阶段。
+
+## L4 fresh default（2026-09-06，时间门 PASS）
+
+- compat 后端完整六 API（168 Linear + 120 Attention，标准 Attention）：
+  **linear_mean 0.6402583244298936**（与 v189 文档值 0.640258324430 一致——
+  第三次逐位复现确认），attention 0.0，overall 0.3735（含标准 Attention，
+  按 §3.1 不与完整父 Overall 比较）。
+- api_seconds：W_calib 292.48（168 次）、dyn_act 63.54（168 次）、A_calib 0.0、
+  dyn Q/K/V 0.27/0.24/0.23；api_total 356.77s、wall 383.03s（本地）。
+- **时间模型**：`T ≈ 170.3 + 0.115×292.48 + 0.694×0.0 + 0.734×63.54 − 1.58×0.74
+  = 249.4s < 280s` —— 提交门通过。
+- 混合坐标四臂分解（E10/E01）对变换坐标栈无归因意义（AGENTS §5.4 已警示），
+  仅记录不使用。
+- 结果报告：`workbench/v162_linear/result-ladder.md`。
+
+## L 链 OOD 成对门禁（2026-09-06，全链 PASS）
+
+| 版本 | ID mean | OOD mean | gap=ID−OOD | \|Δgap\| vs 直接父 |
+|---|---|---|---|---|
+| L1 | 0.628182 | 0.642120 | −0.013938 | — |
+| L2 | 0.632762 | 0.644909 | −0.012148 | 0.001791 ✅ |
+| L3 | 0.636705 | 0.648661 | −0.011955 | 0.000192 ✅ |
+| L4 | 0.636799 | 0.648735 | −0.011935 | 0.000020 ✅ |
+
+所有版本 OOD 均值高于 ID（OOD 窗口整体略易），无退化信号；各步 |Δgap| ≤ 0.01
+通过。输出 `artifacts/proxy_v3/v162-independent/linear/<version>/ood/`。
 
 <!--
 统一状态字段（总计划 §6）：
