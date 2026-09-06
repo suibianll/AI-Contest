@@ -1,8 +1,8 @@
 # HiF4 solutions archive
 
 > **Execution update (2026-09-06):** the current active plan is
-> [Attention output-Jacobian weighted 2×2 Q/K transform](../docs/superpowers/plans/2026-09-06-attention-output-jacobian-pair-matrix-plan.md)
-> (**ACTIVE / ATTENTION-OUTPUT-JACOBIAN-PAIR-MATRIX**). The recovered fixed-order candidate is archived as
+> [Attention adjacent-pair 4×4 GQA transform](../docs/superpowers/plans/2026-09-06-attention-crosspair-4x4-plan.md)
+> (**ACTIVE / ATTN-CROSSPAIR-4X4**). The recovered fixed-order candidate is archived as
 > [v189](20260906_v189_static-actorder-hdiag_recovered_scoreNA_timeNA/result.md): local gates pass and
 > `solution.zip` is ready, while the official result remains `unregistered/NA`; the root remains v186.
 > The fixed-state output-aware JDRQ integration is closed as **CLOSED / J1_REJECTED** after
@@ -20,6 +20,9 @@
 > The aligned Attention source-scale extension is closed as
 > **CLOSED / NOOP_REJECTED**; see the
 > [execution record](../logs/execution/2026-09-06-attention-aligned-source-scale-plan.md).
+> The Attention logit-Fisher pair candidate is closed as **REJECTED / F2_REJECTED** after
+> shard4 regressed; see the [execution record](../logs/execution/2026-09-06-attention-logit-fisher-pair-plan.md)
+> and [rejected archive](20260906_attention-logit-fisher-pair_rejected/result.md).
 > The Linear multi-fold cross-block Hessian extension is closed as
 > **CLOSED / B1_REJECTED**; see the
 > [execution record](../logs/execution/2026-09-06-linear-crossblock-robust-hessian-plan.md).

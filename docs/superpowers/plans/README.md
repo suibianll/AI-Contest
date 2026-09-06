@@ -10,9 +10,9 @@
 `evaluator/eval.py`（其 proxy-v2/reference 后端 `evaluator/official_eval.py` 仅兼容旧缓存与协议），
 跨模型泛化调用 `evaluator/cross_model_eval.py`；旧 `real_model_suite.py` 已退役。
 
-**当前唯一活动计划：** [`Attention logit-Fisher 配对 2×2 Q/K 变换计划`](2026-09-06-attention-logit-fisher-pair-plan.md)，
-状态 **ACTIVE / ATTN-LOGIT-FISHER-PAIR**。它在 v189 已冻结的 Q/K 状态之后按 softmax
-logit Fisher 权重拟合一次合法 GQA-local pair transform；根 v186 保持不变。
+**当前唯一活动计划：** [`Attention 相邻 pair 的 4×4 GQA 配对变换计划`](2026-09-06-attention-crosspair-4x4-plan.md)，
+状态 **ACTIVE / ATTN-CROSSPAIR-4X4**。它在 v189 已冻结的 Q/K 状态之后按相邻 pair 的
+交叉协方差拟合一次合法 GQA-local 4×4 pair transform；根 v186 保持不变。
 
 [`Linear 冻结激活状态输出感知 JDRQ 计划`](../archive/plans/2026-09-06-linear-fixed-state-output-aware-jdrq-plan-rejected.md)
 已按 J0 → J1 执行并以 **CLOSED / J1_REJECTED** 结束：112 个配对 case 的前两个 shard

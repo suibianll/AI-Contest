@@ -1,0 +1,40 @@
+{
+  "date": "2026-09-06",
+  "name": "attention-logit-fisher-pair",
+  "status": "REJECTED",
+  "decision": "F2_REJECTED",
+  "parent": {
+    "name": "v189_static-actorder-hdiag-recovered",
+    "sha256": "261202248a0146a2ee45f3df60bd1979bb8171b7c162921013b0024c848617af"
+  },
+  "candidate_sha256": "6C3150FAA44020A71C69205E6F8D0B43E6DC0431F6B60B7D10C135E743B5523C",
+  "mechanism": "causal/non-causal softmax logit Fisher p(1-p) weighted GQA-local SPD 2x2 Q/K pair transform; Q=M and K=M^-T",
+  "official": {
+    "score": null,
+    "time_seconds": null,
+    "state": "unregistered/NA",
+    "submitted": false
+  },
+  "root_solution": {
+    "changed": false,
+    "state": "v186"
+  },
+  "f0": {
+    "api_count": 6,
+    "qk_max_abs_error": 9.54e-7
+  },
+  "f1": {
+    "shard0": {"delta_mean": 0.013006852633028726, "l1": 0.015735620153047525, "positive": 2, "negative": 2, "zero": 4},
+    "shard1": {"delta_mean": 0.0053758922688954824, "delta_median": 0.002051061917375474, "l1": 0.010916858844315258, "positive": 4, "negative": 2, "zero": 2}
+  },
+  "f2": {
+    "shard2": {"delta_mean": 0.0003546161991454938, "l1": 0.0018610367323284166, "positive": 2, "negative": 2, "zero": 4},
+    "shard3": {"delta_mean": 0.0, "l1": 0.0, "positive": 0, "negative": 0, "zero": 8},
+    "shard4": {"delta_mean": -0.0017740498277902667, "l1": 0.004926046145248844, "positive": 1, "negative": 1, "zero": 6, "worst_delta": -0.026800383892156443, "worst_layer": 4, "worst_split": "validation", "worst_length": 128},
+    "stopped_before_shard5": true
+  },
+  "evidence": [
+    "artifacts/proxy_v3/attention-logit-fisher-pair-20260906/f1/",
+    "artifacts/proxy_v3/attention-logit-fisher-pair-20260906/f2/"
+  ]
+}

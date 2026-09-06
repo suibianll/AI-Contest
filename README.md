@@ -16,9 +16,9 @@
 
 ## 当前结论
 
-- 当前活动计划：[Attention logit-Fisher 配对 2×2 Q/K 变换](docs/superpowers/plans/2026-09-06-attention-logit-fisher-pair-plan.md)，
-  状态 ACTIVE / ATTN-LOGIT-FISHER-PAIR；在 v189 已冻结的 Q/K 状态之后按 softmax
-  logit Fisher 权重拟合一次合法 GQA-local pair transform，根 v186 未变；v189 候选已
+- 当前活动计划：[Attention 相邻 pair 的 4×4 GQA 配对变换](docs/superpowers/plans/2026-09-06-attention-crosspair-4x4-plan.md)，
+  状态 ACTIVE / ATTN-CROSSPAIR-4X4；在 v189 已冻结的 Q/K 状态之后按相邻 pair 的交叉
+  协方差拟合一次合法 GQA-local 4×4 pair transform，根 v186 未变；v189 候选已
   归档，官方 `unregistered/NA`。上一份 Linear 冻结激活状态输出感知 JDRQ 计划已
   CLOSED / J1_REJECTED；条件曲率块序计划已 CLOSED / C1_REJECTED。
 - Linear 多折 cross-block Hessian 计划已 CLOSED / B1_REJECTED，前两 shard 的 112 个

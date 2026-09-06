@@ -1,7 +1,7 @@
 # Attention softmax-logit Fisher 2×2 Q/K 配对计划
 
 > 创建：2026-09-06  
-> 状态：**ACTIVE / ATTN-LOGIT-FISHER-PAIR**  
+> 状态：**CLOSED / F2_REJECTED**  
 > 父版本：v189（Linear `0.640258324430`、Attention `0.752173407020`、Overall
 > `0.686889608842`，官方 `unregistered/NA`）  
 > 当前本地最高完整 default：Linear `0.641778372`、Attention `0.752173407`、
@@ -62,3 +62,15 @@ reachability 和未修改 Linear control。若两 shard 没有一致正向信号
   default 时间预测。
 - 官方提交次数无限制，但每次提交仍须通过合法性、单一机制和 `<280s` 时间门；本地
   Overall 不等价于官方绝对分。
+
+## 4. 执行裁决（2026-09-06）
+
+- F0 通过：六 API 可导入；合成 GQA 连续 `QK` 最大绝对误差 `9.54e-7`。
+- F1 双 shard 均正均值：shard0 `+0.013007`（L1 `0.015736`），shard1 `+0.005376`
+  （L1 `0.010917`）；但分别含 `2` 个负 case，作为继续信号而非晋级结论。
+- F2 在 shard4 自动停止：shard2 仅 `+0.000355`，shard3 `0/8` 变化，shard4
+  `-0.001774`、正/负/零 `1/1/6`，最坏 case `-0.026800`（layer 4、validation、
+  length 128）。因此机制证据否定，F3/OOD/default 未执行，不提交官方，不扫描邻域。
+- 根 `solution.py` 仍为 v186；候选源码 SHA256
+  `6C3150FAA44020A71C69205E6F8D0B43E6DC0431F6B60B7D10C135E743B5523C`，归档目录和
+  详细 eval-v3 证据见对应 `solutions/` 与 `artifacts/proxy_v3/`。

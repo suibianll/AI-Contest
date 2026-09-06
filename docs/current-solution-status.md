@@ -9,9 +9,9 @@
 ## 0.1 当前计划（2026-09-06）
 
 当前唯一活动计划是
-[`Attention logit-Fisher 配对 2×2 Q/K 变换计划`](superpowers/plans/2026-09-06-attention-logit-fisher-pair-plan.md)，
-状态 **ACTIVE / ATTN-LOGIT-FISHER-PAIR**。它在 v189 已冻结的 Q/K 状态之后按 softmax
-logit Fisher 权重拟合一次合法 GQA-local pair transform；根 `solution.py` 保持 v186。
+[`Attention 相邻 pair 的 4×4 GQA 配对变换计划`](superpowers/plans/2026-09-06-attention-crosspair-4x4-plan.md)，
+状态 **ACTIVE / ATTN-CROSSPAIR-4X4**。它在 v189 已冻结的 Q/K 状态之后按相邻 pair 的交叉
+协方差拟合一次合法 GQA-local 4×4 pair transform；根 `solution.py` 保持 v186。
 
 静态 activation-GPTQ 块序候选已归档为
 [`v189`](../solutions/20260906_v189_static-actorder-hdiag_recovered_scoreNA_timeNA/result.md)：
@@ -842,9 +842,9 @@ v86 的部分 scale-aware/output-aware 机制。此前把它描述为"v86 级静
 ## 6. 最近执行计划
 
 **当前活动优化计划（2026-09-06）：**
-[`Attention logit-Fisher 配对 2×2 Q/K 变换计划`](superpowers/plans/2026-09-06-attention-logit-fisher-pair-plan.md)，
-状态 **ACTIVE / ATTN-LOGIT-FISHER-PAIR**。在 v189 已冻结的 Q/K 状态之后按 softmax
-logit Fisher 权重拟合一次合法 GQA-local pair transform；根 v186 保持不变。静态 activation-GPTQ 计划
+[`Attention 相邻 pair 的 4×4 GQA 配对变换计划`](superpowers/plans/2026-09-06-attention-crosspair-4x4-plan.md)，
+状态 **ACTIVE / ATTN-CROSSPAIR-4X4**。在 v189 已冻结的 Q/K 状态之后按相邻 pair 的交叉
+协方差拟合一次合法 GQA-local 4×4 pair transform；根 v186 保持不变。静态 activation-GPTQ 计划
 已归档为 [`v189 候选复核计划`](superpowers/archive/plans/2026-09-06-static-activation-gptq-order-plan-candidate-archived.md)。
 
 Linear 冻结激活状态输出感知 JDRQ 计划已关闭为 **CLOSED / J1_REJECTED**：前两个

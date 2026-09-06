@@ -10998,12 +10998,40 @@ def hif4_dynamic_quantize_activation(
     )
 
 
-# F1 candidate: use the diagonal Fisher curvature of the softmax logits to
-# weight the Q/K pair covariance.  This is deliberately separate from the
-# output-Jacobian/value-sensitive arms above: only p * (1-p) and the opposite
-# Q/K operand enter this fit, and the deployed state only changes pair_transform.
+# C1 candidate: extend the deployed pair transform from independent 2-D pairs
+# to fixed adjacent 4-D super-pairs.  The original 2x2 implementation remains
+# the exact fallback for the parent state.
+_CROSSPAIR_ORIGINAL_APPLY = _apply_attention_pair_transform
+
+
 @torch.no_grad()
-def _fit_attention_logit_fisher_pair(
+def _apply_attention_pair_transform(
+    dense: torch.Tensor,
+    num_heads: int,
+    head_dim: int,
+    matrices: torch.Tensor,
+) -> torch.Tensor:
+    shape = tuple(int(size) for size in matrices.shape)
+    if shape[-2:] == (2, 2):
+        return _CROSSPAIR_ORIGINAL_APPLY(
+            dense, num_heads, head_dim, matrices
+        )
+    expected = (int(num_heads), int(head_dim) // 4, 4, 4)
+    if int(head_dim) % 4 != 0 or shape != expected:
+        raise ValueError(
+            f"Attention cross-pair transform shape {shape} "
+            f"does not match expected {expected}"
+        )
+    mats = matrices.detach().to(device=dense.device, dtype=torch.float32)
+    grouped = dense.to(torch.float32).reshape(
+        *dense.shape[:-1], int(num_heads), int(head_dim) // 4, 4
+    )
+    transformed = torch.einsum("...hpi,hpij->...hpj", grouped, mats)
+    return transformed.reshape_as(dense)
+
+
+@torch.no_grad()
+def _fit_attention_crosspair_4x4(
     q_samples: list[torch.Tensor],
     k_samples: list[torch.Tensor],
     q_state: dict[str, Any],
@@ -11015,12 +11043,12 @@ def _fit_attention_logit_fisher_pair(
     if (
         not q_samples
         or len(q_samples) != len(k_samples)
-        or int(head_dim) % 2 != 0
+        or int(head_dim) % 4 != 0
         or int(q_num_heads) % int(kv_num_heads) != 0
     ):
         return None
     group = int(q_num_heads) // int(kv_num_heads)
-    pairs = int(head_dim) // 2
+    superpairs = int(head_dim) // 4
     q_fit = [
         _attention_state_transform_dense(
             sample, q_state, q_num_heads, head_dim, is_k=False
@@ -11035,85 +11063,36 @@ def _fit_attention_logit_fisher_pair(
     ]
     device = q_fit[0].device
     q_cov = torch.zeros(
-        kv_num_heads, pairs, 2, 2, dtype=torch.float32, device=device
+        kv_num_heads, superpairs, 4, 4, dtype=torch.float32, device=device
     )
     k_cov = torch.zeros_like(q_cov)
-    q_weight_total = torch.zeros(
-        kv_num_heads, dtype=torch.float32, device=device
-    )
-    k_weight_total = torch.zeros_like(q_weight_total)
-
+    q_rows = 0
+    k_rows = 0
     for q_tensor, k_tensor in zip(q_fit, k_fit):
         seq = min(int(q_tensor.shape[0]), int(k_tensor.shape[0]))
         if seq <= 0:
             continue
-        q_tensor = q_tensor[:seq]
-        k_tensor = k_tensor[:seq]
-        q_heads = q_tensor.reshape(seq, q_num_heads, head_dim).transpose(0, 1)
-        k_heads = (
-            k_tensor.reshape(seq, kv_num_heads, head_dim)
-            .transpose(0, 1)
-            .repeat_interleave(group, dim=0)
+        q_grouped = q_tensor[:seq].reshape(
+            seq, kv_num_heads, group, superpairs, 4
         )
-        logits = torch.einsum("htd,hsd->hts", q_heads, k_heads) / math.sqrt(
-            float(head_dim)
+        k_grouped = k_tensor[:seq].reshape(
+            seq, kv_num_heads, superpairs, 4
         )
-        fisher = torch.zeros_like(logits)
-        causal_mask = torch.triu(
-            torch.full((seq, seq), float("-inf"), device=logits.device), 1
-        )
-        for causal in (True, False):
-            probs = torch.softmax(
-                logits + causal_mask if causal else logits, dim=-1
-            )
-            fisher += 0.5 * probs * (1.0 - probs)
-
-        # d(logit)/dQ is K and d(logit)/dK is Q, so the diagonal logit
-        # Fisher weights the two operand covariances by the opposite operand's
-        # squared coordinates without consulting V or an output residual.
-        q_weight = torch.einsum(
-            "hts,hsd->htd", fisher, k_heads.square()
-        )
-        k_weight_q = torch.einsum(
-            "hts,htd->hsd", fisher, q_heads.square()
-        )
-        q_grouped = q_tensor.reshape(
-            seq, kv_num_heads, group, pairs, 2
-        )
-        k_grouped = k_tensor.reshape(seq, kv_num_heads, pairs, 2)
-        q_pair_weight = q_weight.permute(1, 0, 2).reshape(
-            seq, kv_num_heads, group, pairs, 2
-        ).mean(dim=-1)
-        k_pair_weight = k_weight_q.reshape(
-            kv_num_heads, group, seq, head_dim
-        ).mean(dim=1).permute(1, 0, 2).reshape(
-            seq, kv_num_heads, pairs, 2
-        ).mean(dim=-1)
         q_cov += torch.einsum(
-            "tghpi,tghpj,tghp->gpij",
-            q_grouped,
-            q_grouped,
-            q_pair_weight,
+            "tghpi,tghpj->gpij", q_grouped, q_grouped
         )
         k_cov += torch.einsum(
-            "tgpi,tgpj,tgp->gpij",
-            k_grouped,
-            k_grouped,
-            k_pair_weight,
+            "tgpi,tgpj->gpij", k_grouped, k_grouped
         )
-        q_weight_total += q_pair_weight.sum(dim=(0, 2, 3))
-        k_weight_total += k_pair_weight.sum(dim=(0, 2))
-
-    if not bool(
-        torch.isfinite(q_cov).all()
-        and torch.isfinite(k_cov).all()
-        and torch.isfinite(q_weight_total).all()
-        and torch.isfinite(k_weight_total).all()
-    ):
+        q_rows += seq * group
+        k_rows += seq
+    if q_rows <= 0 or k_rows <= 0:
         return None
-    q_cov = q_cov / q_weight_total.clamp_min(_EPS).reshape(-1, 1, 1, 1)
-    k_cov = k_cov / k_weight_total.clamp_min(_EPS).reshape(-1, 1, 1, 1)
-    eye = torch.eye(2, dtype=torch.float32, device=device)
+    q_cov = q_cov / float(q_rows)
+    k_cov = k_cov / float(k_rows)
+    if not bool(torch.isfinite(q_cov).all() and torch.isfinite(k_cov).all()):
+        return None
+    eye = torch.eye(4, dtype=torch.float32, device=device)
     q_scale = q_cov.diagonal(dim1=-2, dim2=-1).mean(dim=-1, keepdim=True)
     k_scale = k_cov.diagonal(dim1=-2, dim2=-1).mean(dim=-1, keepdim=True)
     q_cov = q_cov + (
@@ -11135,23 +11114,34 @@ def _fit_attention_logit_fisher_pair(
 
 
 @torch.no_grad()
-def _compose_attention_logit_fisher_pair(
+def _compose_attention_crosspair_4x4(
     state: dict[str, Any],
     extra: torch.Tensor,
     num_heads: int,
     head_dim: int,
-) -> torch.Tensor:
+) -> Optional[torch.Tensor]:
+    superpairs = int(head_dim) // 4
     base = state.get("pair_transform")
     if base is None:
-        base = torch.eye(2, dtype=torch.float32, device=extra.device).reshape(
-            1, 1, 2, 2
-        ).expand(int(num_heads), int(head_dim) // 2, -1, -1)
+        base4 = torch.eye(4, dtype=torch.float32, device=extra.device).reshape(
+            1, 1, 4, 4
+        ).expand(int(num_heads), superpairs, -1, -1)
     else:
         base = base.to(device=extra.device, dtype=torch.float32)
-    return torch.matmul(base, extra)
+        expected = (int(num_heads), int(head_dim) // 2, 2, 2)
+        if tuple(int(size) for size in base.shape) != expected:
+            return None
+        base4 = torch.zeros(
+            int(num_heads), superpairs, 4, 4,
+            dtype=torch.float32,
+            device=extra.device,
+        )
+        base4[..., 0:2, 0:2] = base[:, 0::2]
+        base4[..., 2:4, 2:4] = base[:, 1::2]
+    return torch.matmul(base4, extra)
 
 
-_LOGIT_FISHER_BASE_CALIBRATION = hif4_calibration_attention
+_CROSSPAIR_BASE_CALIBRATION = hif4_calibration_attention
 
 
 @torch.no_grad()
@@ -11161,12 +11151,11 @@ def hif4_calibration_attention(
     kv_num_heads: int,
     head_dim: int,
 ) -> dict[str, Any]:
-    result = _LOGIT_FISHER_BASE_CALIBRATION(
+    result = _CROSSPAIR_BASE_CALIBRATION(
         calib_qkv_list, q_num_heads, kv_num_heads, head_dim
     )
-    if len(calib_qkv_list) < 2 or int(head_dim) % 2 != 0:
+    if len(calib_qkv_list) < 2 or int(head_dim) % 4 != 0:
         return result
-
     q_state = result["q_state"]
     k_state = result["k_state"]
     v_state = result["v_state"]
@@ -11180,7 +11169,9 @@ def hif4_calibration_attention(
         q_dense = _dequantize_nvfp4_float32(*sample["q"])
         k_dense = _dequantize_nvfp4_float32(*sample["k"])
         v_quant, v_scale = sample["v"]
-        prefix = min(int(q_dense.shape[0]), int(k_dense.shape[0]), _ATTN_A1_MAX_TOKENS)
+        prefix = min(
+            int(q_dense.shape[0]), int(k_dense.shape[0]), _ATTN_A1_MAX_TOKENS
+        )
         q_dense = q_dense[:prefix].clone()
         k_dense = k_dense[:prefix].clone()
         v_dense = _dequantize_nvfp4_float32(
@@ -11223,10 +11214,9 @@ def hif4_calibration_attention(
                 ),
             )
         )
-
     fit_indices = list(range(0, len(q_samples), 2))
     validation_indices = list(range(1, len(q_samples), 2))
-    fit_result = _fit_attention_logit_fisher_pair(
+    fit_result = _fit_attention_crosspair_4x4(
         [q_samples[index] for index in fit_indices],
         [k_samples[index] for index in fit_indices],
         q_state,
@@ -11238,18 +11228,18 @@ def hif4_calibration_attention(
     if fit_result is None or not validation_indices:
         return result
     q_extra, k_extra = fit_result
+    q_pair = _compose_attention_crosspair_4x4(
+        q_state, q_extra, q_num_heads, head_dim
+    )
+    k_pair = _compose_attention_crosspair_4x4(
+        k_state, k_extra, kv_num_heads, head_dim
+    )
+    if q_pair is None or k_pair is None:
+        return result
     candidate_q_state = dict(q_state)
     candidate_k_state = dict(k_state)
-    candidate_q_state["pair_transform"] = _cpu_state_tensor(
-        _compose_attention_logit_fisher_pair(
-            q_state, q_extra, q_num_heads, head_dim
-        )
-    )
-    candidate_k_state["pair_transform"] = _cpu_state_tensor(
-        _compose_attention_logit_fisher_pair(
-            k_state, k_extra, kv_num_heads, head_dim
-        )
-    )
+    candidate_q_state["pair_transform"] = _cpu_state_tensor(q_pair)
+    candidate_k_state["pair_transform"] = _cpu_state_tensor(k_pair)
     validation_q_pairs = [q_pairs[index] for index in validation_indices]
     validation_k_pairs = [k_pairs[index] for index in validation_indices]
     validation_v_hats = [v_hats[index] for index in validation_indices]
@@ -11286,7 +11276,7 @@ def hif4_calibration_attention(
         result["q_state"] = candidate_q_state
         result["k_state"] = candidate_k_state
         print(
-            "[ATTN-LOGIT-FISHER-PAIR] accepted=1 "
+            "[ATTN-CROSSPAIR-4X4] accepted=1 "
             f"validation={len(validation_indices)}",
             flush=True,
         )
