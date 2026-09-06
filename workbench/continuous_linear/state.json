@@ -23,13 +23,14 @@
     "value": 0.6367994885532791,
     "source": "artifacts/proxy_v3/v162-independent/linear/l4-v189-linear-exact (L4)"
   },
-  "next_action": "机制假设研究：L1-L3 全关闭；剩余误差集中于 fc/proj/o（gain 0.50-0.56）；检索论文均为旋转族/低秩补偿族（已关闭），无新可迁移机制；待新假设或用户重开边界",
+  "next_action": "NEEDS_NEW_HYPOTHESIS：L1-L3 全关闭；剩余误差 fc_up 0.502 / o 0.534 / fc_gate 0.554 / proj 0.564（A-only 61-79%）；论文检索无可迁移非关闭族机制；等待新假设或用户重开边界",
   "recent_steps": [
     "2026-09-07: L1 FlatQuant REJECTED (35 state 34 退化 + COST)",
     "2026-09-07: L2 GPTAQ DUPLICATE_CLOSED (JDRQ 同目标同更新)",
     "2026-09-07: L3 合法层级 DUPLICATE_CLOSED (修正版合法网格同目标全负)",
     "2026-09-07: 剩余误差分组：fc_up 0.502 / o 0.534 / fc_gate 0.554 / proj 0.564 / qkv 0.768",
+    "2026-09-07: fc/proj 分解：A-only 61-79%、W-only 21-39%、interaction≈0",
     "2026-09-07: 论文检索：ButterflyQuant/ReSpinQuant/ConQuR/SmoothRot 均旋转族；SERQ 低秩补偿族；无新可迁移机制",
-    "2026-09-07: 本轮无候选超过本地最高 0.6368，不触发提交"
+    "2026-09-07: NEEDS_NEW_HYPOTHESIS 记录；本轮无候选超过本地最高 0.6368，不触发提交"
   ]
 }
