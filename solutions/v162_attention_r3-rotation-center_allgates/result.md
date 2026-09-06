@@ -1,0 +1,25 @@
+# v162_attention R3：旋转 + 学习型 K-center（全门通过）
+
+> 日期：2026-09-07。父：R2c 机制族。新自由度：每 (KV group, channel) 可学习中心偏移
+> `c_g∈R^64`（K 侧，注入点同旋转——编码前），与旋转联合 32 步解析梯度训练（同一冻结
+> 配置，center 初始 0，无额外正则）。动机：R2 的 in-dist/OOD 不对称疑似平坦损失面游走，
+> center 提供抵消自由度。
+
+## 评测（r3-screen / r3-id / r3-ood / r3-default，全门数据）
+
+| 门 | 结果 |
+|---|---|
+| ID 48-case | mean +0.775558 / median +0.767673，48 正/0 零/0 负，L1_neg 0 |
+| split | test +0.7738 / validation +0.7773 均正 |
+| **OOD** | **Δgap +0.006462 ≤ 0.01 ✅**（R2c 为 +0.0122 被阻——center 修复了分布不对称） |
+| default | attention_mean 0.765023（R2c 0.767788，−0.0028；R1 0.752173，+0.0128） |
+| 时间 | **221.044s < 280s** ✓ |
+| 契约 fuzz | CLEAN（inference_mode 内训练/gate/部署实测正常） |
+| 官方 | unregistered / NA |
+
+## 结论
+
+- center 修复了 OOD 不对称（+0.0122 → +0.0065），但 in-dist 收益被旋转吸收（−0.003 vs R2c）：
+  旋转+center 的联合 DOF 在栈内已基本被吸收，本机制族（Q/K 坐标 + 平移）到头。
+- 未超本地最高（R2c 0.7678），按提交规则不触发；作为 OOD-clean 可部署变体归档备用。
+- **solution.py SHA256 前缀见 git**；通往 0.9 需要与 Q/K 坐标/平移正交的新机制族。
