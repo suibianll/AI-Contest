@@ -16,9 +16,9 @@
 
 ## 当前结论
 
-- 当前活动计划：[Attention residual-pressure tied permutation](docs/superpowers/plans/2026-09-06-attention-residual-pressure-order-plan.md)，
-  状态 ACTIVE / ATTN-RESIDUAL-PRESSURE-PERM；在 v189 已冻结的 Q/K 状态之后仅启用基于
-  实际 HiF4 重构残差压力的 tied Q/K permutation 候选，根 v186 未变；v189 候选已归档，官方
+- 当前活动计划：[v189 官方提交与回传准备](docs/superpowers/plans/2026-09-06-v189-official-return-plan.md)，
+  状态 ACTIVE / WAIT-OFFICIAL；开放机制审计已完成，当前保留 v189 本地通过候选并等待
+  官方平台回传，根 v186 未变；v189 候选已归档，官方
   `unregistered/NA`。上一份 Linear 冻结激活状态输出感知 JDRQ 计划已
   CLOSED / J1_REJECTED；条件曲率块序计划已 CLOSED / C1_REJECTED。
 - Linear 多折 cross-block Hessian 计划已 CLOSED / B1_REJECTED，前两 shard 的 112 个

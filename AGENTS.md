@@ -23,9 +23,9 @@
 > 的 `proxy-v2` 统计仍表示底层协议，不应把二者的输出混排。
 
 > **当前唯一活动计划（2026-09-06）**：
-> [`Attention residual-pressure tied permutation 计划`](docs/superpowers/plans/2026-09-06-attention-residual-pressure-order-plan.md)，
-> **ACTIVE / ATTN-RESIDUAL-PRESSURE-PERM**：在 v189 已冻结状态后，仅启用基于实际 HiF4
-> 重构残差压力的 tied Q/K permutation 候选；根 `solution.py` 保持 v186。
+> [`v189 官方提交与回传准备计划`](docs/superpowers/plans/2026-09-06-v189-official-return-plan.md)，
+> **ACTIVE / WAIT-OFFICIAL**：开放机制审计已完成，当前保留 v189 本地通过候选并等待
+> 官方平台回传；根 `solution.py` 保持 v186。
 > 静态 activation-GPTQ 块序候选已归档为 v189，本地通过但官方 `unregistered/NA`。
 > 上一份 Linear 冻结激活状态的输出感知 JDRQ 接入已 **CLOSED / J1_REJECTED**，112 个
 > 配对 case 的前两个 shard 为负，执行记录见
