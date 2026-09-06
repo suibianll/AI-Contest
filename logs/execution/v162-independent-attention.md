@@ -200,3 +200,21 @@ Attention 输出目标不同面板不同目标，不构成本机制的反证。
 - **分支本地最高 Attention 更新：default 0.752173 / shard48 +0.752772**（前值 0.4224/0.4298 旋转 gate 臂）。
 - 下一步（R2）：在该栈之上训练旋转（surrogate 走完整部署路径），gate 逐层决策，
   目标超过 0.752173；此后继续新机制逼近 0.9。
+
+## R2 REJECTED（OOD_GATE）：旋转部署进 v189 栈（2026-09-06）
+
+- 机制：R1 栈之上，按 A2 冻结配置训练每 KV group 旋转（标准编码器 surrogate），部署在
+  `_nvfp4_to_hif4` 全部栈变换之后、编码之前（连续 QK 与 R1 严格不变），gate 在真实部署路径上
+  逐层决策（identity 严格更优则回退）。候选 `candidate_v3/solution.py`，SHA 前缀 `2E1B23AA1E41C3B2`。
+- **ID 48-case：+0.773821**（vs R1 +0.752772，+0.021），48 正/0 负，双 split 正
+  （test +0.772 / val +0.775）；**default attention_mean 0.767021**（vs R1 0.752173，+0.0148）。
+- 时间：A_calib 89.873s（含 24 层训练+gate 评估），**预测 228.936s < 280s** ✓。
+- **OOD 门未过**：candidate gap = +0.773821 − (+0.757615) = **+0.016207**；
+  相对直接父 R1（同 SHA in-dist/OOD 配对，gap +0.000915）的 Δgap = **+0.015292 > 0.01** → BLOCKED。
+  旋转收益主要留在 WikiText 分布内，构成分布拟合特征（与 09-04 OOD 标定的 gap 家族
+  Attention +0.015~0.022 区间一致）。
+- **裁决：REJECTED / OOD_GATE**。不晋级、不替换 R1；不通过重训/缩容量/换折等邻域手段修复
+  （按"失败换机制"纪律）。教训：标准编码器 surrogate 训练的旋转与 v189 栈组合后，
+  分布鲁棒性下降；后续新机制需在校准目标中直接体现部署路径或使用分布更稳的参数化。
+- **分支状态保持：最佳候选 = R1（`candidate_v2/solution.py`，default 0.752173 / shard48 +0.752772），
+  全门通过，官方 unregistered/NA。**
