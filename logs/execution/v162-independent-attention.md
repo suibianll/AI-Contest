@@ -177,3 +177,26 @@ Attention 输出目标不同面板不同目标，不构成本机制的反证。
 - **分支本地最高 Attention 更新：default 0.752173 / shard48 +0.752772**（前值 0.4224/0.4298 旋转 gate 臂）。
 - 下一步（R2）：在该栈之上训练旋转（surrogate 走完整部署路径），gate 逐层决策，
   目标超过 0.752173；此后继续新机制逼近 0.9。
+
+## R1 RECOVERY：v189 Attention 栈迁入 + 标准 Linear（2026-09-06）
+
+- 机制来源与归属：**RECOVERY**——整体迁入 v189（v186 Attention 栈：Smooth-QK/pair-matrix/
+  block-smooth/logit-gain/V refinement 等，官方锚 v189=17616 总分、Attention 侧 default 0.752173）。
+  按总计划 §1 允许"明确机制来源后单独迁入；已知收益记 RECOVERY，不记新突破"。
+- 手术方式：`workbench/v162_attention/candidate_v2/solution.py` = v189 源文件 + 文件尾追加
+  v162 标准 Linear 覆盖定义（`hif4_calibration_and_quantize_weight`/`hif4_dynamic_quantize_activation`
+  shadow 定义 + 独立 `_branch_*` codec helper，零删除、零注意力侧改动）。
+  SHA 前缀 `3619BFEB0E017555BD8F`。
+- **逐位验证**：Linear 56 项比较 == v162 standard ✓；Attention 12 项 API 探针 == v189 ✓；
+  state 过 reference 合法性 ✓；脱离仓库单文件导入 6/6 API ✓。
+- **评测**（r1-screen / r1-id / r1-ood / r1-default）：
+  - ID 48-case：mean **+0.752772**、median +0.724958、48 正/0 零/0 负、L1_neg 0；
+    split test +0.753569 / validation +0.751976 均正。
+  - OOD：in +0.752772 / ood +0.751857，Δgap **+0.000915** ≤ 0.01 → 过门。
+  - **default：attention_mean 0.752173**（与 v189 历史值 0.752173407020 完全一致）；
+    Linear 0.0 ✓；Overall 0.313406。
+  - 时间：A_calib 65.710s、W_calib 0.668s、dyn_act 1.466s、dyn_q/k/v 合计 3.306s →
+    **预测 211.832s < 280s** ✓。
+- **分支本地最高 Attention 更新：default 0.752173 / shard48 +0.752772**（前值 0.4224/0.4298 旋转 gate 臂）。
+- 下一步（R2）：在该栈之上训练旋转（surrogate 走完整部署路径），gate 逐层决策，
+  目标超过 0.752173；此后继续新机制逼近 0.9。
