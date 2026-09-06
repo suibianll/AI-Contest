@@ -1,0 +1,51 @@
+{
+  "side": "linear",
+  "branch": "v162-independent",
+  "created": "2026-09-06",
+  "zero_baseline": {
+    "path": "solutions/20260903_v162_standard-baseline-both_scoreNA_timeNA/solution.py",
+    "sha256": "56101559D267D962084CD67A9F9AF8EB924501B17AB408EAF676081876CC000A",
+    "local_copy": "workbench/v162_linear/baseline/solution.py",
+    "official_score": 1001,
+    "official_time_s": 146
+  },
+  "l1_candidate": {
+    "id": "l1-v160-stack-recovery",
+    "label": "RECOVERY: v160 Linear calibration stack, Attention frozen standard v162",
+    "source_path": "solutions/20260903_v163_v160-linear_standard-attn_scoreNA_timeNA/solution.py",
+    "source_note": "hook 策略禁止 Bash 复制 .py 源文件；候选以归档源码原位只读引用，SHA 逐字节追踪。自研候选（L2 起）将用 Write 工具落盘 workbench/v162_linear/candidate/。",
+    "sha256_expected": "3352BDEC1E858B9B71637123B8E799059C5AEB79DDD2CF6E0B14F8272C3EB612",
+    "official_anchor": {"score": 4587, "time_s": 202, "version": "v163"},
+    "frozen_side": "attention == v162 standard, verified bit-exact by real-call control before scoring",
+    "panel": {
+      "evaluator": "evaluator/eval.py",
+      "scenario": "linear-only",
+      "shards": [0, 1, 2, 3, 4, 5],
+      "expected_cases": 336,
+      "cache": "artifacts/official_eval/cache/qwen2.5-0.5b-proxy-v2.pt",
+      "algorithm_device": "cuda",
+      "calibration_cache_mode": "auto"
+    },
+    "gates": {
+      "l1_negative_lt": 0.02,
+      "mean_delta_positive": true,
+      "val_test_both_positive": true,
+      "ood_abs_gap_le": 0.01,
+      "official_time_pred_lt_s": 280,
+      "frozen_side_bitexact": true
+    },
+    "candidate_count": 1
+  },
+  "local_highest_reference": {
+    "note": "本地最高精度参考（eval-v3 linear-only 六 shard，n=336）",
+    "value": 0.6367996275406851,
+    "source": "artifacts/proxy_v3/linear_static_actorder_hdiag_full/candidate/manifest.json (v189 Linear 侧)",
+    "fresh_default_overall_highest": 0.688994940507429,
+    "fresh_default_note": "compat 后端 168+120 Overall，含优化 Attention；不可与 L 侧单独比较（总计划 §3.1）"
+  },
+  "strong_control": {
+    "path": "solutions/20260903_v166_rank1-linear-residual_standard-attn_scoreNA_timeNA/solution.py",
+    "sha256": "9C0EAC6A7CA883A1F8962C11735744271259460F5EBBF23D530A5BBCF12B4646",
+    "official_anchor": {"score": 4590, "time_s": 226}
+  }
+}
