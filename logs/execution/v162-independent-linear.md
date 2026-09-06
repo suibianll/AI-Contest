@@ -168,3 +168,14 @@ side/run_id/baseline_sha/parent_sha/candidate_sha/mechanism/config_sha/panel/
 focus_gain/step_gain/strong_control_gap/L1_total/L1_negative/OOD_gap/control/
 coverage/reachability/api_times/time_prediction/official_score/official_time/status
 -->
+
+## 官方定位归档（2026-09-06，用户决策：先官方定位）
+
+- 用户在机制空间穷尽后选择"先官方定位"。L4 侧包已正式归档：
+  `solutions/v162_linear_l4-v189-linear-exact_officialNA_timeNA/`（solution.py
+  SHA `ACB16F76...F5263`，与评测候选逐字节一致）。
+- 脱离仓库单文件导入检查通过（空 CWD + 仓库路径剥离，仅 math/typing/torch
+  导入；六 API、合法五字段、rank2/块序可达日志正常）。
+- 归档 `result.md` 官方字段 unregistered/NA；全局版本号、根替换、组合由协调者
+  负责（本包不动根 v189、不改全局索引）。
+- 待官方回传后记录 S_L/时间，C_L = S_L − 1001。
