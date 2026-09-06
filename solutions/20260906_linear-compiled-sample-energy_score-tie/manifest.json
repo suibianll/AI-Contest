@@ -1,0 +1,47 @@
+{
+  "candidate": "linear-compiled-sample-energy",
+  "status": "REJECTED_SCORE_TIE",
+  "parent": "v189",
+  "parent_official": {
+    "score": 17616,
+    "time_seconds": 275
+  },
+  "source_sha256": "d66128a62e7e068edc50c91f4d8e212f586a6edcaee5bea7d3564166e258b0f6",
+  "official": {
+    "score": "unregistered/NA",
+    "time_seconds": "unregistered/NA",
+    "submitted": false
+  },
+  "local_default": {
+    "linear_mean": 0.6438674644269706,
+    "attention_mean": 0.7521734070200701,
+    "overall_mean": 0.6889949405074288,
+    "local_highest_overall": 0.6889949405074288,
+    "delta_over_local_highest": 0.0
+  },
+  "official_time_prediction": {
+    "W_calib_seconds": 266.42924539675005,
+    "A_calib_seconds": 56.609573600115255,
+    "dyn_act_seconds": 59.77461589849554,
+    "dyn_qkv_seconds": 2.94669119967148,
+    "predicted_seconds": 279.445203273121,
+    "gate": "predicted_seconds < 280",
+    "passed": true
+  },
+  "proxy_evidence": {
+    "r1_compact_linear": {
+      "shard0_delta_mean": 0.00190652765705247,
+      "shard1_delta_mean": 0.0019494698431702948,
+      "reasonableness_issues": 0,
+      "reachable": true
+    },
+    "r2_linear_six_shard_delta_mean": 0.0029812956911266244,
+    "r2_positive_cases": 292,
+    "r2_negative_cases": 44,
+    "r2_weighted_l1": 0.00003575537083334222,
+    "ood_delta_mean": 0.003518762939231011,
+    "ood_delta_gap_change": -0.000537467,
+    "ood_gate_passed": true,
+    "finite_outputs": true
+  }
+}

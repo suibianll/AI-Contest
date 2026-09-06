@@ -1,6 +1,19 @@
 # HiF4 solutions archive
 
-> **Execution update (2026-09-06):** there is currently no active optimization plan.
+> **Execution update (2026-09-06):** active plan is
+> [`Linear compiled residual-pressure block order`](../docs/superpowers/plans/2026-09-06-linear-compiled-residual-pressure-order-plan.md),
+> currently at R0 from root v189.
+> [Linear compiled robust calibration-window max block order](20260906_linear-compiled-robust-window-order_rejected/result.md)
+> was closed as **CLOSED / R1_REJECTED** after shard0 Linear mean/median deltas of
+> `-0.000043038/-0.000117686`; it was archived without R2 or official submission.
+> [Linear compiled output-covariance block order](20260906_linear-compiled-output-covariance-order_score-rejected/result.md)
+> was closed as **CLOSED / R3_REJECTED_SCORE**: its repaired fresh default Overall was
+> `0.687211924573`, below the local high `0.688994940507429`, while the official-time
+> predictor passed at `279.215656s`; all evidence was archived without official submission.
+> [Compiled calibration sample-energy block order](20260906_linear-compiled-sample-energy_score-tie/result.md)
+> was closed as **CLOSED / R3_REJECTED_SCORE_TIE**: its direct-core fresh default Overall
+> `0.688994940507` tied the measured local high, while the official-time predictor passed at
+> `279.445203s`; it was archived without official submission and the root remains v189.
 > [Linear dynamic 32-row block-energy act-order](20260906_linear-dynamic-block-energy32_time-rejected/result.md)
 > was closed as **CLOSED / R3_REJECTED_TIME**: its fresh default Overall was `0.688652578052`,
 > below the measured local high `0.688994940507`, and the official-time predictor was

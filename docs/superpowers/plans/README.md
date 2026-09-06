@@ -10,7 +10,26 @@
 `evaluator/eval.py`（其 proxy-v2/reference 后端 `evaluator/official_eval.py` 仅兼容旧缓存与协议），
 跨模型泛化调用 `evaluator/cross_model_eval.py`；旧 `real_model_suite.py` 已退役。
 
-**当前没有活动计划。** [`Linear 动态 32 行块能量块序计划`](2026-09-06-linear-dynamic-block-energy32-plan.md)
+**当前活动计划：** [`Linear 编译校准残差压力块序`](2026-09-06-linear-compiled-residual-pressure-order-plan.md)
+正在执行 R0：以 v189 为父，测试最终变换坐标中校准激活能量与最终权重量化残差形成的
+固定 64-block 块序；不继承上一份样本能量、输出协方差或窗口极值候选，只有通过固定
+R1/R2/R3 门禁后才允许归档候选并提交官方。
+
+上一份 [`Linear 编译校准稳健窗口极值块序`](../archive/plans/2026-09-06-linear-compiled-robust-window-order-plan-r1-rejected.md)
+已按 R0 → R1 关闭为 **CLOSED / R1_REJECTED**：shard0 Linear mean/median
+`-0.000043038/-0.000117686`，未运行 R2，候选与证据已归档，根仍为 v189。
+
+上一份 [`Linear 编译校准输出协方差块序`](../archive/plans/2026-09-06-linear-compiled-output-covariance-order-plan-score-rejected.md)
+已按 R0 → R3 关闭为 **CLOSED / R3_REJECTED_SCORE**：修复后的 fresh default
+Overall `0.687211924573` 低于本地最高 `0.688994940507429`，虽时间预测
+`279.215656s` 通过，仍未提交官方；候选与初始无效运行均已归档，根仍为 v189。
+
+上一份 [`Linear 编译校准样本能量块序`](../archive/plans/2026-09-06-linear-compiled-sample-energy-plan-score-tie.md)
+已按 R1 → R2 → R3 关闭为 **CLOSED / R3_REJECTED_SCORE_TIE**：最终直连核心实现的
+fresh default Overall `0.688994940507` 与本地最高严格持平，但时间预测 `279.445203s`
+通过；三种实现和完整证据已归档，根仍为 v189，未提交官方。
+
+此前 [`Linear 动态 32 行块能量块序计划`](2026-09-06-linear-dynamic-block-energy32-plan.md)
 已按 R0 → R3 关闭为 **CLOSED / R3_REJECTED_TIME**：fresh default Overall
 `0.688652578052` 低于已测本地最高 `0.688994940507`，且时间预测 `285.526750s`，
 未达到 `<280s` 提交门；候选已归档，根仍为 v189。上一份 [`Linear 动态 carrier-scale 块序计划`](2026-09-06-linear-dynamic-carrier-scale-plan.md)

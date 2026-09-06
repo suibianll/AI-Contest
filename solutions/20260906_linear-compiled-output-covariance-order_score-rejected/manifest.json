@@ -1,0 +1,43 @@
+{
+  "name": "linear-compiled-output-covariance-order",
+  "status": "REJECTED_SCORE",
+  "submitted": false,
+  "official_status": "unregistered/NA",
+  "parent": {
+    "version": "v189",
+    "official_score": 17616,
+    "official_time_seconds": 275,
+    "source_sha256": "261202248a0146a2ee45f3df60bd1979bb8171b7c162921013b0024c848617af"
+  },
+  "candidate_source_sha256": "52de271400805249ea0566f963eae96df61ce65af6fea5db4d76a83dd0782f02",
+  "local_high_overall": 0.6889949405074288,
+  "fresh_default": {
+    "linear": 0.640810865681414,
+    "attention": 0.75217340702007,
+    "overall": 0.687211924572521,
+    "wall_seconds": 409.444695099955,
+    "api_total_seconds": 385.307375397999,
+    "official_time_predictor_seconds": 279.21565609376
+  },
+  "r1_initial_invalid": {
+    "reason": "missing wide-input hdiag fallback",
+    "shard0_mean_delta": -0.000364723,
+    "shard1_mean_delta": -0.00012327
+  },
+  "r1_repaired": {
+    "shard0_mean_delta": 0.000178691541,
+    "shard1_mean_delta": 0.000277934986
+  },
+  "r2": {
+    "mean_delta": 0.00056940353,
+    "l1": 0.001252877313,
+    "positive": 193,
+    "negative": 93,
+    "unchanged": 50
+  },
+  "ood": {
+    "mean_delta": 0.000685096758,
+    "l1": 0.001862106985,
+    "gap_change": -0.000115693
+  }
+}

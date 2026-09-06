@@ -8,7 +8,27 @@
 
 ## 0.1 当前计划状态（2026-09-06）
 
-当前没有活动优化计划。最近的
+当前活动计划为
+[`Linear 编译校准残差压力块序`](superpowers/plans/2026-09-06-linear-compiled-residual-pressure-order-plan.md)，
+正在执行 R0：从根 v189 测试校准激活能量与最终权重量化残差形成的固定 64-block 块序，
+不继承上一候选的样本能量、输出协方差或窗口极值块序。上一份
+[`Linear 编译校准样本能量块序`](superpowers/archive/plans/2026-09-06-linear-compiled-sample-energy-plan-score-tie.md)
+已按 R1→R2→R3 关闭为 **CLOSED / R3_REJECTED_SCORE_TIE**：最终 direct-core fresh
+Overall `0.688994940507` 与本地最高严格持平，时间预测 `279.445203s` 通过；完整证据
+已归档，根仍 v189。最近的
+[`Linear 编译校准稳健窗口极值块序`](superpowers/archive/plans/2026-09-06-linear-compiled-robust-window-order-plan-r1-rejected.md)
+已按 R0→R1 关闭为 **CLOSED / R1_REJECTED**：shard0 Linear mean/median
+`-0.000043038/-0.000117686`，worst-20% `-0.001098366`，未运行 R2；候选与证据
+已归档，根仍为 v189。执行记录见
+[`稳健窗口极值执行记录`](../logs/execution/2026-09-06-linear-compiled-robust-window-order-plan.md)。最近的
+[`Linear 编译校准输出协方差块序`](superpowers/archive/plans/2026-09-06-linear-compiled-output-covariance-order-plan-score-rejected.md)
+已按 R0→R3 关闭为 **CLOSED / R3_REJECTED_SCORE**：修复后的 fresh default
+Linear/Attention/Overall 为 `0.640810865681/0.752173407020/0.687211924573`，时间模型
+预测 `279.215656s` 通过，但 Overall 低于本地最高 `0.688994940507429`；未提交官方，
+完整证据与初始无效运行已归档，根仍为 v189。执行记录见
+[`输出协方差块序执行记录`](../logs/execution/2026-09-06-linear-compiled-output-covariance-order-plan.md)。最近的
+[`Linear 动态 32 行块能量块序计划`](superpowers/plans/2026-09-06-linear-dynamic-block-energy32-plan.md)
+已按 R0→R3 关闭为 **CLOSED / R3_REJECTED_TIME**：fresh default
 [`Linear 动态 32 行块能量块序计划`](superpowers/plans/2026-09-06-linear-dynamic-block-energy32-plan.md)
 已按 R0→R3 关闭为 **CLOSED / R3_REJECTED_TIME**：fresh default
 Linear/Attention/Overall 为 `0.643280557360/0.752173407020/0.688652578052`，低于已测

@@ -1,0 +1,33 @@
+# proxy-v3 diagnosis
+
+**Decision: `continue_next_shard`**
+
+## Warnings
+
+- no official-time prediction: run a fresh default panel without calibration cache
+
+## Accuracy localization
+
+- linear: delta_mean `+0.002862`, L1 `0.003840`, delta_tail `+0.001857`, +/-/0 `47/9/0`
+  - role `v`: mean `+0.000209`, min `-0.004128`
+  - role_family `qkv`: mean `+0.000517`, min `-0.010661`
+  - role `k`: mean `+0.000583`, min `-0.010661`
+  - role `q`: mean `+0.000759`, min `-0.000795`
+
+## Runtime localization
+
+- `hif4_dynamic_quantize_activation`: 18.189s (100.0%), 56 calls
+- `hif4_calibration_and_quantize_weight`: 0.000s (0.0%), 0 calls
+- `hif4_calibration_attention`: 0.000s (0.0%), 0 calls
+- `hif4_dynamic_quantize_q`: 0.000s (0.0%), 0 calls
+- `hif4_dynamic_quantize_k`: 0.000s (0.0%), 0 calls
+- `hif4_dynamic_quantize_v`: 0.000s (0.0%), 0 calls
+- stages: calibration wall/API `0.000/0.000s`, scoring wall/API `22.391/18.189s`, cache load `1.475s`
+- predicted official time: unavailable (requires fresh default panel)
+
+## Next actions
+
+- move work from online Activation quantization into calibration state
+- inspect linear role=v first (mean delta=+0.000209, min delta=-0.004128)
+
+> This tool never predicts an official score.
