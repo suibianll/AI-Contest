@@ -1,5 +1,7 @@
 # Linear / Attention 持续优化总计划
 
+> 最新Linear回传：L23 **TIMEOUT**，未回传精确耗时/分数；旧PENDING记录已失效。关闭本复杂度实现，后继修正全数据求解并消除重复全矩阵计算，另存新SHA；父L4及根v189不变。[回传记录](../../../logs/execution/2026-09-07-l23-official-timeout.md)。
+
 > ACTIVE，2026-09-07。当前阶段：READY_FOR_DESIGN；本轮只更新研究计划。
 
 ## 当前执行入口
