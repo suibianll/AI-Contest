@@ -62,7 +62,12 @@
       "e2_legal_projection": 0.0320,
       "e3_deployment_candidate": 0.6537,
       "e4_mismatch": 0.6143,
-      "reading": "E4 dominates; L24-C (activation-scale bucket weighting) attempted -> REJECTED (fit_gain 0.925<0.948, delta -0.242<-0.218); E4 still OPEN; next L24-A (cross-block carry-over, target E2)"
+      "attempted": {
+        "L24-C": "E4, activation-scale bucket weighting -> REJECTED (fit_gain 0.925<0.948, delta -0.242<-0.218)",
+        "L24-A": "E2, cross-block carry-over -> REJECTED (accepted 3/144, fit_gain 0.824<0.948)",
+        "L25": "E2, lv2/lv3=1 fine-grid joint -> REJECTED (panel identical to L23b, fit_gain 0.945<0.948)"
+      },
+      "reading": "fit_gain 0.9486 >= 0.9 target MET by L23b; E1/E2 tiny; E4 dominant OPEN but 3 mechanism implementations closed; next card must be a distinct E4 mechanism or stop-declaration with dedup table"
     },
     "superseded_official_result": {
       "sha256": "33D1DA51F3CB1D2933ACD8DDD7B77F7851EB3B082934EB54E3A60558CAF4E35D",
@@ -70,7 +75,7 @@
       "scored_sha256": null
     }
   },
-  "next_action": "L23b fit_gain 0.9486 >= 0.9 target MET (168/168 states); L23b READY_FOR_OFFICIAL (no upload entry in env, package + SHA delivered). L24-C/L24-A/L25 all REJECTED (bucketing, carry-over, lv2/lv3 joint). E4 (0.6143) dominant OPEN cell needs a new mechanism; E1 (0.0074)/E2 (0.032) tiny. Next: new E4 mechanism card or stop-declaration with dedup table; official score/300s is the sole judge.",
+  "next_action": "L23b fit_gain 0.9486 >= 0.9 target MET (S1 Linear part: fit_gain + legal + 168/168 coverage). L23b READY_FOR_OFFICIAL (package path + SHA 13639FB2 delivered; official 300s/score sole judge). L24-C/L24-A/L25 closed. E4 (0.6143) dominant OPEN; E1 (0.0074)/E2 (0.032) tiny. Next: register a distinct E4 mechanism card (L26: cross-fold consistency acceptance) or stop-declaration S3 with dedup table if no distinct hypothesis.",
   "recent_steps": [
     "2026-09-07: L23 whitened-residual-subspace math PASS + 4B shard0 local all-roles negative (commit b52dbee)",
     "2026-09-07: L23 直接拟合版六 shard 完成（336 例、Δmean -0.18、0/336/0，record-only）；脱离导入+CPU fuzz PASS；归档 solutions/continuous_linear_l23-residual-subspace/，注册官方探索",
@@ -80,7 +85,8 @@
     "2026-09-08: R1 账本 v0（shard0 28 states）：E1=0.0074、E2=0.0320、E3=0.6537、E4=0.6143；E4 部署失配主导",
     "2026-09-08: L24-C（E4 靶点，activation-scale 分桶加权）实现并 shard0 验证：fit_gain 0.925<0.948、delta -0.242<-0.218，双向负向 -> 卡证伪，关闭该分桶实现；E4 仍 OPEN",
     "2026-09-08: L24-A（E2 靶点，跨块残差 carry-over）实现并 shard0 验证：宽层 accepted 3/144、fit_gain 0.824<0.948，carry 破坏求解方向 -> 卡证伪，关闭该实现；E2 仍 OPEN",
-    "2026-09-08: L25（E2 靶点，lv2/lv3=1 细格点联合选择）实现并 shard0 验证：面板 delta 与 L23b 逐位相同、fit_gain 0.945<0.948 -> 卡证伪，关闭该组合；E2 仍 OPEN"
+    "2026-09-08: L25（E2 靶点，lv2/lv3=1 细格点联合选择）实现并 shard0 验证：面板 delta 与 L23b 逐位相同、fit_gain 0.945<0.948 -> 卡证伪，关闭该组合；E2 仍 OPEN",
+    "2026-09-08: R2 循环日志：三卡（L24-C/L24-A/L25）全部关闭；fit_gain 0.9486 >= 0.9 目标达成（S1 Linear 部分）；L23b READY_FOR_OFFICIAL；下一张卡须为有实质区别的 E4 机制"
   ],
   "evaluation_policy": "Linear: fit all Qwen3.5-4B calibration API data directly; no fit/select split or generalization gate; holdout statistics record only; official 300s"
 }
