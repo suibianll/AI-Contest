@@ -2,7 +2,7 @@
   "side": "linear",
   "branch": "continuous-linear",
   "plan": "docs/superpowers/plans/2026-09-07-continuous-linear-attention-plan.md",
-  "workpackage": "docs/superpowers/plans/workpackages/continuous-linear.md",
+  "workpackage": "docs/superpowers/plans/workpackages/evidence-repair-next-cycle.md",
   "created": "2026-09-07",
   "official_best": {
     "run_id": "l4-v189-linear-exact",
@@ -14,32 +14,35 @@
     "C_L": 3606
   },
   "research_parent": {
-    "note": "同 official_best；所有新候选从该 SHA 构造",
+    "note": "同 official_best；候选只从该 SHA 构造",
     "sha256": "ACB16F764DB80EDA94EB77FE497A7965C716B527571C241C79B2319529FF5263"
   },
-  "pending_official": null,
   "local_highest_reference": {
-    "note": "L 侧本地最高（eval-v3 linear-only 六 shard n=336）",
     "value": 0.6367994885532791,
     "source": "artifacts/proxy_v3/v162-independent/linear/l4-v189-linear-exact (L4)"
   },
-  "next_action": "执行 evidence-repair-next-cycle.md L-R1：标准NVFP4输入、实际六API输出闭环；随后L-R2固定L1正确性/成本，L-R3公式级去重。旧全族关闭与61–79%部署归因不再作为决策依据。",
+  "pending_official": null,
+  "evidence_repair": {
+    "l_r1": {
+      "status": "DONE",
+      "note": "真实输入/部署闭环 12/12 与 evaluator 逐位一致；smooth/perm/hadamard 可逆（1e-13）；rank 非纯可逆（偏差 1e-4 级）；四臂 UNIDENTIFIABLE（混合坐标，61-79% 作废）"
+    },
+    "l_r2": {
+      "status": "PASS + COST_HOLD",
+      "note": "梯度检查/STE/inference_mode/T=I 全部通过；部署一致硬前向 0.62-3.24s/step；32步×168 state ≈1-17k s 不可承受；FlatQuant 数学方向未关闭"
+    },
+    "l_r3": {
+      "status": "DUPLICATE_CLOSED (RESOLVED)",
+      "note": "公式级对照：λ>0 时 GPTAQ 单步 == JDRQ target（~5e-7）；JDRQ teacher 即非对称校准目标"
+    },
+    "coverage_scalars": {
+      "note": "上一轮 round(x/scale) 输入与简化编码器已废弃；成本外推只记风险不替换官方模型"
+    }
+  },
+  "next_action": "L-R2 COST_HOLD 后继：评估 gram 预计算（X^T X 不依赖 T，每步只做 T 收缩）；weight/activation GPTQ 每步依赖 T 无免费复用 → 无足够增益方案则记录并等待新求解机制/新假设",
   "recent_steps": [
-    "2026-09-07: L1 FlatQuant REJECTED (35 state 34 退化 + COST)",
-    "2026-09-07: L2 GPTAQ DUPLICATE_CLOSED (JDRQ 同目标同更新)",
-    "2026-09-07: L3 合法层级 DUPLICATE_CLOSED (修正版合法网格同目标全负)",
-    "2026-09-07: 剩余误差分组：fc_up 0.502 / o 0.534 / fc_gate 0.554 / proj 0.564 / qkv 0.768",
-    "2026-09-07: fc/proj 分解：A-only 61-79%、W-only 21-39%、interaction≈0",
-    "2026-09-07: 论文检索：ButterflyQuant/ReSpinQuant/ConQuR/SmoothRot 均旋转族；SERQ 低秩补偿族；无新可迁移机制",
-    "2026-09-07: NEEDS_NEW_HYPOTHESIS 记录；本轮无候选超过本地最高 0.6368，不触发提交",
-    "2026-09-07: 审查修订为EVIDENCE_REPAIR_REQUIRED；下一轮先做真实输入/API闭环，不将旧探针视为完整机制否定。"
-  ],
-  "status": "EVIDENCE_REPAIR_REQUIRED",
-  "evidence_review": {
-    "path": "logs/execution/2026-09-07-continuous-linear-evidence-review.md",
-    "l1": "PROBE_INVALID_FOR_DEPLOYMENT / COST_UNVERIFIED",
-    "l2": "DEDUP_UNRESOLVED",
-    "l3": "SCOPE_CORRECTION",
-    "historical_recent_steps": "保留历史记录；其中全族关闭、742s官方外推、A-only归因已由本次复核取代"
-  }
+    "2026-09-07: L-R1 真实 API 闭环 12/12 逐位一致；rank 非纯可逆；四臂 UNIDENTIFIABLE",
+    "2026-09-07: L-R2 正确性全过、部署一致成本 0.62-3.24s/step → COST_HOLD",
+    "2026-09-07: L-R3 公式级去重维持 DUPLICATE_CLOSED"
+  ]
 }
