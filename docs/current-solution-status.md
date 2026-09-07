@@ -17,7 +17,9 @@
 状态 READY。L 从L4官方4607/247s、A从R2c官方14387.8/240s继续；独立冻结非目标侧standard，
 A的V保持R2c既有路径。每轮固定机制→验证→官方探索→补充队列，不因OOD阈值或20%材料指标关闭方向。
 L1为结构化可逆变换，A1为训练/部署目标对齐，后续按各自工作包去重后推进。
-旧恢复计划归档；新计划尚未开始实验。L4+R2c完整组合待验证，加性参考17993.8不是官方成绩，根仍v189。
+旧恢复计划归档。L已运行简化探针，审查发现输入、部署路径、优化配置与成本口径偏差，不能据此关闭完整L1；
+当前优先[证据修复工作包](superpowers/plans/workpackages/evidence-repair-next-cycle.md)。GPTAQ去重待公式核验，
+激活误差61–79%不作为实际部署归因。A新阶段产物待核验。L4+R2c完整组合待验证，加性参考17993.8不是官方成绩，根仍v189。
 此前 v189 残差压力块序计划已被取代，旧结果仍由原执行者封存。上一份
 [`Linear 编译校准样本能量块序`](superpowers/archive/plans/2026-09-06-linear-compiled-sample-energy-plan-score-tie.md)
 已按 R1→R2→R3 关闭为 **CLOSED / R3_REJECTED_SCORE_TIE**：最终 direct-core fresh

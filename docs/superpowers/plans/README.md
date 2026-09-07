@@ -23,6 +23,10 @@ A 从 R2c 官方14387.8/240s继续，非目标侧保持 v162 standard，A的V保
 旧v162恢复计划已[归档](../archive/plans/2026-09-06-v162-independent-linear-attention-plan-superseded.md)。
 协调者另排 L4+R2c 集成验证；当前只有侧隔离结果，根仍v189。本次仅计划交接，未启动实验。
 
+**当前下一轮优先入口：**[证据修复与双侧续跑](workpackages/evidence-repair-next-cycle.md)。
+L已执行简化探针，但输入/部署/成本口径不足以支持全族关闭，状态EVIDENCE_REPAIR_REQUIRED；
+A先核验产物再推进A0/A1，组合待验证。本轮计划修订尚未启动修复实验。
+
 此前 [v189 Linear 残差压力块序计划](../archive/plans/2026-09-06-linear-compiled-residual-pressure-order-plan-superseded.md)
 由本总计划取代；旧运行由原执行者封存，不删除、不混入 v162 新分支。
 

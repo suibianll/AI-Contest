@@ -23,7 +23,7 @@
     "value": 0.6367994885532791,
     "source": "artifacts/proxy_v3/v162-independent/linear/l4-v189-linear-exact (L4)"
   },
-  "next_action": "NEEDS_NEW_HYPOTHESIS：L1-L3 全关闭；剩余误差 fc_up 0.502 / o 0.534 / fc_gate 0.554 / proj 0.564（A-only 61-79%）；论文检索无可迁移非关闭族机制；等待新假设或用户重开边界",
+  "next_action": "执行 evidence-repair-next-cycle.md L-R1：标准NVFP4输入、实际六API输出闭环；随后L-R2固定L1正确性/成本，L-R3公式级去重。旧全族关闭与61–79%部署归因不再作为决策依据。",
   "recent_steps": [
     "2026-09-07: L1 FlatQuant REJECTED (35 state 34 退化 + COST)",
     "2026-09-07: L2 GPTAQ DUPLICATE_CLOSED (JDRQ 同目标同更新)",
@@ -31,6 +31,15 @@
     "2026-09-07: 剩余误差分组：fc_up 0.502 / o 0.534 / fc_gate 0.554 / proj 0.564 / qkv 0.768",
     "2026-09-07: fc/proj 分解：A-only 61-79%、W-only 21-39%、interaction≈0",
     "2026-09-07: 论文检索：ButterflyQuant/ReSpinQuant/ConQuR/SmoothRot 均旋转族；SERQ 低秩补偿族；无新可迁移机制",
-    "2026-09-07: NEEDS_NEW_HYPOTHESIS 记录；本轮无候选超过本地最高 0.6368，不触发提交"
-  ]
+    "2026-09-07: NEEDS_NEW_HYPOTHESIS 记录；本轮无候选超过本地最高 0.6368，不触发提交",
+    "2026-09-07: 审查修订为EVIDENCE_REPAIR_REQUIRED；下一轮先做真实输入/API闭环，不将旧探针视为完整机制否定。"
+  ],
+  "status": "EVIDENCE_REPAIR_REQUIRED",
+  "evidence_review": {
+    "path": "logs/execution/2026-09-07-continuous-linear-evidence-review.md",
+    "l1": "PROBE_INVALID_FOR_DEPLOYMENT / COST_UNVERIFIED",
+    "l2": "DEDUP_UNRESOLVED",
+    "l3": "SCOPE_CORRECTION",
+    "historical_recent_steps": "保留历史记录；其中全族关闭、742s官方外推、A-only归因已由本次复核取代"
+  }
 }

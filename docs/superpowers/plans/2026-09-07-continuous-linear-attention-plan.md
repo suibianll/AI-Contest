@@ -4,6 +4,9 @@
 > 本次仅完成计划交接，不启动代理、比赛提交或模型实验。
 > 本计划取代 v162 独立恢复计划；两个工作包只有一个共同总契约，不另设活动总计划。
 
+> **下一轮执行修订**：优先执行[证据修复与双侧续跑工作包](workpackages/evidence-repair-next-cycle.md)。
+> Linear旧探针不足以关闭完整机制；先恢复真实输入/API闭环。Attention推进R2c部署目标对齐。
+
 ## 1. 起点与目标
 
 目标：在六 API、合法 HiF4 编码与官方 300s 内，持续寻找超过现有官方结果的机制，最终挑战用户确认的 21765 锚点。不承诺达到，不将论文准确率或本地 gain 换算官方分数。
@@ -123,7 +126,7 @@ fresh default（168 Linear +120 Attention），独立 GPU 计时，候选校准�
 
 ## 8. 当前进度与续跑入口
 
-- L：READY，先执行工作包 L0，随后 L1；已有 L5/JDRQ 负结果不重跑。
-- A：READY，先执行 A0 部署路径审计，随后 A1；不再测试旧 autograd WA/回退包。
+- L：EVIDENCE_REPAIR_REQUIRED，执行新工作包L-R1/R2；GPTAQ去重为UNRESOLVED，原JDRQ固定实现负结果不重跑。
+- A：READY / ARTIFACT_CHECK，先核验是否存在新阶段产物，再执行A0/A1；不再测试旧autograd WA/回退包。
 - C：READY_FOR_INTEGRATION，L4+R2c 完整组合尚未验证。
 - 每轮代理更新本侧 state/queue 与工作包进度；协调者收到官方回传后更新本表与全局状态，避免长期停留 DESIGN_ONLY。

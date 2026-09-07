@@ -1,6 +1,7 @@
 # A 代理：Attention 持续优化工作包
 
 > READY / A0，主契约：[持续优化总计划](../2026-09-07-continuous-linear-attention-plan.md)。
+> 本轮先执行[续跑工作包](evidence-repair-next-cycle.md) A-R1，核验已有产物后推进部署目标对齐。
 > 初始父 R2c 14387.8 / 240s，完整 SHA/路径见总计划。两个 Linear API 冻结 v162；V 保持 R2c 原路径。
 
 ## A0：建立可验证的部署目标

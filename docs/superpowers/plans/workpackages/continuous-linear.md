@@ -1,6 +1,7 @@
 # L 代理：Linear 持续优化工作包
 
-> READY / L0，主契约：[持续优化总计划](../2026-09-07-continuous-linear-attention-plan.md)。
+> EVIDENCE_REPAIR_REQUIRED，主契约：[持续优化总计划](../2026-09-07-continuous-linear-attention-plan.md)。
+> 下一步按[证据修复工作包](evidence-repair-next-cycle.md) L-R1/R2/R3执行；旧探针不作为整族失败证据。
 > 初始父L4，4607 / 247s，SHA/路径见总计划。全部Attention API与state保持v162 standard。
 
 ## L0：部署坐标和历史去重
