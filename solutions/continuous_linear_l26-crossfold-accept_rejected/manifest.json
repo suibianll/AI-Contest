@@ -1,0 +1,26 @@
+{
+  "run_id": "continuous_linear_l26-crossfold-accept",
+  "mechanism": "L26 cross-fold consistency acceptance (research-loop card, target E4 deployment mismatch)",
+  "source_sha256": "1b04b9904c200b0a4b8c55d3dc5b8687e1663fec038dbb85f76bcd2bae2a55d6",
+  "status": "REJECTED (local paired; card falsified)",
+  "parent": {
+    "label": "L23b (13639FB2) built on L4",
+    "path": "workbench/continuous_linear/l23-residual-subspace/candidate/solution.py",
+    "sha256": "13639fb22976b2c7c838ee2e69ae9c2c58123e03d9bdec106623d93b29510fe0"
+  },
+  "card_target": "E4 deployment mismatch (0.6143)",
+  "mechanism_change": "accept a block only when EVERY calibration fold's loss strictly decreases (cross-fold consistency), instead of the all-rows mean; continuous solution and projection untouched; different variable from closed L24-C (weights) / L24-A (solve residual) / L25 (grid)",
+  "falsification_rule": "E4 not reduced -> close this consistency implementation",
+  "shard0_evidence": {
+    "cases": 56,
+    "delta_mean_vs_L4": -0.119713,
+    "l23b_shard0_delta_mean": -0.218215,
+    "accepted_blocks": "49/144 (wide layer) vs L23b 144/144",
+    "fit_gain_candidate_shard0": 0.817209,
+    "fit_gain_l23b_shard0": 0.947836,
+    "reading": "cross-fold consistency trades massive calibration fit (0.817<0.948) for modest deployment improvement (delta -0.120 vs -0.218, still negative); destroys the fit_gain>=0.9 target -> card falsified"
+  },
+  "closed_scope": "the cross-fold consistency acceptance implementation only; E4 cell remains OPEN",
+  "next": "four cards closed (L24-C/L24-A/L25/L26); L23b fit_gain 0.9486>=0.9 MET remains the best candidate; remaining E4 mechanisms must not sacrifice calibration fit",
+  "official_status": "not submitted (local reject)"
+}
