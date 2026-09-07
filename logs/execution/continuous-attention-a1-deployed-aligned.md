@@ -18,3 +18,11 @@
   时间 239.0s、fuzz CLEAN。
 - 归档 `solutions/continuous_attention_a1-deployed-aligned_officialNA_timeNA/`
   （SHA 65EB37F2...4964A，pending_official 已入 state.json）。
+
+## 官方回传（2026-09-07 上午）
+
+- **A1 官方 14389 / 256.3s**：vs R2c +1.2（官方中性），vs R3 −16。时间 +17.3s 超预测
+  （官方精化训练更贵），<280s 但余量收窄。
+- **OOD gap 排序第 3 数据点**：R3(0.0065)/14405 > A1(0.0083)/14389 > R2c(0.0122)/14387.8
+  ——单调一致。该族内 OOD gap 是官方分的有效排序信号。
+- 裁决：A1 卡关闭（官方中性，R3 保持最佳）。队列转 A2 成本探测（预期 TIME_HOLD）→ A3 去重。

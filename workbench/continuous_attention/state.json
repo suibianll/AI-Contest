@@ -42,20 +42,22 @@
       "path": "solutions/v162_attention_r1-v189-attnstack-recovery_officialNA_timeNA/solution.py",
       "sha256": "3619BFEB0E017555BD8FE31410888F80950A0128E3A2B94F643BD3F20B30BFC8",
       "note": "v189 Attention 栈迁移 + 标准 Linear；历史栈锚"
+    },
+    {
+      "run_id": "a1-deployed-aligned",
+      "score": 14389,
+      "time_s": 256.3,
+      "C_A": 13388,
+      "path": "solutions/continuous_attention_a1-deployed-aligned_officialNA_timeNA/solution.py",
+      "sha256": "65eb37f2346ecebd97952ff67e2af7d5a99b568fc95352eaff1702bd9814964a",
+      "note": "vs R2c +1.2 (flat); R3 (14405) remains best; OOD-gap ranking monotonic: 0.0065<0.0083<0.0122 <=> 14405>14389>14387.8"
     }
   ],
   "research_parent": {
     "note": "同 official_best（R3）；新候选一律从该 SHA 构造。总计划文本写的 R2c 起点已被 R3 官方超越，请协调者确认父绑定改为 R3",
     "sha256": "A5C679D7A2B349A879B2019B4A613244F5FEA7050E407B6475B9E29BD1C146DC"
   },
-  "pending_official": {
-    "run_id": "a1-deployed-aligned",
-    "path": "solutions/continuous_attention_a1-deployed-aligned_officialNA_timeNA/solution.py",
-    "sha256": "65eb37f2346ecebd97952ff67e2af7d5a99b568fc95352eaff1702bd9814964a",
-    "local_default_attention_mean": 0.773281,
-    "time_prediction_s": 239.036,
-    "note": "本地新高 +0.0055 vs R2c；OOD +0.0083 过门；等待用户提交官方"
-  },
+  "pending_official": null,
   "local_highest_reference": {
     "note": "A 侧本地最高（default 120 case attention_mean；ID 48-case delta 见 queue）",
     "value": 0.773281,
@@ -63,7 +65,7 @@
     "candidate": "solutions/continuous_attention_a1-deployed-aligned_officialNA_timeNA",
     "candidate_sha256": "65eb37f2346ecebd97952ff67e2af7d5a99b568fc95352eaff1702bd9814964a"
   },
-  "next_action": "A1 归档已推送，等待用户提交官方；回传后登记。若官方正收益，继续 A2（完整 K/V 支持集，先测每步成本）",
+  "next_action": "A1 卡关闭（官方中性）；A2 成本探测（单层全长 K/V 每步时间，预期 TIME_HOLD）；然后 A3 去重分析",
   "recent_steps": [
     "2026-09-07: A2c 官方 9538/175s（C_A=8537）——手工梯度训练器官方部署证明",
     "2026-09-07: R2c 官方 14387.8/240s（C_A=13386.8）——超过 R1 +378.8",
@@ -72,8 +74,9 @@
     "2026-09-07: 官方环境 autograd 完全不可用（inference 上下文）——训练类机制必须解析梯度",
     "2026-09-07: state/queue 迁移至 continuous_attention 结构（本文件）",
     "2026-09-07: A0 部署目标验证全过（复刻逐位一致，含层23块平滑分支修复）",
-    "2026-09-07: A1 部署对齐训练本地新高 0.7733（R2c 0.7678 +0.0055）；OOD +0.0083 过门；时间 239s；已归档 pending_official"
+    "2026-09-07: A1 部署对齐训练本地新高 0.7733（R2c 0.7678 +0.0055）；OOD +0.0083 过门；时间 239s；已归档 pending_official",
+    "2026-09-07: A1 官方 14389/256.3s（vs R2c +1.2 平；R3 14405 仍最佳）；OOD gap 排序与官方分单调一致（第3数据点）"
   ],
-  "status": "A1_PENDING_OFFICIAL",
+  "status": "A1_CLOSED_OFFICIAL_NEUTRAL / A2_COST_PROBE",
   "artifacts_note": "历史结果在 artifacts/proxy_v3/v162-independent/attention/{r2c-id,r2c-ood,r3-id,r3-ood,r3-default}；新 run 按 plan 写 artifacts/proxy_v3/continuous/attention/"
 }

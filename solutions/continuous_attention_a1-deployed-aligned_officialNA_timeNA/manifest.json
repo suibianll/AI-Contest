@@ -1,6 +1,6 @@
 {
   "version": "continuous_attention_A1",
-  "status": "ALL_LOCAL_GATES_PASS / LOCAL_NEW_HIGH / PENDING_OFFICIAL",
+  "status": "OFFICIAL_PASS / NEUTRAL_VS_R2C (R3 remains best)",
   "mechanism": "A1 deployment-aligned rotation training: training hard-forward uses the true pre-encode coordinates (stack-transform replica, bitwise-verified), the parent's full refined encoder, and the deployed quantized V; config inherited from R2c",
   "parent": {
     "version": "R2c/R3 mechanism lineage",
@@ -26,8 +26,10 @@
     }
   },
   "official": {
-    "score": "NA",
-    "time_seconds": "NA",
-    "status": "unregistered"
+    "score": 14389,
+    "time_seconds": 256.3,
+    "status": "official_result_returned",
+    "C_A": 13388,
+    "note": "vs R2c +1.2 (flat), vs R3 -16; time +17.3s over prediction (official refinement-heavy training slower); OOD gap ranking now monotonic with official scores across 3 candidates"
   }
 }
