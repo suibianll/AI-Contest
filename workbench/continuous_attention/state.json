@@ -139,7 +139,7 @@
     "candidate_sha256": "4686ad817128d60e1a1648e0e14793692097ee8171fac2bc5202466d5787c0b7",
     "status": "HISTORICAL_ONLY_NOT_A_4B_GATE"
   },
-  "next_action": "A25单主干替换路线官方证伪（14057 < A21-1 14199 < A22-2 14424 < A23 14437）。保留旧训练+残余叠加路线（A22-2/A23）在官方上仍最优。research_parent保持A23(14437/276s)。下一卡须基于A23父线继续——不在单主干替换上重试。",
+  "next_action": "A26-A（网格残差一阶输出误差代理，靶F2=0.192）本地证伪：码翻转42%真实可达、模型loss降40-64%，但gate 0/6拒绝且logits级qk_mse 6/6恶化~10x——独立舍入残差一阶代理与真实自适应层级编码器(MSE-optimal lv2/lv3)系统性反向（同时解释A25官方失败）。F2格仍OPEN，next_card=A27-B（低维S+真实读出有限差分）。F5-V=0.275为最大格但FAMILY_CLOSED(AGENTS§7)，V码分配类从未尝试——待用户决策是否解禁；0.9目标在V冻结下结构不可达（F4下界=0.275）。",
   "recent_steps": [
     "2026-09-07：清理当前指令中的A2永久关闭、R3仍最高、OOD排序有效、旧待执行A3等矛盾；保留原始日志。",
     "2026-09-07：A21-1完成48case ID/OOD及fresh default/cross/独立梯度与部署control；本地Delta +0.001234，negative L1 0.007585，时间预测219.284s，独立归档待官方。",
@@ -154,9 +154,13 @@
     "2026-09-07：A23（anchor23-a1，Q/K联合块scale乘积目标，父A22-2）4B paired 72case负向：Δmean -0.004750、test split -0.010253、L8 gate接受后9/12负向（单窗口gate过拟合）；乘积比降45-55%而readout不跟随=预登记失败模式；目标卡关闭（OBJECTIVE_CLOSED），A22-2父线不变；父A22-2的4B基线由本次paired run首跑补齐（4B mean 0.536715）。",
     "2026-09-07：A24（anchor24-a1，父A22-2，残余互逆变换+真实量化输出误差STE目标）验证链发现结构性死路：logits=x_q·exp(S)·exp(−S)·x_kᵀ≡x_q·x_kᵀ，互逆参数化未量化路径与恒等无异，STE一阶梯度精确为零（float64有限差分仲裁=0）；s_norm=8.69为Adam噪声放大伪梯度，训练窗loss降6.6%系窗口内过拟合、独立gate正确拒绝（L0实测4.560e-4>4.328e-4）。按AGENTS§5提前停止：REJECTED_BEFORE_EVALUATION/NO_SUPPORTED_MECHANISM。副产物：float32的torch.matrix_exp autograd数值损坏（FD仲裁差O(1)），_a21_exp_backward经float64仲裁完全正确。关闭边界=仅互逆+STE组合；量化码级离散方法（去重后）与A22-2结构仍开放。",
     "2026-09-07：A23官方14437/276s，SCORE_BEST（vs A22-2 +13/+5s）成为新侧父；vs A2 -3/+2s（A2仍official_best）；4B paired负向(-0.00475)但官方正向——paired面板仅风险记录二代确认；乘积目标卡由官方重新开放；A24的STE死路发现不变。",
-    "2026-09-08：A25官方14057/254s，OFFICIAL_REJECTED（vs A23 −380/−22s）。关键发现：单主干替换旧训练不如保留旧训练（A21-1 14199 > A25 14057 < A22-2 14424 < A23 14437）；Hadamard预旋转有价值（A21-1 > A25）；4B paired正向但官方负向——proxy反转反方向。卡关闭。"
+    "2026-09-08：A25官方14057/254s，OFFICIAL_REJECTED（vs A23 −380/−22s）。关键发现：单主干替换旧训练不如保留旧训练（A21-1 14199 > A25 14057 < A22-2 14424 < A23 14437）；Hadamard预旋转有价值（A21-1 > A25）；4B paired正向但官方负向——proxy反转反方向。卡关闭。",
+    "2026-09-08：新循环框架（continuous-research-loop）R1建账本：error_ledger_2026-09-08（72/72 case零API+cache重算）F4=0.468=F1(QK)0.189+F5-V 0.275精确闭合；F1−F2≈−0.002（变换选择近零损失，QK误差全部在纯码分配F2=0.192）；V分解（ledger_v_decompose）：F4下界=0.275（QK归零也不变）→gain 0.9在V冻结下结构不可达；F5-V为最大格但FAMILY_CLOSED（AGENTS§7），V码分配类从未尝试——上报用户决策。",
+    "2026-09-08：A26-A（anchor26-a1，靶F2，锯齿符号×三角幅度网格残差一阶输出误差代理，父A23）：数学验证6/6过（含A24对照复现、码点/半格方向性）；修复版code_change测量（mant/sign数值比较）证实码翻转42%真实可达；模型loss全层降20-64%；但gate 0/6拒绝（真实读出MSE劣化+3%~+56%）且logits级qk_mse 6/6恶化~10x（0.022→0.232等）——独立舍入残差一阶代理与真实自适应层级编码器（MSE-optimal lv2/lv3）系统性反向。两轮模型修正（半点伪吸引子→锯齿符号×三角幅度；amax→base=2^floor(log2(amax))真实网格）不翻转。按预注册判据LOCAL_REJECTED，不提交官方（gate拒绝⇒部署回退B⇒官方≡父属no-op）。关闭范围=该具体实现+首项正弦+amax网格变体；根因同时解释A25官方失败。归档workbench/continuous_attention/anchor26-a1/（候选SHA acc85552...e3ff）。"
   ],
-  "status": "A25_OFFICIAL_REJECTED / SIDE_PARENT_STAYS_A23",
+  "status": "A26A_LOCAL_REJECTED / SIDE_PARENT_STAYS_A23 / LOOP_R1_DONE_NEXT_A27B",
+  "error_ledger": "artifacts/continuous/attention/error_ledger_2026-09-08.json (+error_ledger_v_decompose_2026-09-08.json)",
+  "loop_framework": "docs/superpowers/plans/workpackages/2026-09-08-continuous-research-loop.md",
   "artifacts_note": "历史结果在 artifacts/proxy_v3/v162-independent/attention/{r2c-id,r2c-ood,r3-id,r3-ood,r3-default}；A22-1 在 artifacts/proxy_v3/continuous/attention/anchor22-a1/{id,ood,timing,cross}",
   "new_evidence": "logs/execution/2026-09-07-user-21071-mechanism-evidence.md；旧全族关闭/旧队列顺序以当前工作包为准。",
   "last_completed_run": "workbench/continuous_attention/anchor22-a2",

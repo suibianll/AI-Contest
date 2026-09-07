@@ -1,0 +1,35 @@
+{
+  "smoke": "fail",
+  "checks": {
+    "s_norm_gt_0": true,
+    "attempted_groups_4": true,
+    "inverse_error_lt_1e-5": false,
+    "loss_decreased": true,
+    "gate_recorded": true,
+    "params_finite": true,
+    "code_change_recorded": true,
+    "decoded_differs_or_zero": true
+  },
+  "code_change": {
+    "q": [
+      0,
+      8388608
+    ],
+    "k": [
+      0,
+      2097152
+    ]
+  },
+  "decoded_q_max_diff": 0.0,
+  "info": {
+    "a26_steps": 32,
+    "a26_attempted_groups": 4,
+    "a26_initial_loss": 37.41171646118164,
+    "a26_final_loss": 16.8994896762789,
+    "a26_inverse_error": 0.00020853730286618521,
+    "a26_s_norm": 8.467494010925293,
+    "a26_gate_base_mse": 0.00045397700159810483,
+    "a26_gate_candidate_mse": 0.0005124598392285407,
+    "a26_accepted": 0
+  }
+}
