@@ -2,7 +2,7 @@
 
 > ACTIVE WORKPACKAGE / A21-1 OFFICIAL_REJECTED / 14199分244s，2026-09-07。隶属[唯一活动总计划](../2026-09-07-continuous-linear-attention-plan.md)。
 > 本轮优先级高于此前 evidence-repair 和 A1/A2/A3、L1/L2/L3 顺序；已完成结果保留，不重复从头审计。
-> A21-1官方相对R3 −206/+6s，未晋级。Attention后继顺序及本卡旧回退规则由[14199回传后计划](attention-after-14199.md)取代；Linear队列不变。
+> A21-1官方相对R3 −206/+6s，未晋级。Attention后继顺序及本卡旧回退规则由[14199回传后计划](attention-after-14199.md)取代；Linear由[独立执行细化卡](linear-output-followthrough.md)落实L21-1，两个方向均READY。
 
 ## 0. 新证据和研究转向
 

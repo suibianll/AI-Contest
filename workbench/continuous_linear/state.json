@@ -2,7 +2,7 @@
   "side": "linear",
   "branch": "continuous-linear",
   "plan": "docs/superpowers/plans/2026-09-07-continuous-linear-attention-plan.md",
-  "workpackage": "docs/superpowers/plans/workpackages/21071-evidence-driven-research.md",
+  "workpackage": "docs/superpowers/plans/workpackages/linear-output-followthrough.md",
   "created": "2026-09-07",
   "official_best": {
     "run_id": "l4-v189-linear-exact",
@@ -14,7 +14,8 @@
     "C_L": 3606
   },
   "research_parent": {
-    "sha256": "ACB16F764DB80EDA94EB77FE497A7965C716B527571C241C79B2319529FF5263"
+    "sha256": "ACB16F764DB80EDA94EB77FE497A7965C716B527571C241C79B2319529FF5263",
+    "path": "solutions/v162_linear_l4-v189-linear-exact_officialNA_timeNA/solution.py"
   },
   "local_highest_reference": {
     "value": 0.6367994885532791,
@@ -24,20 +25,20 @@
   "evidence_repair": {
     "l_r1": "DONE: 真实 API 闭环 12/12 逐位一致；rank 非纯可逆；四臂 UNIDENTIFIABLE",
     "l_r2": "DONE: 正确性 PASS; COST_HOLD; T=I 重建不可用->方向未判定",
-    "l_r3": "DONE: GPTAQ==JDRQ DUPLICATE_CLOSED"
+    "l_r3": "旧等价论证不足：没有逐列条件约束更新的完整对照；不关闭L21-1，保留旧JDRQ真实负结果。"
   },
   "fcproj_analytic": {
     "orthonormal_eigenbasis_T": "REJECTED 5/5 退化 (rel 1.03-1.17)",
     "kronecker_T": "FLAT-DEGRADE 2 退化+2 持平",
-    "note": "P1 transform-saturation + P2 mantissa-no-legal-path + E2E_REFINE in closed offset-scan boundary",
+    "note": "仅上述固定解析探针负向；连续乘积不变不证明变换饱和，旧非法oracle不证明合法mantissa无路。",
     "candidate": null
   },
-  "next_action": "复用真实API闭环；实现真正逐列约束/条件补偿的A@W拟合，对照旧JDRQ；旧岭回归数值对照不作为等价证明。",
+  "next_action": "按Linear独立工作包实现L21-1：冻结真实activation_state、固定合法层级、64块一遍逐列条件补偿；先数学与闭环，再六shard/成本/官方。",
   "recent_steps": [
-    "2026-09-07: fc/proj 解析旋转双探针（正交特征基 5/5 退化、Kronecker 2 退化+2 持平）",
-    "2026-09-07: P1/P2/E2E_REFINE 边界确认：连续变换饱和、mantissa 无合法路径、E2E 属 offset 扫描关闭",
-    "2026-09-07: queue 更新，未创建候选，父 L4 不变"
+    "2026-09-07：L4仍官方4607/247s，L21-1尚无新候选/官方结果。",
+    "2026-09-07：清除当前指令中的连续变换饱和、GPTAQ==JDRQ全族关闭、仅fc/proj可优化等过度结论；旧具体负实验保留。",
+    "2026-09-07：补齐独立可执行L21-1及L21-2/L21-3分支，与Attention A22-1同时列为READY；本轮只制定计划。"
   ],
-  "status": "READY / L21-1",
+  "status": "READY / L21-1_PLAN_ONLY",
   "new_evidence": "logs/execution/2026-09-07-user-21071-mechanism-evidence.md；旧全族关闭/旧队列顺序以当前工作包为准。"
 }

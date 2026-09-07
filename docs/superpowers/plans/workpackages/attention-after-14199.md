@@ -1,7 +1,7 @@
 # Attention 官方14199回传后的优化计划
 
 > READY / DESIGN_ONLY，2026-09-07。隶属唯一活动持续优化总计划。
-> 本卡取代21071工作包的Attention后继顺序；Linear仍按原工作包，本次不实验。
+> 本卡取代21071工作包的Attention后继顺序；Linear同步按[独立细化工作包](linear-output-followthrough.md)推进L21-1，本次两侧只制定计划。
 
 ## 1. 官方事实与边界
 

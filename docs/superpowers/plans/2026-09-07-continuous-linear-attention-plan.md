@@ -8,6 +8,10 @@
 > 旧证据修复中已完成闭环不重跑；当前L走真实逐列输出拟合，A从低成本R3替换为联合scale训练。
 > 下面初始父与队列保留设计背景；当前父、优先级及有限官方探索规则以新工作包为准。
 
+> **双侧当前执行入口**：Linear [L21-1及后继](workpackages/linear-output-followthrough.md)，
+> Attention [A22-1及后继](workpackages/attention-after-14199.md)，均READY；本轮仅计划更新。
+> L父L4、A研发父R3/高分对照A2，各自冻结非目标侧standard，官方分别确认后再组合。
+
 ## 1. 起点与目标
 
 目标：在六 API、合法 HiF4 编码与官方 300s 内，持续寻找超过现有官方结果的机制，最终挑战用户确认的 21765 锚点。不承诺达到，不将论文准确率或本地 gain 换算官方分数。
