@@ -1,5 +1,7 @@
 # HiF4 solutions archive
 
+当前待官方探索：[Attention A21-1](continuous_attention_anchor21-a1/report.md)，源码SHA `870d5848f95887307ad7faa6364b5d7f7480f5b7be6001c812c44ead02bdb48a`；ID Δmean +0.001234，预测219.284s，官方NA。根v189与Attention官方最佳A2均未替换。
+
 > **Planning update (2026-09-06):** the active umbrella plan is
 > [independent Linear / Attention optimization from v162](../docs/superpowers/plans/2026-09-06-v162-independent-linear-attention-plan.md)
 > (DESIGN_ONLY). Both branches start from the original v162 source and freeze the other side to standard.

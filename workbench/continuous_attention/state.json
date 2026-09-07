@@ -50,7 +50,7 @@
       "C_A": 13388,
       "path": "solutions/continuous_attention_a1-deployed-aligned_officialNA_timeNA/solution.py",
       "sha256": "65eb37f2346ecebd97952ff67e2af7d5a99b568fc95352eaff1702bd9814964a",
-      "note": "vs R2c +1.2 (flat); R3 (14405) remains best; OOD-gap ranking monotonic: 0.0065<0.0083<0.0122 <=> 14405>14389>14387.8"
+      "note": "官方相对R2c +1.2；不能称随机噪声，也不能外推OOD排序有效。"
     },
     {
       "run_id": "a2-fullkv",
@@ -58,7 +58,8 @@
       "time_s": 274,
       "C_A": 13439,
       "path": "solutions/continuous_attention_a2-fullkv_dominated/solution.py",
-      "note": "本地 DOMINATED 裁决被官方推翻：+51.2 vs A1；时间余量仅 6s"
+      "note": "官方14440/274s；比A1高51分，推翻旧本地DOMINATED。距硬限300s为26s；280为预测门，不能减出预算。",
+      "sha256": "952147D163ADDAA9EB23BAB4A18C0D58B1A7D1DACB1908C2781B6A1775DB2F02"
     },
     {
       "run_id": "a3sym-bounded-mix",
@@ -67,7 +68,16 @@
       "C_A": 12571,
       "path": "solutions/continuous_attention_a3sym-bounded-mix_bestood/solution.py",
       "sha256": "fa286a7e14bc16d2067543d609d2448a23e2d7280aadcf540c51340b08a777ed",
-      "note": "REJECTED: worst of family despite best OOD profile; ranking signal falsified cross-mechanism; time over gate"
+      "note": "REJECTED：13572/288s，OOD更好仍官方退步；288未超过300硬限，不能将实测与280预测门混判。"
+    },
+    {
+      "run_id": "r3-rotation-center",
+      "score": 14405,
+      "time_s": 238,
+      "C_A": 13404,
+      "path": "solutions/v162_attention_r3-rotation-center_allgates/solution.py",
+      "sha256": "A5C679D7A2B349A879B2019B4A613244F5FEA7050E407B6475B9E29BD1C146DC",
+      "note": "当前低成本研究父；高分父为A2。"
     }
   ],
   "research_parent": {
@@ -75,7 +85,17 @@
     "sha256": "A5C679D7A2B349A879B2019B4A613244F5FEA7050E407B6475B9E29BD1C146DC",
     "note": "21071证据阶段选定低成本父R3 14405/238s；不同于高分official_best A2"
   },
-  "pending_official": null,
+  "pending_official": {
+    "run_id": "anchor21-a1",
+    "path": "solutions\\continuous_attention_anchor21-a1\\solution.py",
+    "sha256": "870d5848f95887307ad7faa6364b5d7f7480f5b7be6001c812c44ead02bdb48a",
+    "official_score": null,
+    "official_time_s": null,
+    "status": "READY_FOR_OFFICIAL_EXPLORATION",
+    "local_delta_mean": 0.0012339806001212539,
+    "negative_L1": 0.007585332048673436,
+    "predicted_official_s": 219.28416430253213
+  },
   "local_highest_reference": {
     "note": "A 侧本地最高（default 120 case attention_mean；ID 48-case delta 见 queue）",
     "value": 0.773281,
@@ -83,23 +103,14 @@
     "candidate": "solutions/continuous_attention_a1-deployed-aligned_officialNA_timeNA",
     "candidate_sha256": "65eb37f2346ecebd97952ff67e2af7d5a99b568fc95352eaff1702bd9814964a"
   },
-  "next_action": "以R3低成本父注册联合Q/K scale目标互逆变换，替换旧训练；A2只作高分对照，不继续叠加全长反传。",
+  "next_action": "等待A21-1官方回传；后继先解决移除R3旧训练后的回退损失，再分离研究scale/output目标失配，不扫描参数。",
   "recent_steps": [
-    "2026-09-07: A2c 官方 9538/175s（C_A=8537）——手工梯度训练器官方部署证明",
-    "2026-09-07: R2c 官方 14387.8/240s（C_A=13386.8）——超过 R1 +378.8",
-    "2026-09-07: R3 官方 14405/238s（C_A=13404）——分支新最佳；OOD 门排序价值被官方验证（过门>未过）",
-    "2026-09-07: 机制族结论：Q/K 坐标（旋转）+平移（center）联合 DOF 在栈内已吸收（R3 default −0.0028 vs R2c）",
-    "2026-09-07: 官方环境 autograd 完全不可用（inference 上下文）——训练类机制必须解析梯度",
-    "2026-09-07: state/queue 迁移至 continuous_attention 结构（本文件）",
-    "2026-09-07: A0 部署目标验证全过（复刻逐位一致，含层23块平滑分支修复）",
-    "2026-09-07: A1 部署对齐训练本地新高 0.7733（R2c 0.7678 +0.0055）；OOD +0.0083 过门；时间 239s；已归档 pending_official",
-    "2026-09-07: A1 官方 14389/256.3s（vs R2c +1.2 平；R3 14405 仍最佳）；OOD gap 排序与官方分单调一致（第3数据点）",
-    "2026-09-07: A2 全长K/V训练三轴劣于A1（DOMINATED 关闭）；采样正则效应记录",
-    "2026-09-07: A3sym（T=exp(S) 有界对称混合）两起实现事故修复后重评：ID +0.7687、default 0.7652、时间 253.9s、OOD −0.0005 全候选最佳；未超本地最高，归档备用（solutions/continuous_attention_a3sym-bounded-mix_bestood/）",
-    "2026-09-07: 教训——部署 applier 的 GQA 映射 bug 无法被复刻逐位对照发现（两侧共用同一 applier）；需要独立第三方对照",
-    "2026-09-07: A3sym 官方 13572/288s —— REJECTED（兄弟最差；OOD 排序信号跨机制证伪；时间超提交门）"
+    "2026-09-07：清理当前指令中的A2永久关闭、R3仍最高、OOD排序有效、旧待执行A3等矛盾；保留原始日志。",
+    "2026-09-07：A21-1完成48case ID/OOD及fresh default/cross/独立梯度与部署control；本地Delta +0.001234，negative L1 0.007585，时间预测219.284s，独立归档待官方。",
+    "2026-09-07：24层尝试6层接受；接受层holdout +0.022872、回退层 -0.005979，说明整包收益被移除旧训练的损失抵消。"
   ],
-  "status": "READY / A21-1",
+  "status": "WAITING_OFFICIAL / A21-1_LOCAL_COMPLETE",
   "artifacts_note": "历史结果在 artifacts/proxy_v3/v162-independent/attention/{r2c-id,r2c-ood,r3-id,r3-ood,r3-default}；新 run 按 plan 写 artifacts/proxy_v3/continuous/attention/",
-  "new_evidence": "logs/execution/2026-09-07-user-21071-mechanism-evidence.md；旧全族关闭/旧队列顺序以当前工作包为准。"
+  "new_evidence": "logs/execution/2026-09-07-user-21071-mechanism-evidence.md；旧全族关闭/旧队列顺序以当前工作包为准。",
+  "current_run": "workbench/continuous_attention/anchor21-a1"
 }

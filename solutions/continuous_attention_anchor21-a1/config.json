@@ -1,0 +1,24 @@
+{
+  "run_id": "anchor21-a1",
+  "mechanism": "joint-block64-scale-inverse-transform",
+  "parent": "solutions\\v162_attention_r3-rotation-center_allgates\\solution.py",
+  "parent_sha256": "a5c679d7a2b349a879b2019b4a613244f5fea7050e407b6475b9e29bd1c146dc",
+  "source_sha256": "870d5848f95887307ad7faa6364b5d7f7480f5b7be6001c812c44ead02bdb48a",
+  "steps": 32,
+  "lr": 0.01,
+  "clip_norm": 1.0,
+  "regularization": 0.001,
+  "epsilon": 1e-12,
+  "amax_ties": "equal subgradient",
+  "condition_limit": 2,
+  "initialization": "R3 fixed pre-training Hadamard or identity; S=0",
+  "folds": "all earlier calibration windows equally; last window true-output gate",
+  "gate": "R3 PRE-TRAINING stack versus one learned scale candidate; ties retain stack",
+  "evaluation_parent": "full official R3, never substitute the calibration fallback",
+  "frozen": [
+    "v162 standard Linear",
+    "R3 V"
+  ],
+  "official_status": "NA",
+  "candidate_count": 1
+}

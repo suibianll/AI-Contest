@@ -1,8 +1,8 @@
 # 21071 官方机制证据驱动的双侧研究计划
 
-> ACTIVE WORKPACKAGE / READY，2026-09-07。隶属[唯一活动总计划](../2026-09-07-continuous-linear-attention-plan.md)。
+> ACTIVE WORKPACKAGE / A21-1 LOCAL_COMPLETE / WAITING_OFFICIAL，2026-09-07。隶属[唯一活动总计划](../2026-09-07-continuous-linear-attention-plan.md)。
 > 本轮优先级高于此前 evidence-repair 和 A1/A2/A3、L1/L2/L3 顺序；已完成结果保留，不重复从头审计。
-> 用户要求制定研究计划，本次不启动代理、实验或官方提交。
+> 用户随后要求整理现状并执行 Attention；本轮只执行 A21-1，Linear 保留队列。
 
 ## 0. 新证据和研究转向
 
@@ -87,7 +87,7 @@ A2：`solutions/continuous_attention_a2-fullkv_dominated/solution.py`，SHA `952
 
 配置：32步Adam、lr0.01、clip_grad_norm上限1，无seed/学习率/步数扫描；使用父的calibration train/gate划分。训练使用各窗口全部Q/K tokens计算尺度统计，不引入V反传；分块计算以控制内存。手工梯度及矩阵指数导数对照小规模autograd，inference_mode内验证可达。
 
-每个训练步骤只走固定前处理、矩阵变换和连续scale损失；训练结束才做真实五字段编码和最终Attention输出检查。校准gate只比较父与单个候选，平局保留父，独立holdout不选择变换。与前轮简化探针区别：候选实际部署目标就是本轮预注册scale训练规则，最终部署合法性与实际输出另行完整验证，不把代理负向当整族证伪。
+固定前处理只执行一次；每个训练步骤只走矩阵变换和连续scale损失；训练结束才做真实五字段编码和最终Attention输出检查。为真正替换旧训练，校准gate比较R3训练前栈与单个候选，平局回退训练前栈；完整R3只作独立评测父。若保留完整R3为校准回退，仍需执行旧训练，与本轮低成本替换目标矛盾。该澄清在首轮评测前登记于[A21-1机制卡](../../../../workbench/continuous_attention/anchor21-a1/mechanism.md)。独立holdout不选择变换，训练前栈不能冒充完整R3。与前轮简化探针区别：候选实际部署目标就是本轮预注册scale训练规则，最终部署合法性与实际输出另行完整验证，不把代理负向当整族证伪。
 
 记录：Q/K各自scale分布、实际E6M2 scale、clip/码改变计数、最终QK/logits/probability/readout误差、accepted组/层。scale变小但readout不改善时，只否定该scale目标/配置，不能认定互逆变换无效。
 
