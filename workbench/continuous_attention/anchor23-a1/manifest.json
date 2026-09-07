@@ -1,0 +1,54 @@
+{
+  "run_id": "anchor23-a1",
+  "mechanism": "joint-qk-block-scale-product-objective",
+  "source_sha256": "8714ac2a044779465c5e406ef0768be7071ac626f3a2171cdc5083350be92dbf",
+  "status": "LOCAL_NEGATIVE_OBJECTIVE_CLOSED",
+  "local_class": "LOCAL_NEGATIVE_TEST_SPLIT_NEGATIVE",
+  "official_score": null,
+  "official_time_s": null,
+  "official_status": "NA (not submitted; 4B paired gate failed)",
+  "parent": {
+    "path": "solutions/continuous_attention_anchor22-a2/solution.py",
+    "sha256": "4686ad817128d60e1a1648e0e14793692097ee8171fac2bc5202466d5787c0b7",
+    "official": "14424 / 271s"
+  },
+  "id_4b_paired": {
+    "cases": 72,
+    "candidate_mean_gain": 0.5319649,
+    "a22_2_4b_baseline_mean": 0.536715065,
+    "delta_mean": -0.004750165,
+    "l1_total": 0.006602289,
+    "l1_negative": 0.005676227,
+    "pos_neg_same": [10, 14, 48],
+    "validation_delta_mean": 0.000752623,
+    "test_delta_mean": -0.010252952,
+    "gate_verdict": "FAILED: dmean<0 and test split negative (special gate requires both splits positive)"
+  },
+  "per_layer_4b": {
+    "0": {"dmean": 0.0, "note": "gate rejected in BOTH A22-2 and A23 -> bit-identical complete parent, 12/12 zero"},
+    "1": {"dmean": 0.0, "note": "gate rejected in both -> zero change"},
+    "5": {"dmean": 0.0, "note": "gate rejected in both -> zero change"},
+    "8": {"dmean": -0.029021164, "pos_neg_same": [3, 9, 0], "note": "gate ACCEPTED (last-calib-window readout slightly better) but 9/12 test cases negative -> single-window gate overfit"},
+    "15": {"dmean": 0.0, "note": "gate rejected in both -> zero change"},
+    "22": {"dmean": 0.000520175, "pos_neg_same": [7, 5, 0], "note": "gate accepted, marginal mixed effect"}
+  },
+  "objective_behavior": {
+    "product_ratio_final_L0": 0.4769,
+    "product_ratio_final_L22": 0.449,
+    "note": "product drops 45-55% (objective strongly 'improves') but readout does not follow: exactly the failure mode preregistered in workpackage §5 'scale product falls while output does not improve -> close this objective'"
+  },
+  "verification": {
+    "product_gradient_vs_autograd": "PASS max 1.5e-8 (3 geometries) + group-fallback 3.7e-9",
+    "product_invariance_qc_kdivc": "PASS: constant Q*c with K/c leaves product unchanged",
+    "s0_tie_matches_a22_2_parent_bitwise": "PASS: synthetic 37 fields, real 4B L0 45 fields, L22 43 fields (both candidates force-pinned to S=0)",
+    "frozen_prefix": "PASS: exact R3 prefix; V and Linear frozen; fresh 4B baseline Linear cases unchanged",
+    "fuzz_contract": "1 failure identical to the A22-2 parent (mixed-q calibration ValueError; official contract never produces mixed-q calibration input; R3 survives only by swallowing exceptions) - inherited, not a regression",
+    "isolated_import": "PASS",
+    "inference_mode": "PASS"
+  },
+  "api_seconds_note": "api_seconds recorded in manifests only; no local time gate per 2026-09-07 directive",
+  "next": "目标卡关闭（预登记分支：乘积下降而输出不改善）。下一卡需先与旧Jacobian/动态Gram关闭族去重后才可考虑实际量化QK目标；不在本卡上扫loss权重/窗口/gate阈值",
+  "official_scored_sha256": null,
+  "archive_sha256": null,
+  "official_result": null
+}

@@ -1,0 +1,24 @@
+{
+  "run_id": "anchor23-a1",
+  "mechanism": "joint-qk-block-scale-product-objective",
+  "parent": "solutions/continuous_attention_anchor22-a2/solution.py",
+  "parent_sha256": "4686ad817128d60e1a1648e0e14793692097ee8171fac2bc5202466d5787c0b7",
+  "source_sha256": "8714ac2a044779465c5e406ef0768be7071ac626f3a2171cdc5083350be92dbf",
+  "objective": "mean_{f,g,b}[a_Q(s,g,b)*a_K(s,g,b) / max(a_Q(0,g,b)*a_K(0,g,b),1e-12)] + 1e-3*mean(S^2); a_Q(g,b) = mean over (tokens, group's Q heads) of amax^2 of head-block b; a_K(g,b) = mean over tokens of amax^2 of K head g block b; denominators are the S=0 parent aggregates",
+  "invariance_note": "constant Q*c with K/c leaves the product unchanged; the additive A22-2 objective cannot see that direction",
+  "steps": 32,
+  "lr": 0.01,
+  "clip_norm": 1.0,
+  "regularization": 0.001,
+  "condition_limit": 2,
+  "parent_construction": "identical to A22-2: one R3-original rotation+center training plus its own identity-vs-rotation gate; complete parent is the fixed fallback",
+  "gate": "candidate versus the COMPLETE parent state on the last calibration window, true readout MSE; strictly smaller accepts, ties retain parent",
+  "layout": "head-aligned 64-blocks (4B panel qh=16 kh=4 dim=256 -> nb=4); group-level fallback only for dim%64!=0 contract fuzz",
+  "frozen": [
+    "v162 standard Linear",
+    "parent V path"
+  ],
+  "evaluation": "4B panel qwen35-4b-panel-v1 paired vs A22-2; 72 attention cases; no local time gate; official 300s",
+  "official_status": "NA",
+  "candidate_count": 1
+}

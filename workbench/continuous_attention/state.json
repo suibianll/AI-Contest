@@ -121,7 +121,7 @@
     "candidate_sha256": "4686ad817128d60e1a1648e0e14793692097ee8171fac2bc5202466d5787c0b7",
     "status": "HISTORICAL_ONLY_NOT_A_4B_GATE"
   },
-  "next_action": "设计A23父坐标Q/K块scale乘积目标；父A22-2，高分对照A2；保留完整回退，先去重和训练/选择隔离审读，不使用本地时间预测。",
+  "next_action": "A23乘积目标4B负向已关闭（不扫参数）。下一卡若考虑实际量化QK输出目标，须先与旧Jacobian/动态Gram关闭族去重（AGENTS §7）；gate过拟合教训（单校准窗口）供后继卡设计参考。等待协调者/用户登记下一张卡；本侧无待官方包。",
   "recent_steps": [
     "2026-09-07：清理当前指令中的A2永久关闭、R3仍最高、OOD排序有效、旧待执行A3等矛盾；保留原始日志。",
     "2026-09-07：A21-1完成48case ID/OOD及fresh default/cross/独立梯度与部署control；本地Delta +0.001234，negative L1 0.007585，时间预测219.284s，独立归档待官方。",
@@ -132,9 +132,10 @@
     "2026-09-07：A22-2（父坐标残余互逆变换，保留P的rotation/center仅学残余S，c_new=c·exp(−S)同步编译）：S=0平局逐位恢复P；ID Δmean +0.021296052、负向L1 0.000103、23/1/42→23/1/24，12/24层接受（L12 +0.106/L20 +0.081/L23 +0.066）；OOD Δmean +0.017129、Δgap +0.004167；default 120c attention_mean 0.783515197>0.773281新本地最高；时间预测235.324s<280s；按用户指令归档solutions/continuous_attention_anchor22-a2/并commit/push（LOCAL_RESEARCH，官方探索未登记）。",
     "2026-09-07：A22-1官方14291/273s，OFFICIAL_REJECTED（vs R3 -114/+35s，vs A21-1 +92/+29s）；时间残差+33.150s与A21-1同向；卡按预注册规则关闭；scale提案替换式两次官方负向，A22-2残余式官方资格待批准。",
     "2026-09-07：用户批准A22-2官方探索；候选包READY_FOR_OFFICIAL（SHA 4686ad81...，预测235.3s，残差情景约268.5s<300s），待提交官方。",
-    "2026-09-07：A22-2官方14424/271s，SCORE_BEST（vs R3 +19/+33s，vs A2 -16/-3s），按预登记规则保留为新父线；A侧首个官方正向scale类机制（附加式残余S）；A21-1→A22-1→A22-2官方轨迹14199→14291→14424验证保留父变换方向有效；时间残差+35.676s与A22-1/A21-1一致；research_parent更新为anchor22-a2。"
+    "2026-09-07：A22-2官方14424/271s，SCORE_BEST（vs R3 +19/+33s，vs A2 -16/-3s），按预登记规则保留为新父线；A侧首个官方正向scale类机制（附加式残余S）；A21-1→A22-1→A22-2官方轨迹14199→14291→14424验证保留父变换方向有效；时间残差+35.676s与A22-1/A21-1一致；research_parent更新为anchor22-a2。",
+    "2026-09-07：A23（anchor23-a1，Q/K联合块scale乘积目标，父A22-2）4B paired 72case负向：Δmean -0.004750、test split -0.010253、L8 gate接受后9/12负向（单窗口gate过拟合）；乘积比降45-55%而readout不跟随=预登记失败模式；目标卡关闭（OBJECTIVE_CLOSED），A22-2父线不变；父A22-2的4B基线由本次paired run首跑补齐（4B mean 0.536715）。"
   ],
-  "status": "A23_DESIGN_READY",
+  "status": "A23_OBJECTIVE_CLOSED / NEXT_CARD_NEEDS_DEREGISTER",
   "artifacts_note": "历史结果在 artifacts/proxy_v3/v162-independent/attention/{r2c-id,r2c-ood,r3-id,r3-ood,r3-default}；A22-1 在 artifacts/proxy_v3/continuous/attention/anchor22-a1/{id,ood,timing,cross}",
   "new_evidence": "logs/execution/2026-09-07-user-21071-mechanism-evidence.md；旧全族关闭/旧队列顺序以当前工作包为准。",
   "last_completed_run": "workbench/continuous_attention/anchor22-a2",
