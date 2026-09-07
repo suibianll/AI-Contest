@@ -1,0 +1,34 @@
+{
+  "run_id": "anchor25-a1",
+  "mechanism": "single-trunk-inverse-scale-proxy-on-base-stack",
+  "source_sha256": "4fb779e36421edb88328a4aa8d9660c184ccfe530156ffd805a7a3182e0fa034",
+  "status": "LOCAL_POSITIVE_DIAGNOSTIC_COMPLETE",
+  "official_score": null,
+  "official_time_s": null,
+  "official_status": "NA",
+  "parent": "base stack B (v189 _V189_CALIBRATION_ATTENTION, no learned_rotation/center)",
+  "trunk": "single: no R3 old training, no Hadamard pre-rotation, S=0 identity start",
+  "four_dimension_diagnostic": {
+    "scale": "5/6 FA layers scale_ratio ~0.65 (35% reduction); L15 gate rejected (no change)",
+    "code": "integer code words 0% change (all layers); E6M2 float scale field changed (the actual channel)",
+    "qk_mse": "mostly unchanged (code words unchanged -> QK unchanged)",
+    "attn_mse": "5/6 layers C < B (softmax nonlinearity amplifies scale-field change into probability redistribution)",
+    "verdict": "mechanism IS effective: scale proxy drives E6M2 scale field -> softmax probability shift -> output improvement"
+  },
+  "three_way_paired_4b": {
+    "C_vs_B_new_training_gain": {"dmean": 0.008084105, "validation": 0.001585636, "test": 0.014582575, "pos_neg_same": [47, 13, 12]},
+    "C_vs_R3_net_increment": {"dmean": 0.003282028, "validation": -0.006740497, "test": 0.013304553, "pos_neg_same": [35, 25, 12]},
+    "P_old_vs_B_old_training_gain": "R3 14405/238s official (historical)",
+    "interpretation": "new training gain (C-B) +0.008 > net increment (C-R3) +0.003 -> new training effective but R3 old training still contributes on some layers (L1 worst: R3 Cayley > A25 exp(S))"
+  },
+  "per_layer": {
+    "0": {"vs_r3": -0.004732, "vs_b": 0.012509, "note": "C>B but C<R3 (R3 old training better here)"},
+    "1": {"vs_r3": -0.012204, "vs_b": -0.002388, "note": "worst layer: R3 Cayley significantly better"},
+    "5": {"vs_r3": 0.004546, "vs_b": 0.003620, "note": "C better than both"},
+    "8": {"vs_r3": 0.029021, "vs_b": 0.029021, "note": "best layer: C far exceeds R3 (R3 gate rejected here too)"},
+    "15": {"vs_r3": 0.0, "vs_b": 0.0, "note": "gate rejected in all -> zero change"},
+    "22": {"vs_r3": 0.003061, "vs_b": 0.005743, "note": "C better than both"}
+  },
+  "next": "本地正向（vs B +0.008、vs R3 +0.003）；validation vs R3 负但 A23 先例（4B paired 负→官方+13）说明本地仅风险记录。等待用户决定是否提交官方。",
+  "archive_sha256": "4fb779e36421edb88328a4aa8d9660c184ccfe530156ffd805a7a3182e0fa034"
+}

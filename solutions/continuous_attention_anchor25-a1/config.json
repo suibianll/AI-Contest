@@ -1,0 +1,24 @@
+{
+  "run_id": "anchor25-a1",
+  "mechanism": "single-trunk-inverse-scale-proxy-on-base-stack",
+  "parent": "base stack B (v189 _V189_CALIBRATION_ATTENTION, no learned_rotation/center)",
+  "parent_sha256": "261202248a0146a2ee45f3df60bd1979bb8171b7c162921013b0024c848617af",
+  "source_sha256": "4fb779e36421edb88328a4aa8d9660c184ccfe530156ffd805a7a3182e0fa034",
+  "trunk": "single: no R3 old training, no Hadamard pre-rotation, S=0 identity start",
+  "objective": "A22-2 additive scale proxy (officially validated +19): per-role 64-block amax ratio squared, Q/K block-mean summed, equal-weight folds, epsilon/amax-tie subgradient",
+  "no_ste": "STE output-error objective proven zero-gradient under inverse parameterization (A24); not used",
+  "steps": 32,
+  "lr": 0.01,
+  "clip_norm": 1.0,
+  "regularization": 0.001,
+  "gate": "candidate versus BASE stack B on the last calibration window, true readout MSE; strictly smaller accepts, ties retain B",
+  "diagnostics": "four-dimension: scale ratio / code change count / QK MSE / Attention output MSE; three-way: B / R3(P_old) / C",
+  "dedup": "A21-1 (Hadamard pre-rotation, no diagnostics, no three-way); A22-2 (retains R3 old training + residual); A23 (retains + product objective); A24 (STE, zero gradient)",
+  "frozen": [
+    "v162 standard Linear",
+    "parent V path"
+  ],
+  "evaluation": "4B panel paired vs B and vs R3 (three-way); 72 attention cases; no local time gate; official 300s; local paired is risk record only (A23 precedent)",
+  "official_status": "NA",
+  "candidate_count": 1
+}
