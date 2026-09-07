@@ -2,11 +2,11 @@
   "run_id": "anchor22-a2",
   "mechanism": "residual-inverse-transform-on-complete-parent",
   "source_sha256": "4686ad817128d60e1a1648e0e14793692097ee8171fac2bc5202466d5787c0b7",
-  "status": "READY_FOR_OFFICIAL_EXPLORATION_USER_APPROVED",
+  "status": "OFFICIAL_KEPT_NEW_PARENT_LINE",
   "local_class": "LOCAL_POSITIVE_ALL_GATES_PASS_NEW_LOCAL_HIGHEST",
-  "official_score": null,
-  "official_time_s": null,
-  "official_status": "READY_FOR_OFFICIAL (user approved 2026-09-07; candidate sha 4686ad81..., submission by coordinator/user)",
+  "official_score": 14424,
+  "official_time_s": 271,
+  "official_status": "OFFICIAL_SCORE_BEST_VS_R3_KEPT",
   "parent": {
     "path": "solutions/v162_attention_r3-rotation-center_allgates/solution.py",
     "sha256": "a5c679d7a2b349a879b2019b4a613244f5fea7050e407b6475b9e29bd1c146dc",
@@ -127,10 +127,17 @@
     "gradients": "manual exp/scale gradients vs autograd max error 2.62e-6",
     "inference_mode": "PASS"
   },
-  "next": "A22-1 \u5b98\u65b9\u56de\u4f20\u524d\u672c\u5361\u4ec5 LOCAL_RESEARCH, \u4e0d\u63d0\u4ea4\u5b98\u65b9; \u56de\u4f20\u540e\u7531\u7528\u6237/\u534f\u8c03\u8005\u51b3\u5b9a\u672c\u5361\u5b98\u65b9\u63a2\u7d22\u8d44\u683c. \u82e5\u664b\u7ea7, \u4e0b\u4e00\u673a\u5236\u6309\u961f\u5217 A22-3 \u6216\u65b0\u5361.",
-  "official_scored_sha256": null,
+  "next": "A22-2\u6210\u4e3a\u65b0\u7814\u7a76\u7236\u7ebf(14424/271s)\uff1b\u65f6\u95f4\u4f59\u91cf\u7d27(\u8ddd300s\u786c\u965029s\u3001\u8ddd280s\u9884\u6d4b\u95e89s)\uff0c\u540e\u7eed\u589e\u91cf\u987b\u8fd1\u96f6\u6821\u51c6\u6210\u672c\u6216\u6570\u5b66\u7b49\u4ef7\u964d\u6210\u672c\uff1b\u4e0b\u4e00\u673a\u5236\u5361\u5f85\u767b\u8bb0",
+  "official_scored_sha256": "4686ad817128d60e1a1648e0e14793692097ee8171fac2bc5202466d5787c0b7",
   "archive_sha256": null,
-  "official_result": null,
+  "official_result": {
+    "score": 14424,
+    "time_s": 271,
+    "vs_r3": "+19/+33s SCORE_BEST kept",
+    "vs_a2": "-16/-3s (A2 remains official_best)",
+    "vs_a22_1": "+133/-2s",
+    "time_residual_vs_prediction": "+35.676s"
+  },
   "official_exploration_approval": {
     "approved_by": "user",
     "approved_at": "2026-09-07",

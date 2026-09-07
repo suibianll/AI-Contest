@@ -1,0 +1,20 @@
+{
+  "run_id": "anchor22-a2",
+  "official_score": 14424,
+  "official_time_s": 271,
+  "status": "OFFICIAL_SCORE_BEST_VS_R3_KEPT",
+  "reported_by": "user",
+  "reported_at": "2026-09-07",
+  "source_sha256": "4686ad817128d60e1a1648e0e14793692097ee8171fac2bc5202466d5787c0b7",
+  "verdict_rule": "preregistered in workpackage attention-after-14199 §4 and queue: official >R3 (14405) and <300s keeps as research candidate/new parent line; <=R3 closes the attachment-style residual family",
+  "comparison": {
+    "vs_r3_previous_research_parent": "+19 / +33s -> SCORE_BEST, kept as new parent line",
+    "vs_a2_official_best": "-16 / -3s -> A2 (14440/274s) remains official_best; -3s is not a decisive Pareto swap",
+    "vs_a22_1": "+133 / -2s",
+    "vs_a21_1": "+225 / +27s"
+  },
+  "time_residual": "271 - 235.324 prediction = +35.676s (consistent with A22-1 +33.150s and A21-1 +24.716s: training-heavy attention calibration costs more officially)",
+  "headroom_note": "official 271s leaves 29s to the 300s hard limit and only 9s to the 280s prediction gate - any further mechanism on this parent must be near-zero calibration cost or reduce existing cost (mathematically equivalent fusion allowed; output changes require a new card)",
+  "first_positive": "first officially positive scale-training mechanism on the attention side (A21-1 -206, A22-1 -114 were replacement-style; A22-2 attachment-style residual +19)",
+  "note": "12/24 layers deploy the residual transform, 12 layers are bit-identical to R3. Score gain likely concentrated in the accepted layers, but no official per-layer breakdown exists - no attribution beyond the whole-package delta."
+}
