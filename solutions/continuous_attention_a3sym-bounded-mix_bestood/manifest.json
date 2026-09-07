@@ -1,0 +1,26 @@
+{
+  "version": "continuous_attention_A3sym",
+  "status": "OFFICIAL_REJECTED (worst of the rotation family despite best OOD profile)",
+  "mechanism": "A1 deployed-aligned rotation + learned K-center + bounded symmetric mixing T=exp(S) (cond<=2), joint analytic-gradient training (Daleckii-Krein)",
+  "parent": {
+    "version": "A1",
+    "source_sha256": "65eb37f2346ecebd97952ff67e2af7d5a99b568fc95352eaff1702bd9814964a"
+  },
+  "source": {
+    "path": "solution.py",
+    "sha256": "FA286A7E14BC16D2067543D609D2448A23E2D7280AADCF540C51340B08A777ED"
+  },
+  "local": {
+    "shard48_mean_delta_vs_v162": 0.768727,
+    "default_attention_mean": 0.76519,
+    "ood_delta_gap": -0.000459,
+    "time_prediction_s": 253.936
+  },
+  "official": {
+    "score": 13572,
+    "time_seconds": 288,
+    "status": "official_result_returned",
+    "C_A": 12571,
+    "note": "REJECTED: worst of the family (A2 -868, R3 -833, A1 -817) despite best OOD profile; time 288s > 280s gate (+34s prediction error); OOD-gap ranking signal falsified cross-mechanism"
+  }
+}

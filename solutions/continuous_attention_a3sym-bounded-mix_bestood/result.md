@@ -1,4 +1,4 @@
-# continuous_attention A3sym：旋转+K-center+有界对称混合（最佳 OOD 档案）
+# continuous_attention A3sym：旋转+K-center+有界对称混合（官方 REJECTED——OOD 排序信号跨机制证伪）
 
 > 日期：2026-09-07。父：A1/A2 机制族。新自由度：每 KV 组对称非正交混合
 > `T = exp(S)`（S 对称零迹初始 0，特征值钳位 [−log2/2, +log2/2] ⇒ cond(T) ≤ 2），
@@ -35,3 +35,11 @@ A3sym 的 −0.0005 严格低于 R3 的 +0.0065 ⇒ **按排序信号预测官�
 ## 官方
 
 - **unregistered / NA**。solution.py SHA256 见 git（CFDDCED7 家族 + sym-mix 扩展）。
+
+
+## 官方结果（2026-09-07 回传）
+
+- **official score：13572 / 288s**。`C_A = 12571`——兄弟候选最差
+  （A2 −868、R3 −833、A1 −817），288s > 280s 提交门。
+- **OOD 排序信号跨机制证伪**：最佳 OOD 档案 ⇒ 最差官方分；该信号仅在 R2c 同源
+  训练器族内单调，跨机制无效。裁决 **REJECTED**，卡关闭，不扫邻域。
