@@ -1,8 +1,8 @@
 # 21071 官方机制证据驱动的双侧研究计划
 
-> ACTIVE WORKPACKAGE / A21-1 LOCAL_COMPLETE / WAITING_OFFICIAL，2026-09-07。隶属[唯一活动总计划](../2026-09-07-continuous-linear-attention-plan.md)。
+> ACTIVE WORKPACKAGE / A21-1 OFFICIAL_REJECTED / 14199分244s，2026-09-07。隶属[唯一活动总计划](../2026-09-07-continuous-linear-attention-plan.md)。
 > 本轮优先级高于此前 evidence-repair 和 A1/A2/A3、L1/L2/L3 顺序；已完成结果保留，不重复从头审计。
-> 用户随后要求整理现状并执行 Attention；本轮只执行 A21-1，Linear 保留队列。
+> A21-1官方相对R3 −206/+6s，未晋级。Attention后继顺序及本卡旧回退规则由[14199回传后计划](attention-after-14199.md)取代；Linear队列不变。
 
 ## 0. 新证据和研究转向
 

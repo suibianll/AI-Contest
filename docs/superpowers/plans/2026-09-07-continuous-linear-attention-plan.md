@@ -1,6 +1,6 @@
 # Linear / Attention 持续优化总计划
 
-> ACTIVE，2026-09-07。已按用户要求整理状态并完成 Attention A21-1 本地验证与归档，待官方探索；Linear 本轮未启动。
+> ACTIVE，2026-09-07。A21-1已回传14199/244s，OFFICIAL_REJECTED；Attention后继优先按[14199回传后计划](workpackages/attention-after-14199.md)，本次未运行新实验。
 > 本计划取代 v162 独立恢复计划；两个工作包只有一个共同总契约，不另设活动总计划。
 
 > **当前执行修订**：优先执行[21071成功机制驱动研究](workpackages/21071-evidence-driven-research.md)。

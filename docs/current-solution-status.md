@@ -15,7 +15,7 @@
 当前优先执行[21071成功机制驱动研究](superpowers/plans/workpackages/21071-evidence-driven-research.md)。
 用户确认官方50/250样例、Linear A@W拟合约4400/5000、与Q/K互逆scale训练叠加21071/283s；
 外部源码未绑定，不继承成绩。L后续方向为真实逐列非对称量化，A以R3 14405/238s作为低成本研究父，
-A2 14440/274s保留高分对照。[A21-1](../workbench/continuous_attention/anchor21-a1/report.md)已完成本地验证并归档待官方；此前闭环结果复用，Linear本轮不运行。以下历史阶段不提供下一步指令。
+A2 14440/274s保留高分对照。A21-1官方回传 **14199/244s，OFFICIAL_REJECTED**，相对R3 −206/+6s，未晋级。下一步见[A22-1及后继计划](superpowers/plans/workpackages/attention-after-14199.md)：固定scale提案、恢复完整R3对照与回退，当前只制定计划。Linear本轮不运行，原始本地报告保留。
 
 当前活动总计划为
 [`Linear / Attention 持续优化`](superpowers/plans/2026-09-07-continuous-linear-attention-plan.md)，

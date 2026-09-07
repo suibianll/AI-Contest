@@ -79,6 +79,15 @@ result = {"run_id": "anchor21-a1", "source_sha256": hashlib.sha256((HERE / "solu
           "controls": {"linear": "exact R3 source prefix; 168 fresh-default cases zero error gain vs standard", "V": diagnostic["V_control"]},
           "evaluator_sha256": {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest() for p in [ROOT / "evaluator/eval.py", ROOT / "evaluator/eval_system.py", ROOT / "evaluator/proxy_v3_eval.py", ROOT / "evaluator/official_eval.py", ROOT / "evaluator/reference_hif4.py"]},
           "next": "Await distinct-SHA official result; prepare A21-3 scale/output mismatch card, no parameter sweep."}
+# A local replay must never reset a subsequently registered official result.
+official_path = HERE / "official-result.json"
+if official_path.exists():
+    official = load(official_path)
+    assert official["official_scored_sha256"] == result["source_sha256"]
+    result.update(status=official["official_status"], official_status=official["official_status"],
+                  official_score=official["official_score"], official_time_s=official["official_time_s"],
+                  official_scored_sha256=official["official_scored_sha256"], archive_sha256=official["archive_sha256"],
+                  official_result="official-result.json", next=official["next_plan"])
 (HERE / "manifest.json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
 for name in ["id", "ood"]:
     print(name, json.dumps({k: v for k, v in result[name].items() if k not in ["rows", "by_split", "by_length"]}))
