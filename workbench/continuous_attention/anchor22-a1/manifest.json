@@ -1,0 +1,92 @@
+{
+  "run_id": "anchor22-a1",
+  "mechanism": "fixed-scale-proposal-complete-r3-fallback",
+  "source_sha256": "25310c6e36c41ca0dd7a716c29946ede9c7e030af7c4329dc2f29d732bd92447",
+  "status": "READY_FOR_OFFICIAL_EXPLORATION",
+  "local_class": "LOCAL_POSITIVE_ALL_GATES_PASS",
+  "official_score": null,
+  "official_time_s": null,
+  "official_status": "NA",
+  "parent": {
+    "path": "solutions/v162_attention_r3-rotation-center_allgates/solution.py",
+    "sha256": "a5c679d7a2b349a879b2019b4a613244f5fea7050e407b6475b9e29bd1c146dc",
+    "official": "14405 / 238s"
+  },
+  "id": {
+    "cases": 48,
+    "candidate_mean_gain": 0.7813435205762164,
+    "r3_mean_gain": 0.775557865,
+    "delta_mean": 0.005785656,
+    "l1_total": 0.005851416,
+    "l1_negative": 0.00003288,
+    "pos_neg_same": [5, 1, 42],
+    "median_delta": 0.0,
+    "validation_delta_mean": 0.003830893,
+    "test_delta_mean": 0.007740418,
+    "worst_quartile_delta_mean": null,
+    "changed_layers": [8, 12, 23],
+    "changed_layer_delta_mean": {
+      "8": 0.000901,
+      "12": 0.087148,
+      "23": 0.050806
+    }
+  },
+  "ood": {
+    "cases": 48,
+    "delta_mean": 0.002841122,
+    "l1_negative": 0.000284406,
+    "pos_neg_same": [4, 2, 42],
+    "validation_delta_mean": 0.003669317,
+    "test_delta_mean": 0.002012927,
+    "candidate_gap": 0.00940687,
+    "r3_gap": 0.006462336,
+    "delta_gap": 0.002944534,
+    "risk_note": "delta_gap below 0.01提示阈值; OOD只作风险诊断, 不作提交或方向关闭的一票否决; changed layers在OOD上也全为正(L8 +0.001169, L12 +0.056159, L23 +0.010859)"
+  },
+  "fresh_default": {
+    "attention_mean_120case": 0.768434864304531,
+    "linear_mean": 0.0,
+    "api_total_seconds": 122.25926160113886,
+    "wall_seconds": 169.5294230999425,
+    "api_seconds": {
+      "hif4_calibration_and_quantize_weight": 0.6898092997726053,
+      "hif4_dynamic_quantize_activation": 1.4614962020423263,
+      "hif4_calibration_attention": 113.53038989962079,
+      "hif4_dynamic_quantize_q": 3.0433072987943888,
+      "hif4_dynamic_quantize_k": 1.9956394007895142,
+      "hif4_dynamic_quantize_v": 1.538619500119239
+    },
+    "official_time_prediction_s": 239.849602,
+    "prediction_plus_a21_residual_s": 264.565602,
+    "time_gate": "239.850 < 280s PASS; +24.716s residual scenario 264.566 < 300s PASS (scenario is sensitivity, not a guarantee)"
+  },
+  "attempted_layers": 24,
+  "accepted_layers": [8, 12, 23],
+  "parent_arm_distribution": {"rotation": 15, "identity": 9},
+  "mean_q_scale_ratio2": 0.7961174417287111,
+  "mean_k_scale_ratio2": 0.772315169374148,
+  "max_inverse_error": 2.563e-05,
+  "accepted_layer_gate_ratio": {"8": 0.9955, "12": 0.8355, "23": 0.9877},
+  "calibration_audit": "workbench/continuous_attention/anchor22-a1/calibration-audit.json",
+  "cross_model": {
+    "model": "gpt2",
+    "panel": "compact 4 cases",
+    "attention_mean": 0.4892130549180622,
+    "api_total_seconds": 18.23592389957048,
+    "note": "仅记录机制鲁棒性, 不支持或否决晋级"
+  },
+  "controls": {
+    "forced_reject_equals_r3_bitwise": "PASS: synthetic 40 fields, L0 34 fields, L23 43 fields all non-audit state fields bit-identical to official R3 source",
+    "v_frozen": "PASS: V five-field params bit-identical to base stack on real windows",
+    "linear_frozen_prefix": "PASS: exact R3 prefix through _a2_train_rotation/_a2_true_path_gate_loss/_a2_normal; fresh default Linear 168 cases gain exactly 0.0",
+    "deployment_coordinates": "PASS: captured encoder input equals _a1_stack_transform + learned_rotation (+learned_center for K) chain on final deployed state, L0/L23",
+    "isolated_import": "PASS: six APIs imported with isolated Python and external cwd",
+    "gradients": "manual exp/scale gradients vs autograd max error 3.219e-6",
+    "inference_mode": "PASS: calibration reachable under torch.inference_mode"
+  },
+  "evaluator_sha256": null,
+  "next": "等待官方回传; A22-2启动条件已满足(多数提案21/24被完整P拒绝), 等待期间仅本地准备, 不把待回传源码升级为官方父",
+  "official_scored_sha256": null,
+  "archive_sha256": null,
+  "official_result": null
+}

@@ -29,6 +29,17 @@ OOD负向与这次官方同号也不证明OOD可预测排名。
 
 ## 3. A22-1：固定scale提案，恢复完整R3对照与回退（唯一立即执行卡）
 
+> **已执行（2026-09-07）**：READY_FOR_OFFICIAL_EXPLORATION / official NA。
+> 强制拒绝候选与官方R3逐位一致（合成/L0/L23全字段）；ID 48case Δmean
+> +0.005785656、负向L1 0.0000329、5/1/42，validation/test双split正；
+> 仅L8/L12/L23部署提案（+0.0009/+0.0871/+0.0508），其余21层严格零变化；
+> OOD Δmean +0.002841、Δgap +0.002945（<0.01提示阈值）；时间预测
+> 239.850s<280s（+24.716s情景264.566s<300s）。候选归档
+> `solutions/continuous_attention_anchor22-a1/solution.py`
+> SHA `25310C6E36C41CA0DD7A716C29946EDE9C7E030AF7C4329DC2F29D732BD92447`。
+> 执行记录见 [continuous-attention-anchor22-a1](../../../../logs/execution/continuous-attention-anchor22-a1.md)。
+> 本卡官方探索代表名额已使用；等待官方回传。
+
 **假设**：A21-1的主要可修复问题包含用训练前栈替代完整R3；先分离这个因素。
 机制为“相同scale提案 + 完整R3保护”，不是A21-1学习率/门限邻域。
 

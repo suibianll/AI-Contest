@@ -1,0 +1,60 @@
+{
+  "source_sha256": "25310c6e36c41ca0dd7a716c29946ede9c7e030af7c4329dc2f29d732bd92447",
+  "parent_sha256": "a5c679d7a2b349a879b2019b4a613244f5fea7050e407b6475b9e29bd1c146dc",
+  "independent_gqa_and_inverse": "PASS: four geometries, unequal Q/K lengths",
+  "gradient_max_errors": [
+    2.384185791015625e-07,
+    3.2186508178710938e-06
+  ],
+  "amax_ties_zero_gradient": "PASS",
+  "frozen_prefix": "PASS: exact R3 prefix through _a2_train_rotation/_a2_true_path_gate_loss/_a2_normal",
+  "forced_reject_matches_r3_synthetic": "PASS: 40 non-audit fields bit-identical",
+  "real_api_inference_legal_control_coordinates": [
+    {
+      "layer": 0,
+      "wall_s": 13.7213946999982,
+      "forced_reject_r3_fields": 34,
+      "a21_steps": 32,
+      "a21_attempted_groups": 2,
+      "a21_initial_loss": 2.0,
+      "a21_final_loss": 1.3317654509665444,
+      "a21_q_scale_ratio2": 0.6887368410825729,
+      "a21_k_scale_ratio2": 0.6430273652076721,
+      "a21_inverse_error": 2.5272369384765625e-05,
+      "a21_s_norm": 3.193178415298462,
+      "a22_parent_arm": "identity",
+      "a22_gate_parent_mse": 1.9673752831295133e-05,
+      "a22_gate_candidate_mse": 3.029954132216517e-05,
+      "a22_accepted": 0,
+      "a22_fallback_states": "complete_r3",
+      "a2_gate_loss_identity": 1.0,
+      "a2_gate_loss_rotation": 1.3736697190026406,
+      "a2_steps": 32,
+      "a2_train_loss": 5.052580833435059,
+      "a2_ortho_error": 3.5762786865234375e-07
+    },
+    {
+      "layer": 23,
+      "wall_s": 14.124929599929601,
+      "forced_reject_r3_fields": 43,
+      "a21_steps": 32,
+      "a21_attempted_groups": 2,
+      "a21_initial_loss": 2.0,
+      "a21_final_loss": 1.4411683402763447,
+      "a21_q_scale_ratio2": 0.7404462695121765,
+      "a21_k_scale_ratio2": 0.7007209435105324,
+      "a21_inverse_error": 2.5033950805664062e-05,
+      "a21_s_norm": 3.038825750350952,
+      "a22_parent_arm": "rotation",
+      "a22_gate_parent_mse": 0.0077317021787166595,
+      "a22_gate_candidate_mse": 0.0076368423178792,
+      "a22_accepted": 1,
+      "a22_fallback_states": "complete_r3",
+      "a2_gate_loss_identity": 1.0,
+      "a2_gate_loss_rotation": 0.9939140535152405,
+      "a2_steps": 32,
+      "a2_train_loss": 1.009676456451416,
+      "a2_ortho_error": 4.172325134277344e-07
+    }
+  ]
+}

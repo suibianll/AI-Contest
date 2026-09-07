@@ -94,7 +94,14 @@
     "sha256": "A5C679D7A2B349A879B2019B4A613244F5FEA7050E407B6475B9E29BD1C146DC",
     "note": "21071证据阶段选定低成本父R3 14405/238s；不同于高分official_best A2"
   },
-  "pending_official": null,
+  "pending_official": {
+    "run_id": "anchor22-a1",
+    "label": "A21-1 fixed scale proposal gated against and falling back to the COMPLETE R3 parent",
+    "path": "solutions/continuous_attention_anchor22-a1/solution.py",
+    "sha256": "25310C6E36C41CA0DD7A716C29946EDE9C7E030AF7C4329DC2F29D732BD92447",
+    "local_class": "LOCAL_POSITIVE_ALL_GATES_PASS",
+    "note": "本卡登记的唯一官方机制检验代表：Δmean +0.005786、负向L1 0.0000329、双split正、时间预测239.850s<280s；官方裁决须比R3高且<300s。"
+  },
   "local_highest_reference": {
     "note": "A 侧本地最高（default 120 case attention_mean；ID 48-case delta 见 queue）",
     "value": 0.773281,
@@ -102,15 +109,17 @@
     "candidate": "solutions/continuous_attention_a1-deployed-aligned_officialNA_timeNA",
     "candidate_sha256": "65eb37f2346ecebd97952ff67e2af7d5a99b568fc95352eaff1702bd9814964a"
   },
-  "next_action": "实施前注册A22-1：保持A21-1固定scale提案，改用完整R3校准对照与回退；先验父control，再真实成本和独立官方检验。",
+  "next_action": "A22-1已完成并归档（官方探索代表，READY_FOR_OFFICIAL_EXPLORATION）；等待官方回传。等待期间仅本地准备A22-2（父坐标增量互逆变换，启动条件已满足21/24回退），不把待回传源码升级为官方父。",
   "recent_steps": [
     "2026-09-07：清理当前指令中的A2永久关闭、R3仍最高、OOD排序有效、旧待执行A3等矛盾；保留原始日志。",
     "2026-09-07：A21-1完成48case ID/OOD及fresh default/cross/独立梯度与部署control；本地Delta +0.001234，negative L1 0.007585，时间预测219.284s，独立归档待官方。",
     "2026-09-07：24层尝试6层接受；接受层holdout +0.022872、回退层 -0.005979，说明整包收益被移除旧训练的损失抵消。",
-    "2026-09-07：A21-1官方14199/244s，REJECTED；预测低估24.716s。下一卡恢复完整R3对照与回退，未启动新实验。"
+    "2026-09-07：A21-1官方14199/244s，REJECTED；预测低估24.716s。下一卡恢复完整R3对照与回退，未启动新实验。",
+    "2026-09-07：A22-1构建+验证：强制拒绝候选时输出与官方R3逐位一致（合成/L0/L23），梯度/坐标/V-control/隔离导入全PASS。",
+    "2026-09-07：A22-1评测：ID Δmean +0.005785656、负向L1 0.0000329、5/1/42，仅L8/L12/L23部署提案（+0.0009/+0.0871/+0.0508），其余21层严格零变化；OOD Δmean +0.002841、Δgap +0.002945；时间预测239.850s<280s；READY_FOR_OFFICIAL_EXPLORATION，已归档solutions/continuous_attention_anchor22-a1/。"
   ],
-  "status": "READY / A22-1_PLAN_ONLY",
-  "artifacts_note": "历史结果在 artifacts/proxy_v3/v162-independent/attention/{r2c-id,r2c-ood,r3-id,r3-ood,r3-default}；新 run 按 plan 写 artifacts/proxy_v3/continuous/attention/",
+  "status": "A22-1_DONE / OFFICIAL_PENDING",
+  "artifacts_note": "历史结果在 artifacts/proxy_v3/v162-independent/attention/{r2c-id,r2c-ood,r3-id,r3-ood,r3-default}；A22-1 在 artifacts/proxy_v3/continuous/attention/anchor22-a1/{id,ood,timing,cross}",
   "new_evidence": "logs/execution/2026-09-07-user-21071-mechanism-evidence.md；旧全族关闭/旧队列顺序以当前工作包为准。",
-  "last_completed_run": "workbench/continuous_attention/anchor21-a1"
+  "last_completed_run": "workbench/continuous_attention/anchor22-a1"
 }
