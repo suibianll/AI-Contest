@@ -1,0 +1,33 @@
+{
+  "version": "continuous_attention_A1",
+  "status": "ALL_LOCAL_GATES_PASS / LOCAL_NEW_HIGH / PENDING_OFFICIAL",
+  "mechanism": "A1 deployment-aligned rotation training: training hard-forward uses the true pre-encode coordinates (stack-transform replica, bitwise-verified), the parent's full refined encoder, and the deployed quantized V; config inherited from R2c",
+  "parent": {
+    "version": "R2c/R3 mechanism lineage",
+    "research_parent_sha256": "a5c679d7a2b349a879b2019b4a613244f5fea7050e407b6475b9e29bd1c146dc"
+  },
+  "source": {
+    "path": "solution.py",
+    "sha256": "65eb37f2346ecebd97952ff67e2af7d5a99b568fc95352eaff1702bd9814964a"
+  },
+  "local": {
+    "shard48_mean_delta_vs_v162": 0.782914,
+    "default_attention_mean": 0.773281,
+    "default_linear_mean": 0.0,
+    "ood_delta_gap": 0.008297,
+    "ood_gate": "pass (<=0.01, risk-flag level per 2026-09-07 policy)",
+    "time_prediction_s": 239.036,
+    "time_gate": "pass (<280)",
+    "l1_negative": 0.0,
+    "local_new_high": true,
+    "prev_local_high": {
+      "candidate": "R2c",
+      "default_attention_mean": 0.767788
+    }
+  },
+  "official": {
+    "score": "NA",
+    "time_seconds": "NA",
+    "status": "unregistered"
+  }
+}
