@@ -114,6 +114,15 @@
       "sha256": "8714ac2a044779465c5e406ef0768be7071ac626f3a2171cdc5083350be92dbf",
       "status": "OFFICIAL_KEPT_NEW_SIDE_PARENT",
       "note": "相对A22-2 +13/+5s（SCORE_BEST，新侧父）；相对A2 -3/+2s（A2仍official_best，近平局Pareto）；相对R3 +32/+38s。4B paired负向但官方正向——paired面板仅风险记录的二代确认。"
+    },
+    {
+      "run_id": "anchor25-a1",
+      "score": 14057,
+      "time_s": 254,
+      "path": "solutions/continuous_attention_anchor25-a1/solution.py",
+      "sha256": "4fb779e36421edb88328a4aa8d9660c184ccfe530156ffd805a7a3182e0fa034",
+      "status": "OFFICIAL_REJECTED",
+      "note": "vs A23侧父 −380/−22s；vs R3 −348/+16s；vs A21-1 −142/+10s（同为单主干，A21-1有Hadamard预旋转）。单主干替换旧训练在官方上不如保留旧训练（A22-2/A23保留R3旧训练得分14424/14437远超14057）。4B paired正向(C vs R3 +0.003)但官方−348——proxy反转反方向(A23是负→正)。四维度诊断在4B cache上显示机制生效但官方隐藏模型不transfer。卡关闭。"
     }
   ],
   "research_parent": {
@@ -130,7 +139,7 @@
     "candidate_sha256": "4686ad817128d60e1a1648e0e14793692097ee8171fac2bc5202466d5787c0b7",
     "status": "HISTORICAL_ONLY_NOT_A_4B_GATE"
   },
-  "next_action": "A23成为新侧父（14437/276s，乘积目标线，官方推翻本地负向预期）；A2仍official_best（-3/+2s近局）。下一卡待登记：乘积目标线的后继（A23父上新一轮）或A22-2/A23正交组合分析；A24的互逆+STE死路发现与码级离散方向仍开放。等待协调者/用户指示。",
+  "next_action": "A25单主干替换路线官方证伪（14057 < A21-1 14199 < A22-2 14424 < A23 14437）。保留旧训练+残余叠加路线（A22-2/A23）在官方上仍最优。research_parent保持A23(14437/276s)。下一卡须基于A23父线继续——不在单主干替换上重试。",
   "recent_steps": [
     "2026-09-07：清理当前指令中的A2永久关闭、R3仍最高、OOD排序有效、旧待执行A3等矛盾；保留原始日志。",
     "2026-09-07：A21-1完成48case ID/OOD及fresh default/cross/独立梯度与部署control；本地Delta +0.001234，negative L1 0.007585，时间预测219.284s，独立归档待官方。",
@@ -144,9 +153,10 @@
     "2026-09-07：A22-2官方14424/271s，SCORE_BEST（vs R3 +19/+33s，vs A2 -16/-3s），按预登记规则保留为新父线；A侧首个官方正向scale类机制（附加式残余S）；A21-1→A22-1→A22-2官方轨迹14199→14291→14424验证保留父变换方向有效；时间残差+35.676s与A22-1/A21-1一致；research_parent更新为anchor22-a2。",
     "2026-09-07：A23（anchor23-a1，Q/K联合块scale乘积目标，父A22-2）4B paired 72case负向：Δmean -0.004750、test split -0.010253、L8 gate接受后9/12负向（单窗口gate过拟合）；乘积比降45-55%而readout不跟随=预登记失败模式；目标卡关闭（OBJECTIVE_CLOSED），A22-2父线不变；父A22-2的4B基线由本次paired run首跑补齐（4B mean 0.536715）。",
     "2026-09-07：A24（anchor24-a1，父A22-2，残余互逆变换+真实量化输出误差STE目标）验证链发现结构性死路：logits=x_q·exp(S)·exp(−S)·x_kᵀ≡x_q·x_kᵀ，互逆参数化未量化路径与恒等无异，STE一阶梯度精确为零（float64有限差分仲裁=0）；s_norm=8.69为Adam噪声放大伪梯度，训练窗loss降6.6%系窗口内过拟合、独立gate正确拒绝（L0实测4.560e-4>4.328e-4）。按AGENTS§5提前停止：REJECTED_BEFORE_EVALUATION/NO_SUPPORTED_MECHANISM。副产物：float32的torch.matrix_exp autograd数值损坏（FD仲裁差O(1)），_a21_exp_backward经float64仲裁完全正确。关闭边界=仅互逆+STE组合；量化码级离散方法（去重后）与A22-2结构仍开放。",
-    "2026-09-07：A23官方14437/276s，SCORE_BEST（vs A22-2 +13/+5s）成为新侧父；vs A2 -3/+2s（A2仍official_best）；4B paired负向(-0.00475)但官方正向——paired面板仅风险记录二代确认；乘积目标卡由官方重新开放；A24的STE死路发现不变。"
+    "2026-09-07：A23官方14437/276s，SCORE_BEST（vs A22-2 +13/+5s）成为新侧父；vs A2 -3/+2s（A2仍official_best）；4B paired负向(-0.00475)但官方正向——paired面板仅风险记录二代确认；乘积目标卡由官方重新开放；A24的STE死路发现不变。",
+    "2026-09-08：A25官方14057/254s，OFFICIAL_REJECTED（vs A23 −380/−22s）。关键发现：单主干替换旧训练不如保留旧训练（A21-1 14199 > A25 14057 < A22-2 14424 < A23 14437）；Hadamard预旋转有价值（A21-1 > A25）；4B paired正向但官方负向——proxy反转反方向。卡关闭。"
   ],
-  "status": "A23_OFFICIAL_KEPT_NEW_SIDE_PARENT / A24_NO_SUPPORTED_MECHANISM",
+  "status": "A25_OFFICIAL_REJECTED / SIDE_PARENT_STAYS_A23",
   "artifacts_note": "历史结果在 artifacts/proxy_v3/v162-independent/attention/{r2c-id,r2c-ood,r3-id,r3-ood,r3-default}；A22-1 在 artifacts/proxy_v3/continuous/attention/anchor22-a1/{id,ood,timing,cross}",
   "new_evidence": "logs/execution/2026-09-07-user-21071-mechanism-evidence.md；旧全族关闭/旧队列顺序以当前工作包为准。",
   "last_completed_run": "workbench/continuous_attention/anchor22-a2",

@@ -1,0 +1,22 @@
+{
+  "run_id": "anchor25-a1",
+  "official_score": 14057,
+  "official_time_s": 254,
+  "status": "OFFICIAL_REJECTED",
+  "reported_by": "user",
+  "reported_at": "2026-09-08",
+  "source_sha256": "4fb779e36421edb88328a4aa8d9660c184ccfe530156ffd805a7a3182e0fa034",
+  "verdict_rule": "workpackage §6: official negative vs side parent -> OFFICIAL_REJECTED",
+  "comparison": {
+    "vs_a23_side_parent": "-380 / -22s",
+    "vs_a22_2": "-367 / -17s",
+    "vs_r3": "-348 / +16s",
+    "vs_a21_1_single_trunk": "-142 / +10s (both single-trunk; A21-1 has Hadamard pre-rotation, A25 does not)"
+  },
+  "local_official_divergence": {
+    "note": "4B paired was POSITIVE (C vs B +0.008, C vs R3 +0.003) yet official is -348 vs R3 - opposite direction from A23 (paired negative -> official +13). Confirms 4B paired panel predicts neither direction.",
+    "implication": "four-dimension diagnostic showed mechanism effective on 4B cache data (scale down, E6M2 field change, output improved) but this did NOT transfer to the official hidden model - the 4B cache is a structural proxy, not the official model"
+  },
+  "key_finding": "single-trunk replacement (no old training) is WORSE than retaining old training: A21-1 14199, A25 14057 both far below A22-2 14424 and A23 14437 which retain R3 old training. The 'stop stacking' direction the user proposed is experimentally refuted: deleting old training loses more than new training gains. Hadamard pre-rotation also has value (A21-1 > A25 by 142).",
+  "note": "254s < 300s hard limit; rejected on score, not timeout. Card closed, no parameter sweeps."
+}
