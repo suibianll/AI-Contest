@@ -22,15 +22,16 @@
   },
   "pending_official": null,
   "evidence_repair": {
-    "l_r1": "DONE: 真实 API 闭环 12/12 逐位一致; rank 非纯可逆(1e-4); 四臂 UNIDENTIFIABLE",
-    "l_r2": "DONE: 正确性 PASS; 完整硬前向 0.62-3.24s/step COST_HOLD",
-    "l_r2_t_identity": "CORRECTED(2026-09-07): deployment_forward(T=I) != 父 (ratio 0.45-0.80); 3-state '退化' 无效; FlatQuant = DIRECTION_UNKNOWN, 不因该探针关闭",
-    "l_r3": "DONE: GPTAQ==JDRQ 公式级(5e-7) DUPLICATE_CLOSED"
+    "l_r1": "DONE: 真实 API 闭环 12/12 逐位一致；rank 非纯可逆；四臂 UNIDENTIFIABLE",
+    "l_r2": "DONE: 正确性 PASS; COST_HOLD(0.62-3.24s/step); T=I 重建基线不可用->方向未判定",
+    "l_r3": "DONE: GPTAQ==JDRQ 公式级(5e-7) DUPLICATE_CLOSED",
+    "l1_final": "COST_HOLD（正确性 PASS；32 步全量不可承受；方向未判定；不关闭可逆变换数学方向）"
   },
-  "next_action": "L1 方向判定需'插 T 完整校准变体'(T=I 逐位恢复父, 含 rank-2 gram/actorder/importance); 将 mc 与代价 COST_HOLD 保持。替代: 低成本解析平坦化方向诊断(非训练, 瞄准官方 P3 fc/proj 桶)",
+  "next_action": "NEEDS_NEW_HYPOTHESIS：L1 COST_HOLD；L2/L3 关闭；官方 P3 指向 fc/proj 桶但该桶可用机制已关闭；组合路线(L4+R2c)归协调者；等待新假设或重开边界",
   "recent_steps": [
-    "2026-09-07: T=I parity 修正: 简化前向与父不一致, 3-state 退化结论作废",
-    "2026-09-07: FlatQuant 状态 -> DIRECTION_UNKNOWN + COST_HOLD",
-    "2026-09-07: 构建插 T 完整校准变体方向探针(仍 MISMATCH, 需补 rank 配对/actorder)"
+    "2026-09-07: L1 终裁 COST_HOLD（正确性 PASS，成本不可承受，方向未判定）",
+    "2026-09-07: T=I parity 修正：简化/重建前向均与父不一致，方向结论无效",
+    "2026-09-07: queue 记录 P3 桶证据（fc 1818+proj 1767）与阻断选项",
+    "2026-09-07: evidence-repair L-R1/R2/R3 全部完成并提交"
   ]
 }
