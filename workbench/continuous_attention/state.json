@@ -103,7 +103,14 @@
     "sha256": "A5C679D7A2B349A879B2019B4A613244F5FEA7050E407B6475B9E29BD1C146DC",
     "note": "21071证据阶段选定低成本父R3 14405/238s；不同于高分official_best A2"
   },
-  "pending_official": null,
+  "pending_official": {
+    "run_id": "anchor22-a2",
+    "label": "A22-2 residual inverse transform on complete parent coordinates (attachment-style, S=0 restores P)",
+    "path": "solutions/continuous_attention_anchor22-a2/solution.py",
+    "sha256": "4686AD817128D60E1A1648E0E14793692097EE8171FAC2BC5202466D5787C0B7",
+    "local_class": "LOCAL_POSITIVE_NEW_LOCAL_HIGHEST",
+    "note": "用户已批准官方探索（2026-09-07）。裁决规则：官方 >R3(14405) 且 <300s 保留；<=R3 附加式残余族关闭。时间预测235.324s，A22-1残差情景约268.5s<300s。"
+  },
   "local_highest_reference": {
     "note": "A 侧本地最高（default 120 case attention_mean）；ID 48-case delta 见 queue",
     "value": 0.783515197,
@@ -111,7 +118,7 @@
     "candidate": "solutions/continuous_attention_anchor22-a2",
     "candidate_sha256": "4686ad817128d60e1a1648e0e14793692097ee8171fac2bc5202466d5787c0b7"
   },
-  "next_action": "A22-1官方14291/273s REJECTED（vs R3 -114/+35s），卡关闭；scale提案族（R3父上替换式）两次官方负向。A22-2（残余参数化，LOCAL_RESEARCH新最高0.783515）为不同机制类型，官方探索资格待用户/协调者批准；批准前不提交官方，不扫参数。",
+  "next_action": "A22-2已获用户批准官方探索（pending_official=anchor22-a2, SHA 4686ad81...），候选包就绪待提交；官方>R3(14405)且<300s保留，<=R3附加式残余族关闭。等待官方回传期间不扫参数；回传后按裁决更新并登记新机制卡。",
   "recent_steps": [
     "2026-09-07：清理当前指令中的A2永久关闭、R3仍最高、OOD排序有效、旧待执行A3等矛盾；保留原始日志。",
     "2026-09-07：A21-1完成48case ID/OOD及fresh default/cross/独立梯度与部署control；本地Delta +0.001234，negative L1 0.007585，时间预测219.284s，独立归档待官方。",
@@ -120,9 +127,10 @@
     "2026-09-07：A22-1构建+验证：强制拒绝候选时输出与官方R3逐位一致（合成/L0/L23），梯度/坐标/V-control/隔离导入全PASS。",
     "2026-09-07：A22-1评测：ID Δmean +0.005785656、负向L1 0.0000329、5/1/42，仅L8/L12/L23部署提案（+0.0009/+0.0871/+0.0508），其余21层严格零变化；OOD Δmean +0.002841、Δgap +0.002945；时间预测239.850s<280s；READY_FOR_OFFICIAL_EXPLORATION，已归档solutions/continuous_attention_anchor22-a1/。",
     "2026-09-07：A22-2（父坐标残余互逆变换，保留P的rotation/center仅学残余S，c_new=c·exp(−S)同步编译）：S=0平局逐位恢复P；ID Δmean +0.021296052、负向L1 0.000103、23/1/42→23/1/24，12/24层接受（L12 +0.106/L20 +0.081/L23 +0.066）；OOD Δmean +0.017129、Δgap +0.004167；default 120c attention_mean 0.783515197>0.773281新本地最高；时间预测235.324s<280s；按用户指令归档solutions/continuous_attention_anchor22-a2/并commit/push（LOCAL_RESEARCH，官方探索未登记）。",
-    "2026-09-07：A22-1官方14291/273s，OFFICIAL_REJECTED（vs R3 -114/+35s，vs A21-1 +92/+29s）；时间残差+33.150s与A21-1同向；卡按预注册规则关闭；scale提案替换式两次官方负向，A22-2残余式官方资格待批准。"
+    "2026-09-07：A22-1官方14291/273s，OFFICIAL_REJECTED（vs R3 -114/+35s，vs A21-1 +92/+29s）；时间残差+33.150s与A21-1同向；卡按预注册规则关闭；scale提案替换式两次官方负向，A22-2残余式官方资格待批准。",
+    "2026-09-07：用户批准A22-2官方探索；候选包READY_FOR_OFFICIAL（SHA 4686ad81...，预测235.3s，残差情景约268.5s<300s），待提交官方。"
   ],
-  "status": "A22-1_OFFICIAL_REJECTED / A22-2_LOCAL_DONE_AWAITING_EXPLORATION_APPROVAL",
+  "status": "A22-1_OFFICIAL_REJECTED / A22-2_READY_FOR_OFFICIAL_USER_APPROVED",
   "artifacts_note": "历史结果在 artifacts/proxy_v3/v162-independent/attention/{r2c-id,r2c-ood,r3-id,r3-ood,r3-default}；A22-1 在 artifacts/proxy_v3/continuous/attention/anchor22-a1/{id,ood,timing,cross}",
   "new_evidence": "logs/execution/2026-09-07-user-21071-mechanism-evidence.md；旧全族关闭/旧队列顺序以当前工作包为准。",
   "last_completed_run": "workbench/continuous_attention/anchor22-a2"

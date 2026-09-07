@@ -2,11 +2,11 @@
   "run_id": "anchor22-a2",
   "mechanism": "residual-inverse-transform-on-complete-parent",
   "source_sha256": "4686ad817128d60e1a1648e0e14793692097ee8171fac2bc5202466d5787c0b7",
-  "status": "LOCAL_RESEARCH_COMPLETED_NEW_LOCAL_BEST",
+  "status": "READY_FOR_OFFICIAL_EXPLORATION_USER_APPROVED",
   "local_class": "LOCAL_POSITIVE_ALL_GATES_PASS_NEW_LOCAL_HIGHEST",
   "official_score": null,
   "official_time_s": null,
-  "official_status": "NA (A22-1 pending; this card has NO registered official exploration; user instruction requires commit+push when the local highest is exceeded)",
+  "official_status": "READY_FOR_OFFICIAL (user approved 2026-09-07; candidate sha 4686ad81..., submission by coordinator/user)",
   "parent": {
     "path": "solutions/v162_attention_r3-rotation-center_allgates/solution.py",
     "sha256": "a5c679d7a2b349a879b2019b4a613244f5fea7050e407b6475b9e29bd1c146dc",
@@ -130,5 +130,11 @@
   "next": "A22-1 \u5b98\u65b9\u56de\u4f20\u524d\u672c\u5361\u4ec5 LOCAL_RESEARCH, \u4e0d\u63d0\u4ea4\u5b98\u65b9; \u56de\u4f20\u540e\u7531\u7528\u6237/\u534f\u8c03\u8005\u51b3\u5b9a\u672c\u5361\u5b98\u65b9\u63a2\u7d22\u8d44\u683c. \u82e5\u664b\u7ea7, \u4e0b\u4e00\u673a\u5236\u6309\u961f\u5217 A22-3 \u6216\u65b0\u5361.",
   "official_scored_sha256": null,
   "archive_sha256": "4686ad817128d60e1a1648e0e14793692097ee8171fac2bc5202466d5787c0b7",
-  "official_result": null
+  "official_result": null,
+  "official_exploration_approval": {
+    "approved_by": "user",
+    "approved_at": "2026-09-07",
+    "rule": "official > R3 (14405) and <300s keeps; <=R3 closes the attachment-style residual family",
+    "time_note": "prediction 235.324s; A22-1 residual scenario ~268.5s < 300s"
+  }
 }

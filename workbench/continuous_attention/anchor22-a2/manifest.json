@@ -2,11 +2,11 @@
   "run_id": "anchor22-a2",
   "mechanism": "residual-inverse-transform-on-complete-parent",
   "source_sha256": "4686ad817128d60e1a1648e0e14793692097ee8171fac2bc5202466d5787c0b7",
-  "status": "LOCAL_RESEARCH_COMPLETED_NEW_LOCAL_BEST",
+  "status": "READY_FOR_OFFICIAL_EXPLORATION_USER_APPROVED",
   "local_class": "LOCAL_POSITIVE_ALL_GATES_PASS_NEW_LOCAL_HIGHEST",
   "official_score": null,
   "official_time_s": null,
-  "official_status": "NA (A22-1 pending; this card has NO registered official exploration; user instruction requires commit+push when the local highest is exceeded)",
+  "official_status": "READY_FOR_OFFICIAL (user approved 2026-09-07; candidate sha 4686ad81..., submission by coordinator/user)",
   "parent": {
     "path": "solutions/v162_attention_r3-rotation-center_allgates/solution.py",
     "sha256": "a5c679d7a2b349a879b2019b4a613244f5fea7050e407b6475b9e29bd1c146dc",
@@ -19,14 +19,40 @@
     "delta_mean": 0.021296052,
     "l1_total": 0.021502441,
     "l1_negative": 0.000103194,
-    "pos_neg_same": [23, 1, 24],
+    "pos_neg_same": [
+      23,
+      1,
+      24
+    ],
     "validation_delta_mean": 0.018684347,
     "test_delta_mean": 0.023907758,
-    "changed_layers": [3, 6, 7, 11, 12, 13, 14, 15, 18, 20, 21, 23],
+    "changed_layers": [
+      3,
+      6,
+      7,
+      11,
+      12,
+      13,
+      14,
+      15,
+      18,
+      20,
+      21,
+      23
+    ],
     "changed_layer_delta_mean": {
-      "3": 0.015858, "6": 0.019861, "7": 0.003789, "11": 0.035874,
-      "12": 0.106191, "13": 0.022577, "14": 0.039172, "15": 0.036818,
-      "18": 0.031949, "20": 0.081058, "21": 0.052390, "23": 0.065570
+      "3": 0.015858,
+      "6": 0.019861,
+      "7": 0.003789,
+      "11": 0.035874,
+      "12": 0.106191,
+      "13": 0.022577,
+      "14": 0.039172,
+      "15": 0.036818,
+      "18": 0.031949,
+      "20": 0.081058,
+      "21": 0.05239,
+      "23": 0.06557
     },
     "only_negative_case": "L7 one case -0.004953"
   },
@@ -34,7 +60,11 @@
     "cases": 48,
     "delta_mean": 0.017128766,
     "l1_negative": 0.000673254,
-    "pos_neg_same": [21, 3, 24],
+    "pos_neg_same": [
+      21,
+      3,
+      24
+    ],
     "validation_delta_mean": 0.016834301,
     "test_delta_mean": 0.01742323,
     "candidate_gap": 0.010629623,
@@ -44,7 +74,10 @@
   },
   "fresh_default": {
     "attention_mean_120case": 0.7835151968918435,
-    "previous_local_highest": {"value": 0.773281, "source": "A1 deployed-aligned, default 120-case attention_mean"},
+    "previous_local_highest": {
+      "value": 0.773281,
+      "source": "A1 deployed-aligned, default 120-case attention_mean"
+    },
     "new_local_highest": true,
     "linear_mean": 0.0,
     "api_total_seconds": 105.52619259804487,
@@ -62,14 +95,27 @@
     "time_gate": "235.324 < 280s PASS; +24.716s residual scenario 260.040 < 300s PASS"
   },
   "attempted_layers": 24,
-  "accepted_layers": [3, 6, 7, 11, 12, 13, 14, 15, 18, 20, 21, 23],
+  "accepted_layers": [
+    3,
+    6,
+    7,
+    11,
+    12,
+    13,
+    14,
+    15,
+    18,
+    20,
+    21,
+    23
+  ],
   "calibration_audit": "workbench/continuous_attention/anchor22-a2/calibration-audit.json",
   "cross_model": {
     "model": "gpt2",
     "panel": "compact 4 cases",
     "attention_mean": 0.47729394260781666,
     "api_total_seconds": 17.133841499919072,
-    "note": "仅记录机制鲁棒性, 不支持或否决晋级"
+    "note": "\u4ec5\u8bb0\u5f55\u673a\u5236\u9c81\u68d2\u6027, \u4e0d\u652f\u6301\u6216\u5426\u51b3\u664b\u7ea7"
   },
   "controls": {
     "s0_tie_equals_r3_bitwise": "PASS: residual pinned to S=0 reproduces official R3 bit-for-bit (synthetic 34 fields, L0 34, L23 43, all non-audit fields)",
@@ -81,8 +127,14 @@
     "gradients": "manual exp/scale gradients vs autograd max error 2.62e-6",
     "inference_mode": "PASS"
   },
-  "next": "A22-1 官方回传前本卡仅 LOCAL_RESEARCH, 不提交官方; 回传后由用户/协调者决定本卡官方探索资格. 若晋级, 下一机制按队列 A22-3 或新卡.",
+  "next": "A22-1 \u5b98\u65b9\u56de\u4f20\u524d\u672c\u5361\u4ec5 LOCAL_RESEARCH, \u4e0d\u63d0\u4ea4\u5b98\u65b9; \u56de\u4f20\u540e\u7531\u7528\u6237/\u534f\u8c03\u8005\u51b3\u5b9a\u672c\u5361\u5b98\u65b9\u63a2\u7d22\u8d44\u683c. \u82e5\u664b\u7ea7, \u4e0b\u4e00\u673a\u5236\u6309\u961f\u5217 A22-3 \u6216\u65b0\u5361.",
   "official_scored_sha256": null,
   "archive_sha256": null,
-  "official_result": null
+  "official_result": null,
+  "official_exploration_approval": {
+    "approved_by": "user",
+    "approved_at": "2026-09-07",
+    "rule": "official > R3 (14405) and <300s keeps; <=R3 closes the attachment-style residual family",
+    "time_note": "prediction 235.324s; A22-1 residual scenario ~268.5s < 300s"
+  }
 }
