@@ -4,30 +4,36 @@
   "plan": "docs/superpowers/plans/2026-09-07-continuous-linear-attention-plan.md",
   "workpackage": "docs/superpowers/plans/workpackages/21071-evidence-driven-research.md",
   "created": "2026-09-07",
-  "official_best": {
-    "run_id": "l4-v189-linear-exact",
-    "label": "v189 Linear side exact recovery (L4)",
+  "parent": {
+    "label": "L4",
     "path": "solutions/v162_linear_l4-v189-linear-exact_officialNA_timeNA/solution.py",
     "sha256": "ACB16F764DB80EDA94EB77FE497A7965C716B527571C241C79B2319529FF5263",
     "official_score": 4607,
-    "official_time_s": 247,
-    "C_L": 3606
+    "official_time_s": 247
   },
-  "local_highest_reference": {
-    "value": 0.6367994885532791,
-    "source": "L4 (eval-v3 linear-only six shard n=336)",
-    "status": "HISTORICAL_ONLY_NOT_A_4B_GATE"
+  "4b_reference": {
+    "cache": "artifacts/official_eval/cache/qwen3.5-4b-proxy-v2.pt",
+    "panel": "qwen35-4b-panel-v1",
+    "v189_baseline_shard0": {"candidate_linear": 56, "mean": 0.508867},
+    "note": "4B guide: paired Δ only, no local time gate, 300s official hard cap"
   },
-  "l21_1": "LOCAL_EXPLORATORY_NEGATIVE: math PASS (OBQ==direct), differs from JDRQ; real-loop 3/3 holdout DEGRADE",
-  "l21_2": "LOCAL_NEGATIVE_IMPLEMENTATION_ONLY: small-sample negative results do not establish objective-wide failure; see evidence correction",
-  "pending_official": null,
-  "next_action": "用户指定A@W低维拟合：L23改为残差监督低维子空间；先与旧激活Gram/权重SVD卡去重，再核验闭式求解与合法投影。撤销可逆对角变换卡，不重跑旧rank邻域。",
+  "l21_series": {
+    "l21_1_percolumn": "LOCAL_EXPLORATORY_NEGATIVE (3/3 holdout degrade)",
+    "l21_2_leanonce": "REJECTED local (block-once == per-column)",
+    "lowdim_candidate_shard0_0_5b": "old 0.5B panel, superseded",
+    "neg_loss_gate_correction": "candidate-shard0-report worst-case claim corrected per 21071-evidence-correction §3 (bound <=0.01899<0.02)"
+  },
+  "l23_residual_subspace": {
+    "mechanism": "whitened residual-cross H (G=ΣωXhᵀXh+λI Cholesky, Hw=L⁻¹H, rank-8 SVD, solve back), fit even rows / select odd rows, median<0 accept, writeback accepted blocks only",
+    "math_check": "PASS: whitened beats act-Gram top-8 by 85.8% vs 0.01% on residual-dominant example; r=64==direct LS",
+    "dedup": "vs old act-Gram/block-once/weight-SVD/JDRQ: different subspace (residual-cross vs activation-energy) and fit/select isolation; registered",
+    "4b_shard0": "L23 mean 0.4898 vs L4 0.5089 → Δ -0.0191; role-paired 34+ cases changed all roles negative (o worst -0.13, proj -0.04)",
+    "status": "REJECTED (local, this implementation only; per workpackage closes this residual-supervision subspace variant, does NOT close low-dim A@W family, no rank/base/teacher/ridge sweep)",
+    "candidate": "workbench/continuous_linear/l23-residual-subspace/candidate/solution.py",
+    "submitted_official": false
+  },
+  "next_action": "L23 local negative -> per workpackage: keep parent L4, no sweep, do not re-register renamed variants. Options: (a) user 21071 source/SHA to bind exact formula; (b) A23 attention card (other agent) or coordinated combo C23-0; (c) new hypothesis. Not spinning, not re-running closed variants",
   "recent_steps": [
-    "2026-09-07: L21-2 probe REJECTED local (block-once == per-column)",
-    "2026-09-07: L21-1 probe LOCAL_EXPLORATORY_NEGATIVE",
-    "2026-09-07: two implementations both prove output-sensitive fit degrades holdout 3/3"
-  ],
-  "status": "L23_DESIGN_READY",
-  "evaluation_policy": "4B only; 336 Linear / 72 Attention; no local time gate; official 300s",
-  "evidence_correction": "logs/execution/2026-09-07-21071-next-cycle-evidence-correction.md"
+    "2026-09-07: L23 whitened-residual-subspace math PASS + 4B shard0 local all-roles negative (commit b52dbee)"
+  ]
 }
