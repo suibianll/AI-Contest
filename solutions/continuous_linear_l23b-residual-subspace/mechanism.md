@@ -1,8 +1,19 @@
 # L23：残差交叉子空间 A@W 低维拟合（全校准行直接拟合，官方裁决）
 
 登记于 2026-09-07；2026-09-08 修正归档（新 SHA `13639FB2…10FE0`，取代
-`33D1DA51…E35D`）。一个机制、一个配置，见 config.json。官方状态 PENDING。
-隶属 [21071工作包](../../../docs/superpowers/plans/workpackages/21071-evidence-driven-research.md) §4。
+`33D1DA51…E35D`）。一个机制、一个配置，见 config.json。
+隶属 [持续研究循环](../../../docs/superpowers/plans/workpackages/2026-09-08-continuous-research-loop.md)。
+
+## 官方状态：TIMEOUT（2026-09-08 用户回传）
+
+- **L23b（13639FB2）官方 TIMEOUT**（>300s，精确耗时/分数未知）。关闭该复杂度实现
+  （全校准行 rank-8 残差交叉子空间逐块求解 + 合法五字段投影）；不机械减
+  rank/样本/步数重试，不重复同 SHA 提交。
+- 机制族（残差交叉子空间 A@W 低维拟合）**仍 OPEN**：仅实质算法/复杂度变化的新源码
+  允许再探索（AGENTS §3）。本地时间归因：L23b 六 shard API 1399.15s（父 1055.71s，
+  +343s 本地），增量残差重构不足以把校准期成本降到官方 300s 预算。
+- **fit_gain 0.9486 ≥ 0.9 研究目标有效**（校准折叠，168/168 states）；独立窗口
+  gain 0.339487 只记录。Linear 侧父 L4 与根 v189 不变。
 
 ## 修正内容（用户指令 2026-09-07/08 + 超时回传后继路径）
 

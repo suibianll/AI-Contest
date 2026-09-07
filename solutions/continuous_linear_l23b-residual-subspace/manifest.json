@@ -2,11 +2,11 @@
   "run_id": "continuous_linear_l23b-residual-subspace",
   "mechanism": "residual-cross-subspace-lowdim-aw-fit",
   "source_sha256": "13639fb22976b2c7c838ee2e69ae9c2c58123e03d9bdec106623d93b29510fe0",
-  "status": "READY_FOR_OFFICIAL",
-  "local_class": "DIRECT_FIT_ALL_ROWS_REGISTERED (independent-window stats record-only per user directive)",
+  "status": "TIMEOUT (official 2026-09-08 user reported; exact score/time unknown)",
+  "local_class": "DIRECT_FIT_ALL_ROWS_REGISTERED (fit_gain 0.9486 >= 0.9 target MET locally; official 300s exceeded)",
   "official_score": null,
   "official_time_s": null,
-  "official_status": "READY_FOR_OFFICIAL (fit_gain 0.9486 >= 0.9 target met on calibration folds; no official upload entry in this environment, package path + SHA delivered; loop §5)",
+  "official_status": "TIMEOUT (official hard cap 300s exceeded; closes this complexity implementation; mechanism family OPEN for time-safe reimplementation)",
   "supersedes": {
     "archive": "solutions/continuous_linear_l23-residual-subspace_timeout/",
     "source_sha256": "33d1da51f3cb1d2933acd8ddd7b77f7851eb3b082934eb54e3a60558caf4e35d",
@@ -74,8 +74,9 @@
     "e4_mismatch": 0.6143,
     "reading": "E4 deployment mismatch dominates (94% of E3); continuous fit nearly perfect; legal projection small; next target L24-C (dynamic-activation scale bucket weighting) per research-loop §7 prior"
   },
-  "next": "official verification pending (READY_FOR_OFFICIAL; no upload entry in env, package path solutions/continuous_linear_l23b-residual-subspace/solution.py + SHA 13639FB2 delivered); fit_gain target met; L24-C card next per ledger E4 dominance",
+  "next": "official TIMEOUT 2026-09-08 (user reported): closes this complexity implementation (all-row direct fit + incremental residual); mechanism family OPEN; next must be a substantive complexity reduction (e.g., shared statistics / batched low-dim solve) to fit the official 300s cap; fit_gain 0.9486>=0.9 research target stays valid as the mechanism benchmark",
   "official_scored_sha256": null,
   "archive_sha256": "13639fb22976b2c7c838ee2e69ae9c2c58123e03d9bdec106623d93b29510fe0",
-  "official_result": null
+  "official_result": null,
+  "official_result_file": "official-result.json (status TIMEOUT, user reported 2026-09-08)"
 }

@@ -2,9 +2,11 @@
   "run_id": "continuous_linear_l23-residual-subspace",
   "current_candidate": {
     "source_sha256": "13639fb22976b2c7c838ee2e69ae9c2c58123e03d9bdec106623d93b29510fe0",
-    "status": "PENDING_OFFICIAL",
-    "role": "time-safe restructure designated by logs/execution/2026-09-07-l23-official-timeout.md: all-calibration-row basis solve + incremental residual, eliminating repeated full Xh@W products; does not inherit the old verification or outcome",
-    "verdict_rule": "preregistered in workpackage 21071-evidence-driven-research §4: fit error improvement on same calibration data + legal/reachable/control satisfied -> official exploration allowed; official score and 300s are the sole judge",
+    "status": "TIMEOUT",
+    "reported_by": "user",
+    "reported_at": "2026-09-08",
+    "role": "all-calibration-row direct fit with incremental residual (time-safe restructure of 33d1da51); official timeout closes this complexity implementation too",
+    "verdict_rule": "official 300s and score are the sole judge; TIMEOUT closes the complexity implementation, mechanism stays OPEN; only a substantive complexity/algorithm change may be explored next",
     "official_score": null,
     "official_time_s": null
   },
@@ -19,5 +21,5 @@
     "official_scored_sha256": null
   },
   "comparison": null,
-  "note": "local independent-window stats are record-only under the 2026-09-07 direct-fit directive and do not gate official exploration"
+  "note": "local independent-window stats are record-only under the 2026-09-07 direct-fit directive and do not gate official exploration. fit_gain (calibration folds) was 0.9486 >= 0.9 (research target MET) but the official 300s hard cap was exceeded; the L23 residual-cross-subspace mechanism family remains OPEN for a time-safe reimplementation"
 }

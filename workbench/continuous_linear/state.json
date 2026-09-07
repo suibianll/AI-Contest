@@ -31,7 +31,7 @@
     "math_check": "PASS: whitened beats act-Gram top-8 by 85.8% vs 0.01% on residual-dominant example; r=64==direct LS",
     "dedup": "vs old act-Gram/block-once/weight-SVD/JDRQ: different subspace (residual-cross vs activation-energy); registered",
     "old_4b_shard0_evenrow": "L23 mean 0.4898 vs L4 0.5089 → Δ -0.0191 (historical even-row fit/select version)",
-    "status": "ALLROW_DIRECT_FIT_OFFICIAL_PENDING (supersedes 33D1DA51 which got official TIMEOUT 2026-09-07; this is the time-safe restructure per timeout log: all-row basis, incremental residual, no per-block full Xh@W products or full-weight clones)",
+    "status": "ALLROW_DIRECT_FIT_OFFICIAL_TIMEOUT (user reported 2026-09-08; official 300s exceeded; exact score/time unknown; closes this complexity implementation; mechanism family OPEN for a substantive complexity reduction)",
     "candidate": "workbench/continuous_linear/l23-residual-subspace/candidate/solution.py",
     "candidate_sha256": "13639FB22976B2C7C838EE2E69AE9C2C58123E03D9BDEC106623D93B29510FE0",
     "archive": "solutions/continuous_linear_l23b-residual-subspace/",
@@ -47,7 +47,8 @@
       "note": "record-only; direct-fit policy; official is judge"
     },
     "submitted_official": false,
-    "official_result": null,
+    "official_result": "TIMEOUT (user reported 2026-09-08; official 300s exceeded; exact score/time unknown; closes this complexity implementation; mechanism family OPEN for time-safe reimplementation)",
+    "official_timeout_log": "logs/execution/2026-09-08-l23b-official-timeout.md",
     "fit_gain_table_2026-09-08": {
       "linear_fit_gain_candidate": 0.948560,
       "linear_fit_gain_parent": 0.721876,
@@ -75,7 +76,7 @@
       "scored_sha256": null
     }
   },
-  "next_action": "S1 Linear part MET (fit_gain 0.9486>=0.9 + legal + 168/168) and S3 dedup table documented (logs/execution/2026-09-08-linear-stop-s3-dedup-table.md): E4 structurally information-limited (only 2 calib folds visible; 4 variable dimensions falsified), E1/E2 tiny. L23b READY_FOR_OFFICIAL (package + SHA 13639FB2 delivered; official score/300s sole judge). Waiting official; if negative, explore new mechanism from L23b parent, not re-open closed cards.",
+  "next_action": "L23b official TIMEOUT 2026-09-08: closes the all-row direct-fit + incremental-residual complexity implementation; mechanism family (residual-cross-subspace low-dim A@W fit) stays OPEN. fit_gain 0.9486>=0.9 research target stays valid as mechanism benchmark. Next card: substantive complexity reduction (shared statistics / batched low-dim solve / vectorized legal projection) to fit official 300s; verify minimal correctness then 4B shard0, official is sole judge. Linear parent L4 and root v189 unchanged.",
   "recent_steps": [
     "2026-09-07: L23 whitened-residual-subspace math PASS + 4B shard0 local all-roles negative (commit b52dbee)",
     "2026-09-07: L23 直接拟合版六 shard 完成（336 例、Δmean -0.18、0/336/0，record-only）；脱离导入+CPU fuzz PASS；归档 solutions/continuous_linear_l23-residual-subspace/，注册官方探索",
@@ -88,7 +89,8 @@
     "2026-09-08: L25（E2 靶点，lv2/lv3=1 细格点联合选择）实现并 shard0 验证：面板 delta 与 L23b 逐位相同、fit_gain 0.945<0.948 -> 卡证伪，关闭该组合；E2 仍 OPEN",
     "2026-09-08: L26（E4 靶点，跨折叠一致性接受判定）实现并 shard0 验证：fit_gain 0.817<0.948（破坏 0.9 目标）、accepted 49/144、delta -0.120（改善但仍负）-> 卡证伪，关闭该一致性实现",
     "2026-09-08: R3 循环日志：四卡（L24-C/L24-A/L25/L26）全部关闭；fit_gain 0.9486 >= 0.9 目标达成（S1 Linear 部分）；L23b READY_FOR_OFFICIAL",
-    "2026-09-08: S3 停止条件评估：E4 结构性信息上限（2 折叠可见、四变量维度证伪）、E2/E1 极小；去重比对表见 logs/execution/2026-09-08-linear-stop-s3-dedup-table.md"
+    "2026-09-08: S3 停止条件评估：E4 结构性信息上限（2 折叠可见、四变量维度证伪）、E2/E1 极小；去重比对表见 logs/execution/2026-09-08-linear-stop-s3-dedup-table.md",
+    "2026-09-08: 用户回传 L23b 官方 TIMEOUT（13639FB2，>300s，分数/时间未知）；关闭该复杂度实现，机制族仍 OPEN；fit_gain 0.9486>=0.9 研究目标仍有效；后继须实质复杂度降低（共享统计/批量求解），见 logs/execution/2026-09-08-l23b-official-timeout.md"
   ],
   "evaluation_policy": "Linear: fit all Qwen3.5-4B calibration API data directly; no fit/select split or generalization gate; holdout statistics record only; official 300s"
 }
