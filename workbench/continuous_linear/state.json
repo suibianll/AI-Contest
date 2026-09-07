@@ -21,7 +21,7 @@
   "l21_1": "LOCAL_EXPLORATORY_NEGATIVE: math PASS (OBQ==direct), differs from JDRQ; real-loop 3/3 holdout DEGRADE",
   "l21_2": "LOCAL_NEGATIVE_IMPLEMENTATION_ONLY: small-sample negative results do not establish objective-wide failure; see evidence correction",
   "pending_official": null,
-  "next_action": "R0核对旧证据身份并去重；设计L23实际A@W误差驱动的成对可逆对角坐标，先证明完整L4零点与合法编译，不重跑旧L21配置。",
+  "next_action": "用户指定A@W低维拟合：L23改为残差监督低维子空间；先与旧激活Gram/权重SVD卡去重，再核验闭式求解与合法投影。撤销可逆对角变换卡，不重跑旧rank邻域。",
   "recent_steps": [
     "2026-09-07: L21-2 probe REJECTED local (block-once == per-column)",
     "2026-09-07: L21-1 probe LOCAL_EXPLORATORY_NEGATIVE",
