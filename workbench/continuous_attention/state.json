@@ -1,0 +1,68 @@
+{
+  "side": "attention",
+  "branch": "continuous-attention",
+  "plan": "docs/superpowers/plans/2026-09-07-continuous-linear-attention-plan.md",
+  "workpackage": "docs/superpowers/plans/workpackages/continuous-attention.md",
+  "evidence_repair": "docs/superpowers/plans/workpackages/evidence-repair-next-cycle.md (§6 A-R1)",
+  "created": "2026-09-07",
+  "official_best": {
+    "run_id": "r3-rotation-center",
+    "label": "R2c rotation + learned K-center, all gates pass, OOD-clean",
+    "path": "solutions/v162_attention_r3-rotation-center_allgates/solution.py",
+    "sha256": "A5C679D7A2B349A879B2019B4A613244F5FEA7050E407B6475B9E29BD1C146DC",
+    "official_score": 14405,
+    "official_time_s": 238,
+    "C_A": 13404,
+    "note": "官方回传 2026-09-07。OOD Δgap +0.0065 过门（风险提示级）；本地 default 0.7650"
+  },
+  "official_history": [
+    {
+      "run_id": "r2c-rotation-in-stack",
+      "score": 14387.8,
+      "time_s": 240,
+      "C_A": 13386.8,
+      "path": "solutions/v162_attention_r2c-rotation-in-stack-manual_oodblocked/solution.py",
+      "sha256": "CFDDCED7886A0CABC7251C57387536B86169185E7A6D8BE7A8647FEFAE677CD6",
+      "note": "总计划指定的 A 起始父；OOD Δgap +0.0122（按 2026-09-07 门禁修订降为风险提示）"
+    },
+    {
+      "run_id": "a2c-rotation-standalone",
+      "score": 9538,
+      "time_s": 175,
+      "C_A": 8537,
+      "path": "solutions/v162_attention_a2c-rotation-manual-trainer_oodblocked/solution.py",
+      "sha256": "FD902933ADF9AB70C816169BE744FAFE8D5DCDC51E1E1ED7B871076C973B406D",
+      "note": "A2 机制独立价值；手工梯度训练器官方部署证明"
+    },
+    {
+      "run_id": "r1-v189-attnstack",
+      "score": 14009,
+      "time_s": 211,
+      "C_A": 13008,
+      "path": "solutions/v162_attention_r1-v189-attnstack-recovery_officialNA_timeNA/solution.py",
+      "sha256": "3619BFEB0E017555BD8FE31410888F80950A0128E3A2B94F643BD3F20B30BFC8",
+      "note": "v189 Attention 栈迁移 + 标准 Linear；历史栈锚"
+    }
+  ],
+  "research_parent": {
+    "note": "同 official_best（R3）；新候选一律从该 SHA 构造。总计划文本写的 R2c 起点已被 R3 官方超越，请协调者确认父绑定改为 R3",
+    "sha256": "A5C679D7A2B349A879B2019B4A613244F5FEA7050E407B6475B9E29BD1C146DC"
+  },
+  "pending_official": null,
+  "local_highest_reference": {
+    "note": "A 侧本地最高（eval-v3 attention-only 六 shard n=48 in-dist delta mean）",
+    "value": 0.776564,
+    "source": "artifacts/proxy_v3/v162-independent/attention/r2c-id (R2c)；R3 = 0.775558（default 0.7650 略低但官方更高）"
+  },
+  "next_action": "执行 evidence-repair-next-cycle.md §6 A-R1 与 continuous-attention.md A0：核验 R2c/R3 归档 SHA 与 manifest 身份；枚举 Q/K 实际执行链（decode→K-center→multiplier→signs·H64→pair-transform→learned rotation→encode/refinement）并记录旋转插入前坐标 U_Q/U_K；实现部署路径复刻的训练前向并与六 API 解码输出做逐位对照；对照通过后进入 A1（真实坐标+真实 V 的旋转训练，配置从 R2c 源码提取）",
+  "recent_steps": [
+    "2026-09-07: A2c 官方 9538/175s（C_A=8537）——手工梯度训练器官方部署证明",
+    "2026-09-07: R2c 官方 14387.8/240s（C_A=13386.8）——超过 R1 +378.8",
+    "2026-09-07: R3 官方 14405/238s（C_A=13404）——分支新最佳；OOD 门排序价值被官方验证（过门>未过）",
+    "2026-09-07: 机制族结论：Q/K 坐标（旋转）+平移（center）联合 DOF 在栈内已吸收（R3 default −0.0028 vs R2c）",
+    "2026-09-07: 官方环境 autograd 完全不可用（inference 上下文）——训练类机制必须解析梯度",
+    "2026-09-07: state/queue 迁移至 continuous_attention 结构（本文件）"
+  ],
+  "status": "A0_DEPLOYMENT_TARGET_VERIFICATION",
+  "artifacts_note": "历史结果在 artifacts/proxy_v3/v162-independent/attention/{r2c-id,r2c-ood,r3-id,r3-ood,r3-default}；新 run 按 plan 写 artifacts/proxy_v3/continuous/attention/"
+}
