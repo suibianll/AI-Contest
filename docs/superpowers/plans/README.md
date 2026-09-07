@@ -19,6 +19,12 @@
 L真实A@W逐列量化，A从R3开展Q/K互逆联合scale训练；已完成的证据修复不重跑。
 用户确认的50/250与21071/283s是新外部证据，源码未绑定，详细边界和有限官方探索规则见该工作包。
 
+**新基础设施工作包（2026-09-07 用户批准）：**
+[Qwen3.5-4B 结构代理面板](workpackages/qwen35-4b-panel.md)。官方评测模型经用户确认为
+Qwen3.5-35B-A3B（同族 hybrid DeltaNet+门控注意力 MoE）；本地改用 Qwen3.5-4B 同族面板做
+机制测试主面板，OOD 降级为可选诊断。4B 面板数值不与 0.5B 面板混排、不提供官方分数预测；
+时间门仍用 0.5B 面板六 API 计时。详见该工作包。
+
 [`Linear / Attention 持续优化`](2026-09-07-continuous-linear-attention-plan.md)，
 Attention A21-1 官方14199/244s，REJECTED（相对R3 −206/+6s）。下一步按[14199回传后计划](workpackages/attention-after-14199.md)执行A22-1完整R3回退保护；当前仅制定计划。Linear同步列为READY：按[独立工作包](workpackages/linear-output-followthrough.md)执行L21-1，父L4；本轮两侧只更新计划。
 A 的研究父为 R3 官方14405/238s，高分对照为 A2 官方14440/274s。

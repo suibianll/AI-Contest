@@ -704,6 +704,12 @@ def load_pack(path: Path) -> RawPack:
     test_windows = [_window_from_payload(item) for item in payload["test_windows"]]
     metadata_early = payload.get("metadata")
     ood_suite = isinstance(metadata_early, Mapping) and str(metadata_early.get("dataset", "")).startswith("ood")
+    # ``qwen35-heterogeneous-v1`` panels (evaluator/capture_qwen35.py) store a
+    # mixed DeltaNet/full-attention layer set, fp16 tensors, and pruned
+    # activation/QKV windows.  Their payload self-describes the geometry, and
+    # the validators below switch on this key.  Packs without the key follow
+    # the legacy path byte-for-byte.
+    panel_schema = isinstance(metadata_early, Mapping) and metadata_early.get("panel_schema") == "qwen35-heterogeneous-v1"
     if [len(window.input_ids) for window in calibration_windows] != list(CALIBRATION_LENGTHS):
         raise RuntimeError("calibration data pack has wrong variable-length schedule")
     if ood_suite:
@@ -745,37 +751,56 @@ def load_pack(path: Path) -> RawPack:
         raise RuntimeError("official data pack has no layer weights")
     if len(weights) != layers:
         raise RuntimeError(f"data pack declares {layers} layers but stores {len(weights)} weight layers")
-    expected_kv_width = kv_heads * head_dim
-    for layer_index, per_layer in enumerate(weights):
-        for role in roles:
-            value = per_layer.get(role) if isinstance(per_layer, Mapping) else None
-            if not torch.is_tensor(value) or value.ndim != 2:
-                raise RuntimeError(f"layer {layer_index} weight {role} is not a matrix")
-            rows, cols = map(int, value.shape)
-            if role in {"k", "v"} and (rows, cols) != (expected_kv_width, hidden_size):
-                raise RuntimeError(
-                    f"layer {layer_index} weight {role} has {tuple(value.shape)}; "
-                    f"expected native {(expected_kv_width, hidden_size)}"
-                )
-            if role in {"q", "o"} and (rows, cols) != (hidden_size, hidden_size):
-                raise RuntimeError(
-                    f"layer {layer_index} weight {role} has {tuple(value.shape)}; "
-                    f"expected native {(hidden_size, hidden_size)}"
-                )
-        for role in set(roles) - {"q", "k", "v", "o"}:
-            value = per_layer[role]
-            rows, cols = map(int, value.shape)
-            if role.startswith("fc_") and not (rows > cols and cols == hidden_size):
-                raise RuntimeError(f"layer {layer_index} weight {role} is not native out-in layout")
-            if role == "proj" and not (rows == hidden_size and cols > rows):
-                raise RuntimeError(f"layer {layer_index} weight proj is not native out-in layout")
-            if not role.startswith("fc_") and role != "proj":
-                # Cross-model adapters may expose a differently named
-                # expansive FFN operation (GPT-2 uses ``ffn_in``).  Keep only
-                # the native out-in/input-width invariant here; the public
-                # HiF4 validator performs the block-alignment check later.
-                if cols != hidden_size:
-                    raise RuntimeError(f"layer {layer_index} weight {role} has unsupported input width")
+    if panel_schema:
+        declared_shapes = metadata_early.get("weight_shapes")
+        if not isinstance(declared_shapes, Mapping) or len(declared_shapes) != layers:
+            raise RuntimeError("panel-schema pack must declare weight_shapes for every layer")
+        for layer_index, per_layer in enumerate(weights):
+            declared = declared_shapes.get(str(layer_index))
+            if not isinstance(declared, Mapping):
+                raise RuntimeError(f"panel-schema pack has no declared shapes for layer {layer_index}")
+            for role in roles:
+                value = per_layer.get(role) if isinstance(per_layer, Mapping) else None
+                if not torch.is_tensor(value) or value.ndim != 2:
+                    raise RuntimeError(f"layer {layer_index} weight {role} is not a matrix")
+                declared_pair = [int(declared[role][0]), int(declared[role][1])]
+                if [int(value.shape[0]), int(value.shape[1])] != declared_pair:
+                    raise RuntimeError(
+                        f"layer {layer_index} weight {role} shape {tuple(value.shape)} "
+                        f"mismatches panel declaration {declared_pair}"
+                    )
+    else:
+        expected_kv_width = kv_heads * head_dim
+        for layer_index, per_layer in enumerate(weights):
+            for role in roles:
+                value = per_layer.get(role) if isinstance(per_layer, Mapping) else None
+                if not torch.is_tensor(value) or value.ndim != 2:
+                    raise RuntimeError(f"layer {layer_index} weight {role} is not a matrix")
+                rows, cols = map(int, value.shape)
+                if role in {"k", "v"} and (rows, cols) != (expected_kv_width, hidden_size):
+                    raise RuntimeError(
+                        f"layer {layer_index} weight {role} has {tuple(value.shape)}; "
+                        f"expected native {(expected_kv_width, hidden_size)}"
+                    )
+                if role in {"q", "o"} and (rows, cols) != (hidden_size, hidden_size):
+                    raise RuntimeError(
+                        f"layer {layer_index} weight {role} has {tuple(value.shape)}; "
+                        f"expected native {(hidden_size, hidden_size)}"
+                    )
+            for role in set(roles) - {"q", "k", "v", "o"}:
+                value = per_layer[role]
+                rows, cols = map(int, value.shape)
+                if role.startswith("fc_") and not (rows > cols and cols == hidden_size):
+                    raise RuntimeError(f"layer {layer_index} weight {role} is not native out-in layout")
+                if role == "proj" and not (rows == hidden_size and cols > rows):
+                    raise RuntimeError(f"layer {layer_index} weight proj is not native out-in layout")
+                if not role.startswith("fc_") and role != "proj":
+                    # Cross-model adapters may expose a differently named
+                    # expansive FFN operation (GPT-2 uses ``ffn_in``).  Keep only
+                    # the native out-in/input-width invariant here; the public
+                    # HiF4 validator performs the block-alignment check later.
+                    if cols != hidden_size:
+                        raise RuntimeError(f"layer {layer_index} weight {role} has unsupported input width")
     metadata = dict(payload.get("metadata", {}))
     if metadata.get("weight_layout") not in {None, "[out_features, in_features]"}:
         raise RuntimeError("official data pack uses an unsupported weight layout")
@@ -787,10 +812,24 @@ def load_pack(path: Path) -> RawPack:
     if metadata.get("input_mode") not in {None, NVFP4_MODE}:
         raise RuntimeError("data pack uses an unsupported NVFP4 input mode")
 
+    panel_cal_slots = (
+        {int(item) for item in metadata_early.get("calibration_activation_windows", [])}
+        if panel_schema else None
+    )
+    panel_test_slots = (
+        {int(item) for item in metadata_early.get("test_activation_windows", [])}
+        if panel_schema else None
+    )
+    panel_attention_layers = (
+        {int(item) for item in metadata_early.get("attention_layers", [])}
+        if panel_schema else None
+    )
+
     def validate_activation_bank(
         bank_name: str,
         bank: Any,
         sample_count: int,
+        required_slots: set[int] | None = None,
     ) -> None:
         if not isinstance(bank, Mapping):
             raise RuntimeError(f"{bank_name} is not a role mapping")
@@ -806,7 +845,15 @@ def load_pack(path: Path) -> RawPack:
                     raise RuntimeError(
                         f"{bank_name}[{role}][{sample_index}] has wrong layer count"
                     )
+                pruned = required_slots is not None and sample_index not in required_slots
                 for layer_index, tensor in enumerate(per_layer):
+                    if pruned:
+                        if tensor is not None:
+                            raise RuntimeError(
+                                f"{bank_name}[{role}][{sample_index}][{layer_index}] "
+                                "holds a tensor in a pruned panel slot"
+                            )
+                        continue
                     if not torch.is_tensor(tensor) or tensor.ndim != 2:
                         raise RuntimeError(
                             f"{bank_name}[{role}][{sample_index}][{layer_index}] is not a 2-D tensor"
@@ -818,7 +865,9 @@ def load_pack(path: Path) -> RawPack:
                             f"{int(tensor.shape[-1])}; expected {expected_width}"
                         )
 
-    def validate_qkv_bank(bank_name: str, bank: Any, sample_count: int) -> None:
+    def validate_qkv_bank(
+        bank_name: str, bank: Any, sample_count: int, required_samples: set[int] | None = None
+    ) -> None:
         if not isinstance(bank, list) or len(bank) != sample_count:
             raise RuntimeError(f"{bank_name} has wrong sample count")
         expected_widths = (q_heads * head_dim, kv_heads * head_dim, kv_heads * head_dim)
@@ -826,6 +875,21 @@ def load_pack(path: Path) -> RawPack:
             if not isinstance(per_layer, list) or len(per_layer) != layers:
                 raise RuntimeError(f"{bank_name}[{sample_index}] has wrong layer count")
             for layer_index, item in enumerate(per_layer):
+                if panel_attention_layers is not None and layer_index not in panel_attention_layers:
+                    if item is not None:
+                        raise RuntimeError(
+                            f"{bank_name}[{sample_index}][{layer_index}] holds Q/K/V in a "
+                            "non-attention panel layer"
+                        )
+                    continue
+                # Pruned panel windows store None at attention layers by design.
+                if required_samples is not None and sample_index not in required_samples:
+                    if item is not None:
+                        raise RuntimeError(
+                            f"{bank_name}[{sample_index}][{layer_index}] holds Q/K/V outside "
+                            "the panel's declared stored windows"
+                        )
+                    continue
                 if not isinstance(item, (tuple, list)) or len(item) != 3:
                     raise RuntimeError(f"{bank_name}[{sample_index}][{layer_index}] is not a Q/K/V tuple")
                 for name, tensor, expected_width in zip(("q", "k", "v"), item, expected_widths):
@@ -835,13 +899,18 @@ def load_pack(path: Path) -> RawPack:
                         )
 
     validate_activation_bank(
-        "calibration_activations", payload["calibration_activations"], len(calibration_windows)
+        "calibration_activations", payload["calibration_activations"], len(calibration_windows),
+        panel_cal_slots,
     )
     validate_activation_bank(
-        "test_activations", payload["test_activations"], len(test_windows)
+        "test_activations", payload["test_activations"], len(test_windows),
+        panel_test_slots,
     )
     validate_qkv_bank("calibration_qkv", payload["calibration_qkv"], len(calibration_windows))
-    validate_qkv_bank("test_qkv", payload["test_qkv"], len(test_windows))
+    validate_qkv_bank(
+        "test_qkv", payload["test_qkv"], len(test_windows),
+        panel_test_slots if panel_schema else None,
+    )
     window_keys = [
         (window.split, window.document_id, window.token_start, window.token_end)
         for window in test_windows

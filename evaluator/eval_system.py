@@ -220,11 +220,21 @@ def _expected_cases(scenario: str) -> dict[str, int]:
     return {"linear": 24 * len(core.ROLES) * 2, "attention": 24 * 2}
 
 
-def _expected_cases_for_shards(scenario: str, shard_count: int) -> dict[str, int]:
-    """Expected case count for a selected shard subset."""
+def _expected_cases_for_shards(
+    scenario: str,
+    shard_count: int,
+    layers_per_shard: int = 4,
+    attention_layers_per_shard: int = 4,
+) -> dict[str, int]:
+    """Expected case counts for a selected shard subset.
+
+    The legacy Qwen2.5 panel has 24 uniform layers (4 per shard, every layer
+    attention-capable).  Heterogeneous panels (qwen35-heterogeneous-v1) pass
+    their per-shard geometry explicitly; defaults preserve the legacy counts.
+    """
     per_shard = {
-        "linear": 4 * len(core.ROLES) * 2,
-        "attention": 4 * 2,
+        "linear": layers_per_shard * len(core.ROLES) * 2,
+        "attention": attention_layers_per_shard * 2,
     }
     if scenario == "linear":
         return {"linear": per_shard["linear"] * shard_count, "attention": 0}
@@ -234,6 +244,65 @@ def _expected_cases_for_shards(scenario: str, shard_count: int) -> dict[str, int
         "linear": per_shard["linear"] * shard_count,
         "attention": per_shard["attention"] * shard_count,
     }
+
+
+def _panel_geometry(cache_path: Path, raw: Any) -> dict[str, tuple[int, ...]] | None:
+    """Per-shard (linear, attention) layer counts for a heterogeneous panel.
+
+    Reads the pack metadata when the pack is loaded, otherwise the sidecar
+    JSON written next to the cache at capture time.  Returns ``None`` for
+    legacy packs so their expectations stay on the legacy constants.
+    """
+    metadata: Any = raw.metadata if raw is not None else None
+    if metadata is None:
+        sidecar = cache_path.with_suffix(cache_path.suffix + ".panel.json")
+        if sidecar.is_file():
+            try:
+                metadata = json.loads(sidecar.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                metadata = None
+    if not isinstance(metadata, Mapping) or "panel_schema" not in metadata:
+        return None
+    total_layers = metadata.get("total_layers")
+    if not isinstance(total_layers, int):
+        # Packs captured before the total_layers metadata key fall back to the
+        # declared panel layer order.
+        panel_layers = metadata.get("panel_model_layers")
+        total_layers = len(panel_layers) if isinstance(panel_layers, list) else None
+    attention_layers = metadata.get("attention_layers")
+    if not isinstance(total_layers, int) or total_layers <= 0 or not isinstance(attention_layers, list):
+        return None
+    pool = {int(item) for item in attention_layers}
+    linear_counts: list[int] = []
+    attention_counts: list[int] = []
+    for shard in range(v3.SHARD_COUNT):
+        shard_layer_ids = v3.shard_layers(total_layers, shard)
+        linear_counts.append(len(shard_layer_ids))
+        attention_counts.append(sum(1 for layer in shard_layer_ids if layer in pool))
+    return {
+        "linear_layers": tuple(linear_counts),
+        "attention_layers": tuple(attention_counts),
+    }
+
+
+def _expected_from_geometry(
+    scenario: str,
+    shards: Sequence[int],
+    geometry: dict[str, tuple[int, ...]] | None,
+) -> dict[str, int] | None:
+    if geometry is None:
+        return None
+    selected = set(shards)
+
+    def _sum(counts: tuple[int, ...]) -> int:
+        return sum(count for shard, count in enumerate(counts) if shard in selected)
+
+    expected: dict[str, int] = {"linear": 0, "attention": 0}
+    if scenario in {"both", "linear"}:
+        expected["linear"] = _sum(geometry["linear_layers"]) * len(core.ROLES) * 2
+    if scenario in {"both", "attention"}:
+        expected["attention"] = _sum(geometry["attention_layers"]) * 2
+    return expected
 
 
 def _single_manifest(
@@ -248,9 +317,14 @@ def _single_manifest(
     baseline_source: Path | None,
     baseline_results: Sequence[Mapping[str, Any]],
     stopped_early: bool,
+    expected_cases: Mapping[str, int] | None = None,
 ) -> dict[str, Any]:
     candidate_summary = _aggregate_results(results)
-    expected = _expected_cases_for_shards(scenario, len(shards))
+    expected = (
+        dict(expected_cases)
+        if expected_cases is not None
+        else _expected_cases_for_shards(scenario, len(shards))
+    )
     actual = {side: candidate_summary["sides"].get(side, {}).get("cases", 0) for side in expected}
     checks = {
         "source_exists": source.is_file(),
@@ -428,6 +502,7 @@ def _run_single(args: argparse.Namespace) -> dict[str, Any]:
                 stopped_early = True
                 break
 
+    panel_geometry = _panel_geometry(cache_path, raw)
     if raw is not None:
         del raw
         gc.collect()
@@ -443,6 +518,7 @@ def _run_single(args: argparse.Namespace) -> dict[str, Any]:
         baseline_source=baseline_source,
         baseline_results=baseline_results,
         stopped_early=stopped_early,
+        expected_cases=_expected_from_geometry(scenario, shards, panel_geometry),
     )
     (output_dir / "manifest.md").write_text(_render_single_markdown(payload), encoding="utf-8")
     return payload

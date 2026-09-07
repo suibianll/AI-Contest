@@ -72,6 +72,15 @@ def prepare_shard(raw: v2.RawPack, shard: int, scenario: str, ood: bool = False)
         raise ValueError(f"unsupported scenario: {scenario}")
     layers = shard_layers(raw.layers, shard)
     roles = tuple(raw.roles)
+    # Heterogeneous panels (qwen35-heterogeneous-v1) restrict attention cases
+    # to their full-attention layers; DeltaNet layers cannot express the
+    # official Q/K/V API contract.  Legacy packs (no key) keep every layer.
+    attention_pool = raw.metadata.get("attention_layers")
+    if attention_pool is None:
+        attention_layers = list(layers)
+    else:
+        pool = {int(item) for item in attention_pool}
+        attention_layers = [layer for layer in layers if layer in pool]
     calibration_indices = tuple(range(min(2, len(raw.calibration_windows))))
     if not calibration_indices:
         raise RuntimeError("dense pack has no Linear calibration windows")
@@ -91,7 +100,7 @@ def prepare_shard(raw: v2.RawPack, shard: int, scenario: str, ood: bool = False)
 
     attention_cases: list[v2.AttentionCase] = []
     if scenario in {"both", "attention"}:
-        for layer_offset, layer in enumerate(layers):
+        for layer_offset, layer in enumerate(attention_layers):
             windows = (
                 _ood_windows(raw, shard + layer_offset)
                 if ood else _in_dist_pair(raw, shard + layer_offset)
@@ -106,7 +115,7 @@ def prepare_shard(raw: v2.RawPack, shard: int, scenario: str, ood: bool = False)
         [(layer, role) for layer in layers for role in roles]
         if scenario in {"both", "linear"} else []
     )
-    attention_state_layers = list(layers) if scenario in {"both", "attention"} else []
+    attention_state_layers = attention_layers if scenario in {"both", "attention"} else []
 
     weights: list[dict[str, tuple[torch.Tensor, torch.Tensor]]] = [dict() for _ in range(raw.layers)]
     cal_act: dict[str, list[list[Any]]] = {
@@ -154,6 +163,7 @@ def prepare_shard(raw: v2.RawPack, shard: int, scenario: str, ood: bool = False)
         "linear_calibration_indices": list(calibration_indices),
         "linear_state_keys": [[layer, role] for layer, role in linear_state_keys],
         "attention_state_layers": attention_state_layers,
+        "attention_layers_pool": sorted({int(item) for item in attention_pool}) if attention_pool is not None else None,
         "linear_case_count": len(linear_cases),
         "attention_case_count": len(attention_cases),
         "linear_roles": list(roles),
