@@ -273,6 +273,11 @@ def _panel_geometry(cache_path: Path, raw: Any) -> dict[str, tuple[int, ...]] | 
     if not isinstance(total_layers, int) or total_layers <= 0 or not isinstance(attention_layers, list):
         return None
     pool = {int(item) for item in attention_layers}
+    declared_qkv_windows = metadata.get("test_qkv_windows")
+    if isinstance(declared_qkv_windows, (list, tuple)) and declared_qkv_windows:
+        attention_windows = len(declared_qkv_windows)
+    else:
+        attention_windows = 2  # legacy compact-pair policy
     linear_counts: list[int] = []
     attention_counts: list[int] = []
     for shard in range(v3.SHARD_COUNT):
@@ -282,6 +287,7 @@ def _panel_geometry(cache_path: Path, raw: Any) -> dict[str, tuple[int, ...]] | 
     return {
         "linear_layers": tuple(linear_counts),
         "attention_layers": tuple(attention_counts),
+        "attention_windows": attention_windows,
     }
 
 
@@ -301,7 +307,9 @@ def _expected_from_geometry(
     if scenario in {"both", "linear"}:
         expected["linear"] = _sum(geometry["linear_layers"]) * len(core.ROLES) * 2
     if scenario in {"both", "attention"}:
-        expected["attention"] = _sum(geometry["attention_layers"]) * 2
+        expected["attention"] = _sum(geometry["attention_layers"]) * int(
+            geometry.get("attention_windows", 2)
+        )
     return expected
 
 

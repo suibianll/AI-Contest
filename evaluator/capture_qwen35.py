@@ -34,11 +34,13 @@ Panel design (``qwen35-4b-panel-v1``):
   storage is bit-identical to the fp32-widened Qwen2.5 convention at half the
   memory.
 - Windows follow the proxy-v2 schedules.  Calibration activations are stored
-  for windows {0, 1} (the two Linear calibration folds); test activations and
-  attention Q/K/V are stored for the proxy-v3 compact pair windows
-  {1, 2, 6, 7}.  Other slots are ``None`` by design; the v3 shard flow never
-  reads them.  Full-panel (12-window) default runs on this cache are out of
-  scope and will fail loudly if attempted.
+  for windows {0, 1} (the two Linear calibration folds); test activations are
+  stored for the proxy-v3 compact pair windows {1, 2, 6, 7}; attention Q/K/V
+  is stored for **every** scheduled test window (cheap storage, six FA layers
+  only) so the heterogeneous attention scenario can consume all 12.  Other
+  activation slots are ``None`` by design; the v3 shard flow never reads them.
+  Full-panel Linear (12-window) default runs on this cache are out of scope
+  and will fail loudly if attempted.
 
 Run (CPU is the supported default: the fp16 4B model is ~8 GiB, which does
 not fit the local 8 GiB GPU — CUDA would silently spill into WDDM sysmem
@@ -89,6 +91,11 @@ FA_PANEL_POSITIONS = (0, 1, 5, 8, 15, 22)
 
 LINEAR_CALIBRATION_WINDOWS = (0, 1)
 TEST_STORED_WINDOWS = (1, 2, 6, 7)  # proxy-v3 COMPACT_WINDOW_INDICES
+# Attention Q/K/V is cheap (~74KB/token across the six FA layers), so it is
+# stored for every scheduled test window: with only six full-attention panel
+# layers, the compact-pair policy would leave just 12 attention cases on the
+# whole panel (0.5B eval-v3 has 48; official composition is attention-heavy).
+TEST_QKV_STORED_WINDOWS = tuple(range(len(v2.TEST_LENGTHS)))
 
 
 def _panel_layer_plan(layer_types: list[str]) -> tuple[list[int], list[str], list[int]]:
@@ -298,9 +305,13 @@ def capture_pack(model_path: Path, device_name: str, output_path: Path) -> v2.Ra
             }
 
         def run_window(window: v2.Window, window_index: int, is_calibration: bool) -> None:
-            if not is_calibration and window_index not in TEST_STORED_WINDOWS:
-                # The forward still runs (deeper layers need the context), but
-                # nothing is stored for this window.
+            if (
+                not is_calibration
+                and window_index not in TEST_STORED_WINDOWS
+                and window_index not in TEST_QKV_STORED_WINDOWS
+            ):
+                # Nothing is stored for this window; the forward can be skipped
+                # entirely (windows are independent forwards).
                 return
             captured.clear()
             rope.clear()
@@ -348,6 +359,7 @@ def capture_pack(model_path: Path, device_name: str, output_path: Path) -> v2.Ra
                     if window_index in TEST_STORED_WINDOWS:
                         for role, tensor in role_tensors.items():
                             test_activations[role][window_index][panel_index] = tensor
+                    if window_index in TEST_QKV_STORED_WINDOWS:
                         test_qkv[window_index][panel_index] = qkv
                 del role_tensors
             captured.clear()
@@ -392,6 +404,7 @@ def capture_pack(model_path: Path, device_name: str, output_path: Path) -> v2.Ra
             "storage_dtype": "float16",
             "calibration_activation_windows": list(LINEAR_CALIBRATION_WINDOWS),
             "test_activation_windows": list(TEST_STORED_WINDOWS),
+            "test_qkv_windows": list(TEST_QKV_STORED_WINDOWS),
             "attention_qkv_note": (
                 "full-attention layers only; DeltaNet q/k/v (16x128 qk vs 32x128 v) is not "
                 "representable in the official Q/K/V API contract and the scenario scores "
@@ -452,6 +465,7 @@ def capture_pack(model_path: Path, device_name: str, output_path: Path) -> v2.Ra
             "roles": list(v2.ROLES),
             "calibration_activation_windows": list(LINEAR_CALIBRATION_WINDOWS),
             "test_activation_windows": list(TEST_STORED_WINDOWS),
+            "test_qkv_windows": list(TEST_QKV_STORED_WINDOWS),
         }
         sidecar_path = output_path.with_suffix(output_path.suffix + ".panel.json")
         sidecar_path.write_text(json.dumps(sidecar, indent=2) + "\n", encoding="utf-8")

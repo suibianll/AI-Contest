@@ -39,10 +39,15 @@
   与 0.5B 的 fp32 升宽逐位等价，体积减半。
 - **窗口裁剪**：校准激活仅存窗口 {0,1}（Linear 两折，`proxy_v3_eval.py:84` 与
   `official_eval.py:966` 均取前两窗）；**校准 QKV 存全部 5 窗**（attention 校准用
-  `tuple(range(len(calibration_windows)))`，`official_eval.py:2559`）；测试激活/QKV 仅存
-  {1,2,6,7}（proxy-v3 compact pair，`COMPACT_WINDOW_INDICES`）。其余槽位 None，v3 shard
-  流程不会触碰；12 窗 default/`--full-cases`/v2-flow `--compact-panel`（其 Linear 校准取
-  {1,2}）在此 cache 上会显式报错（超出范围）。
+  `tuple(range(len(calibration_windows)))`，`official_eval.py:2559`）；测试激活仅存
+  {1,2,6,7}（proxy-v3 compact pair，`COMPACT_WINDOW_INDICES`）；**测试 QKV 存全部
+  12 窗**（`test_qkv_windows`，2026-09-07 构成修正——attention 侧从 12 例扩到 72 例，
+  见执行日志 §6）。其余激活槽位 None，v3 shard 流程不会触碰；12 窗 Linear
+  default/`--full-cases`/v2-flow `--compact-panel`（其 Linear 校准取 {1,2}）在此 cache
+  上会显式报错（超出范围）。
+- **两侧构成（修正后）**：Linear 336 例（24 层×7 role×2 窗）: Attention 72 例
+  （6 FA×12 窗）。DeltaNet 不进 attention 场景是官方 Q/K/V API 合同的结构约束；
+  DeltaNet in_proj/out_proj 计入 Linear 与官方权重族一致。
 - 产物：`artifacts/official_eval/cache/qwen3.5-4b-proxy-v2.pt`（约 6–9GB）+
   sidecar `*.panel.json`（面板几何，供 `--reuse-existing` 快速取数）。
 

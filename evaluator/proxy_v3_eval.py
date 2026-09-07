@@ -84,6 +84,17 @@ def prepare_shard(raw: v2.RawPack, shard: int, scenario: str, ood: bool = False)
     calibration_indices = tuple(range(min(2, len(raw.calibration_windows))))
     if not calibration_indices:
         raise RuntimeError("dense pack has no Linear calibration windows")
+    # Heterogeneous panels store attention Q/K/V for every scheduled test
+    # window (cheap storage); the attention scenario consumes all of them so
+    # the six full-attention panel layers still yield 72 cases (0.5B eval-v3
+    # has 48).  Legacy packs keep the rotating compact pair.
+    attention_windows_all: tuple[int, ...] | None = None
+    declared_qkv_windows = raw.metadata.get("test_qkv_windows")
+    if isinstance(declared_qkv_windows, (list, tuple)) and declared_qkv_windows:
+        indices = sorted(int(item) for item in declared_qkv_windows)
+        if indices[0] < 0 or indices[-1] >= len(raw.test_windows):
+            raise RuntimeError("panel test_qkv_windows out of test-window range")
+        attention_windows_all = tuple(indices)
 
     linear_cases: list[v2.LinearCase] = []
     if scenario in {"both", "linear"}:
@@ -101,10 +112,12 @@ def prepare_shard(raw: v2.RawPack, shard: int, scenario: str, ood: bool = False)
     attention_cases: list[v2.AttentionCase] = []
     if scenario in {"both", "attention"}:
         for layer_offset, layer in enumerate(attention_layers):
-            windows = (
-                _ood_windows(raw, shard + layer_offset)
-                if ood else _in_dist_pair(raw, shard + layer_offset)
-            )
+            if ood:
+                windows = _ood_windows(raw, shard + layer_offset)
+            elif attention_windows_all is not None:
+                windows = attention_windows_all
+            else:
+                windows = _in_dist_pair(raw, shard + layer_offset)
             for window in windows:
                 attention_cases.append(v2.AttentionCase(
                     len(attention_cases), layer,

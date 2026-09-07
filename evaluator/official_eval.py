@@ -820,6 +820,18 @@ def load_pack(path: Path) -> RawPack:
         {int(item) for item in metadata_early.get("test_activation_windows", [])}
         if panel_schema else None
     )
+    # Attention Q/K/V may be stored for a different (usually larger) window
+    # set than the Linear test activations; default to the activation windows
+    # for packs written before the split was introduced.
+    panel_test_qkv_slots = (
+        {
+            int(item)
+            for item in metadata_early.get(
+                "test_qkv_windows", metadata_early.get("test_activation_windows", [])
+            )
+        }
+        if panel_schema else None
+    )
     panel_attention_layers = (
         {int(item) for item in metadata_early.get("attention_layers", [])}
         if panel_schema else None
@@ -909,7 +921,7 @@ def load_pack(path: Path) -> RawPack:
     validate_qkv_bank("calibration_qkv", payload["calibration_qkv"], len(calibration_windows))
     validate_qkv_bank(
         "test_qkv", payload["test_qkv"], len(test_windows),
-        panel_test_slots if panel_schema else None,
+        panel_test_qkv_slots if panel_schema else None,
     )
     window_keys = [
         (window.split, window.document_id, window.token_start, window.token_end)
