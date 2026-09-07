@@ -26,10 +26,11 @@ Linear冻结v162 standard Attention；Attention冻结v162 standard Linear和父V
 
 ## 执行、隔离与交付
 
-1. 每个候选一个机制和固定配置，去重后才实现；训练/选择/holdout分离，禁止测试选参。
+1. 每个候选一个机制和固定配置，去重后才实现；Linear直接用全部4B校准数据拟合与选择，不考虑泛化；Attention保持训练/选择/holdout分离。
 2. 先六API接口、合法state、连续不变量、真实硬前向及reachability；再4B目标侧shard0和固定六shard。
-3. 专项正常门为Δmean>0、validation/test各正、平均负向损失<0.02；总L1仅记录。
-   通用分析器reject不能替代专项指标；旧卡符号豁免不自动延伸新卡。
+3. Linear以4B校准数据上的合法部署A@W拟合改善作为本地收益条件，独立窗口均值/split/负向损失不作门。
+   Attention正常门仍为Δmean>0、validation/test各正、平均负向损失<0.02；总L1仅记录。
+   通用分析器reject不能替代专项指标；Linear新用户指令优先；Attention旧卡符号豁免不自动延伸新卡。
 4. 时间仅记录API秒数；官方300s是唯一时间硬限，不跑0.5B、OOD、跨模型或fresh-default计时。
 5. 合法单文件、训练机制contract fuzz、control与源码SHA确认后才准备官方包；官方不限次数，
    禁止重复同SHA/逐位等价提交。组合单独验证，不能相加侧分/时间冒充官方结果。

@@ -14,7 +14,10 @@
   "4b_reference": {
     "cache": "artifacts/official_eval/cache/qwen3.5-4b-proxy-v2.pt",
     "panel": "qwen35-4b-panel-v1",
-    "v189_baseline_shard0": {"candidate_linear": 56, "mean": 0.508867},
+    "v189_baseline_shard0": {
+      "candidate_linear": 56,
+      "mean": 0.508867
+    },
     "note": "4B guide: paired Δ only, no local time gate, 300s official hard cap"
   },
   "l21_series": {
@@ -32,8 +35,9 @@
     "candidate": "workbench/continuous_linear/l23-residual-subspace/candidate/solution.py",
     "submitted_official": false
   },
-  "next_action": "L23 local negative -> per workpackage: keep parent L4, no sweep, do not re-register renamed variants. Options: (a) user 21071 source/SHA to bind exact formula; (b) A23 attention card (other agent) or coordinated combo C23-0; (c) new hypothesis. Not spinning, not re-running closed variants",
+  "next_action": "按用户最新指令在全部Qwen3.5-4B校准数据直接做L23 A@W低维拟合；不拆fit/select，不用holdout均值/split/负向损失拦截；保留去重、合法部署拟合改善、control与官方裁决。",
   "recent_steps": [
     "2026-09-07: L23 whitened-residual-subspace math PASS + 4B shard0 local all-roles negative (commit b52dbee)"
-  ]
+  ],
+  "evaluation_policy": "Linear: fit all Qwen3.5-4B calibration API data directly; no fit/select split or generalization gate; holdout statistics record only; official 300s"
 }

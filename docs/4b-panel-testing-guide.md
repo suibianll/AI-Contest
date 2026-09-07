@@ -60,7 +60,10 @@ Attention 侧把 `--linear-only` 换 `--attention-only`、目录侧名换 `atten
 `--stop-after-nonpositive 7` 防止通用两 shard 截断固定六 shard；不是绕过最终裁决。
 已有结果的复核用 `--reuse-existing` 零 API 重放。
 
-**第 4 步：判读门（机制唯一门）。**
+**第 4 步：按侧判读。**
+- Linear最新用户指令：直接在全部4B校准数据做A@W低维拟合，不考虑泛化、不拆fit/select；
+  以合法部署后同数据拟合误差改善为收益条件，独立窗口Δmean/split/负向L1只记录，不阻止官方探索。
+  以下通用符号及负向损失门不用于否决该Linear工作包。
 - 通用符号门：`Δmean > 0 且 L1 < 0.02`（L1 = 逐 case gain 平均绝对变化）。
 - continuous-linear 计划两个工作包改用专项负向损失 `mean(max(-Δgain,0)) < 0.02`
   （总 L1 只记录）；独立验证/control/隔离纪律不变。
@@ -76,7 +79,7 @@ api_total 相比父明显膨胀（如 >1.5×），提交说明标注「时间风
 
 ## 3. 提交官方前检查单
 
-1. **4B paired 机制门通过**（Δmean/L1/负向 case 已记录）。
+1. **4B按侧机制条件满足**：Linear为同校准数据合法部署拟合改善；Attention沿用配对符号/风险门。
 2. **合法性**：legal state（评测器强制）+ 脱离仓库单文件导入检查。
 3. **fuzz_official_contract.py**（训练类机制必跑）。
 4. （提示，非门）候选 api_total 相比父明显膨胀 → 提交说明标注时间风险。

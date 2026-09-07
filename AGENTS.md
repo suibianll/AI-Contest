@@ -54,8 +54,10 @@
   两侧分别取得官方结果后才组合检查 interaction。完整父上的单侧增量按活动计划冻结另一侧。
 - 每个版本一个可解释机制、一个预注册配置，候选数量固定；失败换机制，不扫
   threshold/seed/alpha/offset/fold/coverage/候选数量等邻域，不增加模型/layer/role 专属路由。
-- 校准、选择、验证分离：只用 calibration folds 学参数，以独立 holdout 验证；多折使用固定
-  median、worst-fold 或 robust 聚合，不取第一折或最好一折。优先低自由度解析结构与固定正则。
+- Attention校准、选择、验证分离：只用calibration folds学参数，以独立holdout验证；多折固定聚合。
+  Linear按用户最新指令直接在全部Qwen3.5-4B校准数据上做A@W低维拟合，不拆fit/select，
+  不考虑泛化性；独立窗口Δmean/split/负向损失只记录、不否决探索。合法部署拟合改善、
+  control、可达性、单文件和官方300s约束保留，正式晋级仍须官方结果。
 - 必须记录 attempted/accepted 或同等计数证明机制可达；死分支 no-op 不能证明收敛或饱和。
 
 ## 4. 本地诊断与官方门禁
