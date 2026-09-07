@@ -1,0 +1,22 @@
+{
+  "run_id": "anchor24-a1",
+  "mechanism": "residual-inverse-transform-true-output-error-objective",
+  "parent": "solutions/continuous_attention_anchor22-a2/solution.py",
+  "parent_sha256": "4686ad817128d60e1a1648e0e14793692097ee8171fac2bc5202466d5787c0b7",
+  "source_sha256": "08e21b70d4ec009242561503531c0dca0204fb312fea37917f9914a70579d099",
+  "objective": "true deployed-path attention output MSE vs the NVFP4 reference, A2-style mse_std normalization, window-equal mean; straight-through manual gradients (_m_attention_backward + pre-encode einsum); per-window gradient SUM then clip1 (R3 trainer convention)",
+  "no_scale_regularization": "the error target is the objective; complexity is bounded by 32 steps and the spectral projection (zero-trace, +/-log2/2, cond<=2)",
+  "steps": 32,
+  "lr": 0.01,
+  "clip_norm": 1.0,
+  "parent_construction": "identical to A22-2: one R3-original rotation+center training plus its own identity-vs-rotation gate; complete parent is the fixed fallback",
+  "gate": "candidate versus the COMPLETE parent state on the last calibration window, true readout MSE; strictly smaller accepts, ties retain parent",
+  "dedup": "v161/v128 per-call dynamic refinement (dynamic-side, timeout family) - A24 is calibration-side only; v187 Jacobian importance (static analytic selection, no iterative training); A2 trainer (same objective form but Cayley theta + independent center at the B coordinates vs symmetric inverse exp(+-S) + compiled center at the P coordinates, orthogonal vs inverse-pair deployment class, parent R3 vs A22-2); A21/A22/A23 (scale-proxy objectives)",
+  "frozen": [
+    "v162 standard Linear",
+    "parent V path"
+  ],
+  "evaluation": "4B panel qwen35-4b-panel-v1 paired vs A22-2 (baseline already filled by anchor23-a1 run, mean 0.536715); 72 attention cases; no local time gate; official 300s",
+  "official_status": "NA",
+  "candidate_count": 1
+}
