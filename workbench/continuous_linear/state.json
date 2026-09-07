@@ -31,13 +31,25 @@
     "math_check": "PASS: whitened beats act-Gram top-8 by 85.8% vs 0.01% on residual-dominant example; r=64==direct LS",
     "dedup": "vs old act-Gram/block-once/weight-SVD/JDRQ: different subspace (residual-cross vs activation-energy) and fit/select isolation; registered",
     "4b_shard0": "L23 mean 0.4898 vs L4 0.5089 → Δ -0.0191; role-paired 34+ cases changed all roles negative (o worst -0.13, proj -0.04)",
-    "status": "REJECTED (local, this implementation only; per workpackage closes this residual-supervision subspace variant, does NOT close low-dim A@W family, no rank/base/teacher/ridge sweep)",
+    "status": "DIRECT_FIT_REGISTERED_OFFICIAL_PENDING (2026-09-07 user directive: fit all qwen4B calibration directly, no generalization gates; 336-case independent-window delta_mean -0.18 record-only; official 300s sole judge)",
     "candidate": "workbench/continuous_linear/l23-residual-subspace/candidate/solution.py",
+    "candidate_sha256": "33D1DA51F3CB1D2933ACD8DDD7B77F7851EB3B082934EB54E3A60558CAF4E35D",
+    "archive": "solutions/continuous_linear_l23-residual-subspace/",
+    "4b_six_shard_direct_fit": {
+      "cases": 336,
+      "candidate_mean_gain": 0.342577,
+      "parent_mean_gain": 0.524265035881679,
+      "delta_mean": -0.181687835181228,
+      "pos_neg_zero": [0, 336, 0],
+      "fit_quality": "per-layer L_all down 50-62%, accepted 88-110/144 wide / 24-29/40 narrow, reachable",
+      "note": "record-only; direct-fit policy; official is judge"
+    },
     "submitted_official": false
   },
-  "next_action": "按用户最新指令在全部Qwen3.5-4B校准数据直接做L23 A@W低维拟合；不拆fit/select，不用holdout均值/split/负向损失拦截；保留去重、合法部署拟合改善、control与官方裁决。",
+  "next_action": "L23 已按直接拟合政策注册官方探索（官方裁决）；等官方回传后按比分/300s 更新侧父。若负向：只关闭该实现，不扫邻域。",
   "recent_steps": [
-    "2026-09-07: L23 whitened-residual-subspace math PASS + 4B shard0 local all-roles negative (commit b52dbee)"
+    "2026-09-07: L23 whitened-residual-subspace math PASS + 4B shard0 local all-roles negative (commit b52dbee)",
+    "2026-09-07: L23 直接拟合版六 shard 完成（336 例、Δmean -0.18、0/336/0，record-only）；脱离导入+CPU fuzz PASS；归档 solutions/continuous_linear_l23-residual-subspace/，注册官方探索"
   ],
   "evaluation_policy": "Linear: fit all Qwen3.5-4B calibration API data directly; no fit/select split or generalization gate; holdout statistics record only; official 300s"
 }

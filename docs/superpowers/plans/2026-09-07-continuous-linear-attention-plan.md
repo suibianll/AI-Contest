@@ -46,3 +46,14 @@ Linear冻结v162 standard Attention；Attention冻结v162 standard Linear和父V
 R0纠偏文档已写；L23/A23为DESIGN_READY，机制去重及编译可行性尚待执行；
 C23-0为INTEGRATION_PLANNED，尚未验证是否已有同SHA组合结果。
 没有新增候选源码、测试结果或官方提交，根solution.py不变。
+
+### L23 直接拟合版（2026-09-07 用户指令：不拆fit/select、官方裁决）
+
+- L23 去重（dedup-r0.md）与数学检查（math_check.py）完成；候选改为全校准行
+  严格改善接受（无 holdout 守门）。脱离仓库导入检查 + CPU contract fuzz 全 PASS。
+- 4B 六 shard paired（父 L4，336 例）：candidate gain +0.3426 vs 父 +0.5243，
+  Δmean −0.18、0/336/0 —— **record-only**（直接拟合政策下不阻止官方探索）。
+  拟合质量：各层 L_all 相对父降 50–62%，accepted 88–110/144（宽）/24–29/40（窄），机制可达。
+- 已归档 `solutions/continuous_linear_l23-residual-subspace/`（SHA
+  `33D1DA51…E35D`），注册官方探索（PENDING_OFFICIAL）。官方比分与 300s 为唯一裁决；
+  正向则登记新 Linear 侧父并考虑 L23+A22-2 组合，负向只关闭该实现、不扫邻域。
