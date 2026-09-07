@@ -103,23 +103,24 @@
     "note": "本卡登记的唯一官方机制检验代表：Δmean +0.005786、负向L1 0.0000329、双split正、时间预测239.850s<280s；官方裁决须比R3高且<300s。"
   },
   "local_highest_reference": {
-    "note": "A 侧本地最高（default 120 case attention_mean；ID 48-case delta 见 queue）",
-    "value": 0.773281,
-    "source": "artifacts/proxy_v3/v162-independent/attention/a1-default (A1 deployed-aligned)",
-    "candidate": "solutions/continuous_attention_a1-deployed-aligned_officialNA_timeNA",
-    "candidate_sha256": "65eb37f2346ecebd97952ff67e2af7d5a99b568fc95352eaff1702bd9814964a"
+    "note": "A 侧本地最高（default 120 case attention_mean）；ID 48-case delta 见 queue",
+    "value": 0.783515197,
+    "source": "artifacts/proxy_v3/continuous/attention/anchor22-a2/timing (A22-2 residual-inverse-transform)",
+    "candidate": "solutions/continuous_attention_anchor22-a2",
+    "candidate_sha256": "4686ad817128d60e1a1648e0e14793692097ee8171fac2bc5202466d5787c0b7"
   },
-  "next_action": "A22-1已完成并归档（官方探索代表，READY_FOR_OFFICIAL_EXPLORATION）；等待官方回传。等待期间仅本地准备A22-2（父坐标增量互逆变换，启动条件已满足21/24回退），不把待回传源码升级为官方父。",
+  "next_action": "A22-2本地新最高(default 0.783515>0.773281)已归档提交；等待A22-1/A22-2官方回传裁决（A22-2官方探索资格由用户/协调者批准）。0.9目标继续：48case ID 0.7969、default 0.7835，下一机制需新卡登记（A22-3条件卡或新残余自由度）。",
   "recent_steps": [
     "2026-09-07：清理当前指令中的A2永久关闭、R3仍最高、OOD排序有效、旧待执行A3等矛盾；保留原始日志。",
     "2026-09-07：A21-1完成48case ID/OOD及fresh default/cross/独立梯度与部署control；本地Delta +0.001234，negative L1 0.007585，时间预测219.284s，独立归档待官方。",
     "2026-09-07：24层尝试6层接受；接受层holdout +0.022872、回退层 -0.005979，说明整包收益被移除旧训练的损失抵消。",
     "2026-09-07：A21-1官方14199/244s，REJECTED；预测低估24.716s。下一卡恢复完整R3对照与回退，未启动新实验。",
     "2026-09-07：A22-1构建+验证：强制拒绝候选时输出与官方R3逐位一致（合成/L0/L23），梯度/坐标/V-control/隔离导入全PASS。",
-    "2026-09-07：A22-1评测：ID Δmean +0.005785656、负向L1 0.0000329、5/1/42，仅L8/L12/L23部署提案（+0.0009/+0.0871/+0.0508），其余21层严格零变化；OOD Δmean +0.002841、Δgap +0.002945；时间预测239.850s<280s；READY_FOR_OFFICIAL_EXPLORATION，已归档solutions/continuous_attention_anchor22-a1/。"
+    "2026-09-07：A22-1评测：ID Δmean +0.005785656、负向L1 0.0000329、5/1/42，仅L8/L12/L23部署提案（+0.0009/+0.0871/+0.0508），其余21层严格零变化；OOD Δmean +0.002841、Δgap +0.002945；时间预测239.850s<280s；READY_FOR_OFFICIAL_EXPLORATION，已归档solutions/continuous_attention_anchor22-a1/。",
+    "2026-09-07：A22-2（父坐标残余互逆变换，保留P的rotation/center仅学残余S，c_new=c·exp(−S)同步编译）：S=0平局逐位恢复P；ID Δmean +0.021296052、负向L1 0.000103、23/1/42→23/1/24，12/24层接受（L12 +0.106/L20 +0.081/L23 +0.066）；OOD Δmean +0.017129、Δgap +0.004167；default 120c attention_mean 0.783515197>0.773281新本地最高；时间预测235.324s<280s；按用户指令归档solutions/continuous_attention_anchor22-a2/并commit/push（LOCAL_RESEARCH，官方探索未登记）。"
   ],
-  "status": "A22-1_DONE / OFFICIAL_PENDING",
+  "status": "A22-1_DONE_OFFICIAL_PENDING / A22-2_DONE_NEW_LOCAL_HIGHEST",
   "artifacts_note": "历史结果在 artifacts/proxy_v3/v162-independent/attention/{r2c-id,r2c-ood,r3-id,r3-ood,r3-default}；A22-1 在 artifacts/proxy_v3/continuous/attention/anchor22-a1/{id,ood,timing,cross}",
   "new_evidence": "logs/execution/2026-09-07-user-21071-mechanism-evidence.md；旧全族关闭/旧队列顺序以当前工作包为准。",
-  "last_completed_run": "workbench/continuous_attention/anchor22-a1"
+  "last_completed_run": "workbench/continuous_attention/anchor22-a2"
 }
