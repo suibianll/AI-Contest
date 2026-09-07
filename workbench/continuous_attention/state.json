@@ -73,7 +73,7 @@
     "candidate": "solutions/continuous_attention_a1-deployed-aligned_officialNA_timeNA",
     "candidate_sha256": "65eb37f2346ecebd97952ff67e2af7d5a99b568fc95352eaff1702bd9814964a"
   },
-  "next_action": "A3（T=exp(S) 对称混合）解析梯度实现中；时间预算仅剩 6s——A3 训练成本必须与 A2 持平或更低，否则 TIME_HOLD",
+  "next_action": "A3sym 归档（官方 14405 预测基于 OOD 排序信号，提交与否由协调者定）；队列空——下一机制需新自由度提案或等 A2 官方组合",
   "recent_steps": [
     "2026-09-07: A2c 官方 9538/175s（C_A=8537）——手工梯度训练器官方部署证明",
     "2026-09-07: R2c 官方 14387.8/240s（C_A=13386.8）——超过 R1 +378.8",
@@ -84,8 +84,10 @@
     "2026-09-07: A0 部署目标验证全过（复刻逐位一致，含层23块平滑分支修复）",
     "2026-09-07: A1 部署对齐训练本地新高 0.7733（R2c 0.7678 +0.0055）；OOD +0.0083 过门；时间 239s；已归档 pending_official",
     "2026-09-07: A1 官方 14389/256.3s（vs R2c +1.2 平；R3 14405 仍最佳）；OOD gap 排序与官方分单调一致（第3数据点）",
-    "2026-09-07: A2 全长K/V训练三轴劣于A1（DOMINATED 关闭）；采样正则效应记录"
+    "2026-09-07: A2 全长K/V训练三轴劣于A1（DOMINATED 关闭）；采样正则效应记录",
+    "2026-09-07: A3sym（T=exp(S) 有界对称混合）两起实现事故修复后重评：ID +0.7687、default 0.7652、时间 253.9s、OOD −0.0005 全候选最佳；未超本地最高，归档备用（solutions/continuous_attention_a3sym-bounded-mix_bestood/）",
+    "2026-09-07: 教训——部署 applier 的 GQA 映射 bug 无法被复刻逐位对照发现（两侧共用同一 applier）；需要独立第三方对照"
   ],
-  "status": "A2_OFFICIAL_BEST / A3_IMPLEMENTING",
+  "status": "A3SYM_ARCHIVED / QUEUE_EMPTY",
   "artifacts_note": "历史结果在 artifacts/proxy_v3/v162-independent/attention/{r2c-id,r2c-ood,r3-id,r3-ood,r3-default}；新 run 按 plan 写 artifacts/proxy_v3/continuous/attention/"
 }
