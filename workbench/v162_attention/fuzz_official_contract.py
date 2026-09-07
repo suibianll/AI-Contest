@@ -162,6 +162,7 @@ def main() -> int:
         ("r2b", ROOT / "workbench/v162_attention/candidate_v3b/solution.py"),
         ("r3", ROOT / "workbench/v162_attention/candidate_v3d/solution.py"),
         ("a1", ROOT / "workbench/v162_attention/candidate_a1/solution.py"),
+        ("a2", ROOT / "workbench/v162_attention/candidate_a2/solution.py"),
         ("r1", ROOT / "workbench/v162_attention/candidate_v2/solution.py"),
     ]
     all_failures: list[str] = []
