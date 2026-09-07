@@ -1,0 +1,27 @@
+{
+  "run_id": "continuous_linear_l25-lv23-joint",
+  "mechanism": "L25 block-level lv2/lv3 joint code selection (research-loop card, target E2 legal projection loss)",
+  "source_sha256": "8231071fccfb407c4c4ea05b3b12a3d0e33f0b93abff67b7a2f7351c5f5097e6",
+  "status": "REJECTED (local paired; card falsified)",
+  "parent": {
+    "label": "L23b (13639FB2) built on L4",
+    "path": "workbench/continuous_linear/l23-residual-subspace/candidate/solution.py",
+    "sha256": "13639fb22976b2c7c838ee2e69ae9c2c58123e03d9bdec106623d93b29510fe0"
+  },
+  "card_target": "E2 legal projection loss (0.0320)",
+  "mechanism_change": "for each block additionally evaluate the finer fixed grid (lv2=1, lv3=1, scale = sf only) and write back scale_lv2/scale_lv3=1 with sign/mant when L_all strictly decreases; otherwise keep the parent grid; one fixed candidate, no search",
+  "falsification_rule": "deployment error not reduced -> close this combination",
+  "shard0_evidence": {
+    "cases": 56,
+    "delta_mean_vs_L4": -0.218215,
+    "l23b_shard0_delta_mean": -0.218215,
+    "candidate_gain_mean": "identical to L23b (bit-wise panel unchanged)",
+    "accepted_blocks": "144/144 (wide layer), L_all 1.75e-08 -> 5.08e-10",
+    "fit_gain_candidate_shard0": 0.945264,
+    "fit_gain_l23b_shard0": 0.947836,
+    "reading": "finer grid never changes the deployed output on real 4B data (delta identical to L23b); calibration fit_gain slightly lower (0.9453<0.9478); E2 not reduced -> card falsified"
+  },
+  "closed_scope": "the lv2/lv3=1 finer-grid joint selection implementation in the L23b fit only; E2 cell remains OPEN",
+  "next": "E4 (0.6143) remains the dominant OPEN cell; L24-C bucketing and L24-A carry-over closed; fit_gain 0.9486 >= 0.9 target MET by L23b; consider E4 mechanism cards or stop-declaration evidence",
+  "official_status": "not submitted (local reject)"
+}
