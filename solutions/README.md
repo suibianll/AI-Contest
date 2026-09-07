@@ -1,5 +1,7 @@
 # HiF4 solutions archive
 
+> 当前测试按[4B指引](../docs/4b-panel-testing-guide.md)执行。本文历史0.5B、OOD、跨模型和时间预测结果仅作证据，不构成新测试命令或门禁。
+
 最新官方回传：[Attention A21-1](continuous_attention_anchor21-a1/official-result.json) **14199/244s，OFFICIAL_REJECTED**，相对R3 −206/+6s；源码SHA `870d5848f95887307ad7faa6364b5d7f7480f5b7be6001c812c44ead02bdb48a`。根v189与Attention官方最佳A2未替换。
 
 > **Planning update (2026-09-06):** the active umbrella plan is

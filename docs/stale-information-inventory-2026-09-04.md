@@ -1,5 +1,7 @@
 # 过期信息清单（2026-09-04 修订）
 
+> 后续修订优先：[09-07 当前评测退役清单](stale-information-inventory-2026-09-07.md)。本页时间预测、旧面板与跨模型执行要求不再生效。
+
 > 日期：2026-09-04
 > 依据：[`docs/official-local-fitting-analysis-2026-09-04.md`](official-local-fitting-analysis-2026-09-04.md)
 > （22 个有官方回传版本的 proxy-v2 artifacts + 18 组侧隔离配对 + LOO 交叉验证）

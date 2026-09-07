@@ -191,3 +191,11 @@ def test_official_audit_reuses_one_pack_and_writes_report(
     assert payload["pairwise"][0]["inverted_pairs"] == 1
     assert (tmp_path / "audit" / "audit.json").is_file()
     assert (tmp_path / "audit" / "audit.md").is_file()
+
+
+def test_daily_default_uses_4b_cache() -> None:
+    assert system.build_parser().parse_args([]).cache.name == "qwen3.5-4b-proxy-v2.pt"
+
+def test_daily_ood_fails_before_running() -> None:
+    with pytest.raises(ValueError, match="4B OOD"):
+        system.run(system.build_parser().parse_args(["--ood"]))

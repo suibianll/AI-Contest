@@ -12,7 +12,7 @@
   [当前状态](docs/current-solution-status.md)、[版本索引](solutions/README.md)、目标父源码和评测器。
   普通问答或文档修改不触发整套评测流程。
 - 读取历史证据前，先读全部过期信息清单：[09-02](docs/stale-information-inventory-2026-09-02.md)、
-  [09-04](docs/stale-information-inventory-2026-09-04.md)、[09-05](docs/stale-information-inventory-2026-09-05.md)。
+  [09-04](docs/stale-information-inventory-2026-09-04.md)、[09-05](docs/stale-information-inventory-2026-09-05.md)及[09-07](docs/stale-information-inventory-2026-09-07.md)。
   后续修订优先；归档计划和历史日志不提供下一步指令。
 - 官方结果优先于活动计划已确认事实，再次是归档 result/log 和本地 JSON/report；推测不得写成事实。
   活动计划的专项规则只适用于该计划，已关闭的 v162 侧向计划不再全局覆盖门禁。
@@ -28,7 +28,7 @@
 | 用户确认的成功机制锚点 | A@W拟合 + Q/K互逆scale学习 | 21071 / 283s | 外部用户确认，源码/配置/SHA待绑定，不替换根父 |
 
 - v189 官方计分 SHA256：`261202248A0146A2EE45F3DF60BD1979BB8171B7C162921013B0024C848617AF`。
-  至榜首 290s 锚点的余量为 15s；官方硬限为 300s，提交预测门为 `<280s`，三者不得混淆。
+  至榜首 290s 锚点的余量为 15s；官方硬限为 300s；本地时间预测和提交时间门已退役。
 - 活动计划及阶段只以[计划入口](docs/superpowers/plans/README.md)为准，不在此复制快照。
 - 官方提交次数**无限制**；历史配额、剩余次数等表述全部失效。
 - 用户已确认官方评测稳定；禁止为确定性、时间噪声或批处理研究重复提交相同 SHA 或逐位等价 A/B。
@@ -67,7 +67,7 @@
 - 通用符号/风险门为 `Δmean > 0 且 L1 < 0.02`，L1 是逐 case gain 平均绝对变化。
   v188 已出现通过门禁但官方 −4；门禁不保证官方非负，不再宣称“零误”。
 - 两侧专项负向损失政策由 [持续优化计划](docs/superpowers/plans/2026-09-07-continuous-linear-attention-plan.md)
-  承接：总 L1 只记录，改用 `mean(max(-Δgain,0))<0.02`；独立验证/control/时间门不变，OOD按下条记录风险。
+  承接：总 L1 只记录，改用 `mean(max(-Δgain,0))<0.02`；独立验证/control不变，时间只以官方300s裁决；历史OOD按下条解释。
   仅适用于该计划两个工作包；通用分析器仍用总L1时，按计划另算专项指标，不能直接套用reject。
 - OOD 只作风险诊断，不作提交或方向关闭的一票否决：`gap = gain_in - gain_ood`，Δ 为候选减直接父。
   `|Δgap| > 0.01` 仅提示收益不对称；负值表示 OOD 增益更多，正值不等于 OOD 实际退化。
@@ -77,24 +77,9 @@
   不需逐次申请 OOD 豁免；本地分析只提供建议。晋级仍须官方分数、时间和源码 SHA 确认。
   仅被 OOD 拦截的历史候选标记为“未获官方验证”，不证明机制无效；不自动重跑历史候选，
   已有官方负结果和其他有效关闭边界不变。修订依据见 `logs/execution/2026-09-07-ood-gate-policy-correction.md`。
-- 跨模型运行保留并写日志，只描述机制鲁棒性；不得支持或否决晋级、标记 `model-specific-risk`
-  或反向调参数。GPT-2 不是强制通过门禁，单一模型形状依赖不作过拟合判据。
-- 官方时间用六 API 分解模型（秒）：
-
-  ```text
-  T ≈ 170.3 + 0.115·W_calib + 0.694·A_calib + 0.734·dyn_act − 1.58·dyn_qkv
-  提交条件：预测 T < 280s；官方硬限：300s。
-  ```
-
-  **【2026-09-07 用户指令：全部测试改用 4B 面板，0.5B 面板退役；20:26 追加：不设本地
-  时间门禁——本地时间不准】** 本公式与一切本地时间预测/门禁退役。时间唯一硬约束 =
-  官方 300s（提交次数无限制，超时由官方回传得知）；本地 api_seconds 仅随 manifest
-  记录与粗略风险提示，不代入任何公式。0.5B 系数不可代入 4B 秒数（v189 4B 实测代入
-  得 ~465s vs 官方 275s，自证失效）。流程见 `docs/4b-panel-testing-guide.md`。
-  历史 0.5B 计时记录保留作证据，不再新增。原文（已被取代，仅作历史参考）：只代入与
-  拟合一致的 default panel 六 API 实测；分片、OOD、附加诊断及 calibration artifact
-  命中耗时不能直接代入，缺失不按零处理。不能用本地总时长直接外推，负系数不解释为加速。
-  模型 R²=0.799、MAE=10.1s，不保证实际时间。
+- 当前测试统一遵循 [4B 面板测试指引](docs/4b-panel-testing-guide.md)：不新增 0.5B、
+  逐候选 OOD、跨模型 GPT-2/opt 或 fresh-default 计时运行。历史 OOD 解释规则仅用于读历史证据。
+- 官方时间唯一硬约束为 300s；所有本地时间公式、预测和门禁退役，api_seconds 只作记录与风险提示。
 
 ## 5. 评测口径与执行流程
 
@@ -104,16 +89,12 @@
 
 - 日常入口为 [`evaluator/eval.py`](evaluator/eval.py)（eval-v3），复用 proxy-v2 dense cache；
   [`evaluator/official_eval.py`](evaluator/official_eval.py) 是兼容/参考后端，输出不得混排。
-  eval-v3 全六 shard 为 336 Linear + 48 Attention；兼容 default 为 168 + 120。
-- 本地结构假设为 Qwen2.5-0.5B、24 层、WikiText-2 raw v1、Attention calibration lengths
-  `[10,128,512,1024,1024]` 与独立 HiF4 validation；这些不是官方隐藏模型证据。
+  eval-v3 全六 shard 为 4B 的 336 Linear + 72 Attention；旧兼容 default 的 168 + 120 仅作历史口径。
+- 当前本地使用 Qwen3.5-4B 结构代理，24 层含 18 DeltaNet 与 6 full-attention 层；
+  面板、窗口与覆盖以 4B manifest 为准，不把本地结构当作官方隐藏输入。
 - 只比较相同 evaluator、协议、cache、panel、device 的父子结果；2 折与 reeval5 的 5 折不混排。
   `official-shape-v1`、跨模型、compact/effect/replay/smoke/stress 均不能冒充 default 或官方结果。
-- `--compact-panel` 只筛机制：Linear 为 4 层×7 role×2 holdout（56 cases、28 Weight state），
-  Attention 为四个哨兵；`--full-cases`（2016 + 288）只作 stress，顺序前缀 cases 只作 smoke。
-- `--ood` 仅换测试文本，校准仍用 WikiText；code/news/zh 三域 15 窗口，兼容面板为 168 + 120。
-  不参与 in-dist 排名；语料入口为 `workbench/build_ood_corpus.py`，阈值证据见
-  [OOD 标定](logs/execution/2026-09-04-ood-calibration-five-versions.md)。
+- 旧 compact/full-cases/OOD 面板只作历史协议说明，不新增运行；当前使用 4B 目标侧 shard。
 - 单侧运行严格隔离 API，保持共享 state 调用图，不能按 case 制造 oracle。官方 mini 只检查接口、
   合法性和真实形状复杂度，不选算法/参数。
 
@@ -124,8 +105,7 @@
 4. 记录 mean/median、q25/q75、worst-quartile、正负 case、validation/test 同号率、最坏分组、
    interaction、control 与 API 时间。Linear 看最终 Q(A)Q(W)^T；Attention 看 Q/K/V、QK/QKV、
    logits/probability 及最坏长度/层。旧单 operand 混合坐标诊断不等于同坐标纯量化误差。
-5. 前置阶段通过后完成目标侧六 shard、计划要求的 OOD 和跨模型记录。兼容 default/effect
-   仅用于专项校准图或时间模型审计；只有需要检查集成调用图时才运行完整双侧 eval-v3。
+5. 前置阶段通过后完成目标侧 4B 六 shard 与冻结侧 control；只有集成调用图检查运行完整双侧。
 6. 保存 JSON 和 Markdown report，分别写 local proxy、API total、wall time、official 状态。
    接口/环境失败记 `ERROR`，机制否定记 `REJECTED`，官方明确超时记 `TIMEOUT`，
    官方未知记 `unregistered/NA`，不能填本地秒数。无实质算法/复杂度变化不分配版本号。
@@ -134,7 +114,7 @@
 命令模板（使用 CUDA venv，系统 Python 为 CPU-only；输出目录按本次运行命名）：
 
 ```powershell
-.venv\Scripts\python.exe evaluator/eval.py --solution solution.py --linear-only --shards 0,1,2,3,4,5 --cache artifacts\official_eval\cache\qwen2.5-0.5b-proxy-v2.pt --calibration-cache-mode auto --algorithm-device cuda --output-dir artifacts\proxy_v3\<run-name>
+.venv\Scripts\python.exe evaluator/eval.py --solution solution.py --linear-only --shards 0,1,2,3,4,5 --stop-after-nonpositive 7 --cache artifacts\official_eval\cache\qwen3.5-4b-proxy-v2.pt --calibration-cache-mode auto --algorithm-device cuda --output-dir artifacts\proxy_v3\<run-name>
 ```
 
 Attention 改为 `--attention-only`；完整集成审计改为 `--scenario both`。
@@ -156,7 +136,7 @@ Attention 改为 `--attention-only`；完整集成审计改为 `--scenario both`
 - 用户21071成功机制证据优先于历史整族饱和推断。A@W拟合、真正逐列非对称量化、Q/K互逆scale学习
   可按当前工作包注册新机制；旧具体实现负结果不撤销，不重复同SHA/逐位等价提交。
   当前工作包对L21-1/A21-1各一个固定代表候选开放本地符号例外的官方探索，负向损失、合法性、
-  control、隔离及时间门保留；不得扩展成任意扫参或其他候选的通用豁免。
+  control、隔离及官方 300s 硬限保留；不得扩展成任意扫参或其他候选的通用豁免。
 
 以下只保留禁止重试的索引，细节查[当前状态](docs/current-solution-status.md)、
 [版本索引](solutions/README.md)和[计划入口](docs/superpowers/plans/README.md)。

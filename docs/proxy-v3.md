@@ -1,89 +1,36 @@
-# eval-v3 分片评测与诊断工具
+# eval-v3 评估系统
 
-`evaluator/eval.py` 现在是本地评测系统的稳定入口。它默认使用 `proxy-v3` 分片协议：一次进程
-加载 dense cache，按层均衡分片，校准状态按 solution SHA 和输入身份持久化，并把每个分片的
-热点/失败原因写入 JSON 和 Markdown。原 `evaluator/official_eval.py` 保留为 proxy-v2
-兼容/reference 后端，不再作为用户日常评测入口，也不会被新系统静默改写。
+日常流程以 [4B 测试指引](4b-panel-testing-guide.md) 为准，命令统一走 `evaluator/eval.py`。
+默认 cache 为 `artifacts/official_eval/cache/qwen3.5-4b-proxy-v2.pt`，缺失时报错，不自动捕获 0.5B。
 
-## 运行方式
+## 面板与隔离
 
-先按现有流程生成 proxy-v2 dense cache，然后使用替换后的入口运行全部 shard：
+六 shard 合计 Linear 336 case、Attention 72 case。4B 为异构结构，Attention 只覆盖六个
+full-attention 层；不能用旧“每 shard 8 个 Attention”推断当前覆盖，实际以 manifest 为准。
+校准与 validation/test 独立，评价最终 Q(A)Q(W)^T 或 Attention 输出。
 
-```powershell
-.venv\Scripts\python.exe evaluator\eval.py `
-  --solution solution.py --name candidate --scenario both `
-  --cache artifacts\official_eval\cache\qwen2.5-0.5b-proxy-v2.pt `
-  --calibration-cache-mode auto `
-  --output-dir artifacts\proxy_v3\system
-```
+父子必须匹配 evaluator、协议、cache/panel、设备、源码 SHA 与 case 身份及标准参考误差。
+`--reuse-existing` 检查源码路径/SHA、缓存路径、场景与分片；不匹配会重新执行。
+它不完整校验同路径缓存内容、evaluator 版本和设备；仅在这些均未变化且有原 manifest 证明时复用。
+不能把该参数本身当作完整身份保证。
+校准产物按源码与输入身份缓存；命中会标注 calibration_cache_hit，API 时间只记录。
 
-输入 dense cache 由 `--cache` 指定，默认读取
-`artifacts/official_eval/cache/qwen2.5-0.5b-proxy-v2.pt`（OOD 使用 `--ood` 读取 OOD cache）。每个
-shard 覆盖 4 个分散层：
+## 分析与裁决
 
-- Linear：全部 7 个 role，validation/test 两个配对窗口，共 28 个 state、56 个 case；
-- Attention：同 4 层、两个配对窗口，共 8 个 case；
-- 六个 shard 的 state 并集覆盖 24 层，单个 state 只出现一次。
+`evaluator/proxy_v3_analyze.py --baseline <parent.json> --candidate <candidate.json>` 提供配对
+均值、中位数、总 L1、尾部、分组、control 和 API 热点。通用符号门为 Δmean>0 且 L1<0.02；
+持续优化两个工作包另算负向损失及 split 指标，不能直接用通用 reject 代替专项裁决。
 
-校准产物位于 `artifacts/official_eval/cache/proxy-v3-calibration/`，按 solution SHA、场景、state keys、输入
-hash、设备和 PyTorch 版本校验。`auto` 命中后会跳过 calibration；结果会明确标记
-`calibration_cache_hit=true`、`calibration_timing_measured=false`，因此不能用于官方时间预测。
+本地时间预测和 280s 门已移除；旧 JSON 字段 predicted_official_seconds/under_280_gate
+为兼容读取保留为 null。分析器通过不代表官方晋级或完整提交检查完成。
+官方分数/时间及同源码 SHA 才能确认晋级，官方时间硬限 300s。
 
-父子批量筛选可使用稳定入口（底层顺序 runner 仍保留）：
+## 退役和保留
 
-```powershell
-.venv\Scripts\python.exe evaluator\eval.py `
-  --baseline-solution solutions\parent\solution.py `
-  --solution solution.py --name candidate --scenario linear `
-  --output-dir artifacts\proxy_v3\candidate-run
-```
+- 不新增 0.5B、逐候选 OOD、跨模型 GPT-2/opt、fresh-default 计时测试。
+- 日常入口拒绝 `--ood`：当前 4B capture 没有 OOD 输入，不能退回旧 OOD cache。
+- `official_eval.py`、`proxy_v3_eval.py` 及参考合法性代码仍是运行依赖，保留为后端。
+- `--official-audit` 是显式历史审计功能，不是候选日常流程，不自动批量重评。
+- 历史 JSON/report、归档源码和回归测试保留，不与当前 4B 排名混用。
 
-入口会在一次进程中保持 dense cache，避免每个 shard 重读 11GB 快照。`--reuse-existing` 只接受
-协议、场景、分片、源路径和 SHA 全部匹配的 JSON；否则自动重跑，避免“猜测式”复用旧结果。
-
-## 官方成绩重评审
-
-对成绩清单中所有有官方分数的版本运行同一 proxy-v3 协议：
-
-```powershell
-.venv\Scripts\python.exe evaluator\eval.py `
-  --official-audit --cohort new-weight --scenario both `
-  --shards 0,1,2,3,4,5 `
-  --output-dir artifacts\proxy_v3\official-audit
-```
-
-清单由 `evaluator/official_results_v3.py` 维护，显式区分 `old-weight`/`new-weight`，并记录源码是否
-可复现。审计输出 `audit.json` / `audit.md` 包含每个版本的完整 case 覆盖、有限值、重复 identity、
-源 SHA、官方时间是否越过 300 秒，以及同 cohort 的官方/本地 pairwise concordance。后者只用于
-检查代理排序是否合理；本地 gain 不参与官方绝对分数换算，报告会明确写出
-`official_score_equivalent=false`。
-
-若要复核历史 old-weight 成绩，必须显式指定 `--cohort old-weight`。当前 dense cache 是
-new-weight，系统会把每条结果标为 `official_cache_cohort_mismatch`；这类输出只能用于接口/稳定性
-回归，不能用于算法排序或官方分数推断。若已有分片文件，追加 `--reuse-existing` 可只重建汇总报告。
-
-## 诊断方式
-
-单独分析已有 JSON：
-
-```powershell
-.venv\Scripts\python.exe evaluator\proxy_v3_analyze.py `
-  --baseline artifacts\proxy_v3\parent.json `
-  --candidate artifacts\proxy_v3\candidate.json `
-  --mechanism-type analytic `
-  --focus-linear-roles q,k
-```
-
-输出包含：
-
-- 同 case 的 `delta_mean`、median、L1、最差 20% tail、正/负/零计数；
-- role、role family、layer、shape、split、length 热点和最差 case；
-- 若输入结果有 decomposition 字段，则显示 W-only/A-only、Q/K/V、interaction、logit/probability
-  的分量方向；
-- API 时间排序。只有“新鲜 default panel、未命中校准缓存”才套用已有官方时间模型；shard/缓存秒数
-  永远不换算官方分数或官方时间；
-- OOD 配对时输出 `delta(in-ood)` 和 OOD 实际 Δgain；`|Δgap|>0.01` 仅作收益不对称提示，
-  OOD 退化另记风险，均不单独触发 reject。官方探索与正式晋级分开，其他门禁不变。
-
-`--focus-linear-roles` 只做目标 role 与未修改 control 的配对检查；它不会新增候选路由或改变
-evaluator 的调用图。v3 的任何正向结果仍只是本地筛选证据，官方分数必须通过正式评测确认。
+审计发现、修改范围和验证见[评估系统审计](evaluation-system-audit-2026-09-07.md)。

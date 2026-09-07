@@ -18,16 +18,6 @@ except ModuleNotFoundError as exc:  # pragma: no cover - package import path
 
 L1_LIMIT = 0.02
 OOD_GAP_WARNING = 0.01
-OFFICIAL_TIME_LIMIT = 280.0
-TIME_MODEL = {
-    "intercept": 170.3,
-    "hif4_calibration_and_quantize_weight": 0.1154,
-    "hif4_calibration_attention": 0.6939,
-    "hif4_dynamic_quantize_activation": 0.7344,
-    "dynamic_qkv": -1.5837,
-}
-
-
 # Component deltas are emitted by proxy-v2 when decomposition is enabled.
 # proxy-v3 intentionally keeps decomposition off in its fast path, but the
 # analyzer accepts the same fields so a v2 default/effect result can be used
@@ -206,21 +196,6 @@ def runtime_analysis(candidate: Mapping[str, Any]) -> dict[str, Any]:
     )
     scope = candidate.get("evaluation_scope", {})
     default_panel = "default-panel" in str(scope.get("kind", ""))
-    predicted = None
-    if faithful and default_panel:
-        qkv = sum(api.get(name, 0.0) for name in (
-            "hif4_dynamic_quantize_q", "hif4_dynamic_quantize_k", "hif4_dynamic_quantize_v"
-        ))
-        predicted = (
-            TIME_MODEL["intercept"]
-            + TIME_MODEL["hif4_calibration_and_quantize_weight"]
-            * api.get("hif4_calibration_and_quantize_weight", 0.0)
-            + TIME_MODEL["hif4_calibration_attention"]
-            * api.get("hif4_calibration_attention", 0.0)
-            + TIME_MODEL["hif4_dynamic_quantize_activation"]
-            * api.get("hif4_dynamic_quantize_activation", 0.0)
-            + TIME_MODEL["dynamic_qkv"] * qkv
-        )
     return {
         "api_total_seconds": total,
         "calibration_wall_seconds": float(timing.get("calibration_wall_seconds", 0.0)),
@@ -240,8 +215,9 @@ def runtime_analysis(candidate: Mapping[str, Any]) -> dict[str, Any]:
         "ranked_apis": ranked,
         "timing_faithful": faithful,
         "default_panel": default_panel,
-        "predicted_official_seconds": predicted,
-        "under_280_gate": predicted < OFFICIAL_TIME_LIMIT if predicted is not None else None,
+        "predicted_official_seconds": None,
+        "under_280_gate": None,
+        "time_policy": "record_only; official 300s limit; local prediction retired",
     }
 
 
@@ -328,23 +304,14 @@ def analyze(
                 f"linear control delta_mean={float(control.get('mean_delta_gain', 0.0)):+.6f} < 0"
             )
     if mechanism_type == "fitted":
-        warnings.append("calibration-fitted mechanism: official history has high overfit risk")
-    if runtime["under_280_gate"] is False:
-        blockers.append(
-            f"predicted official time {runtime['predicted_official_seconds']:.1f}s >= {OFFICIAL_TIME_LIMIT:.0f}s"
-        )
-    if runtime["predicted_official_seconds"] is None:
-        warnings.append("no official-time prediction: run a fresh default panel without calibration cache")
-
+        warnings.append("calibration-fitted mechanism: validate on independent holdout; mechanism label is not an official rejection criterion")
     scope_kind = str(candidate.get("evaluation_scope", {}).get("kind", ""))
     if blockers:
         decision = "reject"
     elif "shard" in scope_kind:
         decision = "continue_next_shard"
-    elif runtime["under_280_gate"] is True:
-        decision = "eligible_for_official_review"
     else:
-        decision = "hold_for_ood_or_fresh_timing"
+        decision = "eligible_for_official_review"
 
     hotspot = runtime["ranked_apis"][0] if runtime["ranked_apis"] else None
     actions = []
@@ -378,7 +345,7 @@ def analyze(
             "local_trend_gate": "delta_mean > 0 and L1 < 0.02",
             "ood_gate": "diagnostic only; abs(delta(in_dist - ood)) > 0.01 warns, never blocks",
             "official_promotion": "requires official score/time and source identity; local eligibility is not promotion",
-            "official_time_gate": "fresh default prediction < 280s",
+            "official_time_gate": "official 300s only; local timing is diagnostic",
         },
         "mechanism_type": mechanism_type,
         "decision": decision,
@@ -456,11 +423,7 @@ def render_markdown(analysis: Mapping[str, Any]) -> str:
         f"{runtime['scoring_wall_seconds']:.3f}/{runtime['scoring_api_seconds']:.3f}s`, "
         f"cache load `{runtime['calibration_cache_load_seconds']:.3f}s`"
     )
-    predicted = analysis["runtime"]["predicted_official_seconds"]
-    lines.append(
-        f"- predicted official time: `{predicted:.1f}s`" if predicted is not None
-        else "- predicted official time: unavailable (requires fresh default panel)"
-    )
+    lines.append("- local timing: record only; official-time prediction retired; official limit 300s")
     if analysis["recommended_actions"]:
         lines.extend(["", "## Next actions", ""] + [f"- {item}" for item in analysis["recommended_actions"]])
     lines.extend(["", "> This tool never predicts an official score.", ""])

@@ -835,8 +835,8 @@ def build_parser() -> argparse.ArgumentParser:
     scenario.add_argument("--attention-only", dest="scenario", action="store_const", const="attention")
     parser.set_defaults(scenario="both")
     parser.add_argument("--shards", default=",".join(str(item) for item in range(v3.SHARD_COUNT)))
-    parser.add_argument("--ood", action="store_true")
-    parser.add_argument("--cache", type=Path)
+    parser.add_argument("--ood", action="store_true", help="retired: current 4B cache has no OOD capture")
+    parser.add_argument("--cache", type=Path, default=core.DEFAULT_CACHE.with_name("qwen3.5-4b-proxy-v2.pt"), help="4B dense cache; legacy panels are retired")
     parser.add_argument("--algorithm-device", default="cuda" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--calibration-cache-mode", choices=("off", "auto", "read", "write"), default="auto")
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
@@ -858,6 +858,8 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def run(args: argparse.Namespace) -> dict[str, Any]:
+    if args.ood:
+        raise ValueError("4B OOD capture is not available; --ood is retired from the daily entrypoint")
     if args.official_audit:
         if args.solution is not None or args.baseline_solution is not None:
             raise ValueError("--official-audit cannot be combined with --solution/--baseline-solution")

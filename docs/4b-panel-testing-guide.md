@@ -6,7 +6,7 @@
 > ②「不要用0.5B的，全部使用4B进行测试」（0.5B 面板退役）；
 > ③「不设本地时间门禁——本地时间根本不准」（20:26）。
 > 本文件回答「现在测试应该怎么测」；与
-> [持续优化计划](2026-09-07-continuous-linear-attention-plan.md)冲突时以本文件为准。
+> [持续优化计划](superpowers/plans/2026-09-07-continuous-linear-attention-plan.md)冲突时以本文件为准。
 
 ## 0. 总原则
 
@@ -47,8 +47,8 @@
 **第 1 步：定侧与父。** Linear 候选 `--linear-only`；Attention 候选 `--attention-only`。
 父源码：根 `solution.py`（=v189）或对应归档父。非目标侧保持冻结。
 
-**第 2 步：shard0 冒烟（~3–5 分钟）。** 确认六 API 全跑、legal state、coverage true、
-无形状崩溃、机制 reachable。
+**第 2 步：shard0 冒烟（~3–5 分钟）。** 目标侧 API 检查 legal state、coverage true、
+无形状崩溃、机制 reachable；六 API 的导入/接口检查与非目标侧 control 单独完成，单侧运行不调用另一侧 API。
 
 **第 3 步：全六 shard paired（首跑 fresh 校准约 22 分钟；同 SHA 校准缓存命中后约 10 分钟）。**
 
@@ -92,10 +92,7 @@ api_total 相比父明显膨胀（如 >1.5×），提交说明标注「时间风
 - **跨模型 GPT-2/opt**：已废弃（ρ≈−0.2），不跑、不引用。
 - **相同 SHA / 逐位等价 A/B 重复提交**；不同算法 ±1~4 分不证明噪声。
 
-## 5. 与活动计划命令的替换关系
+## 5. 规则入口
 
-持续优化计划 §5 的命令模板写于 4B 面板存在之前：机制筛查 cache 换
-`qwen3.5-4b-proxy-v2.pt`；「A 48」是 0.5B 口径，4B 全量 attention 为 **72**；
-计划 §5「fresh default 计时（official_eval.py default.json）」段整段废除
-（不设本地时间门，见 §3）；其余流程（侧隔离、stop-after-nonpositive、
-账本字段、组合队列规则）不变。
+活动总计划和 AGENTS 已同步本指引；历史 0.5B 数字与时间裁决只作历史证据。
+代码审计和兼容边界见[评估系统审计](evaluation-system-audit-2026-09-07.md)。

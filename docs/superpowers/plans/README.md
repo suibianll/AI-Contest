@@ -2,17 +2,9 @@
 
 > 最后更新：2026-09-07
 
-> **门禁修订（2026-09-07）**：OOD 超阈值改为风险提示，不再单独禁止官方探索或关闭方向；
-> 正式晋级仍须官方分数、时间和源码身份确认。当前规则以 AGENTS 和
-> [修订记录](../../../logs/execution/2026-09-07-ood-gate-policy-correction.md) 为准，以下历史 OOD 禁止门表述不再适用。
-
-> **规则更正**：官方提交次数没有限制；历史 `9/10`、`剩余 1`、`最后一次配额` 等表述
-> 已全部作废，见 [`2026-09-05 过期信息清单`](../../stale-information-inventory-2026-09-05.md)。
-
-本目录最多保留一份活跃计划。执行优化时只读取下面的活动状态、根 `solution.py`、最新
-`proxy-v3` 评测和官方规则；归档目录中的计划不具有指令效力。本地主评测调用稳定入口
-`evaluator/eval.py`（其 proxy-v2/reference 后端 `evaluator/official_eval.py` 仅兼容旧缓存与协议），
-跨模型泛化调用 `evaluator/cross_model_eval.py`；旧 `real_model_suite.py` 已退役。
+日常测试唯一入口：[4B 测试指引](../../4b-panel-testing-guide.md)。全新测试只使用 4B，
+不再运行 0.5B、逐候选 OOD、GPT-2/opt 或 fresh-default 计时；本地时间公式和 280s 门退役。
+官方提交无限制，官方硬限 300s。评估实现说明见 [proxy-v3](../../proxy-v3.md)。
 
 **当前唯一活动总计划：**
 优先阶段为[21071成功机制驱动研究](workpackages/21071-evidence-driven-research.md)：
@@ -23,7 +15,7 @@ L真实A@W逐列量化，A从R3开展Q/K互逆联合scale训练；已完成的�
 [Qwen3.5-4B 结构代理面板](workpackages/qwen35-4b-panel.md)。官方评测模型经用户确认为
 Qwen3.5-35B-A3B（同族 hybrid DeltaNet+门控注意力 MoE）；本地改用 Qwen3.5-4B 同族面板做
 机制测试主面板，OOD 降级为可选诊断。4B 面板数值不与 0.5B 面板混排、不提供官方分数预测；
-时间门仍用 0.5B 面板六 API 计时。详见该工作包。
+API 时间只记录；旧工作包中的 0.5B 计时要求已退役。
 
 [`Linear / Attention 持续优化`](2026-09-07-continuous-linear-attention-plan.md)，
 Attention A21-1 官方14199/244s，REJECTED（相对R3 −206/+6s）。下一步按[14199回传后计划](workpackages/attention-after-14199.md)执行A22-1完整R3回退保护；当前仅制定计划。Linear同步列为READY：按[独立工作包](workpackages/linear-output-followthrough.md)执行L21-1，父L4；本轮两侧只更新计划。
@@ -37,6 +29,10 @@ A 的研究父为 R3 官方14405/238s，高分对照为 A2 官方14440/274s。
 **此前修复阶段（由21071阶段取代优先级）：**[证据修复与双侧续跑](workpackages/evidence-repair-next-cycle.md)。
 该阶段已执行的原始日志保留作证据，不再作为当前队列。
 旧简化探针不支持 Linear 全族关闭；A1/A2/A3 的最终官方裁决见 Attention state/queue。
+
+## 历史计划索引（仅证据）
+
+以下旧父、旧面板、时间预测与关闭记录是历史快照，不提供当前执行指令；当前规则只见上方入口。
 
 此前 [v189 Linear 残差压力块序计划](../archive/plans/2026-09-06-linear-compiled-residual-pressure-order-plan-superseded.md)
 由本总计划取代；旧运行由原执行者封存，不删除、不混入 v162 新分支。

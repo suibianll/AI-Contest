@@ -199,14 +199,15 @@ def test_ood_warning_policy_preserves_pairing_and_other_blockers() -> None:
         analyze(baseline, candidate, "analytic", baseline_ood, candidate_ood)
 
 
-def test_runtime_prediction_requires_fresh_default_panel() -> None:
+def test_runtime_prediction_is_retired_even_for_fresh_default_panel() -> None:
     seconds = {name: 0.0 for name in v2.REQUIRED_APIS}
     seconds["hif4_calibration_and_quantize_weight"] = 100.0
     result = _result("candidate", [0.1], seconds)
     assert runtime_analysis(result)["predicted_official_seconds"] is None
     result["evaluation_scope"]["kind"] = "default-panel"
     predicted = runtime_analysis(result)["predicted_official_seconds"]
-    assert predicted is not None and math.isclose(predicted, 181.84)
+    assert predicted is None
+    assert runtime_analysis(result)["under_280_gate"] is None
     result["timing"]["calibration_cache_hit"] = True
     assert runtime_analysis(result)["predicted_official_seconds"] is None
 
@@ -369,3 +370,13 @@ def test_runner_loads_dense_pack_once_for_multiple_shards(
     manifest = runner.run(args)
     assert load_count["count"] == 1
     assert manifest["completed_shards"] == [0, 1]
+
+
+def test_large_local_timing_does_not_block_official_review() -> None:
+    baseline = _result("parent", [0.2] * 4)
+    candidate = _result("child", [0.21] * 4, {name: 10000.0 for name in v2.REQUIRED_APIS})
+    candidate["evaluation_scope"]["kind"] = "default-panel"
+    baseline["evaluation_scope"]["kind"] = "default-panel"
+    report = analyze(baseline, candidate, "analytic")
+    assert report["decision"] == "eligible_for_official_review"
+    assert report["runtime"]["predicted_official_seconds"] is None
