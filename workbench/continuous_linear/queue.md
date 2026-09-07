@@ -1,5 +1,6 @@
 # L 侧机制队列（continuous-linear）
 
+> 当前优先阶段：[21071机制证据研究](../../docs/superpowers/plans/workpackages/21071-evidence-driven-research.md)。执行L21-1真实逐列A@W量化；下列旧队列仅保留历史，不再提供当前关闭/下一步指令。
 > 更新：2026-09-07。契约：[持续优化总计划](../docs/superpowers/plans/2026-09-07-continuous-linear-attention-plan.md)
 > + [证据修复工作包](workpackages/evidence-repair-next-cycle.md)。
 

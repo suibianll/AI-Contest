@@ -25,6 +25,7 @@
 | 高复杂度新机制的时间预算父 | v180 | 17597 / 242s | 比 v189 快 33s、少 19 分 |
 | 历史侧隔离父 | Linear v166 / Attention v168 | 4590 / 226s；14005 / 210s | 仅用于明确的侧隔离计划 |
 | 用户确认的榜首锚点 | 源码、配置未知 | 21765 / 290s | 距 v189 4149 分，不是本地实验结果 |
+| 用户确认的成功机制锚点 | A@W拟合 + Q/K互逆scale学习 | 21071 / 283s | 外部用户确认，源码/配置/SHA待绑定，不替换根父 |
 
 - v189 官方计分 SHA256：`261202248A0146A2EE45F3DF60BD1979BB8171B7C162921013B0024C848617AF`。
   至榜首 290s 锚点的余量为 15s；官方硬限为 300s，提交预测门为 `<280s`，三者不得混淆。
@@ -91,6 +92,10 @@
 
 ## 5. 评测口径与执行流程
 
+- 用户最新确认官方样例数为50 Linear +250 Attention，Linear拟合可约4400/5000；这是官方分项口径，
+  不与含标准另一侧的侧隔离整包分数直接比较。case数不证明隐藏形状/权重，不修改本地协议冒充官方。
+  依据与研究入口见 `logs/execution/2026-09-07-user-21071-mechanism-evidence.md`。
+
 - 日常入口为 [`evaluator/eval.py`](evaluator/eval.py)（eval-v3），复用 proxy-v2 dense cache；
   [`evaluator/official_eval.py`](evaluator/official_eval.py) 是兼容/参考后端，输出不得混排。
   eval-v3 全六 shard 为 336 Linear + 48 Attention；兼容 default 为 168 + 120。
@@ -141,6 +146,11 @@ Attention 改为 `--attention-only`；完整集成审计改为 `--scenario both`
   不提交 ignored 大 cache、`.codegraph/`、临时目录或无关改动。
 
 ## 7. 已关闭机制与证据边界
+
+- 用户21071成功机制证据优先于历史整族饱和推断。A@W拟合、真正逐列非对称量化、Q/K互逆scale学习
+  可按当前工作包注册新机制；旧具体实现负结果不撤销，不重复同SHA/逐位等价提交。
+  当前工作包对L21-1/A21-1各一个固定代表候选开放本地符号例外的官方探索，负向损失、合法性、
+  control、隔离及时间门保留；不得扩展成任意扫参或其他候选的通用豁免。
 
 以下只保留禁止重试的索引，细节查[当前状态](docs/current-solution-status.md)、
 [版本索引](solutions/README.md)和[计划入口](docs/superpowers/plans/README.md)。

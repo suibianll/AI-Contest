@@ -4,8 +4,10 @@
 > 本次仅完成计划交接，不启动代理、比赛提交或模型实验。
 > 本计划取代 v162 独立恢复计划；两个工作包只有一个共同总契约，不另设活动总计划。
 
-> **下一轮执行修订**：优先执行[证据修复与双侧续跑工作包](workpackages/evidence-repair-next-cycle.md)。
-> Linear旧探针不足以关闭完整机制；先恢复真实输入/API闭环。Attention推进R2c部署目标对齐。
+> **当前执行修订**：优先执行[21071成功机制驱动研究](workpackages/21071-evidence-driven-research.md)。
+> 用户确认50 Linear/250 Attention、A@W拟合约4400/5000、Q/K互逆变换降低scale与拟合组合21071/283s。
+> 旧证据修复中已完成闭环不重跑；当前L走真实逐列输出拟合，A从低成本R3替换为联合scale训练。
+> 下面初始父与队列保留设计背景；当前父、优先级及有限官方探索规则以新工作包为准。
 
 ## 1. 起点与目标
 
@@ -126,7 +128,7 @@ fresh default（168 Linear +120 Attention），独立 GPU 计时，候选校准�
 
 ## 8. 当前进度与续跑入口
 
-- L：EVIDENCE_REPAIR_REQUIRED，执行新工作包L-R1/R2；GPTAQ去重为UNRESOLVED，原JDRQ固定实现负结果不重跑。
-- A：READY / ARTIFACT_CHECK，先核验是否存在新阶段产物，再执行A0/A1；不再测试旧autograd WA/回退包。
+- L：READY / L21-1，复用真实API闭环，实现真正的逐列非对称量化；旧岭回归去重不证明算法等价。
+- A：READY / A21-1，以R3 14405/238s为低成本研究父；A2 14440/274s保留为高分对照，优先联合scale训练替换旧训练。
 - C：READY_FOR_INTEGRATION，L4+R2c 完整组合尚未验证。
 - 每轮代理更新本侧 state/queue 与工作包进度；协调者收到官方回传后更新本表与全局状态，避免长期停留 DESIGN_ONLY。

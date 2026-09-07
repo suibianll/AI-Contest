@@ -15,6 +15,10 @@
 跨模型泛化调用 `evaluator/cross_model_eval.py`；旧 `real_model_suite.py` 已退役。
 
 **当前唯一活动总计划：**
+优先阶段为[21071成功机制驱动研究](workpackages/21071-evidence-driven-research.md)：
+L真实A@W逐列量化，A从R3开展Q/K互逆联合scale训练；已完成的证据修复不重跑。
+用户确认的50/250与21071/283s是新外部证据，源码未绑定，详细边界和有限官方探索规则见该工作包。
+
 [`Linear / Attention 持续优化`](2026-09-07-continuous-linear-attention-plan.md)，
 状态 READY；分别执行 [Linear 工作包](workpackages/continuous-linear.md) 和
 [Attention 工作包](workpackages/continuous-attention.md)。L 从 L4 官方4607/247s继续，
@@ -23,7 +27,7 @@ A 从 R2c 官方14387.8/240s继续，非目标侧保持 v162 standard，A的V保
 旧v162恢复计划已[归档](../archive/plans/2026-09-06-v162-independent-linear-attention-plan-superseded.md)。
 协调者另排 L4+R2c 集成验证；当前只有侧隔离结果，根仍v189。本次仅计划交接，未启动实验。
 
-**当前下一轮优先入口：**[证据修复与双侧续跑](workpackages/evidence-repair-next-cycle.md)。
+**此前修复阶段（由21071阶段取代优先级）：**[证据修复与双侧续跑](workpackages/evidence-repair-next-cycle.md)。
 L已执行简化探针，但输入/部署/成本口径不足以支持全族关闭，状态EVIDENCE_REPAIR_REQUIRED；
 A先核验产物再推进A0/A1，组合待验证。本轮计划修订尚未启动修复实验。
 

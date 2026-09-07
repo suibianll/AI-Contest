@@ -12,6 +12,11 @@
 
 ## 0.1 当前计划状态（2026-09-07）
 
+当前优先执行[21071成功机制驱动研究](superpowers/plans/workpackages/21071-evidence-driven-research.md)。
+用户确认官方50/250样例、Linear A@W拟合约4400/5000、与Q/K互逆scale训练叠加21071/283s；
+外部源码未绑定，不继承成绩。L启动真实逐列非对称量化，A以R3 14405/238s作为低成本研究父，
+A2 14440/274s保留高分对照。此前闭环结果复用；本轮计划尚未运行候选。以下旧阶段记录受此优先级覆盖。
+
 当前活动总计划为
 [`Linear / Attention 持续优化`](superpowers/plans/2026-09-07-continuous-linear-attention-plan.md)，
 状态 READY。L 从L4官方4607/247s、A从R2c官方14387.8/240s继续；独立冻结非目标侧standard，

@@ -2,7 +2,7 @@
   "side": "linear",
   "branch": "continuous-linear",
   "plan": "docs/superpowers/plans/2026-09-07-continuous-linear-attention-plan.md",
-  "workpackage": "docs/superpowers/plans/workpackages/evidence-repair-next-cycle.md",
+  "workpackage": "docs/superpowers/plans/workpackages/21071-evidence-driven-research.md",
   "created": "2026-09-07",
   "official_best": {
     "run_id": "l4-v189-linear-exact",
@@ -32,10 +32,12 @@
     "note": "P1 transform-saturation + P2 mantissa-no-legal-path + E2E_REFINE in closed offset-scan boundary",
     "candidate": null
   },
-  "next_action": "fc/proj 解析旋转已测负（9 state 无改善）；等待新机制方向/重开边界，或协调者组合 C-R1；不空转、不重跑已关闭族",
+  "next_action": "复用真实API闭环；实现真正逐列约束/条件补偿的A@W拟合，对照旧JDRQ；旧岭回归数值对照不作为等价证明。",
   "recent_steps": [
     "2026-09-07: fc/proj 解析旋转双探针（正交特征基 5/5 退化、Kronecker 2 退化+2 持平）",
     "2026-09-07: P1/P2/E2E_REFINE 边界确认：连续变换饱和、mantissa 无合法路径、E2E 属 offset 扫描关闭",
     "2026-09-07: queue 更新，未创建候选，父 L4 不变"
-  ]
+  ],
+  "status": "READY / L21-1",
+  "new_evidence": "logs/execution/2026-09-07-user-21071-mechanism-evidence.md；旧全族关闭/旧队列顺序以当前工作包为准。"
 }
