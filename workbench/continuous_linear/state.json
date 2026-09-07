@@ -14,31 +14,22 @@
     "C_L": 3606
   },
   "research_parent": {
-    "sha256": "ACB16F764DB80EDA94EB77FE497A7965C716B527571C241C79B2319529FF5263",
-    "path": "solutions/v162_linear_l4-v189-linear-exact_officialNA_timeNA/solution.py"
+    "sha256": "ACB16F764DB80EDA94EB77FE497A7965C716B527571C241C79B2319529FF5263"
   },
   "local_highest_reference": {
     "value": 0.6367994885532791,
     "source": "L4 (eval-v3 linear-only six shard n=336)"
   },
   "pending_official": null,
-  "evidence_repair": {
-    "l_r1": "DONE: 真实 API 闭环 12/12 逐位一致；rank 非纯可逆；四臂 UNIDENTIFIABLE",
-    "l_r2": "DONE: 正确性 PASS; COST_HOLD; T=I 重建不可用->方向未判定",
-    "l_r3": "旧等价论证不足：没有逐列条件约束更新的完整对照；不关闭L21-1，保留旧JDRQ真实负结果。"
-  },
-  "fcproj_analytic": {
-    "orthonormal_eigenbasis_T": "REJECTED 5/5 退化 (rel 1.03-1.17)",
-    "kronecker_T": "FLAT-DEGRADE 2 退化+2 持平",
-    "note": "仅上述固定解析探针负向；连续乘积不变不证明变换饱和，旧非法oracle不证明合法mantissa无路。",
+  "l21_1_probe": {
+    "math_check": "PASS: OBQ-condition-solve bit-identical to direct re-solve (0.0), differs from JDRQ (0.35), singular-block ridge finite",
+    "real_closure": "3/3 representative states test holdout DEGRADE: L0-o +28%, L11-proj +78%, L0-fc_up +56%; calibration fold overfits (L_tr drops 10-100x) -> out-of-distribution non-generalization",
+    "status": "LOCAL_EXPLORATORY_NEGATIVE (not candidate, not family-closure, no params swept)",
     "candidate": null
   },
-  "next_action": "按Linear独立工作包实现L21-1：冻结真实activation_state、固定合法层级、64块一遍逐列条件补偿；先数学与闭环，再六shard/成本/官方。",
+  "next_action": "L21-1 probe negative -> per workpackage: label EXPLORATORY, keep risk/legal/control/non-noop/time gates if official; no sweep. Next card L21-2 (lean output-fitting trunk, parent-deletion loss vs fit gain separated) or await direct mechanism evidence",
   "recent_steps": [
-    "2026-09-07：L4仍官方4607/247s，L21-1尚无新候选/官方结果。",
-    "2026-09-07：清除当前指令中的连续变换饱和、GPTAQ==JDRQ全族关闭、仅fc/proj可优化等过度结论；旧具体负实验保留。",
-    "2026-09-07：补齐独立可执行L21-1及L21-2/L21-3分支，与Attention A22-1同时列为READY；本轮只制定计划。"
-  ],
-  "status": "READY / L21-1_PLAN_ONLY",
-  "new_evidence": "logs/execution/2026-09-07-user-21071-mechanism-evidence.md；旧全族关闭/旧队列顺序以当前工作包为准。"
+    "2026-09-07: L21-1 math check PASS (3/3) and real-loop probe negative (3/3 holdout degrade)",
+    "2026-09-07: committed anchor21-l1 probe report + scripts (bd59859)"
+  ]
 }
