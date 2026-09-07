@@ -14,17 +14,12 @@
 
 ## 0.1 当前计划状态（2026-09-07）
 
-当前优先执行[21071成功机制驱动研究](superpowers/plans/workpackages/21071-evidence-driven-research.md)。
-用户确认官方50/250样例、Linear A@W拟合约4400/5000、与Q/K互逆scale训练叠加21071/283s；
-外部源码未绑定，不继承成绩。L后续方向为真实逐列非对称量化，A以R3 14405/238s作为低成本研究父，
-A2 14440/274s保留高分对照。A21-1官方回传 **14199/244s，OFFICIAL_REJECTED**，相对R3 −206/+6s，未晋级。下一步见[A22-1及后继计划](superpowers/plans/workpackages/attention-after-14199.md)：固定scale提案、恢复完整R3对照与回退，当前只制定计划。Linear同步列为READY，按[L21-1独立工作包](superpowers/plans/workpackages/linear-output-followthrough.md)推进真实A@W逐列条件求解；本轮只更新双侧计划，原始本地报告保留。
+当前按[21071下一轮研究计划](superpowers/plans/workpackages/21071-evidence-driven-research.md)推进。
+L4 4607/247s保留；A22-2 14424/271s为研究父（vs R3 +19/+33s），A2 14440/274s仍为侧高分对照。
+L21各具体实现本地负向但不关闭A@W拟合整族；旧平均负向损失/分布解释已[纠偏](../logs/execution/2026-09-07-21071-next-cycle-evidence-correction.md)。
+本轮L23/A23为DESIGN_READY，C23-0 L4+A22-2为待核对集成项；未运行实验或官方提交。
+仅使用4B，无本地时间门；根仍v189。用户21071/283s为成功机制证据，源码尚未绑定，不继承成绩。
 
-当前活动总计划为
-[`Linear / Attention 持续优化`](superpowers/plans/2026-09-07-continuous-linear-attention-plan.md)，
-按21071工作包推进，冻结非目标侧standard和R3的V。A2官方比A1高51分，旧本地DOMINATED不能作为关闭依据；
-A3官方13572/288s虽然OOD更好，仍明确退步，OOD排序不作晋级依据。
-旧恢复与证据修复阶段的原始记录保留；简化探针不能关闭完整Linear路线，
-激活误差61–79%不作为实际部署归因。完整组合仍需单独验证，侧分相加不是官方成绩，根仍v189。
 此前 v189 残差压力块序计划已被取代，旧结果仍由原执行者封存。上一份
 [`Linear 编译校准样本能量块序`](superpowers/archive/plans/2026-09-06-linear-compiled-sample-energy-plan-score-tie.md)
 已按 R1→R2→R3 关闭为 **CLOSED / R3_REJECTED_SCORE_TIE**：最终 direct-core fresh

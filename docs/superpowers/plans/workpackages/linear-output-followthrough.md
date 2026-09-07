@@ -1,5 +1,7 @@
 # Linear 持续优化执行计划：L21-1 落地与后继分支
 
+> 历史执行卡：已由[21071下一轮计划](21071-evidence-driven-research.md)取代当前指令。下文READY、旧父和下一步均为当时快照；最新状态见state/queue。
+
 > 当前新测试统一遵循[4B指引](../../../4b-panel-testing-guide.md)，历史0.5B/OOD/时间预测数字仅作证据，不再执行对应旧命令。
 
 > READY / DESIGN_ONLY，2026-09-07。与Attention的A22-1同时列为待执行工作包，

@@ -2,7 +2,7 @@
   "side": "attention",
   "branch": "continuous-attention",
   "plan": "docs/superpowers/plans/2026-09-07-continuous-linear-attention-plan.md",
-  "workpackage": "docs/superpowers/plans/workpackages/attention-after-14199.md",
+  "workpackage": "docs/superpowers/plans/workpackages/21071-evidence-driven-research.md",
   "evidence_repair": "docs/superpowers/plans/workpackages/evidence-repair-next-cycle.md (§6 A-R1)",
   "created": "2026-09-07",
   "official_best": {
@@ -13,7 +13,7 @@
     "official_score": 14440,
     "official_time_s": 274,
     "C_A": 13439,
-    "note": "高分对照14440/274s；274为实测，280为预测门，完整组合需独立计时。"
+    "note": "高分对照14440/274s；官方300s硬限，本地时间预测退役。"
   },
   "official_history": [
     {
@@ -110,7 +110,7 @@
   "research_parent": {
     "path": "solutions/continuous_attention_anchor22-a2/solution.py",
     "sha256": "4686ad817128d60e1a1648e0e14793692097ee8171fac2bc5202466d5787c0b7",
-    "note": "A22-2官方14424/271s（vs R3 +19/+33s SCORE_BEST）按预登记规则成为新父线；包含完整R3回退+12层残余S；时间余量紧（距300s硬限29s、距280s预测门9s），后续增量须近零校准成本或数学等价降成本；历史父R3(14405/238s)保留为低成本对照。"
+    "note": "A22-2官方14424/271s，vs R3 +19/+33s，研究父；A2仍高分对照。没有近零成本强制门或280s预测预算。"
   },
   "pending_official": null,
   "local_highest_reference": {
@@ -118,9 +118,10 @@
     "value": 0.783515197,
     "source": "artifacts/proxy_v3/continuous/attention/anchor22-a2/timing (A22-2 residual-inverse-transform)",
     "candidate": "solutions/continuous_attention_anchor22-a2",
-    "candidate_sha256": "4686ad817128d60e1a1648e0e14793692097ee8171fac2bc5202466d5787c0b7"
+    "candidate_sha256": "4686ad817128d60e1a1648e0e14793692097ee8171fac2bc5202466d5787c0b7",
+    "status": "HISTORICAL_ONLY_NOT_A_4B_GATE"
   },
-  "next_action": "A22-2官方14424/271s SCORE_BEST（vs R3 +19/+33s），成为新研究父线；A2仍official_best(14440/274s)。下一机制卡待登记：A22-2官方时间余量紧（距280s预测门仅9s、距300s硬限29s），新卡须近零校准成本或数学等价降成本，或以R3为父的低成本线；A22-3条件未触发。等待用户指示或登记新卡。",
+  "next_action": "设计A23父坐标Q/K块scale乘积目标；父A22-2，高分对照A2；保留完整回退，先去重和训练/选择隔离审读，不使用本地时间预测。",
   "recent_steps": [
     "2026-09-07：清理当前指令中的A2永久关闭、R3仍最高、OOD排序有效、旧待执行A3等矛盾；保留原始日志。",
     "2026-09-07：A21-1完成48case ID/OOD及fresh default/cross/独立梯度与部署control；本地Delta +0.001234，negative L1 0.007585，时间预测219.284s，独立归档待官方。",
@@ -133,8 +134,10 @@
     "2026-09-07：用户批准A22-2官方探索；候选包READY_FOR_OFFICIAL（SHA 4686ad81...，预测235.3s，残差情景约268.5s<300s），待提交官方。",
     "2026-09-07：A22-2官方14424/271s，SCORE_BEST（vs R3 +19/+33s，vs A2 -16/-3s），按预登记规则保留为新父线；A侧首个官方正向scale类机制（附加式残余S）；A21-1→A22-1→A22-2官方轨迹14199→14291→14424验证保留父变换方向有效；时间残差+35.676s与A22-1/A21-1一致；research_parent更新为anchor22-a2。"
   ],
-  "status": "A22-2_OFFICIAL_KEPT_NEW_PARENT_LINE / NEXT_CARD_PENDING",
+  "status": "A23_DESIGN_READY",
   "artifacts_note": "历史结果在 artifacts/proxy_v3/v162-independent/attention/{r2c-id,r2c-ood,r3-id,r3-ood,r3-default}；A22-1 在 artifacts/proxy_v3/continuous/attention/anchor22-a1/{id,ood,timing,cross}",
   "new_evidence": "logs/execution/2026-09-07-user-21071-mechanism-evidence.md；旧全族关闭/旧队列顺序以当前工作包为准。",
-  "last_completed_run": "workbench/continuous_attention/anchor22-a2"
+  "last_completed_run": "workbench/continuous_attention/anchor22-a2",
+  "evaluation_policy": "4B only; 336 Linear / 72 Attention; no local time gate; official 300s",
+  "evidence_correction": "logs/execution/2026-09-07-21071-next-cycle-evidence-correction.md"
 }

@@ -6,29 +6,13 @@
 不再运行 0.5B、逐候选 OOD、GPT-2/opt 或 fresh-default 计时；本地时间公式和 280s 门退役。
 官方提交无限制，官方硬限 300s。评估实现说明见 [proxy-v3](../../proxy-v3.md)。
 
-**当前唯一活动总计划：**
-优先阶段为[21071成功机制驱动研究](workpackages/21071-evidence-driven-research.md)：
-L真实A@W逐列量化，A从R3开展Q/K互逆联合scale训练；已完成的证据修复不重跑。
-用户确认的50/250与21071/283s是新外部证据，源码未绑定，详细边界和有限官方探索规则见该工作包。
+**当前唯一活动总计划：** [Linear / Attention持续优化](2026-09-07-continuous-linear-attention-plan.md)。
+当前明细：[21071机制驱动下一轮](workpackages/21071-evidence-driven-research.md)。
 
-**新基础设施工作包（2026-09-07 用户批准）：**
-[Qwen3.5-4B 结构代理面板](workpackages/qwen35-4b-panel.md)。官方评测模型经用户确认为
-Qwen3.5-35B-A3B（同族 hybrid DeltaNet+门控注意力 MoE）；本地改用 Qwen3.5-4B 同族面板做
-机制测试主面板，OOD 降级为可选诊断。4B 面板数值不与 0.5B 面板混排、不提供官方分数预测；
-API 时间只记录；旧工作包中的 0.5B 计时要求已退役。
-
-[`Linear / Attention 持续优化`](2026-09-07-continuous-linear-attention-plan.md)，
-Attention A21-1 官方14199/244s，REJECTED（相对R3 −206/+6s）。下一步按[14199回传后计划](workpackages/attention-after-14199.md)执行A22-1完整R3回退保护；当前仅制定计划。Linear同步列为READY：按[独立工作包](workpackages/linear-output-followthrough.md)执行L21-1，父L4；本轮两侧只更新计划。
-A 的研究父为 R3 官方14405/238s，高分对照为 A2 官方14440/274s。
-非目标侧保持 v162 standard，A 的 V 保持 R3 既有路径。
-持续循环为机制登记→验证→官方探索→保留/换机制→补充队列；负向损失门、OOD风险诊断与正式晋级分开。
-旧v162恢复计划已[归档](../archive/plans/2026-09-06-v162-independent-linear-attention-plan-superseded.md)。
-完整组合须独立验证；当前根仍 v189，不继承外部21071分。
-两侧独立执行入口：[Linear L21-1及后继](workpackages/linear-output-followthrough.md)、[Attention A22-1及后继](workpackages/attention-after-14199.md)。A21-1原始本地报告保留，官方新裁决优先。
-
-**此前修复阶段（由21071阶段取代优先级）：**[证据修复与双侧续跑](workpackages/evidence-repair-next-cycle.md)。
-该阶段已执行的原始日志保留作证据，不再作为当前队列。
-旧简化探针不支持 Linear 全族关闭；A1/A2/A3 的最终官方裁决见 Attention state/queue。
+用户确认50 Linear/250 Attention、A@W拟合约4400/5000、Q/K互逆scale学习组合21071/283s。
+最新父：L4 4607/247s；A研究父A22-2 14424/271s、高分对照A2 14440/274s、低成本R3 14405/238s。
+下一步R0纠偏/去重→L23/A23设计→已有官方侧C23-0组合→固定新候选验证与官方→组合确认改进。
+本轮仅计划，未启动实验；完整根仍v189。旧L21/A22-1不再是待执行队列。
 
 ## 历史计划索引（仅证据）
 

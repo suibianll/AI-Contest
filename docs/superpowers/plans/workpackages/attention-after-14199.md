@@ -1,5 +1,7 @@
 # Attention 官方14199回传后的优化计划
 
+> 历史执行卡：已由[21071下一轮计划](21071-evidence-driven-research.md)取代当前指令。下文READY、旧父和下一步均为当时快照；最新状态见state/queue。
+
 > 当前新测试统一遵循[4B指引](../../../4b-panel-testing-guide.md)，历史0.5B/OOD/时间预测数字仅作证据，不再执行对应旧命令。
 
 > READY / DESIGN_ONLY，2026-09-07。隶属唯一活动持续优化总计划。

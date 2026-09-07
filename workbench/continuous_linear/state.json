@@ -2,7 +2,7 @@
   "side": "linear",
   "branch": "continuous-linear",
   "plan": "docs/superpowers/plans/2026-09-07-continuous-linear-attention-plan.md",
-  "workpackage": "docs/superpowers/plans/workpackages/linear-output-followthrough.md",
+  "workpackage": "docs/superpowers/plans/workpackages/21071-evidence-driven-research.md",
   "created": "2026-09-07",
   "official_best": {
     "run_id": "l4-v189-linear-exact",
@@ -15,15 +15,19 @@
   },
   "local_highest_reference": {
     "value": 0.6367994885532791,
-    "source": "L4 (eval-v3 linear-only six shard n=336)"
+    "source": "L4 (eval-v3 linear-only six shard n=336)",
+    "status": "HISTORICAL_ONLY_NOT_A_4B_GATE"
   },
   "l21_1": "LOCAL_EXPLORATORY_NEGATIVE: math PASS (OBQ==direct), differs from JDRQ; real-loop 3/3 holdout DEGRADE",
-  "l21_2": "REJECTED (local): block-once solve matches per-column exactly (rel 1.31/1.78/1.56); overfit is objective-inherent not loop complexity; fit increment not migratable",
+  "l21_2": "LOCAL_NEGATIVE_IMPLEMENTATION_ONLY: small-sample negative results do not establish objective-wide failure; see evidence correction",
   "pending_official": null,
-  "next_action": "L21-3 条件不满足（首卡本地负向）；无新候选超本地最高。等待：外部直接机制证据 / 协调者裁决 / 新假设。不空转、不重跑已关闭族",
+  "next_action": "R0核对旧证据身份并去重；设计L23实际A@W误差驱动的成对可逆对角坐标，先证明完整L4零点与合法编译，不重跑旧L21配置。",
   "recent_steps": [
     "2026-09-07: L21-2 probe REJECTED local (block-once == per-column)",
     "2026-09-07: L21-1 probe LOCAL_EXPLORATORY_NEGATIVE",
     "2026-09-07: two implementations both prove output-sensitive fit degrades holdout 3/3"
-  ]
+  ],
+  "status": "L23_DESIGN_READY",
+  "evaluation_policy": "4B only; 336 Linear / 72 Attention; no local time gate; official 300s",
+  "evidence_correction": "logs/execution/2026-09-07-21071-next-cycle-evidence-correction.md"
 }
