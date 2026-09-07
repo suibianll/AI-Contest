@@ -81,11 +81,31 @@ refine threshold 1e-7、margin 0.02、ratio 0.70、blocks 32768），真实输�
 4. 若用"仅激活侧 T（权重侧解析吸收 W T^{-T} 再固定 GPTQ）"，会破坏
    L-R1 §2.2 的 rank/坐标等价性，需另立机制卡并预注册，不能现场改规则。
 
-## 6. 结论
+## 7. 修正口径方向探针（`probe_l2_direction.py`，STE 已接）
 
-- FlatQuant 方向**未因本机成本关闭**（上一轮"34/35 退化"源于输入/部署
-  不一致的简化探针，已按 R0 修订为 PROBE_INVALID_FOR_DEPLOYMENT）。
+在 L-R1 闭环（真实 NVFP4 输入 + 部署一致 GPTQ 权重/激活编码 + 修正梯度裁剪
+norm>1 才缩放）下重测 FlatQuant T=T1⊗T2 的 32 步 STE Adam。修正上一轮
+"量化全 detach 梯度断流"问题后：
+
+| state | baseline(T=I) | step32 | rel Δ |
+|---|---|---|---|
+| L0-o | 0.001011 | 0.001053 | **+4.2%**（退化） |
+| L11-proj | 0.002348 | 0.002476 | **+5.5%**（退化） |
+| L0-fc_up | 0.007219 | 0.007391 | **+2.4%**（退化） |
+
+- 3/3 代表 state 全部退化（无一致正向）。
+- 部署一致单步成本 0.6–3.3s；32 步 × 168 state 全量不可承受（COST_HOLD，
+  上一节），且已评估无缓存/统计复用能改变主导成本（weight/act GPTQ 依赖 T）。
+- 按 L-R2 结论：该训练式实现既无本地方向（3/3 退化）又成本不可承受；
+  **不注册候选**。数学方向（可逆变换）不因 3 代表 state 单点关闭，但当前
+  "逐 state 32 步训练"实现无本地路线；若未来有解析/非训练求解可另立新卡。
+
+## 8. 结论（更新）
+
+- 修复后的 3 代表 state（真实输入 + 部署一致 + STE 接上）**3/3 退化**，
+  与旧 fast-path 方向一致（34/35 退化），但现在是可信口径。
 - 正确性成立、成本 COST_HOLD；下一张机制卡优先评估 §5 第 1 项的 gram
   预计算与"批量/并行 fold"方案是否能把 32 步降到每 state <2s，或换一个
   不改变硬前向语义的解析求解（不等价于 $L1 自动重跑）。
-- 产物：`probe_l1_correctness_cost.py`、`artifacts/proxy_v3/continuous/linear/repair-r1/l1-cost.json`。
+- 产物：`probe_l1_correctness_cost.py`、`probe_l2_direction.py`、
+  `artifacts/proxy_v3/continuous/linear/repair-r1/l1-cost.json`。
