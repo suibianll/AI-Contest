@@ -48,18 +48,36 @@
     },
     "submitted_official": false,
     "official_result": null,
+    "fit_gain_table_2026-09-08": {
+      "linear_fit_gain_candidate": 0.948560,
+      "linear_fit_gain_parent": 0.721876,
+      "states": "168/168",
+      "fold_rows": 336,
+      "cand_vs_std": "336W/0L/0T",
+      "target": ">= 0.9 MET",
+      "protocol": "calibration folds [0,1], real dynamic activation + final five-field decode, same-SHA artifact reuse, CPU"
+    },
+    "error_ledger_2026-09-08": {
+      "e1_continuous_fit": 0.0074,
+      "e2_legal_projection": 0.0320,
+      "e3_deployment_candidate": 0.6537,
+      "e4_mismatch": 0.6143,
+      "reading": "E4 dominates -> L24-C next (dynamic-activation scale bucket weighting)"
+    },
     "superseded_official_result": {
       "sha256": "33D1DA51F3CB1D2933ACD8DDD7B77F7851EB3B082934EB54E3A60558CAF4E35D",
       "status": "TIMEOUT (>300s, user reported 2026-09-07); closes that complexity implementation; not retried with mechanical reductions",
       "scored_sha256": null
     }
   },
-  "next_action": "L23 全校准行修正版（13639FB2）已归档并注册官方探索；等官方回传按比分/300s 裁决。正向则登记新 Linear 侧父并考虑组合；负向/超时只关闭该实现，不扫邻域。",
+  "next_action": "L23b fit_gain 0.9486 >= 0.9 target MET (168/168 states); ledger E4=0.6143 dominates -> register L24-C card (dynamic-activation scale bucket weighting); L23b READY_FOR_OFFICIAL (no upload entry in env, package + SHA delivered); official score/300s is the sole judge.",
   "recent_steps": [
     "2026-09-07: L23 whitened-residual-subspace math PASS + 4B shard0 local all-roles negative (commit b52dbee)",
     "2026-09-07: L23 直接拟合版六 shard 完成（336 例、Δmean -0.18、0/336/0，record-only）；脱离导入+CPU fuzz PASS；归档 solutions/continuous_linear_l23-residual-subspace/，注册官方探索",
     "2026-09-07: 用户回传L23官方超时；见logs/execution/2026-09-07-l23-official-timeout.md",
-    "2026-09-08: L23 全校准行修正版完成（SHA 13639FB2）：删除奇偶拆分、增量残差、消除逐块全矩阵乘积/全权重复制；verify_direct_fit/check_import/fuzz 全 PASS；4B 六 shard（336 例，Δmean -0.185、1/335/0 record-only，拟合 L_all 降 90-99%）；归档新 SHA 注册官方探索"
+    "2026-09-08: L23 全校准行修正版完成（SHA 13639FB2）：删除奇偶拆分、增量残差、消除逐块全矩阵乘积/全权重复制；verify_direct_fit/check_import/fuzz 全 PASS；4B 六 shard（336 例，Δmean -0.185、1/335/0 record-only，拟合 L_all 降 90-99%）；归档新 SHA 注册官方探索",
+    "2026-09-08: P0 fit_gain 表完成：候选 0.9486 >= 0.9（168/168 states、336 fold-rows 全胜 STD/父；父 0.7219）；L23b 标记 READY_FOR_OFFICIAL",
+    "2026-09-08: R1 账本 v0（shard0 28 states）：E1=0.0074、E2=0.0320、E3=0.6537、E4=0.6143；E4 部署失配主导 -> 下一张卡 L24-C"
   ],
   "evaluation_policy": "Linear: fit all Qwen3.5-4B calibration API data directly; no fit/select split or generalization gate; holdout statistics record only; official 300s"
 }
