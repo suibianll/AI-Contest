@@ -13,23 +13,17 @@
     "official_time_s": 247,
     "C_L": 3606
   },
-  "research_parent": {
-    "sha256": "ACB16F764DB80EDA94EB77FE497A7965C716B527571C241C79B2319529FF5263"
-  },
   "local_highest_reference": {
     "value": 0.6367994885532791,
     "source": "L4 (eval-v3 linear-only six shard n=336)"
   },
+  "l21_1": "LOCAL_EXPLORATORY_NEGATIVE: math PASS (OBQ==direct), differs from JDRQ; real-loop 3/3 holdout DEGRADE",
+  "l21_2": "REJECTED (local): block-once solve matches per-column exactly (rel 1.31/1.78/1.56); overfit is objective-inherent not loop complexity; fit increment not migratable",
   "pending_official": null,
-  "l21_1_probe": {
-    "math_check": "PASS: OBQ-condition-solve bit-identical to direct re-solve (0.0), differs from JDRQ (0.35), singular-block ridge finite",
-    "real_closure": "3/3 representative states test holdout DEGRADE: L0-o +28%, L11-proj +78%, L0-fc_up +56%; calibration fold overfits (L_tr drops 10-100x) -> out-of-distribution non-generalization",
-    "status": "LOCAL_EXPLORATORY_NEGATIVE (not candidate, not family-closure, no params swept)",
-    "candidate": null
-  },
-  "next_action": "L21-1 probe negative -> per workpackage: label EXPLORATORY, keep risk/legal/control/non-noop/time gates if official; no sweep. Next card L21-2 (lean output-fitting trunk, parent-deletion loss vs fit gain separated) or await direct mechanism evidence",
+  "next_action": "L21-3 条件不满足（首卡本地负向）；无新候选超本地最高。等待：外部直接机制证据 / 协调者裁决 / 新假设。不空转、不重跑已关闭族",
   "recent_steps": [
-    "2026-09-07: L21-1 math check PASS (3/3) and real-loop probe negative (3/3 holdout degrade)",
-    "2026-09-07: committed anchor21-l1 probe report + scripts (bd59859)"
+    "2026-09-07: L21-2 probe REJECTED local (block-once == per-column)",
+    "2026-09-07: L21-1 probe LOCAL_EXPLORATORY_NEGATIVE",
+    "2026-09-07: two implementations both prove output-sensitive fit degrades holdout 3/3"
   ]
 }
