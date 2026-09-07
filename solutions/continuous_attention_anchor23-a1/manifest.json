@@ -2,11 +2,11 @@
   "run_id": "anchor23-a1",
   "mechanism": "joint-qk-block-scale-product-objective",
   "source_sha256": "8714ac2a044779465c5e406ef0768be7071ac626f3a2171cdc5083350be92dbf",
-  "status": "LOCAL_NEGATIVE_OBJECTIVE_CLOSED",
+  "status": "OFFICIAL_KEPT_NEW_SIDE_PARENT",
   "local_class": "LOCAL_NEGATIVE_TEST_SPLIT_NEGATIVE",
-  "official_score": null,
-  "official_time_s": null,
-  "official_status": "NA (not submitted; 4B paired gate failed)",
+  "official_score": 14437,
+  "official_time_s": 276,
+  "official_status": "OFFICIAL_KEPT_NEW_SIDE_PARENT",
   "parent": {
     "path": "solutions/continuous_attention_anchor22-a2/solution.py",
     "sha256": "4686ad817128d60e1a1648e0e14793692097ee8171fac2bc5202466d5787c0b7",
@@ -79,8 +79,14 @@
     "inference_mode": "PASS"
   },
   "api_seconds_note": "api_seconds recorded in manifests only; no local time gate per 2026-09-07 directive",
-  "next": "\u76ee\u6807\u5361\u5173\u95ed\uff08\u9884\u767b\u8bb0\u5206\u652f\uff1a\u4e58\u79ef\u4e0b\u964d\u800c\u8f93\u51fa\u4e0d\u6539\u5584\uff09\u3002\u4e0b\u4e00\u5361\u9700\u5148\u4e0e\u65e7Jacobian/\u52a8\u6001Gram\u5173\u95ed\u65cf\u53bb\u91cd\u540e\u624d\u53ef\u8003\u8651\u5b9e\u9645\u91cf\u5316QK\u76ee\u6807\uff1b\u4e0d\u5728\u672c\u5361\u4e0a\u626bloss\u6743\u91cd/\u7a97\u53e3/gate\u9608\u503c",
-  "official_scored_sha256": null,
+  "next": "A23\u6210\u4e3a\u65b0\u4fa7\u7236(14437/276s)\uff1b\u4e58\u79ef\u76ee\u6807\u5361\u7531\u5b98\u65b9\u88c1\u51b3\u91cd\u65b0\u5f00\u653e\uff1bA2\u4ecdofficial_best(14440/274s, \u8fd1\u5e73\u5c40Pareto)",
+  "official_scored_sha256": "8714ac2a044779465c5e406ef0768be7071ac626f3a2171cdc5083350be92dbf",
   "archive_sha256": "8714ac2a044779465c5e406ef0768be7071ac626f3a2171cdc5083350be92dbf",
-  "official_result": null
+  "official_result": {
+    "score": 14437,
+    "time_s": 276,
+    "vs_a22_2": "+13/+5s new side parent",
+    "vs_a2": "-3/+2s (A2 remains official_best)",
+    "local_official_divergence": "4B paired negative but official positive - paired panel is risk record only"
+  }
 }

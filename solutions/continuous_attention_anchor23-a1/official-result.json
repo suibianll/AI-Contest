@@ -1,0 +1,22 @@
+{
+  "run_id": "anchor23-a1",
+  "official_score": 14437,
+  "official_time_s": 276,
+  "status": "OFFICIAL_KEPT_NEW_SIDE_PARENT",
+  "reported_by": "user",
+  "reported_at": "2026-09-07",
+  "source_sha256": "8714ac2a044779465c5e406ef0768be7071ac626f3a2171cdc5083350be92dbf",
+  "verdict_rule": "workpackage 21071-evidence-driven-research §6: official positive and <300s updates the side parent",
+  "comparison": {
+    "vs_a22_2_previous_parent": "+13 / +5s -> SCORE_BEST, new side parent",
+    "vs_a2_official_best": "-3 / +2s -> A2 (14440/274s) remains official_best; near-tie Pareto",
+    "vs_r3": "+32 / +38s",
+    "vs_a22_1": "+146 / +3s",
+    "vs_a21_1": "+238 / +32s"
+  },
+  "local_official_divergence": {
+    "note": "4B paired 72-case dmean was -0.004750 (test split -0.010253) yet official is +13 - the 4B paired panel is a RISK RECORD only, not a submission gate; second-generation proxy inversion confirmed on the 4B panel",
+    "implication": "the product objective's local readout misfit does not transfer; official is the only score judge"
+  },
+  "note": "276s < 300s hard limit. The product objective card is REOPENED by the official verdict: local negative closed nothing; only official results judge. A22-2 remains an official Pareto point (14424/271s)."
+}
