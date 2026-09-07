@@ -1,6 +1,6 @@
 # 计划入口
 
-> 最后更新：2026-09-07
+> 最后更新：2026-09-08
 
 日常测试唯一入口：[4B 测试指引](../../4b-panel-testing-guide.md)。全新测试只使用 4B，
 不再运行 0.5B、逐候选 OOD、GPT-2/opt 或 fresh-default 计时；本地时间公式和 280s 门退役。
@@ -9,7 +9,8 @@
 **当前唯一活动总计划：** [Linear / Attention持续优化](2026-09-07-continuous-linear-attention-plan.md)。
 当前明细：[2026-09-08双侧0.9执行任务书](workpackages/2026-09-08-dual-side-09-execution.md)。
 用户指定：Linear校准拟合gain≥0.9，Attention独立窗口gain≥0.9；由其他执行子代理持续实施并及时commit/push。
-先核对Linear两个未提交包（L23b已确认，第二包身份待确认），明确fit指标后再开发后继。
+两份Linear归档已明确为旧L23 timeout与L23b；所指是Git提交推送，旧超时版不重复提交官方。
+任务状态：PLAN_DELIVERED，计划已交付；本任务未启动优化实验。
 Attention A25官方14057/254s退步，A23 14437/276s为研究父，A2 14440/274s为最高对照。
 本任务只计划，未启动新实验或提交官方；根v189不变。
 
