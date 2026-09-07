@@ -1,0 +1,51 @@
+{
+  "run_id": "continuous_linear_l23-residual-subspace",
+  "mechanism": "residual-cross-subspace-lowdim-aw-fit",
+  "source_sha256": "33d1da51f3cb1d2933acd8ddd7b77f7851eb3b082934eb54e3a60558caf4e35d",
+  "status": "PENDING_OFFICIAL",
+  "local_class": "DIRECT_FIT_REGISTERED (independent-window stats record-only per 2026-09-07 user directive)",
+  "official_score": null,
+  "official_time_s": null,
+  "official_status": "PENDING (registered for official exploration; workpackage 21071-evidence-driven-research §4)",
+  "parent": {
+    "path": "solutions/v162_linear_l4-v189-linear-exact_officialNA_timeNA/solution.py",
+    "sha256": "ACB16F764DB80EDA94EB77FE497A7965C716B527571C241C79B2319529FF5263",
+    "official": "4607 / 247s"
+  },
+  "id_4b_paired_336": {
+    "cases": 336,
+    "candidate_mean_gain": 0.342577,
+    "parent_mean_gain": 0.524265035881679,
+    "delta_mean": -0.181687835181228,
+    "positive_cases": 0,
+    "negative_cases": 336,
+    "zero_cases": 0,
+    "note": "record-only per direct-fit policy; official 300s and score are the sole judge"
+  },
+  "fit_quality": {
+    "wide_blocks_144_examples": [
+      "97/144 accepted, L_all 2.6364e-08 -> 1.3809e-08",
+      "94/144 accepted, L_all 6.9045e-09 -> 2.5569e-09",
+      "110/144 accepted, L_all 2.0145e-08 -> 9.5553e-09"
+    ],
+    "narrow_blocks_40_examples": [
+      "24/40 accepted, L_all 5.7414e-09 -> 4.0989e-09",
+      "26/40 accepted, L_all 2.7839e-09 -> 1.8545e-09",
+      "29/40 accepted, L_all 2.0903e-09 -> 1.4249e-09"
+    ],
+    "reachability": "L23 accepted>0 on every layer exercised; L_all strictly decreases on all accepted blocks"
+  },
+  "verification": {
+    "isolated_import": "PASS",
+    "cpu_fuzz_contract": "PASS (all shapes / extreme / inference_mode / no_grad / repeat determinism)",
+    "math_check": "PASS (whitened residual-cross beat act-Gram top-8: 85.8% vs 0.01% residual-dominant example; r=64 == direct LS)",
+    "legal_state": "enforced by evaluator; six-shard run 0 reasonableness issues",
+    "finite": true,
+    "coverage": true
+  },
+  "api_seconds_note": "candidate api_total 1123.97s (6 shard, 1 calib cache hit) vs parent 1055.71s (0 hits); record only, no local time gate per 2026-09-07 directive",
+  "next": "official verification pending; on positive result with <300s, register L23 as new Linear-side parent and consider L23+A22-2 combination per plan §7",
+  "official_scored_sha256": null,
+  "archive_sha256": "33d1da51f3cb1d2933acd8ddd7b77f7851eb3b082934eb54e3a60558caf4e35d",
+  "official_result": null
+}
