@@ -1,13 +1,11 @@
-"""L21-2 探针：块级一次输出求解（无逐列 F 更新循环）vs L21-1 vs L4 父。
+"""L21-2 对照 B：精简父（v166）+ 块级一次输出拟合。
 
-对照（config.md §4）：
-- 精简父 = L4 父本身（真实 activation_state）作为基线（block rename:parent）。
-- 精简父+拟合 = 在父权重 W0 上做块级一次 LS + 格点化（每 64 块：
-  Z=solve(Hλ,Dλ) 直接格点化，不进逐列 OBQ 循环），块两臂接受。
-- 与 L21-1 逐列结果对比：判断 holdout 退化是"输出感知拟合固有"还是
-  "逐列循环过拟合"。
+报告：相对精简父（v166）的拟合增量 vs 相对 L4 的删除损失，分开显示。
 
-局部诊断；3 个代表 state；不提交官方。
+精简父 = v166（rank1、无 rank2/actorder），冻结 standard Attention。
+拟合 = block-once solve（同 probe_once_solve，固定 scale/lv2/lv3，只改 sign/mant）。
+
+LOCAL diagnostic；代表 state：L0-o / L11-proj / L0-fc_up。
 """
 
 from __future__ import annotations
@@ -20,9 +18,6 @@ from pathlib import Path
 import torch
 
 CACHE = Path(r"d:\工作内容\AI竞赛\artifacts\official_eval\cache\qwen2.5-0.5b-proxy-v2.pt")
-L4_PATH = Path(
-    r"d:\工作内容\AI竞赛\solutions\v162_linear_l4-v189-linear-exact_officialNA_timeNA\solution.py"
-)
 V166_PATH = Path(
     r"d:\工作内容\AI竞赛\solutions\20260903_v166_rank1-linear-residual_standard-attn_scoreNA_timeNA\solution.py"
 )
@@ -32,7 +27,7 @@ sys.path.insert(0, str(EVAL_DIR))
 import proxy_v3_eval as pv3  # noqa: E402
 import official_eval as v2  # noqa: E402
 
-spec = importlib.util.spec_from_file_location("l4sol", L4_PATH)
+spec = importlib.util.spec_from_file_location("v166sol", V166_PATH)
 sol = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(sol)
 
@@ -41,27 +36,23 @@ _BLOCK = 64
 
 
 def snap_block(Z, scale_comb):
-    """一次性格点化（无逐列循环）：Z/scale -> 最近 0.25 code -> 合法值。"""
     codes = torch.tensor([-1.75, -1.5, -1.25, -1.0, -0.75, -0.5, -0.25,
                           0.0, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75],
                          device=Z.device)
     k, oc = Z.shape
-    scale = scale_comb                                     # [k, oc]
-    grid_vals = codes.reshape(15, 1, 1) * scale.reshape(1, k, oc)
-    dist = (Z.reshape(1, k, oc) - grid_vals).abs()          # [15, k, oc]
+    grid_vals = codes.reshape(15, 1, 1) * scale_comb.reshape(1, k, oc)
+    dist = (Z.reshape(1, k, oc) - grid_vals).abs()
     return grid_vals.gather(0, dist.argmin(dim=0, keepdim=True))[0]
 
 
 def block_once_solve(Xb, Yt, Wb0, scale_comb, lam):
-    """块级一次求解：LS + 一次格点化（无逐列 F 循环）。"""
     N = int(Xb.shape[0])
-    o = int(Yt.shape[1])
     G = Xb.t() @ Xb
     G = 0.5 * (G + G.t())
     diagm = float(G.diagonal().mean().clamp_min(1e-12))
     H = G + lam * diagm * torch.eye(64, device=G.device)
     D = Xb.t() @ Yt + lam * diagm * Wb0
-    Z = torch.linalg.solve(H, D)                            # [64, o]
+    Z = torch.linalg.solve(H, D)
     return snap_block(Z, scale_comb)
 
 
@@ -110,7 +101,6 @@ def main(layer, role):
               for f in range(F)]
     Xhw = torch.cat([math.sqrt(omegas[f]) * xh for f, (_, xh) in enumerate(x_pairs)], dim=0)
     Yw = torch.cat([math.sqrt(omegas[f]) * (x @ w_orig.T) for f, (x, _) in enumerate(x_pairs)], dim=0)
-    Xval, Yval = x_pairs[1][1], x_pairs[1][0] @ w_orig.T
 
     n_blocks = in_f // _BLOCK
     sf = wp["scale_factor"].to(torch.float32)
@@ -138,8 +128,6 @@ def main(layer, role):
             W = W_cand
             R = Yw - Xhw @ W.t()
             changed += 1
-    print(f"[{role}-L{layer}] once-solve changed={changed}/{n_blocks} "
-          f"L_val_end={L(W, Xval, Yval):.3e} L_val_parent={L(W0, Xval, Yval):.3e}")
 
     case = next(c for c in pack.linear_cases if c.layer == layer and c.role == role)
     act_pair = v2._move_pair(pack.test_activations[role][case.test_window][layer], device)
@@ -151,11 +139,12 @@ def main(layer, role):
         dtype=torch.float32, device=device
     )
     ref_out = ref_x @ w_orig.T
-    mse_p = float(((player_x @ W0.t() - ref_out).square().mean()))
-    mse_n = float(((player_x @ W.t() - ref_out).square().mean()))
-    rel = mse_n / mse_p if mse_p > 0 else float("inf")
-    print(f"[{role}-L{layer}] holdout parent={mse_p:.4e} once={mse_n:.4e} rel={rel:.4f} "
-          f"{'IMPROVE' if rel < 0.99 else ('DEGRADE' if rel > 1.01 else 'FLAT')}")
+    mse_slim = float(((player_x @ W0.t() - ref_out).square().mean()))
+    mse_fit = float(((player_x @ W.t() - ref_out).square().mean()))
+    rel_fit = mse_fit / mse_slim if mse_slim > 0 else float("inf")
+    print(f"[{role}-L{layer}] slim(v166)={mse_slim:.4e} slim+fit={mse_fit:.4e} "
+          f"rel_vs_slim={rel_fit:.4f} changed={changed}/{n_blocks} "
+          f"{'IMPROVE' if rel_fit < 0.99 else ('DEGRADE' if rel_fit > 1.01 else 'FLAT')}")
 
 
 if __name__ == "__main__":
