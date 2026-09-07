@@ -16,6 +16,12 @@
 
 ## 0.1 当前计划状态（2026-09-07）
 
+> **2026-09-08 计划形态变更**：执行任务已改为[持续研究循环](superpowers/plans/workpackages/2026-09-08-continuous-research-loop.md)：
+> 误差账本（Linear E1 连续拟合/E2 合法投影/E3 部署/E4 失配；Attention F1 Q-K 总/F2 码/F3 QK-logits/F4 输出/F5 残差）定位 →
+> 代理自行补机制卡 → 一卡一固定配置 → 归档 push/官方探索 → 每轮必留 next_card。停止条件仅达标 0.9、
+> 缺不可替代外部输入、去重后无新假设三条。初始队列：Linear L24-A/B/C，Attention A26-A/B/C，
+> 先验为 E2/E4 主导（待账本否证）。本轮仅改写计划形态，未启动实验或官方提交。
+
 当前按[21071下一轮研究计划](superpowers/plans/workpackages/21071-evidence-driven-research.md)推进。
 L4 4607/247s保留；A22-2 14424/271s为研究父（vs R3 +19/+33s），A2 14440/274s仍为侧高分对照。
 L21各具体实现本地负向但不关闭A@W拟合整族；旧平均负向损失/分布解释已[纠偏](../logs/execution/2026-09-07-21071-next-cycle-evidence-correction.md)。

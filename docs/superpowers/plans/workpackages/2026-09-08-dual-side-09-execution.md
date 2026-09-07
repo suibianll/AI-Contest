@@ -1,7 +1,9 @@
 # 双侧持续优化交接计划：Linear fit gain / Attention holdout gain 0.9
 
-> 2026-09-08，当前阶段PLAN_HANDOFF。本任务只核查、制定与提交计划，由其他执行子代理实施。
-> 隶属[唯一总计划](../2026-09-07-continuous-linear-attention-plan.md)。本文件取代旧L23/A23待设计队列。
+> **[SUPERSEDED 2026-09-08]** 本文件已由[持续研究循环](2026-09-08-continuous-research-loop.md)取代，
+> **不再提供队列指令**。保留价值：§1 结果表与 L23b/A25 证据、§2 fit 表口径、§3 L0 事务（两份归档 Git 提交推送）。
+> 其余执行节奏、门禁与交付以新循环文件为准。
+> 2026-09-08，PLAN_HANDOFF。本任务只核查、制定与提交计划，由其他执行子代理实施。
 
 ## 1. 已确认口径和结果
 

@@ -6,9 +6,13 @@
 不再运行 0.5B、逐候选 OOD、GPT-2/opt 或 fresh-default 计时；本地时间公式和 280s 门退役。
 官方提交无限制，官方硬限 300s。评估实现说明见 [proxy-v3](../../proxy-v3.md)。
 
-**当前唯一活动总计划：** [Linear / Attention持续优化](2026-09-07-continuous-linear-attention-plan.md)。
-当前明细：[2026-09-08双侧0.9执行任务书](workpackages/2026-09-08-dual-side-09-execution.md)。
+**当前唯一活动总计划：** [Linear / Attention持续优化](2026-09-07-continuous-linear-attention-plan.md)（已改为持续研究循环）。
+当前明细：[2026-09-08 持续研究循环（误差账本驱动）](workpackages/2026-09-08-continuous-research-loop.md)。
 用户指定：Linear校准拟合gain≥0.9，Attention独立窗口gain≥0.9；由其他执行子代理持续实施并及时commit/push。
+循环机制：误差账本（Linear E1–E4 / Attention F1–F5）定位最大可改变误差源 → 代理自行补一张有实质区别的机制卡
+（含改变什么/为何有效/如何证伪/去重四项比对）→ 一卡一个固定配置验证 → 归档commit/push与官方探索 →
+每轮必留 next_card。停止条件仅三条：达标0.9、缺不可替代外部输入、去重后无可执行新假设，后两条须列具体阻碍。
+旧[双侧0.9执行任务书](workpackages/2026-09-08-dual-side-09-execution.md)降级为证据与P0事务来源，不再提供队列指令。
 两份Linear归档已明确为旧L23 timeout与L23b；所指是Git提交推送，旧超时版不重复提交官方。
 任务状态：PLAN_DELIVERED，计划已交付；本任务未启动优化实验。
 Attention A25官方14057/254s退步，A23 14437/276s为研究父，A2 14440/274s为最高对照。
