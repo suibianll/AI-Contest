@@ -14,35 +14,23 @@
     "C_L": 3606
   },
   "research_parent": {
-    "note": "同 official_best；候选只从该 SHA 构造",
     "sha256": "ACB16F764DB80EDA94EB77FE497A7965C716B527571C241C79B2319529FF5263"
   },
   "local_highest_reference": {
     "value": 0.6367994885532791,
-    "source": "artifacts/proxy_v3/v162-independent/linear/l4-v189-linear-exact (L4)"
+    "source": "L4 (eval-v3 linear-only six shard n=336)"
   },
   "pending_official": null,
   "evidence_repair": {
-    "l_r1": {
-      "status": "DONE",
-      "note": "真实输入/部署闭环 12/12 与 evaluator 逐位一致；smooth/perm/hadamard 可逆（1e-13）；rank 非纯可逆（偏差 1e-4 级）；四臂 UNIDENTIFIABLE（混合坐标，61-79% 作废）"
-    },
-    "l_r2": {
-      "status": "PASS + COST_HOLD",
-      "note": "梯度检查/STE/inference_mode/T=I 全部通过；部署一致硬前向 0.62-3.24s/step；32步×168 state ≈1-17k s 不可承受；FlatQuant 数学方向未关闭"
-    },
-    "l_r3": {
-      "status": "DUPLICATE_CLOSED (RESOLVED)",
-      "note": "公式级对照：λ>0 时 GPTAQ 单步 == JDRQ target（~5e-7）；JDRQ teacher 即非对称校准目标"
-    },
-    "coverage_scalars": {
-      "note": "上一轮 round(x/scale) 输入与简化编码器已废弃；成本外推只记风险不替换官方模型"
-    }
+    "l_r1": "DONE: 真实 API 闭环 12/12 逐位一致; rank 非纯可逆(1e-4); 四臂 UNIDENTIFIABLE",
+    "l_r2": "DONE: 正确性 PASS; 完整硬前向 0.62-3.24s/step COST_HOLD",
+    "l_r2_t_identity": "CORRECTED(2026-09-07): deployment_forward(T=I) != 父 (ratio 0.45-0.80); 3-state '退化' 无效; FlatQuant = DIRECTION_UNKNOWN, 不因该探针关闭",
+    "l_r3": "DONE: GPTAQ==JDRQ 公式级(5e-7) DUPLICATE_CLOSED"
   },
-  "next_action": "L-R2 COST_HOLD 后继：评估 gram 预计算（X^T X 不依赖 T，每步只做 T 收缩）；weight/activation GPTQ 每步依赖 T 无免费复用 → 无足够增益方案则记录并等待新求解机制/新假设",
+  "next_action": "L1 方向判定需'插 T 完整校准变体'(T=I 逐位恢复父, 含 rank-2 gram/actorder/importance); 将 mc 与代价 COST_HOLD 保持。替代: 低成本解析平坦化方向诊断(非训练, 瞄准官方 P3 fc/proj 桶)",
   "recent_steps": [
-    "2026-09-07: L-R1 真实 API 闭环 12/12 逐位一致；rank 非纯可逆；四臂 UNIDENTIFIABLE",
-    "2026-09-07: L-R2 正确性全过、部署一致成本 0.62-3.24s/step → COST_HOLD",
-    "2026-09-07: L-R3 公式级去重维持 DUPLICATE_CLOSED"
+    "2026-09-07: T=I parity 修正: 简化前向与父不一致, 3-state 退化结论作废",
+    "2026-09-07: FlatQuant 状态 -> DIRECTION_UNKNOWN + COST_HOLD",
+    "2026-09-07: 构建插 T 完整校准变体方向探针(仍 MISMATCH, 需补 rank 配对/actorder)"
   ]
 }
