@@ -2,11 +2,11 @@
   "run_id": "anchor22-a1",
   "mechanism": "fixed-scale-proposal-complete-r3-fallback",
   "source_sha256": "25310c6e36c41ca0dd7a716c29946ede9c7e030af7c4329dc2f29d732bd92447",
-  "status": "READY_FOR_OFFICIAL_EXPLORATION",
+  "status": "OFFICIAL_REJECTED",
   "local_class": "LOCAL_POSITIVE_ALL_GATES_PASS",
-  "official_score": null,
-  "official_time_s": null,
-  "official_status": "NA",
+  "official_score": 14291,
+  "official_time_s": 273,
+  "official_status": "OFFICIAL_REJECTED",
   "parent": {
     "path": "solutions/v162_attention_r3-rotation-center_allgates/solution.py",
     "sha256": "a5c679d7a2b349a879b2019b4a613244f5fea7050e407b6475b9e29bd1c146dc",
@@ -108,8 +108,15 @@
     "inference_mode": "PASS: calibration reachable under torch.inference_mode"
   },
   "evaluator_sha256": null,
-  "next": "\u7b49\u5f85\u5b98\u65b9\u56de\u4f20; A22-2\u542f\u52a8\u6761\u4ef6\u5df2\u6ee1\u8db3(\u591a\u6570\u63d0\u684821/24\u88ab\u5b8c\u6574P\u62d2\u7edd), \u7b49\u5f85\u671f\u95f4\u4ec5\u672c\u5730\u51c6\u5907, \u4e0d\u628a\u5f85\u56de\u4f20\u6e90\u7801\u5347\u7ea7\u4e3a\u5b98\u65b9\u7236",
-  "official_scored_sha256": null,
+  "next": "\u5361\u5173\u95ed: scale\u63d0\u6848\u65cf(R3\u7236\u4e0a\u66ff\u6362\u5f0f+\u5b8c\u6574R3\u56de\u9000)\u4e24\u6b21\u5b98\u65b9\u8d1f\u5411(14199/14291 vs 14405); A22-2\u6b8b\u4f59\u53c2\u6570\u5316\u4e3a\u4e0d\u540c\u673a\u5236, \u5b98\u65b9\u8d44\u683c\u5f85\u7528\u6237/\u534f\u8c03\u8005\u6279\u51c6",
+  "official_scored_sha256": "25310c6e36c41ca0dd7a716c29946ede9c7e030af7c4329dc2f29d732bd92447",
   "archive_sha256": "25310c6e36c41ca0dd7a716c29946ede9c7e030af7c4329dc2f29d732bd92447",
-  "official_result": null
+  "official_result": {
+    "score": 14291,
+    "time_s": 273,
+    "vs_r3": "-114/+35s",
+    "vs_a2": "-149/-1s",
+    "vs_a21_1": "+92/+29s",
+    "time_residual_vs_prediction": "+33.150s"
+  }
 }

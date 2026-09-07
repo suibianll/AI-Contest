@@ -1,0 +1,17 @@
+{
+  "run_id": "anchor22-a1",
+  "official_score": 14291,
+  "official_time_s": 273,
+  "status": "OFFICIAL_REJECTED",
+  "reported_by": "user",
+  "reported_at": "2026-09-07",
+  "source_sha256": "25310c6e36c41ca0dd7a716c29946ede9c7e030af7c4329dc2f29d732bd92447",
+  "verdict_rule": "preregistered in workpackage attention-after-14199 §3: must beat R3 (14405) with time <300s to keep; lower or equal closes the card regardless of local signs",
+  "comparison": {
+    "vs_r3_research_parent": "-114 / +35s",
+    "vs_a2_high_score_parent": "-149 / -1s",
+    "vs_a21_1": "+92 / +29s (complete-R3 fallback protection itself recovered 92 of the -206)"
+  },
+  "time_residual": "273 - 239.850 prediction = +33.150s (same direction as A21-1 +24.716s; training-heavy calibration costs more officially)",
+  "note": "273s within the 300s hard limit; rejected on score, not timeout. Local positive (+0.005786 ID / +0.002841 OOD) did not transfer to official - another same-route proxy inversion, consistent with the 2026-09-04 evaluation doctrine."
+}
