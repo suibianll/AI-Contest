@@ -6,14 +6,14 @@
   "evidence_repair": "docs/superpowers/plans/workpackages/evidence-repair-next-cycle.md (§6 A-R1)",
   "created": "2026-09-07",
   "official_best": {
-    "run_id": "r3-rotation-center",
-    "label": "R2c rotation + learned K-center, all gates pass, OOD-clean",
-    "path": "solutions/v162_attention_r3-rotation-center_allgates/solution.py",
-    "sha256": "A5C679D7A2B349A879B2019B4A613244F5FEA7050E407B6475B9E29BD1C146DC",
-    "official_score": 14405,
-    "official_time_s": 238,
-    "C_A": 13404,
-    "note": "官方回传 2026-09-07。OOD Δgap +0.0065 过门（风险提示级）；本地 default 0.7650"
+    "run_id": "a2-fullkv",
+    "label": "A1 deployed-aligned rotation + full-length K/V training",
+    "path": "solutions/continuous_attention_a2-fullkv_dominated/solution.py",
+    "sha256": "952147d163addaa9eb23",
+    "official_score": 14440,
+    "official_time_s": 274,
+    "C_A": 13439,
+    "note": "官方回传 2026-09-07。时间 274s 距提交门仅 6s——后续叠加机制时间预算已耗尽"
   },
   "official_history": [
     {
@@ -51,6 +51,14 @@
       "path": "solutions/continuous_attention_a1-deployed-aligned_officialNA_timeNA/solution.py",
       "sha256": "65eb37f2346ecebd97952ff67e2af7d5a99b568fc95352eaff1702bd9814964a",
       "note": "vs R2c +1.2 (flat); R3 (14405) remains best; OOD-gap ranking monotonic: 0.0065<0.0083<0.0122 <=> 14405>14389>14387.8"
+    },
+    {
+      "run_id": "a2-fullkv",
+      "score": 14440,
+      "time_s": 274,
+      "C_A": 13439,
+      "path": "solutions/continuous_attention_a2-fullkv_dominated/solution.py",
+      "note": "本地 DOMINATED 裁决被官方推翻：+51.2 vs A1；时间余量仅 6s"
     }
   ],
   "research_parent": {
@@ -65,7 +73,7 @@
     "candidate": "solutions/continuous_attention_a1-deployed-aligned_officialNA_timeNA",
     "candidate_sha256": "65eb37f2346ecebd97952ff67e2af7d5a99b568fc95352eaff1702bd9814964a"
   },
-  "next_action": "A3 机制卡已登记（去重完成：T=exp(S) 对称非正交混合与对角/2x2/正交族均不等价）；实现解析梯度（Daleckii-Krein 矩阵指数导数）后按 A1 同链评测",
+  "next_action": "A3（T=exp(S) 对称混合）解析梯度实现中；时间预算仅剩 6s——A3 训练成本必须与 A2 持平或更低，否则 TIME_HOLD",
   "recent_steps": [
     "2026-09-07: A2c 官方 9538/175s（C_A=8537）——手工梯度训练器官方部署证明",
     "2026-09-07: R2c 官方 14387.8/240s（C_A=13386.8）——超过 R1 +378.8",
@@ -78,6 +86,6 @@
     "2026-09-07: A1 官方 14389/256.3s（vs R2c +1.2 平；R3 14405 仍最佳）；OOD gap 排序与官方分单调一致（第3数据点）",
     "2026-09-07: A2 全长K/V训练三轴劣于A1（DOMINATED 关闭）；采样正则效应记录"
   ],
-  "status": "A2_CLOSED_DOMINATED / A3_REGISTERED",
+  "status": "A2_OFFICIAL_BEST / A3_IMPLEMENTING",
   "artifacts_note": "历史结果在 artifacts/proxy_v3/v162-independent/attention/{r2c-id,r2c-ood,r3-id,r3-ood,r3-default}；新 run 按 plan 写 artifacts/proxy_v3/continuous/attention/"
 }
