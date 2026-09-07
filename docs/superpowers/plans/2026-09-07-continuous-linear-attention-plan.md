@@ -51,11 +51,20 @@ C23-0为INTEGRATION_PLANNED，尚未验证是否已有同SHA组合结果。
 
 ### L23 直接拟合版（2026-09-07 用户指令：不拆fit/select、官方裁决）
 
-- L23 去重（dedup-r0.md）与数学检查（math_check.py）完成；候选改为全校准行
-  严格改善接受（无 holdout 守门）。脱离仓库导入检查 + CPU contract fuzz 全 PASS。
-- 4B 六 shard paired（父 L4，336 例）：candidate gain +0.3426 vs 父 +0.5243，
-  Δmean −0.18、0/336/0 —— **record-only**（直接拟合政策下不阻止官方探索）。
-  拟合质量：各层 L_all 相对父降 50–62%，accepted 88–110/144（宽）/24–29/40（窄），机制可达。
-- 已归档 `solutions/continuous_linear_l23-residual-subspace/`（SHA
-  `33D1DA51…E35D`），注册官方探索（PENDING_OFFICIAL）。官方比分与 300s 为唯一裁决；
-  正向则登记新 Linear 侧父并考虑 L23+A22-2 组合，负向只关闭该实现、不扫邻域。
+- ~~首版（SHA 33D1DA51）~~：官方 **TIMEOUT**（2026-09-07 用户回传），关闭该复杂度
+  实现（逐块完整 L_all 矩阵乘积 + 逐块全权重复制）；见
+  [超时登记](../../../../logs/execution/2026-09-07-l23-official-timeout.md)。
+- **修正版（2026-09-08，SHA 13639FB2，当前注册）**：按修正指令与超时后继路径——
+  彻底删除奇偶行拆分（基构造/系数/fold 权重/接受判定全部用全校准行）；
+  全局残差 R=Y−XhWᵀ 增量维护，块提案 R−Xh_B ΔW_Bᵀ，消除逐块完整 Xh@W 乘积与
+  全权重复制（~144× matmul 削减）；机制（rank-8 白化残差、teacher、五字段投影）不变。
+- 验证（`verify_direct_fit.py` 等，全 PASS）：192/192 行参与求解、`_l23_fold_split`
+  不存在；五字段解码损失 == 接受判定最终损失（rel 1.1e-05）；L23 on/off 的
+  activation_state 与动态激活逐位一致；仅接受块 sign/mant 改变；attention 标准
+  空 state 合法。脱离仓库导入与 CPU contract fuzz PASS。
+- 4B 六 shard paired（父 L4，336 例）：candidate +0.3395 vs 父 +0.5243，
+  Δmean −0.1848、1/335/0 —— record-only；拟合质量：宽层 144/144 块接受、
+  L_all 降 90–99%（旧偶数行版 50–62%），机制可达。
+- 归档 `solutions/continuous_linear_l23-residual-subspace/`（SHA `13639FB2…10FE0`），
+  PENDING_OFFICIAL。官方比分与 300s 为唯一裁决；正向则登记新 Linear 侧父并
+  考虑 L23+A22-2 组合，负向/超时只关闭该实现、不扫邻域。

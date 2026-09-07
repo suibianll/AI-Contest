@@ -1,9 +1,10 @@
 {
-  "source_sha256": "33d1da51f3cb1d2933acd8ddd7b77f7851eb3b082934eb54e3a60558caf4e35d",
+  "source_sha256": "13639fb22976b2c7c838ee2e69ae9c2c58123e03d9bdec106623d93b29510fe0",
   "parent_sha256": "ACB16F764DB80EDA94EB77FE497A7965C716B527571C241C79B2319529FF5263",
   "isolated_import": "PASS: six APIs imported with isolated Python and external cwd",
   "cpu_fuzz_contract": "PASS: narrow/wide/nonpow2in/big shapes, extreme x330000, inference_mode, no_grad, repeat determinism",
-  "math_check": "PASS: whitened rank-8 SVD solve-back recovers direct LS at r=64; residual-cross subspace beats activation-Gram top-8 here",
+  "math_check": "PASS: whitened rank-8 SVD solve-back recovers direct LS at r=64; residual-cross subspace beats activation-Gram top-8",
+  "verify_direct_fit": "PASS: all rows in solve (192/192, no parity split); incremental residual == direct recompute (decode loss equals tracked final loss, rel 1.1e-05); five-field decode fit error equals acceptance loss; activation_state and dynamic activation bit-identical with L23 on/off; only accepted blocks change sign/mant; scale/lv2/lv3 parent-identical; attention standard empty states legal",
   "legal_state": "PASS: evaluator-enforced; six-shard run 0 reasonableness issues; all outputs finite",
   "deployment_identity": "fixed parent scale/lv2/lv3; only accepted blocks rewrite sign/mant; unaccepted blocks byte-identical to parent"
 }

@@ -1,14 +1,23 @@
 {
   "run_id": "continuous_linear_l23-residual-subspace",
-  "official_score": null,
-  "official_time_s": null,
-  "status": "TIMEOUT",
-  "reported_by": "user",
-  "reported_at": "2026-09-07",
-  "source_sha256": "33d1da51f3cb1d2933acd8ddd7b77f7851eb3b082934eb54e3a60558caf4e35d",
-  "verdict_rule": "preregistered in workpackage 21071-evidence-driven-research §4: fit error improvement on same calibration data + legal/reachable/control satisfied -> official exploration allowed; official score and 300s are the sole judge",
+  "current_candidate": {
+    "source_sha256": "13639fb22976b2c7c838ee2e69ae9c2c58123e03d9bdec106623d93b29510fe0",
+    "status": "PENDING_OFFICIAL",
+    "role": "time-safe restructure designated by logs/execution/2026-09-07-l23-official-timeout.md: all-calibration-row basis solve + incremental residual, eliminating repeated full Xh@W products; does not inherit the old verification or outcome",
+    "verdict_rule": "preregistered in workpackage 21071-evidence-driven-research §4: fit error improvement on same calibration data + legal/reachable/control satisfied -> official exploration allowed; official score and 300s are the sole judge",
+    "official_score": null,
+    "official_time_s": null
+  },
+  "superseded": {
+    "source_sha256": "33d1da51f3cb1d2933acd8ddd7b77f7851eb3b082934eb54e3a60558caf4e35d",
+    "status": "TIMEOUT",
+    "reported_by": "user",
+    "reported_at": "2026-09-07",
+    "note": "official timeout; exact score/time unknown. Closes that complexity implementation (per-block full L_all products + full-weight clones); not retried with mechanical rank/sample/step reductions. See logs/execution/2026-09-07-l23-official-timeout.md",
+    "official_score": null,
+    "official_time_s": null,
+    "official_scored_sha256": null
+  },
   "comparison": null,
-  "note": "用户回传L23超时；精确耗时/分数未知。关闭当前复杂度实现；修正版不得继承旧回传。详见logs/execution/2026-09-07-l23-official-timeout.md",
-  "official_scored_sha256": null,
-  "source_identity_status": "registered source SHA retained; uploaded SHA not separately supplied; current archive source is being revised"
+  "note": "local independent-window stats are record-only under the 2026-09-07 direct-fit directive and do not gate official exploration"
 }

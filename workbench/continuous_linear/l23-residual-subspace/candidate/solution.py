@@ -10801,32 +10801,25 @@ _L23_RESIDUAL_SUBSPACE = True
 _L23_RANK = 8
 
 
-def _l23_fold_split(rows: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-    """折叠内固定 token 奇偶拆 fit/select（工作包 §4 隔离纪律）。"""
-    n = int(rows.shape[0])
-    idx = torch.arange(n, device=rows.device)
-    return rows[idx % 2 == 0], rows[idx % 2 == 1]
-
-
-def _l23_block_solve(Xb, Rf, lam):
+def _l23_block_solve(Xb, R, lam):
     """L23 闭式：G 白化残差交叉 H → rank-8 截断 SVD → 解回 ΔW_B。
 
-    Xb: [n_fit,64]；Rf: [n_fit,o]（残差=Y−Xh W_current，fit 行）。
+    Xb: [N,64]（全校准加权行）；R: [N,o]（全局残差 Y−Xh W_current）。
     """
     G = Xb.t() @ Xb
     G = 0.5 * (G + G.t())
     diagm = float(G.diagonal().mean().clamp_min(1e-12))
     Gλ = G + lam * diagm * torch.eye(64, device=G.device, dtype=G.dtype)
     L = torch.linalg.cholesky(Gλ)
-    R = Rf.to(G.dtype)
-    H = Xb.t() @ R                                   # [64, o]
+    Rf = R.to(G.dtype)
+    H = Xb.t() @ Rf                                  # [64, o]
     Hw = torch.linalg.solve_triangular(L, H, upper=False)
     U, _, _ = torch.linalg.svd(Hw, full_matrices=False)
     U_r = U[:, : int(min(_L23_RANK, U.shape[1]))]
     dW = torch.linalg.solve_triangular(
         L.t(), U_r @ (U_r.t() @ Hw), upper=True
     )
-    return dW.to(Rf.dtype)
+    return dW.to(R.dtype)
 
 
 def _l23_residual_subspace_fit(
@@ -10836,14 +10829,14 @@ def _l23_residual_subspace_fit(
     weight_scale: torch.Tensor,
     calib_activation_list: list,
 ) -> dict[str, torch.Tensor]:
-    """L23：残差交叉子空间低维 A@W 拟合（校准全集，官方裁决）。
+    """L23：残差交叉子空间低维 A@W 拟合（校准全集直接拟合，官方裁决）。
 
-    对每 64 块 B：
-      fit 行（fold 内偶数 token）构造残差交叉子空间：
-        G = Σω Xh_B^T Xh_B + λI；H = Σω Xh_B^T R_fit；
+    对每 64 块 B（父顺序一遍）：
+      全校准行（无奇偶/fit-select 拆分）构造残差交叉子空间：
+        G = Σω Xh_B^T Xh_B + λI；H = Σω Xh_B^T R；
         Cholesky 白化 H → rank-8 SVD → 解回 ΔW_B；
-      投影父合法格点后，用全部校准行目标 L = Σω||Y−Xh W||² 严格下降才接受；
-      平局保留父块；更新真实残差。
+      投影父合法格点后，用全校准行目标 L = Σω||Y−Xh W||² 严格下降才接受；
+      平局保留父块；增量更新全局残差 R ← R − Xh_B ΔW_B^T。
     固定父 scale/lv2/lv3；只改 sign/mant。teacher = X·W_origᵀ。
     本地不留跨窗口守门，由官方评测裁决（用户指令 2026-09-07）。
     """
@@ -10856,7 +10849,6 @@ def _l23_residual_subspace_fit(
         else _WEIGHT_GPTQ_REGULARIZATION
     )
     # 每个 fold：真实 dynamic activation → Xh；teacher = X·W_origᵀ
-    x_folds = []
     xh_folds = []
     y_folds = []
     for pair in calib_activation_list:
@@ -10865,16 +10857,13 @@ def _l23_residual_subspace_fit(
         xh = _dequantize_hif4(act_params).to(torch.float32)
         if xh.shape != x.shape:
             xh = xh.reshape(x.shape)
-        x_folds.append(x)
         xh_folds.append(xh)
         y_folds.append(x @ w_orig.T)
-    F = len(x_folds)
-    # ω_f 只用 fit 行的 Y 范数（工作包 §4）：分母 = F * max(||Y_fit,f||², 1e-12)
-    fit_y_norms = []
-    for f in range(F):
-        y_fit, _ = _l23_fold_split(y_folds[f])
-        fit_y_norms.append(float((y_fit ** 2).sum()))
-    omegas = [1.0 / (F * max(fit_y_norms[f], 1e-12)) for f in range(F)]
+    F = len(xh_folds)
+    # ω_f 用全部校准行的 Y 范数：分母 = F * max(||Y_f||², 1e-12)
+    omegas = [
+        1.0 / (F * max(float((y_folds[f] ** 2).sum()), 1e-12)) for f in range(F)
+    ]
     n_blocks = in_f // _HIF4_BLOCK_SIZE
     sf = weight_params["scale_factor"].to(torch.float32)
     lv2v = weight_params["scale_lv2"].to(torch.float32)
@@ -10885,64 +10874,50 @@ def _l23_residual_subspace_fit(
          0.0, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75],
         device=w_orig.device, dtype=torch.float32,
     )
-    # fit 行（偶数 token）定义子空间；接受判定用全校准行目标（偶数+奇数）
+    # 全校准加权行：基构造、系数求解、fold 权重与接受判定同一数据
     W = W0.clone()
-    fit_x = []
-    fit_y = []
-    all_x = []
-    all_y = []
+    xs = []
+    ys = []
     for f in range(F):
-        xh = xh_folds[f]
-        y = y_folds[f]
-        xh_fit, _ = _l23_fold_split(xh)
-        y_fit, _ = _l23_fold_split(y)
         sw = math.sqrt(omegas[f])
-        fit_x.append(xh_fit * sw)         # 基构造数据（加权偶数行）
-        fit_y.append(y_fit * sw)
-        all_x.append(xh * sw)             # 接受判定数据（全校准行，同 ω 加权）
-        all_y.append(y * sw)
-    xh_fit_cat = torch.cat(fit_x, dim=0)
-    y_fit_cat = torch.cat(fit_y, dim=0)
-    xh_all_cat = torch.cat(all_x, dim=0)
-    y_all_cat = torch.cat(all_y, dim=0)
+        xs.append(xh_folds[f] * sw)
+        ys.append(y_folds[f] * sw)
+    xh_all = torch.cat(xs, dim=0)
+    y_all = torch.cat(ys, dim=0)
 
-    def L_all(Wfull):
-        return float(((xh_all_cat @ Wfull.t() - y_all_cat) ** 2).mean())
-
-    R_fit = y_fit_cat - xh_fit_cat @ W.t()      # fit 行全局残差（子空间构造）
+    R = y_all - xh_all @ W.t()      # 全局残差，增量维护（避免逐块全矩阵乘积）
+    L_cur = float((R ** 2).mean())
+    L0 = L_cur
     accepted_blocks: set[int] = set()
-    L0 = L_all(W)
     for b in range(n_blocks):
         sl = slice(b * _HIF4_BLOCK_SIZE, (b + 1) * _HIF4_BLOCK_SIZE)
-        Xb_fit = xh_fit_cat[:, sl]               # [N_fit, 64]
+        Xb = xh_all[:, sl]                        # [N, 64] 全校准行
         Wb0 = W[:, sl].t().contiguous()          # [64, o]
-        Yt = R_fit + Xb_fit @ Wb0                # 块目标（本块贡献+其余列残差）
-        dW = _l23_block_solve(Xb_fit, Yt - Xb_fit @ Wb0, lam)
+        dW = _l23_block_solve(Xb, R, lam)
         scale_b = scale_full[:, b, :].t().contiguous()
         Wd = Wb0 + dW
         grid_vals = codes.reshape(15, 1, 1) * scale_b.reshape(1, 64, o)
         Wq = grid_vals.gather(
             0, (Wd.reshape(1, 64, o) - grid_vals).abs().argmin(dim=0, keepdim=True)
         )[0]
-        W_cand = W.clone()
-        W_cand[:, sl] = Wq.t()
-        if L_all(W_cand) < L_all(W):
+        Rcand = R + Xb @ (Wb0 - Wq)             # 增量候选残差 R − Xh_B ΔW_B^T
+        L_cand = float((Rcand ** 2).mean())
+        if L_cand < L_cur:
             accepted_blocks.add(b)
-            W = W_cand
-            R_fit = y_fit_cat - xh_fit_cat @ W.t()   # 接受后更新 fit 残差（基遵循当前 W）
+            W[:, sl] = Wq.t()
+            R = Rcand
+            L_cur = L_cand
         if b == 0 or (b + 1) % 10 == 0:
-            print(f"    [L23] block {b}: L_all cur={L_all(W):.4e} "
+            print(f"    [L23] block {b}: L_all cur={L_cur:.4e} "
                   f"L0={L0:.4e} accepted={len(accepted_blocks)}", flush=True)
     print(f"    [L23] accepted={len(accepted_blocks)}/{n_blocks} "
-          f"L_all {L0:.4e} → {L_all(W):.4e}", flush=True)
+          f"L_all {L0:.4e} → {L_cur:.4e}", flush=True)
     # 写回合法 sign/mant（保持 scale/lv2/lv3）
     out = dict(weight_params)
     # 未接受块保留父逐位字段（防止重编码扰动父码）
     out["sign"] = weight_params["sign"].clone()
     out["mant"] = weight_params["mant"].clone()
-    for b in range(n_blocks):
-        if b not in accepted_blocks:
-            continue
+    for b in accepted_blocks:
         sl = slice(b * _HIF4_BLOCK_SIZE, (b + 1) * _HIF4_BLOCK_SIZE)
         Wb = W[:, sl]
         scale_b = scale_full[:, b, :]                # [o, 64]
