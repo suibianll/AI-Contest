@@ -89,23 +89,27 @@ norm>1 才缩放）下重测 FlatQuant T=T1⊗T2 的 32 步 STE Adam。修正上
 
 | state | baseline(T=I) | step32 | rel Δ |
 |---|---|---|---|
-| L0-o | 0.001011 | 0.001053 | **+4.2%**（退化） |
-| L11-proj | 0.002348 | 0.002476 | **+5.5%**（退化） |
-| L0-fc_up | 0.007219 | 0.007391 | **+2.4%**（退化） |
+| L0-o | 0.001011 | 0.001053 | +4.2% |
+| L11-proj | 0.002348 | 0.002476 | +5.5% |
+| L0-fc_up | 0.007219 | 0.007391 | +2.4% |
 
-- 3/3 代表 state 全部退化（无一致正向）。
-- 部署一致单步成本 0.6–3.3s；32 步 × 168 state 全量不可承受（COST_HOLD，
-  上一节），且已评估无缓存/统计复用能改变主导成本（weight/act GPTQ 依赖 T）。
-- 按 L-R2 结论：该训练式实现既无本地方向（3/3 退化）又成本不可承受；
-  **不注册候选**。数学方向（可逆变换）不因 3 代表 state 单点关闭，但当前
-  "逐 state 32 步训练"实现无本地路线；若未来有解析/非训练求解可另立新卡。
+**该结论随后被 `probe_t_identity_parity.py` 判为无效**：`deployment_forward`
+（T=I）输出与父真实 API 不一致（MSE ratio 0.45-0.80，见
+`report-t-identity-correction.md`），即简化前向缺少父的 rank-2 残差 gram
+修正、static-actorder hdiag 块序与 importance 规范化。因此 3 个 state 的
+"退化"是相对一个与父不一致的基线，**不能归因于 FlatQuant T**。
+FlatQuant 状态回退为 **DIRECTION_UNKNOWN**（正确性方法 PASS；完整硬前向
+COST_HOLD；真实部署方向证据不足）。
 
 ## 8. 结论（更新）
 
-- 修复后的 3 代表 state（真实输入 + 部署一致 + STE 接上）**3/3 退化**，
-  与旧 fast-path 方向一致（34/35 退化），但现在是可信口径。
-- 正确性成立、成本 COST_HOLD；下一张机制卡优先评估 §5 第 1 项的 gram
-  预计算与"批量/并行 fold"方案是否能把 32 步降到每 state <2s，或换一个
-  不改变硬前向语义的解析求解（不等价于 $L1 自动重跑）。
+- FlatQuant 方向**未判定**：正确性方法 PASS、完整硬前向 COST_HOLD
+  （0.62-3.24s/step，32 步 × 168 state 不可承受）；3-state "退化"因
+  T=I 前向与父不一致而无效。要判定需"插 T 的完整校准变体"（T=I 逐位
+  恢复父含 rank-2/actorder），每步≈完整校准 ~2s/state，仅代表 state
+  可做方向诊断。
+- 下一张机制卡优先评估 §5 第 1 项的 gram 预计算与"批量/并行 fold"方案
+  是否能把 32 步降到每 state <2s，或换一个不改变硬前向语义的解析求解。
 - 产物：`probe_l1_correctness_cost.py`、`probe_l2_direction.py`、
+  `probe_t_identity_parity.py`、`report-t-identity-correction.md`、
   `artifacts/proxy_v3/continuous/linear/repair-r1/l1-cost.json`。
