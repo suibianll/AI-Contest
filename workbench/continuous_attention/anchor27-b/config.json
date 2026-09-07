@@ -1,0 +1,35 @@
+{
+  "card": "A27-B",
+  "side": "attention",
+  "parent_sha": "8714ac2a044779465c5e406ef0768be7071ac626f3a2171cdc5083350be92dbf",
+  "parent_label": "A23 (official 14437/276s, side parent)",
+  "candidate_structure": "v189 base stack single trunk + learned_rotation (A26-line)",
+  "target_ledger_cell": "F2",
+  "target_value": 0.192,
+  "mechanism": "low-dim spectral S (8 Kronecker-Hadamard band coefficients per KV group) + true five-field readout MSE central-difference sign gradient",
+  "frozen_config": {
+    "basis": "sylvester_hadamard_256_kronecker_order_normalized",
+    "bands": 8,
+    "band_width": 32,
+    "epsilon_fd": 0.05,
+    "eta_sign_gd": 0.05,
+    "steps": 8,
+    "coordinate_rotation": "step j updates coefficient j of every group; groups separable",
+    "projection": "shift-bisect zero-trace + clamp +-log2/2 (32 iterations)",
+    "training_folds": "[:-1]",
+    "token_cap_per_fold": 256,
+    "token_cap_index": "evenly-spaced unique indices (_a2_even_indices), identical for Q and K",
+    "readout": "stack_transform + group_rotation + _dense_to_hif4(state refine params) + _dequantize_hif4, per-group slices; v fixed parent v_state decode; reference = NVFP4 floats",
+    "gate": "_a21_gate_loss on last fold, strict less-than accepts, tie keeps B",
+    "init": "c = 0 (candidate bit-identical to B)",
+    "frozen_never_swept": ["epsilon", "eta", "bands", "steps", "token_cap", "basis", "gate fold"]
+  },
+  "falsification": {
+    "gate_acceptance": "accepted < 3/6 layers -> close",
+    "panel": "4B 72-case attention dmean vs R3 <= 0 -> close",
+    "gate_reject_shortcut": "gate 0/6 => deployment falls back to B => panel identical to parent; skip 72-case run"
+  },
+  "closure_granularity": "kronecker-hadamard 8-band + central-difference sign-GD implementation only",
+  "cost_probe": "probe_cost.json (q slice 8.6ms / k slice 6.5ms / gate 42ms / base calib 3.2s, layer 0)",
+  "created": "2026-09-08"
+}
