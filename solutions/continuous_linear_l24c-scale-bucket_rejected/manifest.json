@@ -1,0 +1,27 @@
+{
+  "run_id": "continuous_linear_l24c-scale-bucket",
+  "mechanism": "L24-C dynamic-activation-scale bucket weighting (research-loop card, target E4 deployment mismatch)",
+  "source_sha256": "585387e960c4bd80cb6c9695f31ea6bfb75f975a26c3b7897145ca5e58a5ca2b",
+  "status": "REJECTED (local paired; card falsified)",
+  "parent": {
+    "label": "L23b (13639FB2) built on L4",
+    "path": "workbench/continuous_linear/l23-residual-subspace/candidate/solution.py",
+    "sha256": "13639fb22976b2c7c838ee2e69ae9c2c58123e03d9bdec106623d93b29510fe0"
+  },
+  "card_target": "E4 deployment mismatch (0.6143, 94% of E3)",
+  "mechanism_change": "replace fold-level output-energy omega (1/(F*max(||Y_f||^2,1e-12))) with per-row activation-scale bucket weights: bucket every calibration row by floor(log2(row activation max)) over pooled folds, give each bucket equal total weight; the old omega gave the 10-row fold 17.8x the per-row weight of the 128-row fold",
+  "falsification_rule": "E4 not reduced -> close this bucketing implementation",
+  "shard0_evidence": {
+    "cases": 56,
+    "delta_mean_vs_L4": -0.241562,
+    "pos_neg_zero": [0, 56, 0],
+    "candidate_gain_mean": 0.267306,
+    "l23b_shard0_delta_mean": -0.218215,
+    "fit_gain_candidate_shard0": 0.924895,
+    "fit_gain_l23b_shard0": 0.947836,
+    "reading": "both calibration fit_gain (0.925 < 0.948) and deployment delta (-0.242 < -0.218) worse than L23b; E4 not reduced -> card falsified"
+  },
+  "closed_scope": "the activation-scale bucket weighting implementation in the L23b fit only; E4 cell remains OPEN for other mechanisms",
+  "next": "L24-A cross-block residual carry-over (target E2) per research-loop initial queue; ledger E1/E2/E4 updated",
+  "official_status": "not submitted (local reject)"
+}

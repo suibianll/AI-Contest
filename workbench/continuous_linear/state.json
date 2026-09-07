@@ -62,7 +62,7 @@
       "e2_legal_projection": 0.0320,
       "e3_deployment_candidate": 0.6537,
       "e4_mismatch": 0.6143,
-      "reading": "E4 dominates -> L24-C next (dynamic-activation scale bucket weighting)"
+      "reading": "E4 dominates; L24-C (activation-scale bucket weighting) attempted -> REJECTED (fit_gain 0.925<0.948, delta -0.242<-0.218); E4 still OPEN; next L24-A (cross-block carry-over, target E2)"
     },
     "superseded_official_result": {
       "sha256": "33D1DA51F3CB1D2933ACD8DDD7B77F7851EB3B082934EB54E3A60558CAF4E35D",
@@ -70,14 +70,15 @@
       "scored_sha256": null
     }
   },
-  "next_action": "L23b fit_gain 0.9486 >= 0.9 target MET (168/168 states); ledger E4=0.6143 dominates -> register L24-C card (dynamic-activation scale bucket weighting); L23b READY_FOR_OFFICIAL (no upload entry in env, package + SHA delivered); official score/300s is the sole judge.",
+  "next_action": "L23b fit_gain 0.9486 >= 0.9 target MET (168/168 states); L23b READY_FOR_OFFICIAL (no upload entry in env, package + SHA delivered). L24-C (scale-bucket weighting) REJECTED: fit_gain shard0 0.925<0.948, delta -0.242<-0.218, card falsified. Next card: L24-A (E2 target, cross-block residual carry-over) per research-loop queue; official score/300s is the sole judge.",
   "recent_steps": [
     "2026-09-07: L23 whitened-residual-subspace math PASS + 4B shard0 local all-roles negative (commit b52dbee)",
     "2026-09-07: L23 直接拟合版六 shard 完成（336 例、Δmean -0.18、0/336/0，record-only）；脱离导入+CPU fuzz PASS；归档 solutions/continuous_linear_l23-residual-subspace/，注册官方探索",
     "2026-09-07: 用户回传L23官方超时；见logs/execution/2026-09-07-l23-official-timeout.md",
     "2026-09-08: L23 全校准行修正版完成（SHA 13639FB2）：删除奇偶拆分、增量残差、消除逐块全矩阵乘积/全权重复制；verify_direct_fit/check_import/fuzz 全 PASS；4B 六 shard（336 例，Δmean -0.185、1/335/0 record-only，拟合 L_all 降 90-99%）；归档新 SHA 注册官方探索",
     "2026-09-08: P0 fit_gain 表完成：候选 0.9486 >= 0.9（168/168 states、336 fold-rows 全胜 STD/父；父 0.7219）；L23b 标记 READY_FOR_OFFICIAL",
-    "2026-09-08: R1 账本 v0（shard0 28 states）：E1=0.0074、E2=0.0320、E3=0.6537、E4=0.6143；E4 部署失配主导 -> 下一张卡 L24-C"
+    "2026-09-08: R1 账本 v0（shard0 28 states）：E1=0.0074、E2=0.0320、E3=0.6537、E4=0.6143；E4 部署失配主导",
+    "2026-09-08: L24-C（E4 靶点，activation-scale 分桶加权）实现并 shard0 验证：fit_gain 0.925<0.948、delta -0.242<-0.218，双向负向 -> 卡证伪，关闭该分桶实现；E4 仍 OPEN，下一张 L24-A"
   ],
   "evaluation_policy": "Linear: fit all Qwen3.5-4B calibration API data directly; no fit/select split or generalization gate; holdout statistics record only; official 300s"
 }
