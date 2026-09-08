@@ -1,0 +1,26 @@
+{
+  "run_id": "continuous_linear_l28-proj-vectorized",
+  "mechanism": "L28 time-safe reimplementation after L23b official TIMEOUT (L27 batch Cholesky + eigh + vectorized legal projection)",
+  "source_sha256": "44d7e964f8264633b0ad8d83b7a04efb5d158161e1f09ffcd52efb3e0e63d2f0",
+  "status": "READY_FOR_OFFICIAL",
+  "parent": {
+    "label": "L23b (13639FB2) built on L4",
+    "path": "solutions/continuous_linear_l23b-residual-subspace/solution.py",
+    "sha256": "13639fb22976b2c7c838ee2e69ae9c2c58123e03d9bdec106623d93b29510fe0"
+  },
+  "supersedes": {
+    "sha256": "13639fb22976b2c7c838ee2e69ae9c2c58123e03d9bdec106623d93b29510fe0",
+    "official_status": "TIMEOUT (>300s, user reported 2026-09-08)"
+  },
+  "mechanism_change": "keep exact L23b incremental-residual semantics; (1) batched Cholesky precompute over blocks; (2) eigh(Hw Hw^T) [64x64] replaces SVD(Hw) [64x o]; (3) legal projection via round/clamp (Wd/scale/0.25).round().clamp(-7,7)*0.25*scale instead of building a [15,64,o] grid tensor per block (8.8M elems at o=9216) and argmin - verified max diff 0.0; removes the dominant official-CPU allocation over ~24k blocks",
+  "verification": {
+    "math_equivalence": "PASS: eigh vs SVD projection 2.4e-15; round/clamp vs argmin grid max diff 0.0",
+    "synthetic_smoke": "PASS: accepted>0, L_all decreasing, five-field legal",
+    "4b_shard0": "accepted 144/144 (L_all 1.75e-08 -> 5.08e-10), delta_mean -0.217771 (L23b -0.218215, equivalent), fit_gain 0.9453 (L23b 0.9478, eigh/proj numerics)",
+    "legal_state": "PASS (evaluator reasonableness 0, all finite)",
+    "control": "activation path frozen, attention standard states legal"
+  },
+  "api_seconds_note": "local shard0 api_total 217.9s vs L27 220.7s vs L23b 232.1s; calib_w 173.1s (L27 174.3s, L23b 176.1s); official CPU gains larger (removes 15x grid allocation and 64x9216 SVD per block)",
+  "official_status": "READY_FOR_OFFICIAL (no upload entry in env; package path solutions/continuous_linear_l28-proj-vectorized/solution.py + SHA delivered; official 300s is the sole time judge)",
+  "next": "official score/300s judge; if positive and <300s, register as new Linear-side parent; if TIMEOUT again, per-block loop itself must be batched end-to-end"
+}

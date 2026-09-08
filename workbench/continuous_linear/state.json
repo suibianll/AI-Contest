@@ -76,7 +76,7 @@
       "scored_sha256": null
     }
   },
-  "next_action": "L23b official TIMEOUT (2026-09-08) closed that complexity implementation. L27 time-safe reimplementation registered (batch Cholesky + eigh replaces SVD, same incremental semantics): shard0 fit_gain 0.9453, delta -0.2179 (equivalent to L23b), READY_FOR_OFFICIAL (SHA 78A9B982). Official 300s/score sole judge; if TIMEOUT again, batch the per-block loop end-to-end. Linear parent L4 and root v189 unchanged.",
+  "next_action": "L23b official TIMEOUT (2026-09-08) closed that complexity implementation. L28 time-safe reimplementation registered (L27 batch Cholesky + eigh + vectorized round/clamp projection, same incremental semantics): shard0 fit_gain 0.9453, delta -0.2178 (equivalent to L23b), api_total 217.9s local, READY_FOR_OFFICIAL (SHA 44D7E964, supersedes L27 78A9B982). Official 300s/score sole judge; if TIMEOUT again, batch the per-block loop end-to-end. Linear parent L4 and root v189 unchanged.",
   "recent_steps": [
     "2026-09-07: L23 whitened-residual-subspace math PASS + 4B shard0 local all-roles negative (commit b52dbee)",
     "2026-09-07: L23 直接拟合版六 shard 完成（336 例、Δmean -0.18、0/336/0，record-only）；脱离导入+CPU fuzz PASS；归档 solutions/continuous_linear_l23-residual-subspace/，注册官方探索",
@@ -91,7 +91,8 @@
     "2026-09-08: R3 循环日志：四卡（L24-C/L24-A/L25/L26）全部关闭；fit_gain 0.9486 >= 0.9 目标达成（S1 Linear 部分）；L23b READY_FOR_OFFICIAL",
     "2026-09-08: S3 停止条件评估：E4 结构性信息上限（2 折叠可见、四变量维度证伪）、E2/E1 极小；去重比对表见 logs/execution/2026-09-08-linear-stop-s3-dedup-table.md",
     "2026-09-08: 用户回传 L23b 官方 TIMEOUT（13639FB2，>300s，分数/时间未知）；关闭该复杂度实现，机制族仍 OPEN；fit_gain 0.9486>=0.9 研究目标仍有效；后继须实质复杂度降低（共享统计/批量求解），见 logs/execution/2026-09-08-l23b-official-timeout.md",
-    "2026-09-08: L27 时间安全重构（批量 Cholesky 预计算 + eigh 替换 SVD，保持增量残差语义）：shard0 fit_gain 0.9453、delta -0.2179（与 L23b 等价）、accepted 144/144；标记 READY_FOR_OFFICIAL（SHA 78A9B982）；官方 300s 为唯一裁决"
+    "2026-09-08: L27 时间安全重构（批量 Cholesky 预计算 + eigh 替换 SVD，保持增量残差语义）：shard0 fit_gain 0.9453、delta -0.2179（与 L23b 等价）、accepted 144/144；标记 READY_FOR_OFFICIAL（SHA 78A9B982）；官方 300s 为唯一裁决",
+    "2026-09-08: L28 在 L27 上叠加投影向量化（round/clamp 替代 15×64×o 网格 argmin，等价 max diff 0.0）：fit_gain 0.9453、delta -0.2178、api_total 217.9s（本地）；取代 L27 为官方候选（SHA 44D7E964，READY_FOR_OFFICIAL）"
   ],
   "evaluation_policy": "Linear: fit all Qwen3.5-4B calibration API data directly; no fit/select split or generalization gate; holdout statistics record only; official 300s"
 }
