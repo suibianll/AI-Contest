@@ -108,9 +108,11 @@
 
 1. 固定当前完整根及 SHA；已有同口径结果不重跑，使用 `--reuse-existing` 零 API 重放。
 2. 一个候选只加一个机制和一个固定配置；做六 API、合法 state、有限输出、reachability 和 control smoke。
-3. 官方前只跑目标侧 shard0 排除接口、no-op 与灾难性错误；本地统计不排序候选。
+3. 官方前先跑目标侧 shard0 排除接口错误；活动计划中的算法开发卡随后运行目标侧六 shard，用于判断
+   hard-output 优化是否真实发生和修改下一轮算法，但不得把本地数值换算为官方分数。
 4. 合法且可达的单一代表候选交官方裁决；不重复相同 SHA 或逐位等价实现。
-5. 官方正向后才做目标侧六 shard 归档和必要的双侧 interaction audit；失败后只为明确根因运行诊断。
+5. 目标侧六 shard 已在算法开发阶段完成；官方正向后只补必要的双侧 interaction audit，失败后只为
+   明确根因运行诊断。
 6. 保存 JSON 和 Markdown report，分别写 local proxy、API total、wall time、official 状态。
    接口/环境失败记 `ERROR`，机制否定记 `REJECTED`，官方明确超时记 `TIMEOUT`，
    官方未知记 `unregistered/NA`，不能填本地秒数。无实质算法/复杂度变化不分配版本号。

@@ -27,7 +27,8 @@
 当前只按[单一完整方案计划](superpowers/plans/2026-09-08-single-solution-optimization-plan.md)推进：
 
 - 所有候选从根完整方案构建，每次只改一侧、一个机制、一个固定配置。
-- 官方前只做六 API contract smoke 和目标侧 shard0；官方正向后才做六 shard 归档。
+- 官方前先做六 API contract smoke 和目标侧 shard0；当前活动计划的算法开发卡随后运行目标侧六 shard，
+  用于确认 hard-output 优化真实发生，官方正向后只补必要的双侧 interaction audit。
 - Linear `calibration_fit_gain` 的最终输出误差公式正确，但只是校准集拟合诊断。L28 的
   `0.948587` 对应官方仅 `+4`，不能继续充当 `≥0.9` 晋级目标。
 - L28、A2、AC0 均为历史侧证据；R3 已经作为当前完整组合的一部分绑定到官方 `18032/280s`；
@@ -51,8 +52,12 @@
   `logs/execution/2026-09-08-v191-v192-official-timeouts.md`。v193 仍为本地回退父状态、官方 NA。
 - v194 等价消除 A2/R3 校准重复计算，官方 **`18032 / 285s`**：分数与根相同、时间 `+5s`，
   `REJECTED_TIME`。本地 calibration API 的 −22.5% 没有转化为官方提速，不再用标准 Linear 重复提交。
-- 当前活动计划改用标准 Linear 分别承载 v195、v191、v190、v192，以 `标准 Linear + R3 =
-  14405/238s` 直接判断 Attention 算法效果；具体顺序和判读见活动计划。
+- 当前活动计划认定 Attention 停滞的主因是代理目标与真实 hard-output 错位：v190 大量翻码但 gate
+  变差，v191 方向信号接近零，v192 训练 loss 下降但真实输出恶化，v195 修 bug 后变化仍小。标准
+  Linear 的 v195/v191/v190/v192 官方归因继续一次性完成，但不再作为优化主线。
+- 下一张主卡为 A1/v199：GQA×64-block 的真实翻码边界 reciprocal 搜索，直接用 hard HiF4 最终
+  Attention output 选择；随后执行 L-T1/v202，将 Linear sample-energy 统计融合进已有校准遍历以
+  释放完整根时间。A1结果决定继续64+8 hierarchy还是改 hard-logit residual 排序。
 
 以下内容是历史证据索引，不提供当前下一步指令。
 

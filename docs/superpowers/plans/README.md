@@ -6,12 +6,13 @@
 不再运行 0.5B、逐候选 OOD、GPT-2/opt 或 fresh-default 计时；本地时间公式和 280s 门退役。
 官方提交无限制，官方硬限 300s。评估实现说明见 [proxy-v3](../../proxy-v3.md)。
 
-**当前唯一活动计划：** [标准 Linear 承载的 Attention 有效性验证](2026-09-08-single-solution-optimization-plan.md)。
+**当前唯一活动计划：** [Hard-Output Attention + Linear 降时持续优化](2026-09-08-single-solution-optimization-plan.md)。
 
-v190、v191、v192 在当前 Linear 完整根上均官方超时。v194 官方 `18032/285s`，相对根同分但慢 5s，
-等价提速失败，不再重复提交。当前计划改用已验证的标准 Linear 分别承载 v195、v191、v190、v192，
-以 `标准 Linear + R3 = 14405/238s` 为统一官方对照。每个组合只提交一次，不做参数扫描。当前 Linear
-的组合差分净贡献为 `3627`，侧等价分为 `4628`。具体构造、顺序、判读和归档见活动计划 §2–§4。
+当前 Attention 停滞的主因是代理目标与真实 hard quantization 输出错位：v190 大量翻码后 gate 变差，
+v191 梯度方向接近零，v192 训练 loss 明显下降但两个 hard-output 窗口均恶化，v195 修 bug 后也只有
+微小本地变化。新计划先完成标准 Linear 官方归因，同时直接启动 GQA×64-block hard reciprocal 搜索，
+所有候选通过真实 HiF4 encode/decode 和最终 Attention output 选择；不再增加 STE/Adam/矩阵指数训练。
+第一张 Attention 卡后执行 Linear sample-energy 校准融合，为完整组合释放时间。
 
 ## 历史计划索引（仅证据）
 

@@ -1,142 +1,160 @@
-# 标准 Linear 承载的 Attention 有效性验证计划
+# HiF4 持续优化计划：Hard-Output Attention + Linear 降时
 
-> ACTIVE，更新于 2026-09-09。当前完整根官方 `18032/280s`。v190、v191、v192 在当前 Linear 上均
-> `TIMEOUT`，因此先移除当前 Linear 的时间占用，用标准 Linear 单独测出 Attention 算法的官方效果。
+> ACTIVE，2026-09-09。当前完整根为 18032/280s。后续不再通过增加 STE 训练、矩阵指数或
+> 动态范围代理迭代优化 Attention；Attention 改为低维、离散、真实 HiF4 hard-output 优化，
+> 同时从当前 Linear 中释放完整方案时间。
 
-## 1. 这轮要回答两个问题
+## 1. 当前方法的问题
 
-1. v190、v191、v192、v195 的 Attention 修改究竟提高还是降低官方分数。
-2. 当前最高分 Linear 在 `18032` 中贡献多少。
+| 证据 | 结论 |
+|---|---|
+| v190 改变 Q 约108万、K约27万编码，但两个输出窗口都变差并回退 | RMS/传播能量平衡不能代表最终输出 |
+| v191 实际部署后 shard0 仅 -0.000104，主奇异值约 1e-11 | 输出梯度方向太弱，首个翻码步长没有有效收益 |
+| v192 训练 loss 2.0→1.2237，两个 hard gate 都变差 | STE/连续训练目标与真实量化输出错位 |
+| v195 修复多窗口 center 梯度后 shard0 仅 +0.001935 | bug 存在，但不是 Attention 停滞的主因 |
+| v198 草稿 smooth-max loss 迭代前后完全相同 | 解析初始化已把代理目标做饱和，继续迭代没有新信息 |
+| v194 本地 calibration 快22.5%，官方却为 18032/285s | 局部计时不能代表官方端到端提速 |
 
-固定三个已有官方锚点，不重复提交：
+因此下一步不是继续调学习率、训练步数或 gate，而是更换优化方法：
 
-| 组合 | 官方分数 / 时间 | 用途 |
-|---|---:|---|
-| 标准 Linear + 标准 Attention | `1001 / 146s` | 全标准零点 |
-| 标准 Linear + R3 Attention | `14405 / 238s` | 本轮 Attention 对照 |
-| 当前 Linear + R3 Attention | `18032 / 280s` | 当前完整根 |
+    低维参数 → 强制跨越真实 HiF4 码边界 → hard encode/decode
+    → 真实 logits / Attention output 计算 → 选择部署状态
 
-当前 Linear 的净贡献已经可以直接计算：
+## 2. 固定基线与分工
 
-```text
-C_linear = 18032 - 14405 = 3627
-当前 Linear 的侧等价分 = 1001 + 3627 = 4628
-```
+- 最终晋级根：current Linear + R3 Attention，18032/280s。
+- Attention 官方侧对照：标准 Linear + R3，14405/238s。
+- 当前 Linear 净贡献：18032-14405=3627，侧等价分4628。
+- Attention 净贡献：14405-1001=13404。
 
-交叉核对使用上一完整根 `17636` 和同 Attention 的标准 Linear 组合 `14009`：
+分工固定：
 
-```text
-17636 - 14009 = 3627
-```
+- **Attention 负责提分。** 它占当前总增量的78.7%，先解决目标错位。
+- **Linear 负责释放时间。** 保留其3627分贡献，只做输出等价的计算合并。
+- 标准 Linear 只用于测 Attention 官方侧分，不作为最终父版本。
 
-两组独立组合得到相同结果。因此当前证据下，当前最高分 Linear 的官方净贡献为 **3627**，
-等价侧分为 **4628**；它占当前高于全标准基线部分 `18032-1001` 的约 **21.3%**。这是组合差分
-得到的贡献，不登记成一次独立官方 Linear 提交结果。
+## 3. 每一轮如何执行
 
-## 2. 如何构造候选
+每轮只实现一个算法变化，按以下循环持续推进：
 
-每个候选保留原 Attention 源码和四个 Attention API，只把两个 Linear API 替换成 v162 已验证的
-标准 Linear 实现。具体复用
-`solutions/v162_attention_r1-v189-attnstack-recovery_officialNA_timeNA/solution.py` 中已经使用过的
-标准 Linear 尾部覆盖方式，不重新实现 codec。
+1. 从当前最高分完整根构建候选；Attention 候选同时生成标准 Linear 诊断版。
+2. 先跑一次 Attention shard0 排除接口错误，再跑4B Attention六 shard，观察真实 hard-output
+   是否确实变化。这里的本地结果用于改算法，不换算官方分数。
+3. 用标准 Linear 诊断版提交一次官方，计算 attention_step_gain = score - 14405。
+4. 官方侧分为正时，把该 Attention 装回当前 Linear，只提交一次完整组合。
+5. 完整组合提分且低于300s就切根；提分但超时则保留算法结论，先执行 Linear 降时卡再组合。
+6. 失败后换下一种参数化或目标，不在同一算法上扫描 seed、学习率、步数和 clamp。
 
-统一在 `workbench/standard_linear_attention_probes/` 放一个构建脚本和一个核对脚本。构建脚本固定读取
-以下四个计分候选的已归档源码，不修改原归档：
+每轮只保留四项核心记录：修改内容、六 shard hard-output 变化、官方侧分/时间、完整组合结果。
 
-```text
-solutions/20260908_v190_attn-diag-reciprocal-balance_scoreNA_timeNA/solution.py
-solutions/20260908_v191_attn-block-triangular-transport_scoreNA_timeNA/solution.py
-solutions/20260908_v192_attn-full-reciprocal-residual_scoreNA_timeNA/solution.py
-solutions/20260908_v195_attn-a2-center-gradient-aggregate_scoreNA_timeNA/solution.py
-```
+## 4. 先完成已有结果归因
 
-构造四个计分候选：
+标准 Linear 组合已经生成。运行：
 
-| 候选 | Attention 来源 | 要判断的问题 |
-|---|---|---|
-| `standard-linear_v190-attn` | v190 逐通道 Q/K 互逆平衡 | 去掉当前 Linear 后是否有官方增益 |
-| `standard-linear_v191-attn` | v191 稀疏三角搬运 | 已部署修改是否提高 Attention 分数 |
-| `standard-linear_v192-attn` | v192 全矩阵互逆残差 | 隐藏官方校准上是否被接受并产生收益 |
-| `standard-linear_v195-attn` | v195 K-center 多窗口梯度修复 | bug 修复是否优于 R3 |
+    .venv\Scripts\python.exe workbench/standard_linear_attention_probes/verify.py
 
-v194 是 R3 输出等价提速，不属于新计分算法；它在当前完整根上的官方结果已经是 `18032/285s`，
-相对根同分但慢 5s，足以否定提速目的，不再换标准 Linear 重复提交。v196 与 v192 属于同一32步
-全矩阵机制，而且本地最终回退 R3，不再重复提交。
+随后按 v195 → v191 → v190 → v192 各提交一次标准 Linear 版本。它们只回答历史算法是否在
+官方 Attention 侧有效，不阻塞下面的新算法实现，也不因结果继续调旧实现。
 
-## 3. 执行顺序
+v194 已有完整官方 18032/285s，不再提交标准 Linear 版本。v196 与 v192 同机制，不提交。
 
-### 第一步：生成标准 Linear 组合
+## 5. Attention 新算法路线
 
-为上述四个候选各生成一个单文件 `solution.py`。生成后只做一次组合核对：
+### A1 / v199：GQA × 64-block hard reciprocal coordinate
 
-- 两个 Linear API 与 v162 标准 Linear 逐位一致；
-- 四个 Attention API 与各自原候选逐位一致；
-- 六 API 能脱离仓库导入，state 合法，输出有限。
+这是下一张主卡，替换当前 v198 草稿；v198 原样不提交。
 
-执行命令固定为：
+参数只有每个 KV/GQA group、每个64通道块一个 u[g,b]：
 
-```powershell
-.venv\Scripts\python.exe workbench/standard_linear_attention_probes/build.py
-.venv\Scripts\python.exe workbench/standard_linear_attention_probes/verify.py
-```
+    Q' = Q * exp(u)
+    K' = K * exp(-u)
+    V' = V
 
-`build.py` 一次生成四个计分候选，`verify.py` 一次输出四行 PASS/FAIL；已经生成的 v194 标准 Linear
-组合保留但不提交，不为每个候选再创建一套检查脚本。
+执行方法：
 
-已有 v190–v195 的本地 shard0 和 reachability 结果直接复用，不重跑六 shard、OOD、跨模型、参数扫描
-或分数门禁。这里的目的就是取得官方侧分；v190/v192 在本地 shard0 回退 R3 不阻止这一次标准 Linear
-诊断提交，因为官方隐藏校准可能作出不同选择。
+1. 从 R3 最终 rotation/center 后的 Q/K 开始，V 完全冻结。
+2. 对每个64块直接计算使 Q 或 K 首次发生真实 HiF4 编码变化的正、负 reciprocal 步长。
+3. 将所有正负候选批量 hard encode/decode，在 fit 窗口上计算真实最终 Attention output MSE。
+4. 每个 GQA group 只采用一个最优块移动；全部 group 完成后，在独立 holdout 窗口重新计算真实输出。
+5. 只保存最终 u[g,b] 到 state，动态 API 只做一次乘法，不带搜索和训练。
 
-### 第二步：逐个提交四个 Attention 算法
+这一卡不使用 RMS loss、smooth-max、STE、Adam、SVD或矩阵指数。目标是让优化过程直接看到码变化和
+最终输出变化，而不是先把代理 loss 做小。
 
-按 `v195 → v191 → v190 → v192` 提交，每个只提交一次。统一计算：
+### A2 / v200：64 + 8 hierarchy hard reciprocal
 
-```text
-attention_step_gain = 官方候选分数 - 14405
-```
+只有 A1 找到真实正向块、但块内剩余误差仍明显时执行。
 
-- `> 0`：算法有效，进入完整根回装。
-- `= 0`：对官方计分无效果，不继续调参。
-- `< 0`：算法负向，关闭该实现。
-- 标准 Linear 载体仍 `TIMEOUT`：该实现本身超时，关闭该实现。
+1. 保留 A1 选中的64块。
+2. 在该块的8个八元素组上增加 u8[g,b,i]。
+3. 每个八元素组仍只测试首次正/负翻码边界，批量计算 hard-output loss。
+4. 固定一次由粗到细的遍历：先64块、再8组，不重复回扫。
 
-不使用本地 mean、L1 或运行时间替代上述官方判断，也不因小幅正负结果扫描学习率、步数、窗口或
-clamp。v192 放最后，因为它的32步全矩阵训练成本最高。
+如果 A1 在全部六层都找不到正向64块，A2不启动，因为细分只会增加自由度和时间。
 
-### 第三步：只回装官方最优 Attention
+### A3 / v201：hard-logit residual weighted reciprocal
 
-四个候选全部回传后，只选择官方分数最高且高于 `14405` 的一个。把它的四个 Attention API 回装到
-当前 `18032/280s` 完整根。v194 已证实官方没有提速，不带入组合。
+当 A1 能改变大量编码、但 final output 仍不改善时执行。此时问题是候选排序目标，而不是可达性。
 
-只提交这一个完整组合：
+1. 用父版本 hard Q/K 得到真实 logit residual：E = Q_hat K_hat^T - Q K^T。
+2. 通过当前 softmax Jacobian和V把 E 映射成输出误差权重，只用于给64块候选排序。
+3. 最终采用与否仍由真实 hard Attention output MSE决定，不对 quantizer 使用 STE。
+4. 参数仍是 A1 的 u[g,b]，不增加矩阵自由度。
 
-- 分数高于 `18032` 且时间 `<300s`：替换当前根。
-- 分数没有提高：保留 `18032/280s` 根，说明该 Attention 与当前 Linear 存在负交互。
-- `TIMEOUT`：Attention 算法的分数结论仍保留，但必须先做 Linear 等价降时，释放时间后才能再次组合。
+### A4：联合合法 hierarchy 码选择
 
-若四个计分候选均不高于 `14405`，不做完整组合提交，下一轮直接转 Linear 等价降时或新的算法机制。
+如果 A1–A3 的 reciprocal transform 均没有官方正向，停止对角互逆族。下一轮直接在 Q/K 的合法
+scale_factor/lv2/lv3 候选中做联合 hard-logit 选择；每个64块只比较父状态和一个相邻合法
+hierarchy 状态，mantissa随后一次重编码。该方向改变的是量化码选择，不再继续优化连续变换。
 
-## 4. 归档方式
+## 6. Linear 降时路线
 
-每个标准 Linear 组合独立归档：
+### L-T1 / v202：sample-energy 与基校准融合
 
-```text
-solutions/<standard-linear_attention-candidate>/
-  solution.py
-  result.md
-  official-result.json
-```
+当前 Linear 在基校准结束后，又通过 _combined_sample_energy_block_order 重建校准激活并统计
+block energy。v202 将 energy 统计合并进已有 Gram/importance 校准遍历：
 
-`result.md`只记录原 Attention 来源、组合 SHA、官方分数/时间、相对 `14405/238s` 的差值和结论。
-本地已有结果只链接原候选证据，不复制成长篇检查报告。全部回传后在本计划末尾追加一张结果表，
-并在 `docs/current-solution-status.md` 与 `solutions/README.md` 更新最终结论。
+1. 在首次解码校准激活时同步累计每个64块 energy。
+2. 基校准结束时直接生成并保存 gptq_block_order。
+3. 删除第二次 _static_actorder_dense_from_state 重建和遍历。
+4. 权重参数、activation state和动态输出必须与当前根逐位一致。
 
-## 5. 已有候选状态
+本地只核对等价性和完整调用次数，然后直接提交当前完整组合。官方仍为18032且时间低于280s才保留；
+否则回退，不继续做同类微优化。
 
-- **v194 `attn-a2-calibration-fused`：官方 `18032/285s`，REJECTED_TIME。** 相对当前根同分、
-  慢 5s；本地 calibration API `6.021s → 4.669s`（−22.5%）没有转化为官方提速，不再提交
-  标准 Linear 版本。
-- **v195 `attn-a2-center-gradient-aggregate`：本地完成，待标准 Linear 官方计分。** 候选 SHA
-  `839adb1e...761d7f`；已确认梯度包含全部训练窗口，shard0 delta mean `+0.0019352`，非 no-op。
-- **v190、v191、v192：** 完整根官方均为 `TIMEOUT`，原候选源码与结果归档直接复用；不重新实现算法。
-- **v196：** shard0 全部回退父且与 v192 同属32步全矩阵残差，不纳入本轮。
+L-T1 在 A1 的六 shard与标准 Linear侧分完成后立即执行，不等待完整组合超时。若更早出现官方正向
+Attention，但装回当前根后超时，也直接提前执行 L-T1。
+
+标准 Linear 不作为降时方案，因为它会损失3627分。
+
+## 7. Linear 提分草稿的处置
+
+现有 v197 linear-aw1-block-gain 只改权重并增加 A@W 拟合计算，尚未完成真实4B验证。当前不提交，
+也不让它阻塞 Attention A1和 Linear L-T1。
+
+只有完整根已经释放出明确时间后才继续 Linear A@W：
+
+1. 先在真实4B数据运行一次，记录合法投影前后的实际 A@W output loss。
+2. 若连续闭式解改善、合法重编码后改善消失，下一张卡改成 hierarchy-aligned legal proposal，
+   不增加输出组自由度。
+3. 若合法重编码后仍有明显改善，再交完整官方；不按 fit_gain 推算官方分。
+
+## 8. 当前执行队列
+
+| 顺序 | 工作 | 当前状态 | 完成后动作 |
+|---:|---|---|---|
+| 1 | 标准 Linear 组合静态核对 | 已生成，待运行verify | 提交 v195 侧分 |
+| 2 | v195/v191/v190/v192 标准 Linear 官方归因 | 待回传 | 只记录，不调旧实现 |
+| 3 | A1 / v199 hard reciprocal 64-block | 下一张实现卡 | 六 shard后提交标准 Linear侧分 |
+| 4 | L-T1 / v202 Linear等价降时 | A1后或组合超时时执行 | 完整官方确认时间 |
+| 5 | A2或A3 | 根据A1失败类型二选一 | 不同时启动 |
+| 6 | 最佳 Attention + 当前最快 Linear | 待侧分正向 | 一次完整官方晋级 |
+
+## 9. 归档
+
+    workbench/full_solution/<candidate>/           构建和验证脚本
+    artifacts/proxy_v3/full_solution/<candidate>/  4B本地结果
+    solutions/<candidate>/                         单文件、result.md、official-result.json
+
+候选失败后在 result.md 写清楚是“无翻码、hard-output无收益、官方负向或官方超时”中的哪一种，
+然后进入队列下一项。活动计划只维护上表，不再堆叠长篇门禁和历史实验流水账。
