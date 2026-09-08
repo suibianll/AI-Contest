@@ -19,17 +19,17 @@
 
 ## 0.1 当前计划状态（2026-09-08）
 
-> **2026-09-08 计划形态变更**：执行任务已改为[持续研究循环](superpowers/plans/workpackages/2026-09-08-continuous-research-loop.md)：
-> 误差账本（Linear E1 连续拟合/E2 合法投影/E3 部署/E4 失配；Attention F1 Q-K 总/F2 码/F3 QK-logits/F4 输出/F5 残差）定位 →
-> 代理自行补机制卡 → 一卡一固定配置 → 归档 push/官方探索 → 每轮必留 next_card。停止条件仅达标 0.9、
-> 缺不可替代外部输入、去重后无新假设三条。初始队列：Linear L24-A/B/C，Attention A26-A/B/C，
-> 先验为 E2/E4 主导（待账本否证）。本轮仅改写计划形态，未启动实验或官方提交。
+> **2026-09-08 当前详细队列**见[持续研究循环 §7](superpowers/plans/workpackages/2026-09-08-continuous-research-loop.md)：
+> P0 先统一 L28 计分 SHA/完整 fit 表并纠正 A28 的 V-only 伪下界；Linear 依次执行 L29 充分统计量顺序拟合、
+> L30 联合 A@W 低维互逆拟合；Attention 依次执行 A2+A23 重基线、A29 最终输出残差驱动的量化边界
+> Q/K 互逆补偿，并按预注册条件决定是否进入 4×4 块扩展。旧 L24–L26/A26 初始表不再提供指令。
 
 当前按[持续研究循环](superpowers/plans/workpackages/2026-09-08-continuous-research-loop.md)推进。
 **Linear 侧父更新：L4 → L28**（4611/286s，2026-09-08 官方 RETAINED，+4 vs L4）。
 L28 = 残差交叉子空间 A@W 拟合 + 时间安全重构（批量 Cholesky、eigh 替换 SVD、投影向量化）；
 L23b（13639FB2）官方 TIMEOUT 已关闭该复杂度实现；四张探索卡（L24-C/L24-A/L25/L26）
-按证伪判据关闭。fit_gain 0.9453 ≥ 0.9 研究目标保持（L23b 0.9486 为机制基准）。
+按证伪判据关闭。L23b 完整校准 fit_gain `0.9486` 已达目标；L28 当前 `0.9453` 是 shard0 证据，
+完整 168-state/336-row fit 表列为 P0，未完成前不写成 L28 全量结果。
 Attention 侧：A25 官方 14057/254s 退步，A23 14437/276s 研究父，A2 14440/274s 最高对照。
 根仍 v189（17616/275s）；官方 Linear 时间余量 14s（286→300）。
 

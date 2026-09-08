@@ -16,9 +16,9 @@
 两份Linear归档已明确为旧L23 timeout与L23b；所指是Git提交推送，旧超时版不重复提交官方。
 Linear侧官方进展（2026-09-08）：L23b TIMEOUT后L28时间安全重构（批量Cholesky+eigh替换SVD+投影向量化）
 官方 **4611/286s**（+4 vs L4 4607/247s，286s<300s）RETAINED，**L28 升级为新 Linear 侧父**；
-fit_gain 0.9453≥0.9 研究目标保持。根v189不变，官方时间余量14s。
+L23b完整校准fit_gain 0.9486已达目标，L28 shard0为0.9453，L28完整fit表列为P0。根v189不变，官方时间余量14s。
 Attention A25官方14057/254s退步，A23 14437/276s为研究父，A2 14440/274s为最高对照。
-任务状态：PLAN_DELIVERED，计划已交付；本任务未启动优化实验。
+任务状态：DETAILED_PLAN_READY；当前唯一执行队列为明细§7的P0、L29/L30、RB-0/A29及条件分支。
 
 ## 历史计划索引（仅证据）
 
