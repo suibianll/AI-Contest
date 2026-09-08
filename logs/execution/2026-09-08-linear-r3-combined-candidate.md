@@ -35,3 +35,16 @@ The local analyzer result is `reject` for this screen because Linear has no
 incremental effect (`delta_mean=0`); the Attention signal is positive but
 mixed. No official score or time is registered. The additive estimate
 `18032` and time-risk estimate `291s` remain prioritization diagnostics only.
+
+## Official result and promotion
+
+The user reported the official result `18032 / 280s`. This is `+396` points
+and `+16s` versus the previous root `17636 / 264s`, and it passes the official
+300-second limit. The platform did not return a separate scored SHA; the
+result is therefore bound transparently to the archived candidate SHA above.
+
+The candidate source was promoted byte-for-byte to the repository root after
+hash verification. New root SHA256:
+`12352EFDD4E23CC5E1E17953008664FBAA5EA5D693373635FDAFC4D28CE4E24E`.
+The earlier local analyzer rejection remains a proxy diagnosis only and does
+not override the official positive result.

@@ -8,10 +8,11 @@
 
 **当前唯一活动计划：** [单一完整方案优化](2026-09-08-single-solution-optimization-plan.md)。
 
-当前根和唯一工作父为 compiled sample-energy，SHA
-`D66128A62E7E068EDC50C91F4D8E212F586A6EDCAEE5BEA7D3564166E258B0F6`；仓库记录的用户官方回传
-为 `17636/264s`，相对 v189 `+20/-11s`。官方平台未单独返回计分 SHA，按用户回传与归档关联
-透明记录，不再因此保留两个并行工作父。
+当前根和唯一工作父为 current Linear + R3 Attention，SHA
+`12352EFDD4E23CC5E1E17953008664FBAA5EA5D693373635FDAFC4D28CE4E24E`；仓库记录的用户官方回传
+为 `18032/280s`，相对上一根 compiled sample-energy `+396/+16s`，并通过官方 `300s` 硬限。
+官方平台未单独返回计分 SHA，按用户回传与候选归档关联透明记录，不再因此保留两个并行工作父。
+上一根 `17636/264s` 仍作为可回退对照。
 
 Linear/Attention 双侧独立 `gain≥0.9`、误差账本、强制 next_card、L31/L32 与 A30/A31 队列全部暂停并
 降级为历史证据。当前只从完整根建立一个候选、加入一个机制、做六 API 合法性与目标侧 shard0，

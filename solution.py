@@ -9,7 +9,7 @@ calibration states are plain CPU data.
 from __future__ import annotations
 
 import math
-from typing import Any, Iterable, Optional, Sequence, Union
+from typing import Any, Iterable, List, Optional, Sequence, Tuple, Union
 
 import torch
 
@@ -4178,6 +4178,9 @@ def _nvfp4_to_hif4(
     attention_rotation_block: Optional[int] = None,
     attention_block_signs: Optional[torch.Tensor] = None,
     attention_pair_transform: Optional[torch.Tensor] = None,
+    learned_rotation: Optional[torch.Tensor] = None,
+    learned_rotation_num_heads: Optional[int] = None,
+    learned_center: Optional[torch.Tensor] = None,
 ) -> dict[str, torch.Tensor]:
     dense = _dequantize_nvfp4_float32(quant_float, scale_float)
     channels = int(dense.shape[-1])
@@ -4263,6 +4266,26 @@ def _nvfp4_to_hif4(
         gram = gram.reshape(blocks, 8, 2, 4, 4).unsqueeze(0).expand(
             int(dense.shape[0]), blocks, 8, 2, 4, 4
         )
+    if learned_rotation is not None and learned_rotation_num_heads is not None:
+        try:
+            dense = _a2_apply_group_rotation(
+                dense, int(learned_rotation_num_heads), learned_rotation
+            )
+        except Exception:  # noqa: BLE001 - degrade to the unrotated legal path
+            pass
+    if learned_center is not None and learned_rotation_num_heads is not None:
+        try:
+            heads = int(learned_rotation_num_heads)
+            head_dim_c = int(dense.shape[-1]) // heads
+            lead = dense.shape[:-1]
+            dense = (
+                dense.reshape(*lead, heads, head_dim_c)
+                + learned_center.to(device=dense.device, dtype=torch.float32).reshape(
+                    *([1] * len(lead)), heads, head_dim_c
+                )
+            ).reshape(dense.shape)
+        except Exception:  # noqa: BLE001 - degrade to the unshifted legal path
+            pass
     refine_importance = importance
     if _ACTIVATION_SAMPLE_IMPORTANCE and dense.ndim == 2:
         refine_importance = torch.sqrt(
@@ -8693,29 +8716,6 @@ def hif4_calibration_and_quantize_weight(
                 best_offset_loss = total_loss
                 best_offsets = cand_offsets
 
-    compiled_sample_energy_order = None
-    if (
-        transformed_activation_samples
-        and in_features % _HIF4_BLOCK_SIZE == 0
-    ):
-        compiled_energy = torch.stack(
-            [
-                transformed.to(torch.float32).square().mean(dim=0)
-                for transformed in transformed_activation_samples
-            ]
-        ).mean(dim=0)
-        compiled_scores = (
-            compiled_energy * activation_importance
-        ).reshape(
-            in_features // _HIF4_BLOCK_SIZE, _HIF4_BLOCK_SIZE
-        ).sum(dim=1)
-        compiled_sample_energy_order = torch.argsort(
-            torch.nan_to_num(
-                compiled_scores, nan=0.0, posinf=0.0, neginf=0.0
-            ),
-            descending=True,
-        ).to(device="cpu", dtype=torch.int16).contiguous()
-
     activation_state = {
         "smooth_inv": smooth_inv_state,
         "permutation": permutation_state,
@@ -8729,7 +8729,6 @@ def hif4_calibration_and_quantize_weight(
         "accept_margin": _ACTIVATION_REFINE_ACCEPT_MARGIN,
         "max_refine_ratio": float(activation_ratio),
         "max_refine_blocks": _ACTIVATION_REFINE_MAX_BLOCKS,
-        "compiled_sample_energy_order": compiled_sample_energy_order,
         "rank1_u": _cpu_state_tensor(rank1_u),
         "rank1_v": _cpu_state_tensor(rank1_v),
         "residual_u": (
@@ -10741,6 +10740,8 @@ def hif4_dynamic_quantize_q(
         attention_rotation_block=state.get("rotation_block"),
         attention_block_signs=state.get("block_smooth_signs"),
         attention_pair_transform=state.get("pair_transform"),
+        learned_rotation=state.get("learned_rotation"),
+        learned_rotation_num_heads=int(q_num_heads),
         importance=state["importance"],
         search_offsets=state["offsets"],
         error_threshold=float(state["error_threshold"]),
@@ -10773,6 +10774,9 @@ def hif4_dynamic_quantize_k(
         attention_rotation_block=state.get("rotation_block"),
         attention_block_signs=state.get("block_smooth_signs"),
         attention_pair_transform=state.get("pair_transform"),
+        learned_rotation=state.get("learned_rotation"),
+        learned_rotation_num_heads=int(kv_num_heads),
+        learned_center=state.get("learned_center"),
         center_mode=int(state["center_mode"]),
         center_num_heads=kv_num_heads,
         center_head_dim=head_dim,
@@ -11022,41 +11026,25 @@ def hif4_dynamic_quantize_activation(
     )
 
 
-# Independent dynamic-order research arm: keep the v189 calibration state and
-# choose the GPTQ block visitation order from the current transformed sample.
-# The order is input-dependent, but the rule is fixed and uses no candidate
-# loop or additional state; all encoding and compensation remain parent code.
-_DYNAMIC_ACTORDER_BASE_DYNAMIC = hif4_dynamic_quantize_activation
-
+# ---------------------------------------------------------------------------
+# v162-independent Attention branch override (A agent, RECOVERY step R1):
+# the Linear side is frozen to the standard v162 codec.  These definitions
+# intentionally shadow the static-actorder Linear APIs above; everything
+# attention-related is untouched from v189 (v186 attention stack).
+# ---------------------------------------------------------------------------
 
 @torch.no_grad()
-def _dynamic_sample_energy_block_order(
-    dense: torch.Tensor,
-    state: dict[str, Any],
-) -> Optional[torch.Tensor]:
-    channels = int(dense.shape[-1])
-    if dense.ndim != 2 or channels % _HIF4_BLOCK_SIZE != 0:
-        return None
-    importance_state = state.get("importance")
-    if not torch.is_tensor(importance_state):
-        return None
-    importance = importance_state.to(
-        device=dense.device, dtype=torch.float32
-    ).reshape(-1)
-    if int(importance.numel()) != channels:
-        return None
-    energy = dense.to(torch.float32).square().mean(dim=0)
-    scores = torch.nan_to_num(
-        energy * importance,
-        nan=0.0,
-        posinf=0.0,
-        neginf=0.0,
-    )
-    blocks = channels // _HIF4_BLOCK_SIZE
-    return torch.argsort(
-        scores.reshape(blocks, _HIF4_BLOCK_SIZE).sum(dim=1),
-        descending=True,
-    ).to(device="cpu", dtype=torch.int16).contiguous()
+def hif4_calibration_and_quantize_weight(
+    weight_quant: torch.Tensor,
+    weight_scale: torch.Tensor,
+    calib_activation_list: list,
+) -> dict[str, Any]:
+    """Standard v162 baseline: encode the weight, ignore calibration samples."""
+
+    return {
+        "weight_params": _standard_params_branch(weight_quant, weight_scale),
+        "activation_state": {},
+    }
 
 
 @torch.no_grad()
@@ -11065,47 +11053,545 @@ def hif4_dynamic_quantize_activation(
     activation_scale: torch.Tensor,
     activation_state: Any,
 ) -> dict[str, torch.Tensor]:
-    if not isinstance(activation_state, dict):
-        raise TypeError("activation_state must be a dict")
-    if activation_state.get("gptq_block_order") is None:
-        return _DYNAMIC_ACTORDER_BASE_DYNAMIC(
-            activation_quant, activation_scale, activation_state
-        )
-    try:
-        channels = int(activation_quant.shape[-1])
-        if channels != int(activation_state.get("in_features", -1)):
-            raise ValueError(
-                "Activation hidden size does not match calibration state"
-            )
-        dense = _static_actorder_dense_from_state(
-            activation_quant, activation_scale, activation_state
-        )
-        order = _dynamic_sample_energy_block_order(dense, activation_state)
-        if order is not None:
-            local_state = dict(activation_state)
-            local_state["gptq_block_order"] = order
-            result = _static_actorder_reordered_gptq(dense, local_state)
-            if result is not None:
-                return result
-    except (RuntimeError, ValueError, TypeError, IndexError):
-        pass
-    return _DYNAMIC_ACTORDER_BASE_DYNAMIC(
-        activation_quant, activation_scale, activation_state
+    return _standard_params_branch(activation_quant, activation_scale)
+
+
+def _branch_standard_e6m2_scale(amax: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+    high_precision_scale = (
+        amax.to(torch.bfloat16) * _BRANCH_BF16_ONE_SEVENTH
+    ).to(torch.float32)
+    code = _branch_e6m2_encode_nearest(high_precision_scale)
+    return code, _branch_e6m2_decode(code)
+
+
+def _branch_e6m2_encode_nearest(value: torch.Tensor) -> torch.Tensor:
+    x = torch.nan_to_num(
+        value.detach().to(torch.float32),
+        nan=_BRANCH_E6M2_MIN,
+        posinf=_BRANCH_E6M2_MAX,
+        neginf=_BRANCH_E6M2_MIN,
+    ).clamp(min=_BRANCH_E6M2_MIN, max=_BRANCH_E6M2_MAX)
+    exponent = torch.floor(torch.log2(x))
+    base = torch.pow(2.0, exponent)
+    mantissa_field = torch.round((x / base - 1.0) * 4.0).to(torch.int64)
+    carry = mantissa_field >= 4
+    exponent = exponent + carry.to(exponent.dtype)
+    mantissa_field = torch.where(
+        carry, torch.zeros_like(mantissa_field), mantissa_field
+    ).clamp(min=0, max=3)
+    exponent_field = (exponent.to(torch.int64) + 48).clamp(min=0, max=63)
+    code = exponent_field * 4 + mantissa_field
+    return code.clamp(min=0, max=254).to(torch.int16)
+
+
+def _branch_e6m2_decode(code: torch.Tensor) -> torch.Tensor:
+    c = code.to(torch.int64).clamp(min=0, max=254)
+    exponent_field = torch.bitwise_right_shift(c, 2)
+    mantissa_field = torch.bitwise_and(c, 3)
+    exponent = exponent_field.to(torch.float32) - 48.0
+    return torch.pow(2.0, exponent) * (
+        1.0 + mantissa_field.to(torch.float32) * 0.25
     )
 
 
-# R4: compile the same sample-energy block order from calibration windows.
-# The dynamic sample-energy arm above remains the parent implementation for
-# provenance; this wrapper replaces only its online order calculation with a
-# fixed order learned from the two supplied calibration windows.
-# The core calibration already emits the compiled order; bypass the older
-# static-hdiag wrapper so it does not compute and overwrite a throwaway order.
-_COMPILED_SAMPLE_BASE_CALIBRATION = _STATIC_ACTORDER_BASE_CALIBRATION
-_COMPILED_SAMPLE_BASE_DYNAMIC = _STATIC_ACTORDER_BASE_DYNAMIC
+def _branch_solve_standard_hierarchy(
+    absolute: torch.Tensor,
+    scale_factor: torch.Tensor,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    losses: list[torch.Tensor] = []
+    for total_exponent in (0, 1, 2):
+        local_scale = scale_factor[..., None, None, None] * float(
+            1 << total_exponent
+        )
+        mantissa = (
+            torch.round(absolute * (4.0 / local_scale)).clamp_(0.0, 7.0) * 0.25
+        )
+        losses.append((absolute - mantissa * local_scale).square().sum(dim=-1))
+    loss_0, loss_1, loss_2 = losses
+    choose_01 = loss_1 < loss_0
+    choose_12 = loss_2 < loss_1
+    cost_lv2_1 = torch.minimum(loss_0, loss_1).sum(dim=-1)
+    cost_lv2_2 = torch.minimum(loss_1, loss_2).sum(dim=-1)
+    use_lv2_2 = cost_lv2_2 < cost_lv2_1
+    use_lv3_2 = torch.where(use_lv2_2[..., None], choose_12, choose_01)
+    scale_lv2 = 1.0 + use_lv2_2.to(torch.float32)
+    scale_lv3 = 1.0 + use_lv3_2.to(torch.float32)
+    denominator = (
+        scale_factor[..., None, None, None]
+        * scale_lv2[..., None, None]
+        * scale_lv3[..., None]
+    )
+    mantissa = (
+        torch.round(absolute * (4.0 / denominator)).clamp_(0.0, 7.0) * 0.25
+    )
+    return scale_lv2, scale_lv3, mantissa
+
+
+def _branch_standard_params(quant_float: torch.Tensor, scale_float: torch.Tensor):
+    dense = _branch_dequantize_nvfp4(quant_float, scale_float).to(torch.float32)
+    return _branch_encode_standard_hif4(dense)
+
+
+def _branch_dequantize_nvfp4(
+    quant_float: torch.Tensor,
+    scale_float: torch.Tensor,
+    blk_size: int = 16,
+) -> torch.Tensor:
+    channels = int(quant_float.shape[-1])
+    if channels % blk_size != 0:
+        raise ValueError(f"Last dim {channels} not divisible by {blk_size}")
+    expected = tuple(quant_float.shape[:-1]) + (channels // blk_size,)
+    if tuple(scale_float.shape) != expected:
+        raise ValueError(f"scale shape {tuple(scale_float.shape)} != {expected}")
+    grouped = quant_float.detach().to(torch.float32).unflatten(-1, (-1, blk_size))
+    result = grouped * scale_float.detach().to(torch.float32).unsqueeze(-1)
+    return result.flatten(-2, -1).to(torch.bfloat16)
+
+
+def _branch_encode_standard_hif4(dense: torch.Tensor) -> dict[str, torch.Tensor]:
+    prefix = tuple(int(v) for v in dense.shape[:-1])
+    channels = int(dense.shape[-1])
+    if channels % 64 != 0:
+        raise ValueError(f"Last dim {channels} not divisible by 64")
+    blocks = channels // 64
+    x = torch.nan_to_num(
+        dense.detach().to(torch.float32),
+        nan=0.0,
+        posinf=_BRANCH_E6M2_MAX * 7.0,
+        neginf=-_BRANCH_E6M2_MAX * 7.0,
+    )
+    x_grouped = x.reshape(*prefix, blocks, 8, 2, 4)
+    x_abs = x_grouped.abs()
+    sign = torch.sign(x_grouped)
+    amax = x_abs.amax(dim=(-1, -2, -3))
+    _, standard_scale = _branch_standard_e6m2_scale(amax)
+    scale_lv2, scale_lv3, mantissa = _branch_solve_standard_hierarchy(
+        x_abs, standard_scale
+    )
+    sign_out = torch.where(
+        mantissa.reshape(*prefix, blocks, 8, 2, 4) == 0.0,
+        torch.zeros_like(sign),
+        sign,
+    )
+    return {
+        "scale_factor": standard_scale.reshape(*prefix, blocks, 1, 1, 1),
+        "scale_lv2": scale_lv2.reshape(*prefix, blocks, 8, 1, 1),
+        "scale_lv3": scale_lv3.reshape(*prefix, blocks, 8, 2, 1),
+        "sign": sign_out,
+        "mant": mantissa.reshape(*prefix, blocks, 8, 2, 4),
+    }
+
+
+_BRANCH_E6M2_MIN = 2.0 ** -48
+_BRANCH_E6M2_MAX = 49152.0
+_BRANCH_BF16_ONE_SEVENTH = 0.142578125
+_STANDARD_PARAMS_BRANCH = _branch_standard_params
+_standard_params_branch = _branch_standard_params
+
+
+# ---------------------------------------------------------------------------
+# v162-independent Attention branch, R2 step (A agent): per-KV-group learned
+# orthogonal rotation deployed inside the v186/v189 attention stack.  The
+# rotation composes after every stack transform and before the HiF4 encode,
+# so the continuous QK product is exactly the R1 one; training uses the
+# frozen A2 config and deployment is gated per layer on the true path.
+# ---------------------------------------------------------------------------
+
+_A2_TRAIN_STEPS = 32
+_A2_TRAIN_LR = 0.01
+_A2_TRAIN_CLIP = 1.0
+_A2_REG_WEIGHT = 1e-3
+_A2_MAX_KV_TOKENS = 128
+_A2_MAX_Q_TOKENS = 32
+_A2_ORTHO_TOLERANCE = 1e-3
+
+
+def _a2_hadamard_orthogonal(dim: int) -> Optional[torch.Tensor]:
+    if dim < 1 or (dim & (dim - 1)) != 0 or dim > 4096:
+        return None
+    matrix = torch.ones(1, 1, dtype=torch.float64)
+    size = 1
+    while size < dim:
+        top = torch.cat([matrix, matrix], dim=1)
+        bottom = torch.cat([matrix, -matrix], dim=1)
+        matrix = torch.cat([top, bottom], dim=0)
+        size *= 2
+    return (matrix / math.sqrt(dim)).to(torch.float32)
+
+
+def _a2_cayley_orthogonal(theta: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    skew = theta - theta.transpose(-1, -2)
+    eye = torch.eye(theta.shape[-1], device=theta.device, dtype=theta.dtype)
+    left = eye - skew
+    right = eye + skew
+    c = torch.linalg.solve(
+        right.transpose(-1, -2), left.transpose(-1, -2)
+    ).transpose(-1, -2)
+    reg = (c - eye).square().mean()
+    return c, reg
+
+
+def _a2_even_indices(total: int, limit: int, device: torch.device) -> torch.Tensor:
+    if total <= limit:
+        return torch.arange(total, device=device)
+    positions = torch.linspace(0, total - 1, limit, device=device).round()
+    return torch.unique(positions.to(torch.int64))
+
+
+def _a2_apply_group_rotation(
+    dense: torch.Tensor,
+    num_heads: int,
+    rotation: torch.Tensor,
+) -> torch.Tensor:
+    head_dim = int(dense.shape[-1]) // int(num_heads)
+    groups = int(rotation.shape[0])
+    per_group = int(num_heads) // groups
+    lead = dense.shape[:-1]
+    grouped = dense.reshape(*lead, groups, per_group, head_dim)
+    rotated = torch.einsum(
+        "tghk,gkd->tghd",
+        grouped.reshape(-1, groups, per_group, head_dim),
+        rotation.to(device=grouped.device, dtype=torch.float32),
+    )
+    return rotated.reshape(*lead, int(num_heads) * head_dim)
+
+
+def _a2_attention_forward(
+    q: torch.Tensor,
+    k: torch.Tensor,
+    v: torch.Tensor,
+    q_heads: int,
+    kv_heads: int,
+    head_dim: int,
+) -> torch.Tensor:
+    batch, tokens, _ = q.shape
+    qh = q.reshape(batch, tokens, q_heads, head_dim).transpose(1, 2)
+    group = q_heads // kv_heads
+    kh = k.reshape(batch, -1, kv_heads, head_dim).transpose(1, 2).repeat_interleave(group, dim=1)
+    vh = v.reshape(batch, -1, kv_heads, head_dim).transpose(1, 2).repeat_interleave(group, dim=1)
+    probabilities = torch.softmax(qh @ kh.transpose(-1, -2) / math.sqrt(head_dim), dim=-1)
+    return (probabilities @ vh).transpose(1, 2).reshape(batch, tokens, q_heads * head_dim)
+
+
+def _m_attention_backward(
+    d_out: torch.Tensor,
+    q_hat: torch.Tensor,
+    k_hat: torch.Tensor,
+    v: torch.Tensor,
+    q_heads: int,
+    kv_heads: int,
+    head_dim: int,
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    scale = 1.0 / math.sqrt(head_dim)
+    group = q_heads // kv_heads
+    tokens_q = q_hat.shape[0]
+    tokens_k = k_hat.shape[0]
+    qh = q_hat.reshape(tokens_q, q_heads, head_dim).transpose(0, 1)
+    kh = k_hat.reshape(tokens_k, kv_heads, head_dim).transpose(0, 1).repeat_interleave(group, dim=0)
+    vh = v.reshape(tokens_k, kv_heads, head_dim).transpose(0, 1).repeat_interleave(group, dim=0)
+    do = d_out.reshape(tokens_q, q_heads, head_dim).transpose(0, 1)
+    logits = (qh @ kh.transpose(-1, -2)) * scale
+    probabilities = torch.softmax(logits, dim=-1)
+    d_prob = do @ vh.transpose(-1, -2)
+    tmp = (d_prob * probabilities).sum(dim=-1, keepdim=True)
+    d_logits = (d_prob - tmp) * probabilities * scale
+    d_q = torch.einsum("hij,hjk->hik", d_logits, kh)
+    d_k = torch.einsum("hij,hik->hjk", d_logits, qh)
+    d_k = d_k.view(kv_heads, group, tokens_k, head_dim).sum(dim=1)
+    d_q = d_q.transpose(0, 1).reshape(tokens_q, q_heads * head_dim)
+    d_k = d_k.permute(1, 0, 2).reshape(tokens_k, kv_heads * head_dim)
+    return d_q, d_k
+
+
+def _m_cayley_backward(grad_c: torch.Tensor, theta: torch.Tensor) -> torch.Tensor:
+    dim = theta.shape[-1]
+    eye = torch.eye(dim, device=theta.device, dtype=theta.dtype)
+    skew = theta - theta.transpose(-1, -2)
+    left = eye - skew
+    right = eye + skew
+    c = torch.linalg.solve(right.transpose(-1, -2), left.transpose(-1, -2)).transpose(-1, -2)
+    y = torch.linalg.solve(right, grad_c.transpose(-1, -2)).transpose(-1, -2)
+    grad_a = -(c.transpose(-1, -2) + eye) @ y
+    return grad_a - grad_a.transpose(-1, -2)
+
+
+def _m_cayley_pair(theta: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    dim = theta.shape[-1]
+    eye = torch.eye(dim, device=theta.device, dtype=theta.dtype)
+    skew = theta - theta.transpose(-1, -2)
+    left = eye - skew
+    right = eye + skew
+    c = torch.linalg.solve(right.transpose(-1, -2), left.transpose(-1, -2)).transpose(-1, -2)
+    return c, right
+
+
+def _a2_train_rotation(
+    windows: List[dict],
+    q_heads: int,
+    kv_heads: int,
+    head_dim: int,
+    device: torch.device,
+) -> Tuple[torch.Tensor, dict]:
+    """Analytic-gradient trainer: no autograd, safe under any harness context."""
+
+    groups = kv_heads
+    dim = head_dim
+    base = _a2_hadamard_orthogonal(dim)
+    if base is None:
+        base = torch.eye(dim, dtype=torch.float32)
+    base = base.to(device)
+
+    prepared = []
+    for window in windows:
+        q_full = _a2_normal(window["q"], device)
+        k_full = _a2_normal(window["k"], device)
+        v_full = _a2_normal(window["v"], device)
+        kv_index = _a2_even_indices(k_full.shape[0], _A2_MAX_KV_TOKENS, device)
+        q_cap = min(int(kv_index.numel()), int(q_full.shape[0]))
+        q_index = _a2_even_indices(q_cap, _A2_MAX_Q_TOKENS, device)
+        q_rows = kv_index.index_select(0, q_index)
+        q_rows = q_rows[q_rows < q_full.shape[0]]
+        if q_rows.numel() == 0:
+            q_rows = _a2_even_indices(q_full.shape[0], _A2_MAX_Q_TOKENS, device)
+        k_sub = k_full.index_select(0, kv_index)
+        v_sub = v_full.index_select(0, kv_index)
+        q_sub = q_full.index_select(0, q_rows)
+        reference = _a2_attention_forward(
+            q_sub[None], k_sub[None], v_sub[None], q_heads, kv_heads, head_dim
+        )[0].detach()
+        std_q = _dequantize_hif4(_dense_to_hif4(q_sub)).to(torch.float32)
+        std_k = _dequantize_hif4(_dense_to_hif4(k_sub)).to(torch.float32)
+        std_v = _dequantize_hif4(_dense_to_hif4(v_sub)).to(torch.float32)
+        standard = _a2_attention_forward(
+            std_q[None], std_k[None], std_v[None], q_heads, kv_heads, head_dim
+        )[0].detach()
+        mse_std = float((standard - reference).square().mean())
+        v_hat = _dequantize_hif4(_dense_to_hif4(v_sub)).to(torch.float32)
+        prepared.append({
+            "q": q_sub, "k": k_sub, "v_hat": v_hat,
+            "reference": reference, "mse_std": max(mse_std, 1e-12),
+        })
+
+    theta = torch.zeros(groups, dim, dim, device=device, dtype=torch.float32)
+    center = torch.zeros(groups, dim, device=device, dtype=torch.float32)
+    exp_avg = torch.zeros_like(theta)
+    exp_avg_sq = torch.zeros_like(theta)
+    exp_avg_c = torch.zeros_like(center)
+    exp_avg_sq_c = torch.zeros_like(center)
+    eye = torch.eye(dim, device=device, dtype=torch.float32)
+    final_loss = float("nan")
+
+    for step_index in range(_A2_TRAIN_STEPS):
+        window_losses = []
+        grad_theta = torch.zeros_like(theta)
+        for item in prepared:
+            c, _right = _m_cayley_pair(theta)
+            rotation = torch.einsum("dk,gkl->gdl", base, c)
+            q_rot = _a2_apply_group_rotation(item["q"], q_heads, rotation)
+            k_rot = _a2_apply_group_rotation(item["k"], kv_heads, rotation)
+            k_shift = (k_rot.reshape(k_rot.shape[0], kv_heads, head_dim) + center[None]).reshape(k_rot.shape)
+            q_hat = _dequantize_hif4(_dense_to_hif4(q_rot)).to(torch.float32)
+            k_hat = _dequantize_hif4(_dense_to_hif4(k_shift)).to(torch.float32)
+            output = _a2_attention_forward(
+                q_hat[None], k_hat[None], item["v_hat"][None], q_heads, kv_heads, head_dim
+            )[0]
+            residual = output - item["reference"]
+            loss = residual.square().mean() / item["mse_std"]
+            window_losses.append(loss)
+
+            d_output = 2.0 * residual / float(residual.numel()) / item["mse_std"]
+            d_qhat, d_khat = _m_attention_backward(
+                d_output[None], q_hat, k_hat, item["v_hat"], q_heads, kv_heads, head_dim
+            )
+            tokens_q = item["q"].shape[0]
+            tokens_k = item["k"].shape[0]
+            per_group = q_heads // groups
+            q3g = item["q"].reshape(tokens_q, groups, per_group, head_dim)
+            dq3g = d_qhat.reshape(tokens_q, groups, per_group, head_dim)
+            k3 = item["k"].reshape(tokens_k, kv_heads, head_dim)
+            dk3 = d_khat.reshape(tokens_k, kv_heads, head_dim)
+            grad_rotation = torch.einsum("tghk,tghd->gkd", q3g, dq3g)
+            grad_rotation = grad_rotation + torch.einsum("tgk,tgd->gkd", k3, dk3)
+            grad_c = torch.einsum("kd,gkl->gdl", base, grad_rotation)
+            grad_theta = grad_theta + _m_cayley_backward(grad_c, theta)
+            grad_center = dk3.sum(dim=0)
+
+        data_loss = torch.stack(window_losses).mean()
+        if not math.isfinite(float(data_loss)):
+            raise RuntimeError("A2 rotation training produced a non-finite loss")
+        c_now, _right = _m_cayley_pair(theta)
+        grad_c_reg = 2.0 * (c_now - eye) * (_A2_REG_WEIGHT / float(groups * dim * dim))
+        grad_theta = grad_theta + _m_cayley_backward(grad_c_reg, theta)
+        final_loss = float(data_loss)
+
+        total = grad_theta.norm()
+        if float(total) > _A2_TRAIN_CLIP and float(total) > 0:
+            grad_theta = grad_theta * (_A2_TRAIN_CLIP / float(total))
+        exp_avg = 0.9 * exp_avg + 0.1 * grad_theta
+        exp_avg_sq = 0.999 * exp_avg_sq + 0.001 * grad_theta.square()
+        exp_avg_c = 0.9 * exp_avg_c + 0.1 * grad_center
+        exp_avg_sq_c = 0.999 * exp_avg_sq_c + 0.001 * grad_center.square()
+        bias1 = 1 - 0.9 ** (step_index + 1)
+        bias2 = 1 - 0.999 ** (step_index + 1)
+        theta = theta - _A2_TRAIN_LR * (exp_avg / bias1) / ((exp_avg_sq / bias2).sqrt() + 1e-8)
+        center = center - _A2_TRAIN_LR * (exp_avg_c / bias1) / ((exp_avg_sq_c / bias2).sqrt() + 1e-8)
+
+    c, _right = _m_cayley_pair(theta)
+    rotation = torch.einsum("dk,gkl->gdl", base, c)
+    identity_error = float((rotation @ rotation.transpose(-1, -2) - eye[None]).abs().max())
+    if identity_error > _A2_ORTHO_TOLERANCE:
+        raise RuntimeError(f"A2 trained rotation failed orthogonality: {identity_error}")
+    info = {
+        "steps": _A2_TRAIN_STEPS,
+        "final_train_loss": final_loss,
+        "ortho_error": identity_error,
+        "windows": len(prepared),
+        "trainer": "manual+center",
+    }
+    return rotation.detach().cpu().to(torch.float32), info, center.detach().cpu().to(torch.float32)
+
+
+def _a2_true_path_gate_loss(
+    gate_window: dict,
+    q_heads: int,
+    kv_heads: int,
+    head_dim: int,
+    states: dict,
+    rotation: Optional[torch.Tensor],
+    device: torch.device,
+    center: Optional[torch.Tensor] = None,
+) -> float:
+    """Normalized full-window output loss through the true deployed path."""
+
+    def _run(state_q: dict, state_k: dict) -> float:
+        q_quant, q_scale = gate_window["q"]
+        k_quant, k_scale = gate_window["k"]
+        v_quant, v_scale = gate_window["v"]
+        q_ref = _dequantize_nvfp4_float32(q_quant, q_scale).to(torch.float32)
+        k_ref = _dequantize_nvfp4_float32(k_quant, k_scale).to(torch.float32)
+        v_ref = _dequantize_nvfp4_float32(v_quant, v_scale).to(torch.float32)
+        q_params = hif4_dynamic_quantize_q(
+            q_quant, q_scale, q_heads, head_dim, state_q
+        )
+        k_params = hif4_dynamic_quantize_k(
+            k_quant, k_scale, kv_heads, head_dim, state_k
+        )
+        v_params = hif4_dynamic_quantize_v(
+            v_quant, v_scale, kv_heads, head_dim, states["v_state"]
+        )
+        q_hat = _dequantize_hif4(q_params).to(torch.float32)
+        k_hat = _dequantize_hif4(k_params).to(torch.float32)
+        v_hat = _dequantize_hif4(v_params).to(torch.float32)
+        reference = _a2_attention_forward(
+            q_ref[None], k_ref[None], v_ref[None], q_heads, kv_heads, head_dim
+        )[0]
+        player = _a2_attention_forward(
+            q_hat[None], k_hat[None], v_hat[None], q_heads, kv_heads, head_dim
+        )[0]
+        return float((player - reference).square().mean())
+
+    player_k_state = dict(states["k_state"], learned_rotation=rotation)
+    if center is not None:
+        player_k_state["learned_center"] = center
+    player_mse = _run(
+        dict(states["q_state"], learned_rotation=rotation),
+        player_k_state,
+    )
+    standard_mse = _run(states["q_state"], states["k_state"])
+    return player_mse / max(standard_mse, 1e-12)
+
+
+_V189_CALIBRATION_ATTENTION = hif4_calibration_attention
+
+def _a2_normal(t: torch.Tensor, device: torch.device) -> torch.Tensor:
+    """Plain float32 copy on ``device``; the manual trainer needs no autograd."""
+
+    return t.detach().to(device=device, dtype=torch.float32).clone()
+
+
+
+def hif4_calibration_attention(
+    calib_qkv_list: list,
+    q_num_heads: int,
+    kv_num_heads: int,
+    head_dim: int,
+) -> dict[str, Any]:
+    """v189 stack calibration + gated learned rotation (A2 frozen config)."""
+
+    try:
+        states = _V189_CALIBRATION_ATTENTION(
+            calib_qkv_list, q_num_heads, kv_num_heads, head_dim
+        )
+        if not isinstance(calib_qkv_list, list) or len(calib_qkv_list) < 2:
+            return states
+    except Exception:  # noqa: BLE001 - unreachable here; kept for safety
+        return {"q_state": {}, "k_state": {}, "v_state": {}}
+    try:
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        windows = [
+            {
+                "q": _dequantize_nvfp4_float32(*item["q"]).to(torch.float32),
+                "k": _dequantize_nvfp4_float32(*item["k"]).to(torch.float32),
+                "v": _dequantize_nvfp4_float32(*item["v"]).to(torch.float32),
+            }
+            for item in calib_qkv_list
+        ]
+        rotation, info, center = _a2_train_rotation(
+            windows[:-1], q_num_heads, kv_num_heads, head_dim, device
+        )
+        gate_window = calib_qkv_list[-1]
+        loss_identity = _a2_true_path_gate_loss(
+            gate_window, q_num_heads, kv_num_heads, head_dim, states, None, device
+        )
+        loss_rotation = _a2_true_path_gate_loss(
+            gate_window, q_num_heads, kv_num_heads, head_dim, states, rotation, device, center
+        )
+        if loss_rotation < loss_identity:
+            cpu_rotation = rotation.detach().cpu().to(torch.float32).clone()
+            states["q_state"]["learned_rotation"] = cpu_rotation
+            states["k_state"]["learned_rotation"] = cpu_rotation.clone()
+            states["k_state"]["learned_center"] = center
+            audit = {
+                "a2_arm": "rotation",
+                "a2_gate_loss_identity": float(loss_identity),
+                "a2_gate_loss_rotation": float(loss_rotation),
+                "a2_steps": int(info["steps"]),
+                "a2_train_loss": float(info["final_train_loss"]),
+                "a2_ortho_error": float(info["ortho_error"]),
+            }
+        else:
+            audit = {
+                "a2_arm": "identity",
+                "a2_gate_loss_identity": float(loss_identity),
+                "a2_gate_loss_rotation": float(loss_rotation),
+                "a2_steps": int(info["steps"]),
+                "a2_train_loss": float(info["final_train_loss"]),
+                "a2_ortho_error": float(info["ortho_error"]),
+            }
+        states["q_state"].update(audit)
+        states["k_state"].update(audit)
+    except Exception:  # noqa: BLE001 - any failure degrades to exact R1
+        states["q_state"].pop("learned_rotation", None)
+        states["k_state"].pop("learned_rotation", None)
+        states["k_state"].pop("learned_center", None)
+        states["q_state"]["a2_arm"] = "fallback"
+        states["k_state"]["a2_arm"] = "fallback"
+    return states
+
+
+# ---------------------------------------------------------------------------
+# Combined candidate (2026-09-08): keep the current root Linear block-order
+# path and the R3 Attention stack.  This override is intentionally last so
+# the R3 side-isolation Linear shadow definitions do not erase the current
+# root's calibrated Linear behavior.
+# ---------------------------------------------------------------------------
+
+_COMBINED_LINEAR_BASE_CALIBRATION = _STATIC_ACTORDER_BASE_CALIBRATION
+_COMBINED_LINEAR_BASE_DYNAMIC = _STATIC_ACTORDER_BASE_DYNAMIC
 
 
 @torch.no_grad()
-def _compiled_sample_energy_block_order(
+def _combined_sample_energy_block_order(
     calib_activation_list: list,
     state: dict[str, Any],
 ) -> Optional[torch.Tensor]:
@@ -11121,17 +11607,11 @@ def _compiled_sample_energy_block_order(
     for pair in calib_activation_list:
         if not isinstance(pair, (tuple, list)) or len(pair) != 2:
             return None
-        dense = _static_actorder_dense_from_state(
-            pair[0], pair[1], state
-        )
+        dense = _static_actorder_dense_from_state(pair[0], pair[1], state)
         if dense.ndim != 2 or int(dense.shape[-1]) != channels:
             return None
         window_energy = dense.to(torch.float32).square().mean(dim=0)
-        energy_sum = (
-            window_energy
-            if energy_sum is None
-            else energy_sum + window_energy
-        )
+        energy_sum = window_energy if energy_sum is None else energy_sum + window_energy
         window_count += 1
     if energy_sum is None or window_count == 0:
         return None
@@ -11140,9 +11620,7 @@ def _compiled_sample_energy_block_order(
         (energy_sum / float(window_count)) * importance.to(energy_sum.device)
     ).reshape(block_count, _HIF4_BLOCK_SIZE).sum(dim=1)
     return torch.argsort(
-        torch.nan_to_num(
-            block_scores, nan=0.0, posinf=0.0, neginf=0.0
-        ),
+        torch.nan_to_num(block_scores, nan=0.0, posinf=0.0, neginf=0.0),
         descending=True,
     ).to(device="cpu", dtype=torch.int16).contiguous()
 
@@ -11153,66 +11631,26 @@ def hif4_calibration_and_quantize_weight(
     weight_scale: torch.Tensor,
     calib_activation_list: list,
 ) -> dict[str, Any]:
-    result = _COMPILED_SAMPLE_BASE_CALIBRATION(
+    result = _COMBINED_LINEAR_BASE_CALIBRATION(
         weight_quant, weight_scale, calib_activation_list
     )
     state = result["activation_state"]
     order = state.get("compiled_sample_energy_order")
     if not torch.is_tensor(order):
-        order = _compiled_sample_energy_block_order(
-            calib_activation_list, state
-        )
+        order = _combined_sample_energy_block_order(calib_activation_list, state)
     if order is None:
         return result
     state["gptq_block_order"] = order
     state["gptq_block_order_compiled_sample_energy"] = True
     print(
-        f"[COMPILED-SAMPLE-ENERGY] reachable=1 blocks={int(order.numel())}",
+        f"[COMBINED-LINEAR-SAMPLE-ENERGY] reachable=1 blocks={int(order.numel())}",
         flush=True,
     )
     return result
 
 
 @torch.no_grad()
-def hif4_dynamic_quantize_activation(
-    activation_quant: torch.Tensor,
-    activation_scale: torch.Tensor,
-    activation_state: Any,
-) -> dict[str, torch.Tensor]:
-    if not isinstance(activation_state, dict):
-        raise TypeError("activation_state must be a dict")
-    if activation_state.get("gptq_block_order") is None:
-        return _COMPILED_SAMPLE_BASE_DYNAMIC(
-            activation_quant, activation_scale, activation_state
-        )
-    try:
-        channels = int(activation_quant.shape[-1])
-        if channels != int(activation_state.get("in_features", -1)):
-            raise ValueError(
-                "Activation hidden size does not match calibration state"
-            )
-        dense = _static_actorder_dense_from_state(
-            activation_quant, activation_scale, activation_state
-        )
-        result = _dynamic_fast_reordered_gptq(
-            dense, activation_state,
-            activation_state["gptq_block_order"],
-        )
-        if result is not None:
-            return result
-    except (RuntimeError, ValueError, TypeError, IndexError, KeyError):
-        pass
-    return _COMPILED_SAMPLE_BASE_DYNAMIC(
-        activation_quant, activation_scale, activation_state
-    )
-
-
-# R3 implementation-only optimization: argsort already returns a complete
-# permutation, so keep it on the algorithm device and avoid the CPU validation
-# and round-trip before block reordering.  The score formula and GPTQ path are
-# unchanged from the dynamic sample-energy candidate.
-@torch.no_grad()
-def _dynamic_sample_energy_block_order_fast(
+def _combined_dynamic_sample_energy_block_order_fast(
     dense: torch.Tensor,
     state: dict[str, Any],
 ) -> Optional[torch.Tensor]:
@@ -11229,10 +11667,7 @@ def _dynamic_sample_energy_block_order_fast(
         return None
     energy = dense.to(torch.float32).square().mean(dim=0)
     scores = torch.nan_to_num(
-        energy * importance,
-        nan=0.0,
-        posinf=0.0,
-        neginf=0.0,
+        energy * importance, nan=0.0, posinf=0.0, neginf=0.0
     )
     blocks = channels // _HIF4_BLOCK_SIZE
     return torch.argsort(
@@ -11242,7 +11677,7 @@ def _dynamic_sample_energy_block_order_fast(
 
 
 @torch.no_grad()
-def _dynamic_fast_reordered_gptq(
+def _combined_dynamic_fast_reordered_gptq(
     dense: torch.Tensor,
     state: dict[str, Any],
     order: torch.Tensor,
@@ -11267,7 +11702,6 @@ def _dynamic_fast_reordered_gptq(
         device=dense.device, dtype=torch.float32
     ).index_select(0, channel_order).index_select(1, channel_order)
     dense_ordered = dense.index_select(-1, channel_order)
-
     importance = state.get("importance")
     if importance is not None:
         importance = importance.detach().to(
@@ -11276,7 +11710,6 @@ def _dynamic_fast_reordered_gptq(
         if int(importance.numel()) != channels:
             return None
         importance = importance.index_select(0, channel_order)
-
     gram = state.get("gram")
     gram_ordered = None
     if gram is not None:
@@ -11286,7 +11719,6 @@ def _dynamic_fast_reordered_gptq(
         gram_ordered = gram_ordered.index_select(0, order).unsqueeze(0).expand(
             int(dense.shape[0]), blocks, 8, 2, 4, 4
         )
-
     params = _activation_gptq_quantize(
         dense_ordered,
         h_inv_ordered,
@@ -11300,10 +11732,7 @@ def _dynamic_fast_reordered_gptq(
     )
     inverse = torch.empty_like(order)
     inverse[order] = torch.arange(blocks, device=dense.device)
-    return {
-        key: value.index_select(1, inverse)
-        for key, value in params.items()
-    }
+    return {key: value.index_select(1, inverse) for key, value in params.items()}
 
 
 @torch.no_grad()
@@ -11315,29 +11744,27 @@ def hif4_dynamic_quantize_activation(
     if not isinstance(activation_state, dict):
         raise TypeError("activation_state must be a dict")
     if activation_state.get("gptq_block_order") is None:
-        return _DYNAMIC_ACTORDER_BASE_DYNAMIC(
+        return _COMBINED_LINEAR_BASE_DYNAMIC(
             activation_quant, activation_scale, activation_state
         )
     try:
         channels = int(activation_quant.shape[-1])
         if channels != int(activation_state.get("in_features", -1)):
-            raise ValueError(
-                "Activation hidden size does not match calibration state"
-            )
+            raise ValueError("Activation hidden size does not match calibration state")
         dense = _static_actorder_dense_from_state(
             activation_quant, activation_scale, activation_state
         )
-        order = _dynamic_sample_energy_block_order_fast(
+        order = _combined_dynamic_sample_energy_block_order_fast(
             dense, activation_state
         )
         if order is not None:
-            result = _dynamic_fast_reordered_gptq(
+            result = _combined_dynamic_fast_reordered_gptq(
                 dense, activation_state, order
             )
             if result is not None:
                 return result
-    except (RuntimeError, ValueError, TypeError, IndexError):
+    except (RuntimeError, ValueError, TypeError, IndexError, KeyError):
         pass
-    return _DYNAMIC_ACTORDER_BASE_DYNAMIC(
+    return _COMBINED_LINEAR_BASE_DYNAMIC(
         activation_quant, activation_scale, activation_state
     )

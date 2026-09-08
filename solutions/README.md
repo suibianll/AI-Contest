@@ -1,16 +1,16 @@
 # HiF4 solutions archive
 
 > 当前根与最优已知可复现完整方案为
-> [compiled sample-energy](20260906_linear-compiled-sample-energy_score-tie/result.md)：用户官方回传
-> `17636/264s`，根与归档逐位一致，SHA `D66128A6...B0F6`。平台未单独返回计分 SHA。
+> [current Linear + R3 Attention](20260908_linear-current-r3-attention_candidate/result.md)：用户官方回传
+> `18032/280s`，根与候选归档逐位一致，SHA `12352EFDD4E23CC5E1E17953008664FBAA5EA5D693373635FDAFC4D28CE4E24E`。
+> 平台未单独返回计分 SHA。上一根 compiled sample-energy 为 `17636/264s`。
 > L28 `4611/286s` 与其他侧结果降为历史机制证据，不再形成并行父线。
 > [L28 回传记录](../logs/execution/2026-09-08-l28-official-result.md)、
 > [L23b 超时记录](../logs/execution/2026-09-08-l23b-official-timeout.md)。
 
 > 组合候选 [current Linear + R3 Attention](20260908_linear-current-r3-attention_candidate/result.md)
-> 已归档：Linear 使用当前根 compiled sample-energy，Attention 使用 R3 rotation-center/all-gates。
-> 六 API smoke、合法 state 与 proxy-v3 shard0 完成；shard0 Linear 增量 `0`，Attention
-> `+0.017241`（11+/1−/0=），因此仅作未注册候选，未替换根，也没有官方分数或时间。
+> 已获用户官方回传 `18032/280s` 并提升为当前根：Linear 使用 compiled sample-energy，Attention
+> 使用 R3 rotation-center/all-gates。平台未单独返回计分 SHA，结果透明绑定候选归档 SHA。
 
 > 当前测试按[4B指引](../docs/4b-panel-testing-guide.md)执行。本文历史0.5B、OOD、跨模型和时间预测结果仅作证据，不构成新测试命令或门禁。
 
@@ -250,7 +250,8 @@ silently assigned a score.
 | v186 | `20260904_v186_attn-plus4-single-window_scoreNA_timeNA` | **17599** | **272 s** | **pass, RETAINED as new full official parent; oracle-decomposition minimal product: v182 + 1-line `_DYNAMIC_OFFSETS (-1,1,2,3)→(-1,1,2,3,4)` (add single +4 E6M2 code to online Q/K/V scale window; hill-climb edge extension cannot reach it across binades). step_gain +1 vs v182 17598; time −1s (time-model predicted 274.0s, actual 272s, within MAE 10.1s — calibration-neutral prediction validated). Local Δmean +0.010344 (largest post-A1 signal, 29x D1) → official +1: reconfirms local mean does not convert to official points but sign gates (Δmean>0, L1=0.0155<0.02) were zero-error. Family officially positive; no code-neighborhood scan (+5/-2 etc.). Gap to 21765 is 4166; time margin 28s** |
 | v187 | `20260904_v187_attn-jacobian-sensitivity_research-retained` | **9167** | **169 s** | **official positive / RESEARCH RETAINED; v185 clean-room + analytic final-Attention Jacobian importance for Q/K, KV-group shared and leave-one-fold-out gated. Official +721/+4s vs v185 confirms transfer. 7/24 layers active; local Δmean +0.015187, L1 0.016199. Still −8432 vs v186, so not a full parent; root unchanged** |
 | v188 | `20260904_v188_attn-jacobian-port_rejected` | **17595** | **268 s** | **rejected (official 2026-09-04); v186 + v187 Jacobian sensitivity importance ported as final calibration step on the fully-transformed Q/K coordinates (causal/non-causal 0.5, cross-fold median, log shrink 0.25, clamp [0.5,2], LOO deployed-MSE gate; v187 pre-registered constants, no neighborhood scan). step_gain −4 vs v186 17599; time 268s (model predicted 274s, within MAE). Local default 120 vs v186: Δmean +0.000426, L1 0.001114, 6+/4−/110=; gate accepted only 2/24 layers (L12/L22 — the pair-transform-free layers; pair-smooth output-fitted importance wins elsewhere). First sign-gate miss on a near-zero local signal (110/120 cases unchanged): the gate blocks large losses (−165~−1164) but does not guarantee non-negative official deltas for near-zero signals; official ±1~4 is the effective noise band (single-point gains v182/v186 were +1/+1/+3). Jacobian port family closed; root rolled back to v186** |
-| v189 | `20260906_v189_static-actorder-hdiag_recovered_scoreNA_timeNA` | **17616** | **275 s** | **RETAINED (official 2026-09-06); v186 + static deployed-Hessian activation-GPTQ complete 64-block ordering; step_gain +17 vs v186, root switched to v189; local default Overall `0.686889608842` remains a proxy-only value** |
+| — | `20260908_linear-current-r3-attention_candidate` | **18032** | **280 s** | **RETAINED (user-reported official 2026-09-08); current compiled sample-energy Linear + R3 rotation-center/all-gates Attention; +396/+16s vs previous root 17636/264s; root switched to this source; platform did not return a separate scored SHA** |
+| v189 | `20260906_v189_static-actorder-hdiag_recovered_scoreNA_timeNA` | **17616** | **275 s** | **RETAINED (official 2026-09-06); v186 + static deployed-Hessian activation-GPTQ complete 64-block ordering; step_gain +17 vs v186, historical full parent before 17636 root; local default Overall `0.686889608842` remains a proxy-only value** |
 | — | `continuous_linear_l28-proj-vectorized` | **4611** | **286 s** | **RETAINED (official 2026-09-08); Linear side parent L4→L28; residual-cross-subspace A@W fit + time-safe rework (batched Cholesky, eigh(64×64) replaces SVD(64×o), vectorized round/clamp projection, math-equivalent); step_gain +4 vs L4 (4607/247s), 286s<300s; fit_gain 0.9453>=0.9 local; supersedes L23b (TIMEOUT)`** |
 | — | `continuous_linear_l23b-residual-subspace` | — | >300 s | **TIMEOUT (official 2026-09-08); all-row direct fit + incremental residual; complexity implementation closed, mechanism family reworked as L28** |
 | — | `continuous_linear_l23-residual-subspace_timeout` | — | >300 s | **TIMEOUT (official 2026-09-07); evidence only, no re-submit** |

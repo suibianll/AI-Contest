@@ -1,27 +1,30 @@
 {
   "candidate": "current-linear-plus-r3-attention",
-  "status": "LOCAL_CANDIDATE / UNREGISTERED_OFFICIAL",
+  "status": "OFFICIAL_RETAINED / CURRENT_ROOT",
   "parent_root_sha256": "D66128A62E7E068EDC50C91F4D8E212F586A6EDCAEE5BEA7D3564166E258B0F6",
   "linear_source": "root compiled sample-energy",
   "attention_source": "solutions/v162_attention_r3-rotation-center_allgates/solution.py",
   "attention_source_sha256": "A5C679D7A2B349A879B2019B4A613244F5FEA7050E407B6475B9E29BD1C146DC",
   "source_sha256": "12352EFDD4E23CC5E1E17953008664FBAA5EA5D693373635FDAFC4D28CE4E24E",
   "official": {
-    "score": null,
-    "time_seconds": null,
-    "status": "unregistered/NA"
+    "score": 18032,
+    "time_seconds": 280,
+    "status": "user-reported official / retained",
+    "score_source_sha256": null,
+    "candidate_archive_sha256": "12352EFDD4E23CC5E1E17953008664FBAA5EA5D693373635FDAFC4D28CE4E24E",
+    "binding_note": "Platform did not return a separate scored SHA; the user-reported result is bound transparently to this archived source."
   },
   "additive_estimate": {
     "score": 18032,
     "formula": "17636 + (14405 - 14009)",
     "time_risk_seconds": 291,
     "time_formula": "264 + (238 - 211)",
-    "note": "diagnostic estimate only; official score/time are required"
+    "note": "The additive diagnostic matched the user-reported official score; official result takes precedence."
   },
   "smoke": {
     "six_api_import": true,
     "reference_state_validation": "passed",
-    "target_shard0": "completed; reasonableness_issues=0; analyzer=reject (linear delta_mean=0; attention positive but mixed)"
+    "target_shard0": "completed; reasonableness_issues=0; local analyzer=reject (linear delta_mean=0; attention positive but mixed)"
   },
   "local_proxy_shard0": {
     "scenario": "both",
@@ -31,6 +34,14 @@
     "attention_positive_negative_zero": "11/1/0",
     "overall_delta_mean": 0.0030424562616671036,
     "api_total_seconds": 187.23618649877608,
-    "note": "proxy-v3 shard0 diagnostic only; not comparable to official score/time"
+    "note": "proxy-v3 shard0 diagnostic only; official score/time above take precedence"
+  },
+  "promotion": {
+    "root_source_sha256": "12352EFDD4E23CC5E1E17953008664FBAA5EA5D693373635FDAFC4D28CE4E24E",
+    "previous_root_source_sha256": "D66128A62E7E068EDC50C91F4D8E212F586A6EDCAEE5BEA7D3564166E258B0F6",
+    "score_delta_vs_previous_root": 396,
+    "time_delta_seconds_vs_previous_root": 16,
+    "official_time_limit_seconds": 300,
+    "time_limit_passed": true
   }
 }

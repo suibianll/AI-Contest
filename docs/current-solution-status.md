@@ -1,8 +1,12 @@
-# 当前状态：单一完整方案 17636 / 264s
+# 当前状态：current Linear + R3 Attention 18032 / 280s
 
-> 当前根 `solution.py` 已提升为 compiled sample-energy 完整方案，与归档逐位一致，SHA256
-> `D66128A62E7E068EDC50C91F4D8E212F586A6EDCAEE5BEA7D3564166E258B0F6`。仓库记录的用户官方
-> 回传为 `17636/264s`，相对 v189 `+20/-11s`；官方平台未单独返回计分 SHA，该边界继续保留。
+> 当前根 `solution.py` 已提升为 current Linear + R3 Attention 组合，与候选归档逐位一致，SHA256
+> `12352EFDD4E23CC5E1E17953008664FBAA5EA5D693373635FDAFC4D28CE4E24E`。仓库记录的用户官方
+> 回传为 `18032/280s`，相对上一根 `17636/264s` 为 `+396/+16s`；官方平台未单独返回计分 SHA，
+> 结果透明绑定候选归档 SHA。官方硬限 `300s`，当前通过。
+
+> 上一根 compiled sample-energy 仍保留为可回退对照，SHA256
+> `D66128A62E7E068EDC50C91F4D8E212F586A6EDCAEE5BEA7D3564166E258B0F6`。
 
 > 当前测试按[4B指引](4b-panel-testing-guide.md)执行。本文历史0.5B、OOD、跨模型和时间预测结果仅作证据，不构成新测试命令或门禁。
 > 当前规则优先级为 `AGENTS.md` → 4B 指引 → [单一完整方案计划](superpowers/plans/2026-09-08-single-solution-optimization-plan.md)
@@ -26,12 +30,13 @@
 - 官方前只做六 API contract smoke 和目标侧 shard0；官方正向后才做六 shard 归档。
 - Linear `calibration_fit_gain` 的最终输出误差公式正确，但只是校准集拟合诊断。L28 的
   `0.948587` 对应官方仅 `+4`，不能继续充当 `≥0.9` 晋级目标。
-- L28、A2、R3、AC0 均为历史侧证据；L31/L32、A30/A31 队列暂停，不允许机械组合侧分数或侧时间。
+- L28、A2、AC0 均为历史侧证据；R3 已经作为当前完整组合的一部分绑定到官方 `18032/280s`；
+  L31/L32、A30/A31 队列暂停，不允许再机械组合侧分数或侧时间。
 - 正式晋级只看完整官方总分更高且官方时间 `<300s`；同分取更快。
 - 2026-09-08 方法审计撤销“LC1/LC2 证明根已局部饱和”的解释：LC1 实际加入 rank-8 求解器，
   不等于其“只改 fold 权重”机制卡；LC2 实际只尝试整块同步 `+1/-1`，不是逐元素合法邻域，零值
   sign flip 也未执行。两者只关闭各自真实实现，不能关闭 objective-only A@W 或整个根坐标。
-- 当前下一步固定为：R0 根上 fold 加权入口零 API 审计；入口存在才执行 L-C3 objective-only；
+- 当前下一步固定为：在新的 `18032/280s` 根上重新做 R0 fold 加权入口零 API 审计；入口存在才执行 L-C3 objective-only；
   随后审计并移植 A23 已获官方正证据的 Q/K 互逆 scale 最小差异。每张卡必须先通过机制—代码一致性门。
 
 以下内容是历史证据索引，不提供当前下一步指令。

@@ -5,11 +5,12 @@
 
 ## 1. 唯一父版本
 
-- 根 `solution.py` 与归档 `solutions/20260906_linear-compiled-sample-energy_score-tie/solution.py`
-  逐位一致，SHA256 `D66128A62E7E068EDC50C91F4D8E212F586A6EDCAEE5BEA7D3564166E258B0F6`。
-- 仓库记录的用户官方回传为 `17636/264s`，相对 v189 `+20/-11s`。这是当前唯一工作父和
-  最优已知可复现完整 solution；官方平台未单独返回计分 SHA 的事实继续透明记录。
-- v189、L28、A2、R3、AC0 只作为历史对照或机制证据，不再形成并行父线。
+- 根 `solution.py` 与归档 `solutions/20260908_linear-current-r3-attention_candidate/solution.py`
+  逐位一致，SHA256 `12352EFDD4E23CC5E1E17953008664FBAA5EA5D693373635FDAFC4D28CE4E24E`。
+- 仓库记录的用户官方回传为 `18032/280s`，相对上一根 compiled sample-energy `+396/+16s`，
+  且 `280s<300s`。这是当前唯一工作父和最优已知可复现完整 solution；官方平台未单独返回计分
+  SHA 的事实继续透明记录。
+- 上一根 compiled sample-energy、v189、L28、A2、AC0 只作为历史对照或机制证据，不再形成并行父线。
 
 ## 2. 指标裁决
 
