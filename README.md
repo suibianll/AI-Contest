@@ -16,8 +16,8 @@ compiled sample-energy 为 `17636 / 264s`。官方硬限 300s，提交次数无�
 
 ## 当前评测口径
 
-使用 `evaluator/eval.py` 与 Qwen3.5-4B 输入缓存；官方前只跑目标侧 shard0 冒烟，完整六 shard
-（336 Linear + 72 Attention）只在官方正向后归档或官方失败后回答明确诊断问题。
+使用 `evaluator/eval.py` 与 Qwen3.5-4B 输入缓存；算法开发阶段按活动计划直接运行目标侧完整六 shard
+（336 Linear + 72 Attention），不等待官方回传；本地结果只用于 hard-output 诊断和归档。
 4B 是结构代理，不是官方隐藏评测；官方样例数按用户确认的 50 Linear + 250 Attention 记录。
 本地只比较同 cache、协议、设备及精确 case 身份的父子最终输出 gain，不换算官方分数。
 

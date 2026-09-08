@@ -10,9 +10,9 @@
 
 当前 Attention 停滞的主因是代理目标与真实 hard quantization 输出错位：v190 大量翻码后 gate 变差，
 v191 梯度方向接近零，v192 训练 loss 明显下降但两个 hard-output 窗口均恶化；v195 修 bug 后本地
-变化微小，但完整官方结果为 `18053/289s` 并已 RETAINED。新计划先完成标准 Linear 官方归因，同时直接启动 GQA×64-block hard reciprocal 搜索，
-所有候选通过真实 HiF4 encode/decode 和最终 Attention output 选择；不再增加 STE/Adam/矩阵指数训练。
-第一张 Attention 卡后执行 Linear sample-energy 校准融合，为完整组合释放时间。
+变化微小，但完整官方结果为 `18053/289s` 并已 RETAINED。活动计划本轮已按真实 HiF4 encode/decode
+和最终 Attention output 完成 A1/v199、A3/v201、A4/v203，以及 Linear L-T1/v202；候选均已归档，
+未等待官方回传，根保持 v195。
 
 ## 历史计划索引（仅证据）
 

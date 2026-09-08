@@ -22,7 +22,7 @@
 > “最后一个配额”等表述全部失效，见
 > [`stale-information-inventory-2026-09-05.md`](stale-information-inventory-2026-09-05.md)。
 
-## 0.1 当前计划状态（2026-09-08）
+## 0.1 当前计划状态（2026-09-09）
 
 当前只按[单一完整方案计划](superpowers/plans/2026-09-08-single-solution-optimization-plan.md)推进：
 
@@ -60,9 +60,15 @@
 - 当前活动计划认定 Attention 停滞的主因是代理目标与真实 hard-output 错位：v190 大量翻码但 gate
   变差，v191 方向信号接近零，v192 训练 loss 下降但真实输出恶化。标准 Linear 的
   v195/v191/v190/v192 官方归因继续一次性完成，但不再作为优化主线。
-- 下一张主卡为 A1/v199：GQA×64-block 的真实翻码边界 reciprocal 搜索，直接用 hard HiF4 最终
-  Attention output 选择；随后执行 L-T1/v202，将 Linear sample-energy 统计融合进已有校准遍历以
-  释放完整根时间。A1结果决定继续64+8 hierarchy还是改 hard-logit residual 排序。
+- A1/v199 已完成：真实 4B 六 shard 中边界可达，4/6 层产生接受状态，但代理整体相对根
+  `−0.0000729515`，不替换根。
+- A3/v201 已完成：保留 A1 边界、改用 hard-logit residual + softmax Jacobian/V 排序，4/6 层产生接受状态，
+  代理整体 `−0.0001206117`，不替换根。
+- L-T1/v202 已完成：Linear 336 case 逐位等价，动态输出逐位一致；总 API 时间仅诊断级波动，
+  不作为降时晋级，不替换根。
+- A4/v203 已完成：合法 Q/K hierarchy 邻码联合 hard-output 选择仅在 shard5 发生变化，六 shard
+  代理整体 `−0.0010964882`，校准成本上升，不替换根。上述候选均为 `unregistered/NA`，下一步不再
+  重试 reciprocal/邻码族。
 
 以下内容是历史证据索引，不提供当前下一步指令。
 
