@@ -96,3 +96,70 @@ R0 已确认 objective-only fold 加权入口存在，但审计基于上一根�
 
 A22-2、A23、A2 等侧结果降级为历史机制证据。未来若采用其中机制，也必须重新写成“当前完整根 +
 一个增量”的机制卡，不按 R3→A22-2→A23 侧链执行。
+
+## 8. 从低维 A@W / QK 互逆设计中保留的机制方向
+
+本节只保存可在未来轮次注册的机制方向，不建立 Linear/Attention 双队列，也不授权同时实现。当前
+唯一 next candidate 仍是 §7 的 LC3 objective-only；它取得完整官方裁决后，才从下列未关闭方向中
+选择一张卡，并从届时最高分根重新构建。
+
+### D1：官方归一化的低维互逆 A/W 拟合
+
+保留“低维、连续乘积不变、最终合法 hard A@W 裁决”三点，固定数学边界为：
+
+\[
+T_L(\alpha)=\operatorname{diag}(\exp(P\alpha)),\quad
+A'=AT_L,\quad W'=WT_L^{-T},\quad A'W'^T=AW^T.
+\]
+
+其中 `P` 必须在机制卡注册时固定为一个低维结构基，并先与当前根已有 smooth/block/hierarchy 变换及
+历史实现做数学去重；不得在同一张卡中比较 block、8-group、4-group、SVD 或多种 rank。训练与 hard
+选择统一使用量纲一致的本地诊断目标：
+
+\[
+L_L=\frac1F\sum_f
+\frac{\operatorname{MSE}(Y_f,\hat Y_f)}
+{\max(\operatorname{MSE}(Y_f,Y_f^{STD}),\epsilon)}.
+\]
+
+连续提案必须编译到合法 weight params 与 activation state，最终仅允许一个完整候选。原设计中的
+`\hat Y=\sum_b g_bZ_b` 会改变连续模型函数，不归入本方向；若要研究直接输出校正，必须另立新机制，
+不能借用“互逆等价变换”的结论。
+
+### D2：GQA 共享的 Q/K 互逆动态范围重分配
+
+保留 GQA group 内共享的对角互逆参数化：
+
+\[
+T_A(\beta)=\operatorname{diag}(\exp(P_A\beta)),\quad
+Q'=QT_A,\quad K'=KT_A^{-T},\quad Q'K'^T=QK^T.
+\]
+
+第一张符合本方向的卡必须直接建立在届时完整根上，并满足：
+
+- `P_A` 和参数维度一次冻结；先与当前 R3、A22/A23、旧 RMS balance 和 hierarchy-aligned 路线去重，
+  数学等价则不注册；
+- V、Linear、既有 rotation/center 和其余训练主干冻结，只新增一个 Q/K 互逆自由度；
+- proposal 可使用解析 range balance 或固定低维 smooth-max，但二者不能同卡比较；训练轮数和候选数
+  在实现前固定，不使用 `2~5`、多 seed、多 rank 或多 hierarchy 的范围扫描；
+- calibration fold 只生成参数，独立 holdout 以真实 HiF4 Q/K hard encode 和 final Attention output
+  选择；必须记录连续 logits invariance、实际 Q/K scale/code 变化、attempted/accepted 和原子回退；
+- 正式结果只看包含当前根其余实现的完整官方包，不登记 Attention 侧分或侧父。
+
+### S1：固定码区间内的低维充分统计量加速
+
+保留二次型 sufficient statistics 作为实现手段，而不是独立算法或精确裁决。只有在部署 activation
+`X` 固定、`W(θ)=W0+Bθ` 仿射且量化 code/hierarchy 不变的局部区域内，才可使用
+`H=X^TX`、`c=X^Ty` 生成一个低成本 proposal。参数导致 activation、scale、hierarchy 或 code 改变后，
+该二次型不再精确；最终必须重新执行真实 hard encode 与输出 MSE，不得用二次型结果直接接受候选。
+
+### 明确不进入计划的内容
+
+- 官方 `4400/5000` 不换算为本地 `gain=0.88`；删除 `0.80/0.85/0.88` 本地晋级目标。
+- 不执行 L-AW1/L-AW2/L-AW3 或 A1/A2/A3/A4 阶梯，不按输出组 `32/64/128`、basis 来源、
+  hierarchy 层级或训练轮数做邻域扫描。
+- 不把 Linear 与 Attention 分别做到门槛后再组合，不使用 clean/侧基线，不从历史侧源码继续优化。
+- 外部 `21071/283s` 只证明机制方向可行；因源码与调用图未绑定，不能作为当前候选的时间保证。
+
+每次官方裁决后，仅允许从 D1/D2 中选择一个尚未被当前根包含或被具体实现关闭的机制；若两者均无
+可去重的新参数化，则保持根并先提出新的单义假设，不通过扩大 sweep 制造候选。
