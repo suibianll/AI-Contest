@@ -27,6 +27,7 @@
 | [v190](20260908_v190_attn-diag-reciprocal-balance_scoreNA_timeNA/result.md) | diag reciprocal balance | 官方 `TIMEOUT`（`>300s`）；本地 gate 拒绝、回退父 |
 | [v191](20260908_v191_attn-block-triangular-transport_scoreNA_timeNA/result.md) | block triangular transport | gate 接受；shard0 delta `-0.0001040638` |
 | [v192](20260908_v192_attn-full-reciprocal-residual_scoreNA_timeNA/result.md) | full reciprocal residual | gate 拒绝，回退父；shard0 delta `0` |
+| [v193](20260908_v193_attn-joint-qk-product_scoreNA_timeNA/result.md) | joint Q/K product | gate 拒绝，回退父；shard0 delta `0` |
 
 **Attention Correctness Hardening（2026-09-08）：** [AC0](continuous_attention_ac0-correctness-hardened/result.md)
 （`F817E4C2…`，父 R3 `A5C679D7…`）保留为 Attention 正确性参考：原子 Q/K-pair

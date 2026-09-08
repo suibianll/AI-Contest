@@ -1,0 +1,29 @@
+{
+  "run_id": "attn-joint-qk-product",
+  "mechanism": "full-symmetric-zero-trace-joint-qk-block-amax2-product",
+  "parent": "solution.py",
+  "parent_sha256": "12352efdd4e23cc5e1e17953008664fbaa5ea5d693373635fdafc4d28ce4e24e",
+  "source_sha256": "5c2dc19347741d3f2368eabb8b97a008eaec3064fe1f7da47bf20f62d5f299e0",
+  "train_steps": 32,
+  "learning_rate": 0.01,
+  "gradient_clip": 1.0,
+  "regularization": 0.001,
+  "adam_beta": [
+    0.9,
+    0.999
+  ],
+  "spectral_bound": "+/-log(2)/2",
+  "fit_windows": [
+    0,
+    1,
+    2
+  ],
+  "gate_windows": [
+    4,
+    5
+  ],
+  "formula": "loss=mean(aQ_new*aK_new/(aQ_parent*aK_parent+1e-12))+0.001*mean(S^2)",
+  "deployment": "Q_parent@exp(S), K_parent@exp(-S), c_parent@exp(-S)",
+  "candidate_count": 1,
+  "official_status": "unregistered/NA"
+}

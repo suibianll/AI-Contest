@@ -1,0 +1,43 @@
+"""Build the joint Q/K block-product candidate from the current root."""
+
+from pathlib import Path
+import hashlib
+import json
+
+
+HERE = Path(__file__).resolve().parent
+ROOT = HERE.parents[2]
+PARENT = ROOT / "solution.py"
+CANDIDATE_DIR = HERE / "candidate"
+CANDIDATE_DIR.mkdir(parents=True, exist_ok=True)
+
+candidate = CANDIDATE_DIR / "solution.py"
+source = (
+    PARENT.read_text(encoding="utf-8").rstrip()
+    + "\n\n"
+    + (HERE / "implementation.py").read_text(encoding="utf-8").strip()
+    + "\n"
+)
+candidate.write_text(source, encoding="utf-8")
+
+config = {
+    "run_id": "attn-joint-qk-product",
+    "mechanism": "full-symmetric-zero-trace-joint-qk-block-amax2-product",
+    "parent": "solution.py",
+    "parent_sha256": hashlib.sha256(PARENT.read_bytes()).hexdigest(),
+    "source_sha256": hashlib.sha256(candidate.read_bytes()).hexdigest(),
+    "train_steps": 32,
+    "learning_rate": 0.01,
+    "gradient_clip": 1.0,
+    "regularization": 0.001,
+    "adam_beta": [0.9, 0.999],
+    "spectral_bound": "+/-log(2)/2",
+    "fit_windows": [0, 1, 2],
+    "gate_windows": [4, 5],
+    "formula": "loss=mean(aQ_new*aK_new/(aQ_parent*aK_parent+1e-12))+0.001*mean(S^2)",
+    "deployment": "Q_parent@exp(S), K_parent@exp(-S), c_parent@exp(-S)",
+    "candidate_count": 1,
+    "official_status": "unregistered/NA",
+}
+(HERE / "config.json").write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
+print(json.dumps(config, indent=2))
