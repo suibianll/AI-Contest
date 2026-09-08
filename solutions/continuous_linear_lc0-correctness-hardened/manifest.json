@@ -4,11 +4,13 @@
   "parent_sha256": "44D7E964F82646331E4509996FFFEAB84E4FE0B3870528D45F25ED953EC93AB5",
   "source_sha256": "E702D7C1F087097906E752DEFA5CBFF05C2E41585883B0EC8D5E4F937AA4AF3D",
   "created_at": "2026-09-08",
-  "status": "UNREGISTERED_LOCAL_CORRECTNESS_CANDIDATE",
+  "status": "OFFICIAL_RETAINED_AS_CANDIDATE (4614/294s; +3 vs L28; 294s < 300s)",
   "official": {
-    "status": "unregistered/NA",
-    "score": null,
-    "time_seconds": null
+    "status": "PASS (+3 vs L28 4611/286s; 294s < 300s, 6s margin)",
+    "score": 4614,
+    "time_seconds": 294,
+    "reported_by": "user",
+    "reported_at": "2026-09-08"
   },
   "local_proxy": {
     "protocol": "proxy-v3",
@@ -21,10 +23,11 @@
     "parent_mean": 0.29109681032846757,
     "paired_delta": -0.00269465104662217,
     "status": "ok",
-    "reasonableness_issues": 0
+    "reasonableness_issues": 0,
+    "note": "local proxy negative but official +3; confirms 4B proxy does not rank official (record-only)"
   },
   "correctness_changes": [
-    "MSE_STD-normalized A@W calibration objective",
+    "MSE_STD-normalized A@W calibration objective (omega_f = 1/(F*numel*MSE_STD_f))",
     "strict activation shape checking",
     "no silent activation GPTQ fallback",
     "canonical zero sign writeback",
@@ -36,5 +39,6 @@
     "targeted_pytest": "10 passed",
     "standard_codec_parity_max_abs": 0.0,
     "six_api_import": "PASS"
-  }
+  },
+  "verdict_analysis": "MSE_STD-normalized A@W objective is the confirmed-positive change (+3 official). Matches the directive's omega_f = 1/MSE_STD suggestion. Time 294s leaves only 6s margin to 300s - cannot combine with Attention. Registered as retained candidate; L28 remains time-parent for combination."
 }
