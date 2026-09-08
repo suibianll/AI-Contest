@@ -1,8 +1,8 @@
 {
   "side": "linear",
   "branch": "continuous-linear",
-  "plan": "docs/superpowers/plans/2026-09-07-continuous-linear-attention-plan.md",
-  "workpackage": "docs/superpowers/plans/workpackages/2026-09-08-continuous-research-loop.md",
+  "plan": "docs/superpowers/plans/2026-09-08-single-solution-optimization-plan.md",
+  "workpackage": "SUPERSEDED; no independent Linear workpackage",
   "created": "2026-09-07",
   "parent": {
     "label": "L28",
@@ -77,7 +77,8 @@
       "scored_sha256": null
     }
   },
-  "next_action": "P0 first: bind or reject the reported full-candidate result 17636/264s against its official scored SHA. Then deduplicate L31 vs L32 and register exactly one card from L4 time reference. L28 remains score parent (4611/286s; full fit 0.948587). Holdout and local api_seconds are record-only, not rejection gates.",
+  "next_action": "NO_SIDE_QUEUE; use the single full-solution plan and build any new Linear mechanism from root solution.py.",
+  "status": "SUPERSEDED_BY_SINGLE_FULL_SOLUTION",
   "recent_steps": [
     "2026-09-07: L23 whitened-residual-subspace math PASS + 4B shard0 local all-roles negative (commit b52dbee)",
     "2026-09-07: L23 直接拟合版六 shard 完成（336 例、Δmean -0.18、0/336/0，record-only）；脱离导入+CPU fuzz PASS；归档 solutions/continuous_linear_l23-residual-subspace/，注册官方探索",

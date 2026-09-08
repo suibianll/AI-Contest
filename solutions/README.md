@@ -1,16 +1,16 @@
 # HiF4 solutions archive
 
-> 最新Linear回传：**L28 官方 4611/286s（+4 vs L4 4607/247s，286s<300s）RETAINED，
-> L28 升级为新的 Linear 侧父**（残差交叉子空间 A@W 拟合 + 时间安全重构：批量 Cholesky、
-> eigh 替换 SVD、投影向量化）。此前 L23b（13639FB2）官方 TIMEOUT 关闭该复杂度实现。
+> 当前根与最优已知可复现完整方案为
+> [compiled sample-energy](20260906_linear-compiled-sample-energy_score-tie/result.md)：用户官方回传
+> `17636/264s`，根与归档逐位一致，SHA `D66128A6...B0F6`。平台未单独返回计分 SHA。
+> L28 `4611/286s` 与其他侧结果降为历史机制证据，不再形成并行父线。
 > [L28 回传记录](../logs/execution/2026-09-08-l28-official-result.md)、
 > [L23b 超时记录](../logs/execution/2026-09-08-l23b-official-timeout.md)。
 
 > 当前测试按[4B指引](../docs/4b-panel-testing-guide.md)执行。本文历史0.5B、OOD、跨模型和时间预测结果仅作证据，不构成新测试命令或门禁。
 
-> 完整方案身份分开记录：根运行父仍是 v189 `17616/275s`；compiled sample-energy 已有用户回传
-> `17636/264s`，但官方计分 SHA 尚未与归档 SHA `D66128A6...B0F6` 单独核验，因此当前状态为
-> **REPORTED_BETTER / IDENTITY_PENDING**，核验前不替换根父，也不得写成已确认当前根。
+> 上一完整父 v189 为 `17616/275s`。当前执行只以根完整方案为父，官方前仅做六 API smoke 与
+> 目标侧 shard0；完整六 shard 只在官方正向后归档或为明确失败诊断运行。
 
 **Attention Correctness Hardening（2026-09-08）：** [AC0](continuous_attention_ac0-correctness-hardened/result.md)
 （`F817E4C2…`，父 R3 `A5C679D7…`）保留为 Attention 正确性参考：原子 Q/K-pair
@@ -21,13 +21,13 @@ attention-only vs R3：Δmean +0.003501 / L1 0.011264（72 case，34+/26−/12=�
 arm 一致，L15 边际 gate 翻转（R3 identity→AC0 rotation）。**官方回传 14395 / 258s**
 （相对 R3 −10/+20s；未触发 <−20 停止门；258s<300s 硬限；A29 骨架与 AC0 同 SHA，
 结果绑定 AC0）。[A29 骨架](continuous_attention_a29-boundary-output/result.md) 只是 AC0 逐位复制；
-真正 A29 实现 `v163_attention_a29-final-residual-s` 已官方 TIMEOUT，当前下一卡为 A30。
+真正 A29 实现 `v163_attention_a29-final-residual-s` 已官方 TIMEOUT；旧 A30/A31 队列已暂停。
 
-最新官方回传：[Attention A21-1](continuous_attention_anchor21-a1/official-result.json) **14199/244s，OFFICIAL_REJECTED**，相对R3 −206/+6s；源码SHA `870d5848f95887307ad7faa6364b5d7f7480f5b7be6001c812c44ead02bdb48a`。根v189与Attention官方最佳A2未替换。
+最新 Attention 侧历史回传：[Attention A21-1](continuous_attention_anchor21-a1/official-result.json) **14199/244s，OFFICIAL_REJECTED**，相对R3 −206/+6s；源码SHA `870d5848f95887307ad7faa6364b5d7f7480f5b7be6001c812c44ead02bdb48a`。
 
 > **Historical snapshot (2026-09-06; not current instructions):** the superseded umbrella plan was
 > [independent Linear / Attention optimization from v162](../docs/superpowers/archive/plans/2026-09-06-v162-independent-linear-attention-plan.md).
-> Current execution uses the continuous research loop linked from `docs/superpowers/plans/README.md`.
+> Current execution uses the single full-solution plan linked from `docs/superpowers/plans/README.md`.
 > The following entries are historical execution records only.
 > [Linear compiled robust calibration-window max block order](20260906_linear-compiled-robust-window-order_rejected/result.md)
 > was closed as **CLOSED / R1_REJECTED** after shard0 Linear mean/median deltas of
@@ -40,7 +40,7 @@ arm 一致，L15 边际 gate 翻转（R3 identity→AC0 rotation）。**官方�
 > was closed as **CLOSED / R3_REJECTED_SCORE_TIE**: its direct-core fresh default Overall
 > `0.688994940507` tied the measured local high, while the official-time predictor passed at
 > `279.445203s`. The user later reported an official result of `17636/264s` (`+20/-11s` vs v189);
-> the original local score-tie decision is retained, and the root remains v189.
+> the original local score-tie decision is retained as history; this archive is now the root working parent.
 > [Linear dynamic 32-row block-energy act-order](20260906_linear-dynamic-block-energy32_time-rejected/result.md)
 > was closed as **CLOSED / R3_REJECTED_TIME**: its fresh default Overall was `0.688652578052`,
 > below the measured local high `0.688994940507`, and the official-time predictor was
@@ -65,7 +65,7 @@ arm 一致，L15 边际 gate 翻转（R3 identity→AC0 rotation）。**官方�
 > was closed as **CLOSED / R2_REJECTED** after the fresh default gate. The previous non-causal
 > logit-gain fitting was closed as **CLOSED / R1_REJECTED**. The recovered fixed-order candidate is archived as
 > [v189](20260906_v189_static-actorder-hdiag_recovered_scoreNA_timeNA/result.md): official
-> `17616/275s`, RETAINED as the current full parent; the root is now v189.
+> `17616/275s`, RETAINED as the previous full parent.
 > The fixed-state output-aware JDRQ integration is closed as **CLOSED / J1_REJECTED** after
 > 112 paired Linear cases were negative; see the
 > [execution record](../logs/execution/2026-09-06-linear-fixed-state-output-aware-jdrq-plan.md)
@@ -98,7 +98,7 @@ arm 一致，L15 边际 gate 翻转（R3 identity→AC0 rotation）。**官方�
 > output-objective diagnostics, and gated candidate validation. The completed codebook
 > plan is archived; its broad saturation claims are superseded by this
 > [evidence audit](../logs/execution/2026-09-05-next-plan-evidence-audit.md).
-> The root remains official v189 `17616/275s`; v180 `17597/242s` is the time-budget parent.
+> Historical snapshot only: v189 was `17616/275s`; v180 was the `17597/242s` time-budget reference.
 > The previous system-identification design is archived as superseded; no new solution version is assigned.
 
 > **Rule correction (2026-09-05):** official submissions are unlimited. Historical

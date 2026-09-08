@@ -6,25 +6,17 @@
 不再运行 0.5B、逐候选 OOD、GPT-2/opt 或 fresh-default 计时；本地时间公式和 280s 门退役。
 官方提交无限制，官方硬限 300s。评估实现说明见 [proxy-v3](../../proxy-v3.md)。
 
-**当前唯一活动总计划：** [Linear / Attention持续优化](2026-09-07-continuous-linear-attention-plan.md)（已改为持续研究循环）。
-当前明细：[2026-09-08 持续研究循环（误差账本驱动）](workpackages/2026-09-08-continuous-research-loop.md)。
-用户指定：Linear校准拟合gain≥0.9，Attention独立窗口gain≥0.9；由其他执行子代理持续实施并及时commit/push。
-循环机制：误差账本（Linear E1–E4 / Attention F1–F5）定位最大可改变误差源 → 代理自行补一张有实质区别的机制卡
-（含改变什么/为何有效/如何证伪/去重四项比对）→ 一卡一个固定配置验证 → 归档commit/push与官方探索 →
-每轮必留 next_card。停止条件仅三条：达标0.9、缺不可替代外部输入、去重后无可执行新假设，后两条须列具体阻碍。
-旧[双侧0.9执行任务书](workpackages/2026-09-08-dual-side-09-execution.md)降级为证据与P0事务来源，不再提供队列指令。
-两份Linear归档已明确为旧L23 timeout与L23b；所指是Git提交推送，旧超时版不重复提交官方。
-Linear侧官方进展（2026-09-08）：L23b TIMEOUT后L28时间安全重构（批量Cholesky+eigh替换SVD+投影向量化）
-官方 **4611/286s**（+4 vs L4 4607/247s，286s<300s）RETAINED，**L28 升级为新 Linear 侧父**；
-L28 完整校准 fit_gain `0.948587` 已达目标。根运行父仍为 v189；compiled sample-energy 用户回传
-`17636/264s`，官方计分 SHA 待单独核验，核验前状态为 `REPORTED_BETTER / IDENTITY_PENDING`。
-Attention A25官方14057/254s退步，A23 14437/276s为研究父，A2 14440/274s为最高对照。
-AC0（correctness-hardened）官方 14395/258s（2026-09-08）：相对 R3 14405/238s −10/+20s，
-未触发 A29 停止门（<−20）；AC0 只作正确性参考。真实 A29 实现官方 TIMEOUT，AC0 同 SHA 骨架
-不得继承 A29 身份；Attention 当前下一卡为 A30。
-任务状态：RULES_UNIFIED / NEXT_A30；当前唯一执行队列为明细§7。Linear 的 L29-Q/G 与 L30 已拒绝，
-先核验 `17636/264s` 身份，再从 L31/L32 中只注册一张；Attention 当前为 A30，A31 随后；共享码语义仍待单独授权。
-新收益卡采用 score/time 双父：Linear 从 L4 247s、Attention 从 R3 238s 构建，L28/A2作为必须超越的高分对照。
+**当前唯一活动计划：** [单一完整方案优化](2026-09-08-single-solution-optimization-plan.md)。
+
+当前根和唯一工作父为 compiled sample-energy，SHA
+`D66128A62E7E068EDC50C91F4D8E212F586A6EDCAEE5BEA7D3564166E258B0F6`；仓库记录的用户官方回传
+为 `17636/264s`，相对 v189 `+20/-11s`。官方平台未单独返回计分 SHA，按用户回传与归档关联
+透明记录，不再因此保留两个并行工作父。
+
+Linear/Attention 双侧独立 `gain≥0.9`、误差账本、强制 next_card、L31/L32 与 A30/A31 队列全部暂停并
+降级为历史证据。当前只从完整根建立一个候选、加入一个机制、做六 API 合法性与目标侧 shard0，
+然后由官方总分和官方 300s 裁决。`calibration_fit_gain`、4B paired、holdout 和本地时间均只作诊断，
+不再承担候选排序或提交门禁。
 
 ## 历史计划索引（仅证据）
 

@@ -18,8 +18,8 @@ full-attention 层；不能用旧“每 shard 8 个 Attention”推断当前覆�
 ## 分析与裁决
 
 `evaluator/proxy_v3_analyze.py --baseline <parent.json> --candidate <candidate.json>` 提供配对
-均值、中位数、总 L1、尾部、分组、control 和 API 热点。通用符号门为 Δmean>0 且 L1<0.02；
-持续优化两个工作包另算负向损失及 split 指标，不能直接用通用 reject 代替专项裁决。
+均值、中位数、总 L1、尾部、分组、control 和 API 热点。这些统计只用于合法性、可达性与失败诊断，
+不再构成候选排序、提交或晋级门；正式裁决只看官方总分与官方 300s。
 
 本地时间预测和 280s 门已移除；旧 JSON 字段 predicted_official_seconds/under_280_gate
 为兼容读取保留为 null。分析器通过不代表官方晋级或完整提交检查完成。

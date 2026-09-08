@@ -1,6 +1,6 @@
 # HiF4 竞赛执行规则
 
-> 最后整理：2026-09-07。本文件只保留当前基线、长期约束和工作入口。
+> 最后整理：2026-09-08。本文件只保留当前基线、长期约束和工作入口。
 > 计划进度、逐版本结果和实验细节由下列文档维护，不在此追加流水账。
 
 ## 1. 工作范围与信息入口
@@ -24,18 +24,18 @@
 
 | 用途 | 版本 | 官方分数 / 时间 | 说明 |
 |---|---|---|---|
-| 完整官方父、低成本候选起点 | v189 | 17616 / 275s | RETAINED，根 `solution.py` |
-| 已回传但待身份绑定的完整候选 | compiled sample-energy | 17636 / 264s | 用户回传，优于 v189；官方计分 SHA 尚未与归档 SHA `D66128A6...B0F6` 单独核验，核验前不替换根父 |
-| 高复杂度新机制的时间预算父 | v180 | 17597 / 242s | 比 v189 快 33s、少 19 分 |
-| Linear 侧官方父 | L28（continuous_linear_l28-proj-vectorized） | 4611 / 286s | 2026-09-08 RETAINED，+4 vs L4；残差交叉子空间 A@W 拟合 + 时间安全重构 |
+| 当前完整工作父、最优已知可复现方案 | compiled sample-energy | 17636 / 264s | 用户官方回传；根 `solution.py` 与归档逐位一致，SHA `D66128A6...B0F6`；平台未单独返回计分 SHA |
+| 上一完整官方父 | v189 | 17616 / 275s | 历史稳定对照，SHA `26120224...17AF` |
+| 历史时间参考 | v180 | 17597 / 242s | 只作复杂度证据，不再作为候选父 |
+| Linear 侧历史结果 | L28（continuous_linear_l28-proj-vectorized） | 4611 / 286s | +4 vs L4；只作机制证据，不再作为并行父 |
 | 历史侧隔离父 | Linear v166 / Attention v168 | 4590 / 226s；14005 / 210s | 仅用于明确的侧隔离计划 |
-| Attention 正确性参考 | AC0（continuous_attention_ac0-correctness-hardened） | 14395 / 258s | 2026-09-08 官方回传；相对 R3（14405/238s）−10/+20s；A29 骨架与 AC0 同 SHA，但不是 A29 机制分数 |
+| Attention 历史正确性参考 | AC0（continuous_attention_ac0-correctness-hardened） | 14395 / 258s | 相对 R3（14405/238s）−10/+20s；只作历史证据 |
 | Attention A29 实际机制实现 | a29-final-residual-s | TIMEOUT / >300s | 与 AC0 骨架分开；只关闭该高成本实现，不能把 AC0 的 14395 记为 A29 分数 |
-| 用户确认的榜首锚点 | 源码、配置未知 | 21765 / 290s | 距 v189 4149 分，不是本地实验结果 |
+| 用户确认的榜首锚点 | 源码、配置未知 | 21765 / 290s | 距当前工作父 4129 分，不是本地实验结果 |
 | 用户确认的成功机制锚点 | A@W拟合 + Q/K互逆scale学习 | 21071 / 283s | 外部用户确认，源码/配置/SHA待绑定，不替换根父 |
 
-- v189 官方计分 SHA256：`261202248A0146A2EE45F3DF60BD1979BB8171B7C162921013B0024C848617AF`。
-  至榜首 290s 锚点的余量为 15s；官方硬限为 300s；本地时间预测和提交时间门已退役。
+- 当前根 SHA256：`D66128A62E7E068EDC50C91F4D8E212F586A6EDCAEE5BEA7D3564166E258B0F6`。
+  当前官方回传时间距硬限 36s；官方硬限为 300s；本地时间预测和提交时间门已退役。
 - 活动计划及阶段只以[计划入口](docs/superpowers/plans/README.md)为准，不在此复制快照。
 - 官方提交次数**无限制**；历史配额、剩余次数等表述全部失效。
 - 用户已确认官方评测稳定；禁止为确定性、时间噪声或批处理研究重复提交相同 SHA 或逐位等价 A/B。
@@ -57,8 +57,8 @@
 - Linear 目标是实际输出误差 `XW^T - Q(XR)Q(WR^{-T})^T`；连续变换必须保持乘积不变，
   Hessian/Gram 在最终变换与部署权重坐标系计算。operand MSE、importance 和均值不能替代输出证据。
   A@W 拟合本身没有官方禁令，仍须满足合法 state 与时间约束。
-- Attention、Linear 分开改并检查未修改侧 control。侧隔离实验以 v162 standard 冻结非目标侧；
-  两侧分别取得官方结果后才组合检查 interaction。完整父上的单侧增量按活动计划冻结另一侧。
+- 每个候选仍只改 Linear 或 Attention 一侧并检查未修改侧 control，但必须从当前完整根构建和提交；
+  不再维护侧隔离父、侧分数晋级线或把两个侧结果机械组合。
 - 每个版本一个可解释机制、一个预注册配置，候选数量固定；失败换机制，不扫
   threshold/seed/alpha/offset/fold/coverage/候选数量等邻域，不增加模型/layer/role 专属路由。
 - Attention校准、选择、验证分离：只用calibration folds学参数，以独立holdout验证；多折固定聚合。
@@ -73,11 +73,10 @@
   `overall_mean` 是实际 case 等权均值，不是准确率或官方总分，不拟合两侧权重。
 - **禁止把本地分数换算官方分数**。本地只做机制否定、误差定位、符号/风险和同机成本诊断。
   本地与官方排序反转后，停止用该 proxy 为同一路线晋级。
-- 通用符号/风险门为 `Δmean > 0 且 L1 < 0.02`，L1 是逐 case gain 平均绝对变化。
-  v188 已出现通过门禁但官方 −4；门禁不保证官方非负，不再宣称“零误”。
-- 两侧专项负向损失政策由 [持续优化计划](docs/superpowers/plans/2026-09-07-continuous-linear-attention-plan.md)
-  承接：总 L1 只记录，改用 `mean(max(-Δgain,0))<0.02`；独立验证/control不变，时间只以官方300s裁决；历史OOD按下条解释。
-  仅适用于该计划两个工作包；通用分析器仍用总L1时，按计划另算专项指标，不能直接套用reject。
+- `Δmean`、L1 与分位数只作诊断。v188 已出现本地门通过但官方 −4，故它们不再作为提交或晋级门。
+- 旧双侧持续计划的专项负向损失、`gain≥0.9`、误差账本和 side-score 队列已退役；当前按
+  [单一完整方案计划](docs/superpowers/plans/2026-09-08-single-solution-optimization-plan.md)执行。
+  Linear `calibration_fit_gain`、Attention 4B paired、holdout 和 L1 均只作诊断，不作官方候选排序或提交门。
 - OOD 只作风险诊断，不作提交或方向关闭的一票否决：`gap = gain_in - gain_ood`，Δ 为候选减直接父。
   `|Δgap| > 0.01` 仅提示收益不对称；负值表示 OOD 增益更多，正值不等于 OOD 实际退化。
   同时记录 ID/OOD 的 Δgain、负向 case 与最坏分组；父子须用各自同 SHA 的 in-dist/OOD 配对。
@@ -108,14 +107,11 @@
 - 单侧运行严格隔离 API，保持共享 state 调用图，不能按 case 制造 oracle。官方 mini 只检查接口、
   合法性和真实形状复杂度，不选算法/参数。
 
-1. 固定父版本及 immutable JSON/report；已有同口径结果不重跑，使用 `--reuse-existing` 零 API 重放。
-2. 做目标侧最小 smoke，检查六 API、合法 state、有限输出、缓存及机制 reachability。
-3. 按活动计划阶段运行目标侧 shard，候选用 `--baseline-solution`；精确匹配
-   `(layer, role, test_window, split, length)`、`mse_standard`、`reference_energy`。
-4. 记录 mean/median、q25/q75、worst-quartile、正负 case、validation/test 同号率、最坏分组、
-   interaction、control 与 API 时间。Linear 看最终 Q(A)Q(W)^T；Attention 看 Q/K/V、QK/QKV、
-   logits/probability 及最坏长度/层。旧单 operand 混合坐标诊断不等于同坐标纯量化误差。
-5. 前置阶段通过后完成目标侧 4B 六 shard 与冻结侧 control；只有集成调用图检查运行完整双侧。
+1. 固定当前完整根及 SHA；已有同口径结果不重跑，使用 `--reuse-existing` 零 API 重放。
+2. 一个候选只加一个机制和一个固定配置；做六 API、合法 state、有限输出、reachability 和 control smoke。
+3. 官方前只跑目标侧 shard0 排除接口、no-op 与灾难性错误；本地统计不排序候选。
+4. 合法且可达的单一代表候选交官方裁决；不重复相同 SHA 或逐位等价实现。
+5. 官方正向后才做目标侧六 shard 归档和必要的双侧 interaction audit；失败后只为明确根因运行诊断。
 6. 保存 JSON 和 Markdown report，分别写 local proxy、API total、wall time、official 状态。
    接口/环境失败记 `ERROR`，机制否定记 `REJECTED`，官方明确超时记 `TIMEOUT`，
    官方未知记 `unregistered/NA`，不能填本地秒数。无实质算法/复杂度变化不分配版本号。
@@ -124,7 +120,7 @@
 命令模板（使用 CUDA venv，系统 Python 为 CPU-only；输出目录按本次运行命名）：
 
 ```powershell
-.venv\Scripts\python.exe evaluator/eval.py --solution solution.py --linear-only --shards 0,1,2,3,4,5 --stop-after-nonpositive 7 --cache artifacts\official_eval\cache\qwen3.5-4b-proxy-v2.pt --calibration-cache-mode auto --algorithm-device cuda --output-dir artifacts\proxy_v3\<run-name>
+.venv\Scripts\python.exe evaluator/eval.py --solution <candidate.py> --baseline-solution solution.py --linear-only --shards 0 --cache artifacts\official_eval\cache\qwen3.5-4b-proxy-v2.pt --calibration-cache-mode auto --algorithm-device cuda --output-dir artifacts\proxy_v3\<run-name>
 ```
 
 Attention 改为 `--attention-only`；完整集成审计改为 `--scenario both`。

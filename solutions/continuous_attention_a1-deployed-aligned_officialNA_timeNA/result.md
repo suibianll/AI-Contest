@@ -1,6 +1,6 @@
 # continuous_attention A1：部署对齐旋转训练（本地新高，待官方）
 
-> 日期：2026-09-07。父：R2c/R3 机制（官方 14387.8 / 14405）。隶属[持续优化总计划](../../docs/superpowers/plans/2026-09-07-continuous-linear-attention-plan.md)。
+> 日期：2026-09-07。父：R2c/R3 机制（官方 14387.8 / 14405）。隶属[已归档持续优化总计划](../../docs/superpowers/archive/plans/2026-09-07-continuous-linear-attention-plan-superseded.md)。
 > 唯一机制变化（A1 卡）：训练硬前向改用**旋转插入点的真实坐标**（栈变换复刻 U，逐位对照
 > 通过）+ **父实际精化编码**（importance/offsets/refinement 全量）+ **部署量化的 V**——
 > 修复 R2c 的训练/部署错位（R2c 训练用标准编码器代理 + 标准 V）。配置完全继承 R2c

@@ -1,4 +1,4 @@
-# 4B 面板测试指引（2026-09-07 定版；20:26 修订：不设本地时间门禁）
+# 4B 面板测试指引（2026-09-08 单一完整方案版）
 
 > 适用前提：Qwen3.5-4B 结构代理面板 R0–R2 验收完成（执行记录
 > `logs/execution/2026-09-07-qwen35-4b-panel-r0-r1-r2.md`）。用户指令链：
@@ -6,7 +6,7 @@
 > ②「不要用0.5B的，全部使用4B进行测试」（0.5B 面板退役）；
 > ③「不设本地时间门禁——本地时间根本不准」（20:26）。
 > 本文件回答「现在测试应该怎么测」；与
-> [持续优化计划](superpowers/plans/2026-09-07-continuous-linear-attention-plan.md)冲突时以本文件为准。
+> [单一完整方案计划](superpowers/plans/2026-09-08-single-solution-optimization-plan.md)冲突时以本文件为准。
 
 > 当前规则优先级：`AGENTS.md` → 本指引 → 唯一活动计划/当前工作包 → workbench 状态文件。
 > 状态文件不得新增门禁；冲突先修正文档和状态，不能在候选间临时切换口径。
@@ -33,7 +33,7 @@
   panel `qwen35-4b-panel-v1`，24 层 = 18 DeltaNet + 6 full-attention，16Q/4KV/hd256）。
 - 构成：**Linear 336 例**（24 层×7 role×2 窗）: **Attention 72 例**（6 FA×12 窗）。
   DeltaNet 不进 attention 场景是官方 Q/K/V API 合同的结构约束。
-- **v189 根父基线**（SHA `26120224…`，manifest
+- **历史 v189 基线**（SHA `26120224…`，manifest
   `artifacts/proxy_v3/qwen35-4b-baseline-v189-attn72/`）：
 
 | 侧 | cases | mean | median | min | max |
@@ -42,51 +42,45 @@
 | Attention | 72 | 0.526517 | 0.544639 | 0.228 | 0.818 |
 
 - 同 cache/协议/SHA 的已有结果一律 `--reuse-existing` 零 API 重放，不重跑。
-- 换父（如 anchor22-a2 归档父）：用 `--baseline-solution <父.py>` 同 run 配对，
-  父的基线读数以该 run 的 baseline manifest 为准。
+- 当前候选统一以根 `solution.py` 为父；侧隔离归档不再切换为工作父。
 - 参考成本（仅量级参考，非门）：v189 fresh 全量 api_total 992.1s（同机；
   校准缓存命中的 run 会显著偏小，属正常）。
 
 ## 2. 机制候选测试流程（每个候选）
 
-**第 1 步：定侧与父。** Linear 候选 `--linear-only`；Attention 候选 `--attention-only`。
-父源码：根 `solution.py`（=v189）或对应归档父。非目标侧保持冻结。
+**第 1 步：定侧与父。** 所有候选只从当前根完整父构建。Linear 候选 `--linear-only`；
+Attention 候选 `--attention-only`，非目标侧保持冻结。L28/A2/R3/AC0 不再作为并行工作父。
 
 **第 2 步：shard0 冒烟（~3–5 分钟）。** 目标侧 API 检查 legal state、coverage true、
 无形状崩溃、机制 reachable；六 API 的导入/接口检查与非目标侧 control 单独完成，单侧运行不调用另一侧 API。
 
-**第 3 步：全六 shard paired（首跑 fresh 校准约 22 分钟；同 SHA 校准缓存命中后约 10 分钟）。**
+**第 3 步：官方前只做目标侧 shard0。** 全六 shard 不再是提交门；仅在官方正向后做归档复核，
+或在官方失败后为回答一个明确诊断问题时运行。
 
 ```powershell
-.venv\Scripts\python.exe evaluator/eval.py --solution <candidate.py> --baseline-solution <parent.py> --linear-only --shards 0,1,2,3,4,5 --stop-after-nonpositive 7 --cache artifacts\official_eval\cache\qwen3.5-4b-proxy-v2.pt --calibration-cache-mode auto --algorithm-device cuda --output-dir artifacts\proxy_v3\<run-id>\id
+.venv\Scripts\python.exe evaluator/eval.py --solution <candidate.py> --baseline-solution solution.py --linear-only --shards 0 --cache artifacts\official_eval\cache\qwen3.5-4b-proxy-v2.pt --calibration-cache-mode auto --algorithm-device cuda --output-dir artifacts\proxy_v3\<run-id>
 ```
 
-Attention 侧把 `--linear-only` 换 `--attention-only`、目录侧名换 `attention`。
-`--stop-after-nonpositive 7` 防止通用两 shard 截断固定六 shard；不是绕过最终裁决。
-已有结果的复核用 `--reuse-existing` 零 API 重放。
+Attention 侧把 `--linear-only` 换 `--attention-only`。已有结果的复核用 `--reuse-existing` 零 API 重放。
 
-**第 4 步：按侧判读。**
-- Linear最新用户指令：直接在全部4B校准数据做A@W低维拟合，不考虑泛化、不拆fit/select；
-  以合法部署后同数据拟合误差改善为收益条件，独立窗口Δmean/split/负向L1只记录，不阻止官方探索。
-  以下通用符号及负向损失门不用于否决该Linear工作包。
-- 通用符号门：`Δmean > 0 且 L1 < 0.02`（L1 = 逐 case gain 平均绝对变化）。
-- continuous-linear 计划两个工作包改用专项负向损失 `mean(max(-Δgain,0)) < 0.02`
-  （总 L1 只记录）；独立验证/control/隔离纪律不变。
-- 附带记录：mean/median/q25/q75、worst-quartile、正负零 case、validation/test 同号率、
-  最坏层/role/长度。
+**第 4 步：只判合法性与可达性。**
+- `calibration_fit_gain = mean_case(1-MSE_PLAYER/MSE_STD)` 公式保留，但只是校准集内拟合诊断；
+  不要求 `≥0.9`，不用于排序或否决。
+- Attention/Linear 的 Δmean、holdout、L1 和误差账本均只记录；本地符号不决定是否提交。
+- 附带记录 paired mean、正负零 case、最坏层/role/长度即可；只有明确诊断需要时再扩展统计。
 - 门通过 ≠ 官方非负（v188 教训）；本地正向不自动晋级。
 
 **第 5 步：记录。** JSON/report 归档 `artifacts/proxy_v3/<run-id>/`；执行日志写
-`logs/execution/`；按活动计划账本字段（run_id、side、SHA、case count、配对统计、
-attempted/accepted、next_action）。api_seconds 照 manifest 抄录即可；若候选
+`logs/execution/`；记录 run_id、目标侧、父子 SHA、case count、reachable/control 与官方状态。
+api_seconds 照 manifest 抄录即可；若候选
 api_total 相比父明显膨胀（如 >1.5×），提交说明标注「时间风险」——只是提示，
 不阻止提交。实质变更 commit & push（origin-ssh）。
 
 ## 3. 提交官方前检查单
 
-1. **4B按侧机制条件满足**：Linear为同校准数据合法部署拟合改善；Attention沿用配对符号/风险门。
+1. **4B目标侧 shard0**：接口、legal state、finite、reachable、非 no-op、非目标 API control。
 2. **合法性**：legal state（评测器强制）+ 脱离仓库单文件导入检查。
-3. **fuzz_official_contract.py**（训练类机制必跑）。
+3. **候选专用六 API 随机形状 contract smoke**（训练类机制必跑）。
 4. （提示，非门）候选 api_total 相比父明显膨胀 → 提交说明标注时间风险。
 5. 提交后登记：官方分数/时间/计分 SHA → 状态文档、版本索引、计划进度表；
    同时抄录该候选的 4B api_total（仅为将来积累参考数据，不构成预测）。

@@ -8693,6 +8693,29 @@ def hif4_calibration_and_quantize_weight(
                 best_offset_loss = total_loss
                 best_offsets = cand_offsets
 
+    compiled_sample_energy_order = None
+    if (
+        transformed_activation_samples
+        and in_features % _HIF4_BLOCK_SIZE == 0
+    ):
+        compiled_energy = torch.stack(
+            [
+                transformed.to(torch.float32).square().mean(dim=0)
+                for transformed in transformed_activation_samples
+            ]
+        ).mean(dim=0)
+        compiled_scores = (
+            compiled_energy * activation_importance
+        ).reshape(
+            in_features // _HIF4_BLOCK_SIZE, _HIF4_BLOCK_SIZE
+        ).sum(dim=1)
+        compiled_sample_energy_order = torch.argsort(
+            torch.nan_to_num(
+                compiled_scores, nan=0.0, posinf=0.0, neginf=0.0
+            ),
+            descending=True,
+        ).to(device="cpu", dtype=torch.int16).contiguous()
+
     activation_state = {
         "smooth_inv": smooth_inv_state,
         "permutation": permutation_state,
@@ -8706,6 +8729,7 @@ def hif4_calibration_and_quantize_weight(
         "accept_margin": _ACTIVATION_REFINE_ACCEPT_MARGIN,
         "max_refine_ratio": float(activation_ratio),
         "max_refine_blocks": _ACTIVATION_REFINE_MAX_BLOCKS,
+        "compiled_sample_energy_order": compiled_sample_energy_order,
         "rank1_u": _cpu_state_tensor(rank1_u),
         "rank1_v": _cpu_state_tensor(rank1_v),
         "residual_u": (
@@ -10994,5 +11018,326 @@ def hif4_dynamic_quantize_activation(
     except (RuntimeError, ValueError, TypeError, IndexError):
         pass
     return _STATIC_ACTORDER_BASE_DYNAMIC(
+        activation_quant, activation_scale, activation_state
+    )
+
+
+# Independent dynamic-order research arm: keep the v189 calibration state and
+# choose the GPTQ block visitation order from the current transformed sample.
+# The order is input-dependent, but the rule is fixed and uses no candidate
+# loop or additional state; all encoding and compensation remain parent code.
+_DYNAMIC_ACTORDER_BASE_DYNAMIC = hif4_dynamic_quantize_activation
+
+
+@torch.no_grad()
+def _dynamic_sample_energy_block_order(
+    dense: torch.Tensor,
+    state: dict[str, Any],
+) -> Optional[torch.Tensor]:
+    channels = int(dense.shape[-1])
+    if dense.ndim != 2 or channels % _HIF4_BLOCK_SIZE != 0:
+        return None
+    importance_state = state.get("importance")
+    if not torch.is_tensor(importance_state):
+        return None
+    importance = importance_state.to(
+        device=dense.device, dtype=torch.float32
+    ).reshape(-1)
+    if int(importance.numel()) != channels:
+        return None
+    energy = dense.to(torch.float32).square().mean(dim=0)
+    scores = torch.nan_to_num(
+        energy * importance,
+        nan=0.0,
+        posinf=0.0,
+        neginf=0.0,
+    )
+    blocks = channels // _HIF4_BLOCK_SIZE
+    return torch.argsort(
+        scores.reshape(blocks, _HIF4_BLOCK_SIZE).sum(dim=1),
+        descending=True,
+    ).to(device="cpu", dtype=torch.int16).contiguous()
+
+
+@torch.no_grad()
+def hif4_dynamic_quantize_activation(
+    activation_quant: torch.Tensor,
+    activation_scale: torch.Tensor,
+    activation_state: Any,
+) -> dict[str, torch.Tensor]:
+    if not isinstance(activation_state, dict):
+        raise TypeError("activation_state must be a dict")
+    if activation_state.get("gptq_block_order") is None:
+        return _DYNAMIC_ACTORDER_BASE_DYNAMIC(
+            activation_quant, activation_scale, activation_state
+        )
+    try:
+        channels = int(activation_quant.shape[-1])
+        if channels != int(activation_state.get("in_features", -1)):
+            raise ValueError(
+                "Activation hidden size does not match calibration state"
+            )
+        dense = _static_actorder_dense_from_state(
+            activation_quant, activation_scale, activation_state
+        )
+        order = _dynamic_sample_energy_block_order(dense, activation_state)
+        if order is not None:
+            local_state = dict(activation_state)
+            local_state["gptq_block_order"] = order
+            result = _static_actorder_reordered_gptq(dense, local_state)
+            if result is not None:
+                return result
+    except (RuntimeError, ValueError, TypeError, IndexError):
+        pass
+    return _DYNAMIC_ACTORDER_BASE_DYNAMIC(
+        activation_quant, activation_scale, activation_state
+    )
+
+
+# R4: compile the same sample-energy block order from calibration windows.
+# The dynamic sample-energy arm above remains the parent implementation for
+# provenance; this wrapper replaces only its online order calculation with a
+# fixed order learned from the two supplied calibration windows.
+# The core calibration already emits the compiled order; bypass the older
+# static-hdiag wrapper so it does not compute and overwrite a throwaway order.
+_COMPILED_SAMPLE_BASE_CALIBRATION = _STATIC_ACTORDER_BASE_CALIBRATION
+_COMPILED_SAMPLE_BASE_DYNAMIC = _STATIC_ACTORDER_BASE_DYNAMIC
+
+
+@torch.no_grad()
+def _compiled_sample_energy_block_order(
+    calib_activation_list: list,
+    state: dict[str, Any],
+) -> Optional[torch.Tensor]:
+    importance_state = state.get("importance")
+    if not torch.is_tensor(importance_state):
+        return None
+    importance = importance_state.to(dtype=torch.float32).reshape(-1)
+    channels = int(importance.numel())
+    if channels == 0 or channels % _HIF4_BLOCK_SIZE != 0:
+        return None
+    energy_sum = None
+    window_count = 0
+    for pair in calib_activation_list:
+        if not isinstance(pair, (tuple, list)) or len(pair) != 2:
+            return None
+        dense = _static_actorder_dense_from_state(
+            pair[0], pair[1], state
+        )
+        if dense.ndim != 2 or int(dense.shape[-1]) != channels:
+            return None
+        window_energy = dense.to(torch.float32).square().mean(dim=0)
+        energy_sum = (
+            window_energy
+            if energy_sum is None
+            else energy_sum + window_energy
+        )
+        window_count += 1
+    if energy_sum is None or window_count == 0:
+        return None
+    block_count = channels // _HIF4_BLOCK_SIZE
+    block_scores = (
+        (energy_sum / float(window_count)) * importance.to(energy_sum.device)
+    ).reshape(block_count, _HIF4_BLOCK_SIZE).sum(dim=1)
+    return torch.argsort(
+        torch.nan_to_num(
+            block_scores, nan=0.0, posinf=0.0, neginf=0.0
+        ),
+        descending=True,
+    ).to(device="cpu", dtype=torch.int16).contiguous()
+
+
+@torch.no_grad()
+def hif4_calibration_and_quantize_weight(
+    weight_quant: torch.Tensor,
+    weight_scale: torch.Tensor,
+    calib_activation_list: list,
+) -> dict[str, Any]:
+    result = _COMPILED_SAMPLE_BASE_CALIBRATION(
+        weight_quant, weight_scale, calib_activation_list
+    )
+    state = result["activation_state"]
+    order = state.get("compiled_sample_energy_order")
+    if not torch.is_tensor(order):
+        order = _compiled_sample_energy_block_order(
+            calib_activation_list, state
+        )
+    if order is None:
+        return result
+    state["gptq_block_order"] = order
+    state["gptq_block_order_compiled_sample_energy"] = True
+    print(
+        f"[COMPILED-SAMPLE-ENERGY] reachable=1 blocks={int(order.numel())}",
+        flush=True,
+    )
+    return result
+
+
+@torch.no_grad()
+def hif4_dynamic_quantize_activation(
+    activation_quant: torch.Tensor,
+    activation_scale: torch.Tensor,
+    activation_state: Any,
+) -> dict[str, torch.Tensor]:
+    if not isinstance(activation_state, dict):
+        raise TypeError("activation_state must be a dict")
+    if activation_state.get("gptq_block_order") is None:
+        return _COMPILED_SAMPLE_BASE_DYNAMIC(
+            activation_quant, activation_scale, activation_state
+        )
+    try:
+        channels = int(activation_quant.shape[-1])
+        if channels != int(activation_state.get("in_features", -1)):
+            raise ValueError(
+                "Activation hidden size does not match calibration state"
+            )
+        dense = _static_actorder_dense_from_state(
+            activation_quant, activation_scale, activation_state
+        )
+        result = _dynamic_fast_reordered_gptq(
+            dense, activation_state,
+            activation_state["gptq_block_order"],
+        )
+        if result is not None:
+            return result
+    except (RuntimeError, ValueError, TypeError, IndexError, KeyError):
+        pass
+    return _COMPILED_SAMPLE_BASE_DYNAMIC(
+        activation_quant, activation_scale, activation_state
+    )
+
+
+# R3 implementation-only optimization: argsort already returns a complete
+# permutation, so keep it on the algorithm device and avoid the CPU validation
+# and round-trip before block reordering.  The score formula and GPTQ path are
+# unchanged from the dynamic sample-energy candidate.
+@torch.no_grad()
+def _dynamic_sample_energy_block_order_fast(
+    dense: torch.Tensor,
+    state: dict[str, Any],
+) -> Optional[torch.Tensor]:
+    channels = int(dense.shape[-1])
+    if dense.ndim != 2 or channels % _HIF4_BLOCK_SIZE != 0:
+        return None
+    importance_state = state.get("importance")
+    if not torch.is_tensor(importance_state):
+        return None
+    importance = importance_state.to(
+        device=dense.device, dtype=torch.float32
+    ).reshape(-1)
+    if int(importance.numel()) != channels:
+        return None
+    energy = dense.to(torch.float32).square().mean(dim=0)
+    scores = torch.nan_to_num(
+        energy * importance,
+        nan=0.0,
+        posinf=0.0,
+        neginf=0.0,
+    )
+    blocks = channels // _HIF4_BLOCK_SIZE
+    return torch.argsort(
+        scores.reshape(blocks, _HIF4_BLOCK_SIZE).sum(dim=1),
+        descending=True,
+    ).to(device=dense.device, dtype=torch.int64)
+
+
+@torch.no_grad()
+def _dynamic_fast_reordered_gptq(
+    dense: torch.Tensor,
+    state: dict[str, Any],
+    order: torch.Tensor,
+) -> Optional[dict[str, torch.Tensor]]:
+    channels = int(dense.shape[-1])
+    if dense.ndim != 2 or channels % _HIF4_BLOCK_SIZE != 0:
+        return None
+    blocks = channels // _HIF4_BLOCK_SIZE
+    order = order.reshape(-1).to(device=dense.device, dtype=torch.int64)
+    if int(order.numel()) != blocks:
+        return None
+    h_inv_state = state.get("h_inv")
+    if h_inv_state is None:
+        return None
+    channel_order = (
+        order[:, None] * _HIF4_BLOCK_SIZE
+        + torch.arange(
+            _HIF4_BLOCK_SIZE, device=dense.device, dtype=torch.int64
+        )[None, :]
+    ).reshape(-1)
+    h_inv_ordered = h_inv_state.to(
+        device=dense.device, dtype=torch.float32
+    ).index_select(0, channel_order).index_select(1, channel_order)
+    dense_ordered = dense.index_select(-1, channel_order)
+
+    importance = state.get("importance")
+    if importance is not None:
+        importance = importance.detach().to(
+            device=dense.device, dtype=torch.float32
+        ).reshape(-1)
+        if int(importance.numel()) != channels:
+            return None
+        importance = importance.index_select(0, channel_order)
+
+    gram = state.get("gram")
+    gram_ordered = None
+    if gram is not None:
+        gram_ordered = gram.detach().to(
+            device=dense.device, dtype=torch.float32
+        ).reshape(blocks, 8, 2, 4, 4)
+        gram_ordered = gram_ordered.index_select(0, order).unsqueeze(0).expand(
+            int(dense.shape[0]), blocks, 8, 2, 4, 4
+        )
+
+    params = _activation_gptq_quantize(
+        dense_ordered,
+        h_inv_ordered,
+        importance=importance,
+        group_gram=gram_ordered,
+        search_offsets=state.get("offsets"),
+        error_threshold=float(state.get("error_threshold", 0.0)),
+        accept_margin=float(state.get("accept_margin", 0.0)),
+        max_refine_ratio=float(state.get("max_refine_ratio", 0.0)),
+        max_refine_blocks=int(state.get("max_refine_blocks", 0)),
+    )
+    inverse = torch.empty_like(order)
+    inverse[order] = torch.arange(blocks, device=dense.device)
+    return {
+        key: value.index_select(1, inverse)
+        for key, value in params.items()
+    }
+
+
+@torch.no_grad()
+def hif4_dynamic_quantize_activation(
+    activation_quant: torch.Tensor,
+    activation_scale: torch.Tensor,
+    activation_state: Any,
+) -> dict[str, torch.Tensor]:
+    if not isinstance(activation_state, dict):
+        raise TypeError("activation_state must be a dict")
+    if activation_state.get("gptq_block_order") is None:
+        return _DYNAMIC_ACTORDER_BASE_DYNAMIC(
+            activation_quant, activation_scale, activation_state
+        )
+    try:
+        channels = int(activation_quant.shape[-1])
+        if channels != int(activation_state.get("in_features", -1)):
+            raise ValueError(
+                "Activation hidden size does not match calibration state"
+            )
+        dense = _static_actorder_dense_from_state(
+            activation_quant, activation_scale, activation_state
+        )
+        order = _dynamic_sample_energy_block_order_fast(
+            dense, activation_state
+        )
+        if order is not None:
+            result = _dynamic_fast_reordered_gptq(
+                dense, activation_state, order
+            )
+            if result is not None:
+                return result
+    except (RuntimeError, ValueError, TypeError, IndexError):
+        pass
+    return _DYNAMIC_ACTORDER_BASE_DYNAMIC(
         activation_quant, activation_scale, activation_state
     )

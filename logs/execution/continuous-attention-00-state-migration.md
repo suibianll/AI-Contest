@@ -1,6 +1,6 @@
 # continuous-attention 状态迁移与官方结果登记（2026-09-07）
 
-> 契约：[持续优化总计划](../../docs/superpowers/plans/2026-09-07-continuous-linear-attention-plan.md)。
+> 历史契约：[已归档持续优化总计划](../../docs/superpowers/archive/plans/2026-09-07-continuous-linear-attention-plan-superseded.md)。
 > 原因：A 侧此前按 v162-independent 结构写状态，协调者新结构（workbench/continuous_attention/）
 > 看不到 R3/R2c/A2c 官方结果——本文件与 state.json/queue.md 完成迁移登记。
 

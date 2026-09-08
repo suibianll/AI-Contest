@@ -1,13 +1,12 @@
-# 当前状态：目标 21765，v189 官方保留并继续优化
+# 当前状态：单一完整方案 17636 / 264s
 
-> 最新Linear回传：**L28 官方 4611/286s（+4 vs L4 4607/247s，286s<300s）RETAINED，
-> L28 升级为新的 Linear 侧父**（残差交叉子空间 A@W 拟合 + 时间安全重构：批量 Cholesky、
-> eigh 替换 SVD、投影向量化）。此前 L23b 官方 TIMEOUT 已关闭该复杂度实现。[L28 回传记录](../logs/execution/2026-09-08-l28-official-result.md)、
-> [L23b 超时记录](../logs/execution/2026-09-08-l23b-official-timeout.md)。
+> 当前根 `solution.py` 已提升为 compiled sample-energy 完整方案，与归档逐位一致，SHA256
+> `D66128A62E7E068EDC50C91F4D8E212F586A6EDCAEE5BEA7D3564166E258B0F6`。仓库记录的用户官方
+> 回传为 `17636/264s`，相对 v189 `+20/-11s`；官方平台未单独返回计分 SHA，该边界继续保留。
 
 > 当前测试按[4B指引](4b-panel-testing-guide.md)执行。本文历史0.5B、OOD、跨模型和时间预测结果仅作证据，不构成新测试命令或门禁。
-> 当前规则优先级为 `AGENTS.md` → 4B 指引 → 唯一活动计划/工作包 → workbench 状态；
-> Linear 独立窗口和所有本地时间仅记录，均不得重新成为提交否决门。
+> 当前规则优先级为 `AGENTS.md` → 4B 指引 → [单一完整方案计划](superpowers/plans/2026-09-08-single-solution-optimization-plan.md)
+> → workbench 状态；侧队列和工作包不得重新定义门禁。
 
 更新：2026-09-08。
 
@@ -21,36 +20,23 @@
 
 ## 0.1 当前计划状态（2026-09-08）
 
-> **2026-09-08 当前详细队列**见[持续研究循环 §7](superpowers/plans/workpackages/2026-09-08-continuous-research-loop.md)：
-> L28 计分 SHA、完整 fit 表和 A28 解释纠偏已经完成；L29-Q/G 与 L30 已拒绝。
-> Linear 先核验完整候选 `17636/264s` 的官方计分 SHA，再在 L31/L32 中去重后只注册一张；
-> Attention 当前为 A30 闭式逐通道
-> 互逆平衡、A31 64 块三角误差搬运、A33 折一致聚合，另有待授权 A32 共享码语义。旧 L24–L26/A26 表不再提供指令。
-> 新收益卡采用双父策略：Linear 从 L4 时间父、Attention 从 R3 时间父构建，高分父仅作超越目标；不再把所有旧训练无条件叠加到接近 300s。
+当前只按[单一完整方案计划](superpowers/plans/2026-09-08-single-solution-optimization-plan.md)推进：
 
-当前按[持续研究循环](superpowers/plans/workpackages/2026-09-08-continuous-research-loop.md)推进。
-**Linear 侧父更新：L4 → L28**（4611/286s，2026-09-08 官方 RETAINED，+4 vs L4）。
-L28 = 残差交叉子空间 A@W 拟合 + 时间安全重构（批量 Cholesky、eigh 替换 SVD、投影向量化）；
-L23b（13639FB2）官方 TIMEOUT 已关闭该复杂度实现；四张探索卡（L24-C/L24-A/L25/L26）
-按证伪判据关闭。L28 完整 168-state/336-row 校准 fit_gain 为 `0.948587`，已达到 Linear `≥0.9`
-研究目标；该指标不能换算官方分数，官方增量实际仅 `+4`。
-Attention 侧：A25 官方 14057/254s 退步，A23 14437/276s 研究父，A2 14440/274s 最高对照。
-**AC0（continuous_attention_ac0-correctness-hardened）官方 14395/258s（2026-09-08 回传）**：
-correctness-hardened 卡（原子 Q/K-pair fallback、训练/部署五字段 parity、统一 transform
-reference、GQA/rotation/center 校验、FP64 QK-invariance audit，battery 30/30）；
-相对 R3（14405/238s）−10/+20s，未触发「Δscore<−20 停止 A29」门，258s<300s 硬限但超 245s
-时间目标；AC0 为 A29 正确性参考，A29 骨架与 AC0 同 SHA（该官方结果绑定 AC0，不证明 A29 机制）。
-真正 A29 最终输出残差实现（SHA `D8BAAB46...126A5`）官方 TIMEOUT；只关闭该高成本实现，
-当前 Attention 下一卡为 A30。根运行父仍 v189（17616/275s）。另有 compiled sample-energy
-用户回传 `17636/264s`，但官方计分 SHA 尚未与归档 SHA 单独核验；核验前标为“待身份绑定的更优完整候选”，
-不与根父混写。官方 Linear L28 时间余量为 14s（286→300），这里只是官方实测风险事实，不构成本地门禁。
+- 所有候选从根完整方案构建，每次只改一侧、一个机制、一个固定配置。
+- 官方前只做六 API contract smoke 和目标侧 shard0；官方正向后才做六 shard 归档。
+- Linear `calibration_fit_gain` 的最终输出误差公式正确，但只是校准集拟合诊断。L28 的
+  `0.948587` 对应官方仅 `+4`，不能继续充当 `≥0.9` 晋级目标。
+- L28、A2、R3、AC0 均为历史侧证据；L31/L32、A30/A31 队列暂停，不允许机械组合侧分数或侧时间。
+- 正式晋级只看完整官方总分更高且官方时间 `<300s`；同分取更快。
+
+以下内容是历史证据索引，不提供当前下一步指令。
 
 此前 v189 残差压力块序计划已被取代，旧结果仍由原执行者封存。上一份
 [`Linear 编译校准样本能量块序`](superpowers/archive/plans/2026-09-06-linear-compiled-sample-energy-plan-score-tie.md)
 已按 R1→R2→R3 关闭为 **CLOSED / R3_REJECTED_SCORE_TIE**：最终 direct-core fresh
 Overall `0.688994940507` 与本地最高严格持平，时间预测 `279.445203s` 通过；完整证据
 已归档。用户后来补充该归档官方结果为 `17636/264s`（相对 v189 `+20/-11s`）；
-原始本地 score-tie 裁决仍保留，根仍 v189。最近的
+原始本地 score-tie 裁决仍保留为历史判断，但当前根已提升为该归档源码。最近的
 [`Linear 编译校准稳健窗口极值块序`](superpowers/archive/plans/2026-09-06-linear-compiled-robust-window-order-plan-r1-rejected.md)
 已按 R0→R1 关闭为 **CLOSED / R1_REJECTED**：shard0 Linear mean/median
 `-0.000043038/-0.000117686`，worst-20% `-0.001098366`，未运行 R2；候选与证据

@@ -1,8 +1,8 @@
 {
   "side": "attention",
   "branch": "continuous-attention",
-  "plan": "docs/superpowers/plans/2026-09-07-continuous-linear-attention-plan.md",
-  "workpackage": "docs/superpowers/plans/workpackages/2026-09-08-continuous-research-loop.md",
+  "plan": "docs/superpowers/plans/2026-09-08-single-solution-optimization-plan.md",
+  "workpackage": "SUPERSEDED; no independent Attention workpackage",
   "evidence_repair": "docs/superpowers/plans/workpackages/evidence-repair-next-cycle.md (§6 A-R1)",
   "created": "2026-09-07",
   "official_best": {
@@ -159,7 +159,7 @@
     "candidate_sha256": "4686ad817128d60e1a1648e0e14793692097ee8171fac2bc5202466d5787c0b7",
     "status": "HISTORICAL_ONLY_NOT_A_4B_GATE"
   },
-  "next_action": "A30 is the only current card. Score parent=A2 14440/274s; time parent=R3 14405/238s; AC0 14395/258s is correctness reference only. Real A29 implementation D8BAAB46... timed out; the F817E4C2 skeleton score belongs to AC0. A29 may return only as a new deduplicated low-cost implementation card. 4B paired and api_seconds are risk records; official score/time are the final judges.",
+  "next_action": "NO_SIDE_QUEUE; use the single full-solution plan and build any new Attention mechanism from root solution.py.",
   "recent_steps": [
     "2026-09-07：清理当前指令中的A2永久关闭、R3仍最高、OOD排序有效、旧待执行A3等矛盾；保留原始日志。",
     "2026-09-07：A21-1完成48case ID/OOD及fresh default/cross/独立梯度与部署control；本地Delta +0.001234，negative L1 0.007585，时间预测219.284s，独立归档待官方。",
@@ -180,7 +180,7 @@
     "2026-09-08：A27-B（anchor27-b，靶F2，低维谱系数S+真实五字段读出MSE中心差分符号梯度，单主干B=v189基座无旧训练，父线对照R3）完整链：成本探针冻结token_cap=256；verify_math 6/6（切片读出=全动态API逐位0.0）；smoke过；gate_check 4/6接受（L0 -0.08%/L1 -3.8%/L5 -7.3%/L22 -0.26%接受，L8 +5.0%/L15 +1.1%拒绝）过第一条判据；4B面板vs R3加权Δmean=-0.006442(10正/38负/24零)≤0触发预注册第二条→LOCAL_REJECTED不提交官方。vs_b(v189基座机制-only对照)-0.001640；R3旧训练4B净贡献+0.004677；逐层恒等式vs_r3=vs_b-(R3-B)全吻合。三层根因：机制净效果负/gate校准折过拟合不transfer/单主干丢旧训练（A25同构）。shard2/3零差异裁决=数学必然（L8/L15 gate拒绝回退B ∧ R3在这两层本就零部署），非bug。关闭范围=Kronecker-Hadamard 8谱带+signGD实现；F2格本身OPEN。归档workbench/continuous_attention/anchor27-b/（候选SHA 8306444f...e17147）。",
     "2026-09-08：用户解禁F5-V的V码分配类（旧四类关闭不变）。R-1探针（anchor28-v-attribution，零API，6层×5折）先于出卡量化码分配可捕获空间：standard→baseline现有管道吃掉16-22%重编码误差，但14值offset oracle+ratio1.0+无块上限与部署基线六层MSE全同（0.00%增益）且L22 fold4码参数逐位相同；importance去掉零变化（head级E[A²]实际无作用）；ratio已1.0、blocks上限未绑定。关键结构事实：V量化对象=激活（部署时对新token动态执行），校准state只能带通道方向参数，通道方向attention内对称（A[q,t]不依赖通道），o_proj不在校准签名内→通道级importance无信息源。裁决：码分配类NO_SUPPORTED_MECHANISM（AGENTS§5提前停止，不构建候选不跑面板），残余f5v=格式级固有损失；AGENTS§7已更新。唯一未试=码语义变更（同步改共享解码端，全侧码格式卡）待用户决策。next_card退回F2格深度归因。（同日纠偏：'残余f5v=格式级固有损失'限指当前码语义；'gain 0.9结构不可达'类推论已作废，见logs/execution/2026-09-08-a28-interpretation-correction.md）"
   ],
-  "status": "A29_IMPLEMENTATION_TIMEOUT / AC0_IDENTITY_SEPARATED / OFFICIAL_BEST_A2 / NEXT_A30",
+  "status": "SUPERSEDED_BY_SINGLE_FULL_SOLUTION",
   "error_ledger": "artifacts/continuous/attention/error_ledger_2026-09-08.json (+error_ledger_v_decompose_2026-09-08.json)",
   "loop_framework": "docs/superpowers/plans/workpackages/2026-09-08-continuous-research-loop.md",
   "artifacts_note": "历史结果在 artifacts/proxy_v3/v162-independent/attention/{r2c-id,r2c-ood,r3-id,r3-ood,r3-default}；A22-1 在 artifacts/proxy_v3/continuous/attention/anchor22-a1/{id,ood,timing,cross}；A27-B 在 artifacts/proxy_v3/continuous/attention/anchor27-b/{vs_r3,vs_b}",

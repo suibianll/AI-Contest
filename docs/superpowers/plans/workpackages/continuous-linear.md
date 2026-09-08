@@ -1,8 +1,8 @@
-# L 代理：Linear 持续优化工作包
+# L 代理：Linear 持续优化工作包（SUPERSEDED）
 
 > 当前执行入口：[21071机制证据工作包](21071-evidence-driven-research.md) L21-1；以下旧队列不再决定下一步。
 
-> EVIDENCE_REPAIR_REQUIRED，主契约：[持续优化总计划](../2026-09-07-continuous-linear-attention-plan.md)。
+> SUPERSEDED。当前只按[单一完整方案计划](../2026-09-08-single-solution-optimization-plan.md)执行；以下仅作历史证据。
 > 下一步按[证据修复工作包](evidence-repair-next-cycle.md) L-R1/R2/R3执行；旧探针不作为整族失败证据。
 > 初始父L4，4607 / 247s，SHA/路径见总计划。全部Attention API与state保持v162 standard。
 
