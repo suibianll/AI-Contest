@@ -1,0 +1,160 @@
+{
+  "date": "2026-09-08",
+  "purpose": "plan P0: F2 deep attribution to fix next-card structure (A29)",
+  "data": [
+    "anchor27-b/vs_b 6-shard paired per-case",
+    "anchor27-b/gate_check.json",
+    "error_ledger_2026-09-08.json",
+    "error_ledger_v_decompose_2026-09-08.json"
+  ],
+  "zero_api": true,
+  "ledger_facts": {
+    "F2_share_per_layer": {
+      "0": 0.166035387449782,
+      "1": 0.2548227475692568,
+      "5": 0.15256365582241072,
+      "8": 0.226759230668121,
+      "15": 0.31685922453531695,
+      "22": 0.03507814595282186
+    },
+    "F1_minus_F2_share_per_layer_abs_max": 0.004041879878809607,
+    "F4_per_layer": {
+      "0": 0.4297581573233267,
+      "1": 0.4531916599429329,
+      "5": 0.28509081728560703,
+      "8": 0.36239124031487613,
+      "15": 0.5845930413976779,
+      "22": 0.6931856815500342
+    },
+    "F4_per_length": {
+      "10": 0.49397494927815755,
+      "128": 0.47946076638704305,
+      "512": 0.4677625066737224,
+      "1024": 0.4467003694725746
+    },
+    "F5V_share_per_layer": {
+      "0": 0.25989429071953857,
+      "1": 0.2005053645206405,
+      "5": 0.12746606360709367,
+      "8": 0.14017979158123048,
+      "15": 0.26452471237033187,
+      "22": 0.659911304815438
+    }
+  },
+  "transfer_relation": {
+    "pearson_rho_gate_calib_vs_4B_delta": 0.778,
+    "reading": "deeper calibration-fold improvement => larger 4B independent-window regression (A27-B signGD depth monotonically traded for transfer failure)",
+    "per_layer": [
+      {
+        "layer": 0,
+        "gate_calib_rel": -0.000776419266660431,
+        "fourB_dmean": 0.0033715431826828826,
+        "pos": 7,
+        "neg": 5,
+        "by_length_split": {
+          "10/validation": 0.022081,
+          "128/test": 0.013973,
+          "512/validation": -0.001344,
+          "1024/test": -0.004977,
+          "1024/validation": -0.002355,
+          "10/test": -0.004912,
+          "128/validation": 0.004796,
+          "512/test": 0.004494
+        }
+      },
+      {
+        "layer": 1,
+        "gate_calib_rel": -0.03817000442181286,
+        "fourB_dmean": -0.0029996676267471842,
+        "pos": 5,
+        "neg": 7,
+        "by_length_split": {
+          "10/validation": -0.034661,
+          "128/test": 0.001484,
+          "512/validation": 0.004063,
+          "1024/test": -0.001982,
+          "1024/validation": 0.000657,
+          "10/test": -0.006148,
+          "128/validation": 0.004555,
+          "512/test": -0.00199
+        }
+      },
+      {
+        "layer": 5,
+        "gate_calib_rel": -0.07251441612985995,
+        "fourB_dmean": -0.010568689661927347,
+        "pos": 3,
+        "neg": 9,
+        "by_length_split": {
+          "10/validation": -0.030034,
+          "128/test": 0.00067,
+          "512/validation": -0.000389,
+          "1024/test": -0.015922,
+          "1024/validation": -0.020359,
+          "10/test": -0.00654,
+          "128/validation": -0.007461,
+          "512/test": -0.055599
+        }
+      },
+      {
+        "layer": 8,
+        "gate_calib_rel": 0.05034450211997316,
+        "fourB_dmean": 0.0,
+        "pos": 0,
+        "neg": 0,
+        "by_length_split": {
+          "10/validation": 0.0,
+          "128/test": 0.0,
+          "512/validation": 0.0,
+          "1024/test": 0.0,
+          "1024/validation": 0.0,
+          "10/test": 0.0,
+          "128/validation": 0.0,
+          "512/test": 0.0
+        }
+      },
+      {
+        "layer": 15,
+        "gate_calib_rel": 0.01098281756662034,
+        "fourB_dmean": 0.0,
+        "pos": 0,
+        "neg": 0,
+        "by_length_split": {
+          "10/validation": 0.0,
+          "128/test": 0.0,
+          "512/validation": 0.0,
+          "1024/test": 0.0,
+          "1024/validation": 0.0,
+          "10/test": 0.0,
+          "128/validation": 0.0,
+          "512/test": 0.0
+        }
+      },
+      {
+        "layer": 22,
+        "gate_calib_rel": -0.0026112222443713095,
+        "fourB_dmean": 0.0003585775810592019,
+        "pos": 5,
+        "neg": 7,
+        "by_length_split": {
+          "10/validation": 0.003953,
+          "128/test": 0.006115,
+          "512/validation": -0.000625,
+          "1024/test": -0.002579,
+          "1024/validation": 0.001846,
+          "10/test": -0.000707,
+          "128/validation": -0.000717,
+          "512/test": -0.00113
+        }
+      }
+    ]
+  },
+  "conclusions_for_next_card": [
+    "1. F1_minus_F2 per-layer <= 0.002 everywhere: transform choice already exhausts its lever; pure code-allocation gains must come from code decisions, not new transforms (confirms A26-A root cause layer-wide).",
+    "2. Iterative calibration-fold optimization depth is a direct transfer-failure predictor (rho=+0.778): A29 must use ONE closed-form direction + ONE hard proposal, no per-fold numeric optimization.",
+    "3. QK-side headroom concentrates in L15 (F2 share 0.317), L1 (0.255), L8 (0.227); L22 is V-dominated (F5V 0.66, QK 0.035) -> A29 expected no-op at L22, gate should reject; do NOT build per-layer routing.",
+    "4. length=128/test-split most stable positive cell; length=10/val most fragile -> record only, no routing (single case per cell).",
+    "5. A29 final-hard-output closed loop (Lhard on fold3/4) is the structural fix for both observed failure modes (A26-A proxy inversion; A27-B depth-regression)."
+  ],
+  "verdict": "A29 structure confirmed; no per-layer/length routing; target layers L15/L1/L8/L0; L22 expected gate-reject."
+}

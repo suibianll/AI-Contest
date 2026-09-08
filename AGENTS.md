@@ -151,10 +151,11 @@ Attention 改为 `--attention-only`；完整集成审计改为 `--scenario both`
   v187 仅为 clean-room 研究父，不替代完整父。
 - V 侧不注册新候选：per-head 常量不改变块内解，per-channel multiplier 解码不逆缩放会破坏输出，
   五字段不支持 per-token 表；V-bias 等旧路径已裁决。2026-09-08 用户解禁 V 码分配类后探针裁决
-  （anchor28-v-attribution）：NVFP4→HiF4 重编码的码分配空间 100% 饱和——14 值 offset oracle +
+  （anchor28-v-attribution）：当前码语义下 NVFP4→HiF4 重编码的码分配空间 100% 饱和——14 值 offset oracle +
   ratio 1.0 + 无块上限与部署基线逐位相同（六层 0.00% 增益），importance 实测无作用；码分配类同属
-  NO_SUPPORTED_MECHANISM。仅剩"码语义变更"（scale/lv 判据/格式映射，须同步改共享解码端）未试，
-  属全侧码格式卡，开设与否待用户决策。
+  NO_SUPPORTED_MECHANISM。该饱和不构成最终输出下界（0.275 只对应固定 P,V̂，QK-V 负交叉补偿可
+  降低 V 项净贡献，见 logs/execution/2026-09-08-a28-interpretation-correction.md）；仅剩码语义变更
+  （scale/lv 判据/格式映射，须同步改共享解码端）= A32，属全侧码格式卡，开设与否待用户决策。
 - A4/L4/C1、旧 clean-room balance/gamma/refine 和历史负向局部扫描不重开。
   09-06 各块序、source-scale、JDRQ、联合坐标和合法编码实验的具体关闭边界以对应计划/日志为准，
   不把一个候选的失败扩写成所有新机制不可行。
