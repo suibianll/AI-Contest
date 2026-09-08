@@ -35,6 +35,15 @@
 | [v197](20260909_v197_linear-aw1-block-gain_scoreNA_timeNA/result.md) | 64-block 标量增益 A@W 闭式拟合 | shard0 delta mean `−0.2077`（0/56/0，mse ratio 1.45），疑似部署 block 对齐 bug；本地 REJECTED，不提交 |
 | [v198](20260909_v198_attn-gqa-reciprocal-diag_scoreNA_timeNA/result.md) | GQA 组共享互逆对角（解析初始化+smooth-max+硬门控，冻结 V） | shard0 delta mean `−0.001693`（6/6/0），非 no-op；官方 `unregistered/NA`，可交官方裁决 |
 
+## 2026-09-09 持续优化候选
+
+| 版本 | 机制 | 当前结果 |
+|---|---|---|
+| [v199](20260909_v199_attn-gqa-hard-reciprocal_scoreNA_timeNA/result.md) | GQA × 64-block hard reciprocal，真实 hard-output 选择 | 4/6 层产生接受状态，但六 shard 代理 `−0.0000729515`；`REJECTED`，官方 `unregistered/NA` |
+| [v201](20260909_v201_attn-hard-logit-residual_scoreNA_timeNA/result.md) | hard-logit residual + softmax Jacobian/V 加权候选排序 | 4/6 层产生接受状态，但六 shard 代理 `−0.0001206117`；`REJECTED`，官方 `unregistered/NA` |
+| [v202](20260909_v202_linear-sample-energy-fusion_scoreNA_timeNA/result.md) | Linear sample-energy 编译与首次校准解码融合 | 336 case 逐位等价；总 API 仅诊断级 `−0.53s`，`REJECTED` |
+| [v203](20260909_v203_attn-legal-hierarchy-selection_scoreNA_timeNA/result.md) | 联合 Q/K 合法 hierarchy 邻码 hard-output 选择 | 仅 shard5 变化且 `−0.0065789294`，总代理 `−0.0010964882`；`REJECTED`，官方 `unregistered/NA` |
+
 **Attention Correctness Hardening（2026-09-08）：** [AC0](continuous_attention_ac0-correctness-hardened/result.md)
 （`F817E4C2…`，父 R3 `A5C679D7…`）保留为 Attention 正确性参考：原子 Q/K-pair
 fallback（删 `except: pass`）、训练 hard forward 走部署五字段路径、统一 transform

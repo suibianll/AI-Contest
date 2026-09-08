@@ -1,0 +1,20 @@
+{
+  "run_id": "attn-hard-logit-residual",
+  "version": "v201",
+  "mechanism": "hard-logit residual weighted reciprocal proposals: v199 first +/- HiF4 boundary, top-2 residual ranking per GQA group, real causal hard-output selection, one block per group, V frozen",
+  "parent": "solution.py",
+  "parent_sha256": "839adb1e617c3115c6b55071a34b281c5db0ff2aa070adbbc71fd1549e761d7f",
+  "helper_parent": "v199 fixed boundary generator",
+  "source_sha256": "85ed5bb799c2079f9bc604b9551407cec160f824a221f37fb75fd5c47bf51846",
+  "u_bound": "+/-log(2)",
+  "boundary_search": "v199 fixed 14-step binary locate of first changed hard code with 2e-4 crossing margin",
+  "residual_weight": "local continuous-parent softmax Jacobian times frozen V deviation squared",
+  "ranked_candidates": 2,
+  "fit_windows": "all but last (fallback to all when only one exists)",
+  "holdout_window": "last calibration window",
+  "selection": "real causal Attention output MSE after residual ranking; at most one block move per KV/GQA group",
+  "deployment": "one compiled diag_scale multiply after parent final Q/K transforms; K uses reciprocal scale",
+  "v_policy": "frozen",
+  "candidate_count": 1,
+  "official_status": "unregistered/NA"
+}

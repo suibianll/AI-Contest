@@ -1,0 +1,17 @@
+{
+  "run_id": "attn-gqa-hard-reciprocal",
+  "version": "v199",
+  "mechanism": "GQA-group-shared hard reciprocal coordinate: first +/- HiF4 boundary per 64-channel block, real causal Attention-output selection, one block per KV group, V frozen",
+  "parent": "solution.py",
+  "parent_sha256": "839adb1e617c3115c6b55071a34b281c5db0ff2aa070adbbc71fd1549e761d7f",
+  "source_sha256": "e07c7c74e15414e2f8a01e5b2f19e49a852f33a303558b136dd2089974dc4bb7",
+  "u_bound": "+/-log(2)",
+  "boundary_search": "14-step binary locate of first changed hard code with fixed 2e-4 crossing margin",
+  "fit_windows": "all but last (fallback to all when only one exists)",
+  "holdout_window": "last calibration window",
+  "selection": "real causal Attention output MSE; at most one block move per KV/GQA group",
+  "deployment": "one compiled diag_scale multiply after parent final Q/K transforms; K uses reciprocal scale",
+  "v_policy": "frozen",
+  "candidate_count": 1,
+  "official_status": "unregistered/NA"
+}

@@ -1,0 +1,15 @@
+{
+  "run_id": "attn-legal-hierarchy-selection",
+  "version": "v203",
+  "mechanism": "joint legal Q/K E6M2 scale-factor neighbor selection with one fixed adjacent code offset per candidate 64-block and exact legal lv2/lv3/mantissa re-encoding",
+  "parent": "solution.py",
+  "parent_sha256": "839adb1e617c3115c6b55071a34b281c5db0ff2aa070adbbc71fd1549e761d7f",
+  "source_sha256": "4268bae94e58ba86ca8d926437c42fac9c2b19e4bdc6675c0c24af4e5460b1ec",
+  "candidate_roles": "q-only, k-only, or joint qk per GQA group/block; directions +/-1 E6M2 code",
+  "selection": "real causal Attention output MSE; at most one retained proposal per KV group",
+  "deployment": "apply compiled per-64-block scale-code offset to each dynamic parent scale code, then solve legal hierarchy once",
+  "continuous_transform": "frozen; no reciprocal coordinate, STE, optimizer, or dynamic search",
+  "v_policy": "frozen",
+  "candidate_count": 1,
+  "official_status": "unregistered/NA"
+}

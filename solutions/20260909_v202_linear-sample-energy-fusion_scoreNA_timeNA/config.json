@@ -1,0 +1,13 @@
+{
+  "run_id": "linear-sample-energy-fusion",
+  "version": "v202",
+  "mechanism": "fuse existing sample-energy block-order compilation with the parent calibration's first decoded activation tensors",
+  "parent": "solution.py",
+  "parent_sha256": "839adb1e617c3115c6b55071a34b281c5db0ff2aa070adbbc71fd1549e761d7f",
+  "source_sha256": "56dc805d6e5a3aef896db8021045740292735725d688b48e3d4393e55efcb2bd",
+  "equivalence_target": "current combined Linear root: same final deployment-coordinate sample-energy order",
+  "removed_work": "post-calibration _dequantize_nvfp4_float32 plus _static_actorder_dense_from_state rebuild",
+  "dynamic_path": "unchanged; consumes the compiled gptq_block_order",
+  "candidate_count": 1,
+  "official_status": "unregistered/NA"
+}
