@@ -28,7 +28,7 @@
 | [v191](20260908_v191_attn-block-triangular-transport_scoreNA_timeNA/result.md) | block triangular transport | 官方 `TIMEOUT`（`>300s`）；本地 gate 接受、shard0 delta `-0.0001040638` |
 | [v192](20260908_v192_attn-full-reciprocal-residual_scoreNA_timeNA/result.md) | full reciprocal residual | 官方 `TIMEOUT`（`>300s`）；本地 gate 拒绝、回退父、shard0 delta `0` |
 | [v193](20260908_v193_attn-joint-qk-product_scoreNA_timeNA/result.md) | joint Q/K product | gate 拒绝，回退父；shard0 delta `0` |
-| [v194](20260908_v194_attn-a2-calibration-fused_scoreNA_timeNA/result.md) | A2/R3 校准等价提速 | shard0 逐位一致，calibration API −22.5%；官方 `unregistered/NA`，待提交 |
+| [v194](20260908_v194_attn-a2-calibration-fused_scoreNA_timeNA/result.md) | A2/R3 校准等价提速 | 官方 `18032/285s`：同分、比当前根慢 5s，`REJECTED_TIME`；本地 calibration API −22.5% 未转化为官方提速 |
 | [v195](20260908_v195_attn-a2-center-gradient-aggregate_scoreNA_timeNA/result.md) | K-center 梯度聚合修复 | shard0 delta mean `+0.001935`（6/6/0），非 no-op；官方 `unregistered/NA`，待提交 |
 | [v196](20260908_v196_attn-reciprocal-residual-original-split_scoreNA_timeNA/result.md) | Q/K 互逆残差原始 4+1 配置 | shard0 delta `0`（gate 全拒绝回退父，calibration +37.7%）；REJECTED，不提交 |
 

@@ -1,6 +1,6 @@
 # 标准 Linear 承载的 Attention 有效性验证计划
 
-> ACTIVE，2026-09-08。当前完整根官方 `18032/280s`。v190、v191、v192 在当前 Linear 上均
+> ACTIVE，更新于 2026-09-09。当前完整根官方 `18032/280s`。v190、v191、v192 在当前 Linear 上均
 > `TIMEOUT`，因此先移除当前 Linear 的时间占用，用标准 Linear 单独测出 Attention 算法的官方效果。
 
 ## 1. 这轮要回答两个问题
@@ -41,13 +41,12 @@ C_linear = 18032 - 14405 = 3627
 标准 Linear 尾部覆盖方式，不重新实现 codec。
 
 统一在 `workbench/standard_linear_attention_probes/` 放一个构建脚本和一个核对脚本。构建脚本固定读取
-以下五个已归档源码，不修改原归档：
+以下四个计分候选的已归档源码，不修改原归档：
 
 ```text
 solutions/20260908_v190_attn-diag-reciprocal-balance_scoreNA_timeNA/solution.py
 solutions/20260908_v191_attn-block-triangular-transport_scoreNA_timeNA/solution.py
 solutions/20260908_v192_attn-full-reciprocal-residual_scoreNA_timeNA/solution.py
-solutions/20260908_v194_attn-a2-calibration-fused_scoreNA_timeNA/solution.py
 solutions/20260908_v195_attn-a2-center-gradient-aggregate_scoreNA_timeNA/solution.py
 ```
 
@@ -60,15 +59,15 @@ solutions/20260908_v195_attn-a2-center-gradient-aggregate_scoreNA_timeNA/solutio
 | `standard-linear_v192-attn` | v192 全矩阵互逆残差 | 隐藏官方校准上是否被接受并产生收益 |
 | `standard-linear_v195-attn` | v195 K-center 多窗口梯度修复 | bug 修复是否优于 R3 |
 
-v194 是 R3 输出等价提速，不属于新计分算法。另构造 `standard-linear_v194-attn-speed`，只用于比较
-官方时间是否低于 R3 的 `238s`。v196 与 v192 属于同一32步全矩阵机制，而且本地最终回退 R3，
-不再重复提交。
+v194 是 R3 输出等价提速，不属于新计分算法；它在当前完整根上的官方结果已经是 `18032/285s`，
+相对根同分但慢 5s，足以否定提速目的，不再换标准 Linear 重复提交。v196 与 v192 属于同一32步
+全矩阵机制，而且本地最终回退 R3，不再重复提交。
 
 ## 3. 执行顺序
 
 ### 第一步：生成标准 Linear 组合
 
-为上述五个候选各生成一个单文件 `solution.py`。生成后只做一次组合核对：
+为上述四个候选各生成一个单文件 `solution.py`。生成后只做一次组合核对：
 
 - 两个 Linear API 与 v162 标准 Linear 逐位一致；
 - 四个 Attention API 与各自原候选逐位一致；
@@ -81,21 +80,14 @@ v194 是 R3 输出等价提速，不属于新计分算法。另构造 `standard-
 .venv\Scripts\python.exe workbench/standard_linear_attention_probes/verify.py
 ```
 
-`build.py` 一次生成五个候选，`verify.py` 一次输出五行 PASS/FAIL；不为每个候选再创建一套检查脚本。
+`build.py` 一次生成四个计分候选，`verify.py` 一次输出四行 PASS/FAIL；已经生成的 v194 标准 Linear
+组合保留但不提交，不为每个候选再创建一套检查脚本。
 
 已有 v190–v195 的本地 shard0 和 reachability 结果直接复用，不重跑六 shard、OOD、跨模型、参数扫描
 或分数门禁。这里的目的就是取得官方侧分；v190/v192 在本地 shard0 回退 R3 不阻止这一次标准 Linear
 诊断提交，因为官方隐藏校准可能作出不同选择。
 
-### 第二步：先提交 v194 提速对照
-
-提交 `标准 Linear + v194`：
-
-- 分数应为 `14405`；不同则说明所谓输出等价没有在官方输入上成立，停止使用 v194。
-- 分数相同且时间 `<238s`，记录实际节省秒数，并把 v194 作为后续完整组合的 Attention 实现。
-- 分数相同但时间没有下降，v194 不替换实现。
-
-### 第三步：逐个提交四个 Attention 算法
+### 第二步：逐个提交四个 Attention 算法
 
 按 `v195 → v191 → v190 → v192` 提交，每个只提交一次。统一计算：
 
@@ -111,10 +103,10 @@ attention_step_gain = 官方候选分数 - 14405
 不使用本地 mean、L1 或运行时间替代上述官方判断，也不因小幅正负结果扫描学习率、步数、窗口或
 clamp。v192 放最后，因为它的32步全矩阵训练成本最高。
 
-### 第四步：只回装官方最优 Attention
+### 第三步：只回装官方最优 Attention
 
 四个候选全部回传后，只选择官方分数最高且高于 `14405` 的一个。把它的四个 Attention API 回装到
-当时最快的当前 Linear 完整根：若 v194 官方提速成立，先带上 v194 的等价实现，再合入该算法修改。
+当前 `18032/280s` 完整根。v194 已证实官方没有提速，不带入组合。
 
 只提交这一个完整组合：
 
@@ -141,9 +133,9 @@ solutions/<standard-linear_attention-candidate>/
 
 ## 5. 已有候选状态
 
-- **v194 `attn-a2-calibration-fused`：本地完成，待标准 Linear 官方提速对照。** 候选 SHA
-  `1e1d9846...229dce`；合成与真实 4B shard0 均逐位一致，calibration API
-  `6.021s → 4.669s`（−22.5%）。
+- **v194 `attn-a2-calibration-fused`：官方 `18032/285s`，REJECTED_TIME。** 相对当前根同分、
+  慢 5s；本地 calibration API `6.021s → 4.669s`（−22.5%）没有转化为官方提速，不再提交
+  标准 Linear 版本。
 - **v195 `attn-a2-center-gradient-aggregate`：本地完成，待标准 Linear 官方计分。** 候选 SHA
   `839adb1e...761d7f`；已确认梯度包含全部训练窗口，shard0 delta mean `+0.0019352`，非 no-op。
 - **v190、v191、v192：** 完整根官方均为 `TIMEOUT`，原候选源码与结果归档直接复用；不重新实现算法。
