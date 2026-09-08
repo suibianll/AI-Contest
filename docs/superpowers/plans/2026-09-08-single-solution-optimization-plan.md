@@ -1,165 +1,169 @@
-# 单一完整方案优化计划
+# 当前最高分版本持续优化执行计划
 
-> ACTIVE，2026-09-08。取代 Linear / Attention 双侧独立持续循环。当前目标只有一个：
-> 在单一完整父上提升官方总分，并保持官方时间 `<300s`。
+> ACTIVE，2026-09-08。只回答三件事：怎么改、怎么跑、怎么归档。
 
-## 1. 唯一父版本
+## 1. 执行方式
 
-- 根 `solution.py` 与归档 `solutions/20260908_linear-current-r3-attention_candidate/solution.py`
-  逐位一致，SHA256 `12352EFDD4E23CC5E1E17953008664FBAA5EA5D693373635FDAFC4D28CE4E24E`。
-- 仓库记录的用户官方回传为 `18032/280s`，相对上一根 compiled sample-energy `+396/+16s`，
-  且 `280s<300s`。这是当前唯一工作父和最优已知可复现完整 solution；官方平台未单独返回计分
-  SHA 的事实继续透明记录。
-- 上一根 compiled sample-energy、v189、L28、A2、AC0 只作为历史对照或机制证据，不再形成并行父线。
+始终把根 `solution.py` 当作当前最高分完整版本。每轮只做一个明确改动，但提交物始终是包含六个 API
+的完整 `solution.py`，不再建立 Linear 版、Attention 版或两条并行路线。
 
-## 2. 指标裁决
+每轮按下面五步执行：
 
-- 唯一晋级指标：官方总分更高且官方时间 `<300s`；同分时取更快版本。
-- `calibration_fit_gain = mean_case(1-MSE_player/MSE_standard)` 公式正确，但只描述本地校准集内
-  拟合，不能预测官方分数，也不是候选门禁。L28 `0.948587` 只保留为诊断事实。
-- 4B paired 只检查接口、合法 state、finite、机制可达、非目标 API control 和明显灾难性回归；
-  不用 Δmean、holdout、L1、误差账本或 probe 排序官方候选。
-- 本地 `api_seconds`、按层外推和 FLOPs 只标记时间风险；官方 300s 是唯一时间裁决。
+1. 从根 `solution.py` 复制候选，写清本轮唯一算法改动和固定参数。
+2. 完成实现后，先跑合成检查与六 API 导入检查。
+3. 只跑受影响场景的 4B shard0，排除实现错误、完全无效和严重退化。
+4. 将候选归档为完整包并提交官方；本地小幅正负不决定是否提交。
+5. 官方分数更高且未超时就替换根版本；否则保留原根，从原根开始下一轮。
 
-## 3. 唯一执行流程
+不再维护候选池、门禁表、误差账本或两侧阶段计划。一次只推进下面列出的当前轮次。
 
-1. **先做机制—代码一致性门。** 每张卡先列出目标公式、允许修改的函数/状态字段、明确禁止的
-   附加自由度及预期 changed/attempted 计数；逐项映射到候选 diff。若根没有该机制的同构入口，
-   记 `DESIGN_BLOCKED / NOT_APPLICABLE`，不得换成另一个求解器继续沿用原卡名称。
-2. 用小矩阵或合成输入验证实际搜索粒度、零点/符号边界、接受判据和回退；文档声称“逐元素”、
-   “只改 loss”或“逐位恢复父”时，测试必须直接覆盖该性质。失败时不启动模型评测。
-3. 从当前最高分根复制一个完整候选，只加入通过一致性门的一个机制和一个固定配置。允许只改变
-   Linear 或 Attention 子系统以保持因果可解释，但候选必须保留完整六 API；不再构建或维护任何
-   clean-room/侧隔离父、侧候选队列或侧官方提交。
-4. 执行六 API 独立导入、reference 合法性、随机形状 smoke；目标侧 shard0 验证
-   reachable/control，并核对实际 diff 未超出机制卡。明显灾难性回归用于否定实现；本地微小正负
-   不预测官方排序。
-5. 合法、可达、非 no-op、实现忠实且动态复杂度有界的唯一代表才提交官方。提交次数无限制，
-   但不重复相同 SHA 或逐位等价实现。
-6. 官方正向后才运行必要的 4B 六 shard 归档与完整双侧 interaction audit，并把根切到新父；
-   官方负向、TIMEOUT、wrong answer分别只关闭已实际执行的具体机制、复杂度实现或正确性实现。
-7. probe 可在实现前回答机制可执行性，也可在官方失败后回答会改变下一张卡的问题；必须绑定一个
-   决策问题且优先零 API/合成检查，不建立永久误差账本，不产生新的独立父线。
+## 2. 第一轮：提交 LC3 objective-only
 
-## 4. 当前停止项
+### 优化内容
 
-- 暂停 L31/L32、A30/A31 旧队列；如需回访，必须重新写成基于当前完整父的一张机制卡。
-- 取消 Linear/Attention 各自 `gain≥0.9` 的停止目标；它们与官方成绩缺乏可用映射。
-- 不再维护 E1–E4/F1–F5 持续误差账本、强制 `next_card`、多层 probe 漏斗或 side-score 组合预测。
-- 不把 L28 `4611/286s` 与 A2 `14440/274s` 机械组合；两者的侧隔离时间已接近上限，且组合
-  没有官方时间保证。
-- 停止“先单独优化某一侧、形成侧父、再组合”的执行模式。历史侧结果只用于提出机制，不提供父版本、
-  晋级分或固定执行顺序。
+当前候选已经完成，路径为：
+`solutions/continuous_linear_lc3-objective-only/solution.py`。
 
-## 5. 下一步约束
+它只修改 Linear 校准时的候选评分：
 
-当前没有自动继承的 Linear/Attention 队列。下一张卡除“改变什么、为何可能提升、如何证明
-reachable/control、失败后关闭什么”外，必须增加第五项“代码映射与禁止改动”。缺少可执行机制时
-保持当前根，不用探针制造进度。
+```text
+原评分 = 输出误差平方和 / 原输出能量
+新评分 = 输出误差平方和 / 标准 HiF4 输出误差平方和
+```
 
-## 6. 2026-09-08 方法审计与证据更正
+对应代码入口：
 
-- L-C1 卡写的是仅把根的 fold 权重改为 `MSE_STD+numel` 归一化，但实际归档实现加入了
-  rank-8 residual-subspace 求解器。该运行只关闭“根上叠加这套 rank-8 后处理”，原卡未被执行；
-  不得据此否定目标归一化本身。
-- LC2 声称逐元素 `±1` 合法邻域，实际只尝试了每个 64-block 内全部输出元素同步 `+1/-1`；
-  零值因沿用 `sign=0` 也没有发生 sign flip。`accepted=0` 只关闭这两个整块同步提案，不证明逐元素
-  局部最优，不证明根的 A@W 坐标饱和。
-- 历史源码和 manifest 保留原样作审计证据；当前解释以
-  [`2026-09-08 LC1/LC2 方法审计`](../../../logs/execution/2026-09-08-lc1-lc2-method-audit.md)为准。
+- `_linear_output_candidate_metrics`
+- `_linear_output_candidate_metrics_combos`
+- `_linear_smooth_hybrid_metrics`
+- Linear 校准 fold 中标准 HiF4 误差的预计算与传递
 
-## 7. 单一完整根持续循环
+这轮不再改代码，也不再增加本地实验。已有合成检查、六 API 检查和 Linear shard0 足以确认实现可以
+提交；下一动作就是上传该完整候选。
 
-不再设置“Attention 优先”“Linear 优先”或 A/L 双侧阶段。每一轮只有一个完整工作父和一个待裁决
-候选：
+### 执行
 
-1. **冻结父。** 每轮开始记录当前根 SHA、完整官方分数/时间和六 API 身份；当前为
-   `12352EFD...E24E / 18032 / 280s`。任何历史侧源码只能提供机制证据，不能作为代码父。
-2. **选择一个机制。** 机制可以作用于 Linear 或 Attention，但必须直接应用到当前根；不能先得到侧父
-   再组合。一次只改一个机制和一个固定配置，并通过 §3 的机制—代码一致性门。
-3. **验证完整候选。** 本地可只跑受影响子系统 shard0 排除错误，同时必须验证未修改 API control；
-   这只是完整候选的局部检查，不称为侧优化。正式包始终包含当前根其余全部实现。
-4. **完整官方裁决。** 候选合法、可达、非 no-op、无灾难性错误后，以完整包提交官方。分数更高且
-   `<300s` 才替换根；否则根不变。下一轮必须从裁决后的最高分根重新开始，不沿失败候选或历史侧父继续。
-5. **持续而不预排侧队列。** 官方结果到账后只登记一个 next mechanism；不得预先创建 A/L 两套后继、
-   side-score 组合或“某侧完成后再回另一侧”的阶段计划。
+1. 提交 `solutions/continuous_linear_lc3-objective-only/solution.py`。
+2. 将官方分数和时间写入同目录 `result.md` 与 `manifest.json`。
+3. 按以下方式处理：
+   - 分数提高且运行未超时：把该文件复制为根 `solution.py`，它成为下一轮父版本。
+   - 分数未提高：根保持不变，LC3 标记为 `REJECTED`。
+   - 超时或运行错误：记录实际错误，根保持不变。
+4. 结果登记完成后直接进入第二轮，不围绕 LC3 调权重、fold 或归一化系数。
 
-### 当前下一步
+## 3. 第二轮：在最新根上加入 Q/K 互逆残差变换
 
-R0 已确认 objective-only fold 加权入口存在，但审计基于上一根。保留现有未跟踪
-`workbench/continuous_linear/lc3-objective-only/`，先核对其父源码是否为当前 SHA
-`12352EFD...E24E`：
+这一轮不是单独维护 Attention 版本，而是在第一轮裁决后的最高分完整根上增加一个已经出现官方正收益
+的 Q/K 机制。参考实现为
+`solutions/continuous_attention_anchor22-a2/solution.py`，只作为代码来源，不作为父版本。
 
-- 若是当前根且 diff 仅包含已注册的 fold 归一化，作为下一份完整候选继续验证；
-- 若基于上一根，保留其文件作未归档草稿，从当前根重新生成候选，不继承旧包；
-- 无论作用于哪个子系统，官方裁决后立即以新的最高分根开启下一轮，不形成 Linear 或 Attention 父线。
+### 算法
 
-A22-2、A23、A2 等侧结果降级为历史机制证据。未来若采用其中机制，也必须重新写成“当前完整根 +
-一个增量”的机制卡，不按 R3→A22-2→A23 侧链执行。
+保留根版本已经学到的 Q/K rotation 和 K center，再学习每个 GQA group 的对称矩阵 `S`：
 
-## 8. 从低维 A@W / QK 互逆设计中保留的机制方向
+```text
+Q_new = Q_parent @ exp(S)
+K_new = K_parent @ exp(-S)
+```
 
-本节只保存可在未来轮次注册的机制方向，不建立 Linear/Attention 双队列，也不授权同时实现。当前
-唯一 next candidate 仍是 §7 的 LC3 objective-only；它取得完整官方裁决后，才从下列未关闭方向中
-选择一张卡，并从届时最高分根重新构建。
+部署时同步编译：
 
-### D1：官方归一化的低维互逆 A/W 拟合
+```text
+Rq_new = Rq_parent @ exp(S)
+Rk_new = Rk_parent @ exp(-S)
+c_new  = c_parent  @ exp(-S)
+```
 
-保留“低维、连续乘积不变、最终合法 hard A@W 裁决”三点，固定数学边界为：
+这样连续 QK 乘积不变，优化目标只是把 Q/K 的动态范围重新分配到更适合 HiF4 编码的位置。最后一个
+校准窗口比较新状态与根状态的真实 Attention 输出误差；只有新状态更好时才保存它，否则该层继续使用
+根状态。
 
-\[
-T_L(\alpha)=\operatorname{diag}(\exp(P\alpha)),\quad
-A'=AT_L,\quad W'=WT_L^{-T},\quad A'W'^T=AW^T.
-\]
+### 固定实现
 
-其中 `P` 必须在机制卡注册时固定为一个低维结构基，并先与当前根已有 smooth/block/hierarchy 变换及
-历史实现做数学去重；不得在同一张卡中比较 block、8-group、4-group、SVD 或多种 rank。训练与 hard
-选择统一使用量纲一致的本地诊断目标：
+从参考实现移植以下函数及其调用，不重新设计另一套训练器：
 
-\[
-L_L=\frac1F\sum_f
-\frac{\operatorname{MSE}(Y_f,\hat Y_f)}
-{\max(\operatorname{MSE}(Y_f,Y_f^{STD}),\epsilon)}.
-\]
+- `_a21_exp`
+- `_a21_exp_backward`
+- `_a21_project`
+- `_a21_scale_loss_grad`
+- `_a21_matrix_grad`
+- `_a22b_train`
+- `_a21_gate_loss`
 
-连续提案必须编译到合法 weight params 与 activation state，最终仅允许一个完整候选。原设计中的
-`\hat Y=\sum_b g_bZ_b` 会改变连续模型函数，不归入本方向；若要研究直接输出校正，必须另立新机制，
-不能借用“互逆等价变换”的结论。
+在根的 `hif4_calibration_attention` 中，先按原逻辑得到完整父状态，再调用 `_a22b_train` 生成候选状态，
+最后用 `_a21_gate_loss` 比较两者。Q/K 动态 API 不增加训练，只读取校准后保存的 rotation/center。
 
-### D2：GQA 共享的 Q/K 互逆动态范围重分配
+参数直接固定为参考实现已验证的一组：
 
-保留 GQA group 内共享的对角互逆参数化：
+```text
+训练步数       32
+学习率         0.01
+梯度范数上限   1.0
+S 正则         0.001
+Adam beta      0.9 / 0.999
+谱范围         ±log(2)/2
+矩阵约束       对称、零迹
+候选数量       1
+```
 
-\[
-T_A(\beta)=\operatorname{diag}(\exp(P_A\beta)),\quad
-Q'=QT_A,\quad K'=KT_A^{-T},\quad Q'K'^T=QK^T.
-\]
+### 实现目录
 
-第一张符合本方向的卡必须直接建立在届时完整根上，并满足：
+新建 `workbench/full_solution/qk-reciprocal-residual/`：
 
-- `P_A` 和参数维度一次冻结；先与当前 R3、A22/A23、旧 RMS balance 和 hierarchy-aligned 路线去重，
-  数学等价则不注册；
-- V、Linear、既有 rotation/center 和其余训练主干冻结，只新增一个 Q/K 互逆自由度；
-- proposal 可使用解析 range balance 或固定低维 smooth-max，但二者不能同卡比较；训练轮数和候选数
-  在实现前固定，不使用 `2~5`、多 seed、多 rank 或多 hierarchy 的范围扫描；
-- calibration fold 只生成参数，独立 holdout 以真实 HiF4 Q/K hard encode 和 final Attention output
-  选择；必须记录连续 logits invariance、实际 Q/K scale/code 变化、attempted/accepted 和原子回退；
-- 正式结果只看包含当前根其余实现的完整官方包，不登记 Attention 侧分或侧父。
+- `build.py`：从当时的根生成候选并移植上述增量。
+- `verify.py`：检查 `S=0` 能恢复父状态、QK 连续乘积保持、K center 同步变换。
+- `check_math_and_import.py`：检查矩阵梯度、六 API 单文件导入和合法 state。
+- `candidate/solution.py`：待评测的完整候选。
+- `config.json`：只记录上面的固定参数。
 
-### S1：固定码区间内的低维充分统计量加速
+### 运行顺序
 
-保留二次型 sufficient statistics 作为实现手段，而不是独立算法或精确裁决。只有在部署 activation
-`X` 固定、`W(θ)=W0+Bθ` 仿射且量化 code/hierarchy 不变的局部区域内，才可使用
-`H=X^TX`、`c=X^Ty` 生成一个低成本 proposal。参数导致 activation、scale、hierarchy 或 code 改变后，
-该二次型不再精确；最终必须重新执行真实 hard encode 与输出 MSE，不得用二次型结果直接接受候选。
+```powershell
+.venv\Scripts\python.exe workbench/full_solution/qk-reciprocal-residual/build.py
+.venv\Scripts\python.exe workbench/full_solution/qk-reciprocal-residual/verify.py
+.venv\Scripts\python.exe workbench/full_solution/qk-reciprocal-residual/check_math_and_import.py
+.venv\Scripts\python.exe evaluator/eval.py --solution workbench/full_solution/qk-reciprocal-residual/candidate/solution.py --baseline-solution solution.py --attention-only --shards 0 --cache artifacts/official_eval/cache/qwen3.5-4b-proxy-v2.pt --calibration-cache-mode auto --algorithm-device cuda --output-dir artifacts/proxy_v3/full_solution/qk-reciprocal-residual-shard0
+```
 
-### 明确不进入计划的内容
+执行者只需确认：检查脚本通过、训练确实产生非零 `S`、至少有层接受候选、shard0 没有严重异常。满足后
+就归档并提交官方，不继续试学习率、步数、group 数或其他变体。
 
-- 官方 `4400/5000` 不换算为本地 `gain=0.88`；删除 `0.80/0.85/0.88` 本地晋级目标。
-- 不执行 L-AW1/L-AW2/L-AW3 或 A1/A2/A3/A4 阶梯，不按输出组 `32/64/128`、basis 来源、
-  hierarchy 层级或训练轮数做邻域扫描。
-- 不把 Linear 与 Attention 分别做到门槛后再组合，不使用 clean/侧基线，不从历史侧源码继续优化。
-- 外部 `21071/283s` 只证明机制方向可行；因源码与调用图未绑定，不能作为当前候选的时间保证。
+### 结果处理
 
-每次官方裁决后，仅允许从 D1/D2 中选择一个尚未被当前根包含或被具体实现关闭的机制；若两者均无
-可去重的新参数化，则保持根并先提出新的单义假设，不通过扩大 sweep 制造候选。
+- 官方提高：候选替换根，下一轮继续从新根优化。
+- 官方不提高：根不变，关闭这次“完整根 + Q/K 互逆残差”的实现。
+- 官方超时：根不变；下一轮优先选择不增加校准训练的机制。
+- 运行错误：只修复明确的实现错误并重新验证，不趁机改变算法。
+
+## 4. 后续怎么继续优化
+
+第二轮官方结果回来后再写下一轮，不提前堆一长串候选。选择规则很简单：
+
+- 如果 Q/K 互逆残差有效，下一轮优先减少它的校准成本或把同一变换更好地编译进现有状态。
+- 如果无效，回到最新根，下一轮改做低维 A/W 互逆拟合；届时先固定唯一的低维基和训练参数，再开始实现。
+- 如果超时，下一轮只选不会新增在线计算、且校准开销明显更小的变换。
+
+每次只把“下一轮马上要执行的算法”写成上述详细程度；尚未开始的方向不再写成大段限制条件。
+
+## 5. 归档方式
+
+每个实际运行的候选只保留一份归档：
+
+```text
+solutions/<candidate-name>/
+  solution.py     完整六 API 提交文件
+  config.json     本轮算法和固定参数
+  result.md       本地检查、官方分数、时间和结论
+```
+
+工作脚本放在 `workbench/full_solution/<candidate-name>/`，评测 JSON 放在
+`artifacts/proxy_v3/full_solution/<candidate-name>/`。评测产物不复制进 Git。
+
+`result.md` 只写五项：改了什么、本地是否正常、官方分数、官方时间、是否替换根。官方结果登记后更新：
+
+- `solution.py`（仅成功时替换）
+- `docs/current-solution-status.md`
+- `solutions/README.md`
+- 本计划的“当前轮次”
+
+失败候选保留归档，不删除、不继续作为父版本，也不为它追加新的调参分支。
