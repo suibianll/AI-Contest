@@ -98,3 +98,21 @@ solutions/<candidate-name>/
 
 `result.md`只记录修改内容、shard0、校准时间、官方分数/时间和是否替换根。工作脚本留在
 `workbench/full_solution/<candidate-name>/`，评测JSON留在`artifacts/proxy_v3/full_solution/`。
+
+## 6. 执行结果（2026-09-08）
+
+- **v194 `attn-a2-calibration-fused`：done，待官方**。
+  候选 SHA `1e1d9846...229dce`。合成与真实 4B shard0 均逐位一致（12/12 delta 0，
+  `reasonableness_issues=0`）；calibration API `6.021s → 4.669s`（−22.5%）。
+  按 §2 门禁可提交官方；同分更快即替换根。
+- **v195 `attn-a2-center-gradient-aggregate`：done，待官方**。
+  候选 SHA `839adb1e...761d7f`。spy 回放证实 center 梯度含全部训练窗口；shard0 delta
+  mean `+0.0019352`、median `+0.0011072`、+/-/0 = `6/6/0`，非 no-op、无运行错误。
+  按 §3 门禁可提交官方裁决。
+- **v196 草稿**：实现与 shard0 已在修订前完成——shard0 12/12 delta 0（gate 全拒绝、逐位
+  回退父），calibration API +37.7%（32 步训练真实执行）。按 §1 与 AGENTS.md 不提交，
+  归档于 `solutions/20260908_v196_attn-reciprocal-residual-original-split_scoreNA_timeNA/`
+  仅作证据，全矩阵残差方向不缩窗、不减步数重试。
+- 归档：`solutions/20260908_v19{4,5}_*/`（v196 仅证据）；评测 JSON：
+  `artifacts/proxy_v3/full_solution/{attn-a2-calibration-fused,attn-a2-center-gradient-aggregate,attn-reciprocal-residual-original-split}-shard0/`。
+- 待办：v194、v195 交官方回传后按 §4 制定下一轮。

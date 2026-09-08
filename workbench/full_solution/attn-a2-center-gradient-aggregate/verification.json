@@ -1,0 +1,28 @@
+{
+  "candidate_sha256": "839adb1e617c3115c6b55071a34b281c5db0ff2aa070adbbc71fd1549e761d7f",
+  "parent_sha256": "12352efdd4e23cc5e1e17953008664fbaa5ea5d693373635fdafc4d28ce4e24e",
+  "patch_present_only_in_candidate": "PASS",
+  "center_uses_all_windows_candidate": "PASS",
+  "parent_center_is_last_window_only": "PASS",
+  "candidate_vs_parent_center_differ": {
+    "status": "PASS",
+    "max_abs_diff": 0.1433727890253067
+  },
+  "finite_trained_tensors": {
+    "status": "PASS",
+    "candidate_final_train_loss": 1.014657735824585,
+    "parent_final_train_loss": 0.981849193572998,
+    "ortho_error": 3.5762786865234375e-07
+  },
+  "calibration_outcome_differs": {
+    "status": "PASS",
+    "candidate_arm": "rotation",
+    "parent_arm": "rotation",
+    "candidate_train_loss": 1.0174086093902588,
+    "parent_train_loss": 1.0031177997589111,
+    "candidate_gate_loss_rotation": 0.9409448031508589,
+    "parent_gate_loss_rotation": 0.9184832286759075
+  },
+  "state_and_output_contract": "PASS",
+  "standalone_six_api_import": "PASS"
+}

@@ -1,0 +1,24 @@
+{
+  "run_id": "attn-reciprocal-residual-original-split",
+  "mechanism": "full-symmetric-zero-trace-reciprocal-qk-residual",
+  "split": "A22-2 original: fit=calib_qkv_list[:-1], gate=calib_qkv_list[-1] only",
+  "parent": "solution.py",
+  "parent_sha256": "12352efdd4e23cc5e1e17953008664fbaa5ea5d693373635fdafc4d28ce4e24e",
+  "source_sha256": "0889a3a5ce639d9eb44dadf197d78538105585931972ecb03b0958a0793824f9",
+  "train_steps": 32,
+  "learning_rate": 0.01,
+  "gradient_clip": 1.0,
+  "regularization": 0.001,
+  "adam_beta": [
+    0.9,
+    0.999
+  ],
+  "spectral_bound": "+/-log(2)/2",
+  "fit_windows": "all_but_last (4 of 5 on the official calibration panel)",
+  "gate_windows": "last window only",
+  "gate_rule": "single strict true-path output-MSE improvement, else parent fallback",
+  "formula": "Q_new=Q_parent@exp(S), K_new=K_parent@exp(-S), trace(S)=0",
+  "center_compile": "c_new=c_parent@exp(-S)",
+  "candidate_count": 1,
+  "official_status": "unregistered/NA"
+}
