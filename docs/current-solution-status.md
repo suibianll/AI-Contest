@@ -20,9 +20,11 @@
 ## 0.1 当前计划状态（2026-09-08）
 
 > **2026-09-08 当前详细队列**见[持续研究循环 §7](superpowers/plans/workpackages/2026-09-08-continuous-research-loop.md)：
-> P0 先统一 L28 计分 SHA/完整 fit 表并纠正 A28 的 V-only 伪下界；Linear 依次执行 L29 充分统计量顺序拟合、
-> L30 联合 A@W 低维互逆拟合；Attention 依次执行 A2+A23 重基线、A29 最终输出残差驱动的量化边界
-> Q/K 互逆补偿，并按预注册条件决定是否进入 4×4 块扩展。旧 L24–L26/A26 初始表不再提供指令。
+> P0 先统一 L28 计分 SHA/完整 fit 表、选择精确速度表示并纠正 A28 的 V-only 伪下界。Linear 方向池为
+> L29-Q 行空间压缩 / L29-G 充分统计量（二选一）、L30 全局 reduced-rank 输出拟合、L31 输出目标合法码更新、
+> L32 联合 A@W 低维互逆拟合；Attention 为 A2+A23 重基线、A29 最终输出量化边界补偿、A30 闭式逐通道
+> 互逆平衡、A31 64 块三角误差搬运、A33 折一致聚合，另有待授权 A32 共享码语义。旧 L24–L26/A26 表不再提供指令。
+> 新收益卡采用双父策略：Linear 从 L4 时间父、Attention 从 R3 时间父构建，高分父仅作超越目标；不再把所有旧训练无条件叠加到接近 300s。
 
 当前按[持续研究循环](superpowers/plans/workpackages/2026-09-08-continuous-research-loop.md)推进。
 **Linear 侧父更新：L4 → L28**（4611/286s，2026-09-08 官方 RETAINED，+4 vs L4）。
