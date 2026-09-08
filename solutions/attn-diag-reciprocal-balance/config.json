@@ -1,0 +1,18 @@
+{
+  "run_id": "attn-diag-reciprocal-balance",
+  "mechanism": "closed-form-output-propagated-diagonal-reciprocal-qk-balance",
+  "parent": "solution.py",
+  "parent_sha256": "12352efdd4e23cc5e1e17953008664fbaa5ea5d693373635fdafc4d28ce4e24e",
+  "source_sha256": "7ac5cd94a769c82299c0f88264cf94f51b451c69fcc1a1b8fd8ec624f7e08a36",
+  "fit_windows": 3,
+  "gate_windows": [
+    4,
+    5
+  ],
+  "max_tokens": 256,
+  "chunk_tokens": 8,
+  "formula": "d=0.25*log((b+1e-12)/(a+1e-12)); group-center; clamp +/-log(2)/2",
+  "deployment": "Q_parent*exp(d), K_parent*exp(-d), learned_center*exp(-d)",
+  "candidate_count": 1,
+  "official_status": "unregistered/NA"
+}
