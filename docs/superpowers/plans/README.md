@@ -16,12 +16,14 @@
 两份Linear归档已明确为旧L23 timeout与L23b；所指是Git提交推送，旧超时版不重复提交官方。
 Linear侧官方进展（2026-09-08）：L23b TIMEOUT后L28时间安全重构（批量Cholesky+eigh替换SVD+投影向量化）
 官方 **4611/286s**（+4 vs L4 4607/247s，286s<300s）RETAINED，**L28 升级为新 Linear 侧父**；
-L23b完整校准fit_gain 0.9486已达目标，L28 shard0为0.9453，L28完整fit表列为P0。根v189不变，官方时间余量14s。
+L28 完整校准 fit_gain `0.948587` 已达目标。根运行父仍为 v189；compiled sample-energy 用户回传
+`17636/264s`，官方计分 SHA 待单独核验，核验前状态为 `REPORTED_BETTER / IDENTITY_PENDING`。
 Attention A25官方14057/254s退步，A23 14437/276s为研究父，A2 14440/274s为最高对照。
 AC0（correctness-hardened）官方 14395/258s（2026-09-08）：相对 R3 14405/238s −10/+20s，
-未触发 A29 停止门（<−20），258s<300s 硬限但超 245s 时间目标；AC0 为 A29 实现父（A29 骨架同 SHA）。
-任务状态：EXPANDED_PLAN_READY；当前唯一执行队列为明细§7。Linear含两类精确降时与三类正交收益机制，
-Attention含重基线、最终输出补偿、闭式互逆平衡、块三角搬运与折一致聚合；共享码语义仍待单独授权。
+未触发 A29 停止门（<−20）；AC0 只作正确性参考。真实 A29 实现官方 TIMEOUT，AC0 同 SHA 骨架
+不得继承 A29 身份；Attention 当前下一卡为 A30。
+任务状态：RULES_UNIFIED / NEXT_A30；当前唯一执行队列为明细§7。Linear 的 L29-Q/G 与 L30 已拒绝，
+先核验 `17636/264s` 身份，再从 L31/L32 中只注册一张；Attention 当前为 A30，A31 随后；共享码语义仍待单独授权。
 新收益卡采用 score/time 双父：Linear 从 L4 247s、Attention 从 R3 238s 构建，L28/A2作为必须超越的高分对照。
 
 ## 历史计划索引（仅证据）
@@ -46,24 +48,24 @@ fresh default Overall `0.688994940507` 与本地最高严格持平，但时间�
 通过；三种实现和完整证据已归档。用户后来补充该归档的官方结果为
 `17636/264s`（相对 v189 `+20/-11s`）；原始本地 score-tie 裁决仍保留，根仍为 v189。
 
-此前 [`Linear 动态 32 行块能量块序计划`](2026-09-06-linear-dynamic-block-energy32-plan.md)
+此前 [`Linear 动态 32 行块能量块序计划`](../archive/plans/2026-09-06-linear-dynamic-block-energy32-plan.md)
 已按 R0 → R3 关闭为 **CLOSED / R3_REJECTED_TIME**：fresh default Overall
 `0.688652578052` 低于已测本地最高 `0.688994940507`，且时间预测 `285.526750s`，
-未达到 `<280s` 提交门；候选已归档，根仍为 v189。上一份 [`Linear 动态 carrier-scale 块序计划`](2026-09-06-linear-dynamic-carrier-scale-plan.md)
+未达到当时使用的 `<280s` 提交门；候选已归档，根仍为 v189。上一份 [`Linear 动态 carrier-scale 块序计划`](../archive/plans/2026-09-06-linear-dynamic-carrier-scale-plan.md)
 已按 R0 → R3 关闭为 **CLOSED / R3_REJECTED_TIME**：fresh default Overall
 `0.687922431205` 低于已测本地最高 `0.688994940507`，且时间预测 `286.049047s`，
-未达到 `<280s` 提交门；候选已归档，根仍为 v189。上一份 [`Linear 动态块能量块序计划`](2026-09-06-linear-dynamic-block-energy-plan.md)
+未达到当时使用的 `<280s` 提交门；候选已归档，根仍为 v189。上一份 [`Linear 动态块能量块序计划`](../archive/plans/2026-09-06-linear-dynamic-block-energy-plan.md)
 已按 R0 → R3 关闭为 **CLOSED / R3_REJECTED_TIME**：fresh default Overall
 `0.688967415343` 高于本地最高，但时间预测 `286.022476s`，未达到 `<280s` 提交门；
-候选已归档，根仍为 v189。上一份 [`Linear 校准内 carrier-energy 块序计划`](2026-09-06-linear-integrated-carrier-energy-plan.md)
+候选已归档，根仍为 v189。上一份 [`Linear 校准内 carrier-energy 块序计划`](../archive/plans/2026-09-06-linear-integrated-carrier-energy-plan.md)
 已按 R0 → R3 关闭为 **CLOSED / R3_REJECTED_TIME**：复用版保持上一版的本地分数，
 但时间预测为 `284.291453s` 且未超过本地最高，未达到提交门。上一份
-[`Linear 动态样本能量 GPTQ 块序计划`](2026-09-06-linear-dynamic-actorder-plan.md)
+[`Linear 动态样本能量 GPTQ 块序计划`](../archive/plans/2026-09-06-linear-dynamic-actorder-plan.md)
 已按 R0 → R3 关闭为 **CLOSED / R3_REJECTED_TIME**：候选的 default proxy 分数超过
 本地最高，但官方时间预测为 `284.775756s`，未达到 `<280s` 提交门，根仍为 v189。
 该计划不重开已归档排序/曲率邻域。
 
-最近的 [`Attention mask-aligned output selector 执行计划`](2026-09-06-attention-noncausal-selector-plan.md)
+最近的 [`Attention mask-aligned output selector 执行计划`](../archive/plans/2026-09-06-attention-noncausal-selector-plan.md)
 已按 R0→R2 关闭为 **CLOSED / R2_REJECTED**；v189 已收到官方 `17616/275s` 并 RETAINED
 为当前完整父版本，根 `solution.py` 已切换为 v189。上一份无因果 logit-gain 拟合已关闭为
 **CLOSED / R1_REJECTED**。在注册新的独立机制前不重开已关闭邻域。

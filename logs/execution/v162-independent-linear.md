@@ -1,6 +1,6 @@
 # v162 独立分支：Linear 侧执行日志（L 代理）
 
-> 契约：[总计划 §2/§5/§6](../docs/superpowers/plans/2026-09-06-v162-independent-linear-attention-plan.md)。
+> 契约：[总计划 §2/§5/§6](../../docs/superpowers/archive/plans/2026-09-06-v162-independent-linear-attention-plan.md)。
 > 只写本侧目录与本日志；GPU 经 `artifacts/proxy_v3/v162-independent/gpu.lock` 排队。
 > 零点 v162 `56101559...C000A`（官方 1001/146s）。本地最高参考（eval-v3 linear
 > 六 shard，n=336）：**0.6367996275406851**（v189 Linear 侧，

@@ -16,16 +16,21 @@
   后续修订优先；归档计划和历史日志不提供下一步指令。
 - 官方结果优先于活动计划已确认事实，再次是归档 result/log 和本地 JSON/report；推测不得写成事实。
   活动计划的专项规则只适用于该计划，已关闭的 v162 侧向计划不再全局覆盖门禁。
+- 当前规则优先级固定为：本文件 → `docs/4b-panel-testing-guide.md` → 唯一活动总计划及其当前工作包
+  → `workbench/*/state.json` / `queue.md`。后两者只保存执行状态，不得重新定义门禁；发现冲突时先同步
+  当前文档再继续执行，不得自行选择有利口径。
 
 ## 2. 当前基线与提交边界
 
 | 用途 | 版本 | 官方分数 / 时间 | 说明 |
 |---|---|---|---|
 | 完整官方父、低成本候选起点 | v189 | 17616 / 275s | RETAINED，根 `solution.py` |
+| 已回传但待身份绑定的完整候选 | compiled sample-energy | 17636 / 264s | 用户回传，优于 v189；官方计分 SHA 尚未与归档 SHA `D66128A6...B0F6` 单独核验，核验前不替换根父 |
 | 高复杂度新机制的时间预算父 | v180 | 17597 / 242s | 比 v189 快 33s、少 19 分 |
 | Linear 侧官方父 | L28（continuous_linear_l28-proj-vectorized） | 4611 / 286s | 2026-09-08 RETAINED，+4 vs L4；残差交叉子空间 A@W 拟合 + 时间安全重构 |
 | 历史侧隔离父 | Linear v166 / Attention v168 | 4590 / 226s；14005 / 210s | 仅用于明确的侧隔离计划 |
-| Attention A29 实现父 | AC0（continuous_attention_ac0-correctness-hardened） | 14395 / 258s | 2026-09-08 官方回传，correctness-hardened；相对 R3（14405/238s）−10/+20s，未触发 A29 停止门；A29 骨架与 AC0 同 SHA |
+| Attention 正确性参考 | AC0（continuous_attention_ac0-correctness-hardened） | 14395 / 258s | 2026-09-08 官方回传；相对 R3（14405/238s）−10/+20s；A29 骨架与 AC0 同 SHA，但不是 A29 机制分数 |
+| Attention A29 实际机制实现 | a29-final-residual-s | TIMEOUT / >300s | 与 AC0 骨架分开；只关闭该高成本实现，不能把 AC0 的 14395 记为 A29 分数 |
 | 用户确认的榜首锚点 | 源码、配置未知 | 21765 / 290s | 距 v189 4149 分，不是本地实验结果 |
 | 用户确认的成功机制锚点 | A@W拟合 + Q/K互逆scale学习 | 21071 / 283s | 外部用户确认，源码/配置/SHA待绑定，不替换根父 |
 
@@ -84,6 +89,7 @@
 - 当前测试统一遵循 [4B 面板测试指引](docs/4b-panel-testing-guide.md)：不新增 0.5B、
   逐候选 OOD、跨模型 GPT-2/opt 或 fresh-default 计时运行。历史 OOD 解释规则仅用于读历史证据。
 - 官方时间唯一硬约束为 300s；所有本地时间公式、预测和门禁退役，api_seconds 只作记录与风险提示。
+  本地开销可用于标注风险和安排降时优先级，但不得设置 `<280s`、按层外推或其他提交否决门。
 
 ## 5. 评测口径与执行流程
 

@@ -1,7 +1,7 @@
 # Attention 无因果 logit-gain 拟合执行记录
 
 日期：2026-09-06
-计划：[`执行计划`](../../docs/superpowers/plans/2026-09-06-attention-noncausal-logit-fit-plan.md)
+计划：[`执行计划`](../../docs/superpowers/archive/plans/2026-09-06-attention-noncausal-logit-fit-plan.md)
 父：根 `solution.py` v189，官方 `17616/275s`
 
 ## 裁决

@@ -8,24 +8,27 @@
 
 > 当前测试按[4B指引](../docs/4b-panel-testing-guide.md)执行。本文历史0.5B、OOD、跨模型和时间预测结果仅作证据，不构成新测试命令或门禁。
 
+> 完整方案身份分开记录：根运行父仍是 v189 `17616/275s`；compiled sample-energy 已有用户回传
+> `17636/264s`，但官方计分 SHA 尚未与归档 SHA `D66128A6...B0F6` 单独核验，因此当前状态为
+> **REPORTED_BETTER / IDENTITY_PENDING**，核验前不替换根父，也不得写成已确认当前根。
+
 **Attention Correctness Hardening（2026-09-08）：** [AC0](continuous_attention_ac0-correctness-hardened/result.md)
-（`F817E4C2…`，父 R3 `A5C679D7…`）本地 RETAINED 为新 Attention 实现父：原子 Q/K-pair
+（`F817E4C2…`，父 R3 `A5C679D7…`）保留为 Attention 正确性参考：原子 Q/K-pair
 fallback（删 `except: pass`）、训练 hard forward 走部署五字段路径、统一 transform
 reference、GQA/rotation/center shape 校验、校准期 FP64 QK-invariance audit（真实 4B
 六层全部 valid，5.2~6.1e-07<1e-6）、fallback_reason 记录；battery 30/30。本地 paired
 attention-only vs R3：Δmean +0.003501 / L1 0.011264（72 case，34+/26−/12=）；5/6 层
 arm 一致，L15 边际 gate 翻转（R3 identity→AC0 rotation）。**官方回传 14395 / 258s**
 （相对 R3 −10/+20s；未触发 <−20 停止门；258s<300s 硬限；A29 骨架与 AC0 同 SHA，
-结果绑定 AC0）。[A29](continuous_attention_a29-boundary-output/result.md) 骨架已建
-（=AC0 逐位复制，机制未实现）。
+结果绑定 AC0）。[A29 骨架](continuous_attention_a29-boundary-output/result.md) 只是 AC0 逐位复制；
+真正 A29 实现 `v163_attention_a29-final-residual-s` 已官方 TIMEOUT，当前下一卡为 A30。
 
 最新官方回传：[Attention A21-1](continuous_attention_anchor21-a1/official-result.json) **14199/244s，OFFICIAL_REJECTED**，相对R3 −206/+6s；源码SHA `870d5848f95887307ad7faa6364b5d7f7480f5b7be6001c812c44ead02bdb48a`。根v189与Attention官方最佳A2未替换。
 
-> **Planning update (2026-09-06):** the active umbrella plan is
-> [independent Linear / Attention optimization from v162](../docs/superpowers/plans/2026-09-06-v162-independent-linear-attention-plan.md)
-> (DESIGN_ONLY). Both branches start from the original v162 source and freeze the other side to standard.
-> The user approved the negative-change risk gate for this plan. Root v189 remains unchanged.
-> The following entries are previous execution records, not the new branches' results.
+> **Historical snapshot (2026-09-06; not current instructions):** the superseded umbrella plan was
+> [independent Linear / Attention optimization from v162](../docs/superpowers/archive/plans/2026-09-06-v162-independent-linear-attention-plan.md).
+> Current execution uses the continuous research loop linked from `docs/superpowers/plans/README.md`.
+> The following entries are historical execution records only.
 > [Linear compiled robust calibration-window max block order](20260906_linear-compiled-robust-window-order_rejected/result.md)
 > was closed as **CLOSED / R1_REJECTED** after shard0 Linear mean/median deltas of
 > `-0.000043038/-0.000117686`; it was archived without R2 or official submission.
@@ -58,7 +61,7 @@ arm 一致，L15 边际 gate 翻转（R3 identity→AC0 rotation）。**官方�
 > was closed as **CLOSED / R3_REJECTED_TIME**: its local default Overall was `0.688994940507`
 > (above the local high `0.687776303363`), but the official-time predictor was `284.775756s`,
 > so it was archived without official submission and the root remains v189.
-> [Attention mask-aligned output selector](../docs/superpowers/plans/2026-09-06-attention-noncausal-selector-plan.md)
+> [Attention mask-aligned output selector](../docs/superpowers/archive/plans/2026-09-06-attention-noncausal-selector-plan.md)
 > was closed as **CLOSED / R2_REJECTED** after the fresh default gate. The previous non-causal
 > logit-gain fitting was closed as **CLOSED / R1_REJECTED**. The recovered fixed-order candidate is archived as
 > [v189](20260906_v189_static-actorder-hdiag_recovered_scoreNA_timeNA/result.md): official

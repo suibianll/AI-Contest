@@ -6,6 +6,8 @@
 > [L23b 超时记录](../logs/execution/2026-09-08-l23b-official-timeout.md)。
 
 > 当前测试按[4B指引](4b-panel-testing-guide.md)执行。本文历史0.5B、OOD、跨模型和时间预测结果仅作证据，不构成新测试命令或门禁。
+> 当前规则优先级为 `AGENTS.md` → 4B 指引 → 唯一活动计划/工作包 → workbench 状态；
+> Linear 独立窗口和所有本地时间仅记录，均不得重新成为提交否决门。
 
 更新：2026-09-08。
 
@@ -20,9 +22,9 @@
 ## 0.1 当前计划状态（2026-09-08）
 
 > **2026-09-08 当前详细队列**见[持续研究循环 §7](superpowers/plans/workpackages/2026-09-08-continuous-research-loop.md)：
-> P0 先统一 L28 计分 SHA/完整 fit 表、选择精确速度表示并纠正 A28 的 V-only 伪下界。Linear 方向池为
-> L29-Q 行空间压缩 / L29-G 充分统计量（二选一）、L30 全局 reduced-rank 输出拟合、L31 输出目标合法码更新、
-> L32 联合 A@W 低维互逆拟合；Attention 为 A2+A23 重基线、A29 最终输出量化边界补偿、A30 闭式逐通道
+> L28 计分 SHA、完整 fit 表和 A28 解释纠偏已经完成；L29-Q/G 与 L30 已拒绝。
+> Linear 先核验完整候选 `17636/264s` 的官方计分 SHA，再在 L31/L32 中去重后只注册一张；
+> Attention 当前为 A30 闭式逐通道
 > 互逆平衡、A31 64 块三角误差搬运、A33 折一致聚合，另有待授权 A32 共享码语义。旧 L24–L26/A26 表不再提供指令。
 > 新收益卡采用双父策略：Linear 从 L4 时间父、Attention 从 R3 时间父构建，高分父仅作超越目标；不再把所有旧训练无条件叠加到接近 300s。
 
@@ -30,15 +32,18 @@
 **Linear 侧父更新：L4 → L28**（4611/286s，2026-09-08 官方 RETAINED，+4 vs L4）。
 L28 = 残差交叉子空间 A@W 拟合 + 时间安全重构（批量 Cholesky、eigh 替换 SVD、投影向量化）；
 L23b（13639FB2）官方 TIMEOUT 已关闭该复杂度实现；四张探索卡（L24-C/L24-A/L25/L26）
-按证伪判据关闭。L23b 完整校准 fit_gain `0.9486` 已达目标；L28 当前 `0.9453` 是 shard0 证据，
-完整 168-state/336-row fit 表列为 P0，未完成前不写成 L28 全量结果。
+按证伪判据关闭。L28 完整 168-state/336-row 校准 fit_gain 为 `0.948587`，已达到 Linear `≥0.9`
+研究目标；该指标不能换算官方分数，官方增量实际仅 `+4`。
 Attention 侧：A25 官方 14057/254s 退步，A23 14437/276s 研究父，A2 14440/274s 最高对照。
 **AC0（continuous_attention_ac0-correctness-hardened）官方 14395/258s（2026-09-08 回传）**：
 correctness-hardened 卡（原子 Q/K-pair fallback、训练/部署五字段 parity、统一 transform
 reference、GQA/rotation/center 校验、FP64 QK-invariance audit，battery 30/30）；
 相对 R3（14405/238s）−10/+20s，未触发「Δscore<−20 停止 A29」门，258s<300s 硬限但超 245s
-时间目标；AC0 为 A29 实现父，A29 骨架与 AC0 同 SHA（该官方结果绑定 AC0，不证明 A29 机制）。
-根仍 v189（17616/275s）；官方 Linear 时间余量 14s（286→300）。
+时间目标；AC0 为 A29 正确性参考，A29 骨架与 AC0 同 SHA（该官方结果绑定 AC0，不证明 A29 机制）。
+真正 A29 最终输出残差实现（SHA `D8BAAB46...126A5`）官方 TIMEOUT；只关闭该高成本实现，
+当前 Attention 下一卡为 A30。根运行父仍 v189（17616/275s）。另有 compiled sample-energy
+用户回传 `17636/264s`，但官方计分 SHA 尚未与归档 SHA 单独核验；核验前标为“待身份绑定的更优完整候选”，
+不与根父混写。官方 Linear L28 时间余量为 14s（286→300），这里只是官方实测风险事实，不构成本地门禁。
 
 此前 v189 残差压力块序计划已被取代，旧结果仍由原执行者封存。上一份
 [`Linear 编译校准样本能量块序`](superpowers/archive/plans/2026-09-06-linear-compiled-sample-energy-plan-score-tie.md)
@@ -57,30 +62,28 @@ Linear/Attention/Overall 为 `0.640810865681/0.752173407020/0.687211924573`，�
 预测 `279.215656s` 通过，但 Overall 低于本地最高 `0.688994940507429`；未提交官方，
 完整证据与初始无效运行已归档，根仍为 v189。执行记录见
 [`输出协方差块序执行记录`](../logs/execution/2026-09-06-linear-compiled-output-covariance-order-plan.md)。最近的
-[`Linear 动态 32 行块能量块序计划`](superpowers/plans/2026-09-06-linear-dynamic-block-energy32-plan.md)
-已按 R0→R3 关闭为 **CLOSED / R3_REJECTED_TIME**：fresh default
-[`Linear 动态 32 行块能量块序计划`](superpowers/plans/2026-09-06-linear-dynamic-block-energy32-plan.md)
+[`Linear 动态 32 行块能量块序计划`](superpowers/archive/plans/2026-09-06-linear-dynamic-block-energy32-plan.md)
 已按 R0→R3 关闭为 **CLOSED / R3_REJECTED_TIME**：fresh default
 Linear/Attention/Overall 为 `0.643280557360/0.752173407020/0.688652578052`，低于已测
 本地最高 `0.688994940507`，且时间模型预测 `285.526750s`，未通过 `<280s` 提交门；候选已归档于
 [`32 行块能量时间拒绝归档`](../solutions/20260906_linear-dynamic-block-energy32_time-rejected/result.md)，
 未提交官方，根仍为 v189。执行记录见
 [`32 行块能量执行记录`](../logs/execution/2026-09-06-linear-dynamic-block-energy32-plan.md)。最近的
-[`Linear 动态 carrier-scale 块序计划`](superpowers/plans/2026-09-06-linear-dynamic-carrier-scale-plan.md)
+[`Linear 动态 carrier-scale 块序计划`](superpowers/archive/plans/2026-09-06-linear-dynamic-carrier-scale-plan.md)
 已按 R0→R3 关闭为 **CLOSED / R3_REJECTED_TIME**：fresh default
 Linear/Attention/Overall 为 `0.642028877051/0.752173407020/0.687922431205`，低于已测
 本地最高 `0.688994940507`，且时间模型预测 `286.049047s`，未通过 `<280s` 提交门；候选已归档于
 [`动态 carrier-scale 时间拒绝归档`](../solutions/20260906_linear-dynamic-carrier-scale_time-rejected/result.md)，
 未提交官方，根仍为 v189。执行记录见
 [`动态 carrier-scale 执行记录`](../logs/execution/2026-09-06-linear-dynamic-carrier-scale-plan.md)。最近的
-[`Linear 动态块能量块序计划`](superpowers/plans/2026-09-06-linear-dynamic-block-energy-plan.md)
+[`Linear 动态块能量块序计划`](superpowers/archive/plans/2026-09-06-linear-dynamic-block-energy-plan.md)
 已按 R0→R3 关闭为 **CLOSED / R3_REJECTED_TIME**：fresh default Linear/Attention/Overall
 为 `0.643820278430/0.752173407020/0.688967415343`，超过本地最高
 `0.687776303363`，但时间模型预测 `286.022476s`，未通过 `<280s` 提交门；候选已归档于
 [`动态块能量时间拒绝归档`](../solutions/20260906_linear-dynamic-block-energy_time-rejected/result.md)，
 未提交官方，根仍为 v189。执行记录见
 [`动态块能量执行记录`](../logs/execution/2026-09-06-linear-dynamic-block-energy-plan.md)。此前最近的
-[`Linear 校准内 carrier-energy 块序计划`](superpowers/plans/2026-09-06-linear-integrated-carrier-energy-plan.md)
+[`Linear 校准内 carrier-energy 块序计划`](superpowers/archive/plans/2026-09-06-linear-integrated-carrier-energy-plan.md)
 已按 R0→R3 关闭为 **CLOSED / R3_REJECTED_TIME**：候选复用版保持上一 carrier-energy
 候选的 Linear `0.641778372`、Overall `0.687776303`，但时间模型预测 `284.291453s`
 且没有超过本地最高，已归档于
@@ -88,7 +91,7 @@ Linear/Attention/Overall 为 `0.642028877051/0.752173407020/0.687922431205`，�
 未提交官方，根仍为 v189。执行记录见
 [`校准内 carrier-energy 执行记录`](../logs/execution/2026-09-06-linear-integrated-carrier-energy-plan.md)。
 此前最近的
-[`Linear 动态样本能量 GPTQ 块序计划`](superpowers/plans/2026-09-06-linear-dynamic-actorder-plan.md)
+[`Linear 动态样本能量 GPTQ 块序计划`](superpowers/archive/plans/2026-09-06-linear-dynamic-actorder-plan.md)
 已按 R0→R3 关闭为 **CLOSED / R3_REJECTED_TIME**：候选 default Overall
 `0.688994940507` 高于本地最高 `0.687776303363`，但时间模型预测 `284.775756s`，未通过
 `<280s` 提交门；候选已归档于
@@ -96,7 +99,7 @@ Linear/Attention/Overall 为 `0.642028877051/0.752173407020/0.687922431205`，�
 未进行官方提交，根仍为 v189。执行记录见
 [`动态样本能量执行记录`](../logs/execution/2026-09-06-linear-dynamic-actorder-plan.md)。
 此前最近的
-[`Attention mask-aligned output selector 执行计划`](superpowers/plans/2026-09-06-attention-noncausal-selector-plan.md)
+[`Attention mask-aligned output selector 执行计划`](superpowers/archive/plans/2026-09-06-attention-noncausal-selector-plan.md)
 已按 R0→R2 关闭为 **CLOSED / R2_REJECTED**；执行记录见
 [`mask selector 执行记录`](../logs/execution/2026-09-06-attention-noncausal-selector.md)。v189 已收到官方
 `17616/275s` 并 RETAINED 为当前完整官方父，根 `solution.py` 已切换为 v189。上一份无因果 logit-gain 拟合已
@@ -327,7 +330,7 @@ per-call 小张量算子成本远超本地 CUDA 外推，v160 的 68s 官方余�
 [`v161 官方超时日志`](../logs/execution/2026-09-03-v161-official-timeout.md)、
 [`v161 result`](../solutions/20260903_v161_v160-attn-s1-qk-gram-refine_scoreNA_timeout/result.md)。
 **当时唯一活动计划**：
-[`v162 基线的 Linear / Attention 官方侧向隔离优化计划`](superpowers/plans/2026-09-03-v162-official-side-isolation-optimization-plan.md)。
+[`v162 基线的 Linear / Attention 官方侧向隔离优化计划`](superpowers/archive/plans/2026-09-03-v162-official-side-isolation-optimization-plan-superseded.md)。
 以 v162 `1001/146s` 双标准 HiF4 为共同零点，分别构造“候选 Linear + standard Attention”
 和“standard Linear + 候选 Attention”。官方结果直接给出每侧绝对贡献、相对 v160 侧贡献
 （Linear `3586`、Attention `12944`）的提升比例；组合后再测实际交互和对 `4233` 分差的闭合率。
@@ -373,7 +376,7 @@ cross-fold minimax 及其邻域仍不重启。
 
 用户提供的 `linear.txt`/`linear_dep.txt` 已合成为 v159，并已获得 17532 官方分数；17816 的
 完整提交仍未同步，不能把两者视为同一源码。完整执行顺序见
-[`活动计划`](superpowers/plans/2026-09-03-official-pattern-and-linear-structure-experiments.md)。
+[`归档计划`](superpowers/archive/plans/2026-09-03-official-pattern-and-linear-structure-experiments-superseded.md)。
 
 ## 0.1 v160 本地集成（2026-09-03，官方 = 17532/232s no-op）
 
@@ -938,7 +941,7 @@ v86 的部分 scale-aware/output-aware 机制。此前把它描述为"v86 级静
 ## 6. 最近执行计划
 
 **当前活动优化计划（2026-09-06）：**
-[`Attention 相邻 pair 的 4×4 GQA 配对变换计划`](superpowers/plans/2026-09-06-attention-crosspair-4x4-plan.md)，
+[`Attention 相邻 pair 的 4×4 GQA 配对变换计划`](superpowers/archive/plans/2026-09-06-attention-crosspair-4x4-plan-rejected.md)，
 状态 **ACTIVE / ATTN-CROSSPAIR-4X4**。在 v189 已冻结的 Q/K 状态之后按相邻 pair 的交叉
 协方差拟合一次合法 GQA-local 4×4 pair transform；根 v186 保持不变。静态 activation-GPTQ 计划
 已归档为 [`v189 候选复核计划`](superpowers/archive/plans/2026-09-06-static-activation-gptq-order-plan-candidate-archived.md)。

@@ -1,12 +1,13 @@
 # Linear 当前机制队列
 
-2026-09-07更新。唯一明细：[21071下一轮计划](../../docs/superpowers/plans/workpackages/21071-evidence-driven-research.md)。
+唯一明细：[持续研究循环 §7](../../docs/superpowers/plans/workpackages/2026-09-08-continuous-research-loop.md)。
+本文件只保存状态，不定义新门禁。
 
-1. R0：证据身份、去重和[解释纠偏](../../logs/execution/2026-09-07-21071-next-cycle-evidence-correction.md)，零API，不重测旧0.5B。
-2. L23：官方TIMEOUT，当前复杂度实现关闭。后继为全校准行求解修正与残差增量降成本，单独新SHA验证归档，不机械减rank/样本/步数重试。
-3. 条件后继：仅在本卡误差定位给出新自由度时登记一张，不扫旧rank/步数/窗口/阈值。
+1. **P0 身份核验**：用户回传的完整候选 `17636/264s` 优于根 v189，但官方计分 SHA 尚未与
+   归档 SHA `D66128A6...B0F6` 单独绑定。核验前状态为 `REPORTED_BETTER / IDENTITY_PENDING`。
+2. **当前侧父**：L28 `4611/286s`，完整校准 fit_gain `0.948587`；L4 `4607/247s` 只作
+   time reference。L29-Q/G 已前置拒绝，L30 已拒绝，LC0 只作正确性审计。
+3. **下一卡**：L31 与 L32 先去重，只注册其中一张，并从 L4 构建；不得并行扫参。
 
-当前父与全部历史官方结果见[state.json](state.json)。Linear直接用全部4B校准数据做A@W低维拟合，不考虑泛化、不拆fit/select；
-独立窗口均值/split/负向损失只记录，不作门，
-本地时间仅记录；官方300s。旧local_highest_reference仅历史参考，不作4B准入门。
-L23已获官方超时回传，精确耗时和分数未知。具体旧实现负结果保留，不以此关闭成功机制整族。
+Linear 直接用全部 4B 校准数据做 A@W 拟合。独立窗口、split、负向损失和本地 `api_seconds`
+只记录，不得否决候选；官方分数和官方 300s 是最终裁决。

@@ -1,7 +1,7 @@
 # L 侧机制卡（v162 独立分支）
 
 > 侧：Linear（L）。日期：2026-09-06。契约：
-> [总计划](../../docs/superpowers/plans/2026-09-06-v162-independent-linear-attention-plan.md) +
+> [总计划](../../docs/superpowers/archive/plans/2026-09-06-v162-independent-linear-attention-plan.md) +
 > [L 任务书](../../docs/superpowers/plans/workpackages/v162-linear.md)。
 > 零点 v162 SHA `56101559D267D962084CD67A9F9AF8EB924501B17AB408EAF676081876CC000A`。
 

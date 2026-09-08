@@ -1,6 +1,6 @@
 # L 侧独立分支：RECOVERY 阶梯结果报告（L1–L4）
 
-> 日期：2026-09-06。契约：[总计划](../../docs/superpowers/plans/2026-09-06-v162-independent-linear-attention-plan.md)
+> 日期：2026-09-06。契约：[总计划](../../docs/superpowers/archive/plans/2026-09-06-v162-independent-linear-attention-plan.md)
 > + [L 任务书](../../docs/superpowers/plans/workpackages/v162-linear.md)。
 > 执行日志：`logs/execution/v162-independent-linear.md`。根 v189 未改动。
 

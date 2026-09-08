@@ -156,6 +156,16 @@ V禁令继续遵守，不据此自动解禁V，也不在尚未证明不可达时
 score parent 重构；需要新增复杂校准或动态算子的收益卡从 time parent 构建，并以 score parent 为官方超越目标。
 不得为了保留几分历史增益而无条件叠加所有训练栈。
 
+### 7.0 当前状态快照（执行以此为准）
+
+| 侧 | 已完成 | 当前父/对照 | 唯一下一步 |
+|---|---|---|---|
+| Linear | L28 `4611/286s` RETAINED；完整 fit `0.948587`；L29-Q/G 前置拒绝；L30 拒绝；LC0 只作正确性审计 | score parent=L28；time reference=L4 | 先核验完整候选 `17636/264s` 的计分 SHA；随后在 L31/L32 中去重后只注册一张，从 L4 构建 |
+| Attention | AC0 `14395/258s`；真实 A29 实现 TIMEOUT，AC0 骨架不得冒充 A29 得分 | score parent=A2 `14440/274s`；time parent=R3 `14405/238s` | A30；A29 只有另立“降时实现卡”才可回访 |
+
+所有本地时间仅标注风险和安排降时优先级；不得设置 `<280s` 或按层外推提交门。Linear 独立窗口
+只记录，不得否决全校准 fit 候选；Attention 的 4B paired 只作合法性/风险判读，官方结果是唯一分数裁决。
+
 ### P0：证据身份与解释修复（先做，零模型 API）
 
 | owner | 动作 | 完成条件 |
@@ -288,6 +298,12 @@ fold4 独立 holdout。三个训练 fold 各自产生 driver 后等权聚合成�
 负向关闭“在 A2 上叠 A23 乘积残余”，TIMEOUT 只关闭这一组合复杂度。
 
 ### A-R1：A29 最终输出残差驱动的量化边界 Q/K 互逆补偿
+
+> **当前裁决：IMPLEMENTATION_TIMEOUT。** 实际机制实现
+> `solutions/v163_attention_a29-final-residual-s/solution.py` 官方超时；
+> `solutions/continuous_attention_a29-boundary-output/solution.py` 只是 AC0 逐位骨架，官方
+> `14395/258s` 归属 AC0。以下保留为机制定义证据，不是当前待执行卡。F4 仍 OPEN；只有新建、
+> 去重后的降时实现卡才能回访。当前队列继续 A30。
 
 **靶点**：直接优化 F4，而非继续压 Q/K operand MSE。A28 的 V 重编码饱和不构成最终输出下界；
 A29 利用 QK 项与 V 项的负交叉补偿。固定父为时间父 R3，保留其已获官方验证的旧训练，

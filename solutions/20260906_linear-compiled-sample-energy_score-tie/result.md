@@ -1,4 +1,4 @@
-# Linear compiled calibration sample-energy block order — OFFICIAL POSITIVE / LOCAL SCORE TIE
+# Linear compiled calibration sample-energy block order — REPORTED OFFICIAL POSITIVE / IDENTITY PENDING
 
 ## Source and status
 
@@ -6,8 +6,9 @@
 - Final SHA256: `d66128a62e7e068edc50c91f4d8e212f586a6edcaee5bea7d3564166e258b0f6`
 - Parent: v189, official `17616/275s`
 - Official result (user-reported): `17636/264s` (`+20` score, `-11s` vs v189)
+- Official scored SHA: **pending separate verification**; do not infer it from the archive filename or local final SHA
 - Local R3 decision: `REJECTED_SCORE_TIE`; the later official result is recorded here
-- Root: unchanged v189; this archive is not promoted by this metadata update
+- Root: unchanged v189 until the official scored SHA is bound to this archive
 
 The mechanism compiles one legal 64-channel block order during Linear weight
 calibration. It averages final-transformed calibration-window block energy,
@@ -35,11 +36,13 @@ The direct-core implementation produced:
   `dyn_act=59.774616s`, `dyn_qkv=2.946691s`
 - Official-time predictor: `279.445203s`
 
-The score exactly tied the current local high `0.688994940507429`. Because
+The score exactly tied the historical local high `0.688994940507429`. Because
 the local submission rule required a strict improvement, the local R3 decision
 was `REJECTED_SCORE_TIE`. The user subsequently supplied an official result
 of `17636/264s` for this archive; that later official positive result is
-recorded separately from the original local gate decision.
+recorded separately from the original local gate decision. It remains
+`REPORTED_BETTER / IDENTITY_PENDING`, not the confirmed root parent, until the
+official scored SHA is verified.
 
 The initial wrapper SHA is
 `f6541fadbac21e2876000729cf6a87a0761c7f796ff5fd65365c752207758626`; its

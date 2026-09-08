@@ -1,7 +1,7 @@
 # v162 独立 Attention 优化执行日志（A 代理）
 
 > 任务书：[workpackages/v162-attention.md](../../docs/superpowers/plans/workpackages/v162-attention.md)
-> 总计划：[2026-09-06-v162-independent-linear-attention-plan.md](../../docs/superpowers/plans/2026-09-06-v162-independent-linear-attention-plan.md)
+> 总计划：[2026-09-06-v162-independent-linear-attention-plan.md](../../docs/superpowers/archive/plans/2026-09-06-v162-independent-linear-attention-plan.md)
 > 零点：v162 standard-baseline-both，SHA `56101559D267D962084CD67A9F9AF8EB924501B17AB408EAF676081876CC000A`，官方 1001/146s。
 > 本侧冻结：两个 Linear API、dynamic V、standard codec。工作目录 `workbench/v162_attention/`。
 

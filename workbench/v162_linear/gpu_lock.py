@@ -1,6 +1,6 @@
 """GPU serialization lock for the v162-independent branch (L side).
 
-Contract from docs/superpowers/plans/2026-09-06-v162-independent-linear-attention-plan.md §2:
+Historical contract from docs/superpowers/archive/plans/2026-09-06-v162-independent-linear-attention-plan.md §2:
 atomic exclusive creation via open(path,'x'); the lock records side, PID,
 run_id and start time; released in finally.  If the lock exists, wait; never
 delete the other agent's lock.  The lock is an ignored run artifact and is

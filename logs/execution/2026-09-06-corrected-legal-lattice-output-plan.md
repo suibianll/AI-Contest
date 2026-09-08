@@ -36,4 +36,4 @@ oracle，不把旧错误结果或本次 oracle 解释为整个 HiF4 空间的格
 
 - 状态：`CLOSED / R1_NO_SUPPORTED_MECHANISM`。
 - R2 未执行，未分配版本号，未改变根 `solution.py`。
-- 当前唯一活动计划已切换为 `docs/superpowers/plans/2026-09-06-attention-source-scale-proposal-plan.md`。
+- 当时的后继计划现已归档为 `docs/superpowers/archive/plans/2026-09-06-attention-source-scale-proposal-plan-rejected.md`。

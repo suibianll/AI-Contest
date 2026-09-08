@@ -62,6 +62,8 @@ AC0 = R3 数学行为 + implementation hardening（只修正确性，不改算�
     该层 rotation 在官方窗口未获净收益；③ mse_std 分母改部署 parent 语义。
   - 时间 +20s：§9/§10 强制 parity 的成本——训练期每步部署编码（32 步×4 窗×Q/K ×6 层）、
     每层 FP64 audit（≤256 行）与 pair 校验、V 部署编码。258s < 300s 硬限（余量 42s）。
-- 结论：AC0 保持为 A29 实现父（正确性卡，非官方最佳；官方 Attention 最佳仍为 A2 14440）。
-- 下一步：在 AC0 上实现 A29 机制（`continuous_attention_a29-boundary-output/`，骨架已建，
-  机制实现另行开卡），并在 hard gate 中先复现该 −10 基线成本。
+- 结论：AC0 保持为正确性参考，不是官方最佳；官方 Attention 最佳仍为 A2 `14440/274s`，
+  时间父仍为 R3 `14405/238s`。AC0 的官方 `−10/+20s` 按真实负结果记录，不称为正向收益。
+- A29 状态：本目录对应的 `continuous_attention_a29-boundary-output/` 只是 AC0 逐位骨架；
+  真正 A29 实现 `v163_attention_a29-final-residual-s` 已官方 TIMEOUT。当前下一卡为 A30；
+  A29 只有另立、去重后的降时实现卡才可回访。

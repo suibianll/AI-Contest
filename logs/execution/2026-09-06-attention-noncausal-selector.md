@@ -1,7 +1,7 @@
 # Attention mask-aligned output selector 执行记录
 
 日期：2026-09-06
-计划：[`Attention mask-aligned output selector`](../../docs/superpowers/plans/2026-09-06-attention-noncausal-selector-plan.md)
+计划：[`Attention mask-aligned output selector`](../../docs/superpowers/archive/plans/2026-09-06-attention-noncausal-selector-plan.md)
 父：v189 `static-actorder-hdiag-recovered`，根 SHA256
 `261202248a0146a2ee45f3df60bd1979bb8171b7c162921013b0024c848617af`
 

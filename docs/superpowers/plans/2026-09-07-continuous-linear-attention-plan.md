@@ -14,15 +14,15 @@
 
 0. 循环机制（§1–§6 见明细）：账本 E1–E4 / F1–F5 定位 → 出卡 → 一卡一配置 → 交付/官方 → 续接。
 
-1. 建账本（R1，零 API 优先）：Linear E1/E2/E3/E4，Attention F1–F5；父基准 L4、A23，对照 A2。
-   先验为 E2/E4 主导（L23b 校准拟合降 90–99% 但独立窗口 0.339487 < 父 0.524265），待账本否证。
-2. 初始队列：Linear L24-A（跨块残差 carry-over，靶 E2）/ L24-B（输出度量加权低维基，靶 E1）/
-   L24-C（动态激活 scale 分桶，靶 E4）；Attention A26-A（输出度量加权码误差目标，靶 F2）/
-   A26-B（logits 低维可微代理，靶 F1/F3）/ A26-C（长度层分布配比，靶 F5）。按账本择一，不并行扫参。
-3. P0 事务：两份 Linear 归档（33D1DA51 timeout 仅证据；13639FB2 L23b 待官方）git commit/push + L23b fit 表。
-4. 单侧正向且 <300s 才升级侧父并重定位账本；两侧均正向后登记单侧增量组合包。
+1. Linear：先核验完整候选 `17636/264s` 的官方计分 SHA；核验后在 L31/L32 中去重并只注册一张，
+   从 L4 time reference 构建，以 L28 为 score target。L29-Q/G、L30 和 LC0 不在当前队列。
+2. Attention：A29 实际实现已 TIMEOUT，AC0 骨架分数只归属 AC0；当前只执行 A30，A31 随后，
+   A32 共享码语义仍需用户单独授权。
+3. 单侧正向且官方 `<300s` 才升级侧父并重定位账本；两侧均正向后登记单侧增量组合包。
    等待官方回传期间继续独立机制推导与实现，不停循环。
 
-根v189和Linear侧父L4暂不变。现有包的新旧路径/SHA必须分开，不覆盖历史源码或继承结果。
+根运行父仍为 v189；另有 compiled sample-energy 用户回传 `17636/264s`，须先核验官方计分 SHA，
+核验前只列为“待身份绑定的更优完整候选”。Linear `score_parent=L28`，`time_reference=L4`；
+Attention `score_parent=A2`，`time_parent=R3`。现有包的新旧路径/SHA必须分开，不覆盖历史源码或继承结果。
 执行细节、指标、失败分支、所有权、GPU锁与交付模板均以循环明细为准。
 旧[21071阶段](workpackages/21071-evidence-driven-research.md)保留为机制设计依据，不再提供队列指令。

@@ -41,6 +41,7 @@ source scale proposal 在已变换 Q/K 坐标下没有胜出。
 
 状态：**CLOSED / NOOP_REJECTED**。不扫描 stats、threshold、offset 或其他邻域；下一
 活动计划切换到
-`docs/superpowers/plans/2026-09-06-attention-aligned-source-scale-plan.md`，测试把
+当时的后继计划现已归档为
+`docs/superpowers/archive/plans/2026-09-06-attention-aligned-source-scale-plan-rejected.md`，测试把
 NVFP4 source scale 按最终 Q/K multiplier/permutation 坐标对齐后再进入同一 canonical
 候选池。

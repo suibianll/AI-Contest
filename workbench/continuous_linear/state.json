@@ -2,7 +2,7 @@
   "side": "linear",
   "branch": "continuous-linear",
   "plan": "docs/superpowers/plans/2026-09-07-continuous-linear-attention-plan.md",
-  "workpackage": "docs/superpowers/plans/workpackages/2026-09-08-dual-side-09-execution.md",
+  "workpackage": "docs/superpowers/plans/workpackages/2026-09-08-continuous-research-loop.md",
   "created": "2026-09-07",
   "parent": {
     "label": "L28",
@@ -77,7 +77,7 @@
       "scored_sha256": null
     }
   },
-  "next_action": "L28 official RETAINED (4611/286s, new Linear time parent; full fit table 0.9486>=0.9 over 168 states). L29-Q/G speed candidates REJECTED_BEFORE_IMPLEMENTATION (N=138<<d). L30 global reduced-rank REJECTED (fit_gain 0.707~=L4, api 322.9s>300s). Next: L31 (output-target legal neighbor update) or L32 (joint A/W low-dim inverse fit) per loop §7; must stay time-safe from L4.",
+  "next_action": "P0 first: bind or reject the reported full-candidate result 17636/264s against its official scored SHA. Then deduplicate L31 vs L32 and register exactly one card from L4 time reference. L28 remains score parent (4611/286s; full fit 0.948587). Holdout and local api_seconds are record-only, not rejection gates.",
   "recent_steps": [
     "2026-09-07: L23 whitened-residual-subspace math PASS + 4B shard0 local all-roles negative (commit b52dbee)",
     "2026-09-07: L23 直接拟合版六 shard 完成（336 例、Δmean -0.18、0/336/0，record-only）；脱离导入+CPU fuzz PASS；归档 solutions/continuous_linear_l23-residual-subspace/，注册官方探索",
