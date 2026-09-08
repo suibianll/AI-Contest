@@ -1,10 +1,13 @@
 # 当前状态：目标 21765，v189 官方保留并继续优化
 
-> 最新Linear回传：L23 **TIMEOUT**，未回传精确耗时/分数；旧PENDING记录已失效。关闭本复杂度实现，后继修正全数据求解并消除重复全矩阵计算，另存新SHA；父L4及根v189不变。[回传记录](../logs/execution/2026-09-07-l23-official-timeout.md)。
+> 最新Linear回传：**L28 官方 4611/286s（+4 vs L4 4607/247s，286s<300s）RETAINED，
+> L28 升级为新的 Linear 侧父**（残差交叉子空间 A@W 拟合 + 时间安全重构：批量 Cholesky、
+> eigh 替换 SVD、投影向量化）。此前 L23b 官方 TIMEOUT 已关闭该复杂度实现。[L28 回传记录](../logs/execution/2026-09-08-l28-official-result.md)、
+> [L23b 超时记录](../logs/execution/2026-09-08-l23b-official-timeout.md)。
 
 > 当前测试按[4B指引](4b-panel-testing-guide.md)执行。本文历史0.5B、OOD、跨模型和时间预测结果仅作证据，不构成新测试命令或门禁。
 
-更新：2026-09-07。
+更新：2026-09-08。
 
 > **门禁修订（2026-09-07）**：R2c 官方相对 R1 +378.8，证明 OOD 固定阈值存在误拦。
 > OOD 改为成对风险诊断，不单独否决官方探索或关闭机制；历史 OOD_BLOCKED 不等于官方证伪。
@@ -14,7 +17,7 @@
 > “最后一个配额”等表述全部失效，见
 > [`stale-information-inventory-2026-09-05.md`](stale-information-inventory-2026-09-05.md)。
 
-## 0.1 当前计划状态（2026-09-07）
+## 0.1 当前计划状态（2026-09-08）
 
 > **2026-09-08 计划形态变更**：执行任务已改为[持续研究循环](superpowers/plans/workpackages/2026-09-08-continuous-research-loop.md)：
 > 误差账本（Linear E1 连续拟合/E2 合法投影/E3 部署/E4 失配；Attention F1 Q-K 总/F2 码/F3 QK-logits/F4 输出/F5 残差）定位 →
@@ -22,11 +25,13 @@
 > 缺不可替代外部输入、去重后无新假设三条。初始队列：Linear L24-A/B/C，Attention A26-A/B/C，
 > 先验为 E2/E4 主导（待账本否证）。本轮仅改写计划形态，未启动实验或官方提交。
 
-当前按[21071下一轮研究计划](superpowers/plans/workpackages/21071-evidence-driven-research.md)推进。
-L4 4607/247s保留；A22-2 14424/271s为研究父（vs R3 +19/+33s），A2 14440/274s仍为侧高分对照。
-L21各具体实现本地负向但不关闭A@W拟合整族；旧平均负向损失/分布解释已[纠偏](../logs/execution/2026-09-07-21071-next-cycle-evidence-correction.md)。
-本轮L23（用户指定A@W低维拟合）/A23为DESIGN_READY，C23-0 L4+A22-2为待核对集成项；未运行实验或官方提交。
-仅使用4B，无本地时间门；根仍v189。用户21071/283s为成功机制证据，源码尚未绑定，不继承成绩。
+当前按[持续研究循环](superpowers/plans/workpackages/2026-09-08-continuous-research-loop.md)推进。
+**Linear 侧父更新：L4 → L28**（4611/286s，2026-09-08 官方 RETAINED，+4 vs L4）。
+L28 = 残差交叉子空间 A@W 拟合 + 时间安全重构（批量 Cholesky、eigh 替换 SVD、投影向量化）；
+L23b（13639FB2）官方 TIMEOUT 已关闭该复杂度实现；四张探索卡（L24-C/L24-A/L25/L26）
+按证伪判据关闭。fit_gain 0.9453 ≥ 0.9 研究目标保持（L23b 0.9486 为机制基准）。
+Attention 侧：A25 官方 14057/254s 退步，A23 14437/276s 研究父，A2 14440/274s 最高对照。
+根仍 v189（17616/275s）；官方 Linear 时间余量 14s（286→300）。
 
 此前 v189 残差压力块序计划已被取代，旧结果仍由原执行者封存。上一份
 [`Linear 编译校准样本能量块序`](superpowers/archive/plans/2026-09-06-linear-compiled-sample-energy-plan-score-tie.md)

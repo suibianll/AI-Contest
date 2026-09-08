@@ -1,13 +1,20 @@
 {
   "run_id": "continuous_linear_l28-proj-vectorized",
-  "source_sha256": "44d7e964f8264633b0ad8d83b7a04efb5d158161e1f09ffcd52efb3e0e63d2f0",
+  "source_sha256": "44d7e964f82646331e4509996fffeab84e4fe0b3870528d45f25ed953ec93ab5",
   "parent_sha256": "13639fb22976b2c7c838ee2e69ae9c2c58123e03d9bdec106623d93b29510fe0",
-  "official_score": null,
-  "official_time_s": null,
-  "status": "READY_FOR_OFFICIAL",
-  "reported_by": null,
-  "reported_at": null,
-  "verdict_rule": "official 300s and score are the sole judge; L28 is the time-safe reimplementation after L23b TIMEOUT",
-  "comparison": null,
-  "note": "no official upload entry in this environment; package path + SHA delivered"
+  "official_score": 4611,
+  "official_time_s": 286,
+  "status": "RETAINED",
+  "reported_by": "user",
+  "reported_at": "2026-09-08",
+  "verdict_rule": "official 300s and score are the sole judge; official +4 vs parent L4 (4607/247s) and 286s < 300s -> RETAINED as new Linear-side parent",
+  "comparison": {
+    "parent_label": "L4",
+    "parent_official_score": 4607,
+    "parent_official_time_s": 247,
+    "step_gain": 4,
+    "time_delta_s": 39,
+    "reading": "official positive +4, time 286s within 300s hard cap"
+  },
+  "note": "L28 = L23b residual-cross-subspace mechanism + time-safe rework (batched Cholesky, eigh replaces SVD, vectorized round/clamp projection); official confirms the mechanism family is positive and the time rework fits the 300s budget"
 }

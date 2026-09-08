@@ -1,6 +1,10 @@
 # HiF4 solutions archive
 
-> 最新Linear回传：L23 **TIMEOUT**，未回传精确耗时/分数；旧PENDING记录已失效。关闭本复杂度实现，后继修正全数据求解并消除重复全矩阵计算，另存新SHA；父L4及根v189不变。[回传记录](../logs/execution/2026-09-07-l23-official-timeout.md)。
+> 最新Linear回传：**L28 官方 4611/286s（+4 vs L4 4607/247s，286s<300s）RETAINED，
+> L28 升级为新的 Linear 侧父**（残差交叉子空间 A@W 拟合 + 时间安全重构：批量 Cholesky、
+> eigh 替换 SVD、投影向量化）。此前 L23b（13639FB2）官方 TIMEOUT 关闭该复杂度实现。
+> [L28 回传记录](../logs/execution/2026-09-08-l28-official-result.md)、
+> [L23b 超时记录](../logs/execution/2026-09-08-l23b-official-timeout.md)。
 
 > 当前测试按[4B指引](../docs/4b-panel-testing-guide.md)执行。本文历史0.5B、OOD、跨模型和时间预测结果仅作证据，不构成新测试命令或门禁。
 
@@ -228,6 +232,9 @@ silently assigned a score.
 | v187 | `20260904_v187_attn-jacobian-sensitivity_research-retained` | **9167** | **169 s** | **official positive / RESEARCH RETAINED; v185 clean-room + analytic final-Attention Jacobian importance for Q/K, KV-group shared and leave-one-fold-out gated. Official +721/+4s vs v185 confirms transfer. 7/24 layers active; local Δmean +0.015187, L1 0.016199. Still −8432 vs v186, so not a full parent; root unchanged** |
 | v188 | `20260904_v188_attn-jacobian-port_rejected` | **17595** | **268 s** | **rejected (official 2026-09-04); v186 + v187 Jacobian sensitivity importance ported as final calibration step on the fully-transformed Q/K coordinates (causal/non-causal 0.5, cross-fold median, log shrink 0.25, clamp [0.5,2], LOO deployed-MSE gate; v187 pre-registered constants, no neighborhood scan). step_gain −4 vs v186 17599; time 268s (model predicted 274s, within MAE). Local default 120 vs v186: Δmean +0.000426, L1 0.001114, 6+/4−/110=; gate accepted only 2/24 layers (L12/L22 — the pair-transform-free layers; pair-smooth output-fitted importance wins elsewhere). First sign-gate miss on a near-zero local signal (110/120 cases unchanged): the gate blocks large losses (−165~−1164) but does not guarantee non-negative official deltas for near-zero signals; official ±1~4 is the effective noise band (single-point gains v182/v186 were +1/+1/+3). Jacobian port family closed; root rolled back to v186** |
 | v189 | `20260906_v189_static-actorder-hdiag_recovered_scoreNA_timeNA` | **17616** | **275 s** | **RETAINED (official 2026-09-06); v186 + static deployed-Hessian activation-GPTQ complete 64-block ordering; step_gain +17 vs v186, root switched to v189; local default Overall `0.686889608842` remains a proxy-only value** |
+| — | `continuous_linear_l28-proj-vectorized` | **4611** | **286 s** | **RETAINED (official 2026-09-08); Linear side parent L4→L28; residual-cross-subspace A@W fit + time-safe rework (batched Cholesky, eigh(64×64) replaces SVD(64×o), vectorized round/clamp projection, math-equivalent); step_gain +4 vs L4 (4607/247s), 286s<300s; fit_gain 0.9453>=0.9 local; supersedes L23b (TIMEOUT)`** |
+| — | `continuous_linear_l23b-residual-subspace` | — | >300 s | **TIMEOUT (official 2026-09-08); all-row direct fit + incremental residual; complexity implementation closed, mechanism family reworked as L28** |
+| — | `continuous_linear_l23-residual-subspace_timeout` | — | >300 s | **TIMEOUT (official 2026-09-07); evidence only, no re-submit** |
 | — | `20260906_linear-dynamic-actorder_time-rejected` | — | — | **REJECTED_TIME (local only); default Overall `0.688994940507` exceeded the local proxy high by `+0.001218637144`, but predicted official time `284.775756s` failed the `<280s` gate; no official submission** |
 | v169 | `20260903_v169_standard-linear_v-bias-attn_rejected` | — | — | **rejected (local, clearly negative); expansion plan A2 V output-bias centroid: local Qwen -0.0093 (21+/99-) and GPT-2 0/4 all-negative - final classification per user 'reject clearly-negative optimizations'** |
 | v170 | `20260903_v170_standard-linear_fixed-offset-attn_rejected` | — | — | **rejected (local, clearly negative); expansion plan A3 static fixed-offset compile: Qwen -0.0506 (9+/111-) and GPT-2 -0.0551 (1+/3-) - final classification per user** |

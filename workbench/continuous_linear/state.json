@@ -5,11 +5,12 @@
   "workpackage": "docs/superpowers/plans/workpackages/2026-09-08-dual-side-09-execution.md",
   "created": "2026-09-07",
   "parent": {
-    "label": "L4",
-    "path": "solutions/v162_linear_l4-v189-linear-exact_officialNA_timeNA/solution.py",
-    "sha256": "ACB16F764DB80EDA94EB77FE497A7965C716B527571C241C79B2319529FF5263",
-    "official_score": 4607,
-    "official_time_s": 247
+    "label": "L28",
+    "path": "solutions/continuous_linear_l28-proj-vectorized/solution.py",
+    "sha256": "44D7E964F82646331E4509996FFFEAB84E4FE0B3870528D45F25ED953EC93AB5",
+    "official_score": 4611,
+    "official_time_s": 286,
+    "note": "RETAINED 2026-09-08; +4 vs L4 (4607/247s); new Linear-side parent after L28 official positive"
   },
   "4b_reference": {
     "cache": "artifacts/official_eval/cache/qwen3.5-4b-proxy-v2.pt",
@@ -76,7 +77,7 @@
       "scored_sha256": null
     }
   },
-  "next_action": "L23b official TIMEOUT (2026-09-08) closed that complexity implementation. L28 time-safe reimplementation registered (L27 batch Cholesky + eigh + vectorized round/clamp projection, same incremental semantics): shard0 fit_gain 0.9453, delta -0.2178 (equivalent to L23b), api_total 217.9s local, READY_FOR_OFFICIAL (SHA 44D7E964, supersedes L27 78A9B982). Official 300s/score sole judge; if TIMEOUT again, batch the per-block loop end-to-end. Linear parent L4 and root v189 unchanged.",
+  "next_action": "L28 official RETAINED (4611/286s, +4 vs L4, 2026-09-08): new Linear-side parent (replaces L4). Mechanism family (residual-cross-subspace A@W fit + time-safe rework) officially positive. fit_gain 0.9453>=0.9 research target met. Next: build from L28 parent; register combined-side integration after Attention side confirms; time margin 14s (286->300).",
   "recent_steps": [
     "2026-09-07: L23 whitened-residual-subspace math PASS + 4B shard0 local all-roles negative (commit b52dbee)",
     "2026-09-07: L23 直接拟合版六 shard 完成（336 例、Δmean -0.18、0/336/0，record-only）；脱离导入+CPU fuzz PASS；归档 solutions/continuous_linear_l23-residual-subspace/，注册官方探索",
@@ -92,7 +93,8 @@
     "2026-09-08: S3 停止条件评估：E4 结构性信息上限（2 折叠可见、四变量维度证伪）、E2/E1 极小；去重比对表见 logs/execution/2026-09-08-linear-stop-s3-dedup-table.md",
     "2026-09-08: 用户回传 L23b 官方 TIMEOUT（13639FB2，>300s，分数/时间未知）；关闭该复杂度实现，机制族仍 OPEN；fit_gain 0.9486>=0.9 研究目标仍有效；后继须实质复杂度降低（共享统计/批量求解），见 logs/execution/2026-09-08-l23b-official-timeout.md",
     "2026-09-08: L27 时间安全重构（批量 Cholesky 预计算 + eigh 替换 SVD，保持增量残差语义）：shard0 fit_gain 0.9453、delta -0.2179（与 L23b 等价）、accepted 144/144；标记 READY_FOR_OFFICIAL（SHA 78A9B982）；官方 300s 为唯一裁决",
-    "2026-09-08: L28 在 L27 上叠加投影向量化（round/clamp 替代 15×64×o 网格 argmin，等价 max diff 0.0）：fit_gain 0.9453、delta -0.2178、api_total 217.9s（本地）；取代 L27 为官方候选（SHA 44D7E964，READY_FOR_OFFICIAL）"
+    "2026-09-08: L28 在 L27 上叠加投影向量化（round/clamp 替代 15×64×o 网格 argmin，等价 max diff 0.0）：fit_gain 0.9453、delta -0.2178、api_total 217.9s（本地）；取代 L27 为官方候选（SHA 44D7E964，READY_FOR_OFFICIAL）",
+    "2026-09-08: L28 官方回传 4611/286s（+4 vs L4，286s<300s）-> RETAINED，L28 升级为新的 Linear 侧父（取代 L4）；机制族官方正向确认；见 logs/execution/2026-09-08-l28-official-result.md"
   ],
   "evaluation_policy": "Linear: fit all Qwen3.5-4B calibration API data directly; no fit/select split or generalization gate; holdout statistics record only; official 300s"
 }

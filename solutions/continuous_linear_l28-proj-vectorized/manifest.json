@@ -1,8 +1,11 @@
 {
   "run_id": "continuous_linear_l28-proj-vectorized",
   "mechanism": "L28 time-safe reimplementation after L23b official TIMEOUT (L27 batch Cholesky + eigh + vectorized legal projection)",
-  "source_sha256": "44d7e964f8264633b0ad8d83b7a04efb5d158161e1f09ffcd52efb3e0e63d2f0",
-  "status": "READY_FOR_OFFICIAL",
+  "source_sha256": "44d7e964f82646331e4509996fffeab84e4fe0b3870528d45f25ed953ec93ab5",
+  "status": "RETAINED (official 4611 / 286s, 2026-09-08 user reported)",
+  "official_score": 4611,
+  "official_time_s": 286,
+  "official_verdict": "PASS (+4 vs parent L4 4607/247s; 286s < 300s); registered as new Linear-side parent",
   "parent": {
     "label": "L23b (13639FB2) built on L4",
     "path": "solutions/continuous_linear_l23b-residual-subspace/solution.py",
@@ -21,6 +24,6 @@
     "control": "activation path frozen, attention standard states legal"
   },
   "api_seconds_note": "local shard0 api_total 217.9s vs L27 220.7s vs L23b 232.1s; calib_w 173.1s (L27 174.3s, L23b 176.1s); official CPU gains larger (removes 15x grid allocation and 64x9216 SVD per block)",
-  "official_status": "READY_FOR_OFFICIAL (no upload entry in env; package path solutions/continuous_linear_l28-proj-vectorized/solution.py + SHA delivered; official 300s is the sole time judge)",
-  "next": "official score/300s judge; if positive and <300s, register as new Linear-side parent; if TIMEOUT again, per-block loop itself must be batched end-to-end"
+  "official_status": "RETAINED (official 4611 / 286s, user reported 2026-09-08; +4 vs L4, 286s < 300s)",
+  "next": "official verdict RETAINED as new Linear-side parent; fit_gain 0.9453 research target stays met; next Linear work builds on L28 (e.g., combined-side integration or further mechanism cards)"
 }
