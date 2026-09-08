@@ -1,0 +1,27 @@
+{
+  "version": "continuous_attention_AC0",
+  "source": {
+    "path": "solution.py",
+    "sha256": "F817E4C24CAAA8D1325A5A0045F8A0F057EE0DC5EB4C0B7167298FE67BB4F5A2"
+  },
+  "parent": {
+    "path": "solutions/v162_attention_r3-rotation-center_allgates/solution.py",
+    "sha256": "A5C679D7A2B349A879B2019B4A613244F5FEA7050E407B6475B9E29BD1C146DC",
+    "official": {"score": 14405, "time_seconds": 238, "status": "official_result_returned"}
+  },
+  "status": "LOCAL_RETAINED / CORRECTNESS_HARDENED",
+  "official": {
+    "score": null,
+    "time_seconds": null,
+    "status": "unregistered/NA",
+    "note": "correctness card; local paired attention-only vs R3 aggregate delta_mean +0.003501, L1 0.011264 (72 cases); battery 30/30; not submitted"
+  },
+  "changes": [
+    "atomic Q/K-pair fallback replacing dual except:pass in _nvfp4_to_hif4",
+    "trainer hard forward uses deployed quantizer path (five-field parity)",
+    "unified _attention_transform_dense_reference order",
+    "GQA/rotation/center shape validation",
+    "FP64 QK-invariance audit at calibration",
+    "fallback_reason recording"
+  ]
+}
