@@ -52,6 +52,16 @@ AC0 = R3 数学行为 + implementation hardening（只修正确性，不改算�
 ## Status
 
 - **本地**：`RETAINED`（本地基线，AC0 ≈ R3，无系统性退化证据；correctness battery 30/30）。
-- **官方**：`unregistered / NA`（未提交）。
-- 下一步：以 AC0 为唯一实现父进入 A29（`continuous_attention_a29-boundary-output/`，
-  仅复制 AC0 建骨架，机制实现另行开卡）。
+- **官方**：**14395 / 258s**（2026-09-08 回传，计分 SHA `F817E4C24CAAA8D1325A5A0045F8A0F057EE0DC5EB4C0B7167298FE67BB4F5A2`
+  ——A29 骨架与 AC0 同 SHA，该结果即 AC0 官方结果）。相对 R3（14405/238s）：**−10 / +20s**。
+  未触发「Δscore < −20 停止进入 A29」门；258s < 300s 官方硬限，但超出 245s 时间目标。
+- **差异解释（−10/+20s）**：
+  - 分数 −10：① 训练 hard forward 修正为部署五字段路径后，各层 rotation/center 收敛点
+    与 R3 不同（本地 paired Δmean +0.0035 为正，官方 −10——再次确认本地 proxy 不换算官方，
+    符号门不保证官方非负）；② L15 边际 gate 翻转（R3 identity → AC0 rotation，gate 0.9973），
+    该层 rotation 在官方窗口未获净收益；③ mse_std 分母改部署 parent 语义。
+  - 时间 +20s：§9/§10 强制 parity 的成本——训练期每步部署编码（32 步×4 窗×Q/K ×6 层）、
+    每层 FP64 audit（≤256 行）与 pair 校验、V 部署编码。258s < 300s 硬限（余量 42s）。
+- 结论：AC0 保持为 A29 实现父（正确性卡，非官方最佳；官方 Attention 最佳仍为 A2 14440）。
+- 下一步：在 AC0 上实现 A29 机制（`continuous_attention_a29-boundary-output/`，骨架已建，
+  机制实现另行开卡），并在 hard gate 中先复现该 −10 基线成本。

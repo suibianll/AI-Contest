@@ -33,6 +33,11 @@ L23b（13639FB2）官方 TIMEOUT 已关闭该复杂度实现；四张探索卡�
 按证伪判据关闭。L23b 完整校准 fit_gain `0.9486` 已达目标；L28 当前 `0.9453` 是 shard0 证据，
 完整 168-state/336-row fit 表列为 P0，未完成前不写成 L28 全量结果。
 Attention 侧：A25 官方 14057/254s 退步，A23 14437/276s 研究父，A2 14440/274s 最高对照。
+**AC0（continuous_attention_ac0-correctness-hardened）官方 14395/258s（2026-09-08 回传）**：
+correctness-hardened 卡（原子 Q/K-pair fallback、训练/部署五字段 parity、统一 transform
+reference、GQA/rotation/center 校验、FP64 QK-invariance audit，battery 30/30）；
+相对 R3（14405/238s）−10/+20s，未触发「Δscore<−20 停止 A29」门，258s<300s 硬限但超 245s
+时间目标；AC0 为 A29 实现父，A29 骨架与 AC0 同 SHA（该官方结果绑定 AC0，不证明 A29 机制）。
 根仍 v189（17616/275s）；官方 Linear 时间余量 14s（286→300）。
 
 此前 v189 残差压力块序计划已被取代，旧结果仍由原执行者封存。上一份

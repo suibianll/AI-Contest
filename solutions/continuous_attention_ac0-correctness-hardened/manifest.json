@@ -9,12 +9,12 @@
     "sha256": "A5C679D7A2B349A879B2019B4A613244F5FEA7050E407B6475B9E29BD1C146DC",
     "official": {"score": 14405, "time_seconds": 238, "status": "official_result_returned"}
   },
-  "status": "LOCAL_RETAINED / CORRECTNESS_HARDENED",
+  "status": "OFFICIAL_RESULT_RETURNED / CORRECTNESS_HARDENED",
   "official": {
-    "score": null,
-    "time_seconds": null,
-    "status": "unregistered/NA",
-    "note": "correctness card; local paired attention-only vs R3 aggregate delta_mean +0.003501, L1 0.011264 (72 cases); battery 30/30; not submitted"
+    "score": 14395,
+    "time_seconds": 258,
+    "status": "official_result_returned",
+    "note": "bound to SHA F817E4C2 (A29 skeleton is bit-identical to AC0, same result); vs R3 14405/238s: -10/+20s; below the < -20 A29-stop gate; 258s < 300s hard limit but above the 245s time target; local paired attention-only vs R3 aggregate delta_mean +0.003501, L1 0.011264 (72 cases); battery 30/30"
   },
   "changes": [
     "atomic Q/K-pair fallback replacing dual except:pass in _nvfp4_to_hif4",

@@ -14,9 +14,10 @@ fallback（删 `except: pass`）、训练 hard forward 走部署五字段路径�
 reference、GQA/rotation/center shape 校验、校准期 FP64 QK-invariance audit（真实 4B
 六层全部 valid，5.2~6.1e-07<1e-6）、fallback_reason 记录；battery 30/30。本地 paired
 attention-only vs R3：Δmean +0.003501 / L1 0.011264（72 case，34+/26−/12=）；5/6 层
-arm 一致，L15 边际 gate 翻转（R3 identity→AC0 rotation）。官方 unregistered。
-[A29](continuous_attention_a29-boundary-output/result.md) 骨架已建（=AC0 逐位复制，
-机制未实现）。
+arm 一致，L15 边际 gate 翻转（R3 identity→AC0 rotation）。**官方回传 14395 / 258s**
+（相对 R3 −10/+20s；未触发 <−20 停止门；258s<300s 硬限；A29 骨架与 AC0 同 SHA，
+结果绑定 AC0）。[A29](continuous_attention_a29-boundary-output/result.md) 骨架已建
+（=AC0 逐位复制，机制未实现）。
 
 最新官方回传：[Attention A21-1](continuous_attention_anchor21-a1/official-result.json) **14199/244s，OFFICIAL_REJECTED**，相对R3 −206/+6s；源码SHA `870d5848f95887307ad7faa6364b5d7f7480f5b7be6001c812c44ead02bdb48a`。根v189与Attention官方最佳A2未替换。
 

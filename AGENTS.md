@@ -25,6 +25,7 @@
 | 高复杂度新机制的时间预算父 | v180 | 17597 / 242s | 比 v189 快 33s、少 19 分 |
 | Linear 侧官方父 | L28（continuous_linear_l28-proj-vectorized） | 4611 / 286s | 2026-09-08 RETAINED，+4 vs L4；残差交叉子空间 A@W 拟合 + 时间安全重构 |
 | 历史侧隔离父 | Linear v166 / Attention v168 | 4590 / 226s；14005 / 210s | 仅用于明确的侧隔离计划 |
+| Attention A29 实现父 | AC0（continuous_attention_ac0-correctness-hardened） | 14395 / 258s | 2026-09-08 官方回传，correctness-hardened；相对 R3（14405/238s）−10/+20s，未触发 A29 停止门；A29 骨架与 AC0 同 SHA |
 | 用户确认的榜首锚点 | 源码、配置未知 | 21765 / 290s | 距 v189 4149 分，不是本地实验结果 |
 | 用户确认的成功机制锚点 | A@W拟合 + Q/K互逆scale学习 | 21071 / 283s | 外部用户确认，源码/配置/SHA待绑定，不替换根父 |
 

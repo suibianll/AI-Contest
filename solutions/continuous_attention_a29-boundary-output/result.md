@@ -30,8 +30,11 @@ S* → α_boundary → Q_H(Qe^{αS*}) → K_H(Ke^{-αS*}) → Attn
 
 ## Status
 
+- **官方**：**14395 / 258s**（2026-09-08 回传）。注意：本目录当前 `solution.py` 与 AC0
+  **逐位相同**（SHA `F817E4C24CAAA8D1325A5A0045F8A0F057EE0DC5EB4C0B7167298FE67BB4F5A2`），
+  因此该结果**即 AC0 的官方结果**，不证明任何 A29 机制收益；A29 机制尚未实现。
 - **本地**：骨架占位，未实现机制，未评测。
-- **官方**：`unregistered / NA`。
 - 下一步：按机制卡（softmax-Jacobian 方向 + normal-equation 解析解 + 1/64
-  code-boundary 单 proposal + 真实 hard gate）实现并逐项验证；任何 AC0 已确认的
-  correctness 不变量不得破坏。
+  code-boundary 单 proposal + 真实 hard gate）实现并逐项验证；hard gate 须以
+  AC0 官方基线 14395/258s 为参照复现基线成本；任何 AC0 已确认的 correctness
+  不变量不得破坏。
