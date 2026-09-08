@@ -1,0 +1,18 @@
+{
+  "candidate": "continuous_linear_lc2-root-legal-neighbor",
+  "parent": "solution.py (root, D66128A6, official 17636/264s)",
+  "parent_sha256": "D66128A62E7E068EDC50C91F4D8E212F586A6EDCAEE5BEA7D3564166E258B0F6",
+  "source_sha256": "E19FB50C731A8CA0",
+  "created_at": "2026-09-08",
+  "status": "REJECTED (no-op: accepted=0 on root shard0)",
+  "mechanism": "LC2 output-target legal-neighbor refinement in root coordinate: per-element mantissa +-1 step (sign flip at zero), accept only on strict A@W output loss decrease (LC0 MSE_STD+numel omega, incremental residual)",
+  "shard0_evidence": {
+    "cases": 56,
+    "accepted_blocks": "0/144 (all roles)",
+    "changed_ms": 0,
+    "L_cur": "unchanged (9.999999e-01 -> 9.999999e-01)",
+    "reading": "the root's compiled-sample-energy coordinate is already locally optimal for the A@W output loss under +-1 legal-code moves; no legal neighbor improves it. Consistent with LC1 (fresh residual subspace disturbs it): the root is output-saturated in its own coordinate."
+  },
+  "closed_scope": "LC2 +-1 legal-neighbor refinement on the root only. Together with LC1, this confirms the root (17636/264s) is locally optimal for the A@W output objective in the compiled-sample-energy coordinate; neither fresh residual subspace nor micro legal moves transfer. Root unchanged.",
+  "next": "keep root solution.py unchanged per single-solution plan §5. A root-based gain needs a mechanism outside the current coordinate (e.g., activation-side change or hierarchy joint update), or user direction on the known 0.88 method structure."
+}
