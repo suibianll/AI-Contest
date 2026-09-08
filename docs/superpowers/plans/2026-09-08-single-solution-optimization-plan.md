@@ -76,6 +76,14 @@ c_new = c_parent * exp(-d)
 - 尝试层数、采用层数。
 - shard0 相对根的结果与运行时间。
 
+### 官方结果（v190）
+
+- `TIMEOUT`（`>300s`，无分数）。本地 gate 拒绝（唯一测试层 `diag_accepted=0`、shard0 delta `0`），
+  部署等于父状态。**关闭该实现**，不重试 fit/gate 窗口、token、chunk 或 clamp 邻域；
+  机制族未被官方证伪，但也无任何官方正向数据点。根不变。
+- 登记：`logs/execution/2026-09-08-attn-diag-reciprocal-balance.md`；
+  后果与后续约束：`logs/execution/2026-09-08-v190-official-timeout.md`。
+
 ## 4. Attention 方向二：64 维块间稀疏三角搬运
 
 候选名：`attn-block-triangular-transport`
@@ -217,14 +225,22 @@ c_new = c_parent @ exp(-S)
 
 当前执行顺序：
 
-1. `attn-diag-reciprocal-balance`
-2. `attn-block-triangular-transport`
-3. `attn-full-reciprocal-residual`
+1. `attn-diag-reciprocal-balance` — **v190 官方 TIMEOUT（`>300s`）已关闭该实现，不邻域重试**
+2. `attn-block-triangular-transport`（v191，已归档）
+3. `attn-full-reciprocal-residual`（v192，已归档）
 4. `attn-joint-qk-product`
 
 顺序按计算成本从低到高排列，不构成结果依赖。上一候选已经完成本地检查并提交官方后，就可以从当时
 的最高分根开始实现下一项。若期间根因新的官方结果发生变化，只需让尚未构建的候选使用新根；已经完成
 的候选不作废。
+
+**时间约束（2026-09-08 实测，提交前必须回答）**：根 280s / 硬限 300s，余量 20s。成本最低的方向一
+（一次统计 + 一次硬编码）实测仍超时，同日 L-C3 仅 +13s 就到 293s。因此：
+
+- v191、v192 成本均高于方向一，提交前必须先给出时间判断；拿不出 ≥ 所需增量的余量时先做降时。
+- v192 本地 gate 拒绝且 shard0 delta `0`（部署等于父），按现状提交只有时间成本、没有信息收益；
+  要么换门控窗口/参数化重做，要么先降成本。
+- 本地 `accepted=0` 且 shard0 delta 逐位为 0 的候选一律不直接提交官方。
 
 四个方向完成后，根据官方结果继续：
 
