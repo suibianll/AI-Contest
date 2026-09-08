@@ -21,7 +21,9 @@ Linear/Attention 双侧独立 `gain≥0.9`、误差账本、强制 next_card、L
 
 2026-09-08 方法审计后，机制—代码一致性检查前置：LC1 实际执行的 rank-8 求解器不等于其
 objective-only 卡，LC2 实际为整块同步 `±1` 而非逐元素邻域；两者不得支持“根已局部饱和”。
-当前固定顺序为根入口零 API 审计 → 可执行时的 L-C3 objective-only → A23 Q/K 互逆 scale 最小移植；
+R3 Attention 已集成到完整根并获官方 `+396`，说明当前问题是正向链未继续。优先级改为：零 API
+审计当前根 R3 → A22-2 → A23 的两段最小差异 → 先移植 A22-2 互逆残余 scale → 官方正向后才叠加
+A23 scale-product。Linear L-C3 暂停并保留现有工作目录，待 Attention 完整官方裁决后恢复。
 详见活动计划 §6–§7。
 
 ## 历史计划索引（仅证据）

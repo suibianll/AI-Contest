@@ -65,31 +65,50 @@ reachable/control、失败后关闭什么”外，必须增加第五项“代码
 - 历史源码和 manifest 保留原样作审计证据；当前解释以
   [`2026-09-08 LC1/LC2 方法审计`](../../../logs/execution/2026-09-08-lc1-lc2-method-audit.md)为准。
 
-## 7. 当前顺序（不得跳步）
+## 7. 当前顺序（Attention 优先，不得跳步）
 
-### R0：零 API 根入口审计
+当前根已经集成 R3 Attention，完整官方结果 `18032/280s`，相对上一根 `+396/+16s`。这证明
+Attention 刚取得一次材料进展；当前问题是正向链没有继续，而不是 Attention 完全无效。A22-2 相对
+R3 官方 `+19`，A23 相对 A22-2 官方 `+13`，但两段尚未进入当前完整根。因此暂停 Linear L-C3，
+先沿已确认正向链继续 Attention。现有未归档 `workbench/continuous_linear/lc3-objective-only/` 保留原样，
+不删除、不评测、不提交；Attention 获得完整官方裁决后再恢复。
 
-在根 `solution.py` 中定位是否存在与 L-C1 原卡同构的 fold 加权拟合/选择入口，输出公式、函数、
-调用图和最小 diff 边界：
+### A-R0：R3 → A22-2 → A23 最小差异审计（零 API）
 
-- 若存在：注册 **L-C3 objective-only**，只替换 fold 权重；不得增加 rank、残差子空间、邻域搜索、
-  新正则或新候选循环。
-- 若不存在：记 `L-C3 DESIGN_BLOCKED / NOT_APPLICABLE`，说明缺少何种接口；不得用 rank-8、
-  Full-64 或合法邻域代替这张卡。
+1. 先验证当前根四个 Attention API 与归档 R3 的最终定义及 state 语义一致；组合日志和官方 `+396`
+   是外部证据，仍须把实际源码边界写清。
+2. 审计 R3 → A22-2，只提取父坐标上的 Q/K 互逆残余变换、center 同步编译、选择与父回退；不得
+   混入 A23 目标、A2 full-K/V 训练、最终残差 CG、码级代理或新主干。
+3. 单独审计 A22-2 → A23，只提取 scale-product 目标变化；该段不能提前合入第一候选。
+4. 若 A22-2 增量不能在当前 R3 根上保持单义，记 `DESIGN_BLOCKED` 并列出冲突字段，不用近似机制
+   代替。A2 `14440/274s` 只作高分对照，本轮不混入。
 
-### R1：L-C3 最小复现（仅在 R0 可执行时）
+### A-R1：A-C1 root reciprocal-residual-scale
 
-先用合成测试证明 uniform `MSE_STD` 时与父目标等价、非 uniform 时只有 fold 权重改变；再跑 contract
-smoke 和 Linear shard0。必须记录 diff 范围、attempted/accepted、权重实际变化及 activation/Attention
-control。明显灾难性回归关闭该移植实现；通过后只提交这一个完整根候选。无论结果如何，不把它扩写成
-整个 A@W 拟合族的结论。
+仅在 A-R0 通过后，从当前完整根构建一个候选，只移植 R3 → A22-2 的最小差异。机制卡新增明确的
+代码映射与禁止改动。合成测试必须覆盖：
 
-### R2：Q/K 互逆 scale 的官方正证据移植
+- 连续路径 `Q'K'^T = QK^T` 的互逆关系；
+- 零残余和强制拒绝时逐位恢复当前根；
+- center 同步、GQA 映射与部署 trainer parity；
+- 实际量化后的 Q/K scale、code、attempted/accepted 非零；
+- V 与完整 Linear control 不变。
 
-完成 R0/R1 后，对 A23 相对其直接父做零 API 最小差异审计，分离“Q/K 互逆参数化、scale 乘积目标、
-父回退”与侧隔离脚手架。只有差异可分离时，才在当前完整根上移植同一机制；不得同时换成最终残差
-CG、码级代理或新的训练主干。验证连续 QK 互逆关系、实际量化 scale/code 变化、attempted/accepted、
-V 与全部 Linear control，再做 Attention shard0 和唯一代表官方提交。
+通过一致性门和 Attention shard0 后提交唯一完整根候选。官方正向且 `<300s` 才切根；负向只关闭
+“A22-2 增量向当前 R3 根的这次移植”，TIMEOUT/wrong answer 只关闭对应复杂度/正确性实现，不扩大到
+Q/K 互逆 scale 全族。
 
-R0/R1/R2 的目的不是重新用本地分数预测官方，而是确保每个官方结果回答一个单义问题。下一轮只有
-这两条已知成功方向，不注册 L-C3 objective-only 与 A23-root-port 之外的邻域或替代机制。
+### A-R2：A-C2 scale-product（仅在 A-C1 官方正向后）
+
+保持 A-C1 的参数化、父回退、训练窗口、求解器和部署路径不变，只替换为 A23 已获官方 `+13` 的
+scale-product 目标。不得同时增加候选、调整 gate、移植 A2 或改变训练主干。按同一一致性门、
+Attention shard0 和唯一完整官方候选裁决。
+
+### L-R0/L-R1：恢复 Linear objective-only（Attention 裁决后）
+
+Attention A-C1（以及被触发时的 A-C2）完成官方裁决后，才恢复已经完成入口审计的 L-C3：只替换
+fold 权重，先做合成等价性、contract smoke 与 Linear shard0；不得加入 rank、残差子空间、邻域搜索、
+新正则或新候选循环。
+
+本顺序不是用本地分数预测官方，而是连续利用已发生的官方正证据。下一轮除 A-C1、条件触发的 A-C2
+和顺延的 L-C3 外，不注册其他邻域或替代机制。
