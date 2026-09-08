@@ -17,7 +17,7 @@
 - 官方结果优先于活动计划已确认事实，再次是归档 result/log 和本地 JSON/report；推测不得写成事实。
   活动计划的专项规则只适用于该计划，已关闭的 v162 侧向计划不再全局覆盖门禁。
 - 当前规则优先级固定为：本文件 → `docs/4b-panel-testing-guide.md` → 唯一活动总计划
-  → `workbench/*/state.json` / `queue.md`。`plans/workpackages/` 已清空归档，不再提供当前指令；
+  → `workbench/*/state.json` / `queue.md`。`plans/workpackages/` 只存放已完成审计，不提供当前指令；
   workbench 状态只保存历史执行状态，不得重新定义门禁。发现冲突时先同步当前文档再继续执行。
 
 ## 2. 当前基线与提交边界
@@ -77,16 +77,13 @@
 - 旧双侧持续计划的专项负向损失、`gain≥0.9`、误差账本和 side-score 队列已退役；当前按
   [单一完整方案计划](docs/superpowers/plans/2026-09-08-single-solution-optimization-plan.md)执行。
   Linear `calibration_fit_gain`、Attention 4B paired、holdout 和 L1 均只作诊断，不作官方候选排序或提交门。
-- OOD 只作风险诊断，不作提交或方向关闭的一票否决：`gap = gain_in - gain_ood`，Δ 为候选减直接父。
-  `|Δgap| > 0.01` 仅提示收益不对称；负值表示 OOD 增益更多，正值不等于 OOD 实际退化。
-  同时记录 ID/OOD 的 Δgain、负向 case 与最坏分组；父子须用各自同 SHA 的 in-dist/OOD 配对。
-  OOD 实际退化也只记录风险，不单独禁止固定代表候选的官方探索；不得用旧父数值或遗漏 OOD 代替诊断。
-- 区分探索提交与正式晋级：满足其他有效门禁的候选，不因 OOD 超阈值或校准拟合机制标签阻止官方验证，
-  不需逐次申请 OOD 豁免；本地分析只提供建议。晋级仍须官方分数、时间和源码 SHA 确认。
-  仅被 OOD 拦截的历史候选标记为“未获官方验证”，不证明机制无效；不自动重跑历史候选，
-  已有官方负结果和其他有效关闭边界不变。修订依据见 `logs/execution/2026-09-07-ood-gate-policy-correction.md`。
-- 当前测试统一遵循 [4B 面板测试指引](docs/4b-panel-testing-guide.md)：不新增 0.5B、
-  逐候选 OOD、跨模型 GPT-2/opt 或 fresh-default 计时运行。历史 OOD 解释规则仅用于读历史证据。
+  机制标签（如 A@W 拟合、校准统计拟合）本身也不阻止官方探索；晋级仍须官方分数、时间和源码 SHA 确认。
+- OOD 已退役：eval-v3 的 `--ood` 标记为 retired，4B cache 未抓 OOD 窗口，当前不新增任何 OOD 运行。
+  历史 `gap` / `|Δgap| > 0.01` 结论只用于读旧证据，不再是任何形式的门禁；仅被 OOD 拦截的历史候选
+  记为“未获官方验证”，不证明机制无效，也不自动重跑。修订依据见
+  `logs/execution/2026-09-07-ood-gate-policy-correction.md`。
+- 当前测试统一遵循 [4B 面板测试指引](docs/4b-panel-testing-guide.md)：不新增 0.5B、OOD、
+  跨模型 GPT-2/opt 或 fresh-default 计时运行。
 - 官方时间唯一硬约束为 300s；所有本地时间公式、预测和门禁退役，api_seconds 只作记录与风险提示。
   本地开销可用于标注风险和安排降时优先级，但不得设置 `<280s`、按层外推或其他提交否决门。
 
@@ -104,8 +101,8 @@
 - 只比较相同 evaluator、协议、cache、panel、device 的父子结果；2 折与 reeval5 的 5 折不混排。
   `official-shape-v1`、跨模型、compact/effect/replay/smoke/stress 均不能冒充 default 或官方结果。
 - 旧 compact/full-cases/OOD 面板只作历史协议说明，不新增运行；当前使用 4B 目标侧 shard。
-- 单侧运行严格隔离 API，保持共享 state 调用图，不能按 case 制造 oracle。官方 mini 只检查接口、
-  合法性和真实形状复杂度，不选算法/参数。
+- 单侧运行严格隔离 API，保持共享 state 调用图，不能按 case 制造 oracle。评测只检查接口、
+  合法性和真实形状复杂度，不替候选选算法或参数。
 
 1. 固定当前完整根及 SHA；已有同口径结果不重跑，使用 `--reuse-existing` 零 API 重放。
 2. 一个候选只加一个机制和一个固定配置；做六 API、合法 state、有限输出、reachability 和 control smoke。
@@ -127,11 +124,16 @@ Attention 改为 `--attention-only`；完整集成审计改为 `--scenario both`
 
 ## 6. 缓存、证据与 Git
 
-- `--nvfp4-cache-mode auto` 按 scenario/panel/profile 缓存 carrier/scale，只含 evaluator 输入，
-  不含候选 state/输出。profile、协议、codec/mode、dense source identity 或数据 hash 不匹配时，
-  `read` 拒绝、`auto` 重建；`write` 强制重建，`off` 禁用。
-- `--cache-mode auto` 只在 dense cache 缺失时重新前向；`read` 禁止隐式捕获。
-  命中仅减少输入准备时间，不改变 API 数量、误差或分数；本机 ignored cache 不作源码证据。
+- `--calibration-cache-mode`（`off/auto/read/write`，默认 `auto`）缓存**校准产物**
+  （weight_states / attention_states），键为 solution 源码 + pack + device 的 identity：
+  `read` 缺失即报错；`auto` 读取失败按过期处理并重建；`write` 强制重建。
+  **命中时校准 API 的秒数与调用数记为 0**，所以不同缓存状态之间的 `api_seconds` 不可比较；
+  误差与分数仍由 `_score` 实算，不受影响。
+- `--cache` 指向 4B dense cache（默认 `qwen3.5-4b-proxy-v2.pt`），`--cache-cohort` 声明其口径
+  （`old-weight` / `new-weight`，默认 `new-weight`）；cohort 不匹配只报告、不静默合并。
+  被 git ignore 的 cache 不作源码证据。
+- `--nvfp4-cache-mode` / `--cache-mode` 仅存在于 `evaluator/official_eval.py` 兼容后端，
+  eval-v3 入口没有这两个参数。
 - 不覆盖原始 `artifacts/official_eval/*.json`、`logs/official_eval/*.md`、`logs/execution/*.md`；
   修正另写日志并更新状态。比较前检查 `evaluation_scope`。
 - 实质代码或状态更新后运行 `git diff --check`、提交、push 并核验 `git status`；
@@ -149,6 +151,9 @@ Attention 改为 `--attention-only`；完整集成审计改为 `--scenario both`
 
 - Linear：旧 full64/单折邻域、Householder 全族、cross-fold minimax 的 fold/Jacobi/coverage/role
   邻域、rank-3/残差系数/fold 扩展已关闭。首次 L3 死分支结果无效；修正可达后的负结果有效。
+  LC1（rank-8 A@W 精化）与 LC2（整块 ±1 合法邻域）只关闭各自真实实现，不得推广为“根坐标已局部
+  饱和”或“A@W 拟合族无效”——LC1 实际引入了 rank-8 求解器，LC2 未执行零值 sign flip；
+  见 `logs/execution/2026-09-08-lc1-lc2-method-audit.md`。
 - Attention：per-call 动态 Gram/自适应精化族不缩 sweeps 重试；S2 前置条件不满足不启动。
   +4 scale 窗口、block-smooth refine 覆盖率、Jacobian 向 v186 移植及其收缩/clamp/gate 邻域关闭。
   v187 仅为 clean-room 研究父，不替代完整父。
