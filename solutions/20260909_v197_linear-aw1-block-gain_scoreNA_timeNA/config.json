@@ -1,0 +1,19 @@
+{
+  "run_id": "linear-aw1-block-gain",
+  "version": "v197",
+  "mechanism": "L-AW1: 64-block shared scalar-gain A@W closed-form ridge fit on the official normalized output loss, hard-gated, compiled by re-encoding g_b*What_b with the base HiF4 codec",
+  "parent": "solution.py",
+  "parent_sha256": "839adb1e617c3115c6b55071a34b281c5db0ff2aa070adbbc71fd1549e761d7f",
+  "source_sha256": "01aa73f60a49651c4410875d2bde7e48804bb5a36ec483eb45a9d5c2b0e72742",
+  "config": {
+    "max_windows": 1,
+    "max_tokens_per_window": 256,
+    "ridge_ratio": 0.001,
+    "gain_clamp": [
+      0.5,
+      2.0
+    ]
+  },
+  "candidate_count": 1,
+  "official_status": "unregistered/NA"
+}

@@ -1,0 +1,18 @@
+{
+  "run_id": "attn-gqa-reciprocal-diag",
+  "version": "v198",
+  "mechanism": "gqa-group-shared reciprocal diagonal exp(u): analytic RMS init + smooth-max range refine (tau=8, lambda=1e-3, 5 steps), true-path hard gate on last calibration window, V frozen",
+  "parent": "solution.py",
+  "parent_sha256": "839adb1e617c3115c6b55071a34b281c5db0ff2aa070adbbc71fd1549e761d7f",
+  "source_sha256": "8486773e0120a78a653e02543aef60a503f8e508d646a0cc8d5b6f2fe4f30f84",
+  "u_bound": "log(2)",
+  "tau": 8.0,
+  "reg_lambda": 0.001,
+  "refine_steps": 5,
+  "refine_lr": 0.25,
+  "fit_windows": "all but last",
+  "gate_window": "last",
+  "deployment": "encode-stage attention_diag_scale: Q_final*exp(u), (K_final+c)*exp(-u); state field diag_scale",
+  "candidate_count": 1,
+  "official_status": "unregistered/NA"
+}
