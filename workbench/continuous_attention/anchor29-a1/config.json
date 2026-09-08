@@ -1,0 +1,45 @@
+{
+  "card": "A29 (anchor29-a1)",
+  "plan": "docs/superpowers/plans/workpackages/2026-09-08-continuous-research-loop.md#A-R1",
+  "created": "2026-09-08",
+  "target": "F4 final hard-output MSE via QK-V cross compensation",
+  "parent": {
+    "name": "R3 time parent (r3-rotation-center_allgates)",
+    "path": "solutions/v162_attention_r3-rotation-center_allgates/solution.py",
+    "sha256": "A5C679D7A2B349A879B2019B4A613244F5FEA7050E407B6475B9E29BD1C146DC",
+    "official": "14405/238s",
+    "rule": "keep full R3 stack incl. all validated old training; S=0 must restore R3 bitwise"
+  },
+  "score_target": {"name": "A2 a2-fullkv", "official": "14440/274s"},
+  "frozen_config": {
+    "S_parameterization": "per-GQA-group symmetric traceless 256x256, appended at learned_rotation output side (row-vector right-multiply convention); K center compiled as c' = c @ expm(-S)",
+    "direction": "final-output residual: softmax-Jacobian minimum-norm delta-l (rcond=1e-6, RMS-clamped to parent logit-error RMS), then S* least squares via normal equations (G_q S G_ek - G_e S G_k = Q~^T dL E_k - E_q^T dL K~), CG tol 1e-8 max 500 iters",
+    "rank": 4,
+    "rank_rule": "top-4 |eigenvalue| directions of S* per fold, Frobenius-normalized, equal-weight average over fold0-2",
+    "step": "unique alpha from output-sensitivity-weighted 1/64 quantile of first code-boundary crossing distance under dQ=Q~S, dK=-K~S; constraint ||alpha*S||_F <= log(2)/2",
+    "proposals": 1,
+    "folds": "fold0-2 driver only; fold3 strict selection between full parent and the unique proposal; fold4 fully independent holdout",
+    "gate": "deploy layer only if fold4 final hard-output MSE strictly decreases; otherwise bitwise restore R3 for that layer",
+    "negative_loss_gate": 0.02,
+    "no_sweep": ["rank", "quantile", "damping", "cg iters", "fold count", "per-layer/length routing"]
+  },
+  "falsification": [
+    "delta-l* or S* numerically zero across all 6 layers -> close Jacobian->frozen-error linear map",
+    "S* nonzero but changed codes = 0 across all 6 layers -> close 1/64 boundary step implementation",
+    "train-fold Lhard decreases but fold3/fold4 not strictly -> close fixed aggregation, register transfer failure",
+    "fold3/4 pass but 72-case slightly negative -> record risk, keep single fixed representative official eligibility",
+    "negative-L1 >= 0.02 or no-op -> do not submit official",
+    "official negative -> close A29 mechanism; TIMEOUT -> close only this calibration complexity"
+  ],
+  "expected_noop_layers": [22],
+  "verification_required": [
+    "softmax-Jacobian/adjoint/minimum-norm small-shape vs autograd FD",
+    "inverse-transpose identity exp(S)exp(-S)=I on symmetric S",
+    "mask/GQA/K-center compiled-shift bitwise equivalence of continuous QK",
+    "S=0 bitwise restore of R3 state and outputs",
+    "real changed-code counts per layer",
+    "six-API single file, legal CPU state, finite outputs",
+    "V/Linear bitwise control",
+    "negative L1 < 0.02"
+  ]
+}
