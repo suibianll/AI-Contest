@@ -1,0 +1,27 @@
+{
+  "run_id": "continuous_linear_l30-global-reduced-rank",
+  "mechanism": "L30 one global rank-8 reduced-rank output-residual fit (research-loop card L-R2, built from L4 time parent)",
+  "source_sha256": "3e4bbb944d8541f52ce50aa1ca9c13e5ceb9db2a0376d35f75f03b5bcb9e5a4f",
+  "status": "REJECTED (local paired; card falsified + time over budget)",
+  "parent": {
+    "label": "L4 (time parent)",
+    "path": "solutions/v162_linear_l4-v189-linear-exact_officialNA_timeNA/solution.py",
+    "sha256": "ACB16F764DB80EDA94EB77FE497A7965C716B527571C241C79B2319529FF5263"
+  },
+  "card_target": "E1 + E3_fit (fit_gain >= L28 with simpler/faster call graph)",
+  "mechanism_change": "one global min_{rank(dB)<=8} ||R0 - A dB||^2 in calibration-row space of real quantized activation A, one global legal projection, one whole-calibration acceptance (replaces L28 per-block rank-8 loop)",
+  "falsification_rule": "continuous solve no material gain, projection erases gain, or time over budget -> close this implementation",
+  "shard0_evidence": {
+    "cases": 56,
+    "delta_mean_vs_L4": -0.000018,
+    "candidate_gain_mean": 0.508850,
+    "fit_gain_candidate_shard0": 0.706532,
+    "fit_gain_l28_shard0": 0.945277,
+    "api_total_seconds": 322.9,
+    "calibration_api_seconds": 256.5,
+    "reading": "global rank-8 reduced-rank regression is too aggressive on N=138 rows (no material gain, fit_gain ~= L4 0.72, delta ~0) AND time over budget (api 322.9s > 300s, d x o matrices for proj d=9216) -> card falsified"
+  },
+  "closed_scope": "the one-global-reduced-rank regression implementation only; the global-low-dimensional goal remains OPEN for other constructions (L31, L32)",
+  "next": "L31 (output-target legal neighbor update) or L32 (joint A/W low-dim inverse fit) per research-loop §7",
+  "official_status": "not submitted (local reject + time over budget)"
+}

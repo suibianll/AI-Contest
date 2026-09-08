@@ -77,7 +77,7 @@
       "scored_sha256": null
     }
   },
-  "next_action": "L28 official RETAINED (4611/286s, +4 vs L4, 2026-09-08): new Linear-side parent (replaces L4). Mechanism family (residual-cross-subspace A@W fit + time-safe rework) officially positive. fit_gain 0.9453>=0.9 research target met. Next: build from L28 parent; register combined-side integration after Attention side confirms; time margin 14s (286->300).",
+  "next_action": "L28 official RETAINED (4611/286s, new Linear time parent; full fit table 0.9486>=0.9 over 168 states). L29-Q/G speed candidates REJECTED_BEFORE_IMPLEMENTATION (N=138<<d). L30 global reduced-rank REJECTED (fit_gain 0.707~=L4, api 322.9s>300s). Next: L31 (output-target legal neighbor update) or L32 (joint A/W low-dim inverse fit) per loop §7; must stay time-safe from L4.",
   "recent_steps": [
     "2026-09-07: L23 whitened-residual-subspace math PASS + 4B shard0 local all-roles negative (commit b52dbee)",
     "2026-09-07: L23 直接拟合版六 shard 完成（336 例、Δmean -0.18、0/336/0，record-only）；脱离导入+CPU fuzz PASS；归档 solutions/continuous_linear_l23-residual-subspace/，注册官方探索",
@@ -94,7 +94,10 @@
     "2026-09-08: 用户回传 L23b 官方 TIMEOUT（13639FB2，>300s，分数/时间未知）；关闭该复杂度实现，机制族仍 OPEN；fit_gain 0.9486>=0.9 研究目标仍有效；后继须实质复杂度降低（共享统计/批量求解），见 logs/execution/2026-09-08-l23b-official-timeout.md",
     "2026-09-08: L27 时间安全重构（批量 Cholesky 预计算 + eigh 替换 SVD，保持增量残差语义）：shard0 fit_gain 0.9453、delta -0.2179（与 L23b 等价）、accepted 144/144；标记 READY_FOR_OFFICIAL（SHA 78A9B982）；官方 300s 为唯一裁决",
     "2026-09-08: L28 在 L27 上叠加投影向量化（round/clamp 替代 15×64×o 网格 argmin，等价 max diff 0.0）：fit_gain 0.9453、delta -0.2178、api_total 217.9s（本地）；取代 L27 为官方候选（SHA 44D7E964，READY_FOR_OFFICIAL）",
-    "2026-09-08: L28 官方回传 4611/286s（+4 vs L4，286s<300s）-> RETAINED，L28 升级为新的 Linear 侧父（取代 L4）；机制族官方正向确认；见 logs/execution/2026-09-08-l28-official-result.md"
+    "2026-09-08: L28 官方回传 4611/286s（+4 vs L4，286s<300s）-> RETAINED，L28 升级为新的 Linear 侧父（取代 L4）；机制族官方正向确认；见 logs/execution/2026-09-08-l28-official-result.md",
+    "2026-09-08: L28 完整校准 fit 表（168 states/336 fold-rows）：fit_gain 0.948587 >= 0.9（与 L23b 一致，数学等价时间重构）；P0-2 完成",
+    "2026-09-08: L29-Q/G 速度候选 REJECTED_BEFORE_IMPLEMENTATION：N=138<<d 使薄 QR 无压缩（rank(A)=N）、Gram 每块 [d,o] 更新比 L28 [N,o] 慢 17.6x；L28 维持时间父",
+    "2026-09-08: L30 全局 reduced-rank 收益卡 REJECTED：fit_gain 0.707（≈L4，无材料收益）、api_total 322.9s>300s（d×o 大矩阵）；关闭该实现，L31/L32 仍 OPEN"
   ],
   "evaluation_policy": "Linear: fit all Qwen3.5-4B calibration API data directly; no fit/select split or generalization gate; holdout statistics record only; official 300s"
 }
