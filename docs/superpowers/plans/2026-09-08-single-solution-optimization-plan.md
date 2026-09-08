@@ -1,6 +1,6 @@
 # HiF4 持续优化计划：Hard-Output Attention + Linear 降时
 
-> ACTIVE，2026-09-09。当前完整根为 18032/280s。后续不再通过增加 STE 训练、矩阵指数或
+> ACTIVE，2026-09-09。当前完整根为 v195，18053/289s。后续不再通过增加 STE 训练、矩阵指数或
 > 动态范围代理迭代优化 Attention；Attention 改为低维、离散、真实 HiF4 hard-output 优化，
 > 同时从当前 Linear 中释放完整方案时间。
 
@@ -22,15 +22,15 @@
 
 ## 2. 固定基线与分工
 
-- 最终晋级根：current Linear + R3 Attention，18032/280s。
+- 最终晋级根：current Linear + v195 Attention，18053/289s；上一完整根为 current Linear + R3，18032/280s。
 - Attention 官方侧对照：标准 Linear + R3，14405/238s。
-- 当前 Linear 净贡献：18032-14405=3627，侧等价分4628。
-- Attention 净贡献：14405-1001=13404。
+- 当前 Linear 与 v195 Attention 的侧向净贡献待标准 Linear v195 诊断版官方归因，不从完整总分反推；
+  上一根的 Linear 参考增量为 3627 分。
 
 分工固定：
 
-- **Attention 负责提分。** 它占当前总增量的78.7%，先解决目标错位。
-- **Linear 负责释放时间。** 保留其3627分贡献，只做输出等价的计算合并。
+- **Attention 负责提分。** v195 已在完整组合上取得官方 +21，继续解决目标错位。
+- **Linear 负责释放时间。** 保留当前 Linear 实现，只做输出等价的计算合并；当前根余量为 11s。
 - 标准 Linear 只用于测 Attention 官方侧分，不作为最终父版本。
 
 ## 3. 每一轮如何执行
@@ -119,13 +119,14 @@ block energy。v202 将 energy 统计合并进已有 Gram/importance 校准遍�
 3. 删除第二次 _static_actorder_dense_from_state 重建和遍历。
 4. 权重参数、activation state和动态输出必须与当前根逐位一致。
 
-本地只核对等价性和完整调用次数，然后直接提交当前完整组合。官方仍为18032且时间低于280s才保留；
+本地只核对等价性和完整调用次数，然后直接提交当前完整组合。以 v195 的 `18053/289s` 为基线，
+候选需保持分数并低于官方 `300s` 才保留；
 否则回退，不继续做同类微优化。
 
 L-T1 在 A1 的六 shard与标准 Linear侧分完成后立即执行，不等待完整组合超时。若更早出现官方正向
 Attention，但装回当前根后超时，也直接提前执行 L-T1。
 
-标准 Linear 不作为降时方案，因为它会损失3627分。
+标准 Linear 不作为降时方案，只用于 Attention 侧归因；当前 v195 的完整增量不从侧分反推。
 
 ## 7. Linear 提分草稿的处置
 

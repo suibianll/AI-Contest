@@ -11384,6 +11384,7 @@ def _a2_train_rotation(
     for step_index in range(_A2_TRAIN_STEPS):
         window_losses = []
         grad_theta = torch.zeros_like(theta)
+        grad_center = torch.zeros_like(center)
         for item in prepared:
             c, _right = _m_cayley_pair(theta)
             rotation = torch.einsum("dk,gkl->gdl", base, c)
@@ -11414,7 +11415,7 @@ def _a2_train_rotation(
             grad_rotation = grad_rotation + torch.einsum("tgk,tgd->gkd", k3, dk3)
             grad_c = torch.einsum("kd,gkl->gdl", base, grad_rotation)
             grad_theta = grad_theta + _m_cayley_backward(grad_c, theta)
-            grad_center = dk3.sum(dim=0)
+            grad_center = grad_center + dk3.sum(dim=0)
 
         data_loss = torch.stack(window_losses).mean()
         if not math.isfinite(float(data_loss)):
