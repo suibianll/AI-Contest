@@ -7814,7 +7814,11 @@ def _la0_full64_direct_fit(
         standard = xh_std @ w_std.t()
         reference = x @ w_orig.t()
         mse_std_folds.append(float(((standard - reference) ** 2).mean()) + 1e-12)
-    omegas = [1.0 / mse_std_folds[f] for f in range(F)]
+    # omega per LC0 (official +3): 1/(F * numel(Y_f) * MSE_STD_f) - per-row equal weight
+    omegas = [
+        1.0 / (F * max(int(y_folds[f].numel()), 1) * mse_std_folds[f])
+        for f in range(F)
+    ]
     n_blocks = in_f // _HIF4_BLOCK_SIZE
     # precompute per-fold block Hessians and cross terms (sufficient statistics)
     sf = weight_params["scale_factor"].to(torch.float32)
