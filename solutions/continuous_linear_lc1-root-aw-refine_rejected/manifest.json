@@ -1,0 +1,20 @@
+{
+  "candidate": "continuous_linear_lc1-root-aw-refine",
+  "parent": "solution.py (root, D66128A6, official 17636/264s)",
+  "parent_sha256": "D66128A62E7E068EDC50C91F4D8E212F586A6EDCAEE5BEA7D3564166E258B0F6",
+  "source_sha256": "139D1C6BEA87460E",
+  "created_at": "2026-09-08",
+  "status": "REJECTED (root shard0 paired: delta -0.3025)",
+  "mechanism": "LC1 constrained rank-8 residual-subspace A@W refinement on root (LC0 MSE_STD+numel omega, L28 rank-8 constraint, weight mant/sign only, activation+attention frozen)",
+  "shard0_evidence": {
+    "cases": 56,
+    "candidate_gain_mean": 0.214771,
+    "parent_gain_mean": 0.517349,
+    "delta_mean": -0.302577,
+    "api_total_seconds": 243.0,
+    "calibration_api_seconds": 199.2,
+    "reading": "rank-8 residual-subspace refinement destroys the root's COMPILED-SAMPLE-ENERGY mechanism (gain 0.215 vs 0.517). The root is already strongly optimized (sample-energy block order + GPTQ); L28-style refinement does not stack on it."
+  },
+  "closed_scope": "LC1 rank-8 residual-subspace refinement on the root only; the root stays unchanged. The Full-64 (L-A0) and rank-8 (LC1) A@W refinement both fail on strongly-optimized bases - the residual-subspace family does not transfer to the root's compiled-sample-energy coordinate.",
+  "next": "keep root solution.py (17636/264s) unchanged; a new root-based mechanism must respect the compiled-sample-energy coordinate (e.g., output-target legal neighbor within that coordinate, not a fresh residual subspace)."
+}
