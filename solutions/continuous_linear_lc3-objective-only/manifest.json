@@ -4,8 +4,21 @@
   "parent_sha256": "12352EFDD4E23CC5E1E17953008664FBAA5EA5D693373635FDAFC4D28CE4E24E",
   "source_sha256": "c231328d1f8ee5b2db02869ef071838f862efe893f0dbae9cf59a6293d440cc8",
   "created_at": "2026-09-08",
-  "status": "READY_FOR_OFFICIAL",
-  "mechanism": "L-C3 objective-only fold normalization (single-solution plan R0/R1): isomorphic entry _linear_output_candidate_metrics / _combos; replace per-case denominator ||Y_f||^2 with numel_f * MSE_STD_f (LC0-verified, official +3 on L28); standard codec = root _branch_encode_standard_hif4 (numerically == LC0 _ref_encode_standard_hif4, max diff 0.0)",
+  "status": "REJECTED (official 18031/293s, -1 vs root)",
+  "mechanism": "L-C3 objective-only fold normalization (root _linear_output_candidate_metrics: per-case denominator ||Y_f||^2 -> numel_f * MSE_STD_f, LC0-verified +3 on L28)",
+  "official": {
+    "score": 18031,
+    "time_seconds": 293,
+    "reported_by": "user",
+    "reported_at": "2026-09-08",
+    "comparison": {
+      "root_score": 18032,
+      "root_time_s": 280,
+      "delta_score": -1,
+      "delta_time_s": 13
+    },
+    "reading": "official -1 / +13s vs root; does not improve the only promotion criterion (official total higher AND <300s; tie -> faster). Mechanism transplant on the root is closed; root unchanged."
+  },
   "mechanism_consistency": {
     "diff_lines": 59,
     "all_lc3_only": true,
@@ -37,6 +50,6 @@
     "catastrophic_regression": false,
     "note": "local delta small negative; per plan 4B paired does not rank official candidates; official 300s is the sole judge"
   },
-  "official_status": "READY_FOR_OFFICIAL (no upload entry in env; package path solutions/continuous_linear_lc3-objective-only/solution.py + SHA c231328d delivered)",
-  "next": "official score/300s judge; if positive, run six-shard archive + interaction audit and promote root; if negative/TIMEOUT/wrong-answer, close only this fold-normalization transplant"
+  "official_status": "REJECTED (official 18031/293s, user reported 2026-09-08; -1/+13s vs root; root unchanged)",
+  "next": "keep root solution.py unchanged per single-solution plan §5; no neighborhood re-scan of this fold-normalization; a different base/mechanism would need a fresh mechanism card with code mapping"
 }
