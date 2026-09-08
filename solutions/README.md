@@ -7,6 +7,11 @@
 > [L28 回传记录](../logs/execution/2026-09-08-l28-official-result.md)、
 > [L23b 超时记录](../logs/execution/2026-09-08-l23b-official-timeout.md)。
 
+> 组合候选 [current Linear + R3 Attention](20260908_linear-current-r3-attention_candidate/result.md)
+> 已归档：Linear 使用当前根 compiled sample-energy，Attention 使用 R3 rotation-center/all-gates。
+> 六 API smoke、合法 state 与 proxy-v3 shard0 完成；shard0 Linear 增量 `0`，Attention
+> `+0.017241`（11+/1−/0=），因此仅作未注册候选，未替换根，也没有官方分数或时间。
+
 > 当前测试按[4B指引](../docs/4b-panel-testing-guide.md)执行。本文历史0.5B、OOD、跨模型和时间预测结果仅作证据，不构成新测试命令或门禁。
 
 > 上一完整父 v189 为 `17616/275s`。当前执行只以根完整方案为父，官方前仅做六 API smoke 与
