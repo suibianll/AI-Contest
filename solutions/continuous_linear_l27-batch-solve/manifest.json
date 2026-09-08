@@ -1,0 +1,26 @@
+{
+  "run_id": "continuous_linear_l27-batch-solve",
+  "mechanism": "L27 time-safe reimplementation of residual-cross-subspace fit after L23b official TIMEOUT (eigh replaces SVD + batched Cholesky precompute)",
+  "source_sha256": "78a9b982dcf6f9fb4593c9fcc481532f076e07359d983d3d5dff320fde865e76",
+  "status": "READY_FOR_OFFICIAL",
+  "parent": {
+    "label": "L23b (13639FB2) built on L4",
+    "path": "solutions/continuous_linear_l23b-residual-subspace/solution.py",
+    "sha256": "13639fb22976b2c7c838ee2e69ae9c2c58123e03d9bdec106623d93b29510fe0"
+  },
+  "supersedes": {
+    "sha256": "13639fb22976b2c7c838ee2e69ae9c2c58123e03d9bdec106623d93b29510fe0",
+    "official_status": "TIMEOUT (>300s, user reported 2026-09-08); closes that complexity implementation (per-block SVD(64 x o) + per-block Cholesky calls)"
+  },
+  "mechanism_change": "keep the exact per-block incremental-residual semantics of L23b; (1) precompute all blocks' Cholesky factors in one batched call (G_b = Xb^T Xb depends only on Xb, not the residual); (2) replace per-block SVD(Hw) [64 x o, o up to 9216] with eigh(Hw Hw^T) [64 x 64] - top-r left singular vectors of Hw are exactly top-r eigenvectors of the 64x64 Gram, projection-identical (verified max diff 2.4e-15); this removes ~24k small-tensor SVD calls that dominated official CPU runtime",
+  "verification": {
+    "math_equivalence": "PASS: eigh(HwHw^T) vs SVD(Hw) projection max diff 2.4e-15; dW identical",
+    "synthetic_smoke": "PASS: accepted>0, L_all strictly decreasing, five-field legal (validate_hif4_params)",
+    "4b_shard0": "accepted 144/144 wide (L_all 1.75e-08 -> 5.06e-10), delta_mean -0.217889 (L23b -0.218215, equivalent), fit_gain 0.9453 (L23b 0.9478)",
+    "legal_state": "PASS (evaluator reasonableness 0, all finite)",
+    "control": "activation path frozen (bit-identical), attention standard states legal"
+  },
+  "api_seconds_note": "local shard0 calib API 174.3s vs L23b 176.1s (small CUDA diff; official CPU gains come from removing 64x9216 SVD per block -> 64x64 eigh)",
+  "official_status": "READY_FOR_OFFICIAL (no upload entry in env; package path solutions/continuous_linear_l27-batch-solve/solution.py + SHA delivered; official 300s is the sole time judge)",
+  "next": "official score/300s judge; if positive and <300s, register as new Linear-side parent; if TIMEOUT again, the per-block loop itself must be batched end-to-end"
+}
