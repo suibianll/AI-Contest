@@ -1,0 +1,40 @@
+{
+  "candidate": "continuous_linear_lc0-correctness-hardened",
+  "parent": "solutions/continuous_linear_l28-proj-vectorized/solution.py",
+  "parent_sha256": "44D7E964F82646331E4509996FFFEAB84E4FE0B3870528D45F25ED953EC93AB5",
+  "source_sha256": "E702D7C1F087097906E752DEFA5CBFF05C2E41585883B0EC8D5E4F937AA4AF3D",
+  "created_at": "2026-09-08",
+  "status": "UNREGISTERED_LOCAL_CORRECTNESS_CANDIDATE",
+  "official": {
+    "status": "unregistered/NA",
+    "score": null,
+    "time_seconds": null
+  },
+  "local_proxy": {
+    "protocol": "proxy-v3",
+    "model": "qwen3.5-4b",
+    "scenario": "linear",
+    "shard": 0,
+    "shard_count": 6,
+    "cases": 56,
+    "candidate_mean": 0.2884021592818454,
+    "parent_mean": 0.29109681032846757,
+    "paired_delta": -0.00269465104662217,
+    "status": "ok",
+    "reasonableness_issues": 0
+  },
+  "correctness_changes": [
+    "MSE_STD-normalized A@W calibration objective",
+    "strict activation shape checking",
+    "no silent activation GPTQ fallback",
+    "canonical zero sign writeback",
+    "explicit legal-grid tie semantics without grid materialization"
+  ],
+  "tests": {
+    "correctness_battery": "PASS",
+    "py_compile": "PASS",
+    "targeted_pytest": "10 passed",
+    "standard_codec_parity_max_abs": 0.0,
+    "six_api_import": "PASS"
+  }
+}
