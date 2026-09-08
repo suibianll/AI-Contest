@@ -1,6 +1,6 @@
 # R3 执行记录：L26 跨折叠一致性关闭 + Linear 循环状态（2026-09-08）
 
-执行者：Linear 侧执行代理。依据 [持续研究循环](../docs/superpowers/plans/workpackages/2026-09-08-continuous-research-loop.md)。
+执行者：Linear 侧执行代理。依据 [持续研究循环](../docs/superpowers/archive/plans/2026-09-08-continuous-research-loop.md)。
 
 ## 本轮卡：L26（E4 靶点，跨折叠一致性接受判定）
 

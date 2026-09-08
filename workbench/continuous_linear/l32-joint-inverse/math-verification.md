@@ -1,6 +1,6 @@
 # L32 数学验证记录（2026-09-08）
 
-依据 [持续研究循环](../docs/superpowers/plans/workpackages/2026-09-08-continuous-research-loop.md) §7 L-R4。
+依据 [持续研究循环](../docs/superpowers/archive/plans/2026-09-08-continuous-research-loop.md) §7 L-R4。
 
 ## 验证内容
 

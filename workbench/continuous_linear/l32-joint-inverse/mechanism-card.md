@@ -1,6 +1,6 @@
 # L32 机制卡：真正联合的 A@W 低维互逆拟合（收益候选三）
 
-依据 [持续研究循环](../docs/superpowers/plans/workpackages/2026-09-08-continuous-research-loop.md) §7 L-R4。
+依据 [持续研究循环](../docs/superpowers/archive/plans/2026-09-08-continuous-research-loop.md) §7 L-R4。
 
 ## 1. ID / 侧 / 父 / 创建轮次
 

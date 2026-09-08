@@ -1,7 +1,7 @@
 # A25：单主干互逆变换训练 + 四维度机制诊断 + 三方对照
 
 登记于 2026-09-07；一个机制、一个配置，见 config.json。官方状态 NA。
-隶属 [21071 机制证据驱动下一轮计划](../../../../docs/superpowers/plans/workpackages/21071-evidence-driven-research.md)。
+隶属 [21071 机制证据驱动下一轮计划](../../../../docs/superpowers/archive/plans/21071-evidence-driven-research.md)。
 用户指令（2026-09-07 23:36）：停止"保留旧训练+叠加残余+改代理目标"的复杂度堆积路线；
 以一套互逆变换训练为主干，先检查机制是否充分生效，不用已发现无效的梯度，
 把"替换旧训练"与"新机制收益"分开验证。

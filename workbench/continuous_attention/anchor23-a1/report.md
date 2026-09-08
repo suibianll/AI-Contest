@@ -1,6 +1,6 @@
 # A23 执行结果：4B paired 负向，乘积目标卡按预登记分支关闭
 
-2026-09-07。隶属 [21071 机制证据驱动下一轮计划](../../../docs/superpowers/plans/workpackages/21071-evidence-driven-research.md) §5。
+2026-09-07。隶属 [21071 机制证据驱动下一轮计划](../../../docs/superpowers/archive/plans/21071-evidence-driven-research.md) §5。
 候选源码 SHA256：`8714ac2a044779465c5e406ef0768be7071ac626f3a2171cdc5083350be92dbf`。
 父为 **A22-2**（`solutions/continuous_attention_anchor22-a2/solution.py`，
 SHA `4686ad81…`，官方 14424/271s）。评测：4B 面板（`qwen35-4b-panel-v1`，

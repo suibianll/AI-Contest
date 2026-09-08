@@ -1,7 +1,7 @@
 # L23：残差交叉子空间 A@W 低维拟合（直接拟合，官方裁决）
 
 登记于 2026-09-07；一个机制、一个配置，见 config.json。官方状态 PENDING。
-隶属 [21071工作包](../../../docs/superpowers/plans/workpackages/21071-evidence-driven-research.md) §4。
+隶属 [21071工作包](../../../docs/superpowers/archive/plans/21071-evidence-driven-research.md) §4。
 用户指令（2026-09-07）：在全部 Qwen3.5-4B 校准数据上直接做 A@W 低维拟合，
 不考虑泛化、不拆 fit/select、不用 holdout/split/负向损失拦截；官方分数与 300s 裁决。
 

@@ -1,6 +1,6 @@
 # A29 机制卡：最终输出残差驱动的量化边界 Q/K 互逆补偿
 
-依据：[2026-09-08 持续研究循环 §7 A-R1](../../../docs/superpowers/plans/workpackages/2026-09-08-continuous-research-loop.md)。
+依据：[2026-09-08 持续研究循环 §7 A-R1](../../../docs/superpowers/archive/plans/2026-09-08-continuous-research-loop.md)。
 前置：[F2 深度归因](f2_deep_attribution.json)（P0，零 API）+ [A28 解释纠偏](../../../logs/execution/2026-09-08-a28-interpretation-correction.md)。
 
 ## 1. 靶点

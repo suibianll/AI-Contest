@@ -1,6 +1,6 @@
 # Linear 停止条件评估：S3 去重比对表（2026-09-08）
 
-依据 [持续研究循环](../docs/superpowers/plans/workpackages/2026-09-08-continuous-research-loop.md) §6。
+依据 [持续研究循环](../docs/superpowers/archive/plans/2026-09-08-continuous-research-loop.md) §6。
 声明评估：**Linear 侧 S1 部分达标 + S3（去重后无可执行新假设）**。
 
 ## S1 评估（Linear 部分）

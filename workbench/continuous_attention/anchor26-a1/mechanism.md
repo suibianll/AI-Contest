@@ -1,7 +1,7 @@
 # A26-A — sin 网格一阶输出误差训练目标（靶点 F2 纯码分配）
 
 - **ID / 侧 / 父 SHA / 创建轮次**：`anchor26-a1` / Attention / A23 `8714ac2a0447765e...92dbf`（官方 14437/276s）/ 循环 R1
-- 执行框架：`docs/superpowers/plans/workpackages/2026-09-08-continuous-research-loop.md` §3/§4/§7（Attention 初始卡 A26-A 的实现）
+- 执行框架：`docs/superpowers/archive/plans/2026-09-08-continuous-research-loop.md` §3/§4/§7（Attention 初始卡 A26-A 的实现）
 
 ## 2. 靶点（R-2 定位）
 

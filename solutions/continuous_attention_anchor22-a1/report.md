@@ -1,6 +1,6 @@
 # A22-1 执行结果：本地全门通过，登记官方探索代表
 
-2026-09-07。隶属 [14199 回传后计划](../../../docs/superpowers/plans/workpackages/attention-after-14199.md) §3。
+2026-09-07。隶属 [14199 回传后计划](../../../docs/superpowers/archive/plans/attention-after-14199.md) §3。
 候选源码 SHA256：`25310c6e36c41ca0dd7a716c29946ede9c7e030af7c4329dc2f29d732bd92447`。
 实现父 R3 14405/238s（SHA `A5C679D7…`）；高分对照 A2 14440/274s 不变。
 A21-1 官方 14199/244s REJECTED 不替换任何父；根 solution.py 仍为 v189。

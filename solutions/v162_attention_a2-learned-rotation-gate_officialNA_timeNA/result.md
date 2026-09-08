@@ -2,7 +2,7 @@
 
 > 日期：2026-09-06。分支：v162 独立 Attention（A 代理）。
 > 契约：[总计划](../docs/superpowers/plans/2026-09-06-v162-independent-linear-attention-plan.md)
-> + [A 任务书](../docs/superpowers/plans/workpackages/v162-attention.md)。
+> + [A 任务书](../docs/superpowers/archive/plans/v162-attention.md)。
 > 冻结：两个 Linear API、dynamic V、standard codec = v162。
 
 ## 源码与身份

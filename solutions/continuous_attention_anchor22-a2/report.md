@@ -1,6 +1,6 @@
 # A22-2 执行结果：本地新最高（default 0.783515 > 0.773281），按指令归档提交
 
-2026-09-07。隶属 [14199 回传后计划](../../../docs/superpowers/plans/workpackages/attention-after-14199.md) §4。
+2026-09-07。隶属 [14199 回传后计划](../../../docs/superpowers/archive/plans/attention-after-14199.md) §4。
 候选源码 SHA256：`4686ad817128d60e1a1648e0e14793692097ee8171fac2bc5202466d5787c0b7`。
 实现父 R3 14405/238s（SHA `A5C679D7…`）。A22-1（anchor22-a1，官方 NA）已先行完成。
 本卡为 **LOCAL_RESEARCH**：A22-1 未回传，官方探索未登记、不提交官方；

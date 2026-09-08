@@ -1,7 +1,7 @@
 # L-R2 执行报告：修正版 L1 正确性与成本
 
 > 日期：2026-09-07。侧：Linear。run_id：`repair-r1/l-r2`。
-> 契约：[evidence-repair-next-cycle.md](../../docs/superpowers/plans/workpackages/evidence-repair-next-cycle.md) L-R2。
+> 契约：[evidence-repair-next-cycle.md](../../docs/superpowers/archive/plans/evidence-repair-next-cycle.md) L-R2。
 > 父：L4 `ACB16F76...F5263`（官方 4607/247s）。
 
 ## 1. 修复项（相对上一轮 probe_l1_direction* 的错误）

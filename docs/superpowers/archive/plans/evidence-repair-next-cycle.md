@@ -2,7 +2,7 @@
 
 > 阶段优先级已由[21071成功机制驱动研究](21071-evidence-driven-research.md)取代；已完成的真实API闭环直接复用，只修尚未解决的问题。
 
-> SUPERSEDED。当前只按[单一完整方案计划](../2026-09-08-single-solution-optimization-plan.md)执行；以下仅作历史证据。
+> SUPERSEDED。当前只按[单一完整方案计划](../../plans/2026-09-08-single-solution-optimization-plan.md)执行；以下仅作历史证据。
 > 本工作包规定下一轮的先后顺序；与原工作包冲突处，以本轮修订为准。只制定计划，本次不运行实验。
 
 ## 1. 本轮交付目标

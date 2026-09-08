@@ -1,6 +1,6 @@
 # R1 执行记录：L23b fit_gain 达标 + Linear 误差账本 v0（2026-09-08）
 
-执行者：Linear 侧执行代理。依据 [持续研究循环](../docs/superpowers/plans/workpackages/2026-09-08-continuous-research-loop.md)。
+执行者：Linear 侧执行代理。依据 [持续研究循环](../docs/superpowers/archive/plans/2026-09-08-continuous-research-loop.md)。
 
 ## P0：L23b fit 表（fit_gain 目标达成）
 

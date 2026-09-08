@@ -2,7 +2,7 @@
 
 登记于 2026-09-07；2026-09-08 修正归档（新 SHA `13639FB2…10FE0`，取代
 `33D1DA51…E35D`）。一个机制、一个配置，见 config.json。
-隶属 [持续研究循环](../../../docs/superpowers/plans/workpackages/2026-09-08-continuous-research-loop.md)。
+隶属 [持续研究循环](../../../docs/superpowers/archive/plans/2026-09-08-continuous-research-loop.md)。
 
 ## 官方状态：TIMEOUT（2026-09-08 用户回传）
 

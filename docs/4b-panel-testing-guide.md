@@ -48,8 +48,10 @@
 
 ## 2. 机制候选测试流程（每个候选）
 
-**第 1 步：定侧与父。** 所有候选只从当前根完整父构建。Linear 候选 `--linear-only`；
-Attention 候选 `--attention-only`，非目标侧保持冻结。L28/A2/R3/AC0 不再作为并行工作父。
+**第 1 步：确定受影响子系统并冻结完整父。** 所有候选只从当前最高分根完整父构建；不存在
+Linear/Attention 侧候选或侧父。机制若只影响 Linear，可用 `--linear-only` 做局部 smoke；只影响
+Attention 时用 `--attention-only`。这些命令只减少本地检查范围，正式候选仍保留根的完整六 API，
+未修改子系统保持 control。L28/A2/R3/AC0 只作历史机制证据，不再作为并行工作父。
 
 **第 2 步：shard0 冒烟（~3–5 分钟）。** 目标侧 API 检查 legal state、coverage true、
 无形状崩溃、机制 reachable；六 API 的导入/接口检查与非目标侧 control 单独完成，单侧运行不调用另一侧 API。

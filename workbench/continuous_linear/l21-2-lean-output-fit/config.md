@@ -1,7 +1,7 @@
 # L21-2 设计登记：低成本输出拟合主干（条件卡）
 
 > run_id：`l21-2-lean-output-fit`。侧：Linear。日期：2026-09-07。
-> 契约：[linear-output-followthrough.md](../../docs/superpowers/plans/workpackages/linear-output-followthrough.md) §5 L21-2。
+> 契约：[linear-output-followthrough.md](../../docs/superpowers/archive/plans/linear-output-followthrough.md) §5 L21-2。
 > 父：L4 `ACB16F76...F5263`（官方 4607/247s）。触发条件：L21-1 逐列条件求解
 > 本地 3/3 holdout 退化（校准 fold 过拟合），且逐列 OBQ 循环成本高。
 

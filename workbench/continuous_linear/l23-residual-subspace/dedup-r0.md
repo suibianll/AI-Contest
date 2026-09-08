@@ -1,6 +1,6 @@
 # L23 与旧实现数学去重表（R0）
 
-> 日期：2026-09-07。侧：Linear。依据：[21071工作包 §3-4](docs/superpowers/plans/workpackages/21071-evidence-driven-research.md)。
+> 日期：2026-09-07。侧：Linear。依据：[21071工作包 §3-4](docs/superpowers/archive/plans/21071-evidence-driven-research.md)。
 
 ## 1. L23 卡定义（唯一注册目标）
 

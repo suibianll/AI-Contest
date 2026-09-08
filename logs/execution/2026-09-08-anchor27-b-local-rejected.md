@@ -1,6 +1,6 @@
 # A27-B 执行日志：LOCAL_REJECTED（2026-09-08）
 
-循环框架：[误差账本驱动的持续研究循环](../../docs/superpowers/plans/workpackages/2026-09-08-continuous-research-loop.md) R-2（出卡→实现→验证→gate→面板→登记）。
+循环框架：[误差账本驱动的持续研究循环](../../docs/superpowers/archive/plans/2026-09-08-continuous-research-loop.md) R-2（出卡→实现→验证→gate→面板→登记）。
 完整证据链与逐层分解见 [anchor27-b/report.md](../../workbench/continuous_attention/anchor27-b/report.md)。本日志只记执行事实与裁决依据。
 
 ## 事实

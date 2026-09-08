@@ -1,6 +1,6 @@
 # R2 执行记录：L24-C/L24-A/L25 三卡关闭 + fit_gain 目标达成（2026-09-08）
 
-执行者：Linear 侧执行代理。依据 [持续研究循环](../docs/superpowers/plans/workpackages/2026-09-08-continuous-research-loop.md)。
+执行者：Linear 侧执行代理。依据 [持续研究循环](../docs/superpowers/archive/plans/2026-09-08-continuous-research-loop.md)。
 
 ## 账本定位（R-2）
 

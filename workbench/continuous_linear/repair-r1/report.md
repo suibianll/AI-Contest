@@ -1,7 +1,7 @@
 # L-R1 执行报告：真实输入/部署闭环
 
 > 日期：2026-09-07。侧：Linear。run_id：`repair-r1`。
-> 契约：[evidence-repair-next-cycle.md](../../docs/superpowers/plans/workpackages/evidence-repair-next-cycle.md) L-R1。
+> 契约：[evidence-repair-next-cycle.md](../../docs/superpowers/archive/plans/evidence-repair-next-cycle.md) L-R1。
 > 父：L4 `ACB16F76...F5263`（官方 4607/247s）。全部数字来自真实 API 路径。
 
 ## 1. 目标与技术口径

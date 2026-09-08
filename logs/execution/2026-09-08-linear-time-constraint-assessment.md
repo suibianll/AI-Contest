@@ -1,6 +1,6 @@
 # Linear 时间约束系统性评估：L29/L30/L32 全部不可行（2026-09-08）
 
-依据 [持续研究循环](../docs/superpowers/plans/workpackages/2026-09-08-continuous-research-loop.md) §7。
+依据 [持续研究循环](../docs/superpowers/archive/plans/2026-09-08-continuous-research-loop.md) §7。
 
 ## 背景
 

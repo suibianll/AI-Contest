@@ -1,7 +1,7 @@
 # L-R3 执行报告：GPTAQ vs JDRQ 公式级去重
 
 > 日期：2026-09-07。侧：Linear。run_id：`repair-r1/l-r3`。
-> 契约：[evidence-repair-next-cycle.md](../../docs/superpowers/plans/workpackages/evidence-repair-next-cycle.md) L-R3。
+> 契约：[evidence-repair-next-cycle.md](../../docs/superpowers/archive/plans/evidence-repair-next-cycle.md) L-R3。
 > 结论：**DUPLICATE_CLOSED 维持** —— GPTAQ 连续优化目标与 JDRQ 覆盖。
 
 ## 1. 公式对照（`probe_l3_formula_dedup.py`，小型确定性矩阵）

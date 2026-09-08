@@ -1,7 +1,7 @@
 # 持续研究循环：误差账本驱动的双侧机制队列（SUPERSEDED）
 
 > SUPERSEDED，2026-09-08。双侧独立 gain 目标、误差账本和强制 next_card 已由
-> [单一完整方案优化计划](../2026-09-08-single-solution-optimization-plan.md)取代。以下只保留历史机制证据，
+> [单一完整方案优化计划](../../plans/2026-09-08-single-solution-optimization-plan.md)取代。以下只保留历史机制证据，
 > 不提供执行队列或当前门禁。
 > 本文件**取代** [2026-09-08 双侧 0.9 执行任务书](2026-09-08-dual-side-09-execution.md) 的"候选卡清单"形态；
 > 旧文件保留为 L23b/A25 证据与 P0 事务来源，**不再提供队列指令**。

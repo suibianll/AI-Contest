@@ -1,7 +1,7 @@
 # A22-2：父坐标上的增量互逆变换（保留 P，仅学习残余 S）
 
 登记于 2026-09-07；一个机制、一个配置，见 config.json。官方状态 NA。
-隶属 [14199 回传后计划](../../../../docs/superpowers/plans/workpackages/attention-after-14199.md) §4。
+隶属 [14199 回传后计划](../../../../docs/superpowers/archive/plans/attention-after-14199.md) §4。
 **启动条件已满足**：A22-1 中 21/24 提案被完整 P 拒绝（多数提案被拒绝）。
 
 ## 与 A22-1 的关系

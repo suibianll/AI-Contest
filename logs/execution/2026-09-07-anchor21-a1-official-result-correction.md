@@ -13,7 +13,7 @@
 停止用其本地均值排序晋级，不把OOD负向恰巧同号解释为OOD有效。
 本地回退组损失不能直接解释官方−206，官方没有分项。
 
-当前next：[A22-1及后继计划](../../docs/superpowers/plans/workpackages/attention-after-14199.md)。
+当前next：[A22-1及后继计划](../../docs/superpowers/archive/plans/attention-after-14199.md)。
 先保持A21-1的scale提案，恢复完整R3校准对照及回退，单独检验替换损失；
 再依结果进入完整父坐标的增量变换，最后才研究输出敏感度目标。
 不扫描旧参数。本次只登记回传、更新状态和计划，未启动新模型实验或改动提交源码。

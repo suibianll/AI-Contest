@@ -1,6 +1,6 @@
 # L30 机制卡：全局 reduced-rank 输出残差拟合（收益候选一）
 
-依据 [持续研究循环](../docs/superpowers/plans/workpackages/2026-09-08-continuous-research-loop.md) §7 L-R2。
+依据 [持续研究循环](../docs/superpowers/archive/plans/2026-09-08-continuous-research-loop.md) §7 L-R2。
 
 ## 1. ID / 侧 / 父 / 创建轮次
 

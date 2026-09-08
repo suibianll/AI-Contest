@@ -1,7 +1,7 @@
 # A23：父坐标下量化块 scale 乘积目标
 
 登记于 2026-09-07；一个机制、一个配置，见 config.json。官方状态 NA。
-隶属 [21071 机制证据驱动下一轮计划](../../../../docs/superpowers/plans/workpackages/21071-evidence-driven-research.md) §5。
+隶属 [21071 机制证据驱动下一轮计划](../../../../docs/superpowers/archive/plans/21071-evidence-driven-research.md) §5。
 父为 **A22-2**（`solutions/continuous_attention_anchor22-a2/solution.py`，
 SHA `4686ad817128d60e1a1648e0e14793692097ee8171fac2bc5202466d5787c0b7`，
 官方 14424/271s）；高分对照 A2（14440/274s）；低成本对照 R3（14405/238s）。

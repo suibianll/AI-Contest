@@ -1,7 +1,7 @@
 # L21-1 真实闭环探针：逐列条件求解方向证据
 
 > run_id：`anchor21-l1`。侧：Linear。日期：2026-09-07。
-> 契约：[linear-output-followthrough.md](../../docs/superpowers/plans/workpackages/linear-output-followthrough.md) L21-1。
+> 契约：[linear-output-followthrough.md](../../docs/superpowers/archive/plans/linear-output-followthrough.md) L21-1。
 > 父：L4 `ACB16F76...F5263`（官方 4607/247s）。本探针为本地诊断，不提交官方。
 
 ## 1. 数学最小检查（全部 PASS）

@@ -11,7 +11,7 @@
 
 | 项目 | Linear 代理 L | Attention 代理 A |
 |---|---|---|
-| 工作包 | [Linear 任务书](../../plans/workpackages/v162-linear.md) | [Attention 详细计划](../../plans/workpackages/v162-attention.md) |
+| 工作包 | [Linear 任务书](v162-linear.md) | [Attention 详细计划](v162-attention.md) |
 | 初始源码 | v162 原始单文件 | 同一份 v162 原始单文件 |
 | 允许修改 | weight calibration、dynamic activation 及其专用 helper | attention calibration、dynamic Q/K 及其专用 helper |
 | 必须冻结 | 全部 Attention API = v162 | 两个 Linear API = v162；本轮 V = v162 |

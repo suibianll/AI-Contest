@@ -2,7 +2,7 @@
 
 > 日期：2026-09-06。分支：v162 独立 Linear（L 代理）。
 > 契约：[总计划](../docs/superpowers/plans/2026-09-06-v162-independent-linear-attention-plan.md)
-> + [L 任务书](../docs/superpowers/plans/workpackages/v162-linear.md)。
+> + [L 任务书](../docs/superpowers/archive/plans/v162-linear.md)。
 > 分支前缀 `v162_linear_`，全局版本号/根替换/组合由协调者负责。
 
 ## 官方结果（2026-09-06 用户回传）

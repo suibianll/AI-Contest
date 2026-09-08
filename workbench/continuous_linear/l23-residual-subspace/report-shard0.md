@@ -1,7 +1,7 @@
 # L23 残差交叉子空间 A@W 拟合：4B shard0 本地结果
 
 > run_id：`l23-residual-subspace`。日期：2026-09-07。侧：Linear（4B 面板）。
-> 契约：[21071工作包 §4](docs/superpowers/plans/workpackages/21071-evidence-driven-research.md)。
+> 契约：[21071工作包 §4](docs/superpowers/archive/plans/21071-evidence-driven-research.md)。
 > 父：L4 `ACB16F76...F5263`（官方 4607/247s）。本地诊断，不提交官方。
 
 ## 1. 机制与实现

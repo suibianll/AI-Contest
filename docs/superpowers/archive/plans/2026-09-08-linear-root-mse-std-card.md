@@ -5,7 +5,7 @@
 > 关闭实际 rank-8 实现，不裁决本卡。后续按活动总计划 R0 审计根是否存在同构入口；若可执行，以
 > L-C3 objective-only 新卡重新注册，不能继续复用 L-C1 名称。
 
-原依据为[单一完整方案优化计划](../2026-09-08-single-solution-optimization-plan.md)旧 §5 四项机制卡模板；
+原依据为[单一完整方案优化计划](../../plans/2026-09-08-single-solution-optimization-plan.md)旧 §5 四项机制卡模板；
 当前五项模板及执行顺序见该计划 §5–§7。
 
 ## 1. 改变什么

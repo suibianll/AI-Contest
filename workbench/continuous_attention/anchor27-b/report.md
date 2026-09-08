@@ -1,6 +1,6 @@
 # A27-B 执行报告：LOCAL_REJECTED
 
-日期：2026-09-08。执行框架：[误差账本驱动的持续研究循环](../../docs/superpowers/plans/workpackages/2026-09-08-continuous-research-loop.md)（R-1..R-6）。
+日期：2026-09-08。执行框架：[误差账本驱动的持续研究循环](../../docs/superpowers/archive/plans/2026-09-08-continuous-research-loop.md)（R-1..R-6）。
 机制卡：[mechanism.md](mechanism.md)；预注册配置：[config.json](config.json)。
 
 ## 1. 元信息

@@ -1,7 +1,7 @@
 # A24：父坐标残余互逆变换的直接量化输出误差训练
 
 登记于 2026-09-07；一个机制、一个配置，见 config.json。官方状态 NA。
-隶属 [21071 机制证据驱动下一轮计划](../../../../docs/superpowers/plans/workpackages/21071-evidence-driven-research.md)。
+隶属 [21071 机制证据驱动下一轮计划](../../../../docs/superpowers/archive/plans/21071-evidence-driven-research.md)。
 用户指令：转向直接优化实际量化 QK／Attention 输出误差，先与旧实现去重，
 不再追求 scale 数值更小。父为 **A22-2**（`solutions/continuous_attention_anchor22-a2/solution.py`，
 SHA `4686ad81…`，官方 14424/271s）；高分对照 A2（14440/274s）；

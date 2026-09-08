@@ -2,8 +2,8 @@
 
 > run_id：`l1-flatquant-8x8`（侧：Linear）
 > 日期：2026-09-07（证据修复后更新）
-> 契约：[证据修复工作包](docs/superpowers/plans/workpackages/evidence-repair-next-cycle.md)
-> + [L 工作包](docs/superpowers/plans/workpackages/continuous-linear.md) L1。
+> 契约：[证据修复工作包](docs/superpowers/archive/plans/evidence-repair-next-cycle.md)
+> + [L 工作包](docs/superpowers/archive/plans/continuous-linear.md) L1。
 > 直接父：L4 `ACB16F76...F5263`（官方 4607/247s）。
 
 ## 1. 最终裁决：COST_HOLD（方向未判定）

@@ -1,6 +1,6 @@
 # 21071 机制证据驱动：下一轮持续研究（SUPERSEDED）
 
-> SUPERSEDED。当前只按[单一完整方案计划](../2026-09-08-single-solution-optimization-plan.md)执行；以下仅作历史证据。
+> SUPERSEDED。当前只按[单一完整方案计划](../../plans/2026-09-08-single-solution-optimization-plan.md)执行；以下仅作历史证据。
 > 本轮只制定计划，不启动实验。取代旧L21待执行、A22-1待执行和“等待外部证据”的队列。
 > 测试统一按[4B指引](../../../4b-panel-testing-guide.md)；官方300s，无本地时间门。
 

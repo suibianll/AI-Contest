@@ -2,7 +2,7 @@
 
 执行者：Linear 侧执行代理。依据 AGENTS §3（官方 TIMEOUT 关闭具体复杂度实现、
 机制族 OPEN、仅实质复杂度变化允许再探索）与
-[持续研究循环](../docs/superpowers/plans/workpackages/2026-09-08-continuous-research-loop.md)。
+[持续研究循环](../docs/superpowers/archive/plans/2026-09-08-continuous-research-loop.md)。
 
 ## 回传登记
 

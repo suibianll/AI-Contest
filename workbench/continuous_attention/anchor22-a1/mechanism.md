@@ -1,7 +1,7 @@
 # A22-1：固定 scale 提案 + 完整 R3 对照与回退
 
 登记于 2026-09-07；一个机制、一个配置，见 config.json。官方状态 NA。
-隶属 [14199 回传后计划](../../../../docs/superpowers/plans/workpackages/attention-after-14199.md)。
+隶属 [14199 回传后计划](../../../../docs/superpowers/archive/plans/attention-after-14199.md)。
 
 A21-1 官方 14199/244s（相对 R3 −206/+6s）已 REJECTED。归因：A21-1 删除了 R3 旧
 训练器，未接受层回退到**训练前栈 B**（无 learned_rotation/learned_center），

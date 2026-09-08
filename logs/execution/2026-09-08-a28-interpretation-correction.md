@@ -1,6 +1,6 @@
 # A28 解释纠偏日志（2026-09-08，计划 §7 P0）
 
-依据：[2026-09-08 持续研究循环](../../docs/superpowers/plans/workpackages/2026-09-08-continuous-research-loop.md) §7 P0 表
+依据：[2026-09-08 持续研究循环](../../docs/superpowers/archive/plans/2026-09-08-continuous-research-loop.md) §7 P0 表
 "写 A28 解释纠偏日志并更新活动状态"。历史原始结果（v_error_attribution.json 数值、逐位检查输出）不改写；本日志只修正解释边界。
 
 ## 纠偏 1：A28 的关闭范围（收窄表述）

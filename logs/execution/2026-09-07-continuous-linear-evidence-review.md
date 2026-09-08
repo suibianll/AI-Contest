@@ -8,4 +8,4 @@ fc/proj分解使用简化激活编码，61–79%不能解释为真实L4部署误
 
 因此L1当前状态为PROBE_INVALID_FOR_DEPLOYMENT/COST_UNVERIFIED；L2为DEDUP_UNRESOLVED；L3为SCOPE_CORRECTION。不推断候选一定有效，也不重开原JDRQ或其他有效关闭邻域。
 
-下一轮按[修复工作包](../../docs/superpowers/plans/workpackages/evidence-repair-next-cycle.md)执行。official_best仍为L4 4607/247s，根v189未修改。
+下一轮按[修复工作包](../../docs/superpowers/archive/plans/evidence-repair-next-cycle.md)执行。official_best仍为L4 4607/247s，根v189未修改。
