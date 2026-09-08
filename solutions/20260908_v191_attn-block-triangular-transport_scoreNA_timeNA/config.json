@@ -1,0 +1,37 @@
+{
+  "version": "v191",
+  "archive_name": "20260908_v191_attn-block-triangular-transport_scoreNA_timeNA",
+  "run_id": "attn-block-triangular-transport",
+  "mechanism": "two-rank1-64d-block-upper-triangular-qk-transport",
+  "parent": "solution.py",
+  "parent_sha256": "12352efdd4e23cc5e1e17953008664fbaa5ea5d693373635fdafc4d28ce4e24e",
+  "source_sha256": "eb8c3cebb081546dc17c0f0c6470e3ffcaa60ce672865b617cfb1cddd1ff9666",
+  "pairs": [
+    [
+      0,
+      1
+    ],
+    [
+      2,
+      3
+    ]
+  ],
+  "block_dim": 64,
+  "head_dim": 256,
+  "fit_windows": [
+    0,
+    1,
+    2
+  ],
+  "gate_windows": [
+    4,
+    5
+  ],
+  "boundary_initial_step": 1e-05,
+  "boundary_growth_steps": 16,
+  "boundary_binary_steps": 10,
+  "formula": "T=I+N; N_01=u0v0^T, N_23=u2v2^T; T_inverse=I-N",
+  "deployment": "Q_parent*T, K_parent*T^{-T}; group-shared under GQA",
+  "candidate_count": 1,
+  "official_status": "unregistered/NA"
+}

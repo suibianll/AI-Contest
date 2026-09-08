@@ -1,4 +1,4 @@
-# 2026-09-08 `attn-diag-reciprocal-balance`
+# 2026-09-08 `v190 / attn-diag-reciprocal-balance`
 
 ## 结论
 
@@ -40,6 +40,6 @@ loss 回归而失败，window 4 的 mean/causal/non-causal 均失败，故保留
 
 ## 证据位置
 
-- 归档：`solutions/attn-diag-reciprocal-balance/`
+- 归档：`solutions/20260908_v190_attn-diag-reciprocal-balance_scoreNA_timeNA/`
 - 评测：`artifacts/proxy_v3/full_solution/attn-diag-reciprocal-balance-shard0-r2/candidate/`
 - 工作脚本：`workbench/full_solution/attn-diag-reciprocal-balance/`

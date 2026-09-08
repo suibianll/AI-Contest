@@ -1,0 +1,31 @@
+{
+  "version": "v192",
+  "archive_name": "20260908_v192_attn-full-reciprocal-residual_scoreNA_timeNA",
+  "run_id": "attn-full-reciprocal-residual",
+  "mechanism": "full-symmetric-zero-trace-reciprocal-qk-residual",
+  "parent": "solution.py",
+  "parent_sha256": "12352efdd4e23cc5e1e17953008664fbaa5ea5d693373635fdafc4d28ce4e24e",
+  "source_sha256": "dab718bc1835d391eef5212dda869d9deac3db71dc072e08ec7ab3d6c4c6ba07",
+  "train_steps": 32,
+  "learning_rate": 0.01,
+  "gradient_clip": 1.0,
+  "regularization": 0.001,
+  "adam_beta": [
+    0.9,
+    0.999
+  ],
+  "spectral_bound": "+/-log(2)/2",
+  "fit_windows": [
+    0,
+    1,
+    2
+  ],
+  "gate_windows": [
+    4,
+    5
+  ],
+  "formula": "Q_new=Q_parent@exp(S), K_new=K_parent@exp(-S), trace(S)=0",
+  "center_compile": "c_new=c_parent@exp(-S)",
+  "candidate_count": 1,
+  "official_status": "unregistered/NA"
+}
