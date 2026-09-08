@@ -4,7 +4,8 @@
 
 候选从当前完整根构建，六 API、状态合法性、数学关系和实际可达性均通过。4B eval-v3
 Attention shard0 没有实现异常；唯一测试层的闭式 Q/K 平衡被固定双窗口门控拒绝，最终回退到
-父状态，根方案保持不变。候选已归档，官方状态为 `unregistered/NA`。
+父状态，根方案保持不变。候选已归档。用户于 2026-09-08 回传官方 `TIMEOUT`（`>300s`，无分数），
+因此按计划关闭该候选，不进行邻域重试。
 
 ## 固定配置与源码
 
@@ -43,3 +44,10 @@ loss 回归而失败，window 4 的 mean/causal/non-causal 均失败，故保留
 - 归档：`solutions/20260908_v190_attn-diag-reciprocal-balance_scoreNA_timeNA/`
 - 评测：`artifacts/proxy_v3/full_solution/attn-diag-reciprocal-balance-shard0-r2/candidate/`
 - 工作脚本：`workbench/full_solution/attn-diag-reciprocal-balance/`
+
+## 官方回传
+
+- 状态：`TIMEOUT`
+- 官方分数：NA
+- 官方时间：`>300s`
+- 结果来源：用户 2026-09-08 回传

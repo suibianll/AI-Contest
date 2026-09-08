@@ -24,7 +24,7 @@
 
 | 版本 | 机制 | 当前结果 |
 |---|---|---|
-| [v190](20260908_v190_attn-diag-reciprocal-balance_scoreNA_timeNA/result.md) | diag reciprocal balance | gate 拒绝，回退父；shard0 delta `0` |
+| [v190](20260908_v190_attn-diag-reciprocal-balance_scoreNA_timeNA/result.md) | diag reciprocal balance | 官方 `TIMEOUT`（`>300s`）；本地 gate 拒绝、回退父 |
 | [v191](20260908_v191_attn-block-triangular-transport_scoreNA_timeNA/result.md) | block triangular transport | gate 接受；shard0 delta `-0.0001040638` |
 | [v192](20260908_v192_attn-full-reciprocal-residual_scoreNA_timeNA/result.md) | full reciprocal residual | gate 拒绝，回退父；shard0 delta `0` |
 

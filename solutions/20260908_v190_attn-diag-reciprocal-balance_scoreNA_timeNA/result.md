@@ -6,7 +6,7 @@
 - 父 SHA256：`12352efdd4e23cc5e1e17953008664fbaa5ea5d693373635fdafc4d28ce4e24e`
 - 候选 SHA256：`7ac5cd94a769c82299c0f88264cf94f51b451c69fcc1a1b8fd8ec624f7e08a36`
 - 固定配置：fit windows `0,1,2`；gate windows `3,4`；最多 256 token，chunk 8。
-- 官方状态：`unregistered/NA`；根 `solution.py` 未替换。
+- 官方状态：`TIMEOUT`（用户 2026-09-08 回传，官方 `>300s`，无分数）；根 `solution.py` 未替换。
 
 公式为 `d = 1/4 * log((b+1e-12)/(a+1e-12))`，先按 GQA group 去均值，再限制到
 `[-log(2)/2, log(2)/2]`；部署为 `Q_parent*exp(d)`、`K_parent*exp(-d)`，并同步折叠
@@ -30,4 +30,4 @@ non-causal loss 变差，window 4 的 mean/causal/non-causal 均变差，因此�
 （`diag_accepted=0`、`diag_arm=parent`）。
 
 评测记录保存在 `artifacts/proxy_v3/full_solution/attn-diag-reciprocal-balance-shard0-r2/candidate/manifest.json`；
-按当前计划，候选已归档，等待官方提交与回传后再决定是否替换根。
+按当前计划，候选已归档；本次官方超时关闭该候选，不进行阈值、步数或邻域重试。
