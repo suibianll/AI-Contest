@@ -123,6 +123,26 @@
       "sha256": "4fb779e36421edb88328a4aa8d9660c184ccfe530156ffd805a7a3182e0fa034",
       "status": "OFFICIAL_REJECTED",
       "note": "vs A23侧父 −380/−22s；vs R3 −348/+16s；vs A21-1 −142/+10s（同为单主干，A21-1有Hadamard预旋转）。单主干替换旧训练在官方上不如保留旧训练（A22-2/A23保留R3旧训练得分14424/14437远超14057）。4B paired正向(C vs R3 +0.003)但官方−348——proxy反转反方向(A23是负→正)。四维度诊断在4B cache上显示机制生效但官方隐藏模型不transfer。卡关闭。"
+    },
+    {
+      "run_id": "ac0-correctness-hardened",
+      "score": 14395,
+      "time_s": 258,
+      "C_A": 13394,
+      "path": "solutions/continuous_attention_a29-boundary-output/solution.py",
+      "sha256": "F817E4C24CAAA8D1325A5A0045F8A0F057EE0DC5EB4C0B7167298FE67BB4F5A2",
+      "date": "2026-09-08",
+      "note": "AC0=R3+正确性加固(无算法变更)，经 a29-boundary-output 占位目录(逐位复制 AC0)提交；vs R3 -10/+20s 噪声级负；official_best 仍 A2 14440"
+    },
+    {
+      "run_id": "a29-final-residual-s",
+      "score": null,
+      "time_s": null,
+      "timeout": true,
+      "path": "solutions/v163_attention_a29-final-residual-s/solution.py",
+      "sha256": "D8BAAB46510D684452C527C3BD4C9F555DD72891CE4114B67163F2F0C4C126A5",
+      "date": "2026-09-08",
+      "note": "A29 最终输出残差 S 实现官方超时>300s；按冻结卡 TIMEOUT 分支只关闭该校准复杂度实现，机制无官方负向数据点(F4 仍OPEN)；4B 面板 6.8-14.9s/层x官方10 softmax 注意力层外推 +90~150s，提交前未做外推为流程失误；本地4B layer1 曾双门禁通过非no-op"
     }
   ],
   "research_parent": {

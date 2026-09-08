@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
-"""A29 smoke + bitwise control test.
+"""A29 smoke + bitwise control test (4B panel data, per user rule).
 
-Runs the v162 (R3) and v163 (R3+A29) calibration entries on synthetic
-official-shape folds (q_heads=16, kv_heads=4, head_dim=256) and verifies:
+Runs the v162 (R3) and v163 (R3+A29) calibration entries on REAL qwen3.5-4b
+proxy-v2 calibration folds (2026-09-08 user rule: all local testing uses the
+4B panel; synthetic smoke data retired) and verifies:
 
   S1  both runs complete; timing recorded
   S2  all returned state tensors are CPU float32 finite (legal CPU state)
@@ -29,6 +30,9 @@ import torch
 
 ROOT = Path(__file__).resolve().parents[3]
 
+sys.path.insert(0, str(ROOT / "evaluator"))
+import official_eval as core  # noqa: E402
+
 
 def load(name: str, path: Path):
     spec = importlib.util.spec_from_file_location(name, path)
@@ -40,35 +44,27 @@ def load(name: str, path: Path):
 v162 = load("v162", ROOT / "solutions/v162_attention_r3-rotation-center_allgates/solution.py")
 v163 = load("v163", ROOT / "solutions/v163_attention_a29-final-residual-s/solution.py")
 
-E2M1 = torch.tensor([0.0, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 6.0])
-CUTS = torch.tensor([0.25, 0.75, 1.25, 1.75, 2.5, 3.5, 5.0])
+CACHE = ROOT / "artifacts/official_eval/cache/qwen3.5-4b-proxy-v2.pt"
 
 
-def nvfp4_encode(x: torch.Tensor):
-    T, C = x.shape
-    xb = x.reshape(T, C // 16, 16)
-    amax = xb.abs().amax(-1, keepdim=True)
-    scale = (amax / 6.0).clamp_min(1e-8)
-    q = xb / scale
-    sign = q.sign()
-    idx = torch.bucketize(q.abs(), CUTS)
-    qg = E2M1.to(x.device)[idx] * sign
-    return qg.reshape(T, C), scale.squeeze(-1)
+def load_4b_folds(layer: int | None = None):
+    """Real 4B calibration folds (NVFP4 pairs) exactly as official_eval
+    builds them, plus the pack geometry."""
 
-
-def make_folds(seed: int, folds_ts=(128, 256, 512, 512, 512)):
-    g = torch.Generator().manual_seed(seed)
-    q_heads, kv_heads, head_dim = 16, 4, 256
-    items = []
-    for T in folds_ts:
-        q = torch.randn(T, q_heads * head_dim, generator=g) * 0.5
-        k = torch.randn(T, kv_heads * head_dim, generator=g) * 0.5
-        v = torch.randn(T, kv_heads * head_dim, generator=g) * 0.5
-        q_q, q_s = nvfp4_encode(q)
-        k_q, k_s = nvfp4_encode(k)
-        v_q, v_s = nvfp4_encode(v)
-        items.append({"q": (q_q, q_s), "k": (k_q, k_s), "v": (v_q, v_s)})
-    return items
+    raw = core.load_pack(CACHE)
+    meta_layers = raw.metadata.get("attention_state_layers") or raw.metadata.get("attention_layers")
+    layers = [int(v) for v in meta_layers] if meta_layers else list(range(raw.layers))
+    layers = [v for v in layers if raw.calibration_qkv[0][v] is not None]
+    if layer is None or layer not in layers:
+        layer = layers[0]
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    folds = []
+    for sample in range(len(raw.calibration_windows)):
+        qs, ks, vs = raw.calibration_qkv[sample][layer]
+        folds.append(core._move_qkv(
+            {"q": core._pair(qs), "k": core._pair(ks), "v": core._pair(vs)}, device
+        ))
+    return folds, layer, int(raw.q_heads), int(raw.kv_heads), int(raw.head_dim)
 
 
 def state_leaves(states: dict):
@@ -108,10 +104,10 @@ def check_all_cpu_finite(states: dict):
 
 def main() -> int:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"[smoke] device={device}")
-    torch.manual_seed(2929)
-    folds = make_folds(2929)
-    q_heads, kv_heads, head_dim = 16, 4, 256
+    print(f"[smoke] device={device} data=4B-panel")
+    folds, src_layer, q_heads, kv_heads, head_dim = load_4b_folds()
+    print(f"[smoke] source layer {src_layer}, fold tokens="
+          f"{[int(f['q'][0].shape[-2]) for f in folds]}")
 
     t0 = time.time()
     states_r3 = v162.hif4_calibration_attention(folds, q_heads, kv_heads, head_dim)

@@ -7,7 +7,8 @@
 - 父：R3 `solutions/v162_attention_r3-rotation-center_allgates/solution.py`（时间父 14405/238s），
   工作树字节 SHA-256 前缀 `A5C679D7A2B3`（CRLF 保留，`gen_solution.py` 字节级校验）。
 - 生成物：`solutions/v163_attention_a29-final-residual-s/solution.py`，
-  SHA-256 `EC6DDC66FFBD2AF5AE3C843258FC6E1A510B822F8D293415E755EB23614EDCDF`。
+  原始字节 SHA-256（官方身份，CRLF）`D8BAAB46510D684452C527C3BD4C9F555DD72891CE4114B67163F2F0C4C126A5`
+  （gen_solution 打印哈希已改为 read_bytes 字节级；LF 归一哈希 EC6DDC66 作废）。
 - 派生方式：11513 行入口改名 `_r3_a2_calibration_attention`（绑定当时 9235 主校准），尾部追加
   新入口 `hif4_calibration_attention` = R3 全栈逐位 + `_a29_apply`；六 API 定义计数检查通过
   （calibration_attention 2 个定义 = 主校准 + A29 入口）。
@@ -62,6 +63,12 @@
 - 非部署层 state_tensor_diffs_vs_r3 = 0（逐位控制 ✓）。
 
 ## 5. 风险与下一步
+
+0. **官方结果（2026-09-08 回传）**：v163 官方 **TIMEOUT（>300s）**。§5.1 的外推算术
+   （4B 每层开销 × 官方 10 softmax 注意力层 ≈ +90~150s，238+>90 > 300）当时可算未算，
+   属流程失误。按冻结卡 TIMEOUT 分支：**只关闭该校准复杂度实现**；机制无官方负向数据点，
+   F4 仍 OPEN。整改：smoke 数据源已替换为 4B 真实校准折（S1–S6 全过）；后续提交前必做
+   4B 时间外推，>280s 拦截。详见 logs/execution/2026-09-08-a29-official-results.md。
 
 1. **官方时间风险（主要）**：4B 面板 A29 开销 6.8–14.9s/层（6 层共 ~55s，约为 R3 校准的
    ~125%）。官方 40 层 hybrid 仅 10 层 softmax 注意力状态层，但官方折大小未知；投影不确定。

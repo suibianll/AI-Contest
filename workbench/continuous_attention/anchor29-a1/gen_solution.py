@@ -74,7 +74,7 @@ def main() -> int:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     OUT.write_bytes(generated.encode("utf-8"))
 
-    out_sha = hashlib.sha256(OUT.read_text(encoding="utf-8").encode("utf-8")).hexdigest().upper()
+    out_sha = hashlib.sha256(OUT.read_bytes()).hexdigest().upper()  # raw bytes (CRLF) = official identity
     print(f"[gen_solution] parent OK ({sha[:12]})")
     print(f"[gen_solution] wrote {OUT} ({OUT.stat().st_size} bytes)")
     print(f"[gen_solution] output SHA-256: {out_sha}")
