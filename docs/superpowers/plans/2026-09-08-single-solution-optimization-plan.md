@@ -1,51 +1,40 @@
-# 当前根提速与有效 Attention 优化计划
+# 当前根提速与低增量 Attention 优化计划
 
-> ACTIVE，2026-09-08。当前根官方 `18032/280s`。目标是先去掉现有实现中的重复计算，再做真正改变
-> 当前根输出的 Attention 优化。旧 v190–v193 已执行完毕，不再调参重试。
+> ACTIVE，2026-09-08。当前根官方 `18032/280s`。v190、v191、v192 均已官方超时；当前不再追加
+> 新的 Attention 校准循环，只执行输出等价提速和一个近零成本的训练修复。
 
-## 1. 总体执行顺序
+## 1. 当前只执行两项
 
-只做三个候选：
+1. **v194：A2/R3 校准等价提速。** 删除当前根已有流程中的重复矩阵求解、重复 V 编码和重复 gate
+   前向，输出与当前根保持一致。
+2. **v195：K-center 梯度聚合修复。** 修复 center 梯度在窗口循环中被覆盖的问题，不增加训练轮数、
+   窗口或额外前向。
 
-1. **v194：A2/R3 校准等价提速**——输出与当前根完全相同，只减少重复计算。
-2. **v195：修复 K-center 梯度聚合**——修复现有训练器只使用最后一个训练窗口 center 梯度的问题。
-3. **v196：按原始正向配置移植 Q/K 互逆残差**——使用历史 A22-2 的 `4窗训练+1窗选择`，不再使用
-   v192 的 `3窗训练+2窗全通过` 改版。
+此前准备的 v196 全矩阵互逆残差草稿不提交：它仍包含与 v192 同级的32步全矩阵训练，改变窗口划分
+不能解决官方超时。工作目录保留作草稿，不纳入当前执行。
 
-三个候选分别从当前根构建，不互相等待。某个候选官方正向后，尚未提交的候选再合入该正向改动；已经
-提交的候选保持独立结果，不重复提交。
-
-本计划不运行 OOD、跨模型、全六 shard、参数扫描或额外诊断面板。每个候选只做与其目标直接相关的
-一次验证和一次 Attention shard0。每个验证脚本同时完成六 API 单文件导入和有限输出检查，不再另建
-一层检查脚本。
+每项只做一次直接验证和一次 Attention shard0。验证脚本同时完成六 API 单文件导入和有限输出检查；
+不运行 OOD、跨模型、全六 shard、参数扫描或额外诊断面板。
 
 ## 2. v194：A2/R3 校准等价提速
 
 候选名：`attn-a2-calibration-fused`
 
-### 为什么先做
-
-当前根只剩约 20 秒官方时间余量。v190 最终回退父状态仍超时，说明任何新算法之前必须先减少已有
-Attention 校准开销。当前 `_a2_train_rotation` 和 gate 中存在三处可直接消除的重复计算。
-
-### 代码修改
+### 修改内容
 
 只改当前根的 `_a2_train_rotation`、`_a2_true_path_gate_loss` 和
 `hif4_calibration_attention`：
 
-1. 每个训练 step 的 `theta` 对所有窗口相同。把 `_m_cayley_pair(theta)` 和
-   `rotation = base @ cayley(theta)` 从窗口循环内移到循环外，每 step 只计算一次。
-2. 预处理窗口时 `std_v` 和 `v_hat` 是同一个 `_dense_to_hif4(v_sub)` 结果。只编码一次，直接令
-   `v_hat = std_v`。
-3. 当前 gate 为 identity 和 rotation 各调用一次 `_a2_true_path_gate_loss`，而每次函数内部又重新计算
-   父输出。改成一次函数同时返回 `parent_mse` 和 `candidate_mse`，父状态只执行一次 Q/K/V 编码和
-   Attention 前向。
+1. 每个训练 step 中，`theta` 对全部窗口相同。将 `_m_cayley_pair(theta)` 和
+   `rotation = base @ cayley(theta)` 移出窗口循环，每 step 只执行一次。
+2. 窗口预处理中的 `std_v` 与 `v_hat` 来自同一次 `_dense_to_hif4(v_sub)`。保留一次编码，直接复用
+   `std_v`。
+3. 当前 identity 与 rotation gate 重复计算父状态。改成一次函数同时返回父 MSE 和候选 MSE，父
+   Q/K/V 编码及 Attention 前向只执行一次。
 
-不改变训练步数、采样 token、rotation、center、loss、优化器、最终 state 字段或动态 API。
+训练步数、token采样、rotation、center、loss、优化器、最终state和动态API全部不变。
 
 ### 执行
-
-工作目录：`workbench/full_solution/attn-a2-calibration-fused/`。
 
 ```powershell
 .venv\Scripts\python.exe workbench/full_solution/attn-a2-calibration-fused/build.py
@@ -53,48 +42,31 @@ Attention 校准开销。当前 `_a2_train_rotation` 和 gate 中存在三处可
 .venv\Scripts\python.exe evaluator/eval.py --solution workbench/full_solution/attn-a2-calibration-fused/candidate/solution.py --baseline-solution solution.py --attention-only --shards 0 --cache artifacts/official_eval/cache/qwen3.5-4b-proxy-v2.pt --calibration-cache-mode write --algorithm-device cuda --output-dir artifacts/proxy_v3/full_solution/attn-a2-calibration-fused-shard0
 ```
 
-`verify_equivalence.py` 只验证一件事：同一真实 4B 校准输入下，父子返回的部署 state 和 Q/K/V 动态输出
-逐位一致。shard0 只确认分数相同并记录双方 calibration API 时间。
+`verify_equivalence.py` 对同一真实4B输入比较父子部署state和Q/K/V动态输出。逐位一致且本地校准时间下降
+后归档、提交官方。同分但更快则替换根；没有变快就结束，不继续微调性能实现。
 
-逐位一致且校准更快后直接归档并提交官方。同分但更快就替换根；若没有明显变快，结束该候选，不继续做
-微型性能改写。
-
-## 3. v195：修复 K-center 梯度聚合
+## 3. v195：K-center 多窗口梯度修复
 
 候选名：`attn-a2-center-gradient-aggregate`
 
-### 问题
+### 修改内容
 
-当前 `_a2_train_rotation` 每个 step 会遍历全部训练窗口：`grad_theta` 对所有窗口累加，但
-`grad_center = dk3.sum(dim=0)` 在循环内反复覆盖，所以 center 实际只使用最后一个训练窗口的梯度，
-与当前多窗口平均输出 loss 不一致。
-
-### 代码修改
-
-在每个训练 step 开始时增加：
-
-```text
-grad_center = zeros_like(center)
-```
-
-把窗口内的：
+当前 `_a2_train_rotation` 每个 step 内，`grad_theta` 累加全部训练窗口，但：
 
 ```text
 grad_center = dk3.sum(dim=0)
 ```
 
-改成：
+在窗口循环中反复覆盖，导致 center 只使用最后一个窗口。修改为每个 step 开始初始化一次，然后累加：
 
 ```text
+grad_center = zeros_like(center)
 grad_center += dk3.sum(dim=0)
 ```
 
-其余训练代码完全不变：仍为当前步数、学习率、Cayley rotation、最终输出 MSE 和最后一个窗口选择。
-这一改动几乎不增加计算量，只让 center 与 rotation 使用相同的多窗口信息。
+其余代码不变：不增加训练步数、校准窗口、gate或动态计算。
 
 ### 执行
-
-工作目录：`workbench/full_solution/attn-a2-center-gradient-aggregate/`。
 
 ```powershell
 .venv\Scripts\python.exe workbench/full_solution/attn-a2-center-gradient-aggregate/build.py
@@ -102,63 +74,20 @@ grad_center += dk3.sum(dim=0)
 .venv\Scripts\python.exe evaluator/eval.py --solution workbench/full_solution/attn-a2-center-gradient-aggregate/candidate/solution.py --baseline-solution solution.py --attention-only --shards 0 --cache artifacts/official_eval/cache/qwen3.5-4b-proxy-v2.pt --calibration-cache-mode write --algorithm-device cuda --output-dir artifacts/proxy_v3/full_solution/attn-a2-center-gradient-aggregate-shard0
 ```
 
-`verify.py` 只确认三个事实：center 梯度确实包含全部四个训练窗口、输出有限、至少一个校准层的 center
-或最终选择发生变化。随后直接看 shard0：候选不是 no-op、没有严重错误即可归档并提交官方。本地小幅
-正负不用于挑参数。
+`verify.py` 确认center梯度包含全部四个训练窗口、输出有限，并且至少一个校准层的center或最终选择发生
+变化。候选不是no-op且没有运行错误就归档、提交官方；本地小幅正负不用于调参。
 
-## 4. v196：原始配置的 Q/K 互逆残差移植
+## 4. 后续决定
 
-候选名：`attn-reciprocal-residual-original-split`
+v194与v195完成官方裁决后再制定下一轮：
 
-### 为什么重做这一项
+- v194明显降低官方时间：从更快根重新选择一个输出优化机制。
+- v195提高分数：将其作为新根，并继续寻找不增加校准循环的修改。
+- 两项均无收益：停止继续堆Attention校准计算，转向当前根已有计算的目标或实现修正。
 
-A22-2 历史上在 R3 上取得过官方正收益。v192 并没有复现它：原实现用前四个窗口训练、最后一个窗口
-选择，v192 改成前三个窗口训练，并要求后两个窗口同时严格改善，导致提案最终回退。v196恢复原始配置，
-但仍从当前完整根构建。
-
-### 代码修改
-
-从 `solutions/continuous_attention_anchor22-a2/solution.py` 移植以下完整增量：
-
-- `_a21_exp`
-- `_a21_exp_backward`
-- `_a21_project`
-- `_a21_scale_loss_grad`
-- `_a21_matrix_grad`
-- `_a22b_train`
-- `_a21_gate_loss`
-
-父状态仍由当前根原有 `hif4_calibration_attention` 产生。然后：
-
-```text
-fit  = calib_qkv_list[:-1]
-gate = calib_qkv_list[-1]
-Q_new = Q_parent @ exp(S)
-K_new = K_parent @ exp(-S)
-c_new = c_parent @ exp(-S)
-```
-
-固定沿用原实现：32步、学习率 `0.01`、梯度裁剪 `1.0`、正则 `0.001`、对称零迹 `S`、谱范围
-`±log(2)/2`。只比较最后一个窗口的真实 Attention 输出 MSE；更好就采用，否则回父。不增加第二个
-gate，不改变训练窗口，也不尝试联合乘积目标。
-
-### 执行
-
-工作目录：`workbench/full_solution/attn-reciprocal-residual-original-split/`。
-
-```powershell
-.venv\Scripts\python.exe workbench/full_solution/attn-reciprocal-residual-original-split/build.py
-.venv\Scripts\python.exe workbench/full_solution/attn-reciprocal-residual-original-split/verify.py
-.venv\Scripts\python.exe evaluator/eval.py --solution workbench/full_solution/attn-reciprocal-residual-original-split/candidate/solution.py --baseline-solution solution.py --attention-only --shards 0 --cache artifacts/official_eval/cache/qwen3.5-4b-proxy-v2.pt --calibration-cache-mode write --algorithm-device cuda --output-dir artifacts/proxy_v3/full_solution/attn-reciprocal-residual-original-split-shard0
-```
-
-`verify.py` 只验证互逆关系、K-center 同步编译和训练分支实际执行。shard0 中至少有一个层采用残差且
-输出发生变化后归档。由于该算法增加校准训练，优先将 v194 的等价提速合入提交包；如果仍发生官方超时，
-结束全矩阵残差实现，不再缩窗或减步数。
+在获得更快官方根之前，不提交v196，也不提交v193或其变体。
 
 ## 5. 归档
-
-每个候选只保存：
 
 ```text
 solutions/<candidate-name>/
@@ -167,7 +96,5 @@ solutions/<candidate-name>/
   result.md
 ```
 
-`result.md` 记录算法改动、shard0结果、校准时间、官方分数/时间和是否替换根。工作脚本留在
-`workbench/full_solution/<candidate-name>/`；评测 JSON 留在 `artifacts/proxy_v3/full_solution/`。
-
-v194–v196完成后，无论结果正负，都先根据官方结果重新选择下一种机制，不在这三个实现上继续调参数。
+`result.md`只记录修改内容、shard0、校准时间、官方分数/时间和是否替换根。工作脚本留在
+`workbench/full_solution/<candidate-name>/`，评测JSON留在`artifacts/proxy_v3/full_solution/`。

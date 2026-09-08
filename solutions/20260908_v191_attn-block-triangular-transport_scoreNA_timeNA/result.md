@@ -5,7 +5,7 @@
 - 机制：在父版本最终 Q/K 坐标中固定搬运两个不重叠的 64 维块对 `0→1`、`2→3`。
 - 父 SHA256：`12352efdd4e23cc5e1e17953008664fbaa5ea5d693373635fdafc4d28ce4e24e`
 - 候选 SHA256：`eb8c3cebb081546dc17c0f0c6470e3ffcaa60ce672865b617cfb1cddd1ff9666`
-- 官方状态：`unregistered/NA`；根 `solution.py` 未替换。
+- 官方状态：`TIMEOUT`（用户 2026-09-08 回传，官方 `>300s`、无分数）；根 `solution.py` 未替换。
 
 每个块使用父版本最终 Attention 输出误差梯度的最大奇异向量，并取沿该方向第一次触发真实
 HiF4 码变化的步长。部署为 `Q_parent*T`、`K_parent*T^{-T}`，其中 `T=I+N`、`N²=0`，
@@ -44,3 +44,10 @@ GQA 组内共享；在线路径只执行固定块变换。
   | 3 | 2→3 | `3.66819e-11` | `0.000229063` |
 
 评测记录：`artifacts/proxy_v3/full_solution/attn-block-triangular-transport-shard0/candidate/manifest.json`。
+
+## 官方结果
+
+- `TIMEOUT / >300s / score NA`。
+- 本候选虽只使用稀疏三角变换，但校准期包含输出梯度、SVD、逐块翻码边界搜索和双窗口读出；当前根
+  `280s` 的余量无法容纳该实现。
+- 该实现关闭，不继续缩放窗口、步长搜索或块对配置；根保持不变。

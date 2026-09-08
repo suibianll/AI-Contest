@@ -8,7 +8,7 @@
 - 候选 SHA256：`dab718bc1835d391eef5212dda869d9deac3db71dc072e08ec7ab3d6c4c6ba07`
 - 固定配置：32 步 Adam，学习率 `0.01`，梯度裁剪 `1.0`，正则 `0.001`，谱界
   `+/-log(2)/2`；fit windows `0,1,2`，gate windows `3,4`；候选数 `1`。
-- 官方状态：`unregistered/NA`；根 `solution.py` 未替换。
+- 官方状态：`TIMEOUT`（用户 2026-09-08 回传，官方 `>300s`、无分数）；根 `solution.py` 未替换。
 
 ## 检查
 
@@ -38,3 +38,10 @@
 - 归档：`solutions/20260908_v192_attn-full-reciprocal-residual_scoreNA_timeNA/`
 - 评测：`artifacts/proxy_v3/full_solution/attn-full-reciprocal-residual-shard0/candidate/manifest.json`
 - 工作脚本：`workbench/full_solution/attn-full-reciprocal-residual/`
+
+## 官方结果
+
+- `TIMEOUT / >300s / score NA`。
+- 本地最终回退父状态，但32步全矩阵训练和两个真实输出 gate 仍在校准期完整执行，因此官方只增加
+  时间而没有部署收益。
+- 该32步全矩阵残差实现关闭；恢复原始窗口划分不能消除同级计算量，不再直接提交 v196。

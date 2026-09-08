@@ -19,14 +19,14 @@
 
 ## 2026-09-08 当前单一完整方案候选
 
-以下候选均从当前根独立构建，尚未获得官方分数；`scoreNA_timeNA` 表示官方状态仍为
-`unregistered/NA`，不把本地 proxy 结果换算为官方结果。
+以下候选均从当前根独立构建；目录名中的 `scoreNA_timeNA` 是归档时状态，实际官方回传以表格和各自
+`result.md` 为准。
 
 | 版本 | 机制 | 当前结果 |
 |---|---|---|
 | [v190](20260908_v190_attn-diag-reciprocal-balance_scoreNA_timeNA/result.md) | diag reciprocal balance | 官方 `TIMEOUT`（`>300s`）；本地 gate 拒绝、回退父 |
-| [v191](20260908_v191_attn-block-triangular-transport_scoreNA_timeNA/result.md) | block triangular transport | gate 接受；shard0 delta `-0.0001040638` |
-| [v192](20260908_v192_attn-full-reciprocal-residual_scoreNA_timeNA/result.md) | full reciprocal residual | gate 拒绝，回退父；shard0 delta `0` |
+| [v191](20260908_v191_attn-block-triangular-transport_scoreNA_timeNA/result.md) | block triangular transport | 官方 `TIMEOUT`（`>300s`）；本地 gate 接受、shard0 delta `-0.0001040638` |
+| [v192](20260908_v192_attn-full-reciprocal-residual_scoreNA_timeNA/result.md) | full reciprocal residual | 官方 `TIMEOUT`（`>300s`）；本地 gate 拒绝、回退父、shard0 delta `0` |
 | [v193](20260908_v193_attn-joint-qk-product_scoreNA_timeNA/result.md) | joint Q/K product | gate 拒绝，回退父；shard0 delta `0` |
 
 **Attention Correctness Hardening（2026-09-08）：** [AC0](continuous_attention_ac0-correctness-hardened/result.md)

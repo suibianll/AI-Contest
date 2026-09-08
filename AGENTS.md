@@ -159,11 +159,10 @@ Attention 改为 `--attention-only`；完整集成审计改为 `--scenario both`
   `logs/execution/2026-09-08-lc3-official-result.md`。
 - Attention：per-call 动态 Gram/自适应精化族不缩 sweeps 重试；S2 前置条件不满足不启动。
   +4 scale 窗口、block-smooth refine 覆盖率、Jacobian 向 v186 移植及其收缩/clamp/gate 邻域关闭。
-  v187 仅为 clean-room 研究父，不替代完整父。v190（逐通道闭式 Q/K 互逆平衡）官方 TIMEOUT，
-  只关闭该实现，不做窗口/token/chunk/clamp 邻域重试；机制无官方负向数据点。
-- 时间余量事实：当前根 280s / 硬限 300s，余量 20s；v190（成本最低的 Attention 方向）实测超时，
-  L-C3 仅 +13s 即到 293s。任何新增校准计算的候选提交前都必须先回答"这 20s 够不够"，
-  本地 `accepted=0` 且 shard0 delta 为 0 的候选不提交（只有时间成本、无信息收益）。
+  v187 仅为 clean-room 研究父，不替代完整父。v190（逐通道闭式互逆）、v191（稀疏三角搬运）和
+  v192（32步全矩阵互逆残差）均官方 TIMEOUT；只关闭各自计算实现，不缩窗口、步长搜索或训练轮数重试。
+- 时间余量事实：当前根 280s / 硬限 300s，余量20s；v190–v192 三种新增 Attention 校准计算连续超时，
+  L-C3 仅 +13s 即到293s。当前先做输出等价提速或不增加训练轮数的修正；本地最终回退父状态的候选不提交。
 - V 侧不注册新候选：per-head 常量不改变块内解，per-channel multiplier 解码不逆缩放会破坏输出，
   五字段不支持 per-token 表；V-bias 等旧路径已裁决。2026-09-08 用户解禁 V 码分配类后探针裁决
   （anchor28-v-attribution）：当前码语义下 NVFP4→HiF4 重编码的码分配空间 100% 饱和——14 值 offset oracle +
