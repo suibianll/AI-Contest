@@ -201,6 +201,15 @@ Attention 改为 `--attention-only`；完整集成审计改为 `--scenario both`
 - v202（Linear sample-energy calibration fusion）官方 `18053/281s`，与 v195 同分且快 8s，
   已 `RETAINED` 并切换为当前根；候选 SHA `56DC805D...EFCB2BD`。
 - v203（联合 Q/K 合法 hierarchy 邻码选择）官方 `TIMEOUT（>300s）`；只关闭该实现。
+- v204（减法定价：关 Linear rank-2 残差段）官方 `18053/286s`（相对根 `0/+5s`）→ rank-2 残差段
+  官方贡献 **0 分**、时间成本在噪声内，机制定价为零；v205（减法定价：关 C76.4 旋转搜索）官方
+  `17969/275s`（相对根 `−84/−6s`）→ C76.4 官方价值 **+84 分 / ~6s**（14 分/秒，已测最高效机制），
+  **必须保留，不得为省时间砍掉**。砍校准换时间路线收益极小（本地校准 −30% → 官方仅 −6s），
+  v192 的 −40s 无法经裁剪回收；官方计时噪声 ≥±5s，±5s 内时间差不作裁决依据。
+  见 `logs/execution/2026-09-09-v204-v205-subtraction-pricing-official.md`。
+- Linear A@W 拟合族增益/additive 形态（v197、AW1–7、AW9）结构性自闭：自适应 scale 吸收增益，
+  重编码整数码必劣于父，与数据无关，不再注册该形态；无结构逐码贪心（AW8）过拟合校准窗口。
+  归因见 `logs/execution/2026-09-09-aw-fitting-family-analysis.md`。
 - 时间余量事实：当前根 281s / 硬限 300s，余量19s；v190–v192、v196、v198、v199、v201、v203
   的新增 Attention 校准/选择实现均官方 TIMEOUT。后续候选仍须把新增校准成本控制在官方 300s 内，
   新增 Attention 算法先按活动计划与标准 Linear 配对取得官方侧分，再决定是否回装完整根；
