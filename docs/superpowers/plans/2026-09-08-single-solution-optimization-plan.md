@@ -278,6 +278,7 @@ shard0 为 `0/0/12`，没有 hard-output 变化，具体实现关闭为 `REJECTE
 | 21 | C76.1 / v218 固定 Q-only headwise range permutation | 已完成；shard0 `0/0/12`，无 hard-output 变化，`REJECTED` | 保持 v202 根；不重试该具体实现 |
 | 22 | C76.2 / v219 固定 joint output-Fisher importance | 已完成；shard0 `0/0/12`，无 hard-output 变化，`REJECTED` | 保持 v202 根；不重试该具体实现 |
 | 23 | L-AW13 / v220 零值到最小有符号码插入 | 已完成；shard0 `-0.000051551`（14/42/0），`REJECTED` | 保持 v202 根；不重试该具体实现 |
+| 24 | L-AW14 / v221 共享 rank-8 输出残差基 A@W 拟合 | 已完成；shard0 `-0.032568`（0/56/0），`REJECTED` | 保持 v202 根；不重试该具体实现 |
 
 ## 9. 归档
 
