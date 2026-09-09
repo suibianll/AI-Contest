@@ -9,8 +9,9 @@
 **当前唯一活动计划：** [输出感知舍入边界与 A/W 联合量化计划](2026-09-09-output-aware-rounding-and-joint-aw-plan.md)。
 
 **并行 Linear 执行附录：** [历史过拟合 Linear 机制的 4B 并行恢复计划](parallel/2026-09-09-parallel-linear-overfit-recovery-plan.md)。
-该文件从属于唯一活动总计划，只在独立 workbench 中实现 PLA1/PLW1，不建立第二父版本、版本号或
-官方晋级线，也不修改当前 Attention/L-JRB1 工作目录；正式候选统一交回活动总计划处理。
+该文件从属于唯一活动总计划，只在独立 workbench 中实现 PLA1 低秩输出纠码，不建立第二父版本、
+版本号或官方晋级线，也不修改当前 Attention/L-JRB1 工作目录；原 PLW1/C70 offset 重构因与现役
+编码器及已关闭邻域重复，已在实现前取消。正式候选统一交回活动总计划处理。
 
 当前根保持 v202 Linear + v195 Attention，官方 `18053/281s`。v223、v224、v225 官方均 `TIMEOUT(>300s)`；
 R3 已关闭为 `NO_EFFECT`。上一轮三个方向实际都属于
