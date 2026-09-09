@@ -1,0 +1,32 @@
+{
+  "run_id": "linear-xr1-cross-residual-correction",
+  "version": "unassigned",
+  "mechanism": "rank-4 dynamic activation output cross-residual code correction",
+  "plan": "docs/superpowers/plans/2026-09-10-linear-cross-residual-correction-plan.md",
+  "parent": "solution.py",
+  "parent_sha256": "56dc805d6e5a3aef896db8021045740292735725d688b48e3d4393e55efcb2bd",
+  "candidate_sha256": "23c36c4288d9add613c82663b62c40a239120869acf4ce0110fe6014db194967",
+  "build": "append-only: parent bytes + fixed separator + implementation module",
+  "hooks": [
+    "hif4_calibration_and_quantize_weight (post-processor: compile rank-4 G/C factors)",
+    "hif4_dynamic_quantize_activation (post-processor: one frozen-gradient code pass)"
+  ],
+  "untouched": [
+    "parent weight encoder and every shared HiF4 helper (byte-identical)",
+    "hif4_calibration_attention / hif4_dynamic_quantize_q / _k / _v (byte-identical)"
+  ],
+  "fixed_choices": {
+    "rank": 4,
+    "subspace_iterations": 24,
+    "start_subspace": "largest-2-norm columns (deterministic, no RNG)",
+    "candidate_set": "one element of one natural 4-element group, mantissa code +-1 at fixed scale_factor/lv2/lv3",
+    "candidates_per_group": 8,
+    "groups_per_64block": 16,
+    "groups_changed_per_row_per_block": 1,
+    "passes": 1,
+    "accept_rule": "exact single-element quadratic 2*g[i]*dx + diag(G4)[i]*dx^2 < 0",
+    "layers": "state['gram'] present (in_features <= 3072); wide layers keep the parent"
+  },
+  "candidate_count": 1,
+  "official_status": "unregistered/NA"
+}

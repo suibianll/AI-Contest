@@ -112,6 +112,12 @@
 
 事实（2026-09-10）：A-G1 已本地关闭为 `REJECTED`（v227，六 shard 等权 `-0.005294`，未提交官方，
 用户将统一做官方评测），根保持 R0；L-XR1 线不受影响，组合路径待 A-G1 官方回传后按上表裁决。
+
+事实（2026-09-10 01:20）：L-XR1 本地关闭为 `REJECTED`（shard0 配对 `delta_mean=-0.040082`、
+`0/40/16`，40/40 被触及 case 变差且全角色/split/length 同号；归因：块外 G 分量主导
+`offblock_rel` 中位 0.82，固定 rank-4 只捕获 39%，冻结梯度系统性低估纠码代价），
+不分配版本号、不提交官方，根保持 R0；六 shard 记录运行中
+（`artifacts/proxy_v3/linear-xr1-sixshard/`，shard0 复用配对结果）。
 Attention 后续卡由新附录
 [A-QB1](parallel/2026-09-10-attention-qk-logit-bias-plan.md) 承接，归属本计划统一登记。
 
