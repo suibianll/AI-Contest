@@ -32,8 +32,8 @@
 | [v194](20260908_v194_attn-a2-calibration-fused_scoreNA_timeNA/result.md) | A2/R3 校准等价提速 | 官方 `18032/285s`：同分、比当前根慢 5s，`REJECTED_TIME`；本地 calibration API −22.5% 未转化为官方提速 |
 | [v195](20260908_v195_attn-a2-center-gradient-aggregate_scoreNA_timeNA/result.md) | K-center 梯度聚合修复 | shard0 delta mean `+0.001935`（6/6/0），非 no-op；官方 `18053/289s`，`RETAINED`，已切换根 |
 | [v196](20260908_v196_attn-reciprocal-residual-original-split_scoreNA_timeNA/result.md) | Q/K 互逆残差原始 4+1 配置 | shard0 delta `0`（gate 全拒绝回退父，calibration +37.7%）；官方 `TIMEOUT`（`>300s`），根不变 |
-| [v197](20260909_v197_linear-aw1-block-gain_scoreNA_timeNA/result.md) | 64-block 标量增益 A@W 闭式拟合 | shard0 delta mean `−0.2077`（0/56/0，mse ratio 1.45），疑似部署 block 对齐 bug；本地 REJECTED，不提交 |
-| [v198](20260909_v198_attn-gqa-reciprocal-diag_scoreNA_timeNA/result.md) | GQA 组共享互逆对角（解析初始化+smooth-max+硬门控，冻结 V） | shard0 delta mean `−0.001693`（6/6/0），非 no-op；官方 `unregistered/NA`，可交官方裁决 |
+| [v197](20260909_v197_linear-aw1-block-gain_scoreNA_timeNA/result.md) | 64-block 标量增益 A@W 闭式拟合 | 官方 `17277/285s`（相对根 −776/−4s），REJECTED；本地 shard0 −0.2077（0/56/0）方向一致 |
+| [v198](20260909_v198_attn-gqa-reciprocal-diag_scoreNA_timeNA/result.md) | GQA 组共享互逆对角（解析初始化+smooth-max+硬门控，冻结 V） | 官方 `TIMEOUT`（`>300s`）；本地 shard0 delta mean `−0.001693`（6/6/0），无精度数据点 |
 
 ## 2026-09-09 持续优化候选
 

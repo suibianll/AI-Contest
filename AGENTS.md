@@ -172,10 +172,16 @@ Attention 改为 `--attention-only`；完整集成审计改为 `--scenario both`
   `RETAINED` 并切换为当前根；原始完整候选 SHA 为 `839ADB1E...761D7F`。
 - v196（A2 原始 4+1 窗口全矩阵互逆残差）官方 `TIMEOUT（>300s）`，根保持 v195；不缩窗、
   不减步数重试。
-- 时间余量事实：当前根 289s / 硬限 300s，余量11s；v190–v192 三种新增 Attention 校准计算连续超时，
-  L-C3 仅 +13s 即到293s。新增 Attention 算法先按活动计划与标准 Linear 配对取得官方侧分，再决定
-  是否回装完整根；普通完整根候选在本地最终回退父状态时不提交。活动计划中用户明确要求的标准 Linear
-  诊断组合允许各提交一次，用于判断官方隐藏校准上的真实 Attention 效果。
+- v197（Linear 64-block 标量增益 A@W 闭式拟合）官方 `17277/285s`，相对根 `−776/−4s`，
+  已 REJECTED；本地 shard0 `−0.2077`（0/56/0）方向一致，疑似部署 block 对齐 bug，
+  只关闭该实现，不证明低维 A@W 拟合机制无效。
+- v198（GQA 组共享互逆对角：解析初始化+smooth-max+硬门控）官方 `TIMEOUT（>300s）`；
+  本地 calibration 无超时信号仍官方超时。只关闭该实现，互逆 scale 机制无官方精度数据点。
+- 时间余量事实：当前根 289s / 硬限 300s，余量11s；v190–v192、v196、v198 五个新增 Attention
+  校准计算全部官方 TIMEOUT（含低成本的 v198），L-C3 仅 +13s 即到293s。在根官方时间明显
+  下降之前，任何带新增校准计算的候选（Linear 或 Attention）都不应再提交官方。
+  新增 Attention 算法先按活动计划与标准 Linear 配对取得官方侧分，再决定是否回装完整根；
+  普通完整根候选在本地最终回退父状态时不提交。
 - V 侧不注册新候选：per-head 常量不改变块内解，per-channel multiplier 解码不逆缩放会破坏输出，
   五字段不支持 per-token 表；V-bias 等旧路径已裁决。2026-09-08 用户解禁 V 码分配类后探针裁决
   （anchor28-v-attribution）：当前码语义下 NVFP4→HiF4 重编码的码分配空间 100% 饱和——14 值 offset oracle +
