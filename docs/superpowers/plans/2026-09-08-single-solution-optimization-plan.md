@@ -132,7 +132,7 @@ Attention，但装回当前根后超时，也直接提前执行 L-T1。
 ## 7. Linear 提分草稿的处置
 
 现有 v197 linear-aw1-block-gain 已证明当前实现存在部署 block 对齐错误，不能直接重交。v202
-官方将完整根从 289s 降到 281s，满足“时间释放后再继续 Linear A@W”的前置条件。下一张卡注册为
+官方将完整根从 289s 降到 281s，满足“时间释放后再继续 Linear A@W”的前置条件。已执行的卡为
 **L-AW1 / v204：部署坐标对齐的 64-block 标量 A@W 拟合**：
 
 1. 从当前 v202 完整根构建，只修正 A@W 拟合与最终部署 `gptq_block_order`、permutation 及
@@ -145,6 +145,11 @@ Attention，但装回当前根后超时，也直接提前执行 L-T1。
    六 shard 结果。不扫描 ridge、clamp、窗口或增益邻域。
 5. 本地正向只作为机制证据；候选归档后按当前规则记录官方状态，不用本地分数换算官方分数。
 
+v204 已完成上述固定实现：`eval-v3` 4B Linear-only 六 shard 的 336 个 case 与 v202
+逐位相同（overall mean `0.5292658476834804`，changed cases `0`）。受 hard-output gate 保护，
+没有部署任何 A@W 增益；该具体实现关闭为 `REJECTED`，官方状态为 `unregistered/NA`，不切换根，
+也不扫描其 ridge、clamp、窗口或增益邻域。
+
 ## 8. 当前执行队列
 
 | 顺序 | 工作 | 当前状态 | 完成后动作 |
@@ -155,7 +160,7 @@ Attention，但装回当前根后超时，也直接提前执行 L-T1。
 | 4 | L-T1 / v202 Linear等价降时 | 已完成；官方 `18053/281s`，与 v195 同分快 8s | 已归档并切换为当前根 |
 | 5 | A3 / v201 + A4 / v203 | 已完成；官方均 `TIMEOUT`；A3 代理 `−0.0001206117`，A4 代理 `−0.0010964882` | 归档，停止 reciprocal/邻码族 |
 | 6 | 最佳 Attention + 当前最快 Linear | 当前根为 v202 Linear + v195 Attention，`18053/281s` | 保持根，进入下一张 Linear 卡 |
-| 7 | L-AW1 / v204 部署坐标对齐 64-block A@W 拟合 | 已注册；v202 官方释放 8s 余量后执行 | 从 v202 构建、实测、归档并提交 |
+| 7 | L-AW1 / v204 部署坐标对齐 64-block A@W 拟合 | 已完成；六 shard 与 v202 逐位相同，`REJECTED` | 保持 v202 根；不重试该具体实现 |
 
 ## 9. 归档
 

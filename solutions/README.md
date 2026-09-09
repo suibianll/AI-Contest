@@ -43,6 +43,7 @@
 | [v201](20260909_v201_attn-hard-logit-residual_scoreNA_timeNA/result.md) | hard-logit residual + softmax Jacobian/V 加权候选排序 | 4/6 层产生接受状态，但六 shard 代理 `−0.0001206117`；`REJECTED`，官方 `TIMEOUT` |
 | [v202](20260909_v202_linear-sample-energy-fusion_scoreNA_timeNA/result.md) | Linear sample-energy 编译与首次校准解码融合 | 336 case 逐位等价；官方 `18053/281s`，同分快 8s，`RETAINED` 并切换根 |
 | [v203](20260909_v203_attn-legal-hierarchy-selection_scoreNA_timeNA/result.md) | 联合 Q/K 合法 hierarchy 邻码 hard-output 选择 | 仅 shard5 变化且 `−0.0065789294`，总代理 `−0.0010964882`；`REJECTED`，官方 `TIMEOUT` |
+| [v204](20260909_v204_linear-aw1-deployed-coordinate_scoreNA_timeNA/result.md) | 部署坐标对齐的 64-block 标量 A@W 拟合 | 六 shard 336 case 与 v202 逐位相同、无 hard-output 增益；`REJECTED`，官方 `unregistered/NA` |
 
 **Attention Correctness Hardening（2026-09-08）：** [AC0](continuous_attention_ac0-correctness-hardened/result.md)
 （`F817E4C2…`，父 R3 `A5C679D7…`）保留为 Attention 正确性参考：原子 Q/K-pair
