@@ -1,7 +1,7 @@
 # 历史过拟合 Linear 机制的 4B 并行恢复计划
 
-> 状态：并行执行附录（v3，2026-09-09）。
-> 本文件从属于[唯一活动总计划](../2026-09-09-output-aware-rounding-and-joint-aw-plan.md)，不建立
+> 状态：SUPERSEDED，2026-09-10。算法由新的 Linear 主计划接管，本文件未执行。
+> 本文件原从属于[已完成总计划](2026-09-09-output-aware-rounding-and-joint-aw-plan-completed.md)，不建立
 > 第二条父版本、版本号或官方晋级线。当前完整父仍为 v202 Linear + v195 Attention，官方
 > `18053/281s`。根切换、正式归档和官方结果登记继续由唯一活动总计划统一处理。
 

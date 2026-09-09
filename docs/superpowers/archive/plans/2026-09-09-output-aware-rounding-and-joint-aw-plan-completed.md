@@ -1,6 +1,6 @@
 # 输出感知舍入边界与 A/W 联合量化计划
 
-> ACTIVE，2026-09-09。当前完整根为 v202 Linear + v195 Attention，官方 `18053/281s`，
+> COMPLETED，2026-09-10。当前完整根为 v202 Linear + v195 Attention，官方 `18053/281s`，
 > SHA256 `56DC805D6E5A3AEF896DB8021045740292735725D688B48E3D4393E55EFCB2BD`。
 > 每张正式卡都从执行时的最高分完整根构建，保留六 API；不修改任何 `solutions/` 归档源码。
 

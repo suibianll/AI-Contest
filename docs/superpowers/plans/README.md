@@ -1,19 +1,22 @@
 # 计划入口
 
-> 最后更新：2026-09-09
+> 最后更新：2026-09-10
 
 日常测试唯一入口：[4B 测试指引](../../4b-panel-testing-guide.md)。全新测试只使用 4B，
 不再运行 0.5B、逐候选 OOD、GPT-2/opt 或 fresh-default 计时；本地时间公式和 280s 门退役。
 官方提交无限制，官方硬限 300s。评估实现说明见 [proxy-v3](../../proxy-v3.md)。
 
-**当前唯一活动计划：** [输出感知舍入边界与 A/W 联合量化计划](2026-09-09-output-aware-rounding-and-joint-aw-plan.md)。
+**当前唯一活动总计划（Linear）：**
+[Linear 完整输出交叉残差纠码与双线协调计划](2026-09-10-linear-cross-residual-correction-plan.md)。
 
-**并行 Linear 执行附录：** [历史过拟合 Linear 机制的 4B 并行恢复计划](parallel/2026-09-09-parallel-linear-overfit-recovery-plan.md)。
-该文件从属于唯一活动总计划，只在独立 workbench 中实现 PLA1 低秩输出纠码，不建立第二父版本、
-版本号或官方晋级线，也不修改当前 Attention/L-JRB1 工作目录；原 PLW1/C70 offset 重构因与现役
-编码器及已关闭邻域重复，已在实现前取消。正式候选统一交回活动总计划处理。
+**Attention 执行附录：**
+[Q/K 联合仿射 Gauge 优化计划](parallel/2026-09-10-attention-joint-affine-gauge-plan.md)。
+两个文件构成同一个协调执行组：冻结同一完整根、使用独立 workbench 和结果文件、GPU 串行；单机制
+分别官方定价，只有双方都官方正向后才从较高分完整父重新构建组合候选，不建立侧父或侧晋级线。
 
-当前根保持 v202 Linear + v195 Attention，官方 `18053/281s`。v223、v224、v225 官方均 `TIMEOUT(>300s)`；
+当前根保持 v202 Linear + v195 Attention，官方 `18053/281s`。上一份
+[输出感知舍入边界与 A/W 联合量化计划](../archive/plans/2026-09-09-output-aware-rounding-and-joint-aw-plan-completed.md)
+已完成：L-RB1、A-RB1、L-JRB1 均未形成可晋级候选。此前 v223、v224、v225 官方均 `TIMEOUT(>300s)`；
 R3 已关闭为 `NO_EFFECT`。上一轮三个方向实际都属于
 Q/K 正交坐标变换，现已结束并归档。计划第一张卡 L-RB1（v226）已关闭为 `REJECTED`：六 shard 全部
 负向（等权均值 `-4.10e-4`），机制可达、改动 10.4M 个硬码，但接受层校准 `ΔL` 仅约 `5e-7`，属校准
