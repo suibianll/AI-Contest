@@ -229,6 +229,17 @@ v215 已完成：shard0 的 56 个 Linear case 为 `0/56/0`，mean delta `-0.150
 `unregistered/NA`，根继续为 v202。当前三种静态单字段 hard-output 方向（lv3、lv2、E6M2
 scale_factor）均已实测关闭；不重复这些实现，等待新的非重复机制计划。
 
+随后注册 **L-T2 / v216：运行时使用 calibration-compiled activation GPTQ block order**：v202
+虽在 state 中编译了 sample-energy order，动态 wrapper 仍按每次 activation 重算 order；该卡
+固定使用 state order，删除每次 energy ranking/sort，不新增校准搜索。v216 已完成：shard0
+为 `13/43/0`，mean delta `-0.003884`、tail `-0.004127`，runtime 仅有约 `0.3s` 诊断差异，
+具体实现关闭为 `REJECTED`，归档目录名含 `rejected`，官方状态为 `unregistered/NA`，根继续
+为 v202。
+
+下一项新机制注册为 **A5 / v217：单一固定 reciprocal temperature 1.25**：只在 A1 的真实
+attention-output 选择轨启用现有 reciprocal head-scale 参数化，固定 `factor=1.25` 一项，
+不扫描其它 factor；Q/K 连续点积保持不变，动态 API 和 V 状态不变。
+
 ## 8. 当前执行队列
 
 | 顺序 | 工作 | 当前状态 | 完成后动作 |
@@ -251,6 +262,8 @@ scale_factor）均已实测关闭；不重复这些实现，等待新的非重�
 | 16 | L-AW10 / v213 输出感知 per-group lv3 hierarchy bit toggle | 已完成；shard0 `0/0/56`，无 hard-output 变化，`REJECTED` | 保持 v202 根；不重试该具体实现 |
 | 17 | L-AW11 / v214 输出感知 per-group lv2 hierarchy bit toggle | 已完成；shard0 `0/0/56`，无 hard-output 变化，`REJECTED` | 保持 v202 根；不重试该具体实现 |
 | 18 | L-AW12 / v215 输出感知 E6M2 scale_factor 相邻码更新 | 已完成；shard0 `-0.150813`（0/56/0），`REJECTED` | 保持 v202 根；不重试该具体实现 |
+| 19 | L-T2 / v216 运行时使用 calibration-compiled activation GPTQ order | 已完成；shard0 `-0.003884`（13/43/0），`REJECTED` | 保持 v202 根；不重试该具体实现 |
+| 20 | A5 / v217 单一固定 reciprocal temperature 1.25 | 已注册；仅启用一个固定 factor，动态 API 不变 | 完成后按 Attention hard-output 结果归档，不等待官方 |
 
 ## 9. 归档
 

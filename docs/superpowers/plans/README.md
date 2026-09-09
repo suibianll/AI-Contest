@@ -32,6 +32,9 @@ L-AW9/v212 已完成：shard0 为 `0`（0/0/56），没有 hard-output 变化且
 下一张注册为 L-AW12/v215 的输出感知 E6M2 `scale_factor` 相邻码更新。L-AW12/v215 已完成：
 shard0 为 `-0.150813`（0/56/0），已归档为带 `rejected` 的目录。根继续为 v202；当前
 Linear 单字段 hard-output 路线暂停，等待新的非重复机制计划。
+L-T2/v216 已完成：直接使用编译的 activation GPTQ block order 使 shard0 mean delta 为
+`-0.003884`（13+/43-/0），已归档为带 `rejected` 的目录。根继续为 v202；下一项注册为
+A5/v217 的单一固定 reciprocal temperature `1.25`。
 
 ## 历史计划索引（仅证据）
 
