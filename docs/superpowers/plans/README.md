@@ -6,47 +6,19 @@
 不再运行 0.5B、逐候选 OOD、GPT-2/opt 或 fresh-default 计时；本地时间公式和 280s 门退役。
 官方提交无限制，官方硬限 300s。评估实现说明见 [proxy-v3](../../proxy-v3.md)。
 
-**当前唯一活动计划：** [Hard-Output Attention + Linear 降时持续优化](2026-09-08-single-solution-optimization-plan.md)。
+**当前唯一活动计划：** [当前最高分根持续优化计划](2026-09-09-current-root-correctness-and-optimization-plan.md)。
 
-当前 Attention 停滞的主因是代理目标与真实 hard quantization 输出错位：v190 大量翻码后 gate 变差，
-v191 梯度方向接近零，v192 训练 loss 明显下降但两个 hard-output 窗口均恶化；v195 修 bug 后本地
-变化微小，但完整官方结果为 `18053/289s` 并已 RETAINED。活动计划本轮已按真实 HiF4 encode/decode
-和最终 Attention output 完成 A1/v199、A3/v201、A4/v203，以及 Linear L-T1/v202；v199/v201/v203
-官方均超时，v202 官方 `18053/281s` 与 v195 同分更快，已切换为当前根并完成归档。时间余量已从
-11s 增至 19s，活动计划已执行 L-AW1/v204 部署坐标对齐 A@W 拟合卡；候选六 shard 无 hard-output
-变化，已归档为 `REJECTED`，根继续为 v202。L-AW2/v205 的 HiF4 8 元素层级组拟合和
-L-AW3/v206 的输出组×64-block 拟合也已完成，均无 hard-output 变化并以带 `rejected` 的目录归档；
-L-AW4/v207 的 4 元素细粒度组拟合同样已完成，仍无 hard-output 变化并以带 `rejected` 的目录归档。
-L-AW5/v208 的输出行 8-group × 64-block 拟合也已完成，仍无 hard-output 变化并以带 `rejected`
-的目录归档。L-AW6/v209 的 4 元素组广播 additive 拟合和 L-AW7/v210 的按输出行独立 4 元素组
-additive 拟合也已完成，仍无 hard-output 变化并以带 `rejected` 的目录归档。根继续为 v202。
-L-AW8/v211 的冻结 `Q(A)` 输出感知 4 元素组联合码更新已在 shard0 实际翻码，但 Linear mean
-delta 为 `-0.0171391319`（3/53/0），且校准开销约为父级 3.8 倍，已归档为带 `rejected` 的目录。
-根继续为 v202；下一张注册为 L-AW9/v212 的低自由度共享整数码偏移。
-L-AW9/v212 已完成：shard0 为 `0`（0/0/56），没有 hard-output 变化且校准开销约为父级 5.0 倍，
-已归档为带 `rejected` 的目录。根继续为 v202；下一张注册为 L-AW10/v213 的输出感知 `lv3`
-层级 bit toggle。L-AW10/v213 已完成：shard0 为 `0`（0/0/56），没有 hard-output 变化且校准
-开销高于父级，已归档为带 `rejected` 的目录。根继续为 v202；下一张注册为 L-AW11/v214 的
-输出感知 per-group `lv2` hierarchy bit toggle。L-AW11/v214 已完成：shard0 为 `0`（0/0/56），
-没有 hard-output 变化且校准开销高于父级，已归档为带 `rejected` 的目录。根继续为 v202；
-下一张注册为 L-AW12/v215 的输出感知 E6M2 `scale_factor` 相邻码更新。L-AW12/v215 已完成：
-shard0 为 `-0.150813`（0/56/0），已归档为带 `rejected` 的目录。根继续为 v202；当前
-Linear 单字段 hard-output 路线暂停，等待新的非重复机制计划。
-A5/v217 已完成：单一固定 reciprocal temperature `1.25` 在 Attention shard0 的 12 个 case
-全部逐位等价（`0/0/12`），mean/median/tail delta 均为 `0`，已归档为带 `rejected` 的目录。
-C76.1/v218 也已完成：固定 Q-only headwise range permutation 在 shard0 同样为 `0/0/12`，
-没有 hard-output 变化，已归档为带 `rejected` 的目录。根继续为 v202；下一项注册为 C76.2/v219
-的固定 joint output-Fisher importance。C76.2/v219 已完成且 shard0 为 `0/0/12`，没有
-hard-output 变化，已归档为带 `rejected` 的目录；C76.1–C76.3 研究分支全部关闭，不再重开
-邻域。随后按 LC2 审计中仍未实际执行的边界注册 L-AW13/v220 零值到最小有符号码插入；
-v220 在 shard0 实际翻码但 mean delta `-0.000051551`（14/42/0），已归档为带 `rejected`
-的目录，根继续为 v202。随后注册结构化 L-AW14/v221 共享 rank-8 输出残差基；v221 shard0
-所有 56 个 Linear case 均回退（mean delta `-0.032568`），已归档为带 `rejected` 的目录，
-根继续为 v202。
+当前根保持 v202 Linear + v195 Attention，官方 `18053/281s`。旧计划已转入历史归档；当前先在
+新的 workbench 候选中修复 A2 多窗口梯度归一化、返回类型和静默异常，再按真实 hard-output
+执行量化阈值事件搜索、K-center 离散更新和真正逐列非对称 Linear 量化。官方正向前不覆盖根，
+不修改 `solutions/` 下任何已归档源码。
 
 ## 历史计划索引（仅证据）
 
 以下旧父、旧面板、时间预测与关闭记录是历史快照，不提供当前执行指令；当前规则只见上方入口。
+
+上一轮 [Hard-Output Attention + Linear 优化计划](../archive/plans/2026-09-08-single-solution-optimization-plan-superseded-20260909.md)
+已执行至 v221 后结束。其长队列、侧时间推算和后续卡片均不再提供当前指令。
 
 此前 [v189 Linear 残差压力块序计划](../archive/plans/2026-09-06-linear-compiled-residual-pressure-order-plan-superseded.md)
 由本总计划取代；旧运行由原执行者封存，不删除、不混入 v162 新分支。
