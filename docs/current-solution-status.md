@@ -109,6 +109,10 @@
   为 `-0.0171391319`（3/53/0），且校准 API 约为父级 3.8 倍，已归档为 `REJECTED`（目录名含
   `rejected`），官方状态为 `unregistered/NA`。根继续为 v202。下一张卡为 L-AW9/v212：
   每个 64-block 只选一个 4 元素组、跨输出行共享整数码偏移的直接码空间更新。
+- L-AW9/v212 已从 v202 实现每个 64-block 单组、跨输出行共享的整数 signed-mantissa 码偏移；
+  shard0 为 `0`（0/0/56），没有 hard-output 变化，校准 API 约为父级 5.0 倍，已归档为
+  `REJECTED`（目录名含 `rejected`），官方状态为 `unregistered/NA`。根继续为 v202。下一张卡为
+  L-AW10/v213：冻结 activation state、输出感知的 per-group `lv3` hierarchy bit toggle。
 
 以下内容是历史证据索引，不提供当前下一步指令。
 

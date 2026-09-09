@@ -206,6 +206,13 @@ delta 为 `-0.0171391319`（3/53/0），校准 API 约为父级 3.8 倍，具体
 每个 64 输入块只选一个自然 4 元素组，在所有输出行共享一个 4 维整数 signed-mantissa 偏移；
 用全部校准行的一次输出正规方程确定该偏移，直接写回 mantissa/sign 并用实际产品损失保留或回退。
 scale/lv2/lv3 不变，不扫描组、偏移、正则或窗口，不把输出张量写入 state。
+v212 已完成：shard0 的 56 个 Linear case 全部逐位等价（`0/0/56`），没有 hard-output 变化，
+校准 API 约为父级 5.0 倍，具体实现关闭为 `REJECTED`，归档目录名含 `rejected`，官方状态为
+`unregistered/NA`，根继续为 v202。
+下一张卡注册为 **L-AW10 / v213：输出感知 per-group lv3 hierarchy bit toggle**：冻结最终
+`Q(A)`，每个 64 输入块只选一个自然 4 元素组，直接比较该组 `lv3=1↔2` 的合法切换在实际
+输出残差上的变化；按自然 block 顺序一次写回，scale/lv2/mantissa 不变，不扫描组或邻域，
+不把校准输出写入 state。
 
 ## 8. 当前执行队列
 
@@ -226,6 +233,7 @@ scale/lv2/lv3 不变，不扫描组、偏移、正则或窗口，不把输出张
 | 13 | L-AW7 / v210 按输出行独立的 4 元素组 additive A@W 拟合 | 已完成；六 shard 与 v202 逐位相同，`REJECTED` | 保持 v202 根；不重试该具体实现 |
 | 14 | L-AW8 / v211 冻结 Q(A) 输出感知 4-code-group 联合更新 | 已完成；shard0 `-0.0171391319`（3/53/0），`REJECTED` | 保持 v202 根；不重试该具体实现 |
 | 15 | L-AW9 / v212 64-block 内单组共享整数码偏移 | 已注册；固定一次输出正规方程与直接码空间回写 | 完成后按 hard-output 结果归档，不等待官方 |
+| 16 | L-AW10 / v213 输出感知 per-group lv3 hierarchy bit toggle | 已注册；冻结 Q(A)，每个 64-block 单组一次合法切换 | 完成后按 hard-output 结果归档，不等待官方 |
 
 ## 9. 归档
 

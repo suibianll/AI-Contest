@@ -1,0 +1,22 @@
+{
+  "version": "v212",
+  "parent": "v202",
+  "parent_sha256": "56dc805d6e5a3aef896db8021045740292735725d688b48e3d4393e55efcb2bd",
+  "candidate_sha256": "143c459a11b76740ddbd229a9fb54cd2ebab156627f9e8de8e62b711ca38ab0c",
+  "protocol": "proxy-v3",
+  "panel": "qwen35-4b-panel-v1",
+  "scope": "linear-only shard0; early rejection after the first target-side shard",
+  "mechanism": "one shared integer signed-mantissa 4-code offset for one selected group per 64-block",
+  "fit_data": "all calibration pairs and all rows supplied by the API",
+  "hard_output_changed": false,
+  "delta_gain_mean": 0.0,
+  "positive_cases": 0,
+  "negative_cases": 0,
+  "zero_cases": 56,
+  "case_count": 56,
+  "candidate_api_total_seconds": 218.9044445012696,
+  "parent_api_total_seconds": 43.79749029991217,
+  "candidate_calibration_seconds": 173.78921880060807,
+  "decision": "REJECTED",
+  "reason": "the fixed shared integer code update did not change any hard output and added substantial calibration cost"
+}
