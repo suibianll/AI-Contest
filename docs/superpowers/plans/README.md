@@ -36,7 +36,9 @@ A5/v217 已完成：单一固定 reciprocal temperature `1.25` 在 Attention sha
 全部逐位等价（`0/0/12`），mean/median/tail delta 均为 `0`，已归档为带 `rejected` 的目录。
 C76.1/v218 也已完成：固定 Q-only headwise range permutation 在 shard0 同样为 `0/0/12`，
 没有 hard-output 变化，已归档为带 `rejected` 的目录。根继续为 v202；下一项注册为 C76.2/v219
-的固定 joint output-Fisher importance。
+的固定 joint output-Fisher importance。C76.2/v219 已完成且 shard0 为 `0/0/12`，没有
+hard-output 变化，已归档为带 `rejected` 的目录；C76.1–C76.3 研究分支全部关闭，不再重开
+邻域，根继续为 v202。
 
 ## 历史计划索引（仅证据）
 

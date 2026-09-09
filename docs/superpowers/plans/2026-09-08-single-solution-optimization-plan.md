@@ -245,9 +245,10 @@ delta 均为 `0`，固定 factor 没有改变任何 hard output，具体实现�
 含 `rejected`，官方状态为 `unregistered/NA`，根继续为 v202。随后执行的 **C76.1 / v218：
 固定 Q-only headwise range permutation** 也已完成：shard0 为 `0/0/12`，没有 hard-output
 变化，具体实现关闭为 `REJECTED`，归档目录名含 `rejected`，官方状态为 `unregistered/NA`。
-下一项注册为 **C76.2 / v219：固定 joint output-Fisher importance**：只启用 output-Fisher
-统计生成的一组 joint Q/K importance，blend 固定为 `0.5`；V、动态 API 和其余候选不变，
-不扫描 blend 或 Q-only/K-only 邻域。
+C76.2/v219 已完成：只启用 output-Fisher 统计，blend 固定为 `0.5`，Attention-only 目标侧
+shard0 为 `0/0/12`，没有 hard-output 变化，具体实现关闭为 `REJECTED`，归档目录名含
+`rejected`，官方状态为 `unregistered/NA`，根继续为 v202。C76.1–C76.3 已执行且均为 no-op，
+不再重开其参数或角色邻域；当前计划不注册新的重复卡。
 
 ## 8. 当前执行队列
 
@@ -274,7 +275,7 @@ delta 均为 `0`，固定 factor 没有改变任何 hard output，具体实现�
 | 19 | L-T2 / v216 运行时使用 calibration-compiled activation GPTQ order | 已完成；shard0 `-0.003884`（13/43/0），`REJECTED` | 保持 v202 根；不重试该具体实现 |
 | 20 | A5 / v217 单一固定 reciprocal temperature 1.25 | 已完成；shard0 `0/0/12`，无 hard-output 变化，`REJECTED` | 保持 v202 根；不重试该具体实现 |
 | 21 | C76.1 / v218 固定 Q-only headwise range permutation | 已完成；shard0 `0/0/12`，无 hard-output 变化，`REJECTED` | 保持 v202 根；不重试该具体实现 |
-| 22 | C76.2 / v219 固定 joint output-Fisher importance | 已注册；joint Q/K importance，blend 固定为 `0.5` | 完成后按 Attention hard-output 结果归档，不等待官方 |
+| 22 | C76.2 / v219 固定 joint output-Fisher importance | 已完成；shard0 `0/0/12`，无 hard-output 变化，`REJECTED` | 保持 v202 根；不重试该具体实现 |
 
 ## 9. 归档
 
