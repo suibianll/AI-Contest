@@ -140,6 +140,15 @@ Attention 改为 `--attention-only`；完整集成审计改为 `--scenario both`
   被 git ignore 的 cache 不作源码证据。
 - `--nvfp4-cache-mode` / `--cache-mode` 仅存在于 `evaluator/official_eval.py` 兼容后端，
   eval-v3 入口没有这两个参数。
+- **校准缓存必须按 solution SHA 定期清理。** 目录
+  `artifacts/official_eval/cache/proxy-v3-calibration/`，文件名
+  `<solution SHA 前16位>-<linear|attention|both>-<配置哈希>.pt`。死候选的缓存键永不命中，
+  缺失时 `auto` 会自动重建，因此只保留当前根与回退根的缓存即可，其余一律删除。
+  **每个新候选的 Linear 六 shard 约 5.6 GB**，不清理会在数天内涨到数百 GB。
+  清理入口（默认 dry run，先跑再 `--apply`）：
+  `python workbench/cache_cleanup/prune_calibration_cache.py --keep <root前缀> [--keep <回退前缀>] --apply`。
+  **`qwen3.5-4b-proxy-v2.pt` 是 dense 输入主缓存，重建需完整 4B 前向，任何清理都不得删除它**
+  （脚本已硬编码拒绝）。历史清理记录见 `logs/execution/2026-09-09-cache-cleanup.md`。
 - 不覆盖原始 `artifacts/official_eval/*.json`、`logs/official_eval/*.md`、`logs/execution/*.md`；
   修正另写日志并更新状态。比较前检查 `evaluation_scope`。
 - 实质代码或状态更新后运行 `git diff --check`、提交、push 并核验 `git status`；
