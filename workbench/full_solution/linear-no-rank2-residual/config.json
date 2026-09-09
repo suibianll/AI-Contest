@@ -1,0 +1,16 @@
+{
+  "run_id": "linear-no-rank2-residual",
+  "version": "v204",
+  "mechanism": "Subtractive pricing ablation: root with _WEIGHT_RESIDUAL_RANK 2 -> 1, removing the L-R2 rank-2 residual complement (power-iteration pair solver, fused rank-2 update, [L-R2] print) while keeping the v166 rank-1 residual segment and all other behavior unchanged",
+  "switch_form": "module-level constant _WEIGHT_RESIDUAL_RANK (root line 78)",
+  "parent": "solution.py",
+  "parent_sha256": "56dc805d6e5a3aef896db8021045740292735725d688b48e3d4393e55efcb2bd",
+  "source_sha256": "11d7bbcd049092e75aa26336c46eeb995c1a9c9d7fcbb05feed63f3d8e041ca2",
+  "config": {
+    "_WEIGHT_RESIDUAL_RANK": 1,
+    "_WEIGHT_RESIDUAL_COEFF": 0.25,
+    "_WEIGHT_RESIDUAL_POWER_ITERS": 128
+  },
+  "candidate_count": 1,
+  "official_status": "unregistered/NA"
+}

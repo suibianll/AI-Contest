@@ -34,6 +34,8 @@
 | [v196](20260908_v196_attn-reciprocal-residual-original-split_scoreNA_timeNA/result.md) | Q/K 互逆残差原始 4+1 配置 | shard0 delta `0`（gate 全拒绝回退父，calibration +37.7%）；官方 `TIMEOUT`（`>300s`），根不变 |
 | [v197](20260909_v197_linear-aw1-block-gain_scoreNA_timeNA/result.md) | 64-block 标量增益 A@W 闭式拟合 | 官方 `17277/285s`（相对根 −776/−4s），REJECTED；本地 shard0 −0.2077（0/56/0）方向一致 |
 | [v198](20260909_v198_attn-gqa-reciprocal-diag_scoreNA_timeNA/result.md) | GQA 组共享互逆对角（解析初始化+smooth-max+硬门控，冻结 V） | 官方 `TIMEOUT`（`>300s`）；本地 shard0 delta mean `−0.001693`（6/6/0），无精度数据点 |
+| [v204](20260909_v204_linear-no-rank2-residual_scoreNA_timeNA/result.md) | 减法定价：关 L-R2 rank-2 残差段 | shard0 delta mean `+0.000134`（30/26/0），本地净贡献≈0；官方 `unregistered/NA`，待提交定价时间成本 |
+| [v205](20260909_v205_attn-no-c764-rotation-search_scoreNA_timeNA/result.md) | 减法定价：关 C76.4 H16/H32 旋转搜索（Attention 校准 ~30%，官方未定价） | shard0 delta `0`（根在这些层未选中旋转）；官方 `unregistered/NA`，建议侧隔离提交定价 |
 
 ## 2026-09-09 持续优化候选
 

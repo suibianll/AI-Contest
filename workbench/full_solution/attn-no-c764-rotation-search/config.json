@@ -1,0 +1,26 @@
+{
+  "run_id": "attn-no-c764-rotation-search",
+  "version": "v205",
+  "mechanism": "Ablation: _ATTN_ROTATION_ENABLED True->False, removing the C76.4 variable-size (H16/H32/H64) head-local signed Hadamard rotation search (3 block sizes x 4 seeds x deployed-MSE gate) from the v189 Attention calibration stack; A1 winner passes through unchanged, all other mechanisms identical to root",
+  "purpose": "pricing ablation for the C76.4 search (~28-30% of Attention calibration per root-time-audit), not a score candidate",
+  "parent": "solution.py",
+  "parent_sha256": "56dc805d6e5a3aef896db8021045740292735725d688b48e3d4393e55efcb2bd",
+  "source_sha256": "52a79bd20cd3848d5ee7c932e0d535f47c54e11869d0573ab7248b1be4e391c7",
+  "config": {
+    "_ATTN_ROTATION_ENABLED": false,
+    "_ATTN_ROTATION_BLOCKS": [
+      16,
+      32,
+      64
+    ],
+    "_ATTN_ROTATION_SEEDS": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "_ATTN_ROTATION_GQA_ONLY": true
+  },
+  "candidate_count": 1,
+  "official_status": "unregistered/NA"
+}
