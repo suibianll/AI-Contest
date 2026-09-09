@@ -56,6 +56,7 @@
 | [v212](20260909_v212_linear-aw9-shared-code-offset_rejected_scoreNA_timeNA/result.md) | 64-block 内单组共享整数 signed-mantissa 偏移 | shard0 `0`（0/0/56），无 hard-output 变化且校准约 5.0×；`REJECTED`，官方 `unregistered/NA` |
 | [v213](20260909_v213_linear-aw10-hierarchy-toggle_rejected_scoreNA_timeNA/result.md) | 输出感知 per-group `lv3=1↔2` 合法层级切换 | shard0 `0`（0/0/56），无 hard-output 变化且校准高于父级；`REJECTED`，官方 `unregistered/NA` |
 | [v214](20260909_v214_linear-aw11-lv2-toggle_rejected_scoreNA_timeNA/result.md) | 输出感知 per-group `lv2=1↔2` 合法层级切换 | shard0 `0`（0/0/56），无 hard-output 变化且校准高于父级；`REJECTED`，官方 `unregistered/NA` |
+| [v215](20260909_v215_linear-aw12-scale-step_rejected_scoreNA_timeNA/result.md) | 输出感知 E6M2 `scale_factor` 相邻码步进 | shard0 `-0.150813`（0/56/0），全 case 回归；`REJECTED`，官方 `unregistered/NA` |
 
 ### 标准 Linear + Attention 侧隔离官方分（2026-09-09 回传）
 

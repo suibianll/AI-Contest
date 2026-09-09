@@ -121,6 +121,10 @@
   shard0 为 `0`（0/0/56），没有 hard-output 变化且校准 API 高于父级，已归档为 `REJECTED`
   （目录名含 `rejected`），官方状态为 `unregistered/NA`。根继续为 v202。下一张卡为
   L-AW12/v215：输出感知 E6M2 `scale_factor` 相邻码更新。
+- L-AW12/v215 已从 v202 实现冻结 activation state 的输出感知 E6M2 `scale_factor` 相邻码步进；
+  shard0 为 `-0.150813`（0/56/0），tail `-0.263206`，已归档为 `REJECTED`（目录名含
+  `rejected`），官方状态为 `unregistered/NA`。根继续为 v202；当前 Linear 单字段 hard-output
+  路线暂停，不重复这些机制。
 
 以下内容是历史证据索引，不提供当前下一步指令。
 
