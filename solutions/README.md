@@ -66,6 +66,7 @@
 | [v220](20260909_v220_linear-aw13-zero-sign_rejected_scoreNA_timeNA/result.md) | L-AW13 输出感知零值到最小有符号码插入 | shard0 `-0.000051551`（14/42/0），实际翻码但整体回归；`REJECTED`，官方 `unregistered/NA` |
 | [v221](20260909_v221_linear-aw14-global-residual-basis_rejected_scoreNA_timeNA/result.md) | L-AW14 共享 rank-8 输出残差基 A@W 拟合 | shard0 `-0.032568`（0/56/0），全部回归；`REJECTED`，官方 `unregistered/NA` |
 | [v222](20260909_v222_attention-a2-correctness-fix_scoreNA_timeNA/result.md) | FIX-A2：A2 mean-gradient + 异常传播修复（无新算法） | shard0 `−0.000108`、shard1 `−0.015073`，评测器 2 shard 提前停止；部署输出真实变化但本地负向；官方 `unregistered/NA`，按计划提交官方裁决 |
+| [v223](20260909_v223_attention-ah1-threshold-events_scoreNA_timeNA/result.md) | A-H1 量化阈值事件搜索（Cayley 路径 8 事件槽 hard-output 选择） | 六 shard 72 case mean `+0.003209`、median 0（+28/−32/0=12），5/6 层接受事件、可达非等价；3/5 接受层 holdout 转劣；官方 `unregistered/NA` |
 
 ### 标准 Linear + Attention 侧隔离官方分（2026-09-09 回传）
 
