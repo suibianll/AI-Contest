@@ -7,6 +7,9 @@
 - 候选 SHA256：`7ac5cd94a769c82299c0f88264cf94f51b451c69fcc1a1b8fd8ec624f7e08a36`
 - 固定配置：fit windows `0,1,2`；gate windows `3,4`；最多 256 token，chunk 8。
 - 官方状态：`TIMEOUT`（用户 2026-09-08 回传，官方 `>300s`，无分数）；根 `solution.py` 未替换。
+- 标准 Linear 侧隔离官方分（2026-09-09 回传）：`14405 / 246s`，相对基线（标准 Linear + R3
+  `14405/238s`）**Δscore = 0**。分数与基线逐位相同 → 该机制在官方侧被证伪；
+  **关闭机制族**（不只关闭本实现），不做阈值/窗口/token/chunk/clamp 邻域重试。
 
 公式为 `d = 1/4 * log((b+1e-12)/(a+1e-12))`，先按 GQA group 去均值，再限制到
 `[-log(2)/2, log(2)/2]`；部署为 `Q_parent*exp(d)`、`K_parent*exp(-d)`，并同步折叠

@@ -45,6 +45,21 @@
 | [v203](20260909_v203_attn-legal-hierarchy-selection_scoreNA_timeNA/result.md) | 联合 Q/K 合法 hierarchy 邻码 hard-output 选择 | 仅 shard5 变化且 `−0.0065789294`，总代理 `−0.0010964882`；`REJECTED`，官方 `TIMEOUT` |
 | [v204](20260909_v204_linear-aw1-deployed-coordinate_scoreNA_timeNA/result.md) | 部署坐标对齐的 64-block 标量 A@W 拟合 | 六 shard 336 case 与 v202 逐位相同、无 hard-output 增益；`REJECTED`，官方 `unregistered/NA` |
 
+### 标准 Linear + Attention 侧隔离官方分（2026-09-09 回传）
+
+口径：**标准 Linear（v162 标准 codec）+ 各 Attention 变体**，基线为标准 Linear + R3
+`14405/238s`。这些是 **Attention 侧隔离分**，与完整根 `18053/281s` 不同口径，
+不可相加、不可比较、不可从完整分反推。归因见
+[侧隔离分登记](../logs/execution/2026-09-09-standard-linear-attention-side-scores.md)。
+
+| 探针目录 | Attention 机制 | 官方分 / 时间 | Δscore vs 14405 | 结论 |
+|---|---|---|---|---|
+| [standard-linear_v190-attn](20260908_standard-linear_v190-attn_scoreNA_timeNA/) | 逐通道闭式 Q/K 互逆平衡 | `14405 / 246s` | **0** | 官方精确零增益，机制证伪 |
+| [standard-linear_v191-attn](20260908_standard-linear_v191-attn_scoreNA_timeNA/) | 块三角输运 | `14405 / 264s` | **0** | 官方精确零增益，机制证伪 |
+| [standard-linear_v192-attn](20260908_standard-linear_v192-attn_scoreNA_timeNA/) | 全对称零迹矩阵残差 | `14427 / 272s` | **+22** | 有效但 +34s，完整包 TIMEOUT，不可部署 |
+| [standard-linear_v194-attn-speed](20260908_standard-linear_v194-attn-speed_scoreNA_timeNA/) | A2/R3 校准等价提速 | `14405 / 234s` | **0** | 侧隔离 −4s 但完整包 `285s`（+5s），提速路线不成立 |
+| [standard-linear_v195-attn](20260908_standard-linear_v195-attn_scoreNA_timeNA/) | K-center 梯度聚合修复 | `14426 / 243s` | **+21** | 与完整包 `18053−18032=+21` 交叉验证，已在根上兑现 |
+
 **Attention Correctness Hardening（2026-09-08）：** [AC0](continuous_attention_ac0-correctness-hardened/result.md)
 （`F817E4C2…`，父 R3 `A5C679D7…`）保留为 Attention 正确性参考：原子 Q/K-pair
 fallback（删 `except: pass`）、训练 hard forward 走部署五字段路径、统一 transform
