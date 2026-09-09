@@ -59,6 +59,8 @@
 | [v215](20260909_v215_linear-aw12-scale-step_rejected_scoreNA_timeNA/result.md) | 输出感知 E6M2 `scale_factor` 相邻码步进 | shard0 `-0.150813`（0/56/0），全 case 回归；`REJECTED`，官方 `unregistered/NA` |
 | [v216](20260909_v216_linear-lt2-fixed-order_rejected_scoreNA_timeNA/result.md) | 运行时使用 calibration-compiled activation GPTQ order | shard0 `-0.003884`（13/43/0）；`REJECTED`，官方 `unregistered/NA` |
 
+| [v217](20260909_v217_attention-a5-head-scale_rejected_scoreNA_timeNA/result.md) | A1 输出选择中的单一固定 reciprocal Q/K temperature `1.25` | shard0 `0`（0/0/12），无 hard-output 变化；`REJECTED`，官方 `unregistered/NA` |
+
 ### 标准 Linear + Attention 侧隔离官方分（2026-09-09 回传）
 
 口径：**标准 Linear（v162 标准 codec）+ 各 Attention 变体**，基线为标准 Linear + R3

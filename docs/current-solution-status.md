@@ -129,6 +129,10 @@
   shard0 为 `-0.003884`（13/43/0），tail `-0.004127`，已归档为 `REJECTED`（目录名含
   `rejected`），官方状态为 `unregistered/NA`。根继续为 v202；下一项为 A5/v217 的单一固定
   reciprocal temperature `1.25`。
+- A5/v217 已从 v202 启用单一固定 reciprocal Q/K temperature factor `1.25`；Attention
+  shard0 的 12 个 case 为 `0/0/12`，没有 hard-output 变化，mean/median/tail delta 均为 `0`，
+  已归档为 `REJECTED`（目录名含 `rejected`），官方状态为 `unregistered/NA`。根继续为 v202；
+  下一项为 C76.1/v218 的固定 Q-only headwise range permutation。
 
 以下内容是历史证据索引，不提供当前下一步指令。
 
