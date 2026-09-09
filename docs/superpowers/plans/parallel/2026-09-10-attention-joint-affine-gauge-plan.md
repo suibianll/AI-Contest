@@ -1,6 +1,6 @@
 # Attention Q/K 联合仿射 Gauge 优化计划
 
-> 状态：ACTIVE 执行附录，2026-09-10。
+> 状态：CLOSED / REJECTED（本地六 shard 负向，未提交官方），2026-09-10。
 > 从属于[Linear 完整输出交叉残差纠码与双线协调计划](../2026-09-10-linear-cross-residual-correction-plan.md)。
 > 当前完整根为 v202 Linear + v195 Attention，官方 `18053/281s`。本文件只负责 Attention A-G1，
 > 统一父版本、版本号、组合和根切换由总协调计划处理。
@@ -129,3 +129,15 @@ A-G1 的固定实现获得一次明确裁决即完成：
 - 官方提高且 `<300s`：由总协调计划登记为完整根或进入双正向组合。
 
 完成后本文件与日志一并归档，不追加 reciprocal 参数邻域。
+
+## 8. 结果（2026-09-10，v227）
+
+A-G1 已实现并归档为 v227 `REJECTED`，未提交官方（`unregistered/NA`）。本地六 shard（eval-v3
+attention-only，72 case，禁用早停完整跑完）：shard delta_mean 为 `-0.002287 / -0.021423 /
++0.000000 / -0.003990 / +0.000814 / -0.004880`，等权均值 `-0.005294`，合计 28/32/12；manifest
+candidate overall `+0.528703` vs baseline `+0.533998`；shard2 与根逐位不变，误差集中在短序列
+与 test split。Control 全部 PASS：s=0 逐位恢复父，合成非零 s 时 dense softmax max|Δ|=3.7e-9 而
+hard 五字段显著变化（机制可达、非 no-op）。裁决依据 §7：本地净负、机制可达，记 `REJECTED`，
+不追加 reciprocal 参数邻域，不缩步/缩窗/拆粒度重试。执行记录见
+[日志](../../../logs/execution/2026-09-10-attention-ag1-joint-affine-gauge.md)，归档见
+`solutions/20260910_v227_attention-ag1-joint-affine-gauge_rejected_scoreNA_timeNA/`。

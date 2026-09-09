@@ -30,6 +30,12 @@
 当前按[Linear 完整输出交叉残差纠码与双线协调计划](superpowers/plans/2026-09-10-linear-cross-residual-correction-plan.md)
 （含 Linear L-XR1 卡）及其 Attention 附录
 [Q/K 联合仿射 Gauge 优化计划](superpowers/plans/parallel/2026-09-10-attention-joint-affine-gauge-plan.md)（A-G1）推进。
+
+A-G1 已实现并归档为 v227 `REJECTED`：本地六 shard 等权 `-0.005294`（28/32/12，72 case），
+shard2 与根逐位不变；机制可达（60/72 case 硬输出改变，s=0 逐位恢复父）但本地净负，误差集中在
+短序列与 test split；未提交官方，按计划 §7 不缩步/缩窗/拆粒度重试。L-XR1 由并行 Linear 线负责。
+根不变。
+
 当前根不变。FIX-A2/v222 官方 `18015/293s`（相对根 `−38/+12s`），已 REJECTED；A-H1/v223
 六 shard mean `+0.003209`，但事件路径错误地从最后一步 Adam 更新前状态出发，官方
 `TIMEOUT(>300s)`。A-H2 已取消，L-H1 已在残余空间预检关闭。R1/v224（A-H1R 部署父状态锚定）

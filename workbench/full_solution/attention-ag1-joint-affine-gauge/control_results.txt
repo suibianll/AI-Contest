@@ -1,0 +1,33 @@
+[L-R2] rank2 reachable=1 vtu_cross_max=1.863e-09
+[COMBINED-LINEAR-SAMPLE-ENERGY] reachable=1 blocks=2
+[L-R2] rank2 reachable=1 vtu_cross_max=1.863e-09
+[COMBINED-LINEAR-SAMPLE-ENERGY] reachable=1 blocks=2
+========================================================================
+[control1_s0_bitwise] pass=True
+    q_nokey_bitwise: True
+    k_nokey_bitwise: True
+    q_zero_s_bitwise: True
+    k_zero_s_bitwise: True
+    final_output_zero_s_bitwise: True
+[control2_synthetic_s] pass=True
+    s_zero_mean_max: 2.7939677238464355e-09
+    dense_output_max_abs_diff: 3.725290298461914e-09
+    dense_output_rel_diff: 4.2273252613966576e-07
+    q_field_changed_counts: {'scale_factor': 333, 'scale_lv2': 1141, 'scale_lv3': 1338, 'sign': 481, 'mant': 12247}
+    k_field_changed_counts: {'scale_factor': 165, 'scale_lv2': 588, 'scale_lv3': 646, 'sign': 213, 'mant': 6145}
+[control3_standalone_import] pass=True
+    missing_apis: []
+    standalone_end_to_end_finite: True
+[control4_records_and_legal_state] pass=True
+    audit: {'a2_arm': 'identity', 'a2_gate_loss_identity': 1.0, 'a2_gate_loss_rotation': 1.0000205839141856, 'a2_steps': 32, 'a2_train_loss': 1.0000121593475342, 'a2_scale_l2': 0.8633942008018494, 'a2_scale_max_abs': 0.18103589117527008, 'a2_scale_nonzero': 128}
+    state_legal: True
+    deployed_params_legal: True
+    learned_scale_in_state: False
+    learned_scale_cpu_f32: None
+    trained_vs_root_changed_counts: {'q': {'scale_factor': 331, 'scale_lv2': 1594, 'scale_lv3': 3046, 'sign': 14724, 'mant': 21282}, 'k': {'scale_factor': 152, 'scale_lv2': 777, 'scale_lv3': 1458, 'sign': 7352, 'mant': 10634}}
+[control5_v_and_linear] pass=True
+    v_bitwise: True
+    linear_weight_bitwise: True
+    linear_activation_bitwise: True
+========================================================================
+OVERALL: PASS

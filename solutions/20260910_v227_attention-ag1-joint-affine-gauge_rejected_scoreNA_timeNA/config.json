@@ -1,0 +1,13 @@
+{
+  "run_id": "attention-ag1-joint-affine-gauge",
+  "version": "v227",
+  "mechanism": "Q/K joint affine gauge: zero-mean reciprocal log-scale per KV group jointly trained with rotation/K-center in the parent A2 loop",
+  "parent": "v202 Linear + v195 Attention complete root",
+  "parent_sha256": "56dc805d6e5a3aef896db8021045740292735725d688b48e3d4393e55efcb2bd",
+  "candidate_sha256": "165e1a6bc50abd417a2945778741a5839a5636e7c93008bc34a2af47b3de674f",
+  "fit_data": "parent A2 calibration folds (first N-1 fit, last fold true deployment-path MSE gate)",
+  "coordinate": "per-KV-group zero-mean log-scale s[head_dim], clamped to +/-log 2, applied after learned_rotation/learned_center",
+  "solver": "joint Adam with rotation and K-center, same 32 steps, no extra loop or configuration",
+  "candidate_count": 1,
+  "official_status": "unregistered/NA"
+}

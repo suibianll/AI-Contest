@@ -77,6 +77,7 @@
 | [v224](20260909_v224_attention-ah1r-parent-anchored_scoreNA_timeNA/result.md) | A-H1R 部署父状态锚定阈值事件（切空间 `S=skew(R_parent^T G_R)`，center 固定） | 6/6 层合法接受、`t0_identical=1`、changed-code 小范围可解释（不再是整步回退）；六 shard 等权 `≈+1.2e-6`（单 shard \|delta\|≤8e-6），hard-output 效应在噪声底；移除/旁路四处宽 except 并加动态应用断言；官方 `TIMEOUT(>300s)`，只关闭该实现；与 v223 同成本类，重试前须先降校准成本 |
 | [v225](20260909_v225_attention-ah3-gqa-local-hard-event_scoreNA_timeNA/result.md) | A-H3 GQA-group 局部切空间第一事件（正负双向，顺序接受） | 6/6 层有 group 接受（共 18/24）、`t0_identical=1`；六 shard 等权 `+3.11e-5`（基线 `0.533998`→候选 `0.534029`），**增益集中在 shard5 `+1.96e-4`**，其余 ±7e-6 近零/微负；默认早停 2 会在 shard3 漏掉 shard5；官方 `TIMEOUT(>300s)`，只关闭该实现；与 v223/v224 同成本类，重试前须先降校准成本 |
 | [v226](20260909_v226_linear-lrb1-residual-rounding_rejected_scoreNA_timeNA/result.md) | L-RB1 静态权重输出残差共享舍入边界（12 个 `(sign, lower-code)` 共享阈值） | 六 shard 全部 `reject`，等权均值 `-4.10e-4`（33/95/208）；168 次 calibration 中 65 层接受、改动 10.38M 个 mantissa 码，但接受层校准 `ΔL` 合计仅 `-2.52e-5`（每层 ≈5e-7），103 次回退全部因 `ΔL ≥ 0`；接受层集中在宽形态，属校准窗口过拟合；本地负向，按 v219/v220/v221 实践归档，未提交官方 |
+| [v227](20260910_v227_attention-ag1-joint-affine-gauge_rejected_scoreNA_timeNA/result.md) | A-G1 Q/K 联合仿射 gauge（A2 循环内新增每 KV group 零均值 reciprocal log-scale `s[head_dim]`，与 rotation/K-center 共用同一 Adam） | 六 shard 等权 `-0.005294`（28/32/12），shard2 逐位不变，shard1 `-0.021423` 最差；机制可达（60/72 case 硬输出改变，s=0 逐位恢复父）但净负，误差集中在短序列与 test split；`REJECTED`，按计划 §7 不缩步/缩窗/拆粒度重试，未提交官方，根保持 R0 |
 
 ### 标准 Linear + Attention 侧隔离官方分（2026-09-09 回传）
 

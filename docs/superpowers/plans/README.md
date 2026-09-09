@@ -13,6 +13,7 @@
 [Q/K 联合仿射 Gauge 优化计划](parallel/2026-09-10-attention-joint-affine-gauge-plan.md)。
 两个文件构成同一个协调执行组：冻结同一完整根、使用独立 workbench 和结果文件、GPU 串行；单机制
 分别官方定价，只有双方都官方正向后才从较高分完整父重新构建组合候选，不建立侧父或侧晋级线。
+A-G1 当前状态：已归档为 v227 `REJECTED`（本地六 shard 等权 `-0.005294`，未提交官方）。
 
 当前根保持 v202 Linear + v195 Attention，官方 `18053/281s`。上一份
 [输出感知舍入边界与 A/W 联合量化计划](../archive/plans/2026-09-09-output-aware-rounding-and-joint-aw-plan-completed.md)
