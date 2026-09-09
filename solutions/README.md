@@ -55,6 +55,7 @@
 | [v211](20260909_v211_linear-aw8-output-code-group_rejected_scoreNA_timeNA/result.md) | 冻结 Q(A) 的输出感知 4 码组联合更新 | shard0 `-0.0171391319`（3/53/0），真实翻码但整体回退；`REJECTED`，官方 `unregistered/NA` |
 | [v212](20260909_v212_linear-aw9-shared-code-offset_rejected_scoreNA_timeNA/result.md) | 64-block 内单组共享整数 signed-mantissa 偏移 | shard0 `0`（0/0/56），无 hard-output 变化且校准约 5.0×；`REJECTED`，官方 `unregistered/NA` |
 | [v213](20260909_v213_linear-aw10-hierarchy-toggle_rejected_scoreNA_timeNA/result.md) | 输出感知 per-group `lv3=1↔2` 合法层级切换 | shard0 `0`（0/0/56），无 hard-output 变化且校准高于父级；`REJECTED`，官方 `unregistered/NA` |
+| [v214](20260909_v214_linear-aw11-lv2-toggle_rejected_scoreNA_timeNA/result.md) | 输出感知 per-group `lv2=1↔2` 合法层级切换 | shard0 `0`（0/0/56），无 hard-output 变化且校准高于父级；`REJECTED`，官方 `unregistered/NA` |
 
 ### 标准 Linear + Attention 侧隔离官方分（2026-09-09 回传）
 

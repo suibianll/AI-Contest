@@ -218,7 +218,12 @@ hard-output 变化，校准 API 高于 v202，具体实现关闭为 `REJECTED`�
 下一张卡注册为 **L-AW11 / v214：输出感知 per-group lv2 hierarchy bit toggle**：冻结最终
 `Q(A)`，每个 64 输入块只选一个自然 8 元素组，直接比较该组 `lv2=1↔2` 的合法切换在实际
 输出残差上的变化；按自然 block 顺序一次写回，scale/lv3/mantissa 不变，不扫描组或邻域，
-不把校准输出写入 state。
+不把校准输出写入 state。v214 已完成：shard0 的 56 个 Linear case 为 `0/0/56`，没有
+hard-output 变化，校准 API 高于 v202，具体实现关闭为 `REJECTED`，归档目录名含 `rejected`，
+官方状态为 `unregistered/NA`，根继续为 v202。
+下一张卡注册为 **L-AW12 / v215：输出感知 E6M2 scale_factor 相邻码更新**：冻结最终 `Q(A)`，
+对每个自然 64 输入块和输出行依据当前输出残差方向提出一次相邻 E6M2 code 步进，直接用
+实际产品残差接受或回退；lv2/lv3/mantissa 不变，不扫描方向或邻域，不把校准输出写入 state。
 
 ## 8. 当前执行队列
 
@@ -240,7 +245,8 @@ hard-output 变化，校准 API 高于 v202，具体实现关闭为 `REJECTED`�
 | 14 | L-AW8 / v211 冻结 Q(A) 输出感知 4-code-group 联合更新 | 已完成；shard0 `-0.0171391319`（3/53/0），`REJECTED` | 保持 v202 根；不重试该具体实现 |
 | 15 | L-AW9 / v212 64-block 内单组共享整数码偏移 | 已注册；固定一次输出正规方程与直接码空间回写 | 完成后按 hard-output 结果归档，不等待官方 |
 | 16 | L-AW10 / v213 输出感知 per-group lv3 hierarchy bit toggle | 已完成；shard0 `0/0/56`，无 hard-output 变化，`REJECTED` | 保持 v202 根；不重试该具体实现 |
-| 17 | L-AW11 / v214 输出感知 per-group lv2 hierarchy bit toggle | 已注册；冻结 Q(A)，每个 64-block 单组一次合法切换 | 完成后按 hard-output 结果归档，不等待官方 |
+| 17 | L-AW11 / v214 输出感知 per-group lv2 hierarchy bit toggle | 已完成；shard0 `0/0/56`，无 hard-output 变化，`REJECTED` | 保持 v202 根；不重试该具体实现 |
+| 18 | L-AW12 / v215 输出感知 E6M2 scale_factor 相邻码更新 | 已注册；冻结 Q(A)，每个输出行/64-block 一次方向性相邻码步进 | 完成后按 hard-output 结果归档，不等待官方 |
 
 ## 9. 归档
 
