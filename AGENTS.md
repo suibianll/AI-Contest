@@ -147,6 +147,8 @@ Attention 改为 `--attention-only`；完整集成审计改为 `--scenario both`
   **每个新候选的 Linear 六 shard 约 5.6 GB**，不清理会在数天内涨到数百 GB。
   清理入口（默认 dry run，先跑再 `--apply`）：
   `python workbench/cache_cleanup/prune_calibration_cache.py --keep <root前缀> [--keep <回退前缀>] --apply`。
+  **多 session 并发时必须加 `--min-age-hours 2`**，否则会删掉其他 session 正在写的活候选缓存
+  （2026-09-09 实测：清理后 2 小时内被并发 session 写回 11.21 GB，对应 v204/v205/v211）。
   **`qwen3.5-4b-proxy-v2.pt` 是 dense 输入主缓存，重建需完整 4B 前向，任何清理都不得删除它**
   （脚本已硬编码拒绝）。历史清理记录见 `logs/execution/2026-09-09-cache-cleanup.md`。
 - 不覆盖原始 `artifacts/official_eval/*.json`、`logs/official_eval/*.md`、`logs/execution/*.md`；

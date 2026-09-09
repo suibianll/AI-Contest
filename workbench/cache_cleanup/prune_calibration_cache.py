@@ -28,6 +28,7 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -44,6 +45,9 @@ def main() -> int:
                     help="solution SHA prefix (16 hex) to keep; repeatable")
     ap.add_argument("--apply", action="store_true",
                     help="actually delete (default is dry run)")
+    ap.add_argument("--min-age-hours", type=float, default=0.0,
+                    help="skip files written within the last N hours "
+                         "(concurrent sessions may still be using them)")
     args = ap.parse_args()
 
     keep = sorted({k.lower() for k in args.keep})
@@ -59,6 +63,17 @@ def main() -> int:
     keep_files = [f for f in files if f.startswith(tuple(keep))]
     targets = [f for f in files if not f.startswith(tuple(keep))]
 
+    fresh = []
+    if args.min_age_hours > 0:
+        cutoff = time.time() - args.min_age_hours * 3600
+        kept = []
+        for f in targets:
+            if os.path.getmtime(CALIB_DIR / f) > cutoff:
+                fresh.append(f)
+            else:
+                kept.append(f)
+        targets = kept
+
     total = sum(os.path.getsize(CALIB_DIR / f) for f in files)
     keep_bytes = sum(os.path.getsize(CALIB_DIR / f) for f in keep_files)
     del_bytes = sum(os.path.getsize(CALIB_DIR / f) for f in targets)
@@ -66,6 +81,10 @@ def main() -> int:
     print(f"calibration cache : {len(files)} files / {total / GIB:.2f} GB")
     print(f"  keep  ({', '.join(keep) or 'none'}) : {len(keep_files)} files / {keep_bytes / GIB:.2f} GB")
     print(f"  delete                       : {len(targets)} files / {del_bytes / GIB:.2f} GB")
+    if fresh:
+        fb = sum(os.path.getsize(CALIB_DIR / f) for f in fresh)
+        print(f"  skipped (newer than {args.min_age_hours}h) : "
+              f"{len(fresh)} files / {fb / GIB:.2f} GB")
     print(f"  dense cache (never touched)  : {os.path.getsize(CACHE_DIR / DENSE_CACHE) / GIB:.2f} GB")
 
     if not args.apply:

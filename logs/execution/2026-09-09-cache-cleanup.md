@@ -27,7 +27,8 @@
 2. 保留前缀确实命中：`56dc805d6e5a3aef`（当前根 v202）6 个、`839adb1e617c3115`（回退根 v195）12 个。
 3. dense 主缓存 `qwen3.5-4b-proxy-v2.pt` 存在且不在删除范围。
 4. 最近一次缓存写入为 09-09 02:58，执行时 7 小时内无新写入 → 无在跑评估。
-5. 生成清单 `workbench/cache_cleanup/delete-list-2026-09-09.txt`（779 个 / 604.53 GB）供复核。
+5. 生成一次性清单（779 个 / 604.53 GB）供复核，已在清理完成后删除，
+   后续一律用 `prune_calibration_cache.py` 现算，不再保留会过期的静态清单。
 
 ## 执行（用户确认方案 A）
 
@@ -47,6 +48,19 @@
 | `artifacts/` 整体 | 约 91 GB |
 
 **共释放约 604 GB。**
+
+## 清理后 2 小时复涨 11.21 GB（并发 session 造成，非漏删）
+
+12:40 复核：`cache` 由 73.53 GB 回到 85 GB，新增 22−18=4 个文件，全部来自**并发 session 的活候选**：
+
+| 写入时间 | solution 前缀 | 候选 | 大小 |
+|---|---|---|---|
+| 12:31 | `d61dfbb85a39334f` | v211 linear-aw8-output-code-group | 5.74 GB |
+| 12:26 | `11d7bbcd049092e7` | v204 linear-no-rank2-residual | 5.74 GB |
+| 12:28 | `52a79bd20cd3848d` | v205 attn-no-c764-rotation-search | 2 MB |
+
+**这三份不能删**（正在被使用）。由此暴露清理脚本的隐患：本项目多 session 并发，盲跑
+`prune` 会删掉别人正在写的缓存 → 已为脚本加 `--min-age-hours` 保护。
 
 ## 防复涨
 
