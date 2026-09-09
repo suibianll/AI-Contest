@@ -68,3 +68,21 @@
 - 未提交官方，`official_status: unregistered/NA`（用户将统一做官方评测）。
 - 按计划 §7：不减少 A2 步数、不缩小尺度范围、不拆分 head/block 重试，不追加 reciprocal 参数邻域。
   根保持 R0（v202 Linear + v195 Attention，官方 `18053/281s`）。
+
+## 5. 事后归因（2026-09-10，纯 CPU 诊断）
+
+诊断产物：`workbench/full_solution/attention-ag1-joint-affine-gauge/diag/`（`diag_report.md`）。
+
+- shard↔层对应：shard0→层0、s1→层1、s2→层8、s3→层15、s4→层22、s5→层5（每 shard 12 个 test 窗口）。
+- 6 层中 4 层接受 rotation+scale（层 0/1/5/22，gate +4.99%/+8.81%/+3.41%/+0.035%），
+  2 层拒绝（层 8 −13.6%、层 15 −1.12%）；shard2 全零因层 8 两侧同为 identity。
+  层 15 在根里接受 rotation（gate +2.43%），在 v227 联合训练后翻车为 identity，丢根收益；
+  4/6 层联合训练终点损失高于根的纯 rotation。
+- 接受层 gate 改善与 eval delta 完全反序（n=4，Spearman = −1）：gate 对 scale gauge 系统性反定价。
+- s 形态：1024/1024 通道全非零、稠密 ±10% 级抖动，max|s| 0.21~0.24 远低于 log2 截断（clamp 0%）。
+- 机制解释：s 是精确 gauge，收益只来自量化舍入边界的窗口特异移动，单窗口 gate 无法为其定价；
+  联合训练同时拖垮了 rotation 本身。不是"单 fold gate 过拟合"这么简单——rotation 的窗口稳定
+  收益存在（官方 +21），gauge 的窗口特异收益不存在。
+- 对下一版的约束：新机制叠加在根已接受的 rotation 臂之上（rotation 被拒时回退根的 rotation 而非
+  identity）；收益仅来自量化非线性的自由度须用多折聚合 gate。
+- 后续卡：[A-QB1 Q 侧加性 logit 偏置补偿计划](../docs/superpowers/plans/parallel/2026-09-10-attention-qk-logit-bias-plan.md)。

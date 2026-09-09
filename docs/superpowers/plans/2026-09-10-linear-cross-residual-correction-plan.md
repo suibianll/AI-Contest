@@ -112,6 +112,8 @@
 
 事实（2026-09-10）：A-G1 已本地关闭为 `REJECTED`（v227，六 shard 等权 `-0.005294`，未提交官方，
 用户将统一做官方评测），根保持 R0；L-XR1 线不受影响，组合路径待 A-G1 官方回传后按上表裁决。
+Attention 后续卡由新附录
+[A-QB1](parallel/2026-09-10-attention-qk-logit-bias-plan.md) 承接，归属本计划统一登记。
 
 组合候选不是复制粘贴两个归档文件。它必须从较高分完整父重新构建，重算全部 calibration state，先做
 目标两侧 control，再运行一次 `--scenario both` interaction audit，最后交官方。组合是否晋级仍只看
