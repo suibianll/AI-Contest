@@ -63,6 +63,7 @@
 
 | [v218](20260909_v218_attention-c76-1-qonly-range_rejected_scoreNA_timeNA/result.md) | C76.1 固定 Q-only headwise range permutation | shard0 `0`（0/0/12），无 hard-output 变化；`REJECTED`，官方 `unregistered/NA` |
 | [v219](20260909_v219_attention-c76-2-fisher_rejected_scoreNA_timeNA/result.md) | C76.2 固定 output-Fisher Q/K importance，blend `0.5` | shard0 `0`（0/0/12），无 hard-output 变化；`REJECTED`，官方 `unregistered/NA` |
+| [v220](20260909_v220_linear-aw13-zero-sign_rejected_scoreNA_timeNA/result.md) | L-AW13 输出感知零值到最小有符号码插入 | shard0 `-0.000051551`（14/42/0），实际翻码但整体回归；`REJECTED`，官方 `unregistered/NA` |
 
 ### 标准 Linear + Attention 侧隔离官方分（2026-09-09 回传）
 

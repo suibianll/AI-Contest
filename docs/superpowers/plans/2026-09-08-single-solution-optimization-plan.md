@@ -248,7 +248,8 @@ delta 均为 `0`，固定 factor 没有改变任何 hard output，具体实现�
 C76.2/v219 已完成：只启用 output-Fisher 统计，blend 固定为 `0.5`，Attention-only 目标侧
 shard0 为 `0/0/12`，没有 hard-output 变化，具体实现关闭为 `REJECTED`，归档目录名含
 `rejected`，官方状态为 `unregistered/NA`，根继续为 v202。C76.1–C76.3 已执行且均为 no-op，
-不再重开其参数或角色邻域；当前计划不注册新的重复卡。
+不再重开其参数或角色邻域。L-AW13/v220 是 LC2 审计后仍未实际执行的零值有符号码插入，
+不是上述 Attention 研究分支的重复卡。
 
 ## 8. 当前执行队列
 
@@ -268,7 +269,7 @@ shard0 为 `0/0/12`，没有 hard-output 变化，具体实现关闭为 `REJECTE
 | 12 | L-AW6 / v209 4 元素组广播 additive A@W 拟合 | 已完成；六 shard 与 v202 逐位相同，`REJECTED` | 保持 v202 根；不重试该具体实现 |
 | 13 | L-AW7 / v210 按输出行独立的 4 元素组 additive A@W 拟合 | 已完成；六 shard 与 v202 逐位相同，`REJECTED` | 保持 v202 根；不重试该具体实现 |
 | 14 | L-AW8 / v211 冻结 Q(A) 输出感知 4-code-group 联合更新 | 已完成；shard0 `-0.0171391319`（3/53/0），`REJECTED` | 保持 v202 根；不重试该具体实现 |
-| 15 | L-AW9 / v212 64-block 内单组共享整数码偏移 | 已注册；固定一次输出正规方程与直接码空间回写 | 完成后按 hard-output 结果归档，不等待官方 |
+| 15 | L-AW9 / v212 64-block 内单组共享整数码偏移 | 已完成；shard0 无 hard-output 变化，`REJECTED` | 保持 v202 根；不重试该具体实现 |
 | 16 | L-AW10 / v213 输出感知 per-group lv3 hierarchy bit toggle | 已完成；shard0 `0/0/56`，无 hard-output 变化，`REJECTED` | 保持 v202 根；不重试该具体实现 |
 | 17 | L-AW11 / v214 输出感知 per-group lv2 hierarchy bit toggle | 已完成；shard0 `0/0/56`，无 hard-output 变化，`REJECTED` | 保持 v202 根；不重试该具体实现 |
 | 18 | L-AW12 / v215 输出感知 E6M2 scale_factor 相邻码更新 | 已完成；shard0 `-0.150813`（0/56/0），`REJECTED` | 保持 v202 根；不重试该具体实现 |
@@ -276,6 +277,7 @@ shard0 为 `0/0/12`，没有 hard-output 变化，具体实现关闭为 `REJECTE
 | 20 | A5 / v217 单一固定 reciprocal temperature 1.25 | 已完成；shard0 `0/0/12`，无 hard-output 变化，`REJECTED` | 保持 v202 根；不重试该具体实现 |
 | 21 | C76.1 / v218 固定 Q-only headwise range permutation | 已完成；shard0 `0/0/12`，无 hard-output 变化，`REJECTED` | 保持 v202 根；不重试该具体实现 |
 | 22 | C76.2 / v219 固定 joint output-Fisher importance | 已完成；shard0 `0/0/12`，无 hard-output 变化，`REJECTED` | 保持 v202 根；不重试该具体实现 |
+| 23 | L-AW13 / v220 零值到最小有符号码插入 | 已完成；shard0 `-0.000051551`（14/42/0），`REJECTED` | 保持 v202 根；不重试该具体实现 |
 
 ## 9. 归档
 

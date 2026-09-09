@@ -141,6 +141,11 @@
   Attention shard0 仍为 `0/0/12`，没有 hard-output 变化，mean/median/tail delta 均为 `0`，已归档为
   `REJECTED`（目录名含 `rejected`），官方状态为 `unregistered/NA`。根继续为 v202；C76.1–C76.3
   研究分支均已关闭，不重开其参数或角色邻域。
+- L-AW13/v220 按 LC2 方法审计后仍未实际执行的边界，实现了每个自然 64 元块最多一个零值到
+  最小有符号码 `±0.25` 的输出感知插入；shard0 实际翻码，但 Linear mean delta 为
+  `-0.000051551`（14/42/0），tail `-0.000111720`，且校准 API 为 `161.746s`（v202 为
+  `130.118s`）。该具体实现已归档为 `REJECTED`（目录名含 `rejected`），官方状态为
+  `unregistered/NA`，根继续为 v202；不重试该插入实现。
 
 以下内容是历史证据索引，不提供当前下一步指令。
 

@@ -38,7 +38,9 @@ C76.1/v218 也已完成：固定 Q-only headwise range permutation 在 shard0 �
 没有 hard-output 变化，已归档为带 `rejected` 的目录。根继续为 v202；下一项注册为 C76.2/v219
 的固定 joint output-Fisher importance。C76.2/v219 已完成且 shard0 为 `0/0/12`，没有
 hard-output 变化，已归档为带 `rejected` 的目录；C76.1–C76.3 研究分支全部关闭，不再重开
-邻域，根继续为 v202。
+邻域。随后按 LC2 审计中仍未实际执行的边界注册 L-AW13/v220 零值到最小有符号码插入；
+v220 在 shard0 实际翻码但 mean delta `-0.000051551`（14/42/0），已归档为带 `rejected`
+的目录，根继续为 v202。
 
 ## 历史计划索引（仅证据）
 
