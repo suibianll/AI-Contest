@@ -212,8 +212,8 @@ v210 已完成：六 shard 336 个 case 与 v202 逐位相同，hard-output gate
 | 8 | L-AW2 / v205 HiF4 8 元素层级组 A@W 拟合 | 已完成；六 shard 与 v202 逐位相同，`REJECTED` | 保持 v202 根；不重试该具体实现 |
 | 9 | L-AW3 / v206 输出组 × 64-block A@W 拟合 | 已完成；六 shard 与 v202 逐位相同，`REJECTED` | 保持 v202 根；不重试该具体实现 |
 | 10 | L-AW4 / v207 HiF4 4 元素细粒度组 A@W 拟合 | 已完成；六 shard 与 v202 逐位相同，`REJECTED` | 保持 v202 根；不重试该具体实现 |
-| 11 | L-AW5 / v208 输出行 8-group × 64-block A@W 拟合 | 已注册；固定输出行组 8，从 v202 构建 | 实测、归档并提交；不等待官方 |
-| 12 | L-AW6 / v209 4 元素组广播 additive A@W 拟合 | 已注册；固定 4 元素组，从 v202 构建 | 实测、归档并提交；不等待官方 |
+| 11 | L-AW5 / v208 输出行 8-group × 64-block A@W 拟合 | 已完成；六 shard 与 v202 逐位相同，`REJECTED` | 保持 v202 根；不重试该具体实现 |
+| 12 | L-AW6 / v209 4 元素组广播 additive A@W 拟合 | 已完成；六 shard 与 v202 逐位相同，`REJECTED` | 保持 v202 根；不重试该具体实现 |
 | 13 | L-AW7 / v210 按输出行独立的 4 元素组 additive A@W 拟合 | 已完成；六 shard 与 v202 逐位相同，`REJECTED` | 保持 v202 根；不重试该具体实现 |
 
 ## 9. 归档
