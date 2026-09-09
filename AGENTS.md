@@ -60,7 +60,8 @@
   当前完整根并由完整官方结果晋级。
 - 每个版本一个可解释机制、一个预注册配置，候选数量固定；失败换机制，不扫
   threshold/seed/alpha/offset/fold/coverage/候选数量等邻域，不增加模型/layer/role 专属路由。
-- Attention校准、选择、验证分离：只用calibration folds学参数，以独立holdout验证；多折固定聚合。
+- Attention校准、选择、验证分离：只用calibration folds学参数，多折固定聚合；独立 holdout
+  记录验证结果，只作诊断，不作否决。
   Linear按用户最新指令直接在全部Qwen3.5-4B校准数据上做A@W低维拟合，不拆fit/select，
   不考虑泛化性；独立窗口Δmean/split/负向损失只记录、不否决探索。合法部署拟合改善、
   control、可达性、单文件和官方300s约束保留，正式晋级仍须官方结果。

@@ -44,7 +44,9 @@
 
 - 目标：解决 STE 方向与 hard code 不一致。
 - 连续方向：先运行 FIX-A2 的 mean-gradient trainer，得到最后一步更新前的 `theta0/center0` 及
-  mean gradient `g_theta/g_center`。固定
+  mean gradient `g_theta/g_center`。若 FIX-A2 官方未并入根，A-H1/A-H2 均从当前完整根构建，
+  方向由根原 trainer 计算、梯度仍按窗口数归一化（归一化只影响方向定义，不改变根的部署状态）。
+  固定
   `d_theta = -g_theta / max(||g_theta||, 1e-12)`、
   `d_center = -g_center / max(||g_center||, 1e-12)`，路径为
   `theta(t)=theta0+t*d_theta`、`center(t)=center0+t*d_center`，只搜索 `t>0`。
@@ -64,8 +66,9 @@
   不改变候选、不否决提交，也不用于修改任何参数。
 - 时间处理：记录 shard0 calibration API 时间和事件评估次数，只标注风险；不据本地时间减少事件、
   预测官方时间或阻止提交，官方 `<300s` 是唯一时间裁决。
-- 产物：方向范数、原始/去重事件数、8 个 `t`、每个事件 changed-code 数、fold 聚合最终 loss、
-  holdout 记录、被接受的事件序号和最终 state。
+- 产物：方向范数、原始/去重事件数、8 个 `t`、每个事件 changed-code 数（按 Q 侧 / K 侧拆分
+  记录，供 A-H2 前提归因：center 只影响 K 码，rotation 同时影响 Q/K；被接受事件只翻 K 码
+  才支持"收益只来自 center"）、fold 聚合最终 loss、holdout 记录、被接受的事件序号和最终 state。
 - 失败处理：若事件可达但最终输出均不改善，关闭该阈值事件机制；不改步长、事件数或 seed 重试。
 
 ### A-H2：K-center 离散坐标更新
