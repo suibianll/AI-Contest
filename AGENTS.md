@@ -24,9 +24,10 @@
 
 | 用途 | 版本 | 官方分数 / 时间 | 说明 |
 |---|---|---|---|
-| 当前完整工作父、最优已知可复现方案 | current Linear + v195 Attention | 18053 / 289s | 用户官方回传；根与 v195 归档逐位一致，SHA `839ADB1E...761D7F`；相对上一根 +21/+9s |
-| 上一完整官方根 | current Linear + R3 Attention | 18032 / 280s | 可回退历史对照，SHA `12352EFD...E24E` |
-| 上一完整官方父 | compiled sample-energy | 17636 / 264s | 可回退历史对照，SHA `D66128A6...B0F6` |
+| 当前完整工作父、最优已知可复现方案 | v202 Linear + v195 Attention | 18053 / 281s | 用户官方回传；根与 v202 归档逐位一致，SHA `56DC805D...EFCB2BD`；相对 v195 同分 / −8s |
+| 上一完整官方根 | current Linear + v195 Attention | 18053 / 289s | 可回退历史对照，SHA `839ADB1E...761D7F` |
+| 上一完整官方父 | current Linear + R3 Attention | 18032 / 280s | 可回退历史对照，SHA `12352EFD...E24E` |
+| 更早完整官方父 | compiled sample-energy | 17636 / 264s | 可回退历史对照，SHA `D66128A6...B0F6` |
 | 历史时间参考 | v180 | 17597 / 242s | 只作复杂度证据，不再作为候选父 |
 | Linear 侧历史结果 | L28（continuous_linear_l28-proj-vectorized） | 4611 / 286s | +4 vs L4；只作机制证据，不再作为并行父 |
 | 历史侧隔离父 | Linear v166 / Attention v168 | 4590 / 226s；14005 / 210s | 只作历史机制证据，不再启动侧隔离计划 |
@@ -35,8 +36,8 @@
 | 用户确认的榜首锚点 | 源码、配置未知 | 21765 / 290s | 距当前工作父 3733 分，不是本地实验结果 |
 | 用户确认的成功机制锚点 | A@W拟合 + Q/K互逆scale学习 | 21071 / 283s | 距当前工作父 3039 分；源码/配置/SHA待绑定，不替换根父 |
 
-- 当前根 SHA256：`839ADB1E617C3115C6B55071A34B281C5DB0FF2AA070ADBBC71FD1549E761D7F`。
-  当前官方回传时间距硬限 11s；官方硬限为 300s；本地时间预测和提交时间门已退役。
+- 当前根 SHA256：`56DC805D6E5A3AEF896DB8021045740292735725D688B48E3D4393E55EFCB2BD`。
+  当前官方回传时间距硬限 19s；官方硬限为 300s；本地时间预测和提交时间门已退役。
 - 活动计划及阶段只以[计划入口](docs/superpowers/plans/README.md)为准，不在此复制快照。
 - 官方提交次数**无限制**；历史配额、剩余次数等表述全部失效。
 - 用户已确认官方评测稳定；禁止为确定性、时间噪声或批处理研究重复提交相同 SHA 或逐位等价 A/B。
@@ -177,9 +178,13 @@ Attention 改为 `--attention-only`；完整集成审计改为 `--scenario both`
   只关闭该实现，不证明低维 A@W 拟合机制无效。
 - v198（GQA 组共享互逆对角：解析初始化+smooth-max+硬门控）官方 `TIMEOUT（>300s）`；
   本地 calibration 无超时信号仍官方超时。只关闭该实现，互逆 scale 机制无官方精度数据点。
-- 时间余量事实：当前根 289s / 硬限 300s，余量11s；v190–v192、v196、v198 五个新增 Attention
-  校准计算全部官方 TIMEOUT（含低成本的 v198），L-C3 仅 +13s 即到293s。在根官方时间明显
-  下降之前，任何带新增校准计算的候选（Linear 或 Attention）都不应再提交官方。
+- v199（GQA × 64-block hard reciprocal）官方 `TIMEOUT（>300s）`；只关闭该实现。
+- v201（hard-logit residual weighted reciprocal）官方 `TIMEOUT（>300s）`；只关闭该实现。
+- v202（Linear sample-energy calibration fusion）官方 `18053/281s`，与 v195 同分且快 8s，
+  已 `RETAINED` 并切换为当前根；候选 SHA `56DC805D...EFCB2BD`。
+- v203（联合 Q/K 合法 hierarchy 邻码选择）官方 `TIMEOUT（>300s）`；只关闭该实现。
+- 时间余量事实：当前根 281s / 硬限 300s，余量19s；v190–v192、v196、v198、v199、v201、v203
+  的新增 Attention 校准/选择实现均官方 TIMEOUT。后续候选仍须把新增校准成本控制在官方 300s 内，
   新增 Attention 算法先按活动计划与标准 Linear 配对取得官方侧分，再决定是否回装完整根；
   普通完整根候选在本地最终回退父状态时不提交。
 - V 侧不注册新候选：per-head 常量不改变块内解，per-channel multiplier 解码不逆缩放会破坏输出，

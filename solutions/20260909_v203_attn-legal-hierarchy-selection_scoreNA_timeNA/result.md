@@ -21,3 +21,8 @@ Real 4B `eval-v3`, Attention-only, six shards, paired against the v195 root:
 Shard hard-output deltas: `0`, `0`, `0`, `0`, `0`, `-0.0065789294`. The legal neighbor was accepted on one calibration layer but regressed the aggregate proxy and added calibration cost, so it is not the root. Official status remains `unregistered/NA`; no official score or time is inferred.
 
 Calibration wall / scoring wall: `38.170922 s / 10.924981 s`.
+
+## Official result
+
+- **`TIMEOUT / >300s / score NA` (user-reported 2026-09-09).** No score is inferred;
+  the candidate is not retained.

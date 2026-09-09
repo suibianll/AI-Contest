@@ -1,6 +1,6 @@
 # v202 — Linear sample-energy calibration fusion
 
-Status: `REJECTED` (no material local speed change)
+Status: `RETAINED` (official tie, faster)
 
 - Parent: v195 root `solution.py`
 - Parent SHA256: `839ADB1E617C3115C6B55071A34B281C5DB0FF2AA070ADBBC71FD1549E761D7F`
@@ -17,6 +17,12 @@ Real 4B `eval-v3`, Linear-only, six shards, 336 cases, paired against the v195 r
 |---:|---:|---:|---:|---:|
 | 0.5292658476834800 | 0.5292658476834800 | 0 | 1021.600851 s | 1022.134326 s |
 
-All six shard hard-output deltas were exactly `0`. Calibration API time was `772.582748 s` versus `772.430846 s` for the parent; the total difference is diagnostic-level and does not establish a material speed gain. The current root remains v195. Official status remains `unregistered/NA`.
+All six shard hard-output deltas were exactly `0`. Calibration API time was `772.582748 s` versus `772.430846 s` for the parent; the local difference is diagnostic-level, but the user-reported official result is faster. The current root is switched to v202.
 
 Calibration wall / scoring wall: `816.080198 s / 388.320623 s`.
+
+## Official result
+
+- **`18053 / 281s`, `RETAINED` (user-reported 2026-09-09).** This ties the v195
+  root score (`18053/289s`) and improves official time by 8 seconds, so v202 is
+  the current complete root.

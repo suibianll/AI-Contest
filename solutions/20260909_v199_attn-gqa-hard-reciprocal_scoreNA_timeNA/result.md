@@ -21,4 +21,9 @@ Shard hard-output deltas: `0`, `+0.0000842961`, `-0.0003923108`, `0`, `-0.000047
 
 Calibration wall / scoring wall: `82.020024 s / 10.414066 s`.
 
-The candidate changed real hard outputs but was negative in aggregate, so it is not the root. Official status remains `unregistered/NA`; no official score or time is inferred.
+The candidate changed real hard outputs but was negative in aggregate, so it is not the root.
+
+## Official result
+
+- **`TIMEOUT / >300s / score NA` (user-reported 2026-09-09).** No score is inferred;
+  the candidate is not retained.

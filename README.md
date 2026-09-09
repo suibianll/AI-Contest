@@ -1,9 +1,9 @@
 # HiF4 优化实验仓库
 
-当前最优已知可复现完整方案为 v195：用户官方回传 `18053 / 289s`，根 `solution.py` 与归档逐位一致，
-SHA256 `839ADB1E617C3115C6B55071A34B281C5DB0FF2AA070ADBBC71FD1549E761D7F`。平台未单独返回计分 SHA，
-这一证据边界继续透明记录。上一完整根 current Linear + R3 Attention 为 `18032 / 280s`，再上一完整父
-compiled sample-energy 为 `17636 / 264s`。官方硬限 300s，提交次数无限制。
+当前最优已知可复现完整方案为 v202 Linear + v195 Attention：用户官方回传 `18053 / 281s`，根
+`solution.py` 与归档逐位一致，SHA256 `56DC805D6E5A3AEF896DB8021045740292735725D688B48E3D4393E55EFCB2BD`。
+相对 v195 同分快 8 秒；上一完整根 current Linear + v195 Attention 为 `18053 / 289s`，再上一根
+current Linear + R3 Attention 为 `18032 / 280s`。官方硬限 300s，提交次数无限制。
 
 ## 工作入口
 

@@ -1,17 +1,17 @@
 # HiF4 solutions archive
 
 > 当前根与最优已知可复现完整方案为
-> [v195](20260908_v195_attn-a2-center-gradient-aggregate_scoreNA_timeNA/result.md)：用户官方回传
-> `18053/289s`，根与候选归档逐位一致，SHA `839ADB1E617C3115C6B55071A34B281C5DB0FF2AA070ADBBC71FD1549E761D7F`。
-> 平台未单独返回计分 SHA。上一根 current Linear + R3 Attention 为 `18032/280s`，再上一根
-> compiled sample-energy 为 `17636/264s`。
+> [v202](20260909_v202_linear-sample-energy-fusion_scoreNA_timeNA/result.md)：用户官方回传
+> `18053/281s`，根与候选归档逐位一致，SHA `56DC805D6E5A3AEF896DB8021045740292735725D688B48E3D4393E55EFCB2BD`。
+> 相对 v195 同分快 8 秒。上一根 current Linear + v195 Attention 为 `18053/289s`，再上一根
+> current Linear + R3 Attention 为 `18032/280s`。
 > L28 `4611/286s` 与其他侧结果降为历史机制证据，不再形成并行父线。
 > [L28 回传记录](../logs/execution/2026-09-08-l28-official-result.md)、
 > [L23b 超时记录](../logs/execution/2026-09-08-l23b-official-timeout.md)。
 
-> 组合候选 [v195](20260908_v195_attn-a2-center-gradient-aggregate_scoreNA_timeNA/result.md)
-> 已获用户官方回传 `18053/289s` 并提升为当前根：在上一根 current Linear + R3 Attention 上修复
-> K-center 多窗口梯度聚合。平台未单独返回计分 SHA，结果透明绑定候选归档 SHA。
+> 组合候选 [v202](20260909_v202_linear-sample-energy-fusion_scoreNA_timeNA/result.md)
+> 已获用户官方回传 `18053/281s` 并提升为当前根：在 v195 的 Linear 校准中融合 sample-energy
+> block order 编译，输出等价且官方时间快 8 秒。
 
 > 当前测试按[4B指引](../docs/4b-panel-testing-guide.md)执行。本文历史0.5B、OOD、跨模型和时间预测结果仅作证据，不构成新测试命令或门禁。
 
@@ -39,10 +39,10 @@
 
 | 版本 | 机制 | 当前结果 |
 |---|---|---|
-| [v199](20260909_v199_attn-gqa-hard-reciprocal_scoreNA_timeNA/result.md) | GQA × 64-block hard reciprocal，真实 hard-output 选择 | 4/6 层产生接受状态，但六 shard 代理 `−0.0000729515`；`REJECTED`，官方 `unregistered/NA` |
-| [v201](20260909_v201_attn-hard-logit-residual_scoreNA_timeNA/result.md) | hard-logit residual + softmax Jacobian/V 加权候选排序 | 4/6 层产生接受状态，但六 shard 代理 `−0.0001206117`；`REJECTED`，官方 `unregistered/NA` |
-| [v202](20260909_v202_linear-sample-energy-fusion_scoreNA_timeNA/result.md) | Linear sample-energy 编译与首次校准解码融合 | 336 case 逐位等价；总 API 仅诊断级 `−0.53s`，`REJECTED` |
-| [v203](20260909_v203_attn-legal-hierarchy-selection_scoreNA_timeNA/result.md) | 联合 Q/K 合法 hierarchy 邻码 hard-output 选择 | 仅 shard5 变化且 `−0.0065789294`，总代理 `−0.0010964882`；`REJECTED`，官方 `unregistered/NA` |
+| [v199](20260909_v199_attn-gqa-hard-reciprocal_scoreNA_timeNA/result.md) | GQA × 64-block hard reciprocal，真实 hard-output 选择 | 4/6 层产生接受状态，但六 shard 代理 `−0.0000729515`；`REJECTED`，官方 `TIMEOUT` |
+| [v201](20260909_v201_attn-hard-logit-residual_scoreNA_timeNA/result.md) | hard-logit residual + softmax Jacobian/V 加权候选排序 | 4/6 层产生接受状态，但六 shard 代理 `−0.0001206117`；`REJECTED`，官方 `TIMEOUT` |
+| [v202](20260909_v202_linear-sample-energy-fusion_scoreNA_timeNA/result.md) | Linear sample-energy 编译与首次校准解码融合 | 336 case 逐位等价；官方 `18053/281s`，同分快 8s，`RETAINED` 并切换根 |
+| [v203](20260909_v203_attn-legal-hierarchy-selection_scoreNA_timeNA/result.md) | 联合 Q/K 合法 hierarchy 邻码 hard-output 选择 | 仅 shard5 变化且 `−0.0065789294`，总代理 `−0.0010964882`；`REJECTED`，官方 `TIMEOUT` |
 
 **Attention Correctness Hardening（2026-09-08）：** [AC0](continuous_attention_ac0-correctness-hardened/result.md)
 （`F817E4C2…`，父 R3 `A5C679D7…`）保留为 Attention 正确性参考：原子 Q/K-pair

@@ -1,6 +1,6 @@
 # HiF4 持续优化计划：Hard-Output Attention + Linear 降时
 
-> ACTIVE，2026-09-09。当前完整根为 v195，18053/289s。后续不再通过增加 STE 训练、矩阵指数或
+> ACTIVE，2026-09-09。当前完整根为 v202 Linear + v195 Attention，18053/281s。后续不再通过增加 STE 训练、矩阵指数或
 > 动态范围代理迭代优化 Attention；Attention 改为低维、离散、真实 HiF4 hard-output 优化，
 > 同时从当前 Linear 中释放完整方案时间。
 
@@ -22,7 +22,7 @@
 
 ## 2. 固定基线与分工
 
-- 最终晋级根：current Linear + v195 Attention，18053/289s；上一完整根为 current Linear + R3，18032/280s。
+- 最终晋级根：v202 Linear + v195 Attention，18053/281s；上一完整根为 current Linear + v195 Attention，18053/289s；再上一根为 current Linear + R3，18032/280s。
 - Attention 官方侧对照：标准 Linear + R3，14405/238s。
 - 当前 Linear 与 v195 Attention 的侧向净贡献待标准 Linear v195 诊断版官方归因，不从完整总分反推；
   上一根的 Linear 参考增量为 3627 分。
@@ -30,7 +30,7 @@
 分工固定：
 
 - **Attention 负责提分。** v195 已在完整组合上取得官方 +21，继续解决目标错位。
-- **Linear 负责释放时间。** 保留当前 Linear 实现，只做输出等价的计算合并；当前根余量为 11s。
+- **Linear 负责释放时间。** v202 已完成输出等价的计算合并并将官方时间降至 281s；当前根余量为 19s，可进入下一张 Linear A@W 卡。
 - 标准 Linear 只用于测 Attention 官方侧分，不作为最终父版本。
 
 ## 3. 每一轮如何执行
@@ -119,7 +119,8 @@ block energy。v202 将 energy 统计合并进已有 Gram/importance 校准遍�
 3. 删除第二次 _static_actorder_dense_from_state 重建和遍历。
 4. 权重参数、activation state和动态输出必须与当前根逐位一致。
 
-本地只核对等价性和完整调用次数，然后直接提交当前完整组合。以 v195 的 `18053/289s` 为基线，
+本地只核对等价性和完整调用次数，然后直接提交当前完整组合。v202 已获官方 `18053/281s`，
+相对 v195 同分快 8 秒；
 候选需保持分数并低于官方 `300s` 才保留；
 否则回退，不继续做同类微优化。
 
@@ -130,15 +131,19 @@ Attention，但装回当前根后超时，也直接提前执行 L-T1。
 
 ## 7. Linear 提分草稿的处置
 
-现有 v197 linear-aw1-block-gain 只改权重并增加 A@W 拟合计算，尚未完成真实4B验证。当前不提交，
-也不让它阻塞 Attention A1和 Linear L-T1。
+现有 v197 linear-aw1-block-gain 已证明当前实现存在部署 block 对齐错误，不能直接重交。v202
+官方将完整根从 289s 降到 281s，满足“时间释放后再继续 Linear A@W”的前置条件。下一张卡注册为
+**L-AW1 / v204：部署坐标对齐的 64-block 标量 A@W 拟合**：
 
-只有完整根已经释放出明确时间后才继续 Linear A@W：
-
-1. 先在真实4B数据运行一次，记录合法投影前后的实际 A@W output loss。
-2. 若连续闭式解改善、合法重编码后改善消失，下一张卡改成 hierarchy-aligned legal proposal，
-   不增加输出组自由度。
-3. 若合法重编码后仍有明显改善，再交完整官方；不按 fit_gain 推算官方分。
+1. 从当前 v202 完整根构建，只修正 A@W 拟合与最终部署 `gptq_block_order`、permutation 及
+   weight carrier 的同坐标映射；不复用 v197 的错位拼接。
+2. 按用户最新指令使用全部 Qwen3.5-4B 校准数据，不拆 fit/select；每个 64 输入块仅一个
+   固定标量增益，直接以 `XW^T - Q(X)Q(W)^T` 的实际输出目标求解。
+3. 将拟合后的块重新编码为合法五字段 state，并把部署动态路径保持为已编译状态，无在线搜索、
+   候选循环或额外 Attention 校准。
+4. 只注册一个固定配置；记录 A@W output loss、accepted/attempted、合法 state、单文件导入和
+   六 shard 结果。不扫描 ridge、clamp、窗口或增益邻域。
+5. 本地正向只作为机制证据；候选归档后按当前规则记录官方状态，不用本地分数换算官方分数。
 
 ## 8. 当前执行队列
 
@@ -147,9 +152,10 @@ Attention，但装回当前根后超时，也直接提前执行 L-T1。
 | 1 | 标准 Linear 组合静态核对 | 已完成本地等价核对；按用户指令不等待官方侧分 | 结果归档，不阻塞新机制 |
 | 2 | v195/v191/v190/v192 标准 Linear 官方归因 | 待回传；不等待、不重跑 | 只记录，不调旧实现 |
 | 3 | A1 / v199 hard reciprocal 64-block | 已完成；边界可达但六 shard 代理 `−0.0000729515` | 归档并切换目标 |
-| 4 | L-T1 / v202 Linear等价降时 | 已完成；336 case 逐位等价，无材料级降时 | 归档，Linear 保持 v195 |
-| 5 | A3 / v201 + A4 / v203 | 已完成；A3 代理 `−0.0001206117`，A4 代理 `−0.0010964882` | 归档，停止 reciprocal/邻码族 |
-| 6 | 最佳 Attention + 当前最快 Linear | 当前根仍为 v195；本轮候选均 `unregistered/NA` | 不以本地结果晋级根 |
+| 4 | L-T1 / v202 Linear等价降时 | 已完成；官方 `18053/281s`，与 v195 同分快 8s | 已归档并切换为当前根 |
+| 5 | A3 / v201 + A4 / v203 | 已完成；官方均 `TIMEOUT`；A3 代理 `−0.0001206117`，A4 代理 `−0.0010964882` | 归档，停止 reciprocal/邻码族 |
+| 6 | 最佳 Attention + 当前最快 Linear | 当前根为 v202 Linear + v195 Attention，`18053/281s` | 保持根，进入下一张 Linear 卡 |
+| 7 | L-AW1 / v204 部署坐标对齐 64-block A@W 拟合 | 已注册；v202 官方释放 8s 余量后执行 | 从 v202 构建、实测、归档并提交 |
 
 ## 9. 归档
 

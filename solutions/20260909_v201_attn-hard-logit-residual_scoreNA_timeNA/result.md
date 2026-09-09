@@ -21,4 +21,9 @@ Shard hard-output deltas: `0`, `-0.0000084818`, `-0.0004152939`, `-0.0003885254`
 
 Calibration wall / scoring wall: `88.315808 s / 10.214718 s`.
 
-The residual ranking was reachable but did not improve the aggregate hard output, so it is not the root. Official status remains `unregistered/NA`; no official score or time is inferred.
+The residual ranking was reachable but did not improve the aggregate hard output, so it is not the root.
+
+## Official result
+
+- **`TIMEOUT / >300s / score NA` (user-reported 2026-09-09).** No score is inferred;
+  the candidate is not retained.
