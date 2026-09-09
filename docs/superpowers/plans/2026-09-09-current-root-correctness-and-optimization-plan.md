@@ -33,7 +33,8 @@
 4. shard0 确认实现可达后运行 Attention 六 shard。这里的数值只用来判断修复是否改变部署输出，
    不换算官方分数。
 5. 如果六 shard 有实际变化，分配一个新的正式版本并以“当前完整根 + FIX-A2”提交官方；官方
-   分数更高且 `<300s` 才替换根。若逐位等价或官方不增分，修复记录归档，官方根仍为 v202。
+   分数更高，或同分且更快，并且 `<300s` 时才替换根。若逐位等价、官方降分或超时，修复记录
+   归档，官方根仍为 v202。
 
 ## 3. 后续算法队列
 
@@ -42,34 +43,59 @@
 ### A-H1：量化阈值事件搜索
 
 - 目标：解决 STE 方向与 hard code 不一致。
-- 做法：保留当前 A2 的低维 rotation/center 方向，但不按连续 learning rate 更新；计算沿该方向
-  第一次会改变 Q/K 合法编码的阈值事件，按方向顺序评估事件状态。**8 是上限而非定额**：
-  先实测单事件校准成本，再按根 19s 官方余量决定实际评估的事件数，超预算就截断事件数
-  （这是预注册的时间截断规则，不属于扫事件数邻域）；单事件成本本身就超预算则整卡不提交。
-  前例 v196/v198/v199/v201/v203 的新增 Attention 校准全部官方 TIMEOUT，实现前必须先给出
-  单事件实测成本。所有事件评估放在校准内完成，动态 Q/K API 不含候选循环（v165 边界不变）。
-- 选择：每个状态都走真实动态 Q/K encode/decode 和最终 Attention output MSE；只用 calibration
-  folds 学习与聚合，接受条件是 folds 聚合严格优于父状态**且独立 holdout 验证不为负**
-  （与 AGENTS.md §3 校准/选择/验证分离一致）。
-- 产物：changed-code 数、每个事件的最终 loss、被接受的事件序号和最终 state。
+- 连续方向：先运行 FIX-A2 的 mean-gradient trainer，得到最后一步更新前的 `theta0/center0` 及
+  mean gradient `g_theta/g_center`。固定
+  `d_theta = -g_theta / max(||g_theta||, 1e-12)`、
+  `d_center = -g_center / max(||g_center||, 1e-12)`，路径为
+  `theta(t)=theta0+t*d_theta`、`center(t)=center0+t*d_center`，只搜索 `t>0`。
+- 事件生成：仅在生成阈值时冻结父状态的 permutation、offset、`scale_factor/lv2/lv3`。对每个
+  calibration Q/K 元素，在 `t=0` 解析计算 Cayley 路径下的变换值 `x0` 和导数 `dx/dt`；对每个
+  相邻 HiF4 magnitude 中点 `b`，计算线性化边界
+  `t=(b-|x0|)/(sign(x0)*dx/dt)`，只保留有限且严格为正的 `t`。`x0=0` 时直接使用
+  `d|x|/dt=|dx/dt|`。这一步只生成事件位置，最终收益仍由真实非线性路径重算。
+  `t` 升序排列；float32 表示相同的 `t` 合并成一个事件，使用 `torch.nextafter(t,+inf)` 保证
+  跨过预测边界。生成阶段不以 smooth loss 排序。
+- 固定候选：固定 8 个事件槽，填入最早的 8 个**不同**事件；事件不足时剩余槽标记 unavailable，
+  不复制状态，零事件则记不可达并结束。槽位数不根据本地耗时、结果符号或设备调整，也不扫描邻域。
+- 真实评估：每个 `t` 都重新走完整部署 Q/K encode/decode、当前 V 路径和最终 Attention output
+  MSE；动态 Q/K API 只读取校准选出的 rotation/center，不包含事件循环。
+- 选择与验证：候选参数只按 calibration folds 的 case 等权 normalized output MSE 聚合选择，
+  `t=0` 父状态始终在候选集中；严格更优才接受。选定后只在独立 holdout 记录父子 loss，holdout
+  不改变候选、不否决提交，也不用于修改任何参数。
+- 时间处理：记录 shard0 calibration API 时间和事件评估次数，只标注风险；不据本地时间减少事件、
+  预测官方时间或阻止提交，官方 `<300s` 是唯一时间裁决。
+- 产物：方向范数、原始/去重事件数、8 个 `t`、每个事件 changed-code 数、fold 聚合最终 loss、
+  holdout 记录、被接受的事件序号和最终 state。
 - 失败处理：若事件可达但最终输出均不改善，关闭该阈值事件机制；不改步长、事件数或 seed 重试。
 
 ### A-H2：K-center 离散坐标更新
 
 - 前提：A-H1 证明 rotation 与 center 混合事件无法定位收益，或收益只来自 center。
-- 做法：冻结当前 rotation，只对每个 KV head 的 center 使用编码边界生成一个正向和一个负向候选；
-  逐 head 走真实 hard-output loss，固定一轮顺序更新。
-- 选择：候选必须实际翻码且整层最终 output loss 下降；否则保持父 center。
+- 做法：冻结当前部署 rotation。对 KV head `h`，用 FIX-A2 在 calibration folds 聚合得到的 center
+  mean gradient 定义单位方向 `u_h=g_h/max(||g_h||,1e-12)`；从当前 `center_h` 分别沿 `-u_h`
+  和 `+u_h` 求冻结父 `scale_factor/lv2/lv3` 下第一个严格为正的 K 编码阈值，并在阈值处使用
+  `torch.nextafter(t,+inf)`。因此每个 head 恰好两个候选；方向无阈值时该方向记不可达。
+- 顺序：KV head 按索引升序处理且只处理一轮。每个 head 都以之前已接受 head 的 center 为当前状态，
+  重新生成该 head 的两个最近事件；相同阈值同时翻码，不按单元素拆候选。
+- 选择：两个候选和当前状态都走完整 hard encode/decode 与最终 Attention output MSE，只按
+  calibration folds 的 case 等权聚合选择；必须实际翻码且严格降低聚合 loss 才更新该 head。
+  全部 head 完成后在独立 holdout 只记录一次父子结果，不参与选择或提交决定。
+- 产物：每个 head 的方向范数、正负阈值、changed-code 数、fold loss、接受方向及最终 holdout 记录。
 - 失败处理：关闭 center 离散更新，不扫描 head 顺序、轮数或幅度。
 
 ### L-H1：真正的逐列非对称权重量化
 
 - 目标：回到用户给出的 `A@W 拟合 + 逐列非对称量化` 成功机制，而不是继续增益/additive 邻域。
-- **第 0 步表达性预检**：先证明目标逐列非对称编码能用五字段合法 state 表达并通过
-  `evaluator/reference_hif4.py` 检查；再论证它相对根已有 Weight GPTQ（Hessian 度量逐列最优 +
-  误差反馈）存在真实残余空间，而不是退化为又一次输出加权重选码（AW 族九连败归因见
-  `logs/execution/2026-09-09-aw-fitting-family-analysis.md`）。预检任一不通过则不进入实现，
-  直接记录关闭依据。
+- **第 0 步表达性预检**：先把“逐列非对称”固定定义为：同一输入列内，正权重和负权重允许选择
+  不同 magnitude code，但最终仍只输出合法五字段，不引入正负双 scale、zero-point 或自定义解码。
+  用一个含正负权重的 64-column 合成块验证：候选五字段通过 `evaluator/reference_hif4.py`，且相对
+  根编码产生不同的合法解码值。若目标必须依赖五字段无法保存的正负双 scale，则直接判
+  `NOT_EXPRESSIBLE`，不进入实现。
+- **第 0 步残余空间预检**：在同一合成块上冻结最终部署 activation state，枚举一列的合法
+  sign/mant 邻码并计算完整输出误差；必须存在至少一个“根 Weight GPTQ 不选、但 A@W 完整输出目标
+  严格更优”的合法状态，才证明该方向不是 AW1-AW14 的标量 gain/additive 或同目标重选码。
+  未找到反例则记 `NO_DISTINCT_RESIDUAL` 并关闭，不制作 4B 候选。归因对照见
+  `logs/execution/2026-09-09-aw-fitting-family-analysis.md`。
 - 做法：从当前根的最终部署权重坐标出发，用全部 Linear 校准行构造输出残差；对自然 64-column
   block 内每列分别累计正值和负值的输出加权误差，再联合选择合法 sign/mant 与共享层级 scale。
   这张卡改变正负码分配，不再拟合一个会被自适应 scale 吸收的标量 gain。
