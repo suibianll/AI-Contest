@@ -28,8 +28,10 @@
 当前只按[v223 后完整根离散输出与结构优化计划](superpowers/plans/2026-09-09-post-v223-hard-output-structural-plan.md)推进。
 当前根不变。FIX-A2/v222 官方 `18015/293s`（相对根 `−38/+12s`），已 REJECTED；A-H1/v223
 六 shard mean `+0.003209`，但事件路径错误地从最后一步 Adam 更新前状态出发，官方仍
-`unregistered/NA`。A-H2 已取消，L-H1 已在残余空间预检关闭。下一步从当前完整根新建 A-H1R，
-固定部署 center、只搜索 rotation，并暴露校准和动态应用的全部相关异常；不修改归档源码。
+`unregistered/NA`。A-H2 已取消，L-H1 已在残余空间预检关闭。R1/v224（A-H1R 部署父状态锚定）
+已实现并归档：6/6 层合法接受、`t0_identical=1`、changed-code 小范围可解释，六 shard 等权
+`≈+1.2e-6`（hard-output 效应在噪声底），同时移除/旁路四处宽 except 并加动态应用断言；官方
+`unregistered/NA`，待裁决。下一张卡为 R2 A-H3；不修改归档源码。
 
 - 所有候选从根完整方案构建，每次只改一侧、一个机制、一个固定配置。
 - 官方前先做六 API contract smoke 和目标侧 shard0；当前活动计划的算法开发卡随后运行目标侧六 shard，

@@ -74,6 +74,7 @@
 | [v221](20260909_v221_linear-aw14-global-residual-basis_rejected_scoreNA_timeNA/result.md) | L-AW14 共享 rank-8 输出残差基 A@W 拟合 | shard0 `-0.032568`（0/56/0），全部回归；`REJECTED`，官方 `unregistered/NA` |
 | [v222](20260909_v222_attention-a2-correctness-fix_scoreNA_timeNA/result.md) | FIX-A2：A2 mean-gradient + 异常传播修复（无新算法） | 官方 `18015/293s`（相对根 `−38/+12s`），`REJECTED`，根不变；本地 shard0/shard1 负向方向一致 |
 | [v223](20260909_v223_attention-ah1-threshold-events_scoreNA_timeNA/result.md) | A-H1 量化阈值事件搜索（Cayley 路径 8 事件槽 hard-output 选择） | 六 shard 72 case mean `+0.003209`、median 0（+28/−32/0=12），5/6 层接受事件、可达非等价；3/5 接受层 holdout 转劣；事件路径实际从最后一步 Adam 更新前快照出发，不能作为“部署父状态最近阈值”的有效裁决；官方 `unregistered/NA`，归档源码不修改，修正见当前活动计划 R1 |
+| [v224](20260909_v224_attention-ah1r-parent-anchored_scoreNA_timeNA/result.md) | A-H1R 部署父状态锚定阈值事件（切空间 `S=skew(R_parent^T G_R)`，center 固定） | 6/6 层合法接受、`t0_identical=1`、changed-code 小范围可解释（不再是整步回退）；六 shard 等权 `≈+1.2e-6`（单 shard \|delta\|≤8e-6），hard-output 效应在噪声底；移除/旁路四处宽 except 并加动态应用断言；官方 `unregistered/NA`，待裁决 |
 
 ### 标准 Linear + Attention 侧隔离官方分（2026-09-09 回传）
 
