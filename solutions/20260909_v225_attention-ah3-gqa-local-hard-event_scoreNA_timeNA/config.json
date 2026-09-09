@@ -1,0 +1,17 @@
+{
+  "run_id": "attention-gqa-local-hard-event",
+  "version": "v225",
+  "mechanism": "A-H3 GQA-group local orthogonal first-event coordinate update",
+  "parent": "solution.py",
+  "parent_sha256": "56dc805d6e5a3aef896db8021045740292735725d688b48e3d4393e55efcb2bd",
+  "candidate_sha256": "eac65bd199369428bc979be8486d2cdcfc60d804c5ce06edcf3bafcb45beb767",
+  "changes": [
+    "per-KV-group tangent direction S_g = skew(R_g^T G_g) from the deployed-parent gradient",
+    "first Q/K hard-code event along both -S_g and +S_g per group",
+    "groups processed once in fixed index order; accepted state becomes the next group parent",
+    "accept only if codes flip and the calibration-fold aggregate strictly decreases",
+    "remove two encoder-path broad excepts and propagate the two calibration broad excepts",
+    "assert a2_arm != fallback and that the dynamic path really applies the stored transform"
+  ],
+  "official_status": "unregistered/NA"
+}
