@@ -25,7 +25,9 @@ delta 为 `-0.0171391319`（3/53/0），且校准开销约为父级 3.8 倍，�
 根继续为 v202；下一张注册为 L-AW9/v212 的低自由度共享整数码偏移。
 L-AW9/v212 已完成：shard0 为 `0`（0/0/56），没有 hard-output 变化且校准开销约为父级 5.0 倍，
 已归档为带 `rejected` 的目录。根继续为 v202；下一张注册为 L-AW10/v213 的输出感知 `lv3`
-层级 bit toggle。
+层级 bit toggle。L-AW10/v213 已完成：shard0 为 `0`（0/0/56），没有 hard-output 变化且校准
+开销高于父级，已归档为带 `rejected` 的目录。根继续为 v202；下一张注册为 L-AW11/v214 的
+输出感知 per-group `lv2` hierarchy bit toggle。
 
 ## 历史计划索引（仅证据）
 
