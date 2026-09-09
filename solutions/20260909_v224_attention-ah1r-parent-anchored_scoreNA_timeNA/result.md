@@ -53,3 +53,4 @@
 
 - workbench：`workbench/full_solution/attention-ah1-parent-anchored/`（`ah1r_code.py`、`build.py`、`verify.py`、`config.json`、`verification.json`）
 - 六 shard：`artifacts/proxy_v3/ah1r-sixshard-v2/`
+- 官方回传日志：`logs/execution/2026-09-09-v224-official-timeout.md`

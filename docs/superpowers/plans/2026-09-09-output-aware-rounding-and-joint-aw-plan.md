@@ -60,9 +60,14 @@
 
 ### 2.3 固定搜索方式
 
-不运行 threshold 网格。对一个边界收集所有可能受它影响的元素，按其 `frac(u)` 排序，用当前输出残差
-计算“改成 ceil 相对 floor”的二阶近似代价；累积代价最小的位置唯一确定 `tau`。相同最小值取最接近
-`0.5` 的位置，再并列取较小阈值。得到整张边界表后只做一次真实 hard encode/decode 和最终输出复核。
+不保存、排序数百万个原始 breakpoint，也不逐 threshold 重跑编码器。固定按 HiF4 自然 block 宽度将
+`frac(u)` 分成 64 个桶：`bucket=min(floor(64*frac(u)),63)`；把当前输出残差给出的邻码二阶近似代价用
+`scatter_add` 累积到桶，再对 64 个桶做前缀和，直接取代价最小的边界 `tau=b/64`，并把父边界
+`tau=0.5` 作为固定候选。相同最小值取最接近 0.5 的位置，再并列取较小阈值。这是一次固定的充分统计
+求解，不生成 64 个候选版本，也不执行 64 次 hard forward。
+
+每张卡都先在同一个冻结父状态上一次性求完整张边界表，然后只对整表候选做一次真实 hard
+encode/decode 和最终输出复核；不按边界反复执行完整部署路径。
 
 父边界 `tau=0.5` 始终是回退状态。没有 alpha、seed、阈值数量、学习率或轮数扫描。
 
@@ -76,10 +81,14 @@
 
 ### 3.2 精确变量
 
-- 冻结当前根选中的 Linear `d/permutation/block transform/CAT`、activation state、
-  `scale_factor/lv2/lv3` 和 sign。
+- 冻结当前根选中的 Linear `d/permutation/block transform/CAT`、activation state，以及最终部署
+  `weight_params` 的 `scale_factor/lv2/lv3/sign/mant`。令其中 mantissa 整数码为 `c_parent`。
 - 只学习 `tau_w[s,m]`：`s∈{-1,+1}`，`m∈{1,2,3,4,5,6}`，每层共 12 个标量。
 - `m=0` 和饱和码 7 不改变；不产生零码插入，不改变 scale/hierarchy。
+- 使用原始权重经过父 `d/permutation/block transform/CAT` 后的部署坐标值计算 `u=4|w|/D`。
+  只有满足 `c_parent=clamp(round(u),0,7)` 的元素进入边界学习；被 AdaRound、GPTQ、FULL64、headroom
+  或 JDRQ 改成其他码的元素保持 `c_parent`，不被通用阈值覆盖。由此 `tau=0.5` 按定义恢复最终父码，
+  而不是假设最终父码来自普通最近舍入。
 - 最终只保存新的静态 `weight_params`，动态 Linear API 不增加计算。
 
 ### 3.3 求解
@@ -89,9 +98,10 @@
 
 `E = X_hat W_hat^T - Y`。
 
-预计算
+设共有 `F` 个 calibration case，第 `f` 个 case 的 token 数为 `n_f`、输出维为 `o`，固定使用
+case 等权 MSE：`omega_f=1/(F*n_f*o)`。预计算
 
-`H = X_hat^T X_hat`，`G = E^T X_hat`。
+`H = sum_f omega_f X_hat_f^T X_hat_f`，`G = sum_f omega_f E_f^T X_hat_f`。
 
 任一候选权重变化 `DeltaW` 的精确 A@W 损失变化为
 
@@ -99,10 +109,14 @@
 
 按固定顺序 `sign=-1,+1`，每个 sign 内 `m=1..6` 处理一遍：
 
-1. 对属于该 sign/区间的元素计算从 floor 改为 ceil 的 `DeltaW`；
-2. 用 `2*G_ij*DeltaW_ij + H_jj*DeltaW_ij^2` 排序累计，确定唯一候选边界；
-3. 用上面的完整二次型计算该批同步修改的真实 `DeltaL`；严格小于 0 才接受；
-4. 接受后更新 `W_hat/E/G`，再处理下一个区间；全程只有一遍，不回扫。
+1. 只收集本节资格条件通过且属于该 sign/区间的元素；对每个可能边界计算
+   `c_tau`，并令 `DeltaW=(c_tau-c_parent)*sign*D/4`；
+2. 用 `2*G_ij*DeltaW_ij + H_jj*DeltaW_ij^2` 按 64 桶累计并做前缀和，确定唯一候选边界；
+   12 个边界都使用同一份
+   冻结父 `E/G/H` 求解，不接受一个边界后更新另一个边界的训练目标；
+3. 合并 12 个边界形成唯一 `DeltaW_table`，只用上面的完整二次型计算一次整表真实 `DeltaL`；
+   严格小于 0 才接受整表，否则 12 个边界全部恢复 0.5；
+4. 不按 sign、区间或边界重复执行 A@W 完整前向，不做第二轮。
 
 这不是 proxy loss：在固定 `X_hat` 下，二次型与实际 `||X_hat(W_hat+DeltaW)^T-Y||^2` 等价。
 
@@ -110,9 +124,11 @@
 
 - 工作目录：`workbench/full_solution/linear-lrb1-residual-rounding/`。
 - 在 Linear calibration 最终 `weight_params` 生成之后、返回之前执行；不修改归档候选。
-- 记录每层 12 个边界、受影响元素数、accepted 边界数、changed mantissa 数、精确 A@W `DeltaL`、
-  最终 shard paired delta 和额外 calibration API 时间。
-- `tau=0.5` 必须恢复当前根逐位输出；最终 state 必须通过五字段合法检查。
+- 记录每层 12 个边界、非 0.5 提案数、受影响元素数、整表 `table_accepted=0/1`、changed mantissa 数、
+  精确 A@W `DeltaL`、最终 shard paired delta 和额外 calibration API 时间。
+- 记录 eligible/ineligible 数量及 ineligible 的父码来源；`tau=0.5` 必须恢复最终父五字段和输出逐位
+  一致，非 0.5 的合成阈值必须能改变预期 eligible mantissa，避免阈值参数实际未被使用。最终 state
+  必须通过五字段合法检查。
 
 ### 3.5 结束条件
 
@@ -134,19 +150,26 @@
 - 学习 `tau_q[m]` 与 `tau_k[m]`，`m∈{1..6}`，每层共 12 个标量；正负号共享，降低过拟合。
 - `tau[0]=0.5`，不重试零码插入；scale_factor/lv2/lv3 的候选规则不变。
 - 动态 Q/K encoder 在每个 hierarchy 候选内使用学得阈值产生 mantissa，再按现有目标选择合法 hierarchy。
-  state 只新增两条长度 7 的 CPU tensor；在线没有候选循环和矩阵求逆。
+  参数必须从 `q_state/k_state` 经 `hif4_dynamic_quantize_q/k -> _nvfp4_to_hif4 -> _dense_to_hif4`
+  传入 `_solve_exact_hierarchy`、offset/refine 和所有当前会重新生成 mantissa 的活动 Q/K 路径；默认
+  `None` 等价于全 0.5。任何后续 refinement 不得静默用 `torch.round` 覆盖已学边界。state 只新增两条
+  长度 7 的 CPU tensor；在线没有候选循环和矩阵求逆。
 
 ### 4.3 求解
 
-以当前部署父 Q/K/V 和最终 Attention 输出残差为起点，固定顺序先 Q 后 K、各自 `m=1..6` 一遍：
+以当前部署父 Q/K/V 和最终 Attention 输出残差为唯一冻结起点，同时求 Q、K 各 `m=1..6` 的完整边界表：
 
 1. 对 calibration token 中落入区间 `m` 的元素，计算 floor/ceil 两个合法重建值；
-2. 通过当前 Attention backward 得到 `dL/dQ_hat` 或 `dL/dK_hat`；用
-   `2*g*Delta + h*Delta^2` 计算改为 ceil 的代价，其中 `h` 取该元素 Jacobian 平方的折内均值；
-3. 按 `frac(u)` 排序累积，解析选出一个边界 `tau_role[m]`；
-4. 重新执行真实 Q/K hard encode、causal Attention 和当前 V 路径。完整 calibration output MSE
-   严格下降才接受该边界，否则恢复 0.5；
-5. 接受后更新父输出和残差，继续下一个区间；不做第二轮。
+2. 一次普通 backward 得到 `g=J^T(O_parent-O_ref)`。曲率使用一次固定 Hutchinson 对角估计：按
+   `case_index` 和输出扁平索引用固定 seed `0` 生成 Rademacher 向量 `r∈{-1,+1}`，再做一次
+   `v=J^T r`，定义 `h` 为各 calibration case 的 `v^2` 等权均值。该 `h` 是固定的一探针
+   `diag(J^T J)` 估计，不写成精确 Jacobian 对角，也不搜索 seed 或探针数；
+3. 用 `2*g*Delta+h*Delta^2` 计算改为邻码的近似代价，按固定 64 桶累计并做前缀和，解析选出
+   `tau_role[m]`；12 个边界全部使用同一冻结父 `g/h`，不顺序更新残差；
+4. 合并整张 Q/K 表，只重新执行一次真实 Q/K hard encode、causal Attention 和当前 V 路径。
+   calibration case 各自先计算输出 MSE，再对 case 等权平均；整表均值严格下降才接受，否则 Q/K
+   两张表整体恢复 0.5；
+5. 不按 Q/K、mantissa 区间或 threshold 重复完整 Attention 路径，不做第二轮。
 
 最终候选必须用完整部署路径重新生成 Q/K 五字段。不能用线性化代价冒充最终收益。
 
@@ -163,8 +186,12 @@
 - 工作目录：`workbench/full_solution/attention-arb1-qk-rounding/`。
 - 记录每层 12 个边界、attempted/accepted、Q/K changed mantissa、最终 calibration/holdout output delta、
   shard paired delta 和额外 API 时间。
-- 必须分别记录**固定 hierarchy** 与**随阈值重选 hierarchy**两种读数下的 Q/K changed mantissa；若重选后
-  changed mantissa 归零或收益被自适应层级吸收，记 `ABSORBED_BY_HIERARCHY` 并关闭本卡，不拆粒度重试。
+- 必须分别记录**固定 hierarchy**与**随阈值重选 hierarchy**两种读数下五个字段各自的 changed count、
+  解码输出差异和 Attention output 差异。只有重选后五字段全部与父逐位相同，或最终解码 Q/K 与
+  Attention 输出全部逐位相同，才记 `ABSORBED_BY_HIERARCHY`；mantissa changed count 单独归零不能
+  作为关闭理由，因为 scale_factor/lv2/lv3 仍可能产生有效变化。
+- 增加两个直接 reachability control：全 0.5 表必须逐位恢复父；合成非 0.5 表必须在绕过
+  calibration gate 时改变预期 Q/K 字段，并由计数证明 threshold 已穿过全部活动编码路径。
 - 全六 shard `accepted=0` 或输出逐位相同则关闭“Q/K 共享输出舍入边界”；不继续拆 per-head、per-group、
   per-sign 表。形成合法非等价完整候选后只归档一个版本并交官方裁决。
 
@@ -178,19 +205,27 @@ L-RB1 只改变静态 W，激活误差保持不变；外部 `21071` 证据描述
 
 ### 5.2 变量和固定算法
 
-- 从执行时最高分完整根开始；若 L-RB1 已官方 RETAINED，则该根自然包含它，否则从 v202 根开始。
+- 始终从执行 L-JRB1 时已经确认的最高分完整根开始。若 L-RB1、A-RB1、v225 或其他候选此前已官方
+  RETAINED，则使用更新后的完整根；否则才仍是 v202。不得因为 L-RB1 未晋级而忽略其他已晋级结果。
 - activation 使用 sign 共享的 `tau_x[m]`，`m=1..6`；weight 使用 L-RB1 的
   `tau_w[s,m]`，共 18 个边界/层。
 - 只做一次固定次序的 block coordinate descent：
-  `activation 6 个区间 -> 重新生成全部 X_hat/H -> weight 12 个区间`。
-- activation 边界用同一 A@W 输出残差的 Jacobian 对 breakpoints 排序；每个候选边界均重新量化
-  calibration activation 并用真实 `||Q(A)Q(W)^T-AW^T||^2` 接受或回退。
+  `在冻结父残差上一次性求 activation 6 个边界 -> 整表重新生成一次全部 X_hat/H -> 在新的固定
+  X_hat 上一次性求 weight 12 个边界`。
+- Linear 输出对 activation 是线性的，不使用 Hutchinson：对父 `Y_hat=X_hat W_hat^T`，精确使用
+  `g_x=E W_hat` 与 `h_x[j]=sum_i W_hat[i,j]^2` 计算每个 activation 邻码的
+  `2*g_x*DeltaX+h_x*DeltaX^2`。六个边界使用同一冻结父残差求解，合并后只重新量化一次 calibration
+  activation，并用 case 等权的真实
+  `||Q(A)Q(W)^T-AW^T||^2` 接受整张 activation 表或整体回退；不逐边界重跑动态量化。
 - weight 阶段使用 L-RB1 的精确二次型。完成 weight 后不回到 activation，不增加第二轮。
-- 动态 state 只增加长度 7 的 activation threshold tensor；静态 weight 仍只返回合法五字段。
+- activation threshold 必须贯穿 v202 block-order wrapper、`_activation_gptq_quantize`、
+  `_dense_to_hif4`、`_solve_exact_hierarchy` 及所有活动 refinement；默认 0.5 时保持父路径。动态 state
+  只增加长度 7 的 activation threshold tensor；静态 weight 仍只返回合法五字段。
 
 ### 5.3 关键 control
 
-- `tau_x=tau_w=0.5` 时六 API 与父逐位一致。
+- `tau_x=tau_w=0.5` 时六 API 与最终父五字段及输出逐位一致；另外用合成非 0.5 表证明 activation
+  threshold 不会被 v202 wrapper、GPTQ 或后续 refinement 忽略/覆盖。
 - activation-only、weight-only、joint 三个读数只用于归因，正式候选只有 joint 一个。
 - 必须分别记录 activation 和 weight 的 changed mantissa；只有一侧变化不能写成“联合机制已验证”。
 - 若 activation 分支因自适应 hierarchy 完全吸收，记清零翻码原因并关闭本卡，不拆粒度重试。
@@ -255,4 +290,3 @@ L-RB1 只改变静态 W，激活误差保持不变；外部 `21071` 证据描述
   因而把搜索自由度转向离散边界：<https://arxiv.org/abs/2405.16406>。
 - AQLM 的关键启发是应在最终重建目标下联合选择离散码；本计划只借用“低维结构化离散优化”原则，
   不引入其加性码本，因为官方 HiF4 五字段不允许改变表示格式：<https://arxiv.org/abs/2401.06118>。
-
