@@ -16,7 +16,9 @@ v191 梯度方向接近零，v192 训练 loss 明显下降但两个 hard-output 
 11s 增至 19s，活动计划已执行 L-AW1/v204 部署坐标对齐 A@W 拟合卡；候选六 shard 无 hard-output
 变化，已归档为 `REJECTED`，根继续为 v202。L-AW2/v205 的 HiF4 8 元素层级组拟合和
 L-AW3/v206 的输出组×64-block 拟合也已完成，均无 hard-output 变化并以带 `rejected` 的目录归档；
-根继续为 v202。
+L-AW4/v207 的 4 元素细粒度组拟合同样已完成，仍无 hard-output 变化并以带 `rejected` 的目录归档。
+L-AW5/v208 的输出行 8-group × 64-block 拟合也已完成，仍无 hard-output 变化并以带 `rejected`
+的目录归档。根继续为 v202，下一张卡为 L-AW6/v209 4 元素组广播 additive A@W 拟合。
 
 ## 历史计划索引（仅证据）
 

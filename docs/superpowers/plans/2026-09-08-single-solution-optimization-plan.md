@@ -178,6 +178,18 @@ v204 已完成上述固定实现：`eval-v3` 4B Linear-only 六 shard 的 336 �
 一次批量闭式求解、一次合法五字段重编码和全校准 hard-output gate，不扫描组大小或参数邻域。
 v206 已完成：六 shard 336 个 case 与 v202 逐位相同，hard-output gate 未接受任何部署变化，
 具体实现关闭为 `REJECTED`，归档目录名含 `rejected`，官方状态为 `unregistered/NA`，根继续为 v202。
+随后执行的 **L-AW4 / v207：4 元素细粒度组 A@W 拟合**固定每个部署自然坐标 4 元素组一个
+标量，仍从 v202 使用全部校准行并做一次合法重编码与 hard-output gate；不扫描组大小或参数邻域。
+v207 已完成：六 shard 336 个 case 与 v202 逐位相同，hard-output gate 未接受任何部署变化，
+具体实现关闭为 `REJECTED`，归档目录名含 `rejected`，官方状态为 `unregistered/NA`，根继续为 v202。
+下一张卡注册为 **L-AW5 / v208：输出行 8-group × 64-block A@W 拟合**，固定输出行组大小为 8，
+每个输出组共享输入 64-block 标量；使用一次批量闭式求解、一次合法五字段重编码和 hard-output gate，
+不扫描组大小或参数邻域。
+v208 已完成：六 shard 336 个 case 与 v202 逐位相同，hard-output gate 未接受任何部署变化，
+具体实现关闭为 `REJECTED`，归档目录名含 `rejected`，官方状态为 `unregistered/NA`，根继续为 v202。
+下一张卡注册为 **L-AW6 / v209：4 元素组广播 additive A@W 拟合**，固定每个部署自然坐标 4 元素
+组一个共享于所有输出行的加性参数；以真实输出域一次闭式求解，随后一次合法五字段重编码和 hard-output
+gate，不扫描组大小、幅度或参数邻域。
 
 ## 8. 当前执行队列
 
@@ -192,6 +204,9 @@ v206 已完成：六 shard 336 个 case 与 v202 逐位相同，hard-output gate
 | 7 | L-AW1 / v204 部署坐标对齐 64-block A@W 拟合 | 已完成；六 shard 与 v202 逐位相同，`REJECTED` | 保持 v202 根；不重试该具体实现 |
 | 8 | L-AW2 / v205 HiF4 8 元素层级组 A@W 拟合 | 已完成；六 shard 与 v202 逐位相同，`REJECTED` | 保持 v202 根；不重试该具体实现 |
 | 9 | L-AW3 / v206 输出组 × 64-block A@W 拟合 | 已完成；六 shard 与 v202 逐位相同，`REJECTED` | 保持 v202 根；不重试该具体实现 |
+| 10 | L-AW4 / v207 HiF4 4 元素细粒度组 A@W 拟合 | 已完成；六 shard 与 v202 逐位相同，`REJECTED` | 保持 v202 根；不重试该具体实现 |
+| 11 | L-AW5 / v208 输出行 8-group × 64-block A@W 拟合 | 已注册；固定输出行组 8，从 v202 构建 | 实测、归档并提交；不等待官方 |
+| 12 | L-AW6 / v209 4 元素组广播 additive A@W 拟合 | 已注册；固定 4 元素组，从 v202 构建 | 实测、归档并提交；不等待官方 |
 
 ## 9. 归档
 
