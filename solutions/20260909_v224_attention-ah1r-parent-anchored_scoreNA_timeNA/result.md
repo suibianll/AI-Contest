@@ -3,7 +3,7 @@
 - run_id: `attention-ah1-parent-anchored`
 - parent: 根 `solution.py` SHA256 `56dc805d6e5a3aef896db8021045740292735725d688b48e3d4393e55efcb2bd`（未修改）
 - candidate: `solution.py` SHA256 `8329676485cc9ecb8d4ed2259812dd6d7015da97f3ec241a2a68d715183ec019`
-- official_status: `unregistered/NA`
+- official_status: `TIMEOUT(>300s)`（用户回传，2026-09-09）；只关闭该实现
 - 机制：v223 A-H1 从最后一步 Adam 更新前的 `theta_pre/center_pre` 生成事件，`t=0` 不是部署父状态。
   v224 改为：(1) 读取 gate 选中的**实际部署** `R_parent/center_parent`（identity 分支为 identity/zero）；
   (2) 在部署的**旋转前坐标系**重算 calibration fold 的 mean output gradient；
@@ -46,7 +46,8 @@
 ## 裁决
 
 - 合法、可达、非等价（6/6 层翻码），按活动计划 §3 归档为 v224 并交官方独立裁决。
-- 机制效应接近零，若官方非正向则关闭“全局方向最近阈值”机制，不改事件数/步长/窗口/seed 重试。
+- **官方回传 `TIMEOUT(>300s)`**：只关闭该计算实现；与 v223 同成本类（约 3000 万次事件生成）。
+  同成本类事件搜索重试前必须先降校准成本，不缩事件数/步长/窗口/seed 重试。
 
 ## 证据位置
 

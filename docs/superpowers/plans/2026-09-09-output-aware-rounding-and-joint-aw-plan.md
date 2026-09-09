@@ -10,7 +10,7 @@
 
 | 卡 | 实际自由度 | 结果 | 说明 |
 |---|---|---|---|
-| v224 / A-H1R | 全局 Q/K 正交切空间上的最近 hard event | 六 shard `≈+1.2e-6` | 修正了父状态错误，但效应在数值噪声底 |
+| v224 / A-H1R | 全局 Q/K 正交切空间上的最近 hard event | 六 shard `≈+1.2e-6`；官方 `TIMEOUT(>300s)` | 修正了父状态错误，但效应在数值噪声底；与 v223 同成本类，只关闭该实现 |
 | v225 / A-H3 | 把同一正交事件拆到 GQA group | `+3.11e-5` | 18/24 group 接受，但收益几乎全部来自 shard5 |
 | R3 / A-C76.5 | 用输出残差生成 C76.4 signed-Hadamard 候选 | `NO_EFFECT` | 候选可达且非重复，但六层均未被选择 |
 
@@ -53,7 +53,7 @@
 - 标量 gain/additive 会在重新计算 E6M2 和层级 scale 后被吸收；舍入阈值直接改变 floor/ceil 选择，
   无法由一个公共 scale 还原。
 - v224/v225/R3 改的是输入坐标；本计划改的是量化决策边界。
-- AW8 为每个权重元素自由贪心，容易过拟合；本计划每层最多 12 个或 24 个共享参数，修改受结构约束。
+- AW8 为每个权重元素自由贪心，容易过拟合；本计划每层最多 12 个或 18 个共享参数，修改受结构约束。
 - v170 是固定 E6M2 offset，v171 是 moment-matched 单阈值；本计划保持 E6M2 不变，以最终
   A@W/Attention output 残差分别学习每个非零 mantissa 区间的边界。
 - `m=0` 的零码插入保持父规则 `tau[0]=0.5`，不重试已经失败的 v220 零值到最小非零码机制。
@@ -163,6 +163,8 @@
 - 工作目录：`workbench/full_solution/attention-arb1-qk-rounding/`。
 - 记录每层 12 个边界、attempted/accepted、Q/K changed mantissa、最终 calibration/holdout output delta、
   shard paired delta 和额外 API 时间。
+- 必须分别记录**固定 hierarchy** 与**随阈值重选 hierarchy**两种读数下的 Q/K changed mantissa；若重选后
+  changed mantissa 归零或收益被自适应层级吸收，记 `ABSORBED_BY_HIERARCHY` 并关闭本卡，不拆粒度重试。
 - 全六 shard `accepted=0` 或输出逐位相同则关闭“Q/K 共享输出舍入边界”；不继续拆 per-head、per-group、
   per-sign 表。形成合法非等价完整候选后只归档一个版本并交官方裁决。
 
@@ -202,7 +204,7 @@ L-RB1 只改变静态 W，激活误差保持不变；外部 `21071` 证据描述
 
 | 顺序 | 工作 | 当前状态 | 完成后动作 |
 |---:|---|---|---|
-| 0 | 收口 v223/v224/v225/R3 事实并归档旧计划 | DONE | 进入 L-RB1 |
+| 0 | 收口 v223/v224/v225/R3 事实并归档旧计划 | DONE | v224 官方 TIMEOUT 已登记；进入 L-RB1 |
 | 1 | L-RB1 静态权重有符号输出舍入边界 | READY | 归档一个代表版本或写明 `NO_REACHABLE_GAIN`，随后进入 A-RB1 |
 | 2 | A-RB1 Q/K 联合 softmax 输出舍入边界 | WAITING | 归档一个代表版本或关闭该机制，随后进入 L-JRB1 |
 | 3 | L-JRB1 A/W 双量化器联合边界 | WAITING | 归档一个代表版本或关闭该机制；三卡结束后重新分析 |

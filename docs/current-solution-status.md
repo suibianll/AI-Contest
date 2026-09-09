@@ -31,7 +31,7 @@
 `TIMEOUT(>300s)`。A-H2 已取消，L-H1 已在残余空间预检关闭。R1/v224（A-H1R 部署父状态锚定）
 已实现并归档：6/6 层合法接受、`t0_identical=1`、changed-code 小范围可解释，六 shard 等权
 `≈+1.2e-6`（hard-output 效应在噪声底），同时移除/旁路四处宽 except 并加动态应用断言；官方
-`unregistered/NA`，待裁决。R2/v225（A-H3 GQA-group 局部切空间第一事件）已实现并归档：6/6 层有
+`TIMEOUT(>300s)`，只关闭该实现（与 v223 同成本类）。R2/v225（A-H3 GQA-group 局部切空间第一事件）已实现并归档：6/6 层有
 group 接受（18/24）、`t0_identical=1`，六 shard 等权 `+3.11e-5`（增益集中在 shard5 `+1.96e-4`，
 其余 ±7e-6 近零/微负）；官方 `unregistered/NA`，待裁决。R3/v—（A-C76.5 残差定向 C76.4 候选）
 已关闭为 `NO_EFFECT`：六层残差候选均非重复、可达，但从未被 deployed-MSE 选中，输出与根逐位
