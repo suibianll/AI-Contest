@@ -18,9 +18,8 @@ v191 梯度方向接近零，v192 训练 loss 明显下降但两个 hard-output 
 L-AW3/v206 的输出组×64-block 拟合也已完成，均无 hard-output 变化并以带 `rejected` 的目录归档；
 L-AW4/v207 的 4 元素细粒度组拟合同样已完成，仍无 hard-output 变化并以带 `rejected` 的目录归档。
 L-AW5/v208 的输出行 8-group × 64-block 拟合也已完成，仍无 hard-output 变化并以带 `rejected`
-的目录归档。L-AW6/v209 的 4 元素组广播 additive 拟合也已完成，仍无 hard-output 变化并以带
-`rejected` 的目录归档。根继续为 v202，下一张卡为 L-AW7/v210 按输出行独立的 4 元素组 additive
-A@W 拟合。
+的目录归档。L-AW6/v209 的 4 元素组广播 additive 拟合和 L-AW7/v210 的按输出行独立 4 元素组
+additive 拟合也已完成，仍无 hard-output 变化并以带 `rejected` 的目录归档。根继续为 v202。
 
 ## 历史计划索引（仅证据）
 
