@@ -65,6 +65,7 @@
 | [v219](20260909_v219_attention-c76-2-fisher_rejected_scoreNA_timeNA/result.md) | C76.2 固定 output-Fisher Q/K importance，blend `0.5` | shard0 `0`（0/0/12），无 hard-output 变化；`REJECTED`，官方 `unregistered/NA` |
 | [v220](20260909_v220_linear-aw13-zero-sign_rejected_scoreNA_timeNA/result.md) | L-AW13 输出感知零值到最小有符号码插入 | shard0 `-0.000051551`（14/42/0），实际翻码但整体回归；`REJECTED`，官方 `unregistered/NA` |
 | [v221](20260909_v221_linear-aw14-global-residual-basis_rejected_scoreNA_timeNA/result.md) | L-AW14 共享 rank-8 输出残差基 A@W 拟合 | shard0 `-0.032568`（0/56/0），全部回归；`REJECTED`，官方 `unregistered/NA` |
+| [v222](20260909_v222_attention-a2-correctness-fix_scoreNA_timeNA/result.md) | FIX-A2：A2 mean-gradient + 异常传播修复（无新算法） | shard0 `−0.000108`、shard1 `−0.015073`，评测器 2 shard 提前停止；部署输出真实变化但本地负向；官方 `unregistered/NA`，按计划提交官方裁决 |
 
 ### 标准 Linear + Attention 侧隔离官方分（2026-09-09 回传）
 
