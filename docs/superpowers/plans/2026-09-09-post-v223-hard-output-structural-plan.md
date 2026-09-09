@@ -55,6 +55,9 @@ Attention output 或 Linear `A@W` 输出误差是否变化。
 - 每个可用事件确实跨过预测边界；相邻事件槽的 Q/K hard-code 状态不能完全相同。
 - changed-code 由事件集合逐项解释；若再次出现由父状态错位造成的整步回退，判实现错误并修复，
   不进入 4B。
+- R1 候选必须移除或旁路从根继承的 `hif4_calibration_attention` 宽泛 `except Exception`（两处：
+  v189 校准调用回退与 A2 训练失败回退），并在 shard0 记录中断言 `a2_arm != "fallback"`；否则
+  `t=0` 一致性证明可能在 identity/identity 上平凡通过而掩盖真实错误。
 
 ### 记录与结束
 
@@ -89,8 +92,8 @@ seed 重试，已提交候选仍等待官方独立裁决。
 
 实现目录：`workbench/full_solution/attention-c77-residual-directed-rotation/`。
 
-依据：v205 的减法定价表明，删除 C76.4 后官方少 84 分，因此保留 C76.4；本卡不改变其动态路径，
-只增加一个与现有固定 seed 不同、由最终输出残差解析生成的校准候选。
+依据：减法定价候选 `v205_attn-no-c764-rotation-search` 表明，删除 C76.4 后官方少 84 分，因此保留
+C76.4；本卡不改变其动态路径，只增加一个与现有固定 seed 不同、由最终输出残差解析生成的校准候选。
 
 ### 实现
 

@@ -23,6 +23,12 @@
 以下候选均从当前根独立构建；目录名中的 `scoreNA_timeNA` 是归档时状态，实际官方回传以表格和各自
 `result.md` 为准。
 
+> **版本号冲突说明（2026-09-09）：** `v204` 与 `v205` 各有两个并行候选——减法定价系与 AW 拟合系。
+> 版本号相同但目录后缀不同，均为独立合法归档，**不重命名目录**。引用时必须写全目录名或注明机制，
+> 不得只写 `v204`/`v205`。对应关系：
+> `20260909_v204_linear-no-rank2-residual` / `20260909_v205_attn-no-c764-rotation-search` 属**减法定价系**；
+> `20260909_v204_linear-aw1-deployed-coordinate_rejected` / `20260909_v205_linear-aw2-hierarchy-gain_rejected` 属 **AW 拟合系**。
+
 | 版本 | 机制 | 当前结果 |
 |---|---|---|
 | [v190](20260908_v190_attn-diag-reciprocal-balance_scoreNA_timeNA/result.md) | diag reciprocal balance | 官方 `TIMEOUT`（`>300s`）；本地 gate 拒绝、回退父 |
@@ -34,8 +40,8 @@
 | [v196](20260908_v196_attn-reciprocal-residual-original-split_scoreNA_timeNA/result.md) | Q/K 互逆残差原始 4+1 配置 | shard0 delta `0`（gate 全拒绝回退父，calibration +37.7%）；官方 `TIMEOUT`（`>300s`），根不变 |
 | [v197](20260909_v197_linear-aw1-block-gain_scoreNA_timeNA/result.md) | 64-block 标量增益 A@W 闭式拟合 | 官方 `17277/285s`（相对根 −776/−4s），REJECTED；本地 shard0 −0.2077（0/56/0）方向一致 |
 | [v198](20260909_v198_attn-gqa-reciprocal-diag_scoreNA_timeNA/result.md) | GQA 组共享互逆对角（解析初始化+smooth-max+硬门控，冻结 V） | 官方 `TIMEOUT`（`>300s`）；本地 shard0 delta mean `−0.001693`（6/6/0），无精度数据点 |
-| [v204](20260909_v204_linear-no-rank2-residual_scoreNA_timeNA/result.md) | 减法定价：关 L-R2 rank-2 残差段 | shard0 delta mean `+0.000134`（30/26/0）；官方 `18053/286s`（相对根 `0/+5s` 噪声）→ rank-2 段官方定价 **0 分**，机制关闭 |
-| [v205](20260909_v205_attn-no-c764-rotation-search_scoreNA_timeNA/result.md) | 减法定价：关 C76.4 H16/H32 旋转搜索（Attention 校准 ~30%） | shard0 delta `0`；官方 `17969/275s`（相对根 `−84/−6s`）→ C76.4 官方定价 **+84 分 / ~6s**（14 分/秒，最高效机制），必须保留 |
+| [v204（减法定价）](20260909_v204_linear-no-rank2-residual_scoreNA_timeNA/result.md) | 减法定价：关 L-R2 rank-2 残差段 | shard0 delta mean `+0.000134`（30/26/0）；官方 `18053/286s`（相对根 `0/+5s` 噪声）→ rank-2 段官方定价 **0 分**，机制关闭 |
+| [v205（减法定价）](20260909_v205_attn-no-c764-rotation-search_scoreNA_timeNA/result.md) | 减法定价：关 C76.4 H16/H32 旋转搜索（Attention 校准 ~30%） | shard0 delta `0`；官方 `17969/275s`（相对根 `−84/−6s`）→ C76.4 官方定价 **+84 分 / ~6s**（14 分/秒，最高效机制），必须保留 |
 
 ## 2026-09-09 持续优化候选
 
@@ -45,8 +51,8 @@
 | [v201](20260909_v201_attn-hard-logit-residual_scoreNA_timeNA/result.md) | hard-logit residual + softmax Jacobian/V 加权候选排序 | 4/6 层产生接受状态，但六 shard 代理 `−0.0001206117`；`REJECTED`，官方 `TIMEOUT` |
 | [v202](20260909_v202_linear-sample-energy-fusion_scoreNA_timeNA/result.md) | Linear sample-energy 编译与首次校准解码融合 | 336 case 逐位等价；官方 `18053/281s`，同分快 8s，`RETAINED` 并切换根 |
 | [v203](20260909_v203_attn-legal-hierarchy-selection_scoreNA_timeNA/result.md) | 联合 Q/K 合法 hierarchy 邻码 hard-output 选择 | 仅 shard5 变化且 `−0.0065789294`，总代理 `−0.0010964882`；`REJECTED`，官方 `TIMEOUT` |
-| [v204](20260909_v204_linear-aw1-deployed-coordinate_rejected_scoreNA_timeNA/result.md) | 部署坐标对齐的 64-block 标量 A@W 拟合 | 六 shard 336 case 与 v202 逐位相同、无 hard-output 增益；`REJECTED`，官方 `unregistered/NA` |
-| [v205](20260909_v205_linear-aw2-hierarchy-gain_rejected_scoreNA_timeNA/result.md) | HiF4 8 元素层级组标量 A@W 拟合 | 六 shard 336 case 与 v202 逐位相同、无 hard-output 增益；`REJECTED`，官方 `unregistered/NA` |
+| [v204（AW1）](20260909_v204_linear-aw1-deployed-coordinate_rejected_scoreNA_timeNA/result.md) | 部署坐标对齐的 64-block 标量 A@W 拟合 | 六 shard 336 case 与 v202 逐位相同、无 hard-output 增益；`REJECTED`，官方 `unregistered/NA` |
+| [v205（AW2）](20260909_v205_linear-aw2-hierarchy-gain_rejected_scoreNA_timeNA/result.md) | HiF4 8 元素层级组标量 A@W 拟合 | 六 shard 336 case 与 v202 逐位相同、无 hard-output 增益；`REJECTED`，官方 `unregistered/NA` |
 | [v206](20260909_v206_linear-aw3-output-group-gain_rejected_scoreNA_timeNA/result.md) | 输出组 × 64-block 标量 A@W 拟合 | 六 shard 336 case 与 v202 逐位相同、无 hard-output 增益；`REJECTED`，官方 `unregistered/NA` |
 | [v207](20260909_v207_linear-aw4-fine-group-gain_rejected_scoreNA_timeNA/result.md) | HiF4 4 元素细粒度组标量 A@W 拟合 | 六 shard 336 case 与 v202 逐位相同、无 hard-output 增益；`REJECTED`，官方 `unregistered/NA` |
 | [v208](20260909_v208_linear-aw5-output-fine-group-gain_rejected_scoreNA_timeNA/result.md) | 输出行 8-group × 64-block 标量 A@W 拟合 | 六 shard 336 case 与 v202 逐位相同、无 hard-output 增益；`REJECTED`，官方 `unregistered/NA` |
