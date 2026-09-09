@@ -1,7 +1,8 @@
 # v223 后完整根离散输出与结构优化计划
 
 > ACTIVE，2026-09-09。所有正式候选从当前最高分完整根 `solution.py` 构建：
-> v202 Linear + v195 Attention，官方 `18053/281s`。v222、v223 已归档，不修改其源码；
+> v202 Linear + v195 Attention，官方 `18053/281s`，SHA256
+> `56DC805D6E5A3AEF896DB8021045740292735725D688B48E3D4393E55EFCB2BD`。v222、v223 已归档，不修改其源码；
 > v222 官方 `18015/293s`，已 REJECTED，根不变；v223 官方结果到达时只补结果记录，
 > 不阻塞本计划继续执行。
 
@@ -13,11 +14,12 @@
    gate 选中的部署父状态。数百万 Q/K 翻码主要来自回退最后一步 Adam，而不是跨过一个量化阈值。
 2. 全局 rotation 方向同时改变所有 GQA group，容易让少数有益翻码被大量无关翻码抵消。
 3. 过去大量 Attention 候选只是在互逆 scale、步数、窗口或槽位上换参数；这类邻域已经关闭。
-4. Linear 的标量 gain/additive 会被自适应 scale 吸收，逐码贪心又容易拟合校准窗口；后续只能做
-   有共享结构、实际改变合法 hard code 的更新。
+4. 官方样例为 50 Linear + 250 Attention，Linear 场景占比小，应优先优化 Attention。Linear 的标量
+   gain/additive 会被自适应 scale 吸收，逐码贪心又容易拟合校准窗口；本计划不新增 Linear 卡，
+   该约束留给下一计划。
 
 本轮不再优化 smooth loss 本身。每张卡都直接回答：部署字段是否变化、哪些码变化、最终
-Attention output 或 Linear `A@W` 输出误差是否变化。
+Attention output 误差是否变化。三张卡全部针对 Attention，与官方样例权重一致。
 
 ## 2. 固定执行方式
 
@@ -123,17 +125,18 @@ C76.4；本卡不改变其动态路径，只增加一个与现有固定 seed 不
 一个正式候选并提交官方，再补其余五个 shard；六层全部重复或全部不被选择时关闭该机制，不继续换
 eigensolver、seed、block size 或符号规则。
 
-## 7. 明确不执行的工作
+## 6. 明确不执行的工作
 
 - 不修改 v222、v223 或任何 `solutions/` 已归档源码。
-- 不启动 A-H2；v223 的 center 梯度只有约 `2e-8` 到 `4e-8`，没有可解释方向。
+- 不启动 A-H2；v223 的 center 梯度只有约 `2e-8` 到 `4e-8`（证据：
+  `workbench/full_solution/attention-ah1-threshold-events/result.md`），没有可解释方向。
 - 不重开 Q/K 互逆 scale/残差的步数、窗口、block、slot、clamp 邻域。
 - 不重开 Linear 标量 gain/additive、AW8 任意逐码贪心、L-H1 普通逐列正负码重选。
 - 不重开 v220 零码到最小非零有符号码插入；改变 64-block/8-group 粒度仍属于同一机制邻域。
 - 不运行 0.5B、OOD、GPT-2/opt、fresh timing，不用本地分数预测官方分数或本地秒数否决提交。
 - v222 已官方 REJECTED；不为等待 v223 官方结果暂停开发，也不把 v223 未确认结果并入当前根。
 
-## 8. 版本、归档和结果更新
+## 7. 版本、归档和结果更新
 
 1. 开发文件只放 `workbench/full_solution/<name>/`，包含构建脚本、配置和一份结果摘要。
 2. 通过本卡实现检查并形成一个非等价完整候选后，才分配下一个未使用版本；正式目录一次性写入
@@ -145,7 +148,7 @@ eigensolver、seed、block size 或符号规则。
 5. 每轮结束清理死候选的 calibration cache，只保留当前根与回退根；并发时使用
    `--min-age-hours 2`，不得删除 dense 主缓存 `qwen3.5-4b-proxy-v2.pt`。
 
-## 9. 当前执行队列
+## 8. 当前执行队列
 
 | 顺序 | 工作 | 开始条件 | 完成条件 | 下一动作 |
 |---:|---|---|---|---|
