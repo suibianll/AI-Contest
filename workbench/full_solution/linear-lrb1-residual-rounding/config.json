@@ -1,0 +1,13 @@
+{
+  "run_id": "linear-lrb1-residual-rounding",
+  "version": "v226",
+  "mechanism": "shared output-residual weight rounding boundaries",
+  "parent": "solution.py",
+  "parent_sha256": "56dc805d6e5a3aef896db8021045740292735725d688b48e3d4393e55efcb2bd",
+  "candidate_sha256": "31d08ce90140e1527b5ffbff9e92e27d87b9d25d6239b0560daf65f6ed468e3d",
+  "fit_data": "all calibration pairs supplied by eval-v3, case-equal MSE",
+  "coordinate": "frozen parent deployed weight coordinate; one boundary per (sign, mantissa code) class",
+  "solver": "64 fixed fractional buckets, analytic argmin with parent tau=0.5 fallback, one exact quadratic acceptance",
+  "candidate_count": 1,
+  "official_status": "unregistered/NA"
+}
