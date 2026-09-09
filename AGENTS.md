@@ -183,6 +183,9 @@ Attention 改为 `--attention-only`；完整集成审计改为 `--scenario both`
   见 `logs/execution/2026-09-09-standard-linear-attention-side-scores.md`。
 - v194（A2/R3 校准等价去重）官方 `18032/285s`，同分慢 5s，`REJECTED_TIME`；等价提速路线不成立。
 - v196、v198、v199、v201、v203 官方均 `TIMEOUT(>300s)`，各只关闭该实现，不缩窗/减步/减轮重试。
+- v223（A-H1 阈值事件搜索，8 槽×folds≈43 次完整部署路径窗口评估/层）官方 `TIMEOUT(>300s)`，
+  本地六 shard mean `+0.003209` 未获官方定价；只关闭该实现，同成本类事件搜索重试前必须先降
+  校准成本。
 - v222（FIX-A2：A2 mean-gradient + 异常传播修复）官方 `18015/293s`（−38/+12s）REJECTED，
   只关闭该实现；方向定义问题由新计划的部署父状态锚定（A-H1R）重新处理。
 - v205（减法定价：关 C76.4 旋转搜索）官方 `17969/275s`（−84/−6s）→ C76.4 官方价值 +84 分，

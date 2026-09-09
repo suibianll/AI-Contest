@@ -88,3 +88,10 @@
 - 官方状态：`unregistered/NA`，按计划作为单一代表候选交官方裁决。
 - 证据：`workbench/full_solution/attention-ah1-threshold-events/`、
   `artifacts/proxy_v3/full_solution/attention-ah1-threshold-events-shard0/` 与 `-all6/`。
+
+## 官方结果（更新）
+
+- **TIMEOUT（>300s）**（2026-09-09 用户回传），无分数，根不变。
+- 结论：阈值事件搜索的校准成本（8 槽 × folds + 参考态 ≈ 43 次完整部署路径窗口评估/层）
+  在官方侧致命，本地六 shard 的精度信号（mean +0.0032）未能获得官方定价。
+  只关闭该实现；同成本类的事件搜索实现重试前必须先降校准成本。
