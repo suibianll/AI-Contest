@@ -1,0 +1,21 @@
+{
+  "status": "passed",
+  "device": "cuda",
+  "c765_blocks": [
+    16,
+    32
+  ],
+  "residual_signs_shape": [
+    2,
+    64
+  ],
+  "qk_inner_product_max_error": 1.9073486328125e-06,
+  "checks": {
+    "six_api_import": true,
+    "residual_signs_valid": true,
+    "residual_signs_not_seed_duplicate": true,
+    "qk_inner_product_preserved": true,
+    "legal_attention_state": true,
+    "finite_outputs": true
+  }
+}

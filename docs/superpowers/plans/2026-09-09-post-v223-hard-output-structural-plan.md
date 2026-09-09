@@ -155,7 +155,7 @@ eigensolver、seed、block size 或符号规则。
 | 0 | v222 结果与 v223 元数据收口 | DONE | v222 公共记录已同步；v223 元数据已归档 | 进入 R1 |
 | 1 | R1 A-H1R 父状态锚定 | DONE | v224 已归档：正确性证明、shard0、六 shard 均完成（6/6 层接受、`t0_identical=1`，六 shard 等权 `≈+1.2e-6` 在噪声底）；官方 `unregistered/NA` 待裁决 | 进入 R2 |
 | 2 | R2 A-H3 group 局部事件 | DONE | v225 已归档：6/6 层有 group 接受（18/24）、`t0_identical=1`，六 shard 等权 `+3.11e-5`（集中在 shard5 `+1.96e-4`）；官方 `unregistered/NA` 待裁决 | 进入 R3 |
-| 3 | R3 A-C76.5 残差定向 C76.4 | R2 已提交或关闭 | 新候选去重、shard0、归档/提交；其余 shard 后补 | 汇总官方结果并制定新计划 |
+| 3 | R3 A-C76.5 残差定向 C76.4 | DONE | 关闭 `NO_EFFECT`：六层残差候选均非重复、可达，但从未被 deployed-MSE 选中，输出与根逐位相同；未分配版本、未提交 | 三卡结束，归档本计划并制定新计划 |
 
 三张卡全部结束后，本计划立即归档。不得在表尾继续追加相似参数变体；下一计划只依据这三张卡的
 hard-output、官方结果和实际代码机制重新制定。
