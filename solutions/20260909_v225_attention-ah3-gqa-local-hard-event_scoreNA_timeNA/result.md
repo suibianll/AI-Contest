@@ -3,7 +3,7 @@
 - run_id: `attention-gqa-local-hard-event`
 - parent: 根 `solution.py` SHA256 `56dc805d6e5a3aef896db8021045740292735725d688b48e3d4393e55efcb2bd`（未修改）
 - candidate: `solution.py` SHA256 `eac65bd199369428bc979be8486d2cdcfc60d804c5ce06edcf3bafcb45beb767`
-- official_status: `unregistered/NA`
+- official_status: `TIMEOUT(>300s)`（用户回传，2026-09-09）；只关闭该实现
 - 机制：R1 用单一全局切空间方向，少数有用翻码可能被其他 KV group 的大量无关翻码抵消。A-H3 改为：
   1. 从部署根 Q/K 状态出发，冻结 V；
   2. KV group 按索引固定顺序处理一轮，每个 group 用部署父梯度的**本 group 切空间块**
@@ -43,7 +43,8 @@
 ## 裁决
 
 - 合法、可达、非等价（6/6 层有 group 接受，共 18/24 group）；按活动计划 §4 归档为 v225 并交官方裁决。
-- 机制效应小且集中于单层；若官方非正向，关闭“head 局部正交事件”机制，不改 group 顺序/轮数/事件数重试。
+- **官方回传 `TIMEOUT(>300s)`**：只关闭该计算实现；与 v223/v224 同成本类（逐 group 事件生成 +
+  完整路径评估）。同成本类事件搜索重试前必须先降校准成本，不改 group 顺序/轮数/事件数重试。
 
 ## 证据位置
 
