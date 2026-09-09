@@ -10,7 +10,7 @@
 > `D66128A62E7E068EDC50C91F4D8E212F586A6EDCAEE5BEA7D3564166E258B0F6`。
 
 > 当前测试按[4B指引](4b-panel-testing-guide.md)执行。本文历史0.5B、OOD、跨模型和时间预测结果仅作证据，不构成新测试命令或门禁。
-> 当前规则优先级为 `AGENTS.md` → 4B 指引 → [当前最高分根持续优化计划](superpowers/plans/2026-09-09-current-root-correctness-and-optimization-plan.md)
+> 当前规则优先级为 `AGENTS.md` → 4B 指引 → [v223 后完整根离散输出与结构优化计划](superpowers/plans/2026-09-09-post-v223-hard-output-structural-plan.md)
 > → workbench 状态；侧队列和工作包不得重新定义门禁。
 
 更新：2026-09-09。
@@ -25,9 +25,10 @@
 
 ## 0.1 当前计划状态（2026-09-09）
 
-当前只按[当前最高分根持续优化计划](superpowers/plans/2026-09-09-current-root-correctness-and-optimization-plan.md)推进。
-当前根不变；FIX-A2 已在新的 workbench 候选中完成代码修复和小张量验证，尚未运行目标侧 shard0，
-也未分配正式版本或官方结果。修复没有修改任何 `solutions/` 归档源码。
+当前只按[v223 后完整根离散输出与结构优化计划](superpowers/plans/2026-09-09-post-v223-hard-output-structural-plan.md)推进。
+当前根不变。FIX-A2 已归档为 v222（目标侧前两 shard 本地负向），A-H1 已归档为 v223（六 shard
+mean `+0.003209`，但事件路径错误地从最后一步 Adam 更新前状态出发）。A-H2 已取消，L-H1 已在
+残余空间预检关闭。下一步从当前完整根新建 A-H1R，不修改 v222/v223 归档源码。
 
 - 所有候选从根完整方案构建，每次只改一侧、一个机制、一个固定配置。
 - 官方前先做六 API contract smoke 和目标侧 shard0；当前活动计划的算法开发卡随后运行目标侧六 shard，

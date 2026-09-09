@@ -6,16 +6,20 @@
 不再运行 0.5B、逐候选 OOD、GPT-2/opt 或 fresh-default 计时；本地时间公式和 280s 门退役。
 官方提交无限制，官方硬限 300s。评估实现说明见 [proxy-v3](../../proxy-v3.md)。
 
-**当前唯一活动计划：** [当前最高分根持续优化计划](2026-09-09-current-root-correctness-and-optimization-plan.md)。
+**当前唯一活动计划：** [v223 后完整根离散输出与结构优化计划](2026-09-09-post-v223-hard-output-structural-plan.md)。
 
-当前根保持 v202 Linear + v195 Attention，官方 `18053/281s`。旧计划已转入历史归档；当前先在
-新的 workbench 候选中修复 A2 多窗口梯度归一化、返回类型和静默异常，再按真实 hard-output
-执行量化阈值事件搜索、K-center 离散更新和真正逐列非对称 Linear 量化。官方正向前不覆盖根，
-不修改 `solutions/` 下任何已归档源码。
+当前根保持 v202 Linear + v195 Attention，官方 `18053/281s`。v222/v223 已完成并保留为归档；
+当前依次执行部署父状态锚定阈值事件、GQA-group 局部 hard-event、残差定向 C76.4 正交候选和
+Linear 共享层级零码激活。所有正式候选从当前完整根构建，官方正向前不覆盖根，不修改
+`solutions/` 下任何已归档源码。
 
 ## 历史计划索引（仅证据）
 
 以下旧父、旧面板、时间预测与关闭记录是历史快照，不提供当前执行指令；当前规则只见上方入口。
+
+上一轮 [当前最高分根正确性与优化计划](../archive/plans/2026-09-09-current-root-correctness-and-optimization-plan-completed.md)
+已完成：FIX-A2/A-H1 归档为 v222/v223，A-H2 取消，L-H1 在预检关闭；其中 v223 的部署父状态
+起点错误由新活动计划单独修正，归档源码不再修改。
 
 上一轮 [Hard-Output Attention + Linear 优化计划](../archive/plans/2026-09-08-single-solution-optimization-plan-superseded-20260909.md)
 已执行至 v221 后结束。其长队列、侧时间推算和后续卡片均不再提供当前指令。
