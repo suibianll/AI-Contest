@@ -122,4 +122,4 @@
 | 1 | FIX-A2 目标/异常修复 | 已归档 v222；shard0 `−0.000108`、shard1 `−0.015073`（2 shard 提前停止），非逐位等价 | 待官方回传裁决 |
 | 2 | A-H1 量化阈值事件搜索 | 已归档 v223；六 shard mean `+0.003209`（median 0），5/6 层接受，3/5 holdout 转劣 | 待官方回传裁决 |
 | 3 | A-H2 K-center 离散坐标 | **不启动**：A-H1 归因不支持——`||g_center||≈2–4e-8`（噪声方向），接受事件 Q/K 同时大量翻码，收益不来自 center | — |
-| 4 | L-H1 逐列非对称权重量化 | 未开始 | Attention 两项结束后执行 |
+| 4 | L-H1 逐列非对称权重量化 | **预检关闭**：表达性通过（EXPRESSIBLE），残余空间预检 `NO_DISTINCT_RESIDUAL`——4096 个结构化逐列非对称状态 0 改善（最优仍 +18.1% 劣于根），仅存改善属已关闭的 AW8 逐码形态；证据 `workbench/full_solution/linear-lh1-column-asymmetric/precheck.json` | 已关闭，无候选 |

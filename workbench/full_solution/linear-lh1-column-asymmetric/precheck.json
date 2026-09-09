@@ -1,0 +1,36 @@
+{
+  "device": "cpu",
+  "seed": 20260909,
+  "precheck_a": {
+    "verdict": "EXPRESSIBLE",
+    "legal_five_fields": true,
+    "decoded_differs_from_root": true,
+    "changed_elements": 56,
+    "definition": "same input column: positive and negative weights may take different magnitude codes; output stays the legal five fields (no dual scale, no zero-point, no custom decode)"
+  },
+  "precheck_b": {
+    "verdict": "NO_DISTINCT_RESIDUAL",
+    "base_full_output_loss": 32168.95703125,
+    "best_delta": 5826.48828125,
+    "best_relative_improvement": 0.1811214543135469,
+    "best_column": 61,
+    "best_m_pos": 0.75,
+    "best_m_neg": 0.5,
+    "best_is_asymmetric": true,
+    "improving_structured_states": 0,
+    "improving_asymmetric_states": 0,
+    "total_structured_states": 4096,
+    "root_selects_best_state": false,
+    "scalar_formula_direct_check_ok": null,
+    "formula_sanity_check_ok": true,
+    "formula_sanity_direct_delta": 28810.41015625,
+    "formula_sanity_scalar_delta": 28810.4140625,
+    "diag_element_neighbor_improving": 643,
+    "diag_element_neighbor_total": 7467,
+    "diag_element_neighbor_best_delta": -95.00886917114258,
+    "diag_element_neighbor_best_relative": -0.0029534333077335328,
+    "direct_delta": null,
+    "product_preservation_abs_max": 0.08979606628417969,
+    "product_preservation_rel": 0.001878836421626553
+  }
+}
