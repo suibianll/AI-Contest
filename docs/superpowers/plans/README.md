@@ -14,7 +14,9 @@ v191 梯度方向接近零，v192 训练 loss 明显下降但两个 hard-output 
 和最终 Attention output 完成 A1/v199、A3/v201、A4/v203，以及 Linear L-T1/v202；v199/v201/v203
 官方均超时，v202 官方 `18053/281s` 与 v195 同分更快，已切换为当前根并完成归档。时间余量已从
 11s 增至 19s，活动计划已执行 L-AW1/v204 部署坐标对齐 A@W 拟合卡；候选六 shard 无 hard-output
-变化，已归档为 `REJECTED`，根继续为 v202。
+变化，已归档为 `REJECTED`，根继续为 v202。L-AW2/v205 的 HiF4 8 元素层级组拟合和
+L-AW3/v206 的输出组×64-block 拟合也已完成，均无 hard-output 变化并以带 `rejected` 的目录归档；
+根继续为 v202。
 
 ## 历史计划索引（仅证据）
 

@@ -171,6 +171,14 @@ v204 已完成上述固定实现：`eval-v3` 4B Linear-only 六 shard 的 336 �
 没有部署任何 A@W 增益；该具体实现关闭为 `REJECTED`，官方状态为 `unregistered/NA`，不切换根，
 也不扫描其 ridge、clamp、窗口或增益邻域。
 
+在不重试 v204 的前提下，L-AW2/v205 已从同一 v202 根执行 HiF4 第一层 8 元素组标量拟合；
+六 shard 336 个 case 仍逐位相同，具体实现关闭为 `REJECTED`，并归档到带 `rejected` 的目录。
+随后执行的 **L-AW3 / v206：输出组 × 64-block A@W 拟合**固定输出行组大小为 64，
+每个输出组共享一组输入 64-block 标量；从 v202 构建，使用全部 API 输入的全部校准行，
+一次批量闭式求解、一次合法五字段重编码和全校准 hard-output gate，不扫描组大小或参数邻域。
+v206 已完成：六 shard 336 个 case 与 v202 逐位相同，hard-output gate 未接受任何部署变化，
+具体实现关闭为 `REJECTED`，归档目录名含 `rejected`，官方状态为 `unregistered/NA`，根继续为 v202。
+
 ## 8. 当前执行队列
 
 | 顺序 | 工作 | 当前状态 | 完成后动作 |
@@ -182,6 +190,8 @@ v204 已完成上述固定实现：`eval-v3` 4B Linear-only 六 shard 的 336 �
 | 5 | A3 / v201 + A4 / v203 | 已完成；官方均 `TIMEOUT`；A3 代理 `−0.0001206117`，A4 代理 `−0.0010964882` | 归档，停止 reciprocal/邻码族 |
 | 6 | 最佳 Attention + 当前最快 Linear | 当前根为 v202 Linear + v195 Attention，`18053/281s` | 保持根，进入下一张 Linear 卡 |
 | 7 | L-AW1 / v204 部署坐标对齐 64-block A@W 拟合 | 已完成；六 shard 与 v202 逐位相同，`REJECTED` | 保持 v202 根；不重试该具体实现 |
+| 8 | L-AW2 / v205 HiF4 8 元素层级组 A@W 拟合 | 已完成；六 shard 与 v202 逐位相同，`REJECTED` | 保持 v202 根；不重试该具体实现 |
+| 9 | L-AW3 / v206 输出组 × 64-block A@W 拟合 | 已完成；六 shard 与 v202 逐位相同，`REJECTED` | 保持 v202 根；不重试该具体实现 |
 
 ## 9. 归档
 

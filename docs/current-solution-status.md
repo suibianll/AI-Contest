@@ -85,6 +85,13 @@
   重新实现部署坐标对齐的 64-block 标量 A@W 拟合，不复用 v197 的错位实现；六 shard 336
   case 与 v202 逐位相同，硬输出门未接受任何部署变化，候选 `REJECTED`，官方状态保持
   `unregistered/NA`，根继续为 v202。
+- L-AW2/v205 已从 v202 实现 HiF4 8 元素层级组标量 A@W 拟合；六 shard 336 case 仍与
+   v202 逐位相同，硬输出门未接受任何部署变化，已归档为 `REJECTED`（目录名含
+   `rejected`），官方状态为 `unregistered/NA`。下一张独立卡为 L-AW3/v206 输出组×64-block
+   A@W 拟合。
+- L-AW3/v206 已从 v202 实现固定输出组 64 × 输入 64-block 标量 A@W 拟合；六 shard 336 case
+  仍与 v202 逐位相同，硬输出门未接受任何部署变化，已归档为 `REJECTED`（目录名含
+  `rejected`），官方状态为 `unregistered/NA`。根继续为 v202。
 
 以下内容是历史证据索引，不提供当前下一步指令。
 
