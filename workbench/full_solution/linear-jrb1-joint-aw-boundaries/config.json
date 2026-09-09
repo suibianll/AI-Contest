@@ -1,0 +1,28 @@
+{
+  "run_id": "linear-jrb1-joint-aw-boundaries",
+  "version": "v227",
+  "mechanism": "joint activation/weight deployed rounding boundaries (one coordinate-descent round)",
+  "parent": "solution.py",
+  "parent_sha256": "56dc805d6e5a3aef896db8021045740292735725d688b48e3d4393e55efcb2bd",
+  "candidate_sha256": "eaf25a64666a7ef7bb936a2a63fd4aa10559b4c7215941f46fe2074f1f62ba5a",
+  "patches": [
+    "solve-exact-hierarchy signature",
+    "solve-exact-hierarchy mantissa",
+    "dense-to-hif4 signature",
+    "dense-to-hif4 mantissa",
+    "dense-to-hif4 candidate solve",
+    "dense-to-hif4 edge extension",
+    "dense-to-hif4 L1 solve",
+    "activation-gptq-quantize signature",
+    "activation-gptq-quantize single-block pass-through",
+    "activation-gptq-quantize per-block pass-through",
+    "dynamic-activation gptq entry",
+    "dynamic-activation dense entry",
+    "v202 block-order wrapper entry"
+  ],
+  "fit_data": "all Linear calibration windows supplied by eval-v3, case-equal output MSE",
+  "coordinate": "frozen parent deployed A/W pair; 6 sign-shared activation boundaries + 12 sign-split weight boundaries per layer",
+  "solver": "exact g_x = E W_hat, h_x[j] = sum_i W_hat[i,j]^2 and L-RB1 exact quadratic; 64 buckets; one fixed-order round",
+  "candidate_count": 1,
+  "official_status": "unregistered/NA"
+}
