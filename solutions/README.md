@@ -52,6 +52,7 @@
 | [v208](20260909_v208_linear-aw5-output-fine-group-gain_rejected_scoreNA_timeNA/result.md) | 输出行 8-group × 64-block 标量 A@W 拟合 | 六 shard 336 case 与 v202 逐位相同、无 hard-output 增益；`REJECTED`，官方 `unregistered/NA` |
 | [v209](20260909_v209_linear-aw6-broadcast-additive_rejected_scoreNA_timeNA/result.md) | 4 元素组广播 additive A@W 拟合 | 六 shard 336 case 与 v202 逐位相同、无 hard-output 增益；`REJECTED`，官方 `unregistered/NA` |
 | [v210](20260909_v210_linear-aw7-row-local-additive_rejected_scoreNA_timeNA/result.md) | 按输出行独立的 4 元素组 additive A@W 拟合 | 六 shard 336 case 与 v202 逐位相同、无 hard-output 增益；`REJECTED`，官方 `unregistered/NA` |
+| [v211](20260909_v211_linear-aw8-output-code-group_rejected_scoreNA_timeNA/result.md) | 冻结 Q(A) 的输出感知 4 码组联合更新 | shard0 `-0.0171391319`（3/53/0），真实翻码但整体回退；`REJECTED`，官方 `unregistered/NA` |
 
 ### 标准 Linear + Attention 侧隔离官方分（2026-09-09 回传）
 

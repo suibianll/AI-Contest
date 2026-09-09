@@ -20,6 +20,9 @@ L-AW4/v207 的 4 元素细粒度组拟合同样已完成，仍无 hard-output �
 L-AW5/v208 的输出行 8-group × 64-block 拟合也已完成，仍无 hard-output 变化并以带 `rejected`
 的目录归档。L-AW6/v209 的 4 元素组广播 additive 拟合和 L-AW7/v210 的按输出行独立 4 元素组
 additive 拟合也已完成，仍无 hard-output 变化并以带 `rejected` 的目录归档。根继续为 v202。
+L-AW8/v211 的冻结 `Q(A)` 输出感知 4 元素组联合码更新已在 shard0 实际翻码，但 Linear mean
+delta 为 `-0.0171391319`（3/53/0），且校准开销约为父级 3.8 倍，已归档为带 `rejected` 的目录。
+根继续为 v202；下一张注册为 L-AW9/v212 的低自由度共享整数码偏移。
 
 ## 历史计划索引（仅证据）
 

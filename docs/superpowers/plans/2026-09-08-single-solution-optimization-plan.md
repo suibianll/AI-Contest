@@ -197,6 +197,15 @@ v209 已完成：六 shard 336 个 case 与 v202 逐位相同，hard-output gate
 hard-output gate，不扫描组大小、幅度或参数邻域。
 v210 已完成：六 shard 336 个 case 与 v202 逐位相同，hard-output gate 未接受任何部署变化，
 具体实现关闭为 `REJECTED`，归档目录名含 `rejected`，官方状态为 `unregistered/NA`，根继续为 v202。
+随后执行的 **L-AW8 / v211：冻结 Q(A) 的输出感知 4-code-group 联合更新**，固定每个输出行
+选择一个自然 4 元素组；对冻结最终 `Q(A)` 的实际输出残差解一次 4x4 正规方程，直接将连续步
+取整到现有 signed-mantissa 整数码并逐行精确接受。v211 在 shard0 实际翻码但 Linear mean
+delta 为 `-0.0171391319`（3/53/0），校准 API 约为父级 3.8 倍，具体实现关闭为 `REJECTED`，
+归档目录名含 `rejected`，官方状态为 `unregistered/NA`，根继续为 v202。
+下一张卡注册为 **L-AW9 / v212：64-block 内单组共享整数码偏移**：冻结最终 `Q(A)`，
+每个 64 输入块只选一个自然 4 元素组，在所有输出行共享一个 4 维整数 signed-mantissa 偏移；
+用全部校准行的一次输出正规方程确定该偏移，直接写回 mantissa/sign 并用实际产品损失保留或回退。
+scale/lv2/lv3 不变，不扫描组、偏移、正则或窗口，不把输出张量写入 state。
 
 ## 8. 当前执行队列
 
@@ -215,6 +224,8 @@ v210 已完成：六 shard 336 个 case 与 v202 逐位相同，hard-output gate
 | 11 | L-AW5 / v208 输出行 8-group × 64-block A@W 拟合 | 已完成；六 shard 与 v202 逐位相同，`REJECTED` | 保持 v202 根；不重试该具体实现 |
 | 12 | L-AW6 / v209 4 元素组广播 additive A@W 拟合 | 已完成；六 shard 与 v202 逐位相同，`REJECTED` | 保持 v202 根；不重试该具体实现 |
 | 13 | L-AW7 / v210 按输出行独立的 4 元素组 additive A@W 拟合 | 已完成；六 shard 与 v202 逐位相同，`REJECTED` | 保持 v202 根；不重试该具体实现 |
+| 14 | L-AW8 / v211 冻结 Q(A) 输出感知 4-code-group 联合更新 | 已完成；shard0 `-0.0171391319`（3/53/0），`REJECTED` | 保持 v202 根；不重试该具体实现 |
+| 15 | L-AW9 / v212 64-block 内单组共享整数码偏移 | 已注册；固定一次输出正规方程与直接码空间回写 | 完成后按 hard-output 结果归档，不等待官方 |
 
 ## 9. 归档
 

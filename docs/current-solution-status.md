@@ -104,6 +104,11 @@
 - L-AW7/v210 已从 v202 实现按输出行独立的 4 元素组 additive A@W 拟合；六 shard 336 case
   仍与 v202 逐位相同，硬输出门未接受任何部署变化，已归档为 `REJECTED`（目录名含 `rejected`），
   官方状态为 `unregistered/NA`。当前根继续为 v202。
+- L-AW8/v211 已从 v202 实现冻结最终 `Q(A)` 的输出感知 4 元素组联合 signed-mantissa 码更新；
+  每个输出行固定选择一个组并直接按 4x4 输出方程取整。shard0 真实翻码但 Linear mean delta
+  为 `-0.0171391319`（3/53/0），且校准 API 约为父级 3.8 倍，已归档为 `REJECTED`（目录名含
+  `rejected`），官方状态为 `unregistered/NA`。根继续为 v202。下一张卡为 L-AW9/v212：
+  每个 64-block 只选一个 4 元素组、跨输出行共享整数码偏移的直接码空间更新。
 
 以下内容是历史证据索引，不提供当前下一步指令。
 
