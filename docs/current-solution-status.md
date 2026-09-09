@@ -10,7 +10,7 @@
 > `D66128A62E7E068EDC50C91F4D8E212F586A6EDCAEE5BEA7D3564166E258B0F6`。
 
 > 当前测试按[4B指引](4b-panel-testing-guide.md)执行。本文历史0.5B、OOD、跨模型和时间预测结果仅作证据，不构成新测试命令或门禁。
-> 当前规则优先级为 `AGENTS.md` → 4B 指引 → [v223 后完整根离散输出与结构优化计划](superpowers/plans/2026-09-09-post-v223-hard-output-structural-plan.md)
+> 当前规则优先级为 `AGENTS.md` → 4B 指引 → [输出感知舍入边界与 A/W 联合量化计划](superpowers/plans/2026-09-09-output-aware-rounding-and-joint-aw-plan.md)
 > → workbench 状态；侧队列和工作包不得重新定义门禁。
 
 更新：2026-09-09。
@@ -25,17 +25,19 @@
 
 ## 0.1 当前计划状态（2026-09-09）
 
-当前只按[v223 后完整根离散输出与结构优化计划](superpowers/plans/2026-09-09-post-v223-hard-output-structural-plan.md)推进。
+当前只按[输出感知舍入边界与 A/W 联合量化计划](superpowers/plans/2026-09-09-output-aware-rounding-and-joint-aw-plan.md)推进。
 当前根不变。FIX-A2/v222 官方 `18015/293s`（相对根 `−38/+12s`），已 REJECTED；A-H1/v223
-六 shard mean `+0.003209`，但事件路径错误地从最后一步 Adam 更新前状态出发，官方仍
-`unregistered/NA`。A-H2 已取消，L-H1 已在残余空间预检关闭。R1/v224（A-H1R 部署父状态锚定）
+六 shard mean `+0.003209`，但事件路径错误地从最后一步 Adam 更新前状态出发，官方
+`TIMEOUT(>300s)`。A-H2 已取消，L-H1 已在残余空间预检关闭。R1/v224（A-H1R 部署父状态锚定）
 已实现并归档：6/6 层合法接受、`t0_identical=1`、changed-code 小范围可解释，六 shard 等权
 `≈+1.2e-6`（hard-output 效应在噪声底），同时移除/旁路四处宽 except 并加动态应用断言；官方
 `unregistered/NA`，待裁决。R2/v225（A-H3 GQA-group 局部切空间第一事件）已实现并归档：6/6 层有
 group 接受（18/24）、`t0_identical=1`，六 shard 等权 `+3.11e-5`（增益集中在 shard5 `+1.96e-4`，
 其余 ±7e-6 近零/微负）；官方 `unregistered/NA`，待裁决。R3/v—（A-C76.5 残差定向 C76.4 候选）
 已关闭为 `NO_EFFECT`：六层残差候选均非重复、可达，但从未被 deployed-MSE 选中，输出与根逐位
-相同，未分配版本、未提交。三张卡（R1/R2/R3）全部结束，本计划待归档并制定新计划；不修改归档源码。
+相同，未分配版本、未提交。三张卡（R1/R2/R3）全部结束且旧计划已归档；它们实际都属于 Q/K
+正交坐标变换族，不再追加 rotation/event/group/seed/block 邻域。新计划依次执行 L-RB1 静态权重
+输出舍入边界、A-RB1 Q/K 联合 softmax 输出舍入边界、L-JRB1 A/W 双量化器联合边界。
 
 - 所有候选从根完整方案构建，每次只改一侧、一个机制、一个固定配置。
 - 官方前先做六 API contract smoke 和目标侧 shard0；当前活动计划的算法开发卡随后运行目标侧六 shard，
@@ -79,9 +81,9 @@ group 接受（18/24）、`t0_identical=1`，六 shard 等权 `+3.11e-5`（增�
   `RETAINED`，曾切换为完整根；现由同分更快的 v202 替代。
 - v196 恢复原始 4+1 窗口的全矩阵互逆残差，官方 **`TIMEOUT`（`>300s`）**，根保持 v195；
   不缩窗、不减步数重试。
-- 当前活动计划认定 Attention 停滞的主因是代理目标与真实 hard-output 错位：v190 大量翻码但 gate
-  变差，v191 方向信号接近零，v192 训练 loss 下降但真实输出恶化。标准 Linear 的
-  v195/v191/v190/v192 官方归因继续一次性完成，但不再作为优化主线。
+- 已完成的 Attention 证据表明，代理目标与真实 hard-output 错位只是问题之一：v190 大量翻码但 gate
+  变差，v191 方向信号接近零，v192 训练 loss 下降但真实输出恶化；v224/v225/R3 又证明正交事件族即使
+  修正实现并细化作用范围，收益仍在噪声底或集中于单层。新计划不再以该坐标变换族为优化主线。
 - A1/v199 已完成：真实 4B 六 shard 中边界可达，4/6 层产生接受状态，但代理整体相对根
   `−0.0000729515`；官方 **TIMEOUT（>300s）**，不替换根。
 - A3/v201 已完成：保留 A1 边界、改用 hard-logit residual + softmax Jacobian/V 排序，4/6 层产生接受状态，

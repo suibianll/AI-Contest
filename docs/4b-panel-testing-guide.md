@@ -6,7 +6,7 @@
 > ②「不要用0.5B的，全部使用4B进行测试」（0.5B 面板退役）；
 > ③「不设本地时间门禁——本地时间根本不准」（20:26）。
 > 本文件回答「现在测试应该怎么测」；与
-> [当前唯一活动计划](superpowers/plans/2026-09-09-post-v223-hard-output-structural-plan.md)冲突时以本文件为准。
+> [当前唯一活动计划](superpowers/plans/2026-09-09-output-aware-rounding-and-joint-aw-plan.md)冲突时以本文件为准。
 
 > 当前规则优先级：`AGENTS.md` → 本指引 → 唯一活动计划/当前工作包 → workbench 状态文件。
 > 状态文件不得新增门禁；冲突先修正文档和状态，不能在候选间临时切换口径。

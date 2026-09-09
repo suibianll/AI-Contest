@@ -78,7 +78,7 @@
   机制标签（如 A@W 拟合、校准统计拟合）本身也不阻止官方探索；晋级仍须官方分数、时间和源码 SHA 确认。
 - 旧双侧持续计划的专项负向损失、`gain≥0.9`、误差账本、side-score 队列和 OOD 门全部退役；
   历史 `gap` 结论只用于读旧证据，被 OOD 拦截的历史候选记"未获官方验证"，不自动重跑。
-  当前按[v223 后完整根离散输出与结构优化计划](docs/superpowers/plans/2026-09-09-post-v223-hard-output-structural-plan.md)执行。
+  当前按[输出感知舍入边界与 A/W 联合量化计划](docs/superpowers/plans/2026-09-09-output-aware-rounding-and-joint-aw-plan.md)执行。
 - 当前测试统一遵循 [4B 面板测试指引](docs/4b-panel-testing-guide.md)：不新增 0.5B、OOD、
   跨模型 GPT-2/opt 或 fresh-default 计时运行。
 - 官方时间唯一硬约束为 300s；api_seconds 只作记录与风险提示，
@@ -187,7 +187,10 @@ Attention 改为 `--attention-only`；完整集成审计改为 `--scenario both`
   本地六 shard mean `+0.003209` 未获官方定价；只关闭该实现，同成本类事件搜索重试前必须先降
   校准成本。
 - v222（FIX-A2：A2 mean-gradient + 异常传播修复）官方 `18015/293s`（−38/+12s）REJECTED，
-  只关闭该实现；方向定义问题由新计划的部署父状态锚定（A-H1R）重新处理。
+  只关闭该实现；方向定义问题已由 v224 的部署父状态锚定处理。
+- v224（A-H1R）六 shard `≈+1.2e-6`，效应在噪声底；v225（A-H3）六 shard `+3.11e-5`，
+  收益几乎全部来自 shard5；A-C76.5 残差定向候选六层均未被选择。三者实际均属 Q/K 正交坐标
+  变换族，当前关闭 rotation/event/group/seed/block 的直接邻域，转入量化舍入边界自由度。
 - v205（减法定价：关 C76.4 旋转搜索）官方 `17969/275s`（−84/−6s）→ C76.4 官方价值 +84 分，
   必须保留，不得为省时间砍掉。砍校准换时间收益极小（本地校准 −30% → 官方仅 −6s），但这两个
   减法候选不能推出通用时间换分速率，也不能据此估算其他实现的可回收时间。
@@ -195,8 +198,8 @@ Attention 改为 `--attention-only`；完整集成审计改为 `--scenario both`
 - V 侧不注册新候选：per-head 常量不改变块内解，per-channel multiplier 解码不逆缩放会破坏输出，
   五字段不支持 per-token 表；码分配类经 anchor28 探针裁决在当前码语义下 100% 饱和
   （NO_SUPPORTED_MECHANISM），但该饱和不构成最终输出下界
-  （`logs/execution/2026-09-08-a28-interpretation-correction.md`）。仅剩码语义变更
-  （scale/lv 判据/格式映射，须同步改共享解码端）= A32，属全侧码格式卡，开设与否待用户决策。
+  （`logs/execution/2026-09-08-a28-interpretation-correction.md`）。当前计划只在 Q/K 上研究合法 mantissa
+  舍入边界；不据此重开 V 码分配或改变官方解码格式。
 
 ### 全局
 

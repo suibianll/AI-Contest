@@ -6,16 +6,21 @@
 不再运行 0.5B、逐候选 OOD、GPT-2/opt 或 fresh-default 计时；本地时间公式和 280s 门退役。
 官方提交无限制，官方硬限 300s。评估实现说明见 [proxy-v3](../../proxy-v3.md)。
 
-**当前唯一活动计划：** [v223 后完整根离散输出与结构优化计划](2026-09-09-post-v223-hard-output-structural-plan.md)。
+**当前唯一活动计划：** [输出感知舍入边界与 A/W 联合量化计划](2026-09-09-output-aware-rounding-and-joint-aw-plan.md)。
 
-当前根保持 v202 Linear + v195 Attention，官方 `18053/281s`。v222 官方 `18015/293s`，已
-REJECTED；v223 保留归档并等待官方。当前依次执行部署父状态锚定阈值事件、GQA-group 局部
-hard-event 和残差定向 C76.4 正交候选。所有正式候选从当前完整根构建，官方正向前不覆盖根，
+当前根保持 v202 Linear + v195 Attention，官方 `18053/281s`。v223 官方 `TIMEOUT(>300s)`；
+v224、v225 仍为 `unregistered/NA`，R3 已关闭为 `NO_EFFECT`。上一轮三个方向实际都属于
+Q/K 正交坐标变换，现已结束并归档。当前依次执行 L-RB1 静态权重输出舍入边界、A-RB1 Q/K
+联合 softmax 输出舍入边界、L-JRB1 A/W 双量化器联合边界。所有正式候选从当时最高分完整根构建，
 不修改 `solutions/` 下任何已归档源码。
 
 ## 历史计划索引（仅证据）
 
 以下旧父、旧面板、时间预测与关闭记录是历史快照，不提供当前执行指令；当前规则只见上方入口。
+
+上一轮 [v223 后完整根离散输出与结构优化计划](../archive/plans/2026-09-09-post-v223-hard-output-structural-plan-completed.md)
+已完成：v224 仅有噪声底收益，v225 收益集中在单层，R3 候选从未被选择。三卡实际均属于 Q/K
+正交变换族，后续不再追加 rotation/event/seed/block 邻域。
 
 上一轮 [当前最高分根正确性与优化计划](../archive/plans/2026-09-09-current-root-correctness-and-optimization-plan-completed.md)
 已完成：FIX-A2/A-H1 归档为 v222/v223，A-H2 取消，L-H1 在预检关闭；其中 v223 的部署父状态
