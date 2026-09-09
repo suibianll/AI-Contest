@@ -78,7 +78,8 @@
   机制标签（如 A@W 拟合、校准统计拟合）本身也不阻止官方探索；晋级仍须官方分数、时间和源码 SHA 确认。
 - 旧双侧持续计划的专项负向损失、`gain≥0.9`、误差账本、side-score 队列和 OOD 门全部退役；
   历史 `gap` 结论只用于读旧证据，被 OOD 拦截的历史候选记"未获官方验证"，不自动重跑。
-  当前按[输出感知舍入边界与 A/W 联合量化计划](docs/superpowers/plans/2026-09-09-output-aware-rounding-and-joint-aw-plan.md)执行。
+  当前按[Linear 完整输出交叉残差纠码与双线协调计划](docs/superpowers/plans/2026-09-10-linear-cross-residual-correction-plan.md)执行，
+  Attention 侧按其执行附录[Q/K 联合仿射 Gauge 优化计划](docs/superpowers/plans/parallel/2026-09-10-attention-joint-affine-gauge-plan.md)推进。
 - 当前测试统一遵循 [4B 面板测试指引](docs/4b-panel-testing-guide.md)：不新增 0.5B、OOD、
   跨模型 GPT-2/opt 或 fresh-default 计时运行。
 - 官方时间唯一硬约束为 300s；api_seconds 只作记录与风险提示，

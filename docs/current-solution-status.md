@@ -10,10 +10,10 @@
 > `D66128A62E7E068EDC50C91F4D8E212F586A6EDCAEE5BEA7D3564166E258B0F6`。
 
 > 当前测试按[4B指引](4b-panel-testing-guide.md)执行。本文历史0.5B、OOD、跨模型和时间预测结果仅作证据，不构成新测试命令或门禁。
-> 当前规则优先级为 `AGENTS.md` → 4B 指引 → [输出感知舍入边界与 A/W 联合量化计划](superpowers/plans/2026-09-09-output-aware-rounding-and-joint-aw-plan.md)
+> 当前规则优先级为 `AGENTS.md` → 4B 指引 → [Linear 完整输出交叉残差纠码与双线协调计划](superpowers/plans/2026-09-10-linear-cross-residual-correction-plan.md)
 > → workbench 状态；侧队列和工作包不得重新定义门禁。
 
-更新：2026-09-09。
+更新：2026-09-10。
 
 > **门禁修订（2026-09-07）**：R2c 官方相对 R1 +378.8，证明 OOD 固定阈值存在误拦。
 > OOD 改为成对风险诊断，不单独否决官方探索或关闭机制；历史 OOD_BLOCKED 不等于官方证伪。
@@ -23,9 +23,13 @@
 > “最后一个配额”等表述全部失效，见
 > [`stale-information-inventory-2026-09-05.md`](stale-information-inventory-2026-09-05.md)。
 
-## 0.1 当前计划状态（2026-09-09）
+## 0.1 当前计划状态（2026-09-10）
 
-当前只按[输出感知舍入边界与 A/W 联合量化计划](superpowers/plans/2026-09-09-output-aware-rounding-and-joint-aw-plan.md)推进。
+09-09 旧计划三卡（L-RB1/A-RB1/L-JRB1）已全部关闭并归档，见
+[归档版计划](superpowers/archive/plans/2026-09-09-output-aware-rounding-and-joint-aw-plan-completed.md)。
+当前按[Linear 完整输出交叉残差纠码与双线协调计划](superpowers/plans/2026-09-10-linear-cross-residual-correction-plan.md)
+（含 Linear L-XR1 卡）及其 Attention 附录
+[Q/K 联合仿射 Gauge 优化计划](superpowers/plans/parallel/2026-09-10-attention-joint-affine-gauge-plan.md)（A-G1）推进。
 当前根不变。FIX-A2/v222 官方 `18015/293s`（相对根 `−38/+12s`），已 REJECTED；A-H1/v223
 六 shard mean `+0.003209`，但事件路径错误地从最后一步 Adam 更新前状态出发，官方
 `TIMEOUT(>300s)`。A-H2 已取消，L-H1 已在残余空间预检关闭。R1/v224（A-H1R 部署父状态锚定）
