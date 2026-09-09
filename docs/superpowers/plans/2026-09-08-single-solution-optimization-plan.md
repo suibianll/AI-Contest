@@ -242,10 +242,12 @@ attention-output 选择轨启用现有 reciprocal head-scale 参数化，固定 
 
 A5/v217 已完成：Attention-only 目标侧 shard0 的 12 个 case 为 `0/0/12`，mean/median/tail
 delta 均为 `0`，固定 factor 没有改变任何 hard output，具体实现关闭为 `REJECTED`，归档目录名
-含 `rejected`，官方状态为 `unregistered/NA`，根继续为 v202。下一项注册为 **C76.1 / v218：
-固定 Q-only headwise range permutation**：只在 A1 真实输出选择轨测试一次由 Q 侧 log-range
-生成的独立 head permutation，候选上限固定为 1；K 侧和动态 API 不变，不扫描 permutation
-候选或排序参数。
+含 `rejected`，官方状态为 `unregistered/NA`，根继续为 v202。随后执行的 **C76.1 / v218：
+固定 Q-only headwise range permutation** 也已完成：shard0 为 `0/0/12`，没有 hard-output
+变化，具体实现关闭为 `REJECTED`，归档目录名含 `rejected`，官方状态为 `unregistered/NA`。
+下一项注册为 **C76.2 / v219：固定 joint output-Fisher importance**：只启用 output-Fisher
+统计生成的一组 joint Q/K importance，blend 固定为 `0.5`；V、动态 API 和其余候选不变，
+不扫描 blend 或 Q-only/K-only 邻域。
 
 ## 8. 当前执行队列
 
@@ -271,7 +273,8 @@ delta 均为 `0`，固定 factor 没有改变任何 hard output，具体实现�
 | 18 | L-AW12 / v215 输出感知 E6M2 scale_factor 相邻码更新 | 已完成；shard0 `-0.150813`（0/56/0），`REJECTED` | 保持 v202 根；不重试该具体实现 |
 | 19 | L-T2 / v216 运行时使用 calibration-compiled activation GPTQ order | 已完成；shard0 `-0.003884`（13/43/0），`REJECTED` | 保持 v202 根；不重试该具体实现 |
 | 20 | A5 / v217 单一固定 reciprocal temperature 1.25 | 已完成；shard0 `0/0/12`，无 hard-output 变化，`REJECTED` | 保持 v202 根；不重试该具体实现 |
-| 21 | C76.1 / v218 固定 Q-only headwise range permutation | 已注册；仅测试 Q 侧一项独立 head permutation，候选上限为 1 | 完成后按 Attention hard-output 结果归档，不等待官方 |
+| 21 | C76.1 / v218 固定 Q-only headwise range permutation | 已完成；shard0 `0/0/12`，无 hard-output 变化，`REJECTED` | 保持 v202 根；不重试该具体实现 |
+| 22 | C76.2 / v219 固定 joint output-Fisher importance | 已注册；joint Q/K importance，blend 固定为 `0.5` | 完成后按 Attention hard-output 结果归档，不等待官方 |
 
 ## 9. 归档
 

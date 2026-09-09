@@ -61,6 +61,8 @@
 
 | [v217](20260909_v217_attention-a5-head-scale_rejected_scoreNA_timeNA/result.md) | A1 输出选择中的单一固定 reciprocal Q/K temperature `1.25` | shard0 `0`（0/0/12），无 hard-output 变化；`REJECTED`，官方 `unregistered/NA` |
 
+| [v218](20260909_v218_attention-c76-1-qonly-range_rejected_scoreNA_timeNA/result.md) | C76.1 固定 Q-only headwise range permutation | shard0 `0`（0/0/12），无 hard-output 变化；`REJECTED`，官方 `unregistered/NA` |
+
 ### 标准 Linear + Attention 侧隔离官方分（2026-09-09 回传）
 
 口径：**标准 Linear（v162 标准 codec）+ 各 Attention 变体**，基线为标准 Linear + R3

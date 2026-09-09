@@ -133,6 +133,10 @@
   shard0 的 12 个 case 为 `0/0/12`，没有 hard-output 变化，mean/median/tail delta 均为 `0`，
   已归档为 `REJECTED`（目录名含 `rejected`），官方状态为 `unregistered/NA`。根继续为 v202；
   下一项为 C76.1/v218 的固定 Q-only headwise range permutation。
+- C76.1/v218 已从 v202 启用固定 Q-only headwise range permutation，候选上限为 1；Attention
+  shard0 仍为 `0/0/12`，没有 hard-output 变化，mean/median/tail delta 均为 `0`，已归档为
+  `REJECTED`（目录名含 `rejected`），官方状态为 `unregistered/NA`。根继续为 v202；下一项为
+  C76.2/v219 的固定 joint output-Fisher importance。
 
 以下内容是历史证据索引，不提供当前下一步指令。
 
