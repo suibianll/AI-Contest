@@ -48,6 +48,7 @@
 | [v206](20260909_v206_linear-aw3-output-group-gain_rejected_scoreNA_timeNA/result.md) | 输出组 × 64-block 标量 A@W 拟合 | 六 shard 336 case 与 v202 逐位相同、无 hard-output 增益；`REJECTED`，官方 `unregistered/NA` |
 | [v207](20260909_v207_linear-aw4-fine-group-gain_rejected_scoreNA_timeNA/result.md) | HiF4 4 元素细粒度组标量 A@W 拟合 | 六 shard 336 case 与 v202 逐位相同、无 hard-output 增益；`REJECTED`，官方 `unregistered/NA` |
 | [v208](20260909_v208_linear-aw5-output-fine-group-gain_rejected_scoreNA_timeNA/result.md) | 输出行 8-group × 64-block 标量 A@W 拟合 | 六 shard 336 case 与 v202 逐位相同、无 hard-output 增益；`REJECTED`，官方 `unregistered/NA` |
+| [v209](20260909_v209_linear-aw6-broadcast-additive_rejected_scoreNA_timeNA/result.md) | 4 元素组广播 additive A@W 拟合 | 六 shard 336 case 与 v202 逐位相同、无 hard-output 增益；`REJECTED`，官方 `unregistered/NA` |
 
 ### 标准 Linear + Attention 侧隔离官方分（2026-09-09 回传）
 
