@@ -112,7 +112,11 @@ def main() -> int:
                     wsel = ek.unsqueeze(0).expand(n, n)[sel]
                     tot_plain[g, b] += float(a[sel].sum())
                     tot_w[g, b] += float((a[sel] * wsel).sum())
-                    if h == g * group:
+                    if h == 0:
+                        # ONCE per window, matching the candidate: the bucket mask
+                        # is head-independent, so counting once per GROUP would
+                        # make w = totals/cnt four times too small.  That factor
+                        # is exactly the 0.59 gap seen against the deployed kernel.
                         cnt[b] += float(sel.sum())
     w_plain = (tot_plain / cnt.clamp_min(1.0)[None, :]).to(torch.float32)
     with torch.no_grad():
