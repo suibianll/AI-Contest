@@ -10,10 +10,11 @@
 [Linear 精确度量 Activation 码序下降与双线协调计划（L-EM1）](2026-09-10-linear-exact-metric-refinement-plan.md)。
 
 **Attention 执行附录：**
-[Q 侧加性 logit 偏置补偿计划（A-QB1）](parallel/2026-09-10-attention-qk-logit-bias-plan.md)
+[K 侧 per-call 均值再定心计划（A-MC1）](parallel/2026-09-10-attention-k-mean-recenter-plan.md)。
+上一附录 [A-QB1](parallel/2026-09-10-attention-qk-logit-bias-plan.md)
 已关闭：归档 v228 `REJECTED`（本地六 shard 等权 `-0.053177`，3/69/0，六层全负，未提交官方）；
 归因（Q 偏置拟合到的系统性 logit 偏差是校准窗口特异而非量化器固有属性）见
-`logs/execution/2026-09-10-attention-aqb1-q-bias.md`。Attention 侧正在重新规划。
+`logs/execution/2026-09-10-attention-aqb1-q-bias.md`。
 两个文件构成同一个协调执行组：冻结同一完整根、使用独立 workbench 和结果文件、GPU 串行；单机制
 分别官方定价，只有双方都官方正向后才从较高分完整父重新构建组合候选，不建立侧父或侧晋级线。
 上一张 Attention 卡 [A-G1](parallel/2026-09-10-attention-joint-affine-gauge-plan.md) 已关闭：
