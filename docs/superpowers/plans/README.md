@@ -10,7 +10,10 @@
 [Linear 精确度量 Activation 码序下降与双线协调计划（L-EM1）](2026-09-10-linear-exact-metric-refinement-plan.md)。
 
 **Attention 执行附录：**
-[Q 侧 per-call 数据中心化计划（A-QC1）](parallel/2026-09-10-attention-q-mean-center-plan.md)。
+[Q 侧 per-call 数据中心化计划（A-QC1）](parallel/2026-09-10-attention-q-mean-center-plan.md)
+已关闭 `NO_EFFECT`：6/6 层 gate 全拒，六 shard 72 case 与根逐位相同，不占版本号、未提交官方。
+至此 Attention 规则级空间全部裁决完毕（Q·K 不变量四类结构变换 + 两侧 per-call 定心规则），
+Attention 侧无存活卡片；后续只由官方回传（v229 待官方）或 21071 锚点源码绑定驱动。
 上一附录 [A-MC1](parallel/2026-09-10-attention-k-mean-recenter-plan.md)
 已完成执行：归档 v229 **本地正向，待官方**（六 shard 等权 `+0.014923`，26/10/36，3/6 层
 gate 接受，层15 全部 12 case 均匀改善约 `+0.079`；官方 `unregistered/NA`，待用户统一官方

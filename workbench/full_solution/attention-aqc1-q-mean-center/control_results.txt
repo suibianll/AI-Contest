@@ -1,0 +1,51 @@
+[L-R2] rank2 reachable=1 vtu_cross_max=1.863e-09
+[COMBINED-LINEAR-SAMPLE-ENERGY] reachable=1 blocks=2
+[L-R2] rank2 reachable=1 vtu_cross_max=1.863e-09
+[COMBINED-LINEAR-SAMPLE-ENERGY] reachable=1 blocks=2
+========================================================================
+[control1_arm_off_bitwise] pass=True
+    q_bitwise_flag_absent: True
+    k_bitwise: True
+    v_bitwise: True
+    q_bitwise_flag_off: True
+    final_output_bitwise: True
+[control2_arm_on] pass=True
+    q_token_mean_norm_input: 0.5241385102272034
+    q_field_changed_counts: {'scale_factor': 345, 'scale_lv2': 568, 'scale_lv3': 2033, 'sign': 16403, 'mant': 21227}
+    q_fields_changed: True
+    dense_softmax_max_abs_diff: 1.7414335161447525e-05
+    dense_softmax_rel_diff: 0.0019752390785605033
+    dense_output_changed_expected: True
+    hard_output_max_abs_diff: 1.9473489373922348e-05
+    hard_output_changed: True
+    k_bitwise_unchanged: True
+    v_bitwise_unchanged: True
+[control3_standalone_import] pass=True
+    missing_apis: []
+    standalone_end_to_end_finite: True
+[control4_records_and_legal_state] pass=True
+    audit: {'a2_arm': 'identity', 'aqc1_arm': 'center', 'aqc1_gate_loss_parent': 8.794260821787248e-08, 'aqc1_gate_loss_candidate': 8.793859223032996e-08, 'aqc1_windows': 5}
+    state_legal: True
+    deployed_params_legal: True
+    flag_type: int
+    q_changed_counts_vs_parent: {'scale_factor': 345, 'scale_lv2': 568, 'scale_lv3': 2033, 'sign': 16403, 'mant': 21227}
+    root_a2_arm_preserved: identity
+    root_rotation_frozen: True
+[control5_v_and_linear] pass=True
+    v_bitwise: True
+    linear_weight_bitwise: True
+    linear_activation_bitwise: True
+[control6_gate_arms] pass=True
+    {'seed': 0, 'aqc1_arm': 'center', 'gate_parent': 8.794260821787248e-08, 'gate_candidate': 8.793859223032996e-08, 'windows': 5, 'flag': 1, 'dynamic_q_finite': True}
+    {'seed': 1, 'aqc1_arm': 'center', 'gate_parent': 9.199205095455909e-08, 'gate_candidate': 9.19765071216716e-08, 'windows': 5, 'flag': 1, 'dynamic_q_finite': True}
+    {'seed': 2, 'aqc1_arm': 'parent', 'gate_parent': 7.825529735328018e-08, 'gate_candidate': 7.82647475716658e-08, 'windows': 5, 'flag': None}
+    {'seed': 3, 'aqc1_arm': 'parent', 'gate_parent': 9.087016650255464e-08, 'gate_candidate': 9.087832495424663e-08, 'windows': 5, 'flag': None}
+    {'seed': 4, 'aqc1_arm': 'center', 'gate_parent': 8.571382039690434e-08, 'gate_candidate': 8.570483345238245e-08, 'windows': 5, 'flag': 1, 'dynamic_q_finite': True}
+    {'seed': 5, 'aqc1_arm': 'parent', 'gate_parent': 9.07613809886243e-08, 'gate_candidate': 9.076567550891922e-08, 'windows': 5, 'flag': None}
+    {'seed': 6, 'aqc1_arm': 'parent', 'gate_parent': 9.346454561409701e-08, 'gate_candidate': 9.348116947194285e-08, 'windows': 5, 'flag': None}
+    {'seed': 7, 'aqc1_arm': 'center', 'gate_parent': 8.140323330962928e-08, 'gate_candidate': 8.139862899270156e-08, 'windows': 5, 'flag': 1, 'dynamic_q_finite': True}
+    arms_seen: ['center', 'parent']
+    all_windows_5: True
+    forced_nonimproving_rejected: True
+========================================================================
+OVERALL: PASS

@@ -1,6 +1,8 @@
 # Attention Q 侧 per-call 数据中心化计划（A-QC1）
 
-> 状态：ACTIVE 执行附录，2026-09-10。
+> 状态：CLOSED / NO_EFFECT，2026-09-10。
+> 执行结果：6/6 层 gate 全拒，六 shard 72 case 与根逐位相同；不占版本号、未提交官方。
+> 执行记录：`logs/execution/2026-09-10-attention-aqc1-q-mean-center.md`。
 > 从属于当前活动总计划（Linear 线）。当前完整根为 v202 Linear + v195 Attention，官方 `18053/281s`。
 > 本文件只负责 Attention A-QC1；版本登记、组合与根切换由总协调线处理。
 > 前序 Attention 卡：A-G1（v227 REJECTED）、A-QB1（v228 REJECTED）、

@@ -51,6 +51,11 @@ candidate overall `+0.548920` vs 基线 `+0.533998`；3/6 层 gate 接受（层1
 （gate/evals 口径差异，如实记录）。机制不受 v227/v228 窗口过拟合模式影响。官方
 `unregistered/NA`，待用户统一官方评测，根暂不变。
 
+A-QC1（Q 侧 per-call 数据中心化，A-MC1 同构移到 Q 侧）已关闭 `NO_EFFECT`：机制可达
+（control 证明五字段可变）但 6/6 层全 folds gate 全拒，六 shard 72 case 与根逐位相同，
+不占版本号、未提交官方。至此 Attention 规则级空间全部裁决完毕，Attention 侧无存活卡片；
+后续只由 v229 官方回传或 21071 锚点源码绑定驱动。
+
 当前根不变。FIX-A2/v222 官方 `18015/293s`（相对根 `−38/+12s`），已 REJECTED；A-H1/v223
 六 shard mean `+0.003209`，但事件路径错误地从最后一步 Adam 更新前状态出发，官方
 `TIMEOUT(>300s)`。A-H2 已取消，L-H1 已在残余空间预检关闭。R1/v224（A-H1R 部署父状态锚定）
