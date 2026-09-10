@@ -62,11 +62,30 @@ metric  = inverse; metric.diagonal().sub_(ridge)
 
 ## 3. 另外两个已测到的成本（与上面的口径问题无关）
 
-**3.1 设备/dtype 边界（待测，计划已点名）**
+**3.1 设备/dtype 边界（已实测，结论：可行但有契约条件）**
 `h_inv` 由 `_cpu_state_tensor` 存为 **CPU float32**；动态路径在 `_em1_metric` 里
-`h_inv.to(device=device, dtype=torch.float32)` 搬到运行设备后才做 Cholesky。
-前移到校准端只有在校准与之后每一次动态调用**同设备同 dtype** 时才逐位安全——
-计划 §4 已点名"校准与动态设备不同可能造成数值差异，按实际contract列明"。**尚未实测。**
+`h_inv.to(device=device, dtype=torch.float32)` 搬到运行设备后才做 Cholesky。实测（2560 与 4096 两个尺寸）：
+
+| 比较 | 结果 |
+|---|---|
+| CPU 上的 `cholesky_inverse(cholesky(h))` vs CUDA 上的 | **不逐位相同**，相对差 ~1.0e-06 |
+| float32 张量 CUDA→CPU→CUDA 往返 | **精确**（逐位无损） |
+
+故本卡逐位可行的**充分条件**是：G 在**运行设备**上算、以 CPU 副本入 state、动态端再搬回同设备。
+评测器两侧用的是同一个 `--algorithm-device`，且**校准缓存 identity 本就包含 device**
+（AGENTS §5），所以该条件在当前口径下自动成立；但必须写进契约——若某一流程出现校准 CPU / 动态 CUDA，
+预存的 G 会与现路径差 ~1e-6，逐位等价即不成立。
+
+**3.3 原地修改风险（静态发现，实现时必须处理）**
+`_em1_metric` 现在对 `inverse` 做的是**原地** `metric.diagonal().sub_(ridge)`。若 G 改为从 state 读出，
+而同一次运行里同一个 state dict 被多个 case 复用（评测器每 case 调一次动态 API），
+第二次调用会把 ridge **再减一遍**——这正是计划 §4 点名的"使用方不得原地修改持久G……避免每次再减ridge"。
+最干净的解法是把**已减 ridge 的最终 G** 存进 state，使动态端只读。
+
+**3.4 `validate_state` 接受度（已核对）**
+`evaluator/reference_hif4.validate_state` 是通用遍历：tensor 须为 **CPU**、strided、无梯度、实数、
+dtype 在允许集内、有限，且深度 ≤8、节点 ≤4096。新增一个 CPU float32 的 `metric` 张量**可以通过**
+（每 state 只 +1 节点）。注意"必须 CPU"这一条，正是 3.1 里"存 CPU 副本"的来源。
 
 **3.2 state 体积接近翻倍（已测）**
 `metric` 与已存的 `h` 同为 channels² float32，故每个在范围内 state 的 em1 载荷翻倍：
@@ -80,15 +99,20 @@ metric  = inverse; metric.diagonal().sub_(ridge)
 故本次增加约 +12%（每个 shard +0.79 GB）。计划要求把这一项"与旧路径峰值内存、累计 state 大小、
 传输次数同表记录"——此处先给磁盘侧的数，内存/传输侧待实测。
 
-## 4. 尚未做的（审计未完成）
+## 4. 生效路径与两处 metric 调用（已核对）
 
-- 设备/dtype 逐步等价实测（§3.1）；
-- `validate_state` 是否接受更大的 em1 载荷（新增字段合法性）；
-- 校准端 h_inv 生成/修改顺序、两处 metric 调用（`solution.py:12108` 原始 descent 与 `:12423`
-  L-TF2 影子，**只有影子是活的**）的最终生效路径与共享 state 调用者；
-- 峰值内存与 state 搬运次数。
+`_em1_metric` 在根里有**两处**调用：`solution.py:12108`（原始 `_em1_dynamic_descent`）与 `:12423`
+（L-TF2 追加的影子定义）。**只有影子是活的**——模块全局名在调用时解析，后定义者胜出（v237 已用
+`co_firstlineno` 验证过同一机制）。故本卡只需改影子路径；但必须显式核对这一点，
+因为 L-TF2 的纯追加让根里同时存在两份 descent 定义（计划 §4 点名的"包装/覆盖关系"）。
+`_EM1_PARENT_LINEAR_DYNAMIC` 是校准/动态分离用的包装别名，与 metric 无关。
 
-## 5. 产物
+## 5. 仍未做
+
+- 峰值内存与 state 搬运次数的实测（磁盘侧已给：+4.75 GB / 现 38.05 GB）；
+- 逐位等价实测（需先有实现）；本记录只给可行性的充分条件与三条边界。
+
+## 6. 产物
 
 - `workbench/full_solution/linear-lmc1-compiled-metric/audit.py` / `audit.json`（本地面板计数与官方口径引用）。
 - 本记录；未占版本号、未跑 shard、未产出候选。
