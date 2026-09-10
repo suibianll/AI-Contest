@@ -5,6 +5,8 @@
 相对 v195 同分快 8 秒；上一完整根 current Linear + v195 Attention 为 `18053 / 289s`，再上一根
 current Linear + R3 Attention 为 `18032 / 280s`。官方硬限 300s，提交次数无限制。
 
+最新官方回传：v229（A-MC1）`TIMEOUT (>300s)`，已拒绝归档，当前根不变；见[回传记录](logs/execution/2026-09-10-v229-official-timeout.md)。
+
 ## 工作入口
 
 - [执行规则](AGENTS.md)

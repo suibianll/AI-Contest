@@ -40,19 +40,18 @@ A-QB1 已实现并归档为 v228 `REJECTED`：本地六 shard 强负，等权 `-
 逐通道/逐元素级校准拟合自由度在 Attention 侧第三次被否决（继 v227 gauge、A-RB1 舍入边界）。
 未提交官方，根不变。
 
-A-MC1 已实现并归档为 v229（本地正向，待官方）：本计划线首个本地正向的 Attention 候选。
+A-MC1 已实现并归档为 v229（官方 TIMEOUT (>300s)，REJECTED）：本计划线首个本地正向的 Attention 候选。
 K 侧 per-call 均值再定心（冻结根全部 state，rotation+center 之后、`_dense_to_hif4` 之前按
 head 分组 `K -= mean_tokens(K)`；量化前 softmax 精确不变；无训练无超参、无校准拟合参数，
 全 folds 真实 MSE 逐层 gate 严格改善才 arm）。六 shard 等权 `+0.014923`（26/10/36，72 case），
 candidate overall `+0.548920` vs 基线 `+0.533998`；3/6 层 gate 接受（层1/5/15），层0/8/22
 回退逐位不变；层15 全部 12 case 均匀改善约 `+0.079`；层5 gate 接受但 eval 净负 `-0.009628`
-（gate/evals 口径差异，如实记录）。机制不受 v227/v228 窗口过拟合模式影响。官方
-`unregistered/NA`，待用户统一官方评测，根暂不变。
+（gate/evals 口径差异，如实记录）。2026-09-10 用户回传官方 `TIMEOUT (>300s)`，精确秒数与分数未知；计分/归档 SHA `d1c23fa11198e56f15ac8f64e033c00333dcd2d5660cec773598624c4b247f4d`。该实现关闭，本地改善未获官方精度定价，根保持 `18053/281s`。见[回传记录](../logs/execution/2026-09-10-v229-official-timeout.md)。
 
 A-QC1（Q 侧 per-call 数据中心化，A-MC1 同构移到 Q 侧）已关闭 `NO_EFFECT`：机制可达
 （control 证明五字段可变）但 6/6 层全 folds gate 全拒，六 shard 72 case 与根逐位相同，
 不占版本号、未提交官方。至此 Attention 规则级空间全部裁决完毕，Attention 侧无存活卡片；
-后续只由 v229 官方回传或 21071 锚点源码绑定驱动。
+v229 已官方超时；后续执行以计划入口为准，有限卡片的关闭不证明整个机制空间耗尽。
 
 当前根不变。FIX-A2/v222 官方 `18015/293s`（相对根 `−38/+12s`），已 REJECTED；A-H1/v223
 六 shard mean `+0.003209`，但事件路径错误地从最后一步 Adam 更新前状态出发，官方

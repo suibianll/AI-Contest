@@ -1,7 +1,6 @@
 # v229 — A-MC1 K 侧 per-call 均值再定心（冻结根全部 state，量化前 softmax 精确不变的 K 平移）
 
-Status: local positive on all six shards; official status `unregistered/NA` (awaiting the user's
-batched official evaluation).
+Status: REJECTED / official TIMEOUT (>300s), reported by the user on 2026-09-10. Exact elapsed time and score are unavailable. Official scored SHA and archive SHA: `d1c23fa11198e56f15ac8f64e033c00333dcd2d5660cec773598624c4b247f4d` (bound to the unique registered v229 candidate).
 
 - Parent: retained v202 Linear + v195 Attention complete root, SHA256
   `56dc805d6e5a3aef896db8021045740292735725d688b48e3d4393e55efcb2bd`.
@@ -55,6 +54,5 @@ calibration-fitted parameters (the recentering mean comes from the current call)
 subject to the v227/v228 calibration-window overfitting pattern; the gains are concentrated and
 uniform (layer 15: 12/12 cases, ≈+0.079 each), consistent with the mechanism hypothesis of
 correcting calibration-vs-eval window statistic drift. Layer 5 was accepted by the gate yet is net
-negative on the eval window; this gate/eval scope discrepancy is recorded honestly. Per A-MC1 plan
-§6, the local non-negative result is archived and awaits the user's batched official evaluation.
+negative on the eval window; this gate/eval scope discrepancy is recorded honestly. The local gain did not receive an official accuracy result: the complete candidate timed out. This closes this implementation, not all K-centering mechanisms. See `logs/execution/2026-09-10-v229-official-timeout.md`.
 The root remains v202 Linear + v195 Attention at `18053/281s`.
