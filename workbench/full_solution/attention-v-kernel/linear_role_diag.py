@@ -51,7 +51,10 @@ def main() -> int:
     )
     layer = int(os.environ.get("LRD_LAYER", "0"))
     roles = os.environ.get("LRD_ROLES", "proj,k,fc_up,fc_gate,q").split(",")
-    dev = torch.device("cpu")
+    # GPU by default: the .venv torch is cu124 and the panel runs on cuda.
+    # Hard-coding cpu here made every run 10-30x slower than it needed to be.
+    dev = torch.device(os.environ.get("LRD_DEVICE", "cuda" if torch.cuda.is_available() else "cpu"))
+    print(f"device={dev}")
 
     print(f"layer={layer}")
     print(f"{'role':<9}{'shape':>13} | {'act_rel':>9}{'w_rel':>9}{'out_rel':>9} | "
@@ -83,13 +86,27 @@ def main() -> int:
         x_hat = v2.dequantize_hif4(v2._cpu_params(xp), tuple(x_ref.shape)).to(torch.float64).to(dev)
         x_std = v2.decode_standard_hif4(v2.encode_standard_hif4(x_ref)).to(torch.float64)
 
+        # The activation is encoded in a PERMUTED channel order and the weight's
+        # columns are permuted to match, so X_hat @ W_hat^T is invariant while
+        # ||X_hat - X_ref|| is not.  Compare against the reference taken through
+        # the same permutation, or the operand numbers are meaningless (this is
+        # what produced act_rel > 1 on the first run).
+        perm = state.get("permutation") if isinstance(state, dict) else None
+        if torch.is_tensor(perm):
+            order = perm.detach().to(device=dev, dtype=torch.int64).reshape(-1)
+            x_ref_cmp = x_ref.index_select(-1, order)
+            w_ref_cmp = w_ref.index_select(-1, order)
+        else:
+            x_ref_cmp, w_ref_cmp = x_ref, w_ref
+
         def rel(a, b):
             return float((a - b).norm() / b.norm().clamp_min(1e-30))
 
         o_ref = x_ref @ w_ref.T
         print(
-            f"{role:<9}{str(tuple(w_ref.shape)):>13} | "
-            f"{rel(x_hat, x_ref):>9.4f}{rel(w_hat, w_ref):>9.4f}{rel(x_hat @ w_hat.T, o_ref):>9.4f} | "
+            f"{role:<9}{str(tuple(w_ref.shape)):>13} perm={'y' if torch.is_tensor(perm) else 'n'} | "
+            f"{rel(x_hat, x_ref_cmp):>9.4f}{rel(w_hat, w_ref_cmp):>9.4f}"
+            f"{rel(x_hat @ w_hat.T, o_ref):>9.4f} | "
             f"{rel(x_std, x_ref):>9.4f}{rel(w_std, w_ref):>9.4f}{rel(x_std @ w_std.T, o_ref):>9.4f}"
         )
     print()
