@@ -11933,12 +11933,15 @@ _EM1_CODE_MAX = 7.0
 _EM1_MAX_CHANNELS = 4096
 _EM1_VERSION = 2
 _EM1_GROUPS_PER_BLOCK = 16
-# The plan card pre-registered K = 2 with a time-driven fallback: if the paired
-# measurement projects above 296 s official, drop to K = 1.  Measured on the
-# real paired run, K = 2 projects to 281 + 11.6 + 6.2 = 298.8 s -- inside the
-# 300 s gate by 1.2 s against a +/-1.5 s measurement noise floor, which is not a
-# margin.  K = 1 projects to ~294.5 s.  Fallback taken.
-_EM1_PASSES = 1
+# The L-EM2 card pre-registered K = 2 with a time-driven fallback and took the
+# fallback (v230 archived at K = 1).  The fallback reasoned in the naive additive
+# convention; the project's own fitted decomposition (2026-09-04, 21 versions)
+# converts the two APIs this mechanism touches at 0.7344 (dynamic activation) and
+# 0.1154 (weight calibration) and puts K = 2 at ~289 s, i.e. inside the gate.
+# Local measurement cannot settle which convention holds, so L-EM3 ships this
+# arm -- the L-EM2 card's own pre-registered primary -- and lets the official
+# machine decide.  No fixed choice of the mechanism changes; only the pass count.
+_EM1_PASSES = 2
 
 
 @torch.no_grad()

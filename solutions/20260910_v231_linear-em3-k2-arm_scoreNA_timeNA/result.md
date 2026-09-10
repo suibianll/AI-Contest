@@ -1,9 +1,10 @@
 # v231 — Linear group-major exact-metric descent, K = 2 (L-EM3)
 
-Status: **PENDING**. No official evaluation has been run. The L-EM3 card fixed this
-outcome in advance — *"whether or not the projection clears 296 s, v231 is archived as
-`PENDING`"* — because the card exists precisely to have the official machine price the
-two pass counts, not to have the local measurement pick a winner.
+Status: **RETAINED** (2026-09-10 user official result: **18518 / 291s**). Promoted
+byte-for-byte as the new complete root, replacing v230 (18428/292s) at **+90 points / −1s**.
+The L-EM3 card pre-registered this as `PENDING` — the card existed to have the official
+machine price the two pass counts, not to have the local measurement pick a winner; that
+official price is now in.
 
 - Parent: v202 Linear + v195 Attention complete root, as the card was written
 - Parent SHA256: `56DC805D6E5A3AEF896DB8021045740292735725D688B48E3D4393E55EFCB2BD` (485072 B)
@@ -160,7 +161,8 @@ candidate's favour, and the K=1 arm's official number now anchors it.
 
 ## Decision
 
-`LOCAL_POSITIVE_PENDING_OFFICIAL`. 288 of 336 paired cases improve, none regress, 48 are the
-out-of-scope `proj` role; every shard is positive. The K=2 arm adds `+0.027507` over the K=1
-arm already at root and costs about 3 s. Submitted for the user's batched official
-evaluation; the card pre-registered `PENDING` either way.
+`RETAINED` (2026-09-10 official result: **18518 / 291s**). 288 of 336 paired cases improve,
+none regress, 48 are the out-of-scope `proj` role; every shard is positive. The K=2 arm adds
+`+0.027507` over the K=1 arm and the official machine priced it at **+90 points / −1s**
+versus v230 (18428/292s), inside the 300 s limit with 9 s to spare. Promoted byte-for-byte as
+the new complete root; v230 becomes the rollback root.

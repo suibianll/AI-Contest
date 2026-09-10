@@ -1,6 +1,7 @@
 # HiF4 solutions archive
 
-> 当前完整根：[v230 Linear L-EM2](20260910_v230_linear-em2-groupstep-schedule_scoreNA_timeNA/result.md)，**18428/292s**，SHA `0F1AF6DBC207FF32B2C6BE16987E9C4FE50F3F10747DE26782EF52A6F2FAB7BC`；相对 v202 +375/+11s，余量8s。回退根 v202 为18053/281s。
+> 当前完整根：[v231 Linear L-EM3 K=2](20260910_v231_linear-em3-k2-arm_scoreNA_timeNA/result.md)，**18518/291s**，SHA `EA79A1C12DC667142C620975AAB188920FAE7B29988C804F41C1A696CC5754F1`；相对 v230 +90/−1s，余量9s。
+> 回退根：[v233 Linear L-TF1](20260910_v233_linear-tf1-gradient-reuse_scoreNA_timeNA/result.md)，**18428/288s**，SHA `0EC89710087D061BF9608196AD4D53A1C6BE98C8A5595596A071ECD05A6821EB`；相对 v230 同分快 4s，严格占优。**L-TF1 尚未并入当前根 v231。**
 > 以下旧根晋级描述为历史事实，不覆盖当前根。
 > L28 `4611/286s` 与其他侧结果降为历史机制证据，不再形成并行父线。
 > [L28 回传记录](../logs/execution/2026-09-08-l28-official-result.md)、
@@ -77,10 +78,12 @@
 | [v227](20260910_v227_attention-ag1-joint-affine-gauge_rejected_scoreNA_timeNA/result.md) | A-G1 Q/K 联合仿射 gauge（A2 循环内新增每 KV group 零均值 reciprocal log-scale `s[head_dim]`，与 rotation/K-center 共用同一 Adam） | 六 shard 等权 `-0.005294`（28/32/12），shard2 逐位不变，shard1 `-0.021423` 最差；机制可达（60/72 case 硬输出改变，s=0 逐位恢复父）但净负，误差集中在短序列与 test split；`REJECTED`，按计划 §7 不缩步/缩窗/拆粒度重试，未提交官方，根保持 R0 |
 | [v228](20260910_v228_attention-aqb1-q-bias_rejected_scoreNA_timeNA/result.md) | A-QB1 Q 侧加性 logit 偏置（冻结根全部已有 state，每层每 Q head 学 `b_q[head_dim]`，全 5 folds 窗口等权真实部署 MSE 上 Adam 32 步，全 folds 逐层 gate 严格改善才写入） | 六 shard 等权 `-0.053177`（3/69/0），六层全负，shard3（层15）最差 `-0.105430`；机制可达且 gate 真实接受（control 8/8 种子接受、改善 1.9%–2.7%）但全 folds 训练+全 folds gate 仍强负——Q 偏置拟合到的"系统性 logit 偏差"是校准窗口特异而非量化器固有属性；逐通道/逐元素级校准拟合自由度 Attention 侧第三次被否决（继 v227 gauge、A-RB1 舍入边界）；`REJECTED`，按计划 §6 不缩步/调 lr/换 fold/拆 head 粒度重试，未提交官方，根保持 R0 |
 | [v229](20260910_v229_attention-amc1-k-mean-recenter_rejected_scoreNA_timeNA/result.md) | A-MC1 K 侧 per-call 均值再定心，冻结完整根 | **官方 TIMEOUT (>300s)，REJECTED**（2026-09-10 用户回传）；精确秒数/分数未知。六 shard 本地 `+0.014923`（26/10/36）未获官方精度定价；SHA `d1c23fa1…c4b247f4d`，根保持 `18053/281s` |
-| [v230（Linear L-EM2）](20260910_v230_linear-em2-groupstep-schedule_scoreNA_timeNA/result.md) | 精确度量 Activation 组号主序下降，K=1；完整六 API | **RETAINED 18428/292s**，+375/+11s；当前根；六 shard 本地 +0.079454（288/0/48）；与 Attention v230 分开登记 |
-| [v231（Linear L-EM3）](20260910_v231_linear-em3-k2-arm_scoreNA_timeNA/result.md) | groupstep K=2，完整候选；旧v202父、与v230同父构建 | 开发完成，官方 **PENDING**；六shard对v230 +0.027507（286/0/50），SHA `ea79a1c1…5754f1`；不记录预测为官方时间 |
+| [v230（Linear L-EM2）](20260910_v230_linear-em2-groupstep-schedule_scoreNA_timeNA/result.md) | 精确度量 Activation 组号主序下降，K=1；完整六 API | **RETAINED 18428/292s**，+375/+11s；原当前根，已由 v233 以同分快 4s 取代为回退根；六 shard 本地 +0.079454（288/0/48）；与 Attention v230 分开登记 |
+| [v233（Linear L-TF1）](20260910_v233_linear-tf1-gradient-reuse_scoreNA_timeNA/result.md) | 首遍梯度复用（循环头加 `if _pass:` 保护，pass 0 复用循环前那次梯度）；完整六 API | **RETAINED 18428/288s**，相对父 v230 **同分快 4s**，取代其为**回退根**；低于根 v231 90 分故不成为根。六 shard **336/336 精确零**；每次调用少 2 个矩阵乘（20→18）；本地墙钟低于本机时钟分辨力、官方量出 −4s。**未兑现项：L-TF1 尚未并入根 v231** |
+| [v231（Linear L-EM3）](20260910_v231_linear-em3-k2-arm_scoreNA_timeNA/result.md) | groupstep K=2，完整候选；旧v202父、与v230同父构建 | **RETAINED 18518/291s**，相对 v230 +90/−1s；当前根；六shard对v230 +0.027507（286/0/50），SHA `ea79a1c1…5754f1` |
+| [v232（Linear L-QF1）](20260910_v232_linear-qf1-quadratic-cost_scoreNA_timeNA/result.md) | 局部二次代价修正（`krba→krbi`，实现 `δᵀGδ`）；v230 根 + 一个 einsum 下标 | **官方 TIMEOUT (>300s)，REJECTED**（2026-09-10 用户回传），精确秒数/分数未知；本地六 shard +0.013739（284/4/48）、零可测时间成本未转化为官方计时；只关闭该实现 |
 | [v230（Attention A-FIX1）](20260910_v230_attention-afix1-train-deploy-align_rejected_scoreNA_timeNA/result.md) | A-FIX1 训练/部署前向对齐（`_a2_train_rotation` 训练前向 Q/K 量化从裸 `_dense_to_hif4` 换成完整部署编码 `hif4_dynamic_quantize_q/k`，STE 反向不变；参数化/步数/lr/窗口/gate 全部与根相同） | **官方 TIMEOUT (>300s)，REJECTED**（2026-09-10 用户回传），精确秒数/分数未知；六 shard 等权 `-0.004884`（29/31/12）保留为诊断，未获官方精度定价；对齐前向约 1.4× 校准成本与 v229 同成本类，只关闭该实现，不缩步/缩窗重试；层15 重训 rotation 再次受损 `-0.013820`（继 v227 后第二次）；注意与并行 Linear 线 L-EM2 的 v230 编号冲突，引用须写全目录名 |
-| [v234（Attention A-GR1）](20260910_v234_attention-agr1-general-reciprocal_scoreNA_timeNA/result.md) | A-GR1 一般非对称互逆矩阵残差（v192 单变量推广：对称零迹 S→一般 M=I+N，Q@M、K@M⁻ᵀ 校准期精确求逆；fit 0-2/gate 3-4、32 步 Adam、逐层全窗口严格改善门、center 同步编译，全部镜像 v192；冻结根 state） | 开发完成，官方 **unregistered/NA**（用户统一评测）；六 shard 等权 `+0.003845`（21/3/48），层15 `+0.017449`、层22 `+0.005618` 接受，其余四层 gate parent；attempted 6/6、accepted 2/6；候选 SHA `4f27fb59…13a9267`，自 v230 根 `0f1af6db` 纯追加；api 时间 delta 约 +5.5s/六shard（诊断记录）；编号 v233 被 Linear L-TF1 占用故取 v234 |
+| [v234（Attention A-GR1）](20260910_v234_attention-agr1-general-reciprocal_scoreNA_timeNA/result.md) | A-GR1 一般非对称互逆矩阵残差（v192 单变量推广：对称零迹 S→一般 M=I+N，Q@M、K@M⁻ᵀ 校准期精确求逆；fit 0-2/gate 3-4、32 步 Adam、逐层全窗口严格改善门、center 同步编译，全部镜像 v192；冻结根 state） | **侧隔离官方正向：`standard-linear_v234-attn` = `14455/263.7s`，相对 v195 侧基准 `14426/243s` 为 +29/+20.7s**（相对 R3 基线 +50）——继 C76.4（+84）、A1（+60）后 Attention 第三大官方正向机制，表达力梯度（对角 0 < 三角 0 < 对称全矩阵 +22 < 一般矩阵 +29）获官方确认；完整包形态未提交（父 v230 现为回退根，根已晋级 v231）；本地六 shard `+0.003845`（21/3/48），层15/22 接受；候选 SHA `4f27fb59…13a9267`；编号 v233 被 Linear L-TF1 占用故取 v234 |
 
 ### 标准 Linear + Attention 侧隔离官方分（2026-09-09 回传）
 
@@ -97,7 +100,7 @@
 | [standard-linear_v194-attn-speed](20260908_standard-linear_v194-attn-speed_scoreNA_timeNA/) | A2/R3 校准等价提速 | `14405 / 234s` | **0** | 侧隔离 −4s 但完整包 `285s`（+5s），提速路线不成立 |
 | [standard-linear_v195-attn](20260908_standard-linear_v195-attn_scoreNA_timeNA/) | K-center 梯度聚合修复 | `14426 / 243s` | **+21** | 与完整包 `18053−18032=+21` 交叉验证，已在根上兑现 |
 | [standard-linear_v229-attn](20260910_standard-linear_v229-attn_scoreNA_timeNA/) | A-MC1 K per-call 均值再定心（v195 系根 Attention + recenter） | `14424 / 245s` | **+19**（相对 v195 行 **−2/+2s**） | 本地六 shard `+0.014923` 未迁移官方（方向反转），A-MC1 官方侧价值 −2，K 平移类关闭；侧隔离未超时（245s），完整包 v229 TIMEOUT 不由 per-call 成本单独解释；见[回传记录](../logs/execution/2026-09-10-v229-side-isolation-official.md) |
-| [standard-linear_v234-attn](20260910_standard-linear_v234-attn_scoreNA_timeNA/) | A-GR1 一般非对称互逆矩阵残差（v230 根 Attention + M=I+N） | NA | NA | 探针仅构建核验：build+verify PASS；与 v234 归档候选 attention-only 六 shard 配对 72/72 精确零（逐位一致）；官方待用户统一评测 |
+| [standard-linear_v234-attn](20260910_standard-linear_v234-attn_scoreNA_timeNA/) | A-GR1 一般非对称互逆矩阵残差（v195 系根 Attention + M=I+N） | `14455 / 263.7s` | **+50**（相对 v195 行 **+29/+20.7s**） | **官方正向**：A-GR1 官方侧价值 +29，继 C76.4（+84）、A1（+60）后第三大 Attention 机制；表达力梯度（对角 0 < 三角 0 < 对称全矩阵 +22 < 一般矩阵 +29）获官方确认；与 v234 归档候选 72/72 逐位一致；见[回传记录](../logs/execution/2026-09-10-v234-agr1-side-official.md) |
 
 **Attention Correctness Hardening（2026-09-08）：** [AC0](continuous_attention_ac0-correctness-hardened/result.md)
 （`F817E4C2…`，父 R3 `A5C679D7…`）保留为 Attention 正确性参考：原子 Q/K-pair

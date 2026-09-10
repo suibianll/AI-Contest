@@ -1,8 +1,8 @@
 # HiF4 优化实验仓库
 
-v230 Linear（L-EM2）+ v195 Attention 已由用户官方回传 **18428 / 292s**，相对 v202 完整根 **+375 / +11s**，硬限余量 **8s**。根与归档逐位一致，SHA256 `0F1AF6DBC207FF32B2C6BE16987E9C4FE50F3F10747DE26782EF52A6F2FAB7BC`。回退根 v202 保留 `18053/281s`。同编号 v230 Attention A-FIX1 官方状态不受本次回传影响。 官方提交次数无限制。
+v231 Linear（L-EM3 K=2）+ v195 Attention 已由用户官方回传 **18518 / 291s**，相对 v230 完整根 **+90 / −1s**，硬限余量 **9s**。根与归档逐位一致，SHA256 `EA79A1C12DC667142C620975AAB188920FAE7B29988C804F41C1A696CC5754F1`。回退根为 v233（L-TF1 梯度复用）`18428/288s`，SHA256 `0EC89710087D061BF9608196AD4D53A1C6BE98C8A5595596A071ECD05A6821EB`——同分于 v230 但快 4s，严格占优；其 L-TF1 尚未并入根。同编号 v230 Attention A-FIX1 官方状态不受本次回传影响。 官方提交次数无限制。
 
-最新官方回传见[v230 Linear 晋级记录](logs/execution/2026-09-10-v230-linear-official-result.md)；此前 v229 官方超时保留，其标准 Linear 侧隔离官方 `14424/245s`（相对 v195 侧基准 −2），K 平移类已关闭；v230 Attention A-FIX1 官方 TIMEOUT（>300s）REJECTED，见[回传记录](logs/execution/2026-09-10-v230-attention-afix1-official-timeout.md)。
+最新官方回传见[v231 Linear 晋级记录](logs/execution/2026-09-10-v231-linear-official-result.md)与[v233 同分提速记录](logs/execution/2026-09-10-v233-linear-official-result.md)；同日 v232 Linear L-QF1 官方 TIMEOUT（>300s）REJECTED，见[超时记录](logs/execution/2026-09-10-v232-linear-official-timeout.md)。此前 v229 官方超时保留，其标准 Linear 侧隔离官方 `14424/245s`（相对 v195 侧基准 −2），K 平移类已关闭；v230 Attention A-FIX1 官方 TIMEOUT（>300s）REJECTED，见[回传记录](logs/execution/2026-09-10-v230-attention-afix1-official-timeout.md)。v234 Attention A-GR1 侧隔离官方 `14455/263.7s`（相对 v195 侧基准 **+29**），为继 C76.4/A1 后第三大 Attention 官方正向机制，见[回传记录](logs/execution/2026-09-10-v234-agr1-side-official.md)。
 
 ## 工作入口
 
