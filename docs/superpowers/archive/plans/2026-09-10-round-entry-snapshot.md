@@ -1,0 +1,253 @@
+<!-- Historical entry snapshot: superseded by the 2026-09-10 correctness/runtime plan. No current instructions. -->
+# 计划入口
+
+> 最后更新：2026-09-10
+
+日常测试唯一入口：[4B 测试指引](../../../4b-panel-testing-guide.md)。全新测试只使用 4B，
+不再运行 0.5B、逐候选 OOD、GPT-2/opt 或 fresh-default 计时；本地时间公式和 280s 门退役。
+官方提交无限制，官方硬限 300s。评估实现说明见 [proxy-v3](../../../proxy-v3.md)。
+
+> 当前完整父：v230 Linear L-EM2，18428/292s，SHA `0f1af6dbc207ff32b2c6be16987e9c4fe50f3f10747de26782ef52a6f2fab7bc`；下方历史 R0= v202 记录仅适用于原实验。
+
+**当前唯一活动总计划（Linear）：**
+[Linear 精确度量 Activation 码序下降与双线协调计划（L-EM1）](2026-09-10-linear-exact-metric-refinement-plan-superseded.md)。
+
+承接卡 [L-EM2 组号主序调度](2026-09-10-linear-groupstep-schedule-plan-superseded.md) 已官方 **RETAINED 18428/292s**。v230 Linear（L-EM2）+ v195 Attention 已由用户官方回传 **18428 / 292s**，相对 v202 完整根 **+375 / +11s**，硬限余量 **8s**。根与归档逐位一致，SHA256 `0F1AF6DBC207FF32B2C6BE16987E9C4FE50F3F10747DE26782EF52A6F2FAB7BC`。回退根 v202 保留 `18053/281s`。同编号 v230 Attention A-FIX1 官方状态不受本次回传影响。 详见[回传记录](../../../../logs/execution/2026-09-10-v230-linear-official-result.md)。原有本地时间折算不成为有效门禁；新候选从晋级完整根构建，已在运行的旧父候选保持原始 parent/SHA，不机械拼接。
+
+承接卡 [L-EM3 groupstep 的 K=2 臂](2026-09-10-linear-k2-timed-arm-plan-superseded.md) 已执行完成：归档 v231
+`solutions/20260910_v231_linear-em3-k2-arm_scoreNA_timeNA/`，**官方 `PENDING`**（卡片 §2 预先写定
+"不论折算是否越过 296 s 一律 PENDING"）。候选 `ea79a1c1…`，与 v230 **同父兄弟**（均以
+`56dc805d` 为前缀）。本地六 shard 对计划卡父根等权 **+0.106961**（288/0/48），对当前根（=v230）
+**+0.027507**（286/0/50），即 K=2 相对 K=1 的净增量；两者之差与 L-EM2 登记的 `+0.079454` 逐位
+闭合。折算 `292 + 3.2 = 295.2s`。**本卡同时确立两条可复用结论**：v230 官方 292s 证实**朴素可加
+口径**（预测 294s，误差 2s）优于分解回归（286.5s，误差 5.5s）；分进程配对与同进程结果
+**336/336 逐 case 位相同**，内存受限时是无损路径。执行记录见
+[执行记录](../../../../logs/execution/2026-09-10-linear-em3-k2-arm.md)。
+
+> **v231 时间项更正（2026-09-10，L-EM4 侦察后补记）**：该卡登记的"校准钩子折算
+> `+5.8 ~ +6.2 s`"不成立，真实值约 **`+2.56 s`**。误差来自探针：分量用 GPU params 计时、
+> 整钩子用校准缓存里的 **CPU** params 计时，而官方路径上 params 在 GPU
+> （`official_eval.py:2583` 只在 API 返回**之后**才 `_cpu_params` 落盘；`probe_real_calibration_path.py`
+> 确认返回值五个 param 全部 `cuda:0`；`_dequantize_hif4` CPU 20.97 ms vs GPU 0.74 ms，28×）。
+> 所谓"无法归因的 3.2 s 缺口"即此次设备错配，**在官方根上不存在**。**两个 Δ 增益、六 shard
+> 配对、`official_status` 与 `292 + 3.2 = 295.2s` 折算均不受影响**（3.2 s 来自同进程配对实测，
+> 非钩子估计）；原测值保留未删，仅更正其解释。
+
+**当前 Linear 活动卡（L-DD1）：**
+[Linear 动态下降的派发削减](2026-09-10-linear-dynamic-dispatch-plan-superseded.md)。L-EM4 侦察把成本重心
+从钩子移到**动态 API**：`hif4_dynamic_quantize_activation` 绝对成本 **0.45–0.51 s/call**
+（L-EM3 计划卡"父"列的 0.5107/0.4469 s 与之吻合），且**派发受限**——单次调用（in=2560）发出
+约 **19 269 次 `as_strided`**、6 768 `permute`、6 554 `unsqueeze`、5 598 `reshape`、1 504 `bmm`、
+752 `einsum`，平均单 kernel 5–90 µs。现场核对显示 **K=1（530.04 ms）与 K=2（528.68 ms）绝对成本
+在噪声内相同**，即**固定开销主导、K 的边际只值 +3.2 s**，故削减固定开销是唯一同时降低基座与
+K 价格的杠杆。侦察记录见 `workbench/full_solution/linear-em4-metric-arch/FINDINGS.md`。
+
+**Attention 执行附录：**
+[A2 训练/部署前向对齐计划（A-FIX1）](../../plans/parallel/2026-09-10-attention-train-deploy-align-plan.md)
+已执行完成：归档 v230（本地净负、官方待定，`solutions/20260910_v230_attention-afix1-train-deploy-align_officialNA_timeNA/`）。
+六 shard 等权 `-0.004884`（29/31/12，72 case）；机制可达、非等价（种子探针证明对齐前向把
+训练推向流形上不同的点）；层15 重训 rotation 再次受损 `-0.013820`（继 v227 后第二次），
+确认根的 rotation 臂不宜重训；按新执行规则本地负向不截断官方探索，官方 `unregistered/NA`，
+待用户统一评测。执行记录见
+[执行记录](../../../../logs/execution/2026-09-10-attention-afix1-train-deploy-align.md)。
+注意与 L-EM2 的 v230 编号冲突，引用须写全目录名。
+依据[推进瓶颈审计](../../optimization-stall-analysis-2026-09-10.md) §1/§5.3：训练前向裸
+`_dense_to_hif4` 与 gate 完整部署路径不一致（代码已核实）。
+注：审计 §3 指出"规则级空间全部裁决完毕"的表述证据不足，此处更正为"规则级已盘点方向均有
+裁决记录，但不构成完备性证明"。
+上一附录 [A-QC1](../../plans/parallel/2026-09-10-attention-q-mean-center-plan.md)
+已关闭 `NO_EFFECT`：6/6 层 gate 全拒，六 shard 72 case 与根逐位相同，不占版本号、未提交官方。
+上一附录 [A-MC1](../../plans/parallel/2026-09-10-attention-k-mean-recenter-plan.md)
+已关闭：v229 **官方 TIMEOUT (>300s)，REJECTED**（2026-09-10 用户回传）。六 shard 本地 `+0.014923`（26/10/36）；同日标准 Linear 侧隔离官方 **`14424/245s`**（相对 v195 侧基准 `14426/243s` 为 **−2/+2s**），本地正向未迁移官方，A-MC1 官方侧价值 −2，K 平移类正式关闭；侧隔离未超时，完整包 TIMEOUT 不由 per-call 成本单独解释。计分/归档 SHA `d1c23fa11198e56f15ac8f64e033c00333dcd2d5660cec773598624c4b247f4d`。见[超时回传](../../../../logs/execution/2026-09-10-v229-official-timeout.md)与[侧隔离回传](../../../../logs/execution/2026-09-10-v229-side-isolation-official.md)。
+上一附录 [A-QB1](../../plans/parallel/2026-09-10-attention-qk-logit-bias-plan.md)
+已关闭：归档 v228 `REJECTED`（本地六 shard 等权 `-0.053177`，3/69/0，六层全负，未提交官方）；
+归因（Q 偏置拟合到的系统性 logit 偏差是校准窗口特异而非量化器固有属性）见
+`logs/execution/2026-09-10-attention-aqb1-q-bias.md`。
+两个文件构成同一个协调执行组：冻结同一完整根、使用独立 workbench 和结果文件、GPU 串行；单机制
+分别官方定价，只有双方都官方正向后才从较高分完整父重新构建组合候选，不建立侧父或侧晋级线。
+上一张 Attention 卡 [A-G1](../../plans/parallel/2026-09-10-attention-joint-affine-gauge-plan.md) 已关闭：
+归档 v227 `REJECTED`（本地六 shard 等权 `-0.005294`，未提交官方）；归因（gauge 窗口特异收益被
+单窗口 gate 反定价、联合训练拖垮 rotation）见
+`workbench/full_solution/attention-ag1-joint-affine-gauge/diag/diag_report.md`。
+上一张 Linear 卡 [L-XR1](2026-09-10-linear-cross-residual-correction-plan-rejected.md)
+已关闭：本地 `REJECTED`（shard0 配对 `delta_mean=-0.040082`，40/40 被触及 case 变差；归因：块外
+`G` 分量主导 `offblock_rel` 中位 0.82，固定 rank-4 只捕获 39%，冻结梯度低估纠码代价）。L-EM1 以
+精确 `G`（无截断）、精确序贯梯度刷新和 ideal 输出可达目标承接，CPU 只读探测测得真实重算 `dL`
+为 layer0/q `-21.80%`、layer0/o `-42.06%`、layer2/q `-37.69%`。
+
+当前根保持 v202 Linear + v195 Attention，官方 `18053/281s`。上一份
+[输出感知舍入边界与 A/W 联合量化计划](2026-09-09-output-aware-rounding-and-joint-aw-plan-completed.md)
+已完成：L-RB1、A-RB1、L-JRB1 均未形成可晋级候选。此前 v223、v224、v225 官方均 `TIMEOUT(>300s)`；
+R3 已关闭为 `NO_EFFECT`。上一轮三个方向实际都属于
+Q/K 正交坐标变换，现已结束并归档。计划第一张卡 L-RB1（v226）已关闭为 `REJECTED`：六 shard 全部
+负向（等权均值 `-4.10e-4`），机制可达、改动 10.4M 个硬码，但接受层校准 `ΔL` 仅约 `5e-7`，属校准
+窗口过拟合形态，未提交官方。第二张卡 A-RB1（Q/K 联合 softmax 输出舍入边界）已关闭为 `NO_EFFECT`：
+六层全部被接受门回退、输出与根逐位相同——解析求解器每层都把 9–12/12 个类别移出 0.5，但真实输出 MSE
+在 causal 与 non-causal 两条轨同时恶化 1.07×–2.97×，梯度已用有限差分校验，问题是对角曲率近似在
+数百万元素同向改动下失效；未占版本号、未提交官方。第三张卡 L-JRB1（A/W 双量化器联合边界）已关闭为
+`NO_JOINT_REACHABILITY`：5/7 层型（`q/k/v/fc_gate/fc_up`，`in_features=2560 ≤ 3072`）的 activation
+舍入边界由自适应 hierarchy 的 `_adaround_mantissa` 产生、边界表结构上不被查询；2/7 层型
+（`o_proj` 4096、`down_proj` 9216）可达且求解器确实执行（47–68% 元素入拟合、约 30% 单体代价为负），
+但 48 次可达调用中 47 次聚合代价在每个桶位都非负、唯一的负桶位（shard2 block1 `o_proj`，
+`tau[6]=0.0`）在真实重编码下把部署 MSE 从 `8.244593e-05` 恶化到 `8.349849e-05` 而被接受门回退；
+六 shard 输出与根逐位相同，不占版本号、未提交官方。三张卡（L-RB1 / A-RB1 / L-JRB1）至此全部结束，
+按计划 §9 重新分析。所有正式候选从当时最高分完整根构建，不修改 `solutions/` 下任何已归档源码。
+
+## 历史计划索引（仅证据）
+
+以下旧父、旧面板、时间预测与关闭记录是历史快照，不提供当前执行指令；当前规则只见上方入口。
+
+上一轮 [v223 后完整根离散输出与结构优化计划](2026-09-09-post-v223-hard-output-structural-plan-completed.md)
+已完成：v224 仅有噪声底收益，v225 收益集中在单层，R3 候选从未被选择。三卡实际均属于 Q/K
+正交变换族，后续不再追加 rotation/event/seed/block 邻域。
+
+上一轮 [当前最高分根正确性与优化计划](2026-09-09-current-root-correctness-and-optimization-plan-completed.md)
+已完成：FIX-A2/A-H1 归档为 v222/v223，A-H2 取消，L-H1 在预检关闭；其中 v223 的部署父状态
+起点错误由新活动计划单独修正，归档源码不再修改。
+
+上一轮 [Hard-Output Attention + Linear 优化计划](2026-09-08-single-solution-optimization-plan-superseded-20260909.md)
+已执行至 v221 后结束。其长队列、侧时间推算和后续卡片均不再提供当前指令。
+
+此前 [v189 Linear 残差压力块序计划](2026-09-06-linear-compiled-residual-pressure-order-plan-superseded.md)
+由本总计划取代；旧运行由原执行者封存，不删除、不混入 v162 新分支。
+
+上一份 [`Linear 编译校准稳健窗口极值块序`](2026-09-06-linear-compiled-robust-window-order-plan-r1-rejected.md)
+已按 R0 → R1 关闭为 **CLOSED / R1_REJECTED**：shard0 Linear mean/median
+`-0.000043038/-0.000117686`，未运行 R2，候选与证据已归档，根仍为 v189。
+
+上一份 [`Linear 编译校准输出协方差块序`](2026-09-06-linear-compiled-output-covariance-order-plan-score-rejected.md)
+已按 R0 → R3 关闭为 **CLOSED / R3_REJECTED_SCORE**：修复后的 fresh default
+Overall `0.687211924573` 低于本地最高 `0.688994940507429`，虽时间预测
+`279.215656s` 通过，仍未提交官方；候选与初始无效运行均已归档，根仍为 v189。
+
+上一份 [`Linear 编译校准样本能量块序`](2026-09-06-linear-compiled-sample-energy-plan-score-tie.md)
+已按 R1 → R2 → R3 关闭为 **CLOSED / R3_REJECTED_SCORE_TIE**：最终直连核心实现的
+fresh default Overall `0.688994940507` 与本地最高严格持平，但时间预测 `279.445203s`
+通过；三种实现和完整证据已归档。用户后来补充该归档的官方结果为
+`17636/264s`（相对 v189 `+20/-11s`）；原始本地 score-tie 裁决仍保留，根仍为 v189。
+
+此前 [`Linear 动态 32 行块能量块序计划`](2026-09-06-linear-dynamic-block-energy32-plan.md)
+已按 R0 → R3 关闭为 **CLOSED / R3_REJECTED_TIME**：fresh default Overall
+`0.688652578052` 低于已测本地最高 `0.688994940507`，且时间预测 `285.526750s`，
+未达到当时使用的 `<280s` 提交门；候选已归档，根仍为 v189。上一份 [`Linear 动态 carrier-scale 块序计划`](2026-09-06-linear-dynamic-carrier-scale-plan.md)
+已按 R0 → R3 关闭为 **CLOSED / R3_REJECTED_TIME**：fresh default Overall
+`0.687922431205` 低于已测本地最高 `0.688994940507`，且时间预测 `286.049047s`，
+未达到当时使用的 `<280s` 提交门；候选已归档，根仍为 v189。上一份 [`Linear 动态块能量块序计划`](2026-09-06-linear-dynamic-block-energy-plan.md)
+已按 R0 → R3 关闭为 **CLOSED / R3_REJECTED_TIME**：fresh default Overall
+`0.688967415343` 高于本地最高，但时间预测 `286.022476s`，未达到 `<280s` 提交门；
+候选已归档，根仍为 v189。上一份 [`Linear 校准内 carrier-energy 块序计划`](2026-09-06-linear-integrated-carrier-energy-plan.md)
+已按 R0 → R3 关闭为 **CLOSED / R3_REJECTED_TIME**：复用版保持上一版的本地分数，
+但时间预测为 `284.291453s` 且未超过本地最高，未达到提交门。上一份
+[`Linear 动态样本能量 GPTQ 块序计划`](2026-09-06-linear-dynamic-actorder-plan.md)
+已按 R0 → R3 关闭为 **CLOSED / R3_REJECTED_TIME**：候选的 default proxy 分数超过
+本地最高，但官方时间预测为 `284.775756s`，未达到 `<280s` 提交门，根仍为 v189。
+该计划不重开已归档排序/曲率邻域。
+
+最近的 [`Attention mask-aligned output selector 执行计划`](2026-09-06-attention-noncausal-selector-plan.md)
+已按 R0→R2 关闭为 **CLOSED / R2_REJECTED**；v189 已收到官方 `17616/275s` 并 RETAINED
+为当前完整父版本，根 `solution.py` 已切换为 v189。上一份无因果 logit-gain 拟合已关闭为
+**CLOSED / R1_REJECTED**。在注册新的独立机制前不重开已关闭邻域。
+
+[`Linear 冻结激活状态输出感知 JDRQ 计划`](2026-09-06-linear-fixed-state-output-aware-jdrq-plan-rejected.md)
+已按 J0 → J1 执行并以 **CLOSED / J1_REJECTED** 结束：112 个配对 case 的前两个 shard
+整体负向，执行记录见 [`2026-09-06 Linear JDRQ 执行记录`](../../../../logs/execution/2026-09-06-linear-fixed-state-output-aware-jdrq-plan.md)。
+
+[`Linear 静态 activation-GPTQ 条件曲率块序计划`](2026-09-06-linear-static-gptq-conditional-curvature-order-plan-rejected.md)
+已按 C0 → C1 执行并以 **CLOSED / C1_REJECTED** 结束；执行记录见
+[`2026-09-06 条件曲率执行记录`](../../../../logs/execution/2026-09-06-linear-static-gptq-conditional-curvature-plan.md)。
+
+[`Linear 多折 cross-block Hessian 联合坐标计划`](2026-09-06-linear-crossblock-robust-hessian-plan-rejected.md)
+已按 B0 → B1 执行并以 **CLOSED / B1_REJECTED** 结束：112 个配对 case 中 96 个回退，
+执行记录见 [`2026-09-06 Linear cross-block 执行记录`](../../../../logs/execution/2026-09-06-linear-crossblock-robust-hessian-plan.md)。
+
+[`Attention 变换坐标对齐 source-scale 优化计划`](2026-09-06-attention-aligned-source-scale-plan-rejected.md)
+已按 A0 → A1 执行并以 **CLOSED / NOOP_REJECTED** 结束：16 个配对 case 逐位不变，
+执行记录见 [`2026-09-06 Attention 对齐 source-scale 执行记录`](../../../../logs/execution/2026-09-06-attention-aligned-source-scale-plan.md)。
+
+[`Attention source-scale proposal 优化计划`](2026-09-06-attention-source-scale-proposal-plan-rejected.md)
+已按 S0 → S1 执行并以 **CLOSED / NOOP_REJECTED** 结束：实际 16 个配对 case 逐位
+不变，执行记录见 [`2026-09-06 Attention source-scale 执行记录`](../../../../logs/execution/2026-09-06-attention-source-scale-proposal-plan.md)。
+
+[`修正版合法离散网格与输出目标优化计划`](2026-09-06-corrected-legal-lattice-output-plan-rejected.md)
+已按 R0 → R1 执行并以 **CLOSED / R1_NO_SUPPORTED_MECHANISM** 结束：真实 NVFP4 输入的
+合法联合 output oracle 没有材料余量，执行记录见
+[`2026-09-06 修正版执行记录`](../../../../logs/execution/2026-09-06-corrected-legal-lattice-output-plan.md)。
+
+静态 activation-GPTQ 块序复核已完成并归档为 v189：本地 default-panel 高于 v186 组合父基线，
+OOD/时间门通过，官方结果仍 `unregistered/NA`；计划记录见
+[`归档计划`](2026-09-06-static-activation-gptq-order-plan-candidate-archived.md)。
+
+[`联合输出坐标规范化诊断计划`](2026-09-06-joint-output-gauge-plan-rejected.md)
+已关闭为 **CLOSED / J0_REJECTED**，执行记录见
+[`2026-09-06 J0 执行记录`](../../../../logs/execution/2026-09-06-joint-output-gauge-plan.md)。
+
+上一张 [`64-block 层级分区与激活误差解剖计划`](2026-09-06-hierarchy-partition-and-activation-anatomy-plan-rejected.md)
+已按 D-A → D-B 执行并以 **CLOSED / D_B_REJECTED** 结束：clip/grid 非主导，Linear
+子组分区未产生材料收益，Attention joint 也为负；未创建候选。
+
+上一份 [`合法编码复核与最终输出优化计划`](2026-09-05-legal-codec-and-output-objective-plan-r2-rejected.md)
+已于 2026-09-06 按 R0 → R1 → R2 执行并以 **CLOSED / R2_REJECTED** 结束：R0 通过，
+R1 G1-A 未通过，R2-L G2-L 未通过，R2-A 仅 ORACLE_ONLY。执行记录见
+[`2026-09-06 执行记录`](../../../../logs/execution/2026-09-06-legal-codec-output-plan.md)。
+未创建可部署候选，根 v186 不变。
+旧 [codebook 计划](2026-09-05-nvfp4-codebook-exact-conversion-plan-closed.md)
+已结束归档。其结果解释受[新审计](../../../../logs/execution/2026-09-05-next-plan-evidence-audit.md)
+修订：cb1/cb2 编码错误及 operand/output 目标混淆，不能证明合法空间耗尽。
+根 v186 不变。
+
+proxy-v3 分片评测与诊断工具已完成并归档，见
+[`归档记录`](2026-09-04-proxy-v3-evaluator-and-analysis-tools-completed.md)。
+它新增并切换默认评测入口，不修改 `solution.py` 或 `evaluator/official_eval.py`、不产生算法候选、
+也不涉及官方提交；六个平衡 shard、可审计的校准产物复用和自动故障定位现可直接使用。
+命令与判读见 [`proxy-v3 使用说明`](../../../proxy-v3.md)。
+
+v187 Attention Jacobian 坐标敏感度机制相对 v185
+default `+0.015187`、L1 `0.016199`，证明解析 importance 有效；但相对 v186仍
+`-0.333220`、116/120 回归，已归档为 RESEARCH RETAINED。随后官方 `9167/169s`，
+相对 v185 `+721/+4s`，确认机制有效但仍不足以替换 v186。计划见
+[`归档记录`](2026-09-04-v187-attention-jacobian-sensitivity-plan-research-retained.md)。
+
+v185 官方 `8446/165s`，相对 v186 少 `9153` 分；原 K-center/QK-balance/gamma/refine
+邻域关闭。当前官方父为 v186 `17599/272s`。
+
+v183 官方 `17598/279.7s`，与 v182 同分且慢 `6.7s`，已按预注册规则 REJECTED；
+attention block-smooth refine 覆盖率族关闭，计划见
+[`归档记录`](2026-09-04-v183-attn-bsm-full-refine-plan-rejected.md)。
+
+当日已归档：低复杂度算法扩展计划（A1-A4/L1-L4/组合全覆盖，
+`-superseded`）、v162 官方侧向隔离优化计划（v165 timeout、v167 本地
+REJECTED、v166 rank-1 官方 `4590/226s` RETAINED 为新 Linear 父侧，`-superseded`）、官方两侧分数比重校准计划
+（v162 `1001/146s`、v163 `4587/202s`、v164
+`13945/204s`，score interaction 为 1，当前已实现 Attention:Linear 官方贡献约 `3.61:1`）、
+> **[2026-09-04 复核]** `3.61:1` 正确（v182 口径 `C_A/C_L = 13007/3590 = 3.62` 一致）。但
+> `official-local-fitting-analysis-2026-09-04.md` §3.2 初版误用侧隔离总分当侧贡献，得出 `3.05`
+> ——算术错误（未扣 1001 零点），已在原文勘误，不得引用。见
+> [修订清单 §10](../../../stale-information-inventory-2026-09-04.md)。
+Attention per-call 序列自适应精化计划（v161 官方 timeout，per-call 动态族关闭）、Attention
+解析式宽域计划（A1a 4×4 REJECTED、A2 无病因、A3 未启动）与 Householder 快速验证计划
+（全族 REJECTED），见
+[`../archive/plans/`](.)。Linear 侧 T<d 秩亏伪增益通道已结构性封闭，
+不再从已关闭族内微调；官方证据判别器 D1/D2/D3 预注册于
+[`OPA-1 Stage 1 账本`](../../../../logs/execution/2026-09-03-opa1-stage1-official-evidence-ledger.md)，
+绑定未来任何官方提交。
+
+快速机制迭代使用 `--compact-panel`：Linear 为 28 个 selected Weight state + 56 个跨
+validation/test holdout case，Attention 为四个深度/长度哨兵；读取 median、尾部分布、负
+case、cross-holdout 一致性和 interaction；不再用 mean 单独晋级。完整 default panel 仅作
+单侧低频审计。
+
+所有历史计划（含已完成的 21765 A/B/C 计划、Householder 与 Attention 解析计划）均已移至
+[`../archive/plans/`](.)。它们是历史决策记录，
+不再提供下一步指令。
+
+## 计划生命周期
+
+1. 写新计划前先确认本目录除 `README.md` 外只有一个 `.md`；不能并行保留多个 current/active 计划。
+2. 计划步骤要写明假设、代码入口、模型/数据、验收指标、产物和失败处理；执行后立即写入结果、source SHA、日志链接和 `done/rejected/blocked` 状态。
+3. 每次实验无论成功、失败、超时或未提交，都先归档完整源码、配置、结果和 parent；缺少源码/SHA/配置的结果标为 `non-reproducible`。
+4. 计划完成、被替换、停止或连续阻塞后，立即移入 `../archive/plans/`，并在同一提交创建/指定新的 active 计划、更新 README 和状态文档。
+5. 归档计划不可继续追加新的下一步，也不直接修改历史结论；发现 bug 或数据错误时写审计说明并创建修复计划。
+
+当前数据数字发生变化时，应同时更新根 README、`solutions/README.md`、当前状态报告和执行日志的日期、配置、分数、时间与 SHA。此前 C1 structured Linear 计划已归档为 [`2026-08-31-hif4-active-c1-structured-linear-plan-superseded.md`](2026-08-31-hif4-active-c1-structured-linear-plan-superseded.md)，不得再从中读取下一步。
+
+官方边界（2026-08-31 修订）：官方不再限制任何 `A@W` 拟合用法，离线校准与在线激活量化均可自由用 `A@W`、输出或残差优化 `Q(W)`/`Q(A)`；唯一硬约束是端到端运行时间严格小于 `300s`。v98 已在该限制下官方判为 timeout，见 [`2026-08-31-v98-official-timeout.md`](../../../../logs/execution/2026-08-31-v98-official-timeout.md)；v107 官方保持 Attention `wrong answer`（非 timeout）。探索阶段的 layer-1、oracle 和超时实验只能筛选方向，不能替代完整部署门禁。

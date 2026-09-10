@@ -1,9 +1,11 @@
+> 生命周期：SUPERSEDED，2026-09-10。开发结果归档、未知官方回传单列；不再提供当前指令。下一步只见[计划入口](../../plans/README.md)。旧计时外推、DD1等价性/成本归因按本轮总结修正。
+
 # Linear 动态下降的派发削减：把 K 的边际价格打下来（L-DD1）
 
 > 状态：ACTIVE，2026-09-10。L-EM3/v231 之后的**重新规划卡**。
 > 当前完整根：v230 Linear（L-EM2，K=1）+ v195 Attention，官方 **18428 / 292s**，
 > SHA256 `0F1AF6DBC207FF32B2C6BE16987E9C4FE50F3F10747DE26782EF52A6F2FAB7BC`。
-> 前一臂 [L-EM3 K=2](2026-09-10-linear-k2-timed-arm-plan.md) 已归档 v231
+> 前一臂 [L-EM3 K=2](2026-09-10-linear-k2-timed-arm-plan-superseded.md) 已归档 v231
 > `solutions/20260910_v231_linear-em3-k2-arm_scoreNA_timeNA/`，**官方 `PENDING`**，折算 `295.2s`。
 > 侦察记录见 `workbench/full_solution/linear-em4-metric-arch/FINDINGS.md`。
 

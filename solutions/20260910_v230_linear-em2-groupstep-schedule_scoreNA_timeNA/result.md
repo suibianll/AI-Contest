@@ -8,7 +8,7 @@ Status: **RETAINED — official 18428 / 292s**, reported by the user on 2026-09-
 - Version note: v229 was taken by the parallel Attention line
   (`attention-amc1-k-mean-recenter`) while this candidate was in flight. v230 is a
   **sibling** of v229 — both are parented on the same root `56dc805d`.
-- Plan: [`2026-09-10-linear-groupstep-schedule-plan.md`](../../docs/superpowers/plans/2026-09-10-linear-groupstep-schedule-plan.md)
+- Plan: [`2026-09-10-linear-groupstep-schedule-plan.md`](../../docs/superpowers/archive/plans/2026-09-10-linear-groupstep-schedule-plan-superseded.md)
 - Log: [`2026-09-10-linear-groupstep-schedule.md`](../../logs/execution/2026-09-10-linear-groupstep-schedule.md)
 
 ## Mechanism

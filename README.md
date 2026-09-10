@@ -6,6 +6,7 @@ v230 Linear（L-EM2）+ v195 Attention 已由用户官方回传 **18428 / 292s**
 
 ## 工作入口
 
+- [本轮总结与下一步](docs/optimization-round-summary-2026-09-10.md)：先修正Linear局部二次代价，再消除重复计算；官方待定项单列
 - [执行规则](AGENTS.md)
 - [当前唯一活动计划入口](docs/superpowers/plans/README.md)
 - [4B 测试指引](docs/4b-panel-testing-guide.md)：唯一日常测试流程

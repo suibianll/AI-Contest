@@ -20,11 +20,13 @@
 
 ## 0.1 当前计划状态（2026-09-10）
 
-v230 Linear（L-EM2）+ v195 Attention 已由用户官方回传 **18428 / 292s**，相对 v202 完整根 **+375 / +11s**，硬限余量 **8s**。根与归档逐位一致，SHA256 `0F1AF6DBC207FF32B2C6BE16987E9C4FE50F3F10747DE26782EF52A6F2FAB7BC`。回退根 v202 保留 `18053/281s`。同编号 v230 Attention A-FIX1 官方状态不受本次回传影响。 新正式候选从该完整根构建；已在旧父上进行的候选保留原 parent，不自动继承此结果。
+本轮开发已结束，根保持v230 Linear L-EM2 **18428/292s**。下一轮只按[计划入口](superpowers/plans/README.md)指定的[局部代价修正与运行成本优化](superpowers/plans/2026-09-10-linear-correctness-and-runtime-plan.md)推进：L-QF1公式修正 → L-TF1首遍梯度复用 → 单项架构降时。
 
-v231 Linear（L-EM3，groupstep K=2）已归档 **官方 `PENDING`**：`solutions/20260910_v231_linear-em3-k2-arm_scoreNA_timeNA/`，候选 `ea79a1c1…`。它与 v230 是**同父兄弟**（两者都以 `56dc805d` 为前缀），因为 L-EM3 卡片在换根之前就已构建并配对。本地六 shard 对计划卡父根等权 **+0.106961**（288/0/48），对当前根 **+0.027507**（286/0/50，即 K=2 相对 K=1 的净增量）；折算 `292 + 3.2 = 295.2s`。该卡附带两项可复用结论：**朴素可加折算口径**被 v230 官方读数证实（预测 294 vs 官方 292），以及**分进程配对无损**（336/336 逐 case 位相同）。归档时 `solutions/` 下 `v231` 仅此一条；v230 曾被两条线共用，故 v231 若被 Attention 线取用，引用一律写全目录名。
+v231 Linear已完成六shard，相对当前根+0.027507（286/0/50），官方PENDING；v230 Attention A-FIX1官方未知。v229完整包TIMEOUT、标准Linear侧14424/245s（−2/+2s），不再列入后续优化。L-EM4侦察完成；旧L-DD1只有计划与侦察，无实施结果。
 
+[本轮总结](optimization-round-summary-2026-09-10.md)取代此前“朴素时间公式已证实”“官方带缓存”“整API计数归因于局部einsum”“DD1仅等价提速”等解释；CPU/GPU测量口径修正仍保留。原入口补记已保存历史快照。官方未知不填预测秒数。
 
+### 既有实验历史（以下R0/当前根/下一步均为当时快照）
 09-09 旧计划三卡（L-RB1/A-RB1/L-JRB1）已全部关闭并归档，见
 [归档版计划](superpowers/archive/plans/2026-09-09-output-aware-rounding-and-joint-aw-plan-completed.md)。
 当前执行卡及 Attention 附录只以[计划入口](superpowers/plans/README.md)为准，本页不复制活动卡片快照。

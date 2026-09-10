@@ -1,3 +1,5 @@
+> 生命周期：SUPERSEDED，2026-09-10。开发结果归档、未知官方回传单列；不再提供当前指令。下一步只见[计划入口](../../plans/README.md)。旧计时外推、DD1等价性/成本归因按本轮总结修正。
+
 # Linear 精确度量 Activation 码序下降与双线协调计划（L-EM1）
 
 > 状态：ACTIVE，总协调计划，2026-09-10。
@@ -5,9 +7,9 @@
 > 当前完整根：v202 Linear + v195 Attention，官方 `18053/281s`，SHA256
 > `56DC805D6E5A3AEF896DB8021045740292735725D688B48E3D4393E55EFCB2BD`。
 > 本计划负责 Linear 执行和两条优化线的统一父版本、版本登记、组合顺序与最终归档；Attention 算法见
-> [Attention Q 侧加性 logit 偏置计划](parallel/2026-09-10-attention-qk-logit-bias-plan.md)。
+> [Attention Q 侧加性 logit 偏置计划](../../plans/parallel/2026-09-10-attention-qk-logit-bias-plan.md)。
 > 上一张 Linear 卡
-> [L-XR1 完整输出交叉残差纠码](../archive/plans/2026-09-10-linear-cross-residual-correction-plan-rejected.md)
+> [L-XR1 完整输出交叉残差纠码](2026-09-10-linear-cross-residual-correction-plan-rejected.md)
 > 已本地关闭为 `REJECTED`。
 
 ## 1. 目标与算法判断

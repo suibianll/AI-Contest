@@ -1,9 +1,11 @@
+> 生命周期：SUPERSEDED，2026-09-10。开发结果归档、未知官方回传单列；不再提供当前指令。下一步只见[计划入口](../../plans/README.md)。旧计时外推、DD1等价性/成本归因按本轮总结修正。
+
 # Linear groupstep 的 K = 2 臂：用官方数据裁决换算口径（L-EM3）
 
 > 状态：ACTIVE，2026-09-10。L-EM2/v230 之后的**重新规划卡**。
 > 当前完整根：v202 Linear + v195 Attention，官方 `18053/281s`，SHA256
 > `56DC805D6E5A3AEF896DB8021045740292735725D688B48E3D4393E55EFCB2BD`。
-> 前一张卡 [L-EM2 组号主序调度](2026-09-10-linear-groupstep-schedule-plan.md) 已归档为
+> 前一张卡 [L-EM2 组号主序调度](2026-09-10-linear-groupstep-schedule-plan-superseded.md) 已归档为
 > v230（K=1，本地六 shard `288/0/48`、等权 `+0.079454`，`official_status: PENDING`）。
 
 ## 1. 为什么是"抬 K"，而不是别的

@@ -1,17 +1,19 @@
+> 生命周期：SUPERSEDED，2026-09-10。开发结果归档、未知官方回传单列；不再提供当前指令。下一步只见[计划入口](../../plans/README.md)。旧计时外推、DD1等价性/成本归因按本轮总结修正。
+
 # Linear 精确度量下降的组号主序调度（L-EM2）
 
 > 状态：CLOSED / RETAINED，v230 Linear 官方18428/292s，2026-09-10。
 > （`solutions/20260910_v230_linear-em2-groupstep-schedule_scoreNA_timeNA/`，
 > `official_status: PENDING`）。执行记录见
-> [L-EM2 执行记录](../../../logs/execution/2026-09-10-linear-groupstep-schedule.md)。
+> [L-EM2 执行记录](../../../../logs/execution/2026-09-10-linear-groupstep-schedule.md)。
 > 六 shard `288/0/48`、等权均值 `+0.079454`；K 回退为 1，折算官方 `≈294 s`。
 > 本卡是 L-EM1 的时间判定重规划卡。
 > 当前完整根：v202 Linear + v195 Attention，官方 `18053/281s`，SHA256
 > `56DC805D6E5A3AEF896DB8021045740292735725D688B48E3D4393E55EFCB2BD`。
 > 前一张卡
-> [L-EM1 精确度量精化计划](2026-09-10-linear-exact-metric-refinement-plan.md)
+> [L-EM1 精确度量精化计划](2026-09-10-linear-exact-metric-refinement-plan-superseded.md)
 > 因 §3.3 的时间估计被实测证伪（低估约 40 倍）而**不提交官方、不占版本号**；
-> Attention 侧见 [Attention Q 侧加性 logit 偏置计划](parallel/2026-09-10-attention-qk-logit-bias-plan.md)。
+> Attention 侧见 [Attention Q 侧加性 logit 偏置计划](../../plans/parallel/2026-09-10-attention-qk-logit-bias-plan.md)。
 
 ## 1. 为什么重规划
 

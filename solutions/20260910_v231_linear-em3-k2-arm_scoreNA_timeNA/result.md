@@ -12,7 +12,7 @@ two pass counts, not to have the local measurement pick a winner.
   of K=1. The card registered this number as unoccupied; at archive time this is the only
   `v231` under `solutions/`. v230 was shared by both lines, so if the Attention line takes
   v231 too, quote the full directory name.
-- Plan: [`2026-09-10-linear-k2-timed-arm-plan.md`](../../docs/superpowers/plans/2026-09-10-linear-k2-timed-arm-plan.md)
+- Plan: [`2026-09-10-linear-k2-timed-arm-plan.md`](../../docs/superpowers/archive/plans/2026-09-10-linear-k2-timed-arm-plan-superseded.md)
 - Log: [`2026-09-10-linear-em3-k2-arm.md`](../../logs/execution/2026-09-10-linear-em3-k2-arm.md)
 
 ## The root moved while this card was in flight
