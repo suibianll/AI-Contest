@@ -1,6 +1,6 @@
 # Attention Q 侧加性 logit 偏置补偿计划（A-QB1）
 
-> 状态：ACTIVE 执行附录，2026-09-10。
+> 状态：CLOSED / REJECTED，2026-09-10。
 > 从属于[Linear 完整输出交叉残差纠码与双线协调计划](../2026-09-10-linear-cross-residual-correction-plan.md)。
 > 当前完整根为 v202 Linear + v195 Attention，官方 `18053/281s`。本文件只负责 Attention A-QB1，
 > 统一父版本、版本号、组合和根切换由总协调计划处理。
@@ -84,3 +84,14 @@ v227 归因的三条事实决定本卡设计：
 - 无可达非等价输出：`NO_EFFECT`；本地净负且形成非等价候选：归档 `REJECTED`；
 - 本地非负候选：归档并标记等待用户统一官方评测；
 - 完成后本文件归档，不追加偏置粒度/步数/正则邻域。
+
+## 7. 结果（2026-09-10，关闭）
+
+A-QB1 已实现为 v228，本地六 shard 强负：等权 `-0.053177`（3/69/0，72 case），六层全负，
+shard3（层15）最差 `-0.105430`。机制可达且 gate 真实接受（control 8/8 种子接受、改善
+1.9%–2.7%），但全 folds 训练 + 全 folds gate 仍失败——Q 偏置拟合到的系统性 logit 偏差是
+校准窗口特异而非量化器固有属性。结合 v227（gauge）与 A-RB1（舍入边界），逐通道/逐元素级
+校准拟合自由度在 Attention 侧第三次被否决。按 §6 关闭本实现，不追加步数/lr/fold/head 粒度
+邻域；未提交官方，官方状态 `unregistered/NA`。归档：
+`solutions/20260910_v228_attention-aqb1-q-bias_rejected_scoreNA_timeNA/`，执行记录
+`logs/execution/2026-09-10-attention-aqb1-q-bias.md`。根保持 R0。

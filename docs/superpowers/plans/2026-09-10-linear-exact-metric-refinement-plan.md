@@ -171,7 +171,8 @@ Weight 五字段、Linear transform、permutation 和父 activation state 其他
 | 都正向 | 都正向 | 先选官方分更高的单机制完整候选为父，再在该源码上重新应用另一机制，构造一个组合候选 |
 
 事实（2026-09-10）：A-G1 已本地关闭为 `REJECTED`（v227，六 shard 等权 `-0.005294`，未提交官方），
-根保持 R0；Attention 线由 A-QB1 承接。L-XR1 已本地关闭为 `REJECTED`
+根保持 R0；Attention 线由 A-QB1 承接。A-QB1 已本地关闭为 `REJECTED`（v228，六 shard 等权
+`-0.053177`，3/69/0，六层全负，未提交官方），根保持 R0。L-XR1 已本地关闭为 `REJECTED`
 （shard0 配对 `delta_mean=-0.040082`、`0/40/16`），不分配版本号、不提交官方，根保持 R0。
 
 组合候选不是复制粘贴两个归档文件。它必须从较高分完整父重新构建，重算全部 calibration state，先做

@@ -1,0 +1,13 @@
+{
+  "run_id": "attention-aqb1-q-bias",
+  "version": "v228",
+  "mechanism": "Q-side additive logit bias: per-Q-head b_q[head_dim] trained with Adam on true deployment MSE over all calibration folds, applied after learned_rotation/learned_center and before _dense_to_hif4",
+  "parent": "v202 Linear + v195 Attention complete root",
+  "parent_sha256": "56dc805d6e5a3aef896db8021045740292735725d688b48e3d4393e55efcb2bd",
+  "candidate_sha256": "886a8b17736aa51a56d9cb595208975949fbfb815c597adc1ea1c7a7706c824a",
+  "fit_data": "all 5 calibration folds, window-equal-weighted true deployment-path MSE (no fit/select split); per-layer gate on all-folds case-equal-weighted true MSE, strict improvement only",
+  "coordinate": "per-Q-head additive bias b_q[head_dim]; all existing root state (including gate-accepted rotation/center) frozen",
+  "solver": "Adam 32 steps, lr/beta/clip reused from root A2 _A2_TRAIN_* constants",
+  "candidate_count": 1,
+  "official_status": "unregistered/NA"
+}

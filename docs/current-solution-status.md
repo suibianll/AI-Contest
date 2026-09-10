@@ -27,14 +27,20 @@
 
 09-09 旧计划三卡（L-RB1/A-RB1/L-JRB1）已全部关闭并归档，见
 [归档版计划](superpowers/archive/plans/2026-09-09-output-aware-rounding-and-joint-aw-plan-completed.md)。
-当前按[Linear 完整输出交叉残差纠码与双线协调计划](superpowers/plans/2026-09-10-linear-cross-residual-correction-plan.md)
-（含 Linear L-XR1 卡）及其 Attention 附录
-[Q/K 联合仿射 Gauge 优化计划](superpowers/plans/parallel/2026-09-10-attention-joint-affine-gauge-plan.md)（A-G1）推进。
+当前按[Linear 精确度量 Activation 码序下降与双线协调计划（L-EM1）](superpowers/plans/2026-09-10-linear-exact-metric-refinement-plan.md)
+（含 Linear L-EM1 卡）及其 Attention 附录
+[Q 侧加性 logit 偏置补偿计划（A-QB1）](superpowers/plans/parallel/2026-09-10-attention-qk-logit-bias-plan.md)推进。
 
 A-G1 已实现并归档为 v227 `REJECTED`：本地六 shard 等权 `-0.005294`（28/32/12，72 case），
 shard2 与根逐位不变；机制可达（60/72 case 硬输出改变，s=0 逐位恢复父）但本地净负，误差集中在
 短序列与 test split；未提交官方，按计划 §7 不缩步/缩窗/拆粒度重试。L-XR1 由并行 Linear 线负责。
 根不变。
+
+A-QB1 已实现并归档为 v228 `REJECTED`：本地六 shard 强负，等权 `-0.053177`（3/69/0，72 case），
+六层全负，shard3（层15）最差 `-0.105430`；机制可达且全 folds gate 真实接受，但全 folds 训练 +
+全 folds gate 仍失败——Q 偏置拟合到的系统性 logit 偏差是校准窗口特异而非量化器固有属性；
+逐通道/逐元素级校准拟合自由度在 Attention 侧第三次被否决（继 v227 gauge、A-RB1 舍入边界）。
+未提交官方，根不变。
 
 当前根不变。FIX-A2/v222 官方 `18015/293s`（相对根 `−38/+12s`），已 REJECTED；A-H1/v223
 六 shard mean `+0.003209`，但事件路径错误地从最后一步 Adam 更新前状态出发，官方

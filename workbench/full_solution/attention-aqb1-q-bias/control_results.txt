@@ -1,0 +1,46 @@
+[L-R2] rank2 reachable=1 vtu_cross_max=1.863e-09
+[COMBINED-LINEAR-SAMPLE-ENERGY] reachable=1 blocks=2
+[L-R2] rank2 reachable=1 vtu_cross_max=1.863e-09
+[COMBINED-LINEAR-SAMPLE-ENERGY] reachable=1 blocks=2
+========================================================================
+[control1_b0_bitwise] pass=True
+    q_nokey_bitwise: True
+    k_nokey_bitwise: True
+    q_zero_b_bitwise: True
+    final_output_zero_b_bitwise: True
+[control2_synthetic_bias] pass=True
+    q_field_changed_counts: {'scale_factor': 382, 'scale_lv2': 1367, 'scale_lv3': 2880, 'sign': 12366, 'mant': 21109}
+    q_fields_changed: True
+    output_max_abs_diff: 5.919777322560549e-05
+    output_changed: True
+    k_bitwise_unchanged: True
+    v_bitwise_unchanged: True
+[control3_standalone_import] pass=True
+    missing_apis: []
+    standalone_end_to_end_finite: True
+[control4_records_and_legal_state] pass=True
+    audit: {'a2_arm': 'identity', 'aqb1_arm': 'q-bias', 'aqb1_gate_loss_parent': 8.794260821787248e-08, 'aqb1_gate_loss_candidate': 8.582973265447436e-08, 'aqb1_steps': 32, 'aqb1_windows': 5, 'aqb1_train_loss': 0.8902188539505005, 'aqb1_bias_l2': 4.940888404846191, 'aqb1_bias_max_abs': 0.32048237323760986, 'aqb1_bias_nonzero': 256}
+    state_legal: True
+    deployed_params_legal: True
+    learned_q_bias_in_state: True
+    learned_q_bias_cpu_f32: True
+    root_a2_arm_preserved: identity
+    root_rotation_frozen: True
+[control5_v_and_linear] pass=True
+    v_bitwise: True
+    linear_weight_bitwise: True
+    linear_activation_bitwise: True
+[control6_gate_arms_over_seeds] pass=True
+    {'seed': 0, 'aqb1_arm': 'q-bias', 'gate_parent': 8.794260821787248e-08, 'gate_candidate': 8.582973265447436e-08, 'bias_l2': 4.940888404846191, 'bias_nonzero': 256, 'bias_max_abs': 0.32048237323760986, 'windows': 5, 'bias_shape': [4, 64], 'bias_cpu_f32': True, 'bias_finite': True, 'dynamic_q_finite': True}
+    {'seed': 1, 'aqb1_arm': 'q-bias', 'gate_parent': 9.199205095455909e-08, 'gate_candidate': 8.989293860395265e-08, 'bias_l2': 4.945979118347168, 'bias_nonzero': 256, 'bias_max_abs': 0.32166799902915955, 'windows': 5, 'bias_shape': [4, 64], 'bias_cpu_f32': True, 'bias_finite': True, 'dynamic_q_finite': True}
+    {'seed': 2, 'aqb1_arm': 'q-bias', 'gate_parent': 7.825529735328018e-08, 'gate_candidate': 7.626234861390913e-08, 'bias_l2': 4.954642295837402, 'bias_nonzero': 256, 'bias_max_abs': 0.3258588910102844, 'windows': 5, 'bias_shape': [4, 64], 'bias_cpu_f32': True, 'bias_finite': True, 'dynamic_q_finite': True}
+    {'seed': 3, 'aqb1_arm': 'q-bias', 'gate_parent': 9.087016650255464e-08, 'gate_candidate': 8.918379705846746e-08, 'bias_l2': 4.916959285736084, 'bias_nonzero': 256, 'bias_max_abs': 0.3264380395412445, 'windows': 5, 'bias_shape': [4, 64], 'bias_cpu_f32': True, 'bias_finite': True, 'dynamic_q_finite': True}
+    {'seed': 4, 'aqb1_arm': 'q-bias', 'gate_parent': 8.571382039690434e-08, 'gate_candidate': 8.391220660541875e-08, 'bias_l2': 4.866309642791748, 'bias_nonzero': 256, 'bias_max_abs': 0.3207509517669678, 'windows': 5, 'bias_shape': [4, 64], 'bias_cpu_f32': True, 'bias_finite': True, 'dynamic_q_finite': True}
+    {'seed': 5, 'aqb1_arm': 'q-bias', 'gate_parent': 9.07613809886243e-08, 'gate_candidate': 8.881232389512661e-08, 'bias_l2': 4.974477291107178, 'bias_nonzero': 256, 'bias_max_abs': 0.3228459656238556, 'windows': 5, 'bias_shape': [4, 64], 'bias_cpu_f32': True, 'bias_finite': True, 'dynamic_q_finite': True}
+    {'seed': 6, 'aqb1_arm': 'q-bias', 'gate_parent': 9.346454561409701e-08, 'gate_candidate': 9.144421113660428e-08, 'bias_l2': 4.941508769989014, 'bias_nonzero': 256, 'bias_max_abs': 0.33610010147094727, 'windows': 5, 'bias_shape': [4, 64], 'bias_cpu_f32': True, 'bias_finite': True, 'dynamic_q_finite': True}
+    {'seed': 7, 'aqb1_arm': 'q-bias', 'gate_parent': 8.140323330962928e-08, 'gate_candidate': 7.928770457965584e-08, 'bias_l2': 4.954847812652588, 'bias_nonzero': 256, 'bias_max_abs': 0.32907184958457947, 'windows': 5, 'bias_shape': [4, 64], 'bias_cpu_f32': True, 'bias_finite': True, 'dynamic_q_finite': True}
+    arms_seen: ['q-bias']
+    all_windows_5: True
+    forced_harmful_bias_reverted: True
+========================================================================
+OVERALL: PASS
