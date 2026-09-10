@@ -1,0 +1,50 @@
+[L-R2] rank2 reachable=1 vtu_cross_max=1.863e-09
+[COMBINED-LINEAR-SAMPLE-ENERGY] reachable=1 blocks=2
+[L-EM2] compile arm=compiled in=128 gram_diag_mean=1.961338e-01 h_norm=2.8827e-01
+[L-R2] rank2 reachable=1 vtu_cross_max=1.863e-09
+[COMBINED-LINEAR-SAMPLE-ENERGY] reachable=1 blocks=2
+[L-EM2] compile arm=compiled in=128 gram_diag_mean=1.961338e-01 h_norm=2.8827e-01
+[L-EM2] dynamic arm=applied groups=32 passes=2 accepted_steps=32 accepted_groups=945 changed=840 rows=32 grad_mean=4.276e-04 error=-
+[L-EM2] dynamic arm=applied groups=32 passes=2 accepted_steps=32 accepted_groups=945 changed=840 rows=32 grad_mean=4.276e-04 error=-
+========================================================================
+[control1_zero_step_bitwise] pass=True
+    zero_step_arm: parent
+    q_bitwise: True
+    k_bitwise: True
+    v_bitwise: True
+    final_output_bitwise: True
+[control2_reciprocity] pass=True
+    compiled_pair_reciprocity_max_abs: 2.951964037656296e-07
+    train_info_inverse_error_fp32: 4.76837158203125e-07
+    dense_logit_max_abs_diff_fp64: 1.1824882731846509e-08
+    logit_invariant_lt_1e-6: True
+    singular_range: (0.707107663154602, 1.4142316579818726)
+    n_norm: 5.949071884155273
+    initial_vs_final_true_loss: (0.949988603591919, 0.9500202695463944)
+[control3_standalone_import] pass=True
+    missing_apis: []
+    standalone_end_to_end_finite: True
+[control3b_validate_state] pass=True
+    state_legal: True
+    deployed_params_legal: True
+    cand_audit: {'agr2_arm': 'parent', 'agr2_attempted': 1, 'agr2_accepted': 0, 'agr2_gate_parent_mse': 8.100908033270571e-08, 'agr2_gate_candidate_mse': 8.100862558535482e-08, 'agr2_initial_loss': 0.949988603591919, 'agr2_final_loss': 0.9500202695463944, 'agr2_inverse_error': 4.76837158203125e-07, 'agr2_n_norm': 5.949071884155273, 'agr2_parent_arm': 'identity', 'agr2_center_compiled': False, 'a2_arm': 'identity'}
+[control4_v_linear_reachability] pass=True
+    v_bitwise: True
+    linear_weight_bitwise: True
+    linear_activation_bitwise: True
+    {'seed': 0, 'agr2_arm': 'parent', 'attempted': 1, 'accepted': 0, 'gate_parent': 8.100908033270571e-08, 'gate_candidate': 8.100862558535482e-08, 'init_loss': 0.949988603591919, 'final_loss': 0.9500202695463944, 'n_norm': 5.949071884155273}
+    {'seed': 1, 'agr2_arm': 'parent', 'attempted': 1, 'accepted': 0, 'gate_parent': 8.569437071059838e-08, 'gate_candidate': 8.569542586656098e-08, 'init_loss': 0.8977811336517334, 'final_loss': 0.8977611749625292, 'n_norm': 5.662618160247803}
+    {'seed': 2, 'agr2_arm': 'parent', 'attempted': 1, 'accepted': 0, 'gate_parent': 7.855140182755349e-08, 'gate_candidate': 7.855262751377268e-08, 'init_loss': 0.7964805364608765, 'final_loss': 0.7964850007291481, 'n_norm': 5.859109878540039}
+    {'seed': 3, 'agr2_arm': 'accepted', 'attempted': 1, 'accepted': 1, 'gate_parent': 9.302842585157123e-08, 'gate_candidate': 9.302697989710396e-08, 'init_loss': 0.9213647842407227, 'final_loss': 0.9213128442807721, 'n_norm': 5.73684024810791}
+    {'seed': 4, 'agr2_arm': 'accepted', 'attempted': 1, 'accepted': 1, 'gate_parent': 9.334841877262079e-08, 'gate_candidate': 9.334517159231837e-08, 'init_loss': 0.7724539041519165, 'final_loss': 0.772462054602273, 'n_norm': 5.650683403015137}
+    {'seed': 5, 'agr2_arm': 'parent', 'attempted': 1, 'accepted': 0, 'gate_parent': 9.184385163507613e-08, 'gate_candidate': 9.184473626078216e-08, 'init_loss': 0.8225655555725098, 'final_loss': 0.8225051461071105, 'n_norm': 5.574996471405029}
+    {'seed': 6, 'agr2_arm': 'parent', 'attempted': 1, 'accepted': 0, 'gate_parent': 1.0341733513996587e-07, 'gate_candidate': 1.0342381173700232e-07, 'init_loss': 0.7896945476531982, 'final_loss': 0.7897006661887703, 'n_norm': 5.743605613708496}
+    {'seed': 7, 'agr2_arm': 'parent', 'attempted': 1, 'accepted': 0, 'gate_parent': 8.425869424399934e-08, 'gate_candidate': 8.425979558523977e-08, 'init_loss': 0.7305395007133484, 'final_loss': 0.7305067596716411, 'n_norm': 5.773569107055664}
+    arms_seen: ['accepted', 'parent']
+    attempted_all: True
+    loss_decreased_seeds: 4
+    accepted_seeds: 2
+[control5_gradient_fd] pass=True
+    grad_fd_worst_relerr: 2.8882416062338863e-07
+========================================================================
+OVERALL: PASS

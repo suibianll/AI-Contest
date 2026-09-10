@@ -1,6 +1,6 @@
 # Attention 一般互逆残差的真实目标训练计划（A-GR2）
 
-> 状态：ACTIVE 执行附录，2026-09-10。
+> 状态：CLOSED / NO_EFFECT（六 shard 72/72 case 与父逐位相同，六层 gate 全 parent），2026-09-10。不占版本号、不归档；实现关闭，不以缩步/缩窗/调 lr/改归一化重试。
 > 从属于当前活动总计划。当前完整根为 v231 Linear (L-EM3 K=2) + v195 Attention，
 > 官方 `18518/291s`，SHA256 `EA79A1C12DC66714…`。本文件只负责 Attention A-GR2；
 > 版本登记、组合与根切换由总协调线处理。

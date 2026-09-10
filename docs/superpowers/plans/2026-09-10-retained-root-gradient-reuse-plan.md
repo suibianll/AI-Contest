@@ -1,6 +1,6 @@
 # 完整根双线优化：Linear梯度复用与Attention校准复用
 
-> 状态：ACTIVE，2026-09-10；唯一活动总计划。本次仅制定计划，不启动实现或评测。
+> 状态：ACTIVE，2026-09-10；唯一活动总计划。Linear L-TF2（§2）与 Attention A-CT1（§4）均已激活，可立即开发，不等待官方回传。
 > 当前根：v231 Linear K=2 + v195 Attention，官方 **18518/291s**，余量9s。
 > SHA256：`ea79a1c12dc667142c620975aab188920fae7b29988c804f41c1a696cc5754f1`。
 > 回退根：v233 Linear L-TF1，18428/288s，SHA `0ec89710087d061bf9608196ad4d53a1c6be98c8a5595596a071ecd05a6821eb`。
@@ -116,7 +116,7 @@ v236的 `_agr1_gate_loss` 每次量化Q/K/V、解码dense Q/K/V、计算player�
 - 不重开K定心、V码分配、rotation/scale参数扫描或A-GR2学习率/归一化邻域。Attention侧贡献大不等于剩余官方分差可由比例推算。
 ## 6. 并发、记录和结束
 
-单GPU评测串行；保护现有 `attention-agr2-trueobjective/` 未跟踪工作，不删除dense缓存。候选、SHA、官方回传和根切换串行登记，结果原日志不覆盖。
+单GPU评测串行；候选、SHA、官方回传和根切换串行登记，结果原日志不覆盖。A-GR2（`attention-agr2-trueobjective/`）已关闭为 NO_EFFECT，其源码与 control 结果随本次入库作证据，不再作为在跑工作保护；不删除正在运行或待复用候选的 dense 缓存。
 实质结果更新后git diff --check、只提交本次文件、push并核验status；不提交大缓存和无关产物。
 
 L-TF2与A-CT1完成开发/归档，已确认的A-CT2审计或实现完成后即总结本轮；官方待回传项单列，不以官方迟延阻止下一轮有实质依据的研发。已回传者及时登记与晋级。单GPU评测串行，CPU代码审读和各自文件开发不互相等待；不自动启动后台持续任务。
