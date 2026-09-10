@@ -103,11 +103,23 @@ def main() -> int:
             return float((a - b).norm() / b.norm().clamp_min(1e-30))
 
         o_ref = x_ref @ w_ref.T
+        # Mixed arms, ALL in our own coordinate: re-encode our decoded operands
+        # with the standard codec, so the only thing that changes is codec
+        # quality.  Mixing a standard operand with ours in the REFERENCE
+        # coordinate would compare different bases -- that is what made
+        # act_rel > 1 earlier.  Effective-bits note: standard quality is a
+        # DEGRADATION here, so whichever side hurts more when replaced is where
+        # our current advantage lives.
+        x_std_ours = v2.decode_standard_hif4(v2.encode_standard_hif4(x_hat)).to(torch.float64)
+        w_std_ours = v2.decode_standard_hif4(v2.encode_standard_hif4(w_hat)).to(torch.float64)
+        arm_oo = rel(x_hat @ w_hat.T, o_ref)
+        arm_so = rel(x_std_ours @ w_hat.T, o_ref)
+        arm_os = rel(x_hat @ w_std_ours.T, o_ref)
+        arm_ss = rel(x_std_ours @ w_std_ours.T, o_ref)
         print(
             f"{role:<9}{str(tuple(w_ref.shape)):>13} perm={'y' if torch.is_tensor(perm) else 'n'} | "
-            f"{rel(x_hat, x_ref_cmp):>9.4f}{rel(w_hat, w_ref_cmp):>9.4f}"
-            f"{rel(x_hat @ w_hat.T, o_ref):>9.4f} | "
-            f"{rel(x_std, x_ref):>9.4f}{rel(w_std, w_ref):>9.4f}{rel(x_std @ w_std.T, o_ref):>9.4f}"
+            f"oo={arm_oo:.4f}  so(aspect)={arm_so:.4f}  os(weight)={arm_os:.4f}  ss={arm_ss:.4f}  "
+            f"| STDref={rel(x_std @ w_std.T, o_ref):.4f}"
         )
     print()
     print("act_rel/w_rel are operand-level; out_rel is what the score sees.")

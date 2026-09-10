@@ -1,0 +1,42 @@
+{
+  "version": "v241",
+  "candidate_sha256": "8d364b3d0ff11858ae2bd2ad7f8be6aa3210e922037206e77e96816c1db186cd",
+  "parent_sha256": "ecb1f9e510b5507e1a2dc8b95f8a84e9b51864a420b3828537a328813e2ce554",
+  "official_status": "TIMEOUT (>300s) REJECTED",
+  "official_score": null,
+  "official_time_s": null,
+  "official_time_display": null,
+  "reported_by": "user",
+  "reported_at": "2026-09-11",
+  "complete_package_official": {
+    "package": "v237 Linear L-TF2 complete root + VK kernel (per-Q-head, 16 kernels), v195 Attention body unchanged",
+    "submitted_sha256": "8d364b3d0ff11858ae2bd2ad7f8be6aa3210e922037206e77e96816c1db186cd",
+    "result": "TIMEOUT",
+    "hard_limit_s": 300,
+    "exact_seconds": null,
+    "score": null,
+    "note": "Exact seconds and score unknown; no prediction is written. Parent v237 official reading was 289s against the 300s limit (11s of headroom)."
+  },
+  "mechanism": "VK kernel: each Q head gets a 32-parameter relative-position kernel, fitted during calibration and compiled into v_state, used in place of the uniform kernel when choosing V's HiF4 codes. The objective is channel-separable and solved with an exact closed-form per-element step; the banded convolution has width 15 and is never materialised as a T x T matrix. Per-layer calibration gate, deployment falls back to the parent codes on any exception.",
+  "local_panel": {
+    "protocol": "Attention six-shard, 72 cases",
+    "per_shard_delta_mean": [0.003940, 0.001663, 0.000933, 0.015690, 0.004018, 0.001035],
+    "mean_delta_mean": 0.004547,
+    "shards_positive": "6/6",
+    "calibration_gate": "6/6 layers accepted",
+    "note": "Local panel readings are not extrapolated to the official score and set no submission gate."
+  },
+  "decision": "REJECTED. The root is unchanged at v237 (18518/289s) and the fallback root is unchanged at v233 (18428/288s). This implementation is closed: no window/candidate reduction, no kernel-radius reduction, no resubmission of the same SHA. The VK mechanism itself is not closed -- per the active plan section 7, stop conditions act on the specific implementation only.",
+  "cost_model_and_its_missing_fact": "This card's archive positioned v242 as the submittable form precisely because v241's cost was judged too high: V API delta +0.0666 s per call over an assumed 250 attention cases, about 17s, against 11s of root headroom. That per-call cost was measured locally; the call count was not. The repository does not record the official evaluation's dynamic-call count anywhere -- the sibling card v240, archived the same day, registered exactly that as a missing fact and refused to project from it (see solutions/20260910_v240_linear-lmc1-compiled-metric_scoreNA_timeNA/official-result.json, field missing_fact, which also pins local_projection_seconds to null). This timeout is consistent with that assumption failing, but a timeout returns no number, so the true call count cannot be back-derived from it and no variance or conversion factor is inferred. What is established: the 'fits in the headroom' conclusion that selected the submission form rested on an assumed, never-measured call count, and the official result did not confirm it.",
+  "family_ledger": "Fourth complete-package timeout in this repository where the candidate was a cost-reduction of an already-failing mechanism: v236 (A-GR1 as-is), v238 (A-CT1 gate dedup, bitwise-equivalent output), v241 (VK per-Q-head), v242 (VK per-KV-group, cost /5.7). Twice now a candidate has been built specifically to remove redundant work and resubmitted, and neither has brought the package inside 300s. Both reductions were far smaller than the headroom gap, so they do not refute a materially larger reduction; the cost-reduction direction is not declared exhausted.",
+  "no_variance_inference": "The official channel returned only 'timeout'. Nothing was reported about by how much, so no inference is drawn about the official clock's variance and no local-to-official conversion factor is derived.",
+  "local_projection_seconds": null,
+  "local_projection_margin_seconds": null,
+  "local_projection_basis": null,
+  "projection_note": "No local-to-official projection is recorded and none is warranted. This machine's wall clock cannot be converted into the official machine's, and the official 300s gate is the only time gate.",
+  "official_scored_sha256": null,
+  "archive_sha256": "8d364b3d0ff11858ae2bd2ad7f8be6aa3210e922037206e77e96816c1db186cd",
+  "note": "v241 is a pure append on the v237 root: the first 516697 bytes are byte-identical to the parent, +14096 B appended. Independently re-verified with cmp, not taken from the card's self-report. v241 descends from the v237 root and is not additive with v233, v235, v238, v239 or v240. v241 and v242 are the same mechanism at two kernel granularities; their diff is 30 lines, all in the kernel-fit section.",
+  "candidate_type": "complete Attention VK candidate (v237 root plus the VK calibration block); the only v241 under solutions/ at archive time",
+  "execution_log": "logs/execution/2026-09-11-v241-v242-vk-official-timeout.md"
+}

@@ -1,7 +1,10 @@
 # v242（Attention VK，共享核）：每 KV 组一个核，成本 ÷4，解不变
 
 **父**：v237 完整根（SHA `ECB1F9E5…2E554`，516697 B），**纯追加**。
-**官方状态**：`unregistered/NA`（未提交）。
+**官方状态**：**TIMEOUT（>300s），REJECTED**（2026-09-11 用户回传“v241、v242全都超时了”），
+精确秒数/分数未知（记 null，不写预测）。见
+[超时记录](../../logs/execution/2026-09-11-v241-v242-vk-official-timeout.md)。
+（归档时状态为 `unregistered/NA`；本行是回传后的更正登记。）
 **同机制的另一代表**：[v241](../20260911_v241_attention-vk-kernel_scoreNA_timeNA/result.md)（per-Q-head 核，16 个）。
 
 ## 与 v241 的唯一差别
@@ -49,7 +52,7 @@
 
 ## 未做
 
-未做官方提交；未做 Linear 侧。
+~~未做官方提交~~ **已提交，官方 TIMEOUT**；未做 Linear 侧。
 
 ## 与 VK-3 预测的对账（2026-09-11 补）
 

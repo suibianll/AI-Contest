@@ -102,6 +102,34 @@ CANDIDATES = (
         / "solutions"
         / "20260910_standard-linear_v234-attn_scoreNA_timeNA",
     },
+    # VK kernel (relative-position kernel weighting the V HiF4 code), the two
+    # granularities whose full-package forms both TIMED OUT on the v237 root.
+    # Priced on the standard-Linear side, where the package has ~57-62s of
+    # official headroom instead of the full root's 11s.
+    {
+        "name": "standard-linear_v241-attn",
+        "attention_source": (
+            ROOT
+            / "solutions"
+            / "20260911_v241_attention-vk-kernel_scoreNA_timeNA"
+            / "solution.py"
+        ),
+        "output_dir": ROOT
+        / "solutions"
+        / "20260911_standard-linear_v241-attn_scoreNA_timeNA",
+    },
+    {
+        "name": "standard-linear_v242-attn",
+        "attention_source": (
+            ROOT
+            / "solutions"
+            / "20260911_v242_attention-vk-kernel-shared_scoreNA_timeNA"
+            / "solution.py"
+        ),
+        "output_dir": ROOT
+        / "solutions"
+        / "20260911_standard-linear_v242-attn_scoreNA_timeNA",
+    },
 )
 
 

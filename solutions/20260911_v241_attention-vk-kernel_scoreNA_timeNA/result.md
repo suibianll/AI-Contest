@@ -2,7 +2,10 @@
 
 **父**：v237 完整根，SHA `ECB1F9E510B5507E1A2DC8B95F8A84E9B51864A420B3828537A328813E2CE554`，
 516697 B。本候选为**纯追加**（父字节一个未动）。
-**官方状态**：`unregistered/NA`（未提交）。
+**官方状态**：**TIMEOUT（>300s），REJECTED**（2026-09-11 用户回传“v241、v242全都超时了”），
+精确秒数/分数未知（记 null，不写预测）。见
+[超时记录](../../logs/execution/2026-09-11-v241-v242-vk-official-timeout.md)。
+（归档时状态为 `unregistered/NA`；本行是回传后的更正登记。）
 
 ## 机制
 
@@ -65,7 +68,7 @@ min  Σ_g Σ_{h∈g} Σ_t ( Σ_k w_h[t−k]·δ[k,c] )² ,   δ = V̂_hiF4 − V
 
 ## 未做
 
-未做官方提交；未做 Linear 侧；未做降本版本。
+~~未做官方提交~~ **已提交，官方 TIMEOUT**；未做 Linear 侧；降本版本见 [v242](../20260911_v242_attention-vk-kernel-shared_scoreNA_timeNA/result.md)（亦 TIMEOUT）。
 
 ## 与 VK-3 预测的对账（2026-09-11 补）
 
