@@ -156,7 +156,7 @@ K=2投毒对照证明偏移恰为2且输出逐位相同，即保护没有把重�
 六shard对同父A-GR1旧实现v236为**72/72精确零**；`stopped_early`同v237/v238结构性标注，六shard全记录、无截断。
 **时间：本机测不出**——四行效应均落在同字节sham null内，层22的19.83×伴随**9/15轮**（比值大只因null中位贴近0），不当作效应证据。
 **量级已测定不足**：逐位等价基线v236同根官方TIMEOUT，停滞诊断把去重方向合计测为约0.2s vs 机制需要的约12s，并写了A-CT2更小、不值得开卡；
-本卡按**用户指示**照计划跑完并归档，**归档不主张改善官方结局**，不回收诊断结论。官方`unregistered/NA`，根未切换。
+本卡按**用户指示**照计划跑完并归档，**归档不主张改善官方结局**，不回收诊断结论。官方**`unregistered/NA`——未提交**（用户据 v238 官方 TIMEOUT 判定：同族、输出逐位等价、去除的工作严格更多，故不花提交名额；**非本地读数否决**）。归档目录带 `_rejected` 后缀是"决定不提交"的标注，以归档内 `official-result.json` 为准。根未切换。
 
 **v238 Attention A-CT1已完成并归档**（`20260910_v238_attention-act1-gate-reuse_scoreNA_timeNA`，候选`146bb7151f5f2a041b2f1fdbc94e5b370815fb91fa94d58db79384bb7a54fbc7`，528204 B）：
 A-GR1的gate每窗连续两次`_agr1_gate_loss`（父臂、候选臂），而两臂**只差**`q_state.learned_rotation`/`k_state.learned_rotation`/`k_state.learned_center`，
