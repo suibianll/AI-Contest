@@ -136,11 +136,36 @@ v236的 `_agr1_gate_loss` 每次量化Q/K/V、解码dense Q/K/V、计算player�
 - A-CT1开发完且官方仍未回传时，允许继续**A-CT2训练末尾统计复用**的静态审计：`_agr1_train`末尾计算final_loss后，info中的q/k scale ratio又对相同最终M、同prepared folds重算相同变换和loss。先验证同dtype、顺序和异常行为，明确可复用的每fold标量；只在确认后，在本节补一张固定实现卡再开发。它仍从最高分正式根构建、单独装配A-GR1，不把待官方A-CT1当父，不同时修改32步学习过程。
 - A-CT2不得变成无限成本探针队列；没有明确可消除工作就结束审计。下一类算法需依据新证据另行注册，不等待官方也不制造无差异候选。
 
+### A-CT2 固定实现卡（审计已确认，2026-09-10 注册）
+
+**审计结论（`workbench/full_solution/attention-act2-train-tail-reuse/audit.py` / `audit.out`）：重复存在且逐位可复用。**
+`_agr1_train` 尾部：`final_loss` 循环 `for ((coordinate, denominator, heads), matrix) in zip(fold, (m, p))` 已经对每个 fold
+算出 `_agr1_scale_loss_grad(_a2_apply_group_rotation(fold[i][0], int(fold[i][2]), m|p), fold[i][1])[0]`；
+随后 `agr1_q_scale_ratio2`（`fold[0]`/`m`）与 `agr1_k_scale_ratio2`（`fold[1]`/`p`）**把同一批调用又做了一遍**，只取回第一次丢掉的标量。
+六层真实数据实测：每次 `_agr1_train` 共 204 次该调用（192 训练 + 6 final_loss + 6 ratio），
+**6/6 的 ratio 调用入参逐位相同、返回标量逐位相同**；用循环里的标量重建两个 ratio 与上报值**精确相等**。
+dtype 全链 float32；`force_zero` 在全部 5 个归档调用点不可达（若可达则 `final_loss` 未绑定，本卡前提不成立）。
+
+**唯一改动（固定）**：在 `final_loss` 循环内**同时**累加两个按角色分开的标量和，然后由这两个和计算两个 ratio，删掉第二次遍历。
+必须保持 `final_loss` 的累加顺序（逐 fold 内先 q 后 k、各自先除以 `len(prepared)` 再累加）与 ratio 的求和顺序
+（按 fold 顺序左折叠后除以 `len(prepared)`）**逐字不变**，从而 `agr1_final_loss`、`agr1_q_scale_ratio2`、
+`agr1_k_scale_ratio2` 三个字段与旧实现**逐位相同**。不改 32 步训练循环、不改 `_agr1_scale_loss_grad` 或
+`_a2_apply_group_rotation`、不改 gate、不改窗口/候选数/接受逻辑。
+
+**基线**：仍从最高分正式根构建、**单独装配 A-GR1**（不把待官方裁决的 A-CT1/v238 当父，两者不叠加）。
+等价性对照为同父 A-GR1 旧实现 v236，期望 72/72 精确零与六层 state 逐字节相同；另需证明尾部的
+`_agr1_scale_loss_grad` 调用数由 204 降为 198（少 6），其余计数不变。
+工作目录 `workbench/full_solution/attention-act2-train-tail-reuse/`，日志 `logs/execution/2026-09-10-attention-act2-train-tail-reuse.md`；不预占版本号。
+
+**预期量级（事前记录，不当门）**：省下的是训练尾部 204 次调用里的 6 次（约 3%），
+比 A-CT1 的 gate 段收益更小，本机多半分辨不出——照 A-CT1 的规矩分两段记，不取好看的一半，不预测官方秒数。
+
 ## 5. 官方异步与两线整合
 
-- L-TF2、A-CT1均从同一个已确认完整根独立构建；开发、归档不等待官方。已有v235/v236保持各自SHA和未知状态，官方回传到达即记录，不中断另一张卡去替换其冻结父。
+- L-TF2、A-CT1均从同一个已确认完整根独立构建；开发、归档不等待官方。已有v235/v236保持各自SHA，官方回传到达即记录（v235、v236均已回传TIMEOUT并登记，见各自超时记录），不中断另一张卡去替换其冻结父。
 - 官方较高分且300s内才晋级；同分提速按AGENTS晋级。组合从已晋级的最高分完整父重建，必要interaction audit后官方裁决；未确认的两项收益不相加。
 - v236若超时，只关闭原执行结构，不自动关闭已实质削减计算的A-CT1；若v236正向，后续新卡从晋级根做纯降时。两者都不能继承另一份源码的官方结果。
+  - **证据注记（2026-09-10，不改本条款）**：v236 已回传 TIMEOUT，本条的触发条件成立。但本条款的前提是"削减**可能具有实质量级**"，该前提现已被实测否定：v236 需省约 12s，而 A-CT1 实测整校准 **0.55–0.58%（约 0.2s）**，量级差约 60 倍——A-CT1 是"被正确做完但结果无关紧要"的优化（NO_EFFECT 对目标而言）。**据此，本条款宜改写而非机械照搬**：关闭 A-CT1 的理由不是它削减错了，而是它削减得不够。是否改写与是否仍支付一次提交，由用户决定；本处只登记证据，不代改条款。详见 `docs/attention-stall-analysis-2026-09-10.md` §6.2。
 - 若用户回传的是机制本身的官方精度负向，及时降低该机制优先级；记录已完成候选，未启动后继卡据证据重新规划，不为等待中的旧计划机械续跑。
 - 不重开K定心、V码分配、rotation/scale参数扫描或A-GR2学习率/归一化邻域。Attention侧贡献大不等于剩余官方分差可由比例推算。
 ## 6. 并发、记录和结束

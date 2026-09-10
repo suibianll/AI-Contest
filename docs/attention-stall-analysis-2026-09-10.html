@@ -1,0 +1,1113 @@
+<title>Attention 停滞诊断</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+  :root {
+    --bg:        #F4F6F8;
+    --surface:   #FFFFFF;
+    --surface-2: #EAEEF2;
+    --border:    #D5DCE3;
+    --border-2:  #B6C1CC;
+    --ink:       #10161D;
+    --ink-2:     #3C4753;
+    --ink-3:     #6B7885;
+    --accent:    #1B5E88;
+    --accent-2:  #E4EEF6;
+    --good:      #1C6B49;
+    --good-2:    #E2F0E9;
+    --warn:      #8A5A00;
+    --warn-2:    #F6EEDC;
+    --crit:      #A32B1B;
+    --crit-2:    #F7E6E3;
+    --shadow:    0 1px 2px rgba(16,22,29,.06), 0 4px 14px rgba(16,22,29,.05);
+    --sans: "IBM Plex Sans", "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", "Source Han Sans SC", "Noto Sans CJK SC", sans-serif;
+    --mono: "IBM Plex Mono", "Cascadia Mono", "Consolas", "PingFang SC", "Microsoft YaHei", monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg:        #0D1116;
+      --surface:   #141A21;
+      --surface-2: #1C242D;
+      --border:    #2A343F;
+      --border-2:  #3C4956;
+      --ink:       #E7ECF1;
+      --ink-2:     #B3BFCB;
+      --ink-3:     #7E8C9A;
+      --accent:    #6BA9D4;
+      --accent-2:  #172936;
+      --good:      #63C191;
+      --good-2:    #122A20;
+      --warn:      #D9A441;
+      --warn-2:    #2C2413;
+      --crit:      #E8796A;
+      --crit-2:    #2E1713;
+      --shadow:    0 1px 2px rgba(0,0,0,.4), 0 4px 14px rgba(0,0,0,.3);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg:        #0D1116;
+    --surface:   #141A21;
+    --surface-2: #1C242D;
+    --border:    #2A343F;
+    --border-2:  #3C4956;
+    --ink:       #E7ECF1;
+    --ink-2:     #B3BFCB;
+    --ink-3:     #7E8C9A;
+    --accent:    #6BA9D4;
+    --accent-2:  #172936;
+    --good:      #63C191;
+    --good-2:    #122A20;
+    --warn:      #D9A441;
+    --warn-2:    #2C2413;
+    --crit:      #E8796A;
+    --crit-2:    #2E1713;
+    --shadow:    0 1px 2px rgba(0,0,0,.4), 0 4px 14px rgba(0,0,0,.3);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.75;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap {
+    max-width: 1060px;
+    margin: 0 auto;
+    padding-block: 0 96px;
+    padding-inline: 24px;
+  }
+  @media (max-width: 520px) {
+    .wrap { padding-inline: 16px; }
+  }
+
+  /* ---------- masthead ---------- */
+  .masthead {
+    padding-block: 56px 32px;
+    border-bottom: 2px solid var(--ink);
+  }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    font-weight: 500;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-size: clamp(30px, 5.2vw, 50px);
+    line-height: 1.14;
+    font-weight: 700;
+    letter-spacing: -.015em;
+    text-wrap: balance;
+    margin: 0 0 16px;
+  }
+  .standfirst {
+    font-size: clamp(16px, 1.9vw, 18.5px);
+    line-height: 1.66;
+    color: var(--ink-2);
+    max-width: 62ch;
+    margin: 0 0 28px;
+  }
+  .meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .chip {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 7px;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.5;
+    padding: 4px 10px;
+    border: 1px solid var(--border-2);
+    border-radius: 3px;
+    background: var(--surface);
+    color: var(--ink-2);
+  }
+  .chip b { font-weight: 600; color: var(--ink); }
+  .chip.crit { border-color: var(--crit); background: var(--crit-2); color: var(--crit); }
+  .chip.crit b { color: var(--crit); }
+
+  /* ---------- verdict ---------- */
+  .verdict {
+    margin-block: 40px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    border-radius: 3px;
+    padding: 28px 30px 30px;
+    box-shadow: var(--shadow);
+  }
+  .verdict h2 {
+    font-size: 13px;
+    font-family: var(--mono);
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 16px;
+    font-weight: 600;
+  }
+  .verdict p { margin: 0 0 15px; max-width: 70ch; font-size: 16.5px; }
+  .verdict p:last-child { margin-bottom: 0; }
+  .verdict strong { font-weight: 600; }
+
+  /* ---------- sections ---------- */
+  section { margin-block: 60px 0; }
+  h2.sec {
+    font-size: clamp(21px, 2.8vw, 26px);
+    font-weight: 600;
+    letter-spacing: -.01em;
+    line-height: 1.3;
+    margin: 0 0 6px;
+    text-wrap: balance;
+  }
+  .sec-num {
+    display: block;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: .14em;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+  .sec-head { border-top: 1px solid var(--border-2); padding-top: 22px; margin-bottom: 22px; }
+  h3 {
+    font-size: 17.5px;
+    font-weight: 600;
+    margin: 34px 0 10px;
+    letter-spacing: -.005em;
+  }
+  p { margin: 0 0 15px; max-width: 72ch; }
+  a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  a:focus-visible, .chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  ul, ol { max-width: 72ch; padding-left: 22px; margin: 0 0 15px; }
+  li { margin-bottom: 7px; }
+  li::marker { color: var(--ink-3); }
+
+  code, .mono { font-family: var(--mono); font-size: .88em; }
+  code {
+    background: var(--surface-2);
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: var(--ink);
+    word-break: break-word;
+  }
+  .num { font-variant-numeric: tabular-nums; font-family: var(--mono); }
+
+  /* ---------- tables ---------- */
+  .tbox {
+    overflow-x: auto;
+    margin: 0 0 20px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    background: var(--surface);
+  }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; min-width: 480px; }
+  caption {
+    caption-side: top;
+    text-align: left;
+    padding: 13px 16px 11px;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    border-bottom: 1px solid var(--border);
+  }
+  th, td {
+    text-align: left;
+    padding: 9px 16px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  thead th {
+    font-weight: 600;
+    font-size: 12.5px;
+    color: var(--ink-2);
+    background: var(--surface-2);
+    white-space: nowrap;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  td.n, th.n { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  td.k { font-weight: 500; white-space: nowrap; }
+  .pos { color: var(--good); font-weight: 600; }
+  .neg { color: var(--crit); font-weight: 600; }
+  .zero { color: var(--ink-3); }
+  .dim { color: var(--ink-3); }
+
+  /* ---------- chart ---------- */
+  .figure {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 22px 22px 16px;
+    margin: 0 0 20px;
+    box-shadow: var(--shadow);
+  }
+  .figure svg { display: block; width: 100%; height: auto; }
+  .fig-cap {
+    margin: 12px 0 0;
+    font-size: 13.5px;
+    color: var(--ink-3);
+    line-height: 1.6;
+    max-width: 74ch;
+  }
+  .fig-cap b { color: var(--ink-2); font-weight: 600; }
+  .ax { font-family: var(--mono); font-size: 10.5px; fill: var(--ink-3); }
+  .ax-strong { font-family: var(--mono); font-size: 11px; fill: var(--ink-2); font-weight: 600; }
+  .band-label { font-family: var(--mono); font-size: 10.5px; fill: var(--crit); font-weight: 600; }
+  .grid-line { stroke: var(--border); stroke-width: 1; }
+  .wall { stroke: var(--crit); stroke-width: 1.5; stroke-dasharray: 5 4; }
+
+  /* ---------- callout ---------- */
+  .callout {
+    background: var(--warn-2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--warn);
+    border-radius: 3px;
+    padding: 18px 22px;
+    margin: 0 0 20px;
+  }
+  .callout p { margin: 0 0 12px; font-size: 15.5px; }
+  .callout p:last-child { margin-bottom: 0; }
+  .callout .lbl {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+    color: var(--warn);
+    font-weight: 600;
+    display: block;
+    margin-bottom: 8px;
+  }
+
+  /* ---------- evidence list ---------- */
+  .ev {
+    display: grid;
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+  .ev-row {
+    background: var(--surface);
+    padding: 12px 16px;
+    display: grid;
+    grid-template-columns: minmax(150px, 230px) 1fr;
+    gap: 6px 20px;
+  }
+  @media (max-width: 640px) { .ev-row { grid-template-columns: 1fr; } }
+  .ev-k { font-family: var(--mono); font-size: 12.5px; color: var(--accent); word-break: break-all; }
+  .ev-v { font-size: 14.5px; color: var(--ink-2); }
+
+  footer {
+    margin-top: 72px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border-2);
+    font-size: 13.5px;
+    color: var(--ink-3);
+    line-height: 1.7;
+  }
+  footer p { max-width: 78ch; }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">诊断报告 · 2026-09-10</p>
+    <h1>Attention 停滞诊断</h1>
+    <p class="standfirst">
+      占缺口 78% 的 Attention 侧，在累计 22 次官方超时之后仍只兑现 +21 分。
+      本报告用官方账本、常量推出的成本结构和带行号的代码证据，给出四层诊断，
+      并说明「21071 源码不可得」之后还剩下什么。
+    </p>
+    <div class="meta-row">
+      <span class="chip">当前根 <b>v231 · 18518 / 291s</b></span>
+      <span class="chip crit">余量 <b>9s</b> &lt; 模型 MAE <b>10.1s</b></span>
+      <span class="chip">缺口 <b>3247</b></span>
+      <span class="chip">Attention 官方超时 <b>22 次</b></span>
+    </div>
+  </header>
+
+  <div class="verdict">
+    <h2>结论</h2>
+    <p>
+      Attention 推不动，<strong>不是「没有想法」，也不是「时间墙挡住了大收益」</strong>。
+      四层问题同时成立，且每一层都有硬证据：它的天然参数化大多是<strong>规范变换</strong>——部署输出按构造不变，
+      一阶梯度精确为零；它的<strong>训练目标、接受门、接受判据是三个不同的函数</strong>，连量化器都不同；
+      它的校准是约 <strong>3300 次前向的搜索</strong>，而 Linear 是零前向的矩阵公式；
+      它的<strong>本地面板双向反预测</strong>——本地正可以官方负，本地负可以官方正。
+    </p>
+    <p>
+      与 Linear 对照最清楚：Linear 在这四层里占了三层好牌（精确下降恒等式、本地可预测、零前向成本），
+      所以它能靠「减少派发数」把 +375 装进余量。Attention 四层全占坏牌，
+      于是它的每一个动作都同时受制于「方向可能是零」和「代价一定是正」。
+    </p>
+    <p>
+      放弃 21071 源码之后，<strong>外部锚点路径关闭</strong>。剩下唯一未被证伪的方向，
+      是在<strong>参数化层面造出非规范方向</strong>——而不是继续在现有参数化里换目标函数、换候选、换窗口。
+    </p>
+  </div>
+
+  <section>
+    <div class="sec-head">
+      <span class="sec-num">第 0 节</span>
+      <h2 class="sec">口径与数据质量</h2>
+    </div>
+    <p>
+      先把不可信的读数排除，否则后面的结论会建立在坏数据上。
+    </p>
+
+    <h3>已查清：L-TF2 六 shard 的 api 差值不是回退</h3>
+    <p>
+      v237（L-TF2）六 shard 配对结果 <strong>336/336 精确零</strong>（0 正 / 0 负 / 336 零，六片各 n=56）。
+      配对脚本末尾那行 <code>api_total delta +642.8s</code> 是<strong>缓存态假象</strong>：
+    </p>
+    <div class="tbox">
+      <table>
+        <caption>v237 六 shard：缓存态与计分侧口径（秒）</caption>
+        <thead>
+          <tr><th>shard</th><th class="n">候选 api</th><th class="n">基线 api</th><th class="n">差值</th><th>calibration_cache_hit（候选 / 基线）</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="k">0</td><td class="n">42.1</td><td class="n">43.7</td><td class="n pos">−1.6</td><td class="mono">True / True</td></tr>
+          <tr><td class="k">1</td><td class="n">169.5</td><td class="n">42.1</td><td class="n neg">+127.4</td><td class="mono neg">False / True</td></tr>
+          <tr><td class="k">2</td><td class="n">172.5</td><td class="n">41.3</td><td class="n neg">+131.2</td><td class="mono neg">False / True</td></tr>
+          <tr><td class="k">3</td><td class="n">169.5</td><td class="n">41.6</td><td class="n neg">+127.9</td><td class="mono neg">False / True</td></tr>
+          <tr><td class="k">4</td><td class="n">171.0</td><td class="n">41.6</td><td class="n neg">+129.4</td><td class="mono neg">False / True</td></tr>
+          <tr><td class="k">5</td><td class="n">171.6</td><td class="n">43.1</td><td class="n neg">+128.5</td><td class="mono neg">False / True</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      <code>calibration_api_seconds</code>：候选 127.43s / 基线 0.0s。127.43 × 5 ≈ 637s，即那 642.8s 的全部来源。
+      AGENTS §5 明文禁止跨缓存态比较 <code>api_seconds</code>。唯一两侧同缓存态的量是 <code>scoring_api_seconds</code>：
+    </p>
+    <div class="tbox">
+      <table>
+        <caption>唯一可比口径：scoring_api_seconds（两侧均热缓存）</caption>
+        <thead>
+          <tr><th>shard</th><th class="n">候选</th><th class="n">基线</th><th class="n">差值</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="k">0</td><td class="n">42.0549</td><td class="n">43.6649</td><td class="n pos">−1.6100</td></tr>
+          <tr><td class="k">1</td><td class="n">42.0536</td><td class="n">42.1252</td><td class="n pos">−0.0716</td></tr>
+          <tr><td class="k">2</td><td class="n">41.9012</td><td class="n">41.2656</td><td class="n neg">+0.6356</td></tr>
+          <tr><td class="k">3</td><td class="n">42.0960</td><td class="n">41.6191</td><td class="n neg">+0.4769</td></tr>
+          <tr><td class="k">4</td><td class="n">42.8319</td><td class="n">41.6060</td><td class="n neg">+1.2259</td></tr>
+          <tr><td class="k">5</td><td class="n">41.8003</td><td class="n">43.0909</td><td class="n pos">−1.2906</td></tr>
+          <tr><td class="k"><b>合计</b></td><td class="n"><b>252.7378</b></td><td class="n"><b>253.3717</b></td><td class="n pos"><b>−0.6339</b></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      合计 −0.63s，但逐 shard 从 −1.61 翻到 +1.23——<strong>符号翻转</strong>。
+      与该卡三臂配对（含同字节 sham null，四行 |effect|/|null| = 0.52 / 0.52 / 1.11 / 1.00×）结论一致：
+      <strong>本机分辨不出，既不否决也不据此预测官方。</strong>
+    </p>
+
+    <h3>已查清：<code>stopped_early: true</code> 与 <code>records: 6</code> 不冲突</h3>
+    <p>
+      停止检查在 shard 结果 append <em>之后</em>执行，等零候选使计数器在最后一个 shard 才触顶——
+      六 shard 全记录（336 例、6 份 analysis），<strong>无截断</strong>。
+    </p>
+
+    <div class="callout">
+      <span class="lbl">本轮最重要的口径收紧</span>
+      <p>
+        <strong>21071 源码不可得。</strong>该机制此前是本项目唯一有外部官方数字绑定的锚点
+        （A@W 拟合 + Q/K 互逆 scale 学习，21071/283s）。源码不可得意味着：
+      </p>
+      <p>
+        ① 「复现外部机制」这条战略路径关闭；② 缺口分解（Linear +901 / Attention +3266）的目标值
+        16273 失去来源；③ 榜首 21765 同样无可绑定源码——
+        <strong>于是我们既无法确认 3247 分缺口可达，也无法确认它由哪一侧贡献。</strong>
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <span class="sec-num">第 1 节</span>
+      <h2 class="sec">当前状态</h2>
+    </div>
+    <div class="tbox">
+      <table>
+        <caption>根与回退根（源码 SHA 已现场核验）</caption>
+        <thead>
+          <tr><th>角色</th><th>构成</th><th class="n">官方分</th><th class="n">时间</th><th class="n">余量</th><th>SHA256</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="k">当前根</td>
+            <td>v231 Linear L-EM3 K=2 + v195 Attention</td>
+            <td class="n"><b>18518</b></td><td class="n">291s</td><td class="n neg">9s</td>
+            <td class="mono dim">ea79a1c1…5754f1</td>
+          </tr>
+          <tr>
+            <td class="k">回退根</td>
+            <td>v233 Linear L-TF1 + v195 Attention</td>
+            <td class="n">18428</td><td class="n">288s</td><td class="n">12s</td>
+            <td class="mono dim">0ec89710…a6821eb</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout">
+      <span class="lbl">结构性风险</span>
+      <p>
+        拟合时间模型 <code>T ≈ 170.3 + 0.1154·W_calib + 0.6939·A_calib + 0.7344·dyn_act − 1.5837·dyn_qkv</code>
+        在 21 个版本上 R² = 0.799、<strong>MAE = 10.1s</strong>。
+        当前余量 <strong>9s</strong>。<strong>唯一可用的计时模型，其误差棒比剩余余量还大</strong>——
+        任何提交决策现在都落在噪声里。这不是修辞，是模型自己的数字。
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <span class="sec-num">第 2 节</span>
+      <h2 class="sec">轨迹：分数是买来的，货币是余量</h2>
+    </div>
+
+    <div class="figure">
+      <div id="chart"></div>
+      <p class="fig-cap">
+        官方硬限 300s 之下的<b>余量</b>随版本推进的消耗。红色虚线为零余量（即硬限本身）。
+        末端阴影是拟合时间模型的 ±10.1s 误差带——<b>它已经穿过零线，意味着模型无法判断当前根到底在限内还是限外</b>。
+      </p>
+    </div>
+
+    <div class="tbox">
+      <table>
+        <caption>官方分数 / 时间轨迹</caption>
+        <thead>
+          <tr><th>版本</th><th class="n">官方分</th><th class="n">时间</th><th class="n">余量</th><th class="n">Δ分</th><th class="n">Δ时</th><th class="n">分/秒</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="k">v084</td><td class="n">16517</td><td class="n">252.6</td><td class="n">47.4</td><td class="n dim">—</td><td class="n dim">—</td><td class="n dim">—</td></tr>
+          <tr><td class="k">v086</td><td class="n">16744</td><td class="n">222.7</td><td class="n">77.3</td><td class="n pos">+227</td><td class="n pos">−29.9</td><td class="n dim">免费</td></tr>
+          <tr><td class="k">v158</td><td class="n">16861</td><td class="n">223</td><td class="n">77</td><td class="n pos">+117</td><td class="n">+0.3</td><td class="n dim">免费</td></tr>
+          <tr><td class="k">v160</td><td class="n">17532</td><td class="n">232</td><td class="n">68</td><td class="n pos"><b>+671</b></td><td class="n">+9</td><td class="n"><b>74.6</b></td></tr>
+          <tr><td class="k">v175</td><td class="n">17594</td><td class="n">245</td><td class="n">55</td><td class="n pos">+62</td><td class="n">+13</td><td class="n">4.8</td></tr>
+          <tr><td class="k">v182</td><td class="n">17598</td><td class="n">273</td><td class="n">27</td><td class="n pos">+4</td><td class="n neg">+28</td><td class="n neg"><b>0.14</b></td></tr>
+          <tr><td class="k">v186</td><td class="n">17599</td><td class="n">272</td><td class="n">28</td><td class="n pos">+1</td><td class="n pos">−1</td><td class="n dim">免费</td></tr>
+          <tr><td class="k">v189</td><td class="n">17616</td><td class="n">275</td><td class="n">25</td><td class="n pos">+17</td><td class="n">+3</td><td class="n">5.7</td></tr>
+          <tr><td class="k">v195</td><td class="n">18053</td><td class="n">289</td><td class="n">11</td><td class="n pos"><b>+437</b></td><td class="n">+14</td><td class="n"><b>31.2</b></td></tr>
+          <tr><td class="k">v202</td><td class="n">18053</td><td class="n">281</td><td class="n">19</td><td class="n zero">0</td><td class="n pos">−8</td><td class="n dim">免费</td></tr>
+          <tr><td class="k">v230</td><td class="n">18428</td><td class="n">292</td><td class="n">8</td><td class="n pos"><b>+375</b></td><td class="n">+11</td><td class="n"><b>34.1</b></td></tr>
+          <tr><td class="k">v231</td><td class="n">18518</td><td class="n">291</td><td class="n neg">9</td><td class="n pos">+90</td><td class="n pos">−1</td><td class="n dim">免费</td></tr>
+          <tr><td class="k">v233</td><td class="n">18428</td><td class="n">288</td><td class="n">12</td><td class="n zero">0</td><td class="n pos">−4</td><td class="n dim">免费</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>规律一：分数与余量是直接兑换关系，汇率约 30–35 分/秒</h3>
+    <p>
+      v189 → v231 十一个版本换来 +902 分，代价是余量 25s → 9s（消耗 16s）。
+      拆到单机制：v195 = 31.2 分/秒、v230 = 34.1 分/秒。历史最好汇率是 v160 的 74.6，但那是合并既有多项工作。
+      <strong>按最好的单机制汇率，9s 最多再买约 300 分，落到 18824，仍距 21765 差约 2900。</strong>
+    </p>
+
+    <h3>规律二：曲线是阶梯，不是斜坡</h3>
+    <p>
+      v175 → v189 四个版本只涨 +22 分，却烧掉 30s 余量（0.73 分/秒）；其中 v182 花 28s 只买 4 分。
+      而这四个版本所在的邻域，现在在 <code>docs/closed-mechanism-evidence.md</code> 里已逐条关闭
+      （rank-3 / 系数 / fold、覆盖率族、rotation / event / group / seed 邻域）。
+      <strong>相对地，v195（+437）与 v230（+375）都是新机制类别。</strong>
+    </p>
+
+    <h3>规律三：本地面板与官方读数双向失联</h3>
+    <p>
+      本地既不能确认收益，也不能确认损失——四个方向都齐了：v232 本机零可测时间成本 → 官方 TIMEOUT；
+      v235 本轮唯一可分辨的降时 → 官方 TIMEOUT；v229 本地正向 → 官方侧隔离 −2；
+      v233 本地低于分辨力 → 官方干净的 −4s。<strong>官方提交是唯一的测量仪器。</strong>
+    </p>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <span class="sec-num">第 3 节</span>
+      <h2 class="sec">Attention 的官方账本</h2>
+    </div>
+
+    <h3>曾经有过真实收益，但大头已经收完</h3>
+    <div class="tbox">
+      <table>
+        <caption>Attention 侧官方确认的正向机制</caption>
+        <thead>
+          <tr><th>机制</th><th>版本</th><th class="n">官方价值</th><th class="n">代价</th><th>状态</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="k">C76.4 旋转搜索（H16/H32）</td><td class="mono">减法定价</td><td class="n pos"><b>+84</b></td><td class="n">~6s</td><td>已在根里</td></tr>
+          <tr><td class="k">A1 logit gain</td><td class="mono">v168</td><td class="n pos"><b>+60</b></td><td class="n">—</td><td>已在根里</td></tr>
+          <tr><td class="k">A-GR1 一般非对称互逆矩阵</td><td class="mono">v234 / v236</td><td class="n pos">+29</td><td class="n neg">+20.7s</td><td class="neg">未落地，两次完整包均 TIMEOUT</td></tr>
+          <tr><td class="k">全对称零迹矩阵残差</td><td class="mono">v192</td><td class="n pos">+22</td><td class="n neg">+34s</td><td class="neg">完整包 TIMEOUT</td></tr>
+          <tr><td class="k">K-center 梯度聚合修复</td><td class="mono">v195</td><td class="n pos">+21</td><td class="n">+5s</td><td class="pos">已落地（当前根）</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      C76.4 与 A1 这两个大头<strong>已经收完了</strong>。剩下能拿到的是 +20~+30 一档，
+      而 A-GR1 需要约 20s，手上只有 9s。
+    </p>
+
+    <h3>22 次官方超时</h3>
+    <p>
+      v128–v131（4）· v161 · v165 · v184 · v190 · v191 · v192 · v196 · v198 · v199 · v201 · v203 ·
+      v223 · v224 · v225 · v229 · v230(A-FIX1) · v234(A-GR1) · <strong>v236(A-GR1)</strong> = <strong>22 次</strong>。
+      （另有更早的 WA 族 v100 / v107 / v121 三次，属不同机制世代，未计入。）
+      2026-09-09 就写下过一句明文结论，现在回看仍然成立：
+    </p>
+    <div class="callout">
+      <span class="lbl">引自 logs/execution/2026-09-09-v197-v198-official-results.md</span>
+      <p>
+        「连同 v190/v191/v192/v196，<strong>五个新增 Attention 校准机制全部官方超时</strong>——
+        官方隐藏规模下任何新增校准计算都超支。」
+      </p>
+    </div>
+
+    <h3>本地面板不只是零信息量，是双向反预测</h3>
+    <div class="tbox">
+      <table>
+        <caption>官方确认的反转实例（两个方向都有）</caption>
+        <thead>
+          <tr><th>实例</th><th class="n">本地六 shard</th><th class="n">官方</th><th>方向</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="k">A-MC1 / v229</td><td class="n pos">+0.014923</td><td class="n neg">−2</td><td class="neg">本地正 → 官方负</td></tr>
+          <tr><td class="k">A21-1</td><td class="n pos">+0.001234</td><td class="n neg">−206</td><td class="neg">本地正 → 官方负</td></tr>
+          <tr><td class="k">A22-1</td><td class="n pos">+0.005786</td><td class="n neg">−114</td><td class="neg">本地正 → 官方负</td></tr>
+          <tr><td class="k">A25</td><td class="n pos">+0.003</td><td class="n neg">−380</td><td class="neg">本地正 → 官方负</td></tr>
+          <tr><td class="k">A23</td><td class="n neg">−0.00475</td><td class="n pos">+13</td><td class="pos">本地负 → 官方正</td></tr>
+          <tr><td class="k">v168 / A1</td><td class="n neg">−0.000880</td><td class="n pos">+60</td><td class="pos">本地负 → 官方正</td></tr>
+          <tr><td class="k">v192</td><td class="n zero">本地两窗全拒、回退父</td><td class="n pos">+22</td><td class="pos">本地零 → 官方正</td></tr>
+          <tr><td class="k">A-GR1 / v234</td><td class="n pos">+0.003845</td><td class="n pos">+29</td><td class="dim">同号但幅度反转</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      <strong>A23 与 A25 构成一对双向反转</strong>：A23 本地负 → 官方正，A25 本地正 → 官方负。
+      原文结论是「4B paired 面板预测方向不稳定——<strong>既不预测正也不预测负</strong>」。
+      这比「读数无信息」更严重：用它筛候选，等于随机筛。
+    </p>
+    <p>
+      对比 Linear：v230 本地 +0.0795 → 官方 +375；v231 本地 +0.0275 → 官方 +90。
+      Attention 的本地信号比 Linear 小 <strong>1–4 个数量级</strong>
+      （v224 本地 ≈ +1.2e-6、v225 本地 +3.11e-5——数值上就是零，却各消耗一次官方提交）。
+    </p>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <span class="sec-num">第 4 节</span>
+      <h2 class="sec">四层诊断</h2>
+    </div>
+
+    <div class="tbox">
+      <table>
+        <caption>四层同时成立，层层有据</caption>
+        <thead>
+          <tr><th>层</th><th>问题</th><th>证据</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="k">空间层</td>
+            <td>天然参数化是<strong>规范变换</strong>，一阶精确不可见；能得分的只剩非规范残差</td>
+            <td>精确零变分恒等式；STE 穿部署编码梯度 ~1e-15 被 Adam eps=1e-8 吞掉；表达力梯度 0 / 0 / +22 / +29</td>
+          </tr>
+          <tr>
+            <td class="k">目标层</td>
+            <td>训练 loss、门 loss、接受判据是<strong>三个不同函数</strong>，量化器都不同；门只查 1 个窗口</td>
+            <td>行号 11415 / 11507 / 11559 / 11558</td>
+          </tr>
+          <tr>
+            <td class="k">成本层</td>
+            <td>校准是约 <strong>3300 次前向的搜索</strong>，且拿 5 个窗口（Linear 拿 2 个、零前向）</td>
+            <td>常量推出的结构计数；<code>official_eval.py:2584</code> vs <code>:991</code></td>
+          </tr>
+          <tr>
+            <td class="k">测量层</td>
+            <td>本地面板<strong>双向反预测</strong>，官方提交是唯一仪器</td>
+            <td>8 个反转实例，含 A23 / A25 一对双向反转</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>4.1 空间层：规范不变性陷阱</h3>
+    <p>
+      这是最深的一层。<code>logs/execution/continuous-attention-anchor24-a1.md</code> 记录了一个精确恒等式：
+    </p>
+    <p><code>logits = x_q · exp(S) · exp(−S) · x_kᵀ  ≡  x_q · x_kᵀ</code></p>
+    <p>
+      <strong>一阶变分精确为零。</strong>注意它与 Linear 的 L-EM 恒等式性质完全相反——
+      L-EM 的 <code>L(X) = J(X) + const</code> 是<strong>下降</strong>恒等式（有精确梯度可走）；
+      这个是<strong>不变性</strong>恒等式（梯度精确为零，无处可走）。
+    </p>
+    <p>
+      <code>logs/execution/2026-09-10-attention-agr2-trueobjective.md</code> 从反面把它钉死：
+      <strong>STE 穿过完整部署编码后的梯度量级 ~1e-15，被 Adam 的 eps=1e-8 直接吞掉</strong>——
+      所以「amax 尺度比代理目标」是承重的，优化器优化的从来不是真实部署目标。
+    </p>
+    <p>
+      于是官方确认的那条<strong>表达力梯度</strong>根本不是「效果递增」，而是一条<strong>规范不变性足迹</strong>：
+    </p>
+    <div class="tbox">
+      <table>
+        <caption>表达力梯度 = 非规范子空间的尺寸</caption>
+        <thead>
+          <tr><th>机制</th><th>矩阵族</th><th class="n">官方侧分</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="k">v190 逐通道闭式互逆平衡</td><td>对角</td><td class="n zero">0（精确零）</td></tr>
+          <tr><td class="k">v191 块三角输运（rank-1, N²=0）</td><td>三角</td><td class="n zero">0（精确零）</td></tr>
+          <tr><td class="k">v192 全对称零迹残差</td><td>对称全矩阵</td><td class="n pos">+22</td></tr>
+          <tr><td class="k">A-GR1 一般非对称互逆</td><td>一般矩阵</td><td class="n pos">+29</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      <strong>矩阵族越一般，非规范（可见）子空间越大，分数才从 0 爬起来。</strong>
+      这一并解释了那一大堆「精确零」结果——v190 / v191 / v194 侧分 14405 逐位相等、
+      A-QC1 72/72 全零、A-GR2 72/72 全零、v217 / v218 / v219 各 0/0/12、
+      raw source-scale 与变换坐标对齐各 0/0/16。它们不是「幅度小」，
+      是<strong>在规范方向上搜索，部署输出按构造不变</strong>。
+    </p>
+    <div class="callout">
+      <span class="lbl">关键推论</span>
+      <p>
+        Attention 的问题可以更精确地重述：<strong>它的搜索空间绝大部分是要花校准秒数、
+        却在一阶上精确不可见的规范方向。</strong>这比「时间墙」更根本——即使余量充足，走规范方向也是精确零分。
+        于是「低天花板」和「高成本」不是两个独立问题，是<strong>同一个规范结构的两个面</strong>：
+        能得分的非规范残差（对称 +22、一般矩阵 +29），恰好是校准成本最高的那一档。
+      </p>
+    </div>
+
+    <h3>4.2 目标层：训练、门、判据是三个不同的函数</h3>
+    <div class="tbox">
+      <table>
+        <caption>同一窗口的 Q/K，在三处走三条路</caption>
+        <thead>
+          <tr><th>环节</th><th>量化器</th><th>口径</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="k">训练 loss<br><span class="mono dim">solution.py:11415</span></td>
+            <td><code>_dense_to_hif4</code>，<code>search_offsets=None</code><br><span class="dim">单候选、无 importance、无 refine</span></td>
+            <td class="mono">residual².mean() / mse_std<br><span class="dim">（归一化代理）</span></td>
+          </tr>
+          <tr>
+            <td class="k">门 loss<br><span class="mono dim">solution.py:11507</span></td>
+            <td><code>hif4_dynamic_quantize_q/k/v</code><br><span class="dim">5 个 offset 候选 + importance + refine</span></td>
+            <td class="mono">(player − reference)².mean()<br><span class="dim">（未归一化原式 MSE）</span></td>
+          </tr>
+          <tr>
+            <td class="k">接受判据<br><span class="mono dim">solution.py:11559</span></td>
+            <td class="dim">—</td>
+            <td class="mono">player_mse / max(standard_mse, 1e-12)<br><span class="dim">（比值）</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      <strong>同一个窗口的 Q/K，在训练和门里走的是两个不同的量化器。</strong>
+      训练还在 11425 处把量化器 Jacobian 当恒等
+      （<code>grad_rotation = einsum(q_raw, d_qhat) + …</code>，docstring 自己写着 "Analytic-gradient trainer: no autograd"）。
+    </p>
+    <p>
+      所以「训练/部署不一致」不是「前向写法不一样」这么轻：
+      <strong>优化器在最小化 X，门在测量 Y，判据在比较 Y_cand / Y_parent，
+      而 X 和 Y 连量化器都不是同一个。</strong>
+      v230 A-FIX1 只把前向对齐了、没对齐量化器与口径，本地反而 −0.004884——现在这条有了明确解释。
+    </p>
+    <p>
+      更尖锐的是 <strong>11558 行 <code>gate_window = calib_qkv_list[-1]</code>：接受门只检查最后一个窗口</strong>
+      （长度 1024）。而训练用的是 <code>windows[:-1]</code>，即另外 4 个窗口。
+      <strong>训练在 4 个窗口上学，门在训练没见过的第 5 个窗口上判。</strong>
+      （A-GR1 的门是 2 个窗口 <code>(3, 4)</code>，稍好。）
+      这正面解释了 v229 的本地 +0.014923 → 官方 −2：单窗口接受本身就是欠验证的。
+    </p>
+
+    <h3>4.3 成本层：Attention 是搜索，Linear 是公式</h3>
+    <div class="tbox">
+      <table>
+        <caption>评估器层面的分水岭</caption>
+        <thead>
+          <tr><th>侧</th><th class="n">校准窗口数</th><th>窗口长度</th><th>出处</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="k">Attention</td><td class="n neg"><b>5（全部）</b></td><td class="mono">10 / 128 / 512 / 1024 / 1024</td><td class="mono dim">official_eval.py:2584<br>proxy_v3_eval.py:124</td></tr>
+          <tr><td class="k">Linear</td><td class="n"><b>2</b></td><td class="mono">10 / 128</td><td class="mono dim">official_eval.py:991<br>capture_qwen35.py:92</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      Attention 从第一步就站在 2.5× 的窗口基线上，且其中两个是 1024 token。
+      按源码常量推出的每层结构计数（<strong>是计数，不是计时，不换算官方秒数</strong>）：
+    </p>
+    <ul>
+      <li><strong>A1 选择轨</strong>：~21 个候选 × 5 窗口 × 2 前向 ≈ <strong>210 次前向 + 210 次编码</strong></li>
+      <li><strong>选择后置门</strong>：~20 次 <code>_attention_deployed_mse</code> × 5 窗口 × 2 前向 + 2 次部署量化 ≈ <strong>200 次前向 + 200 次部署量化</strong></li>
+      <li><strong>A2 训练</strong>：<code>_A2_TRAIN_STEPS=32</code> × 4 窗口 + 8 次准备 ≈ <strong>136 次小前向 + 同等次数手写反向</strong>，外加 <strong>≈481 次 <code>torch.linalg.solve</code>（批量 4×256×256）/层</strong></li>
+      <li><strong>A2 门</strong>：<strong>8 次 1024-token 全窗口前向</strong>（单次最大：1024×1024×16 heads）</li>
+      <li><strong>合计：单层 ≈ 550 次前向量级 × 6 层 ≈ 3300 次</strong></li>
+    </ul>
+    <p>
+      对照 <strong>Linear <code>_em1_*</code>（行 11948–12249）：零次前向。</strong>
+      只有 <code>_dequantize_*</code> 取稠密矩阵 + <code>mm</code> + Cholesky 求逆 + 2 pass × 16 group 的块代价 einsum，
+      全部在<strong>已缓存张量</strong>上做矩阵代数。
+      <strong>这就是成本刚性的来源</strong>：Linear 的一个机制加的是矩阵算子；
+      Attention 的一个机制乘进的是一个已经 ~3300 次前向的搜索结构。
+    </p>
+    <div class="callout">
+      <span class="lbl">解开一个旧疑团</span>
+      <p>
+        v205「本地校准砍 30% → 官方只省 6 秒」的原因找到了。C76.4 是 12 个旋转候选，
+        住在<strong>选择轨</strong>（~210 次前向）。而真正贵的是<strong>门轨（~200 次前向 + 200 次部署量化）
+        和 A2 训练（136 次前向 + ~481 次 solve）</strong>。砍掉选择轨的一大块，在总量里只占小头。
+      </p>
+      <p>
+        <strong>结论：要让 Attention 变得可负担，必须打门轨和训练器，不是打搜索候选。</strong>
+      </p>
+    </div>
+
+    <h3>4.4 测量层：本地面板双向反预测</h3>
+    <p>
+      见第 3 节的八条反转。对执行的含义很直接：既然本地读数在两个方向上都不预测官方，
+      筛选候选就只能靠<strong>机制级论证</strong>（是否可证减少实际工作、是否可证保持输出），
+      而官方提交槽位是最稀缺资源——本轮 22 次超时就是它的消耗记录。
+    </p>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <span class="sec-num">第 5 节</span>
+      <h2 class="sec">代码证据索引</h2>
+    </div>
+    <p>根文件 <code>solution.py</code>（v231，505762 B）中与上述诊断直接相关的行号。</p>
+    <div class="ev">
+      <div class="ev-row"><div class="ev-k">11291–11318</div><div class="ev-v"><code>_m_attention_backward</code>：手写 attention 反向</div></div>
+      <div class="ev-row"><div class="ev-k">11343–11467</div><div class="ev-v"><code>_a2_train_rotation</code>：32 步手写 Adam；11415 归一化代理 loss；11425 STE（量化器 Jacobian 当恒等）</div></div>
+      <div class="ev-row"><div class="ev-k">11470–11517</div><div class="ev-v"><code>_a2_true_path_gate_loss</code>：11507 未归一化原式 MSE；11558 <code>gate_window = calib_qkv_list[-1]</code>（<strong>只查 1 个窗口</strong>）；11559 比值判据</div></div>
+      <div class="ev-row"><div class="ev-k">11948–12249</div><div class="ev-v">Linear <code>_em1_*</code> 全段：<strong>零次前向</strong>，纯缓存张量上的矩阵代数</div></div>
+      <div class="ev-row"><div class="ev-k">11486–11516</div><div class="ev-v">门内 <code>_run</code> 被调 2 次（player / standard），参考前向逐位相同却算两遍；<code>_a2_true_path_gate_loss</code> 本身又被调 2 次 → <strong>同一 gate window 的参考 attention 被算 4 遍</strong></div></div>
+      <div class="ev-row"><div class="ev-k">11379 / 11384</div><div class="ev-v">同一个 V 的同一编码 <code>_dequantize_hif4(_dense_to_hif4(v_sub))</code> 逐字重算一次</div></div>
+      <div class="ev-row"><div class="ev-k">11215 / 11219–11220</div><div class="ev-v"><code>_A2_TRAIN_STEPS = 32</code> / <code>_A2_MAX_KV_TOKENS = 128</code>、<code>_A2_MAX_Q_TOKENS = 32</code></div></div>
+      <div class="ev-row"><div class="ev-k">434–435</div><div class="ev-v"><code>_ATTN_ROTATION_BLOCKS=(16,32,64)</code> × <code>_ATTN_ROTATION_SEEDS=(0,1,2,3)</code> → 12 个旋转候选（C76.4 所在）</div></div>
+      <div class="ev-row"><div class="ev-k">326 / 364–365</div><div class="ev-v"><code>_ATTN_CENTER_MODES</code> 初值 (0,2)，条件覆盖为 3 个</div></div>
+      <div class="ev-row"><div class="ev-k">409 / 395 / 401 / 426 / 462</div><div class="ev-v"><code>_ATTN_OUTPUT_HEAD_SCALE</code> / <code>_HEADWISE_PERMUTATION</code> / <code>_FISHER_IMPORTANCE</code> / <code>_H64</code> / <code>_L1_DATA_DRIVEN_SCALE</code> 全为 False/空 → 3176–3299 的 Fisher 重要性函数为死代码</div></div>
+      <div class="ev-row"><div class="ev-k">workbench …/attention-agr1-on-v231/candidate/solution.py:12537–12587</div><div class="ev-v"><code>_agr1_train</code> 末尾：同一最终 M 的同一变换与 loss <strong>被完整算了 3 遍</strong>（1 次进 <code>final_loss</code>，2 次进诊断字段）</div></div>
+      <div class="ev-row"><div class="ev-k">同上 :12514–12515</div><div class="ev-v"><code>force_zero=True</code> 时只 <code>continue</code>，仍跑满 32 步完整前向 + 反向，仅跳过优化器更新</div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <span class="sec-num">第 6 节</span>
+      <h2 class="sec">已关闭、新完成的 A-CT1 与建议排序</h2>
+    </div>
+
+    <h3>已关闭</h3>
+    <ul>
+      <li><strong>A-GR2</strong>（真目标训练）：72/72 逐位相同，NO_EFFECT。它从反面证明把代理目标换成真实部署 MSE 不行（fit 窗三升三降）——<strong>要动的是参数化本身，不是损失函数</strong>。</li>
+      <li><strong>A-RB1</strong>（Q/K 联合输出舍入边界）：六层全部回退，NO_EFFECT。</li>
+      <li><strong>v227 / v228</strong>（gauge、Q 偏置）：本地负，未提交。</li>
+      <li><strong>K 平移类</strong>：v229 官方侧隔离 −2，正式关闭。</li>
+      <li><strong>A@W 拟合族</strong>（Linear）：结构性自闭——自适应 scale 吸收标量/群组增益，重编码整数码必劣于父，与数据无关。</li>
+    </ul>
+
+    <h3>A-CT1：等价性通过、去重成立，但量级不足</h3>
+    <p>
+      <strong>官方回传（2026-09-10）：v236 超时。</strong>
+      v236 = v231 根 + A-GR1（<code class="mono">3319fc35…</code>），是 A-CT1 的逐位等价基线。
+      这是 A-GR1 完整包形态的<strong>第二次</strong>官方否决——v234（v230 根 + A-GR1）已经超时过一次。
+      本报告交付时该回传已按仓库纪律登记：<code class="mono">logs/execution/2026-09-10-v236-agr1-on-v231-official-timeout.md</code>，
+      并同步更新 v236 卡的 <code class="mono">official-result.json</code> 与 <code class="mono">result.md</code>、
+      <code class="mono">docs/current-solution-status.md</code>、计划入口与 v236 卡；
+      官方精确秒数/分数未知，一律记 <code class="mono">null</code>，不写预测。
+    </p>
+    <p>
+      candidate 为 A-CT1（<code class="mono">146bb715…</code>，528204 B，从 v236 装配，父 v231 根 18518/291s）。
+      <strong>本报告撰写期间该卡的六 shard、controls 与配对计时全部跑完。</strong>
+    </p>
+    <div class="tbox">
+      <table>
+        <caption>A-CT1 六 shard：逐 case 输出 72/72 逐位相同</caption>
+        <thead>
+          <tr><th>shard</th><th class="n">n</th><th class="n">delta</th><th>+/−/0</th><th>候选缓存</th><th>基线缓存</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="k">0</td><td class="n">12</td><td class="n zero">0</td><td class="mono">0/0/12</td><td class="dim">hit</td><td class="dim">hit</td></tr>
+          <tr><td class="k">1</td><td class="n">12</td><td class="n zero">0</td><td class="mono">0/0/12</td><td class="neg">miss</td><td class="dim">hit</td></tr>
+          <tr><td class="k">2</td><td class="n">12</td><td class="n zero">0</td><td class="mono">0/0/12</td><td class="neg">miss</td><td class="dim">hit</td></tr>
+          <tr><td class="k">3</td><td class="n">12</td><td class="n zero">0</td><td class="mono">0/0/12</td><td class="neg">miss</td><td class="dim">hit</td></tr>
+          <tr><td class="k">4</td><td class="n">12</td><td class="n zero">0</td><td class="mono">0/0/12</td><td class="neg">miss</td><td class="dim">hit</td></tr>
+          <tr><td class="k">5</td><td class="n">12</td><td class="n zero">0</td><td class="mono">0/0/12</td><td class="neg">miss</td><td class="dim">hit</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      六 shard 收尾干净：<code>{'protocol': 'eval-v3', 'records': 6, 'reasonableness_issues': 0}</code>。
+    </p>
+    <p>
+      <strong>关键的是 layer 15 与 layer 22</strong>——A-GR1 六个层里只有这两层真正 arm。逐 case 展开后，
+      两层的 <code>baseline_gain</code> 与 <code>candidate_gain</code> <strong>在全部 12 个 case 上都精确相等</strong>
+      （例如 layer 15 / validation / length 10：两侧同为 <span class="mono">0.413499387577899</span>）。
+      即：<strong>A-CT1 在机制唯一起作用的两层上，逐位复现了旧实现。</strong>
+    </p>
+    <div class="tbox">
+      <table>
+        <caption>独立计数核验（verify.out [C]）：每个 gate 窗口实际少执行</caption>
+        <thead>
+          <tr><th>项</th><th class="n">旧</th><th class="n">新</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="k">attention 前向</td><td class="n">4</td><td class="n pos"><b>3</b></td></tr>
+          <tr><td class="k">参考 dense 解码</td><td class="n">12</td><td class="n pos"><b>8</b></td></tr>
+          <tr><td class="k">hif4 解码</td><td class="n">6</td><td class="n pos"><b>5</b></td></tr>
+          <tr><td class="k">V 量化</td><td class="n">2</td><td class="n pos"><b>1</b></td></tr>
+          <tr><td class="k">Q / K 调用</td><td class="n">2 / 2</td><td class="n">2 / 2（不变）</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      <strong>控制全过</strong>（<code>verify.out</code>：<code>ALL A-CT1 CONTROLS PASSED</code>）：
+      两臂 <code>v_state</code> 逐字节相同 [P1]；同值 V 状态两次调用返回五个逐位相同字段 [P2]；
+      Q/K/V 不改写任何 state [P3]；六层真实数据 + M=I + 合成 + 异常回退 + 装配对自身，
+      全部返回<strong>逐字节相同的 q/k/v state 与相等的 audit 字段</strong> [D]；
+      接受与拒绝两条路径在真实数据上都被覆盖到 [E]。
+    </p>
+
+    <div class="tbox">
+      <table>
+        <caption>配对计时（timing.json，每臂 15 轮，次序轮转，含同字节 sham null）</caption>
+        <thead>
+          <tr><th>测量</th><th class="n">旧（v236 装配）</th><th class="n">新（A-CT1）</th><th class="n">配对效应</th><th class="n">|effect|/|null|</th><th class="n">候选更快</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="k">layer0 / gate 窗口对</td><td class="n">74.658 ms</td><td class="n">61.528 ms</td><td class="n pos"><b>+13.51 ms</b></td><td class="n">15.3×</td><td class="n pos"><b>15/15</b></td></tr>
+          <tr><td class="k">layer22 / gate 窗口对</td><td class="n">71.057 ms</td><td class="n">60.890 ms</td><td class="n pos"><b>+9.75 ms</b></td><td class="n">16.6×</td><td class="n pos"><b>15/15</b></td></tr>
+          <tr><td class="k">layer0 / 整层校准</td><td class="n">6034.3 ms</td><td class="n">6017.6 ms</td><td class="n pos">+34.97 ms（+0.58%）</td><td class="n">2.19×</td><td class="n">10/15</td></tr>
+          <tr><td class="k">layer22 / 整层校准</td><td class="n">6022.8 ms</td><td class="n">5983.0 ms</td><td class="n pos">+33.42 ms（+0.56%）</td><td class="n">1.47×</td><td class="n">11/15</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="fig-cap" style="margin:-8px 0 20px">
+      正号 = 候选更快。sham 为同一装配归档加载的第二份拷贝，逐字节相同；gate 窗口对上其效应为 −0.88 / −0.59 ms。
+    </p>
+    <p>
+      <strong>去重是真的</strong>：gate 窗口对 <strong>15/15 轮</strong>、效应区间 [+2.1, +18.1] ms 全为正、sham ≈ 0。这一条无可争议。
+    </p>
+    <p>
+      <strong>但它小到不改变结论</strong>：整层校准只快 <strong>0.58%</strong>，六层合计 <strong>约 0.2s</strong>。
+    </p>
+    <p>
+      <strong>而 v236 需要省下的约是 12s</strong>：根 291s 留 9s 余量，A-GR1 侧隔离代价 +20.7s → 291 + 20.7 ≈ 311.7s，已越线。
+    </p>
+    <div class="callout" style="border-left-color:var(--crit);background:var(--crit-2)">
+      <span class="lbl" style="color:var(--crit)">0.2s 对 ~12s，差约 60 倍</span>
+      <p>
+        所以 A-CT1 <strong>不是</strong>「机制无效」，也<strong>不是</strong>「实现失败」——
+        它是<strong>一个被正确地做完了、但结果无关紧要的优化</strong>。
+        按本项目的裁决语汇应记 <strong>NO_EFFECT（对目标而言）</strong>：等价性成立，但它省下的工作不足以改变 v236 的官方结局。
+      </p>
+    </div>
+
+    <div class="callout">
+      <span class="lbl">怎么读这个结果</span>
+      <p>三层结论必须分开，不要混：</p>
+      <p>
+        <strong>1. 等价性：通过。</strong>72/72 逐位相同，含唯二 arm 的两层；六层真实数据 + 三条边界路径 control 全过。<br>
+        <strong>2. 去重：成立。</strong>gate 窗口对 15/15 轮、效应全正、sham ≈ 0。<br>
+        <strong>3. 量级：不足，且差得远。</strong>约 0.2s 对需要的约 12s。
+      </p>
+      <p>
+        analyzer 六片全给 <code>decision: reject</code>（判据是 <code>delta_mean &gt; 0</code>），
+        这是<strong>纯去重卡的正常读数</strong>，不是失败信号。
+        同样，<code>cand_api_6shard = 33.0s</code> vs <code>base_api_6shard = 2.40s</code> 是缓存态假象
+        （候选五片冷、基线全程热），<strong>不可比，也不表示 A-CT1 更慢</strong>。
+      </p>
+      <p>
+        计划的 §5 预登记过「v236 若超时，只关闭原执行结构，不自动关闭已实质削减计算的 A-CT1」——
+        那个条款的前提是削减<strong>可能具有实质量级</strong>。现在实测 0.58%，前提不成立。
+        <strong>该条应据此改写，而不是机械照搬。</strong>
+      </p>
+    </div>
+
+    <div class="callout">
+      <span class="lbl">对 A-GR1 的重新定位</span>
+      <p>
+        A-GR1 值 +29 分，代价约 +20.7s，手上 9s。此前日志的结论是「先把秒数腾出来再落地 A-GR1」——
+        那句仍然对，但本卡证明了一件更具体的事：<strong>腾出来的秒数不可能来自 A-GR1 自己的 gate。</strong>
+        把它全部可去重的部分去掉，也只值 0.2s。
+      </p>
+      <p>
+        那 12s 只能来自别处（Linear 侧，例如 L-TF1 并入根）。否则 <strong>A-GR1 在现根上不可落地</strong>；
+        继续在 Attention 门轨/训练器上找去重，是一个收益已被测定的方向。
+      </p>
+    </div>
+
+    <p>
+      <strong>A-CT2</strong>（<code>_agr1_train</code> 末尾统计复用）：冗余已由第 5 节证据确认（同一变换与 loss 算 3 遍），
+      但<strong>量级比 A-CT1 更小</strong>——它省的是训练<strong>末尾</strong>两遍标量重算，而 A-CT1 省的是 gate 里真实的前向与解码，
+      后者实测只值 0.2s。<strong>不建议为此开卡。</strong>
+    </p>
+    <div class="callout">
+      <span class="lbl">需要裁决的内部冲突</span>
+      <p>三处文件对 A-CT1 给出相反指令：</p>
+      <p>
+        · <code>docs/superpowers/plans/README.md</code> 与 <code>docs/current-solution-status.md:24</code>：列为「可立即开发」的活卡<br>
+        · <code>docs/optimization-round-summary-2026-09-10.md:61</code>：「<strong>Attention 本轮不再开新的搜索卡</strong>」<br>
+        · <code>docs/closed-mechanism-evidence.md:72</code>：「<strong>Attention 后续只由官方回传或 21071 锚点源码绑定驱动</strong>」
+      </p>
+      <p>在 21071 已不可得的现在，第三条实际上指向「不再推进」。</p>
+    </div>
+
+    <h3>建议排序</h3>
+    <ol>
+      <li>
+        <strong>先存时间，再花钱。</strong>唯一无风险的动作是「等输出、少计算」的纯降时候选。
+        v237（L-TF2）已归档、待官方裁决；计划中仍标注的未兑现项是<strong>「L-TF1 尚未并入根 v231」</strong>——
+        v233 只在 v230 / K=1 父上测过，而官方已给它干净的 −4s。
+      </li>
+      <li>
+        <strong>花钱只买 L-EM 类</strong>——全项目唯一有官方收益记录、且本地读数可预测官方的机制类别，
+        必须配降本调度（组号主序、梯度复用），不做参数邻域扫描。
+      </li>
+      <li>
+        <strong>不按缺口比例分配投入。</strong>78% 这个数来自可加模型的<strong>分配假设</strong>，不是测量；
+        其来源文档自己标注「顶端换算不可靠，仅量级参照」，而现在连锚点源码都没有了。
+      </li>
+      <li>
+        <strong>Attention 的「去重」方向收益已测定，可以收手。</strong>
+        A-CT1 实测省约 0.2s，A-CT2 量级更小。两者都<strong>正确地</strong>减少了真实存在的重复工作，
+        也都<strong>不足以改变任何官方结局</strong>——去重打得再准，补不上 12s 的账。
+        若要继续 Attention，只能回到<strong>参数化层</strong>（下一条），而不是继续找冗余。
+      </li>
+      <li>
+        <strong>真正的出路在参数化层</strong>：需要造出<strong>非规范方向</strong>，
+        即让部署输出在参数移动时按构造改变。这是唯一未被证伪、且不依赖 21071 的方向。
+        判据应当是可证伪的：新参数化必须在<strong>一阶上有非零的部署输出变分</strong>，
+        否则一进门就是精确零。
+      </li>
+    </ol>
+    <div class="callout">
+      <span class="lbl">对预期的一句实话</span>
+      <p>
+        A-CT1 的两半问题现在都有了答案，且方向相反：<strong>输出可以证明（72/72 等价通过），
+        秒数实测不够（约 0.2s 对需要的约 12s）。</strong>
+        这类纯去重卡的常见结局正是如此——能被证明的往往是无关紧要的那一半。
+      </p>
+      <p>
+        A-GR1 因此在现根上<strong>不可落地</strong>，除非那 12s 从 Linear 侧腾出来；A-CT2 更小，不值得开卡。
+        <strong>Attention 的官方账本停在 +21，缺口 3244 不变。</strong>
+        在 21071 源码不可得的前提下，本项目目前的证据不支持「可以在剩余余量内追平榜首」这一判断。
+      </p>
+    </div>
+  </section>
+
+  <footer>
+    <p>
+      <strong>数据来源</strong>：<code>docs/current-solution-status.md</code>、
+      <code>docs/closed-mechanism-evidence.md</code>、<code>docs/next-research-direction-analysis-2026-09-05.md</code>、
+      <code>docs/optimization-stall-analysis-2026-09-10.md</code>、<code>docs/optimization-round-summary-2026-09-10.md</code>、
+      <code>logs/execution/</code> 下 Attention 与 side-isolation 相关日志、
+      <code>docs/official-local-fitting-analysis-2026-09-04.md</code>、
+      根 <code>solution.py</code> 及 <code>evaluator/</code> 源码。
+    </p>
+    <p>
+      <strong>口径</strong>：本报告不换算官方秒数，不用本地时间做提交判断，不晋级任何版本。
+      结构计数来自源码常量，不是计时。官方未知一律 <code>unregistered/NA</code>；
+      TIMEOUT / REJECTED / NO_EFFECT 严格区分。生成于 2026-09-10，未修改仓库任何文件。
+    </p>
+  </footer>
+
+</div>
+
+<script>
+(function () {
+  var data = [
+    { v: 'v084', m: 47.4 }, { v: 'v086', m: 77.3 }, { v: 'v158', m: 77.0 },
+    { v: 'v160', m: 68.0 }, { v: 'v175', m: 55.0 }, { v: 'v182', m: 27.0 },
+    { v: 'v186', m: 28.0 }, { v: 'v189', m: 25.0 }, { v: 'v195', m: 11.0 },
+    { v: 'v202', m: 19.0 }, { v: 'v230', m: 8.0 },  { v: 'v231', m: 9.0 },
+    { v: 'v233', m: 12.0 }
+  ];
+  var W = 820, H = 300;
+  var padL = 46, padR = 118, padT = 24, padB = 44;
+  var iw = W - padL - padR, ih = H - padT - padB;
+  var yMax = 84;
+  var xs = function (i) { return padL + iw * i / (data.length - 1); };
+  var ys = function (m) { return padT + ih * (1 - m / yMax); };
+
+  var parts = [];
+  parts.push('<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="官方余量随版本推进的消耗，末端误差带穿过零线">');
+
+  // gridlines + y labels
+  [0, 20, 40, 60, 80].forEach(function (g) {
+    var y = ys(g);
+    parts.push('<line class="grid-line" x1="' + padL + '" y1="' + y + '" x2="' + (padL + iw) + '" y2="' + y + '"/>');
+    parts.push('<text class="ax" x="' + (padL - 8) + '" y="' + (y + 3.5) + '" text-anchor="end">' + g + 's</text>');
+  });
+
+  // MAE band around the final point (9s +/- 10.1s); runs past the wall line
+  var bandTop = ys(19.1), bandBot = ys(-1.1);
+  var bandMid = (bandTop + bandBot) / 2;
+  parts.push('<rect x="' + xs(10) + '" y="' + bandTop + '" width="' + (padL + iw - xs(10)) +
+             '" height="' + (bandBot - bandTop) +
+             '" style="fill:var(--crit);opacity:.11"/>');
+
+  // zero line = the 300s wall
+  parts.push('<line class="wall" x1="' + padL + '" y1="' + ys(0) + '" x2="' + (padL + iw) + '" y2="' + ys(0) + '"/>');
+
+  // area
+  var area = 'M' + xs(0) + ',' + ys(0);
+  data.forEach(function (d, i) { area += ' L' + xs(i) + ',' + ys(d.m); });
+  area += ' L' + xs(data.length - 1) + ',' + ys(0) + ' Z';
+  parts.push('<path d="' + area + '" style="fill:var(--accent);opacity:.13"/>');
+
+  // line
+  var line = data.map(function (d, i) { return (i ? 'L' : 'M') + xs(i) + ',' + ys(d.m); }).join(' ');
+  parts.push('<path d="' + line + '" style="fill:none;stroke:var(--accent);stroke-width:2.25;stroke-linejoin:round"/>');
+
+  // points + labels
+  data.forEach(function (d, i) {
+    parts.push('<circle cx="' + xs(i) + '" cy="' + ys(d.m) + '" r="3.6" ' +
+               'style="fill:var(--surface);stroke:var(--accent);stroke-width:2.25"/>');
+    parts.push('<text class="ax" x="' + xs(i) + '" y="' + (H - padB + 17) + '" text-anchor="middle">' + d.v + '</text>');
+  });
+
+  // annotate endpoints and the last landed root
+  parts.push('<text class="ax-strong" x="' + xs(0) + '" y="' + (ys(47.4) - 11) + '" text-anchor="start">47.4s</text>');
+  parts.push('<text class="ax-strong" x="' + xs(12) + '" y="' + (ys(12) - 11) + '" text-anchor="end">12s</text>');
+  parts.push('<text class="ax" x="' + xs(8) + '" y="' + (ys(11) + 18) + '" text-anchor="middle">11s</text>');
+
+  // wall label sits above the line, clear of the x-axis tick labels
+  parts.push('<text class="ax" x="' + (padL + 2) + '" y="' + (ys(0) - 9) +
+             '" style="fill:var(--crit);font-weight:600">300s 硬限 · 余量 0</text>');
+
+  // band label to the right, in the reserved right margin
+  var bx = padL + iw + 10;
+  parts.push('<text class="band-label" x="' + bx + '" y="' + (bandMid - 7) + '">模型误差带</text>');
+  parts.push('<text class="band-label" x="' + bx + '" y="' + (bandMid + 7) + '">±10.1s</text>');
+  parts.push('<text class="ax" x="' + bx + '" y="' + (bandMid + 22) + '">穿过 0 线</text>');
+
+  parts.push('</svg>');
+  document.getElementById('chart').innerHTML = parts.join('');
+})();
+</script>

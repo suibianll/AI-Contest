@@ -2,13 +2,23 @@
   "version": "v236",
   "candidate_sha256": "3319fc354af1ff0f35075498f26886bdf43a078d32a27852f575a4c50d32ba07",
   "parent_sha256": "ea79a1c12dc667142c620975aab188920fae7b29988c804f41c1a696cc5754f1",
-  "official_status": "unregistered/NA",
+  "official_status": "TIMEOUT (>300s) REJECTED",
   "official_score": null,
   "official_time_s": null,
   "official_time_display": null,
-  "reported_by": null,
-  "reported_at": null,
-  "decision": "PENDING the user's batched official evaluation. This candidate exists to collect an official full-package reading for A-GR1, whose official value (+29) was measured by side isolation and has never been landed on a complete root. Both halves of the promotion rule are fixed here before the number arrives: an official score above the current root's 18518 inside 300s promotes it; a timeout or a lower score does not.",
+  "reported_by": "user",
+  "reported_at": "2026-09-10",
+  "complete_package_official": {
+    "package": "v231 Linear (L-EM3 K=2) complete root + A-GR1 Attention, v195 Attention body unchanged",
+    "submitted_sha256": "3319fc354af1ff0f35075498f26886bdf43a078d32a27852f575a4c50d32ba07",
+    "result": "TIMEOUT",
+    "hard_limit_s": 300,
+    "exact_seconds": null,
+    "score": null,
+    "note": "Exact seconds and score unknown; no prediction is written. Parent v231 official reading was 291s against the 300s limit (9s of headroom)."
+  },
+  "what_this_timeout_settles": "The v234 log left exactly one unknown: how far v234 overshot. v234's parent had 8s of headroom and this candidate's parent has 9s, so a 1s improvement was the entire available room, and the promotion rule recorded here before submission was conditional on v234's overshoot being at most 1s. This reading closes that question in the negative: the overshoot exceeds 1s. The two timeouts together now bracket the mechanism from both sides, and no near-neighbour Linear parent can rescue it. This is consistent with the property asserted at archiving time -- A-GR1's extra cost is calibration-side (6 layers x 32 steps of Adam) and carries no new operator on the deployed dynamic path, so it does not track the Linear parent.",
+  "decision": "REJECTED. The preregistered promotion rule is settled on its timeout branch: an official score above the current root's 18518 inside 300s would promote; a timeout or a lower score does not, and this is the timeout. The root is unchanged at v231 (18518/291s) and the fallback root is unchanged at v233 (18428/288s). The implementation is closed: no step/window/candidate-count retry, and it is not transplanted into any other candidate. The A-GR1 mechanism itself is not closed -- only this way of landing it.",
   "sibling_evidence_recorded_after_archiving": {
     "event": "the v234 complete package (v230 root + the same A-GR1 block) was reported by the user as an official TIMEOUT (>300s) on 2026-09-10, after this card was built and archived",
     "log": "logs/execution/2026-09-10-v234-agr1-official-timeout.md",
@@ -27,6 +37,9 @@
   },
   "time_risk": "A-GR1 adds calibration-side training. The side probe measured +20.7s against the v195 side, and the current complete root sits at 291s against the 300s limit (9s of headroom). The sibling v234 complete package, with 8s of headroom and the same calibration-side cost, was then reported as an official TIMEOUT. Side time has no calibrated relationship to the full package, so the only way to learn this candidate's real number is an official reading; the submission's expected value is now low and the user may reasonably decide not to spend it. A timeout closes this implementation only.",
   "recommended_next_attention_action": "the evidence now says the block on A-GR1 is time headroom (about 20s is needed against 9s available), not the parent and not the mechanism. The highest-value Attention work is therefore to reclaim calibration/complete-package seconds first -- the same direction the Linear runtime cards (v233 L-TF1, already officially priced at -4s, and v235 L-AD1) are taking -- and only then land A-GR1. Re-running A-GR1 variants is not a route: weakening it (fewer steps, fewer windows, fewer candidates) is forbidden by the card's own rules.",
-  "note": "v236 is a descendant of the v231 root. It carries v231's K=2 arm but not the pending v235 (Linear L-AD1) or v233 (L-TF1) changes, so it is not additive with either. The Attention mechanism itself is v234's, unchanged; v234 was built on the v230 root and this is the same block on the v231 root.",
+  "note": "v236 is a descendant of the v231 root. It carries v231's K=2 arm but not the pending v235 (Linear L-AD1) or v233 (L-TF1) changes, so it is not additive with either. The Attention mechanism itself is v234's, unchanged; v234 was built on the v230 root and this is the same block on the v231 root. The score was never at stake here: the six-shard run reproduced v234 item by item (+0.003845 equal-weight, 21/3/48, layers 15 and 22 accepting), so the archived candidate is the same Attention behaviour on a new Linear parent, not new mechanism evidence. Only the second was at stake, and it did not fall inside the limit.",
+  "side_value_unaffected": "The side-isolation reading (14455/263.7s, +29/+20.7s against the v195 side baseline) is untouched by this timeout. It prices the SCORE of a smaller package; this timeout closes the LANDABILITY of the complete package. The expressiveness gradient (diagonal 0 < triangular 0 < symmetric full matrix +22 < general matrix +29) remains officially confirmed, and A-GR1 remains the third-largest officially positive Attention mechanism after C76.4 (+84) and A1 (+60).",
+  "no_variance_inference": "The official channel returned only 'timeout', twice now. Nothing was reported about by how much, so no inference is drawn about the official clock's variance and no conversion factor between local and official seconds is derived. The two timeouts agreeing in direction is recorded as 'not contradictory', not as a coefficient.",
+  "execution_log": "logs/execution/2026-09-10-v236-agr1-on-v231-official-timeout.md",
   "candidate_type": "complete Attention A-GR1 candidate (v231 root plus the byte-identical v234 A-GR1 block); the only v236 under solutions/ at archive time"
 }
