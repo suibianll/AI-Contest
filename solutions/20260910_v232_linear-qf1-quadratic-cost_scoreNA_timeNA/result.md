@@ -1,6 +1,6 @@
 # v232 — Linear 局部二次代价修正 (L-QF1)
 
-计划卡 [`docs/superpowers/plans/2026-09-10-linear-correctness-and-runtime-plan.md`](../../docs/superpowers/plans/2026-09-10-linear-correctness-and-runtime-plan.md) §2（首卡）。
+计划卡 [`docs/superpowers/plans/2026-09-10-linear-correctness-and-runtime-plan.md`](../../docs/superpowers/archive/plans/2026-09-10-linear-correctness-and-runtime-plan-completed.md) §2（首卡）。
 执行记录 [`logs/execution/2026-09-10-linear-qf1-quadratic-cost.md`](../../logs/execution/2026-09-10-linear-qf1-quadratic-cost.md)。
 
 | | |

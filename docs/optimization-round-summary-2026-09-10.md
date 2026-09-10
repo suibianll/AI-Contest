@@ -60,4 +60,4 @@ v229的本地正向被同口径官方侧结果反转，当前不应再把K定心
 
 Attention本轮不再开新的搜索卡。A-FIX1已获官方裁决（TIMEOUT >300s，REJECTED），后续新方向须说明与已关闭实现的差异、保护父状态、使用真实部署目标且校准期成本在官方机上可行。21071成功源码绑定仍是高价值证据，但不是推进Linear的前置条件。
 
-执行细节、验收与停止条件见[新活动计划](superpowers/plans/2026-09-10-linear-correctness-and-runtime-plan.md)。
+执行细节、验收与停止条件见[新活动计划](superpowers/archive/plans/2026-09-10-linear-correctness-and-runtime-plan-completed.md)。

@@ -1,6 +1,6 @@
 # v233 — Linear 梯度复用 (L-TF1)
 
-计划卡 [`docs/superpowers/plans/2026-09-10-linear-correctness-and-runtime-plan.md`](../../docs/superpowers/plans/2026-09-10-linear-correctness-and-runtime-plan.md) §3（第二卡）。
+计划卡 [`docs/superpowers/plans/2026-09-10-linear-correctness-and-runtime-plan.md`](../../docs/superpowers/archive/plans/2026-09-10-linear-correctness-and-runtime-plan-completed.md) §3（第二卡）。
 执行记录 [`logs/execution/2026-09-10-linear-tf1-gradient-reuse.md`](../../logs/execution/2026-09-10-linear-tf1-gradient-reuse.md)。
 
 | | |

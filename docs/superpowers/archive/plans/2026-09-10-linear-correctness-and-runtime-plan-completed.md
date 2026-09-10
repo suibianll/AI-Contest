@@ -1,9 +1,11 @@
+> 生命周期：开发完成，2026-09-10归档。v235待官方；后续只见[计划入口](../../plans/README.md)。下文旧ACTIVE/下一步为历史快照。
+
 # Linear 局部代价修正与运行成本优化计划
 
 > 状态：ACTIVE；2026-09-10唯一活动总计划。此次仅注册计划，不启动实现或评测。
 > 当前完整根：v231 Linear L-EM3 K=2 + v195 Attention，官方18518/291s（2026-09-10 回传晋级）。
 > SHA256：`ea79a1c12dc667142c620975aab188920fae7b29988c804f41c1a696cc5754f1`。
-> 总结：[本轮结果与决策](../../optimization-round-summary-2026-09-10.md)。上层规则：AGENTS → 4B指引 → 本计划。
+> 总结：[本轮结果与决策](../../../optimization-round-summary-2026-09-10.md)。上层规则：AGENTS → 4B指引 → 本计划。
 
 ## 1. 目标与统一决策
 
@@ -32,7 +34,7 @@
 ### 2.1 完成记录（2026-09-10，已归档 v232）
 
 开发结束，归档 `solutions/20260910_v232_linear-qf1-quadratic-cost_scoreNA_timeNA/`，
-执行记录 [`logs/execution/2026-09-10-linear-qf1-quadratic-cost.md`](../../../logs/execution/2026-09-10-linear-qf1-quadratic-cost.md)。
+执行记录 [`logs/execution/2026-09-10-linear-qf1-quadratic-cost.md`](../../../../logs/execution/2026-09-10-linear-qf1-quadratic-cost.md)。
 
 - **候选** `447f815ac7bee74950a352cac64e1489cef39fa4c52102c1f902f940579684ca` / 515031 B，
   自父根 `0f1af6db…` / 505496 B **纯追加**；`extracted_function_differing_bytes = 1`。
@@ -61,7 +63,7 @@
 ### 3.1 完成记录（2026-09-10，已归档 v233）
 
 开发结束，归档 `solutions/20260910_v233_linear-tf1-gradient-reuse_scoreNA_timeNA/`，
-执行记录 [`logs/execution/2026-09-10-linear-tf1-gradient-reuse.md`](../../../logs/execution/2026-09-10-linear-tf1-gradient-reuse.md)。
+执行记录 [`logs/execution/2026-09-10-linear-tf1-gradient-reuse.md`](../../../../logs/execution/2026-09-10-linear-tf1-gradient-reuse.md)。
 
 - **候选** `0ec89710087d061bf9608196ad4d53a1c6be98c8a5595596a071ecd05a6821eb` / 515985 B，
   自父根 `0f1af6db…` / 505496 B **纯追加**；1 次子串替换，5 行，+34 B，
@@ -90,7 +92,7 @@
 
 定位问题（"父激活GPTQ、新增下降、度量求逆/拷贝各自占多少无profiler调用时间？"）
 已由 v233 开发过程中取得的证据回答，见
-[`logs/execution/2026-09-10-linear-tf1-gradient-reuse.md`](../../../logs/execution/2026-09-10-linear-tf1-gradient-reuse.md) §5.4。
+[`logs/execution/2026-09-10-linear-tf1-gradient-reuse.md`](../../../../logs/execution/2026-09-10-linear-tf1-gradient-reuse.md) §5.4。
 方法为"整调用 + 单部件打桩"归因（`workbench/full_solution/linear-tf1-gradient-reuse/attribute.py`），
 事件时钟与独立 `perf_counter` 一致到 2% 以内。
 
@@ -197,7 +199,7 @@ RTX 3060 Ti、CUDA event、同 state 同设备、无 profiler、15 轮取中位�
 ### 4.4 完成记录（2026-09-10，已归档 v235）
 
 开发结束，归档 `solutions/20260910_v235_linear-ad1-adaround-materialization_scoreNA_timeNA/`，
-执行记录 [`logs/execution/2026-09-10-linear-ad1-adaround-materialization.md`](../../../logs/execution/2026-09-10-linear-ad1-adaround-materialization.md)。
+执行记录 [`logs/execution/2026-09-10-linear-ad1-adaround-materialization.md`](../../../../logs/execution/2026-09-10-linear-ad1-adaround-materialization.md)。
 
 - **候选** `fe8aec1989189ad9c20cdc9e9c3717ad509c98da987cb556b1e1428fc13bc702` / 510664 B，
   自父根 v231 `ea79a1c1…` / 505762 B **纯追加 +4903 B**：3 条顶层语句（掩码缓存、`_AD1_pattern_masks`、
