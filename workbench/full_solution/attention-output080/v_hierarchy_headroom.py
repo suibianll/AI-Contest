@@ -6,7 +6,6 @@ per pair of 4, so the choice must be shared inside the group.  The 58% headroom 
 reported is therefore an artefact of an illegal oracle and is retracted.  The valid version --
 min per group -- is v_oracle_gain.py, which finds ~0.00%.
 
-Last unmeasured V lever: the lv2/lv3 hierarchy bits.
 
 Two things are already proved: the element-level (sign, mantissa) choice is
 optimal at the encoder's scales, and the block-level `scale_factor` is optimal up
@@ -73,6 +72,13 @@ def best_error(scale, target):
 
 
 def main() -> int:
+    raise SystemExit(
+        "This script's oracle is illegal (the min is taken per element, so every "
+        "element picks its own lv2/lv3; the format shares those inside a group of 8). "
+        "Its 58% headroom reading is retracted -- see v-conclusion.md section 3quater. "
+        "Use v_oracle_gain.py, whose oracle takes the min per group."
+    )
+
     torch.set_grad_enabled(False)
     solution = load_module(SOLUTION, "hier_solution")
 
