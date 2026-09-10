@@ -10,10 +10,13 @@
 [Linear 精确度量 Activation 码序下降与双线协调计划（L-EM1）](2026-09-10-linear-exact-metric-refinement-plan.md)。
 
 **Attention 执行附录：**
-[Q 侧 per-call 数据中心化计划（A-QC1）](parallel/2026-09-10-attention-q-mean-center-plan.md)
+[A2 训练/部署前向对齐计划（A-FIX1）](parallel/2026-09-10-attention-train-deploy-align-plan.md)。
+依据[推进瓶颈审计](../optimization-stall-analysis-2026-09-10.md) §1/§5.3：训练前向裸
+`_dense_to_hif4` 与 gate 完整部署路径不一致（代码已核实）。
+注：审计 §3 指出"规则级空间全部裁决完毕"的表述证据不足，此处更正为"规则级已盘点方向均有
+裁决记录，但不构成完备性证明"。
+上一附录 [A-QC1](parallel/2026-09-10-attention-q-mean-center-plan.md)
 已关闭 `NO_EFFECT`：6/6 层 gate 全拒，六 shard 72 case 与根逐位相同，不占版本号、未提交官方。
-至此 Attention 规则级空间全部裁决完毕（Q·K 不变量四类结构变换 + 两侧 per-call 定心规则），
-Attention 侧无存活卡片；后续只由官方回传（v229 待官方）或 21071 锚点源码绑定驱动。
 上一附录 [A-MC1](parallel/2026-09-10-attention-k-mean-recenter-plan.md)
 已完成执行：归档 v229 **本地正向，待官方**（六 shard 等权 `+0.014923`，26/10/36，3/6 层
 gate 接受，层15 全部 12 case 均匀改善约 `+0.079`；官方 `unregistered/NA`，待用户统一官方
