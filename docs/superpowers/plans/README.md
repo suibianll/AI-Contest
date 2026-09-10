@@ -13,6 +13,16 @@
 
 承接卡 [L-EM2 组号主序调度](2026-09-10-linear-groupstep-schedule-plan.md) 已官方 **RETAINED 18428/292s**。v230 Linear（L-EM2）+ v195 Attention 已由用户官方回传 **18428 / 292s**，相对 v202 完整根 **+375 / +11s**，硬限余量 **8s**。根与归档逐位一致，SHA256 `0F1AF6DBC207FF32B2C6BE16987E9C4FE50F3F10747DE26782EF52A6F2FAB7BC`。回退根 v202 保留 `18053/281s`。同编号 v230 Attention A-FIX1 官方状态不受本次回传影响。 详见[回传记录](../../../logs/execution/2026-09-10-v230-linear-official-result.md)。原有本地时间折算不成为有效门禁；新候选从晋级完整根构建，已在运行的旧父候选保持原始 parent/SHA，不机械拼接。
 
+承接卡 [L-EM3 groupstep 的 K=2 臂](2026-09-10-linear-k2-timed-arm-plan.md) 已执行完成：归档 v231
+`solutions/20260910_v231_linear-em3-k2-arm_scoreNA_timeNA/`，**官方 `PENDING`**（卡片 §2 预先写定
+"不论折算是否越过 296 s 一律 PENDING"）。候选 `ea79a1c1…`，与 v230 **同父兄弟**（均以
+`56dc805d` 为前缀）。本地六 shard 对计划卡父根等权 **+0.106961**（288/0/48），对当前根（=v230）
+**+0.027507**（286/0/50），即 K=2 相对 K=1 的净增量；两者之差与 L-EM2 登记的 `+0.079454` 逐位
+闭合。折算 `292 + 3.2 = 295.2s`。**本卡同时确立两条可复用结论**：v230 官方 292s 证实**朴素可加
+口径**（预测 294s，误差 2s）优于分解回归（286.5s，误差 5.5s）；分进程配对与同进程结果
+**336/336 逐 case 位相同**，内存受限时是无损路径。执行记录见
+[执行记录](../../../logs/execution/2026-09-10-linear-em3-k2-arm.md)。
+
 **Attention 执行附录：**
 [A2 训练/部署前向对齐计划（A-FIX1）](parallel/2026-09-10-attention-train-deploy-align-plan.md)
 已执行完成：归档 v230（本地净负、官方待定，`solutions/20260910_v230_attention-afix1-train-deploy-align_officialNA_timeNA/`）。

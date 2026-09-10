@@ -22,6 +22,8 @@
 
 v230 Linear（L-EM2）+ v195 Attention 已由用户官方回传 **18428 / 292s**，相对 v202 完整根 **+375 / +11s**，硬限余量 **8s**。根与归档逐位一致，SHA256 `0F1AF6DBC207FF32B2C6BE16987E9C4FE50F3F10747DE26782EF52A6F2FAB7BC`。回退根 v202 保留 `18053/281s`。同编号 v230 Attention A-FIX1 官方状态不受本次回传影响。 新正式候选从该完整根构建；已在旧父上进行的候选保留原 parent，不自动继承此结果。
 
+v231 Linear（L-EM3，groupstep K=2）已归档 **官方 `PENDING`**：`solutions/20260910_v231_linear-em3-k2-arm_scoreNA_timeNA/`，候选 `ea79a1c1…`。它与 v230 是**同父兄弟**（两者都以 `56dc805d` 为前缀），因为 L-EM3 卡片在换根之前就已构建并配对。本地六 shard 对计划卡父根等权 **+0.106961**（288/0/48），对当前根 **+0.027507**（286/0/50，即 K=2 相对 K=1 的净增量）；折算 `292 + 3.2 = 295.2s`。该卡附带两项可复用结论：**朴素可加折算口径**被 v230 官方读数证实（预测 294 vs 官方 292），以及**分进程配对无损**（336/336 逐 case 位相同）。归档时 `solutions/` 下 `v231` 仅此一条；v230 曾被两条线共用，故 v231 若被 Attention 线取用，引用一律写全目录名。
+
 
 09-09 旧计划三卡（L-RB1/A-RB1/L-JRB1）已全部关闭并归档，见
 [归档版计划](superpowers/archive/plans/2026-09-09-output-aware-rounding-and-joint-aw-plan-completed.md)。
