@@ -104,7 +104,12 @@ def _vk_fit(windows, states, q_heads, kv_heads, head_dim, device):
     """w[h] = mean of A_h over each relative-offset bucket, on the fit windows."""
 
     group = q_heads // kv_heads
-    totals = torch.zeros(q_heads, _VK_NPARAM, dtype=torch.float64)
+    # One kernel per KV GROUP, not per Q head.  V's error enters all four Q
+    # heads of the group, and if they share w the objective is
+    # 4 * sum_t (sum_k w[t-k] d)^2 -- the SAME minimiser with one banded
+    # operation per group instead of four, i.e. a 4x cost cut that is a
+    # reparameterisation rather than a precision trade.
+    totals = torch.zeros(kv_heads, _VK_NPARAM, dtype=torch.float64)
     counts = torch.zeros(_VK_NPARAM, dtype=torch.float64)
     for item in windows:
         q_quant, q_scale = item["q"]
@@ -137,7 +142,7 @@ def _vk_fit(windows, states, q_heads, kv_heads, head_dim, device):
             for b in range(_VK_NPARAM):
                 sel = idxm == b
                 if bool(sel.any()):
-                    totals[h, b] += float(p[sel].sum())
+                    totals[h // group, b] += float(p[sel].sum())
                     if h == 0:
                         counts[b] += float(sel.sum())
     return (totals / counts.clamp_min(1.0)[None, :]).to(torch.float32)
@@ -175,7 +180,6 @@ def _vk_correct(params, kernel, v_quant, v_scale, kv_heads, head_dim):
     movable = ((sign != 0) & (mant > 0) & (mant < 7)).reshape(tokens, group_dim)
     codes = mant.reshape(tokens, group_dim).clone()
 
-    heads_per_group = int(kernel.shape[0]) // int(kv_heads)
     for _ in range(_VK_SWEEPS):
         vals = (codes * flat_step).reshape(tokens, kv_heads, head_dim)
         resid = vals - v_ref.reshape(tokens, kv_heads, head_dim)
@@ -183,13 +187,12 @@ def _vk_correct(params, kernel, v_quant, v_scale, kv_heads, head_dim):
         qii = torch.zeros(tokens, dtype=torch.float64, device=dev)
         for g in range(int(kv_heads)):
             dg = resid[:, g, :]
-            for j in range(heads_per_group):
-                wg = kernel[g * heads_per_group + j]
-                sig = _vk_shifted(dg, wg, _VK_RADIUS)
-                grad[:, g, :] += 2.0 * _vk_shifted(
-                    sig, torch.cat([wg[:_VK_NBUCKET].flip(0), wg[_VK_NBUCKET:]]), _VK_RADIUS
-                )
-                qii += _vk_row_energy(wg, tokens, _VK_RADIUS, dev)
+            wg = kernel[g]
+            sig = _vk_shifted(dg, wg, _VK_RADIUS)
+            grad[:, g, :] += 2.0 * _vk_shifted(
+                sig, torch.cat([wg[:_VK_NBUCKET].flip(0), wg[_VK_NBUCKET:]]), _VK_RADIUS
+            )
+            qii += _vk_row_energy(wg, tokens, _VK_RADIUS, dev)
 
         n_chan = kv_heads * head_dim
         flat_grad = grad.reshape(tokens, n_chan)

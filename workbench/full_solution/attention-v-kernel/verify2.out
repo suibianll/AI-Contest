@@ -1,0 +1,14 @@
+device=cuda
+[A] six APIs present: True  missing=[]
+[L 0] arm=kernel kernel_legal=True gate=0.0003851036890409887 -> 0.00038138346280902624 changed=4819 fallback_bitwise=True test_moved=119 sec p/c=0.0041/0.0273
+[L 1] arm=parent kernel_legal=True gate=0.001834326540119946 -> 0.001844064798206091 changed=4638 fallback_bitwise=True test_moved=0 sec p/c=0.0041/0.0043
+[L 5] arm=parent kernel_legal=True gate=0.0012916974956169724 -> 0.0012918718857690692 changed=4478 fallback_bitwise=True test_moved=0 sec p/c=0.0033/0.0031
+[L 8] arm=kernel kernel_legal=True gate=0.0037454746197909117 -> 0.0037378694396466017 changed=4893 fallback_bitwise=True test_moved=208 sec p/c=0.0036/0.0253
+[L15] arm=kernel kernel_legal=True gate=0.0022040351759642363 -> 0.00218379870057106 changed=5272 fallback_bitwise=True test_moved=393 sec p/c=0.0033/0.0252
+[L22] arm=kernel kernel_legal=True gate=0.01433748658746481 -> 0.014109395444393158 changed=1842 fallback_bitwise=True test_moved=0 sec p/c=0.0031/0.0069
+
+[D] arms: ['kernel', 'parent', 'parent', 'kernel', 'kernel', 'kernel']
+[B] fallback bitwise on every layer: True
+[C] kernel entry legal on every layer: True
+[F] V API sec: parent mean=0.0036  candidate mean=0.0153  delta=+0.0117
+wrote D:\工作内容\AI竞赛\workbench\full_solution\attention-v-kernel\verify.json
