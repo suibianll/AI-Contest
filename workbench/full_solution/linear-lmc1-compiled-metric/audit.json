@@ -1,0 +1,55 @@
+{
+  "card": "L-MC1",
+  "premise_verified": {
+    "metric_depends_only_on_state": true,
+    "evidence": "_em1_metric reads h_inv and the stored gram_diag_mean scalar; the activation enters only after G is built"
+  },
+  "counts_local": {
+    "layers": 24,
+    "roles": [
+      "q",
+      "k",
+      "v",
+      "o",
+      "fc_gate",
+      "fc_up",
+      "proj"
+    ],
+    "hidden_size": 2560,
+    "channels_per_role": {
+      "q": 2560,
+      "k": 2560,
+      "v": 2560,
+      "o": 4096,
+      "fc_gate": 2560,
+      "fc_up": 2560,
+      "proj": 9216
+    },
+    "in_scope_roles": [
+      "q",
+      "k",
+      "v",
+      "o",
+      "fc_gate",
+      "fc_up"
+    ],
+    "out_of_scope_roles": [
+      "proj"
+    ],
+    "calibrations_total": 168,
+    "calibrations_in_scope": 144,
+    "local_cases_total": 336,
+    "local_cases_in_scope": 288
+  },
+  "counts_official": {
+    "dynamic_calls": 50,
+    "calibrations_in_scope": 144,
+    "dynamic_note": "README: '\u5b98\u65b9\u6837\u4f8b\u6570\u6309\u7528\u6237\u786e\u8ba4\u7684 50 Linear + 250 Attention \u8bb0\u5f55'",
+    "calibration_note": "the root's own comment in _em1_compile_metric: '~2.8 s over the official 144 in-scope calibrations'"
+  },
+  "net_inverses": {
+    "local": 144,
+    "official": -94
+  },
+  "verdict": "NET_WORK_INCREASES_OFFICIALLY"
+}
