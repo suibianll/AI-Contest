@@ -21,7 +21,7 @@
 
 ## 0.1 当前计划状态（2026-09-10）
 
-**最新执行决策：** 上一轮开发已完成并归档。唯一新计划为[当前完整根梯度复用与候选整合](superpowers/plans/2026-09-10-retained-root-gradient-reuse-plan.md)：先在最高分根移植L-TF1为L-TF2，保留K=2；v235、v236各自等待官方回传，按完整结果决定组合。v234超时不能替v236作裁决；下文旧卡下一步仅为历史过程。
+**最新执行决策：** 按用户最新要求，Linear L-TF2与Attention A-CT1均可立即开发，不等待官方回传。A-CT1复用A-GR1 gate的固定reference/V计算，保持训练和接受逻辑；完成后审计A-CT2末尾统计复用。两线从最高分正式完整根独立构建，单GPU评测串行；官方只控制晋级。详见[唯一活动计划](superpowers/plans/2026-09-10-retained-root-gradient-reuse-plan.md)。
 
 本轮开发已结束，根已晋级为 v231 Linear L-EM3 K=2 **18518/291s**（2026-09-10 官方回传，相对 v230 +90/−1s）。下一轮按[计划入口](superpowers/plans/README.md)指定的[局部代价修正与运行成本优化](superpowers/archive/plans/2026-09-10-linear-correctness-and-runtime-plan-completed.md)推进：L-QF1公式修正（**已完成，归档v232，官方TIMEOUT**） → L-TF1首遍梯度复用（**已完成，归档v233，官方同分快4s，取代v230为回退根**） → 单项架构降时（**§4 定位已拆到编码器，§4.3 固定卡 L-AD1 已完成并归档 v235，官方 `unregistered/NA`，根未切换**）。**最直接的未兑现项：把已官方定价的 L-TF1 移植到当前根 v231（v233 只测了 K=1 的 v230 根）；本轮的 v235 已经建在 v231 上，但它做的是另一件事（L-AD1），不含 L-TF1。**
 
