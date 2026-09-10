@@ -92,9 +92,22 @@ L-XR1 的归因是明确的：块外 `G` 分量主导 `offblock_rel` 中位 0.82
    ideal 目标能同时吸收 `B` 的可补偿分量，收益是 dense 的 3–6 倍，因此**目标固定为 ideal `J`**；
 2. 运行时可行的**张量化块内同时提议**变体（`blockseq`）在 layer0/q 只有 −3.10%（vs 精确序贯
    −21.80%），因此**放弃该变体**，固定使用精确序贯刷新；
-3. 精确序贯的调度开销实测（CPU，逐组 9 个算子，`rows=8` 纯调度）：640 组 `66.7 ms`、
+3. ~~精确序贯的调度开销实测（CPU，逐组 9 个算子，`rows=8` 纯调度）：640 组 `66.7 ms`、
    1024 组 `122.9 ms`；折算 GPU 每调用约 50–100 ms，按每 shard 4 层 × 7 角色共 28 次调用估计
-   **新增 ~2–2.5 s**，官方 300s 硬限下当前余量约 19 s，满足；
+   **新增 ~2–2.5 s**，官方 300s 硬限下当前余量约 19 s，满足；~~
+
+   > **【已证伪，2026-09-10】本条低估约 40 倍。** 同进程配对实测（`time_paired.py`，`cuda.synchronize`
+   > 在计时区内）：每调用 **+0.5671 s**（最坏 +1.0193 s，unit 0.93–1.00 ms/组，与 rows 基本无关）；
+   > 折算官方 168 次动态调用 **+95.9 s**，加校准钩子 +4.8 s，合计 **≈ +101 s**，
+   > 官方预计 **≈382 s，必然 TIMEOUT**。根因是把 CPU 逐组调度时间直接当作 GPU 时间外推。
+   > 微优化上限亦不可行：去掉两次 host sync 只省 ~10%（开销是派发受限，~25 µs/算子），
+   > 逐组改解析闭式仍折算 +44.7 s。**①本候选不提交、不占版本号**
+   > （`workbench/full_solution/linear-em1-exact-metric-refinement/config.json` 的
+   > `official_status: not-submitted/time-infeasible`）。
+   > ②第 2 条的"放弃块内同时提议"结论**保持不变**（`blockseq` 只 −3.10%），
+   > 但 `probe_frontier.py` 显示同一机制的**组号主序调度 `groupstep`** 用 1/40 的顺序迭代
+   > 拿回 `seq` p1 的 88%/64%，折算官方仅 +3.6 s（K=1）/ +5.9 s（K=2），
+   > 故重规划为 **L-EM2**：`docs/superpowers/plans/2026-09-10-linear-groupstep-schedule-plan.md`。
 4. 覆盖范围固定为 `in_features <= 4096`（`q/k/v/o/fc_gate/fc_up`）。`proj`（9216）本轮**不做**：
    其 `H` 需要 340 MB/状态、每 shard 1.36 GB，且每次调用 `n^3` 求逆约 0.15 s；作为后续卡
    L-EM2 单独处理（可用 `A=(W_hat-W)^T`、`F=W_hat^T` 两个 fp16 因子把 `H` 压到 94 MB/状态）。

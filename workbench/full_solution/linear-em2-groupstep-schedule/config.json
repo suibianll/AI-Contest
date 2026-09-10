@@ -1,0 +1,148 @@
+{
+  "run_id": "linear-em2-groupstep-schedule",
+  "version": "v230",
+  "version_note": "v229 was taken by the parallel Attention line (attention-amc1-k-mean-recenter) while this was in flight; v230 is a sibling of v229, both parented on the same root 56dc805d",
+  "mechanism": "L-EM1's exact-metric mantissa code descent, re-scheduled group-major so each pass runs 16 steps instead of 640",
+  "plan": "docs/superpowers/plans/2026-09-10-linear-groupstep-schedule-plan.md",
+  "parent": "solution.py",
+  "parent_sha256": "56dc805d6e5a3aef896db8021045740292735725d688b48e3d4393e55efcb2bd",
+  "candidate_sha256": "0f1af6dbc207ff32b2c6be16987e9c4fe50f3f10747de26782ef52a6f2fab7bc",
+  "candidate_bytes": 505496,
+  "build": "append-only: parent bytes + fixed separator + implementation module",
+  "hooks": [
+    "hif4_calibration_and_quantize_weight (post-processor: store H = (W_hat-W)^T W_hat and mean(diag(W_hat^T W_hat)))",
+    "hif4_dynamic_quantize_activation (post-processor: rebuild G and run K group-major descent passes)"
+  ],
+  "untouched": [
+    "parent weight encoder and every shared HiF4 helper (byte-identical)",
+    "hif4_calibration_attention / hif4_dynamic_quantize_q / _k / _v (byte-identical)"
+  ],
+  "delta_from_em1": {
+    "unchanged": [
+      "metric G, cross matrix H, ideal target T, pm1 candidate set, exact row-joint acceptance rule",
+      "the calibration hook's stored H (byte-identical)"
+    ],
+    "changed": [
+      "descent schedule: one Python iteration per 4-element group (640/1024 per call) -> 16 iterations per pass, step k moving group k of every 64-block at once",
+      "calibration ridge: the scalar c is no longer materialised by an n^3 Cholesky inverse in the hook. mean(diag(gram)) is stored at calibration and mean(diag(h_inv^-1)) is taken at dynamic time, where the inverse is built anyway. Mathematically identical; removes 39.9 ms (in=4096) / 15.3 ms (in=2560) per calibration call with no change in stored size or numerics beyond ~1e-7 fp32 rounding."
+    ],
+    "passes": 1,
+    "passes_note": "the plan card pre-registered K=2 with a time-driven fallback; the backoff rule fired, see outcome.time_verdict"
+  },
+  "fixed_choices": {
+    "target": "ideal J(X) = ||(X - T) W_hat^T||^2 with T = X_ref C G^{-1}; L - J is independent of X",
+    "metric": "G = h_inv^{-1} - c I rebuilt from the parent state, no rank truncation, no low-rank sketch",
+    "ridge": "c = mean(diag(inverse)) - mean(diag(W_hat^T W_hat)); the two means are taken in different hooks, never the fused matrix",
+    "cross_matrix": "H = (W_hat - W)^T W_hat stored fp32 per layer, W = nvfp4 decode of the weight pair (the evaluator's ref_weight frame)",
+    "candidate_set": "one element of one natural 4-element group, mantissa code +-1 at fixed scale_factor/lv2/lv3",
+    "candidates_per_group": 8,
+    "groups_per_64block": 16,
+    "schedule": "group-index-major: step k proposes group k of every 64-block simultaneously, groups 0..15 in order",
+    "passes": 1,
+    "gradient_refresh": "exact after every accepted move: g += delta G[sl, :]",
+    "accept_rule": "exact quadratic over the whole per-row move: 2 <delta, g_cur> + delta^T G_gg delta < 0",
+    "layers": "in_features <= 4096 (q/k/v/o/fc_gate/fc_up); proj (9216) out of scope"
+  },
+  "candidate_count": 1,
+  "local_result": {
+    "artifacts": "artifacts/proxy_v3/linear-em2-shard0/candidate/ and artifacts/proxy_v3/linear-em2-sixshard/candidate/",
+    "protocol": "proxy-v3, Qwen3.5-4B proxy-v2, linear-only",
+    "six_shard": {
+      "cases": 336,
+      "positive_negative_zero": [288, 0, 48],
+      "the_48_zeros": "the out-of-scope proj role, 6 shards x 8 cases; bit-identical to the parent",
+      "equal_shard_mean_delta_gain": 0.079453912,
+      "shard_delta_gain_mean": [0.088372493, 0.086232458, 0.07193649, 0.077731499, 0.072229114, 0.080221418],
+      "shard_decision": ["reject", "reject", "reject", "reject", "reject", "reject"],
+      "decision_note": "the tool's local_trend_gate is `delta_mean > 0 and L1 < 0.02` -- an eligibility screen for small local trends. A mechanism that deliberately makes a large change exceeds it by design; the tool's own policy states 'local eligibility is not promotion'. The signal that matters here is 288/0/48, not the gate.",
+      "candidate_scoring_seconds": 263.3,
+      "baseline_scoring_seconds": 250.7,
+      "cross_process_delta_per_case": 0.0376,
+      "paired_prediction_per_case": 0.0400
+    },
+    "shard0": {
+      "linear_mean_baseline": 0.517349,
+      "linear_mean_candidate": 0.605721,
+      "delta_mean": 0.088372,
+      "positive_negative_zero": [48, 0, 8]
+    },
+    "em1_comparison": "L-EM1's full sequential descent scored +0.107791 on the same shard0 panel; L-EM2 at K=1 captures 82% of that gain with 1/40 the sequential iterations, matching the probe frontier's 88% (in=2560) prediction in direction.",
+    "cross_process_validation": "shard0 alone showed +0.064 s/call against a paired prediction of +0.040, a 1.6x gap traced to thermal drift (the local baseline scores off a calibration cache hit; the candidate scores right after 140s of calibration). Across all six shards, where baselines and candidates alternate, the gap collapses: +0.0376 s/call measured against +0.0400 predicted, a 6% agreement that independently reproduces the paired measurement on 336 cases."
+  },
+  "verify": {
+    "script": "verify.py",
+    "controls": "A append-only+isolated import, B parent-off bit identity+out-of-scope bypass at in=4160, C H/gram_diag_mean/G recovery + real _em1_metric code path, D monotonicity+predicted-cost+gradient finite difference, E determinism+state round-trip, F schedule shape (K*16 steps, moves kept)",
+    "control_c_new": "diag_gap=0.000e+00 and path_rel=0.000e+00 on both the synthetic and the real state: the split ridge reproduces the fused mean exactly, and _em1_metric agrees with an independent recomputation bit-for-bit",
+    "real_case": "layer0/q window1 rows128: dL=-19.1053% vs probe ideal/groupstep/pm1/p1 = -19.0998% (gap 5.5e-5), predicted vs true gap 8.7e-7, gradient rel 1.3e-6, H_gap 0, G_rel 1.2e-6, accepted_steps=16",
+    "status": "all controls passed on CPU"
+  },
+  "outcome": {
+    "decision": "submitted as v230",
+    "reason": "the measured time fits the 300s gate with margin at K=1; the plan's own fallback rule selected K=1 over K=2",
+    "dynamic_api": {
+      "script": "time_paired.py",
+      "report": "timing_paired.json",
+      "method": "same process, both arms loaded from one calibration, arms alternated per repeat with cuda.synchronize inside the timed region, 8 repeats, medians",
+      "run2_adopted": "the first run sampled only one in=4096 case (layer0/o), leaving that column 7% apart between estimators against 0.5% at in=2560. The second run covers `o` at all four shard0 layers (0/6/12/18), so both columns rest on independent cases. The adopted figures are run 2.",
+      "k1": {
+        "median_seconds_per_call_in2560": 0.0385,
+        "median_seconds_per_call_in4096": 0.0844,
+        "projected_added_seconds": 6.6,
+        "min_estimator_projected_added_seconds": 6.3
+      },
+      "k2": {
+        "median_seconds_per_call_in2560": 0.0584,
+        "median_seconds_per_call_in4096": 0.1238,
+        "projected_added_seconds": 10.0,
+        "min_estimator_projected_added_seconds": 9.1
+      },
+      "run1_superseded": {
+        "note": "single in=4096 case; its +0.1142 overshot the 4-case value +0.0844, which is why the column was widened",
+        "k1_projected_added_seconds": 7.78,
+        "k2_projected_added_seconds": 11.56,
+        "in2560_k1_median": 0.0420,
+        "in2560_k2_median": 0.0642
+      },
+      "out_of_scope_control": "layer0/proj (in=9216) changed_mantissa=0, delta +0.0030s (k1) / +0.0193s (k2): the noise floor",
+      "per_case_spread_seconds": "0.020-0.069 within a single case at 8 repeats, i.e. comparable to the deltas; the two estimators bracketing the same answer is the evidence, see below",
+      "estimator_agreement": "both columns now average independent cases and the two estimators agree: in=2560 +0.0385 median vs +0.0369 min (4 cases), in=4096 +0.0844 vs +0.0796 (4 cases, layers 0/6/12/18).",
+      "official_linear_calls": {"in2560": 120, "in4096": 24}
+    },
+    "calibration_api": {
+      "script": "profile_compile_hook.py",
+      "method": "isolated: _em1_compile_metric called directly on the real shard state with the parent excluded, 12 repeats",
+      "why_isolated": "time_calibration.py pairs whole calibration calls where the parent alone takes 2-10s, so a ~40ms hook is unresolvable there -- its last run returned in=2560 -0.0525s/call and in=4096 +0.0241s/call, one noise-dominated number and one real one",
+      "median_seconds_per_call_in2560": 0.04131,
+      "median_seconds_per_call_in4096": 0.05204,
+      "min_seconds_per_call_in2560": 0.03903,
+      "min_seconds_per_call_in4096": 0.04682,
+      "projected_added_seconds": "5.8 to 6.2",
+      "note": "the hook re-verifies G recovery while timing (G_rel 2.1e-06 at in=2560, 2.0e-05 at in=4096)"
+    },
+    "time_verdict": {
+      "root_official": "18053/281s, 300s gate, 19s headroom",
+      "k1_total": "281 + 6.5 + 6.0 = approx 294s, margin ~6s",
+      "k2_total": "281 + 9.5 + 6.0 = approx 297.5s, margin ~2.5s",
+      "pre_registered_rule": "if the real paired measurement projects above 296s official, K drops to 1",
+      "rule_outcome": "fired under both measurement runs. Run 1: K=2 298.3s. Run 2 (adopted, wider in=4096 sampling): K=2 297.5s. Either way > 296s, so K=1.",
+      "why_not_k2": "a 2.5s margin against a measurement noise floor of comparable size is not a margin, and an overrun past 300s scores zero. K=1 gives up 7 points of relative loss reduction (-19.10% vs -26.06% at in=2560) to buy ~3.5s.",
+      "thermal_note": "the local shard0 cross-process scoring delta (+0.064 s/call) runs 1.6x above the paired figure (+0.040 expected over the same 56 cases). Cause: the local baseline scores off a calibration cache hit while the candidate scores right after 140s of calibration, so the candidate is hotter -- a 3% whole-run slowdown reproduces the gap exactly. This does NOT carry to the official comparison, where both the recorded 281s root run and the candidate run include a full calibration and are therefore similarly hot. The paired increments are additive onto 281s.",
+      "official_precedents": "Official time is the only gate and this project's record is that it cannot be extrapolated reliably from local marginals (v190: side-isolated 246s but the complete package TIMEOUT; v163/v164 at 202/204s, where adding the two sides' marginals mispredicts v160 at 260s against an actual 232s). Two official returns on the same day point both ways: v222 measured officially at 293s for a +12s marginal -- nearly identical to this card's +12.5s -- while v229 timed out on a mechanism whose marginal should be near zero. The two contradict each other and neither settles this candidate.",
+      "conversion_bracket": {
+        "note": "the two conventions for turning a local increment into an official one bracket this candidate at 286.5-294 s; both are inside the gate but the margins differ by 2x, so no margin is claimed as comfortable.",
+        "naive_additive": "the plan card's convention: add local API seconds 1:1 onto the official root. 281 + 6.5 + 6.0 = 294 s, margin ~6 s.",
+        "fitted_decomposition": "the project's own regression (docs/official-local-fitting-analysis-2026-09-04.md section 4; 21 versions, R^2=0.799, MAE=10.1 s): T_official ~= 170.3 + 0.1154*W_calib + 0.6939*A_calib + 0.7344*dyn_act - 1.5837*dyn_qkv, where dyn_act and W_calib are exactly the two APIs this card changes. Applied differentially: 0.7344*6.5 + 0.1154*6.0 = +5.5 s, i.e. 286.5 s. The official Kunpeng 920B is cheap for large matrices and expensive for small tensors, so local weight-calibration seconds are worth only 0.115x officially.",
+        "model_caveat": "the regression systematically underestimates newer versions by about 20 s (v182 residual +21 s, v183 +19 s) and its negative dyn_qkv coefficient is a collinearity artifact, not a speedup. The differential use is more robust than the absolute one (the intercept and the residual cancel), but the coefficients still carry fit uncertainty.",
+        "k2_retrospective": "under the fitted conversion K=2 would project to 281 + 0.7344*10.0 + 0.1154*6.0 = 289 s and would NOT have tripped the 296 s fallback line; under the naive convention it projected 297.5 s and did. K=1 is therefore a conclusion of the plan card's convention, recorded as such. K was not re-selected after the fact: the pre-registered rule fired under the convention it was written in, and re-picking K once the measurement is in is exactly what pre-registration exists to prevent. K=2 is recorded as a lever for a later card."
+      }
+    },
+    "measurement_caveat": "GPU throughput on this box varied ~2x between runs of the identical op set (the same dequant+matmul+cross sequence measured 13.6ms in one profile and 41ms in another), so absolute hook figures are brackets, not pins. The dynamic deltas are the trustworthy half: the groupstep cost is dispatch-bound (CPU-side small-tensor launches), which is why it is nearly rows-independent and does not move with GPU load."
+  },
+  "open_lever": {
+    "name": "eliminate the dynamic-side Cholesky inverse by storing the Gram",
+    "finding": "cholesky_inverse(cholesky(h_inv)) is the single largest term in both hooks. No drop-in faster inverse exists -- torch.linalg.inv 40.87ms, solve 42.13ms, lu_factor+lu_solve 43.72ms, linalg.inv_ex 40.27ms, cholesky_solve(eye,L)+cholesky 32.6ms, all against cholesky_inverse's 39.9ms at in=4096 (ranking stable across runs, absolute values not).",
+    "why_not_done": "storing gram as the metric instead of rebuilding it from h_inv would remove the inverse from both hooks, but costs +n^2 host RAM: approx +4.76 GB across the 144 in-scope states on top of the approx 4.76 GB of H already held. The parent already holds h_inv for all 168 (layer, role) including proj's 340 MB each, so the official box's headroom is not known to me. Not worth risking an OOM for ~5s.",
+    "candidate_for": "L-EM3"
+  },
+  "next": "shard0 paired accuracy, then the fixed six-shard Linear run, then archive v230"
+}

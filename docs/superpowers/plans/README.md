@@ -9,6 +9,16 @@
 **当前唯一活动总计划（Linear）：**
 [Linear 精确度量 Activation 码序下降与双线协调计划（L-EM1）](2026-09-10-linear-exact-metric-refinement-plan.md)。
 
+承接卡 [L-EM2 组号主序调度](2026-09-10-linear-groupstep-schedule-plan.md) 已完成并归档为
+**v230**（`solutions/20260910_v230_linear-em2-groupstep-schedule_scoreNA_timeNA/`，
+`official_status: PENDING`，未提交官方）。六 shard `288/0/48`、等权均值 `+0.079454`；
+K 按预注册的回退规则降为 1，两种折算口径把官方时间夹在 **`286.5 ~ 294 s`**（朴素可加 vs
+本项目 2026-09-04 分解回归），两者都在门内但余量差一倍。本地 `Decision: reject` 来自 `L1 < 0.02`
+的小趋势资格筛（工具策略：local eligibility is not promotion），不构成机制失效。
+官方时间的先例互相矛盾（v222 `+12 s → 293 s` 过门；v229 近零成本却 TIMEOUT），
+故本卡记录风险而不声称余量充裕。见
+[执行记录](../../../logs/execution/2026-09-10-linear-groupstep-schedule.md)。
+
 **Attention 执行附录：**
 [A2 训练/部署前向对齐计划（A-FIX1）](parallel/2026-09-10-attention-train-deploy-align-plan.md)。
 依据[推进瓶颈审计](../optimization-stall-analysis-2026-09-10.md) §1/§5.3：训练前向裸

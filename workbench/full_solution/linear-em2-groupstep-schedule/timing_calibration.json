@@ -1,0 +1,59 @@
+{
+  "device": "cuda",
+  "cases": [
+    {
+      "layer": 0,
+      "role": "q",
+      "parent_seconds": 5.14181390000158,
+      "parent_channels": 2560,
+      "candidate_seconds": 5.014861400002701,
+      "candidate_channels": 2560,
+      "in_features": 2560,
+      "delta_seconds": -0.12695249999887892
+    },
+    {
+      "layer": 0,
+      "role": "o",
+      "parent_seconds": 1.1469651999977941,
+      "parent_channels": 4096,
+      "candidate_seconds": 1.1710532999968564,
+      "candidate_channels": 4096,
+      "in_features": 4096,
+      "delta_seconds": 0.02408809999906225
+    },
+    {
+      "layer": 0,
+      "role": "proj",
+      "parent_seconds": 2.0844446000010066,
+      "parent_channels": 9216,
+      "candidate_seconds": 2.106141699998261,
+      "candidate_channels": 9216,
+      "in_features": 9216,
+      "delta_seconds": 0.021697099997254554
+    },
+    {
+      "layer": 0,
+      "role": "k",
+      "parent_seconds": 2.111240300000645,
+      "parent_channels": 2560,
+      "candidate_seconds": 2.035384399998293,
+      "candidate_channels": 2560,
+      "in_features": 2560,
+      "delta_seconds": -0.07585590000235243
+    },
+    {
+      "layer": 0,
+      "role": "fc_gate",
+      "parent_seconds": 9.920517599999584,
+      "parent_channels": 2560,
+      "candidate_seconds": 9.965696800001751,
+      "candidate_channels": 2560,
+      "in_features": 2560,
+      "delta_seconds": 0.04517920000216691
+    }
+  ],
+  "mean_delta_in2560_seconds": -0.05254306666635481,
+  "mean_delta_in4096_seconds": 0.02408809999906225,
+  "official_scoped_calibrations": 144,
+  "projected_official_added_seconds": -5.727053599985084
+}

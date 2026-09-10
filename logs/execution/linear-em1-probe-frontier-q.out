@@ -1,0 +1,18 @@
+[case] layer0/q w1 rows=128 ch=2560 blocks=40 groups=640 L0=1.932880e+03
+[ideal/seq/pm1/p1] accepted_groups=38233 dL_true=-4.213710e+02 rel=-21.8002%
+[ideal/seq/pm1/p2] accepted_groups=60035 dL_true=-5.443595e+02 rel=-28.1631%
+[ideal/seq/pm1/p4] accepted_groups=84135 dL_true=-6.266264e+02 rel=-32.4193%
+[ideal/seq/pm1/p8] accepted_groups=105112 dL_true=-6.680578e+02 rel=-34.5628%
+Traceback (most recent call last):
+  File "D:\工作内容\AI竞赛\workbench\full_solution\linear-em1-exact-metric-refinement\probe_frontier.py", line 289, in <module>
+    main()
+  File "D:\工作内容\AI竞赛\workbench\full_solution\linear-em1-exact-metric-refinement\probe_frontier.py", line 279, in main
+    x_cur, accepted, unit = runners[variant](passes)
+                            ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\工作内容\AI竞赛\workbench\full_solution\linear-em1-exact-metric-refinement\probe_frontier.py", line 213, in run_blockseq
+    lin = torch.einsum("kria,ria->kri", deltas, gb)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\工作内容\AI竞赛\.venv\Lib\site-packages\torch\functional.py", line 407, in einsum
+    return _VF.einsum(equation, operands)  # type: ignore[attr-defined]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: einsum(): the number of subscripts in the equation (4) does not match the number of dimensions (5) for operand 0 and no ellipsis was given

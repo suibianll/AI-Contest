@@ -1,0 +1,16 @@
+[case] layer0/q w1 rows=128 ch=2560 blocks=40 groups=640 L0=1.932880e+03
+[ideal/blockseq/pm1/p1] accepted_blocks=355 dL_true=-5.999025e+01 rel=-3.1037%
+[ideal/blockseq/pm1/p2] accepted_blocks=452 dL_true=-6.965630e+01 rel=-3.6038%
+[ideal/blockseq/pm1/p4] accepted_blocks=474 dL_true=-7.104509e+01 rel=-3.6756%
+[ideal/blockseq/pm1/p8] accepted_blocks=474 dL_true=-7.104509e+01 rel=-3.6756%
+[ideal/blockseq/pm1/p16] accepted_blocks=474 dL_true=-7.104509e+01 rel=-3.6756%
+Traceback (most recent call last):
+  File "D:\工作内容\AI竞赛\workbench\full_solution\linear-em1-exact-metric-refinement\probe_frontier.py", line 293, in <module>
+    main()
+  File "D:\工作内容\AI竞赛\workbench\full_solution\linear-em1-exact-metric-refinement\probe_frontier.py", line 283, in main
+    x_cur, accepted, unit = runners[variant](passes)
+                            ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\工作内容\AI竞赛\workbench\full_solution\linear-em1-exact-metric-refinement\probe_frontier.py", line 272, in run_jacobi
+    code_cur = torch.where(
+               ^^^^^^^^^^^^
+RuntimeError: The size of tensor a (640) must match the size of tensor b (16) at non-singleton dimension 2

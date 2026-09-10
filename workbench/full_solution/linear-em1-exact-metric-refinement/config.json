@@ -36,5 +36,65 @@
     "real_case": "layer0/q window1 rows128: dL=-21.8002% (probe ideal/seq -21.8002%), predicted vs true gap 8.8e-7, gradient rel 1.1e-5, H_gap 0, G_rel 1.2e-6",
     "status": "all controls passed on CPU"
   },
-  "official_status": "unregistered/NA"
+  "official_status": "not-submitted/time-infeasible",
+  "outcome": {
+    "decision": "closed for submission at full coverage; no version number assigned",
+    "reason": "measured time, not accuracy",
+    "dynamic_api": {
+      "script": "time_paired.py",
+      "report": "timing_paired.json",
+      "mean_delta_seconds_per_call": 0.5671,
+      "worst_delta_seconds_per_call": 1.0193,
+      "unit_cost_ms_per_group": 0.93,
+      "out_of_scope_control": "layer0/proj delta +0.0006s, changed_mantissa 0",
+      "official_linear_calls": 168,
+      "projected_dynamic_added_seconds": 95.9
+    },
+    "calibration_api": {
+      "script": "time_calibration.py",
+      "report": "timing_calibration.json",
+      "mean_delta_seconds_in2560": 0.0139,
+      "mean_delta_seconds_in4096": 0.1289,
+      "out_of_scope_control_seconds": 0.0875,
+      "projected_calibration_added_seconds": 4.8
+    },
+    "projected_official": "18053/281s + ~101s = approx 382s against a 300s gate -> TIMEOUT",
+    "plan_section_3_3": "falsified: estimated +2-2.5s from a CPU proxy; measured ~40x higher",
+    "micro_optimisation_ceiling": {
+      "script": "bench_seq_gpu.py",
+      "impl_ms_per_call": [507.6, 838.5],
+      "impl_without_host_syncs_ms_per_call": [408.8, 643.3],
+      "analytic_closed_form_ms_per_call": [319.2, 446.4],
+      "vectorised_single_pass_ms_per_call": [1.6, 4.4],
+      "conclusion": "the cost is dispatch-bound, not sync-bound; a per-group Python loop cannot fit the gate at any micro-optimisation level, so the mechanism can only survive with fewer sequential iterations"
+    },
+    "schedule_frontier": {
+      "script": "probe_frontier.py",
+      "note": "true output squared error on real 4B data; all four schedules share every pre-registered fixed choice and differ only in sequential-iteration structure",
+      "layer0_q_in2560_p1_p2_p4_p8_p16": {
+        "seq (640 iters/pass)": [-0.218002, -0.281631, -0.324193, -0.345628, null],
+        "blockseq (40)": [-0.031037, -0.036038, -0.036756, null, null],
+        "jacobi (1)": [0.0, 0.0, 0.0, 0.0, 0.0],
+        "groupstep (16)": [-0.190998, -0.260625, -0.312284, -0.340637, -0.351415]
+      },
+      "layer0_o_in4096_p1_p2_p4": {
+        "seq": [-0.420623, -0.573535, -0.694334],
+        "groupstep": [-0.269464, -0.373016, -0.477262]
+      },
+      "jacobi": "accepted_rows=0 at every pass count: a whole-layer simultaneous proposal is always jointly rejected, so the mechanism's value is the sequential refresh, not the proposal",
+      "conclusion": "groupstep recovers 88% (in=2560) / 64% (in=4096) of seq p1 with 1/40 the sequential iterations"
+    },
+    "schedule_cost": {
+      "script": "bench_seq_gpu.py",
+      "groupstep_ms_per_call": {"in2560": [19.4, 29.9], "in4096": [52.6, 95.7]},
+      "note": "pairs are K=1, K=2",
+      "projected_official": {
+        "seq_p1": "+95.9s dynamic +4.8s calibration = approx 382s -> TIMEOUT",
+        "groupstep_p1": "+3.6s dynamic +4.8s calibration = approx 289.4s, margin 10.6s",
+        "groupstep_p2": "+5.9s dynamic +4.8s calibration = approx 291.7s, margin 8.3s"
+      }
+    }
+  },
+  "replan": "docs/superpowers/plans/2026-09-10-linear-groupstep-schedule-plan.md (L-EM2: same mechanism, groupstep schedule)",
+  "accuracy_at_full_coverage_shard0": "paired linear mean +0.107791 over layers 0/6/12/18, 48/0/8"
 }
