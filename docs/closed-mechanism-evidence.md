@@ -68,8 +68,7 @@
   仅 0.015–0.08%；v230（A-FIX1 训练/部署前向对齐，校准约 1.4×）官方 `TIMEOUT(>300s)`
   （`logs/execution/2026-09-10-v230-attention-afix1-official-timeout.md`），本地 `−0.004884`
   未获官方精度定价，只关闭该实现，训练/部署对齐路线重试前须先消除校准期对齐前向成本。
-  不注册 gauge/偏置/中心变体（mean/midrange/中位数/trimmed）重试；Attention 后续只由官方回传或
-  21071 锚点源码绑定驱动。
+  不注册 gauge/偏置/中心变体（mean/midrange/中位数/trimmed）重试；Attention 后续研发由当前[计划入口](superpowers/plans/README.md)指定计划驱动，不以官方回传或锚点源码绑定为启动条件。
 
 ### 全局
 
