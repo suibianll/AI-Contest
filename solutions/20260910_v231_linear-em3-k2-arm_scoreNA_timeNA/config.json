@@ -89,6 +89,13 @@
     "calibration_hook_seconds_per_call_in2560": 0.04131,
     "calibration_hook_seconds_per_call_in4096": 0.05204,
     "calibration_projected_added_seconds": "5.8 to 6.2",
+    "calibration_hook_correction": {
+      "date": "2026-09-10, post-archive, by the L-EM4 reconnaissance",
+      "what_is_wrong": "the two per-call seconds above (41.31/52.04 ms) and the 5.8-6.2 s projection were measured with the calibration cache's CPU-resident params. On the official path the params are on the GPU: official_eval.py:2583 stores them through _cpu_params only after the API returns, and probe_real_calibration_path.py confirms all five returned params are cuda:0.",
+      "corrected_value": "the hook costs 15.94 ms (in=2560) / 26.87 ms (in=4096) on the shipped path, i.e. about +2.56 s over the 144 in-scope calibrations, not +5.8 to +6.2 s. _dequantize_hif4 is 20.97 ms on CPU against 0.74 ms on GPU, a 28x difference, which is exactly the gap.",
+      "what_is_unaffected": "the two delta gains, the six-shard pairing, the official_status, and the 292 + 3.2 = 295.2 s projection are all unaffected -- the +3.2 s K=2 marginal came from the in-process paired measurement, not from this hook estimate.",
+      "kept_not_replaced": "the original measured numbers are left in place because they are what was actually measured; only their interpretation was wrong. Replacing them would erase the record of the error."
+    },
     "card_time_convention_bracket": "the card could not settle the local-to-official conversion locally. Naive additive: 281 + 9.2 + 6.0 = 296.2s. Fitted decomposition (docs/official-local-fitting-analysis-2026-09-04.md section 4): 281 + 6.8 + 0.7 = 288.4s. The two conventions disagree about whether K=2 clears the card's own 296s line.",
     "convention_resolved_by_v230_official": "mid-card the user reported v230 (K=1, the same mechanism) officially at 292s. Naive additive predicted 281 + 6.5 + 6.0 = 294s (2s error); the fitted decomposition predicted 286.5s (5.5s error). The naive additive convention is 2.8x more accurate on this reading, which makes it the working convention for this mechanism family. This is a single data point against a regression with MAE 10.1s and it is specific to this mechanism; it is not a claim that the naive convention is globally better.",
     "revised_v231_projection": "292 + 3.2 = 295.2s, inside the 300s gate by about 5s",
