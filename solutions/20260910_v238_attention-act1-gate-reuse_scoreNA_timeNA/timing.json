@@ -1,0 +1,240 @@
+{
+  "device": "NVIDIA GeForce RTX 3060 Ti",
+  "rounds_per_arm": 15,
+  "warmup_calls_per_arm": 2,
+  "ordering": "rotated each round so no arm is always last",
+  "clock": "torch.cuda.Event, no profiler, no replay",
+  "assembly_sha256": "3319fc354af1ff0f35075498f26886bdf43a078d32a27852f575a4c50d32ba07",
+  "candidate_sha256": "146bb7151f5f2a041b2f1fdbc94e5b370815fb91fa94d58db79384bb7a54fbc7",
+  "sham": "the assembly archive loaded a second time; byte-identical to it",
+  "results": [
+    {
+      "label": "layer0/whole-calibration",
+      "rounds": 15,
+      "arms_ms": {
+        "assembly": {
+          "median": 6034.32470703125,
+          "min": 5918.88134765625,
+          "max": 6193.37353515625,
+          "p25": 5981.07470703125,
+          "p75": 6094.47119140625,
+          "stdev": 80.00899160588008
+        },
+        "candidate": {
+          "median": 6017.58447265625,
+          "min": 5873.90283203125,
+          "max": 6183.8818359375,
+          "p25": 5901.5087890625,
+          "p75": 6075.814453125,
+          "stdev": 103.79686957794132
+        },
+        "sham": {
+          "median": 6060.12158203125,
+          "min": 5935.97607421875,
+          "max": 6257.57861328125,
+          "p25": 5997.06298828125,
+          "p75": 6079.4716796875,
+          "stdev": 87.89351359582058
+        }
+      },
+      "paired_effects_ms": {
+        "candidate": {
+          "median": 34.97265625,
+          "min": -109.29833984375,
+          "max": 165.18701171875,
+          "p25": -72.09912109375,
+          "p75": 96.2509765625,
+          "stdev": 92.53599648464079,
+          "percent_of_assembly_median": 0.5795620545452177,
+          "rounds_assembly_slower": 10,
+          "rounds": 15
+        },
+        "sham": {
+          "median": -15.98828125,
+          "min": -120.50732421875,
+          "max": 91.1201171875,
+          "p25": -64.205078125,
+          "p75": 11.6728515625,
+          "stdev": 61.16987184504385,
+          "percent_of_assembly_median": -0.2649556002740507,
+          "rounds_assembly_slower": 6,
+          "rounds": 15
+        }
+      },
+      "arm_peak_bytes": {
+        "assembly": 615628288,
+        "candidate": 615628288,
+        "sham": 615628288
+      }
+    },
+    {
+      "label": "layer0/gate-window-pair",
+      "rounds": 15,
+      "arms_ms": {
+        "assembly": {
+          "median": 74.65795135498047,
+          "min": 70.46422576904297,
+          "max": 80.47286224365234,
+          "p25": 71.56102752685547,
+          "p75": 77.23228454589844,
+          "stdev": 3.0307842758791836
+        },
+        "candidate": {
+          "median": 61.52764892578125,
+          "min": 59.345664978027344,
+          "max": 68.59257507324219,
+          "p25": 60.179969787597656,
+          "p75": 63.84128189086914,
+          "stdev": 2.8946729924419206
+        },
+        "sham": {
+          "median": 74.70540618896484,
+          "min": 69.90563201904297,
+          "max": 82.01789093017578,
+          "p25": 71.1118392944336,
+          "p75": 80.59046173095703,
+          "stdev": 4.56970046033854
+        }
+      },
+      "paired_effects_ms": {
+        "candidate": {
+          "median": 13.514015197753906,
+          "min": 2.4240646362304688,
+          "max": 16.912925720214844,
+          "p25": 10.561859130859375,
+          "p75": 15.223548889160156,
+          "stdev": 4.280649257784902,
+          "percent_of_assembly_median": 18.10124032669747,
+          "rounds_assembly_slower": 15,
+          "rounds": 15
+        },
+        "sham": {
+          "median": -0.8834609985351562,
+          "min": -10.456863403320312,
+          "max": 6.3943023681640625,
+          "p25": -4.51129150390625,
+          "p75": 3.9419784545898438,
+          "stdev": 5.370261594158065,
+          "percent_of_assembly_median": -1.183344817934413,
+          "rounds_assembly_slower": 7,
+          "rounds": 15
+        }
+      },
+      "note": "assembly and sham run A-GR1's two gate-loss calls; candidate runs one _act1_gate_pair call"
+    },
+    {
+      "label": "layer22/whole-calibration",
+      "rounds": 15,
+      "arms_ms": {
+        "assembly": {
+          "median": 6022.83056640625,
+          "min": 5936.9306640625,
+          "max": 6124.767578125,
+          "p25": 5970.24169921875,
+          "p75": 6046.5,
+          "stdev": 56.65495645414396
+        },
+        "candidate": {
+          "median": 5983.02685546875,
+          "min": 5886.3232421875,
+          "max": 6156.796875,
+          "p25": 5937.2080078125,
+          "p75": 5999.6259765625,
+          "stdev": 77.17278987081211
+        },
+        "sham": {
+          "median": 6033.42529296875,
+          "min": 5930.98779296875,
+          "max": 6421.66748046875,
+          "p25": 5986.9658203125,
+          "p75": 6088.841796875,
+          "stdev": 115.70974272899484
+        }
+      },
+      "paired_effects_ms": {
+        "candidate": {
+          "median": 33.41650390625,
+          "min": -162.78515625,
+          "max": 206.853515625,
+          "p25": -35.11767578125,
+          "p75": 107.1982421875,
+          "stdev": 92.69424714737598,
+          "percent_of_assembly_median": 0.5548305491547179,
+          "rounds_assembly_slower": 11,
+          "rounds": 15
+        },
+        "sham": {
+          "median": -22.7001953125,
+          "min": -296.89990234375,
+          "max": 184.6259765625,
+          "p25": -124.33349609375,
+          "p75": 46.90625,
+          "stdev": 117.50634073753764,
+          "percent_of_assembly_median": -0.3769024391806016,
+          "rounds_assembly_slower": 6,
+          "rounds": 15
+        }
+      },
+      "arm_peak_bytes": {
+        "assembly": 644464128,
+        "candidate": 644464128,
+        "sham": 644464128
+      }
+    },
+    {
+      "label": "layer22/gate-window-pair",
+      "rounds": 15,
+      "arms_ms": {
+        "assembly": {
+          "median": 71.05741119384766,
+          "min": 66.94121551513672,
+          "max": 75.84780883789062,
+          "p25": 69.45401763916016,
+          "p75": 72.57945251464844,
+          "stdev": 2.668927654077198
+        },
+        "candidate": {
+          "median": 60.889888763427734,
+          "min": 55.74163055419922,
+          "max": 67.9543685913086,
+          "p25": 58.98233413696289,
+          "p75": 62.96713638305664,
+          "stdev": 3.2868348072098232
+        },
+        "sham": {
+          "median": 70.45458984375,
+          "min": 66.25017547607422,
+          "max": 74.9933090209961,
+          "p25": 67.9842529296875,
+          "p75": 72.9867172241211,
+          "stdev": 2.791746359548373
+        }
+      },
+      "paired_effects_ms": {
+        "candidate": {
+          "median": 9.748668670654297,
+          "min": 2.1151046752929688,
+          "max": 18.129058837890625,
+          "p25": 6.2733154296875,
+          "p75": 13.108699798583984,
+          "stdev": 4.10046553099711,
+          "percent_of_assembly_median": 13.719425612142711,
+          "rounds_assembly_slower": 15,
+          "rounds": 15
+        },
+        "sham": {
+          "median": -0.586395263671875,
+          "min": -5.386558532714844,
+          "max": 8.406845092773438,
+          "p25": -2.5697860717773438,
+          "p75": 3.872222900390625,
+          "stdev": 4.215562000929774,
+          "percent_of_assembly_median": -0.825241524873688,
+          "rounds_assembly_slower": 6,
+          "rounds": 15
+        }
+      },
+      "note": "assembly and sham run A-GR1's two gate-loss calls; candidate runs one _act1_gate_pair call"
+    }
+  ]
+}

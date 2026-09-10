@@ -1,0 +1,57 @@
+{
+  "card": "A-CT1 -- reuse the arm-independent work inside the A-GR1 gate",
+  "plan": "docs/superpowers/plans/2026-09-10-retained-root-gradient-reuse-plan.md",
+  "plan_section": "4",
+  "registered": "2026-09-10",
+  "formal_parent_role": "current complete root (highest official score)",
+  "formal_parent_identity": "v231 Linear (L-EM3 K=2) + v195 Attention",
+  "formal_parent_archive_path": "solutions/20260910_v231_linear-em3-k2-arm_scoreNA_timeNA/solution.py",
+  "formal_parent_sha256": "ea79a1c12dc667142c620975aab188920fae7b29988c804f41c1a696cc5754f1",
+  "formal_parent_bytes": 505762,
+  "formal_parent_official_score": 18518,
+  "formal_parent_official_seconds": 291,
+  "formal_parent_official_margin_seconds": 9,
+  "assembly_source_role": "same-parent, same-algorithm implementation control -- NOT a promoted parent",
+  "assembly_source_path": "solutions/20260910_v236_attention-agr1-on-v231_scoreNA_timeNA/solution.py",
+  "assembly_source_sha256": "3319fc354af1ff0f35075498f26886bdf43a078d32a27852f575a4c50d32ba07",
+  "assembly_source_bytes": 520955,
+  "assembly_source_is_root_plus_agr1": true,
+  "assembly_source_prefix_equals_root": {
+    "bytes_compared": 505762,
+    "identical": true,
+    "note": "verified with cmp at card start: v236's first 505762 bytes are the v231 root byte for byte, so the A-GR1 section can be taken from it as-is instead of being re-assembled from the A-GR1 block"
+  },
+  "assembly_source_official_status": "unregistered/NA -- not promoted, not inherited",
+  "v234_prior_evidence": {
+    "side_isolation_official": "+29 (14455/263.7s against the v195-side baseline)",
+    "complete_package": "TIMEOUT (>300s) REJECTED",
+    "note": "the mechanism has an official score and an official cost; both are kept as separate facts and neither is inherited by this card"
+  },
+  "the_change": "inside A-GR1's gate loop, the two consecutive `_agr1_gate_loss` calls for one gate window are replaced by one `_act1_gate_pair` call that computes the arm-independent work once and still evaluates both arms",
+  "arm_independent_work_identified": [
+    "the dense reference Q/K/V decoded from item (identical for both arms)",
+    "the reference attention output `target` (identical for both arms)",
+    "the parent V five-field quantisation and its decoded V_hat (both arms hold equal-valued v_state and the arms differ only in Q/K rotation and K center)"
+  ],
+  "not_changed": [
+    "parent calibration (_AGR1_PARENT_CALIBRATION)",
+    "A-GR1's M parameterisation (M = I + N)",
+    "the amax training target, 32-step Adam, learning rate, spectral clamp",
+    "the fit/gate window configuration (_AGR1_FIT_WINDOWS, _AGR1_GATE_WINDOWS)",
+    "the candidate count and the strict per-window `candidate_loss < parent_loss` AND-acceptance",
+    "the protection of already-learned rotation/center, and the final state compilation",
+    "the dynamic Q/K/V interfaces",
+    "every Linear API"
+  ],
+  "expected_call_reduction_per_gate_window": {
+    "v_api_calls": [-1, 0],
+    "dequantize_hif4_calls": [-1, 0],
+    "reference_dense_decodes": [-3, 0],
+    "attention_forwards": [-1, 0],
+    "over_two_gate_windows": "each count is doubled",
+    "verification": "by independent call counting, not converted into official seconds"
+  },
+  "official_unknowns_are_null": true,
+  "candidate_version": null,
+  "candidate_official_status": "unregistered/NA"
+}

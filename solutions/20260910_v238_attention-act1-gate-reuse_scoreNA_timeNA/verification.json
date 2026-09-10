@@ -1,0 +1,101 @@
+{
+  "version": "v238",
+  "mechanism": "A-CT1: inside A-GR1's gate, the two consecutive _agr1_gate_loss calls for one gate window become one _act1_gate_pair call that computes the arm-independent work once (dense reference Q/K/V, the reference target, and the parent-side V) while still evaluating both arms' Q/K and their own attention forward",
+  "formal_parent_sha256": "ea79a1c12dc667142c620975aab188920fae7b29988c804f41c1a696cc5754f1",
+  "assembly_sha256": "3319fc354af1ff0f35075498f26886bdf43a078d32a27852f575a4c50d32ba07",
+  "candidate_sha256": "146bb7151f5f2a041b2f1fdbc94e5b370815fb91fa94d58db79384bb7a54fbc7",
+  "candidate_bytes": 528204,
+  "implementation_sha256": "5373c335c0b31c9de0d77c8ed038dfafe6e78330d7022ead6c472e5bccda7a1b",
+  "root_sha256_at_archive_time": "ea79a1c12dc667142c620975aab188920fae7b29988c804f41c1a696cc5754f1",
+  "sole_change_measured": {
+    "byte_level": "replace the two per-window _agr1_gate_loss calls with one _act1_gate_pair call",
+    "extracted_function_changed_lines": 6,
+    "extracted_function_byte_delta": -136,
+    "substitutions_performed": 1,
+    "ast_identical_after_dissolving_pair_call": true,
+    "shared_prefix_root_bytes": 505762,
+    "shared_prefix_assembly_bytes": 520955
+  },
+  "single_file_import": "verify.py control A imports the six APIs from a bare temporary directory",
+  "linear_and_qkv_bytecode_identical_to_parent": true,
+  "premise_measured": {
+    "arms_differ_only_in": [
+      "q_state.learned_rotation",
+      "k_state.learned_rotation",
+      "k_state.learned_center"
+    ],
+    "v_state_bitwise_equal_between_arms": true,
+    "v_api_two_calls_five_fields_bitwise_equal": true,
+    "no_api_writes_into_the_state_it_is_handed": true
+  },
+  "protocol": "proxy-v3",
+  "panel": "qwen35-4b-panel-v1 (72 Attention cases)",
+  "scope": "attention-only, six shards, target side",
+  "hard_output_changed": false,
+  "equivalence_is_exact_not_tolerance_based": "every gate window's parent and candidate loss are compared exactly between the two paths, and the full calibration's q/k/v states are compared as raw bytes",
+  "call_counts_per_gate_window": {
+    "attention_forwards": [
+      4,
+      3
+    ],
+    "reference_dense_decodes": [
+      12,
+      8
+    ],
+    "hif4_decodes": [
+      6,
+      5
+    ],
+    "v_quantisations": [
+      2,
+      1
+    ],
+    "q_calls": [
+      2,
+      2
+    ],
+    "k_calls": [
+      2,
+      2
+    ],
+    "method": "independent invocation counters over the module's own names"
+  },
+  "coverage": {
+    "evidence": "verify.out",
+    "accepted_and_rejected_on_real_layers": "the six real layers split {0: accepted, 22: accepted, 1/5/8/15: parent} at attempted=1 everywhere",
+    "identity_parent_arm": "layer 8 reaches it on real data; a patched probe forces it",
+    "ineligible_short_window_list": true,
+    "exception_fallback": true,
+    "determinism": "the assembly compared against itself is byte-identical",
+    "passed": "ALL A-CT1 CONTROLS PASSED"
+  },
+  "equal_shard_mean_delta_gain": 0.0,
+  "shard_delta_gain_mean": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+  ],
+  "positive_cases": 0,
+  "negative_cases": 0,
+  "zero_cases": 72,
+  "case_count": 72,
+  "delta_extremes": {
+    "min": 0.0,
+    "max": 0.0
+  },
+  "shard_decision": "no_effect (the evaluator's own small-trend filter)",
+  "shard_decision_note": "336/72-style exactly-zero is the predicted reading for an implementation that reproduces its control; a non-zero delta here would be the defect",
+  "pairing_method": "one eval.py process carrying both sides; per-case delta re-derived here as candidate.gain - baseline.gain keyed by case_id",
+  "stopped_early_flag": {
+    "manifest_value": true,
+    "is_a_truncation": false,
+    "why": "the stop check runs after the shard's results are appended, and at every shard this candidate reproduces its control exactly, so delta_mean == 0 everywhere and the counter reaches --stop-after-nonpositive 6 exactly on the last requested shard. All six are recorded.",
+    "independent_coverage_check": "candidate-attention-shard{0..5}.json: 6 files, statuses ['ok'], 72 cases, source_sha256 ['146bb715']"
+  },
+  "official_status": "unregistered/NA",
+  "official_score": null,
+  "official_seconds": null
+}

@@ -1,0 +1,23 @@
+[A] root=505762B (ea79a1c1) assembly=520955B (3319fc35) candidate=528204B (146bb715) | both shared prefixes hold, Linear and Q/K/V bytecode identical, AST identical once the single pair call is put back as two calls
+[real] pack loaded: heads=(16, 4, 256) attention_layers=[0, 1, 5, 8, 15, 22]
+[P1] the two arms differ only in q_state/k_state; their v_state is byte-identical (differing fields across all three: ['q_state.learned_rotation', 'k_state.learned_center', 'k_state.learned_rotation'])
+[P2] two V calls with equal-valued states return five bit-identical fields
+[P3] Q/K/V leaves every state dict byte-identical (no writes), so evaluating one arm cannot disturb the other's inputs
+[B:real/layer0] every gate window's parent and candidate loss is exactly equal between the two paths (2 windows, e.g. window 3: 0.00038518186192959547 / 0.00038708525244146585)
+[C:real/layer0] per gate window the new path saves exactly: attention forwards 4 -> 3, reference decodes 12 -> 8, hif4 decodes 6 -> 5, V quantisations 2 -> 1; Q and K calls unchanged at 2/2 and 2/2
+[D:real/layer0] full calibration returns byte-identical q/k/v states and equal audit fields (arm='accepted', attempted=1, accepted=1, parent_arm='rotation', gate_parent=0.0004092804010724649, gate_candidate=0.0004047639376949519)
+[D:real/layer1] full calibration returns byte-identical q/k/v states and equal audit fields (arm='parent', attempted=1, accepted=0, parent_arm='rotation', gate_parent=0.0016595173510722816, gate_candidate=0.0016979202628135681)
+[D:real/layer5] full calibration returns byte-identical q/k/v states and equal audit fields (arm='parent', attempted=1, accepted=0, parent_arm='rotation', gate_parent=0.0012468646746128798, gate_candidate=0.0013009983231313527)
+[D:real/layer8] full calibration returns byte-identical q/k/v states and equal audit fields (arm='parent', attempted=1, accepted=0, parent_arm='identity', gate_parent=0.0036690509878098965, gate_candidate=0.0037458447040989995)
+[D:real/layer15] full calibration returns byte-identical q/k/v states and equal audit fields (arm='parent', attempted=1, accepted=0, parent_arm='rotation', gate_parent=0.0022206195862963796, gate_candidate=0.0022285819286480546)
+[D:real/layer22] full calibration returns byte-identical q/k/v states and equal audit fields (arm='accepted', attempted=1, accepted=1, parent_arm='rotation', gate_parent=0.014339688699692488, gate_candidate=0.01424990501254797)
+[E:coverage] accepted and rejected gate outcomes both occur on real data (attempted=1 everywhere): {0: 'accepted', 1: 'parent', 5: 'parent', 8: 'parent', 15: 'parent', 22: 'accepted'}
+[D:synthetic] full calibration returns byte-identical q/k/v states and equal audit fields (arm='fallback', attempted=0, accepted=0, parent_arm=None, gate_parent=None, gate_candidate=None)
+[D:real/M=I] full calibration returns byte-identical q/k/v states and equal audit fields (arm='parent', attempted=1, accepted=0, parent_arm='identity', gate_parent=0.0004287173505872488, gate_candidate=0.00043100562470499426)
+[E:coverage] the identity-parent arm (M = I, no learned rotation to start from) agrees
+[E:coverage] the ineligible path agrees
+[D:fallback] full calibration returns byte-identical q/k/v states and equal audit fields (arm='fallback', attempted=0, accepted=0, parent_arm=None, gate_parent=None, gate_candidate=None)
+[E:coverage] the exception fallback path agrees
+[D:assembly-vs-itself] full calibration returns byte-identical q/k/v states and equal audit fields (arm='accepted', attempted=1, accepted=1, parent_arm='rotation', gate_parent=0.0004092804010724649, gate_candidate=0.0004047639376949519)
+
+ALL A-CT1 CONTROLS PASSED

@@ -1,0 +1,112 @@
+{
+  "run_id": "attention-act1-gate-reuse",
+  "version": "v238",
+  "version_note": "v238 is the next free number after v237 at archive time.",
+  "mechanism": "A-CT1: inside A-GR1's gate, the two consecutive _agr1_gate_loss calls for one gate window become one _act1_gate_pair call that computes the arm-independent work once (dense reference Q/K/V, the reference target, and the parent-side V) while still evaluating both arms' Q/K and their own attention forward",
+  "mechanism_type": "pure time change with an exact output-equivalence obligation: strictly less work inside the gate, identical losses, identical acceptance, identical states",
+  "plan": "docs/superpowers/plans/2026-09-10-retained-root-gradient-reuse-plan.md",
+  "plan_section": "4 (Attention A-CT1)",
+  "log": "logs/execution/2026-09-10-attention-act1-gate-reuse.md",
+  "formal_parent": "solutions/20260910_v231_linear-em3-k2-arm_scoreNA_timeNA/solution.py",
+  "formal_parent_identity": "v231 Linear (L-EM3 K=2) + v195 Attention",
+  "formal_parent_sha256": "ea79a1c12dc667142c620975aab188920fae7b29988c804f41c1a696cc5754f1",
+  "formal_parent_bytes": 505762,
+  "formal_parent_official": {
+    "score": 18518,
+    "seconds": 291,
+    "limit_seconds": 300,
+    "margin_seconds": 9
+  },
+  "assembly": "solutions/20260910_v236_attention-agr1-on-v231_scoreNA_timeNA/solution.py",
+  "assembly_sha256": "3319fc354af1ff0f35075498f26886bdf43a078d32a27852f575a4c50d32ba07",
+  "assembly_bytes": 520955,
+  "assembly_note": "v236 is the v231 root plus the A-GR1 block byte for byte, so it is both the formal parent's A-GR1 assembly and the same-parent implementation control. It is NOT a promoted parent and nothing is inherited from it.",
+  "candidate_sha256": "146bb7151f5f2a041b2f1fdbc94e5b370815fb91fa94d58db79384bb7a54fbc7",
+  "candidate_bytes": 528204,
+  "implementation_sha256": "5373c335c0b31c9de0d77c8ed038dfafe6e78330d7022ead6c472e5bccda7a1b",
+  "implementation_bytes": 7247,
+  "build": "build.py",
+  "build_is_derived_not_handwritten": true,
+  "the_change": "one block substitution inside A-GR1's own hif4_calibration_attention: the two per-window gate-loss calls become a single pair call. Reported as a byte delta and a line diff, with the AST compared after the pair call is put back as two.",
+  "not_changed": [
+    "the parent calibration (_AGR1_PARENT_CALIBRATION)",
+    "A-GR1's M parameterisation (M = I + N)",
+    "the amax training target, 32-step Adam, learning rate, spectral clamp",
+    "_AGR1_FIT_WINDOWS and _AGR1_GATE_WINDOWS",
+    "the candidate count and the strict per-window candidate_loss < parent_loss AND-acceptance",
+    "the protection of already-learned rotation/center and the final state compilation",
+    "the dynamic Q/K/V interfaces and every Linear API"
+  ],
+  "what_the_change_does_to_execution": "per gate window: attention forwards 4 -> 3, reference dense decodes 12 -> 8 (3 explicit plus one fewer inside the V quantiser), hif4 decodes 6 -> 5, V quantisations 2 -> 1; the Q and K calls stay at 2 each because those are the arm-dependent part. Over the two shipped gate windows every count doubles.",
+  "local_result": {
+    "six_shard_run": "artifacts/proxy_v3/attention-act1-sixshard-20260910",
+    "shard0_run": "artifacts/proxy_v3/attention-act1-shard0-20260910",
+    "baseline_used": "v236 (same-parent A-GR1 old implementation)",
+    "equal_shard_mean_delta_gain": 0.0,
+    "case_count": 72,
+    "positive_cases": 0,
+    "negative_cases": 0,
+    "zero_cases": 72
+  },
+  "mechanism_change_vs_formal_parent": {
+    "source": "artifacts/proxy_v3/attention-agr1-on-v231-sixshard-20260910",
+    "note": "A-GR1's own change against the v231 root, inherited by transitivity: the per-case pairing above is exactly zero on all 72 cases, so this candidate produces the same outputs v236 produced. The run is cited, not re-measured.",
+    "reference_run": "artifacts/proxy_v3/attention-agr1-on-v231-sixshard-20260910",
+    "reference_cases": 72,
+    "reference_statuses": [
+      "ok"
+    ]
+  },
+  "time": {
+    "verdict": "see timing.json; the gate and the whole calibration are reported separately with a null control",
+    "paired_three_arm": {
+      "layer0/whole-calibration": {
+        "assembly_median_ms": 6034.32470703125,
+        "candidate_paired_median_ms": 34.97265625,
+        "percent_of_assembly": 0.5795620545452177,
+        "null_paired_median_ms": -15.98828125,
+        "abs_effect_over_abs_null": 2.187393110188126,
+        "rounds_candidate_faster": 10,
+        "rounds_null_faster": 6,
+        "rounds": 15
+      },
+      "layer0/gate-window-pair": {
+        "assembly_median_ms": 74.65795135498047,
+        "candidate_paired_median_ms": 13.514015197753906,
+        "percent_of_assembly": 18.10124032669747,
+        "null_paired_median_ms": -0.8834609985351562,
+        "abs_effect_over_abs_null": 15.296674352530722,
+        "rounds_candidate_faster": 15,
+        "rounds_null_faster": 7,
+        "rounds": 15
+      },
+      "layer22/whole-calibration": {
+        "assembly_median_ms": 6022.83056640625,
+        "candidate_paired_median_ms": 33.41650390625,
+        "percent_of_assembly": 0.5548305491547179,
+        "null_paired_median_ms": -22.7001953125,
+        "abs_effect_over_abs_null": 1.4720800172080017,
+        "rounds_candidate_faster": 11,
+        "rounds_null_faster": 6,
+        "rounds": 15
+      },
+      "layer22/gate-window-pair": {
+        "assembly_median_ms": 71.05741119384766,
+        "candidate_paired_median_ms": 9.748668670654297,
+        "percent_of_assembly": 13.719425612142711,
+        "null_paired_median_ms": -0.586395263671875,
+        "abs_effect_over_abs_null": 16.62473978662503,
+        "rounds_candidate_faster": 15,
+        "rounds_null_faster": 6,
+        "rounds": 15
+      }
+    }
+  },
+  "lineage_note": "v238 is a descendant of v231 (formal parent) and of v236 (the A-GR1 assembly on that parent). It carries A-GR1 plus the gate-reuse change. It does not contain v233's L-TF1, v232's L-QF1, v235's L-AD1 or v237's L-TF2, and scores/seconds do not add across any of those.",
+  "declared_deviations": [],
+  "local_decision": "archive and submit once for official adjudication",
+  "local_decision_note": "A-GR1's mechanism value and its calibration cost are separate facts from v234 (side isolation +29, complete package TIMEOUT); this card reduces the cost and inherits neither number.",
+  "official_status": "unregistered/NA",
+  "official_score": null,
+  "official_seconds": null
+}
