@@ -119,6 +119,15 @@ Linear 侧 API 调用数均为 **0**（`hif4_calibration_and_quantize_weight` 0 
 **能回答**：**VK 核机制在官方侧到底值多少分**——相对 `14426`（v195 行）与 `14405`（R3 基线）。
 这是完整包形态两次都拿不到的那个数。**VK 机制至今没有任何官方分数**。
 
+> **回填（2026-09-11 回传后，按本节 §7 的约定）：这个"能回答"没有兑现——问题仍然没有答案。**
+> `standard-linear_v241-attn` 官方 **`TIMEOUT (>300s)`，无分**（见
+> [超时登记](2026-09-11-side-vk241-attn-official-timeout.md)）。VK 机制现在两条通道四次尝试
+> 全部无分。**并且本次证伪的正是本文 §1 用来开这条通道的那个前提**——本文 §1 写的
+> "侧隔离通道……包更小、余量充裕……余量约 57～62 s，正是完整包缺的那个量级"
+> **不成立**：那 57～62s 是"此前被测机制都便宜"的结果，不是通道的属性；
+> 侧隔离包同样有 300s 硬限，**能否拿到分数由机制成本决定，不由通道决定**。
+> `standard-linear_v242-attn` 未回传，本记录不对它下结论。
+
 **不能回答（逐条写明，禁止外推）**：
 
 - **不能回答完整包能否落地。** 侧隔离时间对完整包**无预测力**——仓库有双向反例：
@@ -132,6 +141,21 @@ Linear 侧 API 调用数均为 **0**（`hif4_calibration_and_quantize_weight` 0 
 
 ## 7. 待办
 
-官方回传后，按探针名绑定计分 SHA，登记到
-`solutions/README.md` 的侧隔离表与[侧隔离分登记](2026-09-09-standard-linear-attention-side-scores.md)口径，
+官方回传后，按探针名绑定计分 SHA，登记到 `solutions/README.md` 的侧隔离表与
+[侧隔离分登记](2026-09-09-standard-linear-attention-side-scores.md)口径，
 并回填本节 §6 的"能回答"栏。**回传前本文不写任何分数或秒数预测。**
+
+**已完成（2026-09-11，`standard-linear_v241-attn` 回传后）**：
+
+- §6 已按上述约定回填——答案是**没有拿到分数**，问题仍未回答。
+- 计分 SHA 已按探针名绑定：`c86c972a75b26bc5f7e0a6eafc2ce9f65183be434bdb831f434d2d6749a45b6a`。
+- 已登记到 `solutions/README.md` 侧隔离表、`docs/current-solution-status.md`、
+  计划入口与活动计划 §6.1，并另写
+  [超时登记](2026-09-11-side-vk241-attn-official-timeout.md)与探针目录 `result.md`。
+- **未改**[侧隔离分登记](2026-09-09-standard-linear-attention-side-scores.md)本身：
+  该文是 2026-09-09 的时点记录（其 §2 表本就不含 v229/v234），实时索引以
+  `solutions/README.md` 为准。按 AGENTS §5「不覆盖原始执行日志，修正另写日志」处理。
+
+**仍未完成**：`standard-linear_v242-attn` **未回传**（是否已提交未知）。
+它是目前唯一还可能给 VK 机制拿到官方分的通道；回传后按同一流程登记。
+**本文不对它写任何预测。**
