@@ -1,0 +1,169 @@
+{
+  "candidate": "D:\\\u5de5\u4f5c\u5185\u5bb9\\AI\u7ade\u8d5b\\workbench\\full_solution\\linear-ad1-adaround-materialization\\implementation.generated.py",
+  "parent_sha256": "ea79a1c12dc667142c620975aab188920fae7b29988c804f41c1a696cc5754f1",
+  "parent_bytes": 505762,
+  "candidate_sha256": "fe8aec1989189ad9c20cdc9e9c3717ad509c98da987cb556b1e1428fc13bc702",
+  "candidate_bytes": 510664,
+  "appended_bytes": 4902,
+  "starts_with_parent_bytes": true,
+  "parent_definitions_of_helper": 1,
+  "candidate_definitions_of_helper": 2,
+  "parent_definition_unchanged_in_candidate": true,
+  "live_helper_first_line": 12366,
+  "parent_line_count": 12325,
+  "live_helper_is_the_appended_one": true,
+  "bindings_of_helper_name": 1,
+  "in_process_smoke": {
+    "apis": [
+      {
+        "api": "activation",
+        "fields": [
+          "mant",
+          "scale_factor",
+          "scale_lv2",
+          "scale_lv3",
+          "sign"
+        ],
+        "shape": [
+          8,
+          128
+        ]
+      },
+      {
+        "api": "q",
+        "fields": [
+          "mant",
+          "scale_factor",
+          "scale_lv2",
+          "scale_lv3",
+          "sign"
+        ],
+        "shape": [
+          8,
+          128
+        ]
+      },
+      {
+        "api": "k",
+        "fields": [
+          "mant",
+          "scale_factor",
+          "scale_lv2",
+          "scale_lv3",
+          "sign"
+        ],
+        "shape": [
+          8,
+          64
+        ]
+      },
+      {
+        "api": "v",
+        "fields": [
+          "mant",
+          "scale_factor",
+          "scale_lv2",
+          "scale_lv3",
+          "sign"
+        ],
+        "shape": [
+          8,
+          64
+        ]
+      }
+    ],
+    "weight_params_shape": [
+      64,
+      2,
+      1,
+      1,
+      1
+    ],
+    "attention_calibration_identity_on_synthetic_input": true
+  },
+  "states_accepted_by_validate_state": [
+    "k_state",
+    "q_state",
+    "v_state",
+    "weight_activation"
+  ],
+  "params_accepted_by_validate_hif4_params": [
+    "activation",
+    "k",
+    "q",
+    "v",
+    "weight_params"
+  ],
+  "isolated_import": {
+    "scratch_contents": [
+      "solution.py"
+    ],
+    "interpreter_flags": "-I",
+    "cwd": "the scratch directory itself (outside the repository)",
+    "apis_executed": [
+      {
+        "api": "activation",
+        "fields": [
+          "mant",
+          "scale_factor",
+          "scale_lv2",
+          "scale_lv3",
+          "sign"
+        ],
+        "shape": [
+          8,
+          128
+        ]
+      },
+      {
+        "api": "q",
+        "fields": [
+          "mant",
+          "scale_factor",
+          "scale_lv2",
+          "scale_lv3",
+          "sign"
+        ],
+        "shape": [
+          8,
+          128
+        ]
+      },
+      {
+        "api": "k",
+        "fields": [
+          "mant",
+          "scale_factor",
+          "scale_lv2",
+          "scale_lv3",
+          "sign"
+        ],
+        "shape": [
+          8,
+          64
+        ]
+      },
+      {
+        "api": "v",
+        "fields": [
+          "mant",
+          "scale_factor",
+          "scale_lv2",
+          "scale_lv3",
+          "sign"
+        ],
+        "shape": [
+          8,
+          64
+        ]
+      }
+    ],
+    "weight_params_shape": [
+      64,
+      2,
+      1,
+      1,
+      1
+    ]
+  }
+}

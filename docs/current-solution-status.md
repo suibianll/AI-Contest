@@ -21,7 +21,7 @@
 
 ## 0.1 当前计划状态（2026-09-10）
 
-本轮开发已结束，根已晋级为 v231 Linear L-EM3 K=2 **18518/291s**（2026-09-10 官方回传，相对 v230 +90/−1s）。下一轮按[计划入口](superpowers/plans/README.md)指定的[局部代价修正与运行成本优化](superpowers/plans/2026-09-10-linear-correctness-and-runtime-plan.md)推进：L-QF1公式修正（**已完成，归档v232，官方TIMEOUT**） → L-TF1首遍梯度复用（**已完成，归档v233，官方同分快4s，取代v230为回退根**） → 单项架构降时（**§4 定位已拆到编码器，已按分支3收敛为一张固定卡**）。**最直接的未兑现项：把已官方定价的 L-TF1 移植到当前根 v231（v233 只测了 K=1 的 v230 根）。**
+本轮开发已结束，根已晋级为 v231 Linear L-EM3 K=2 **18518/291s**（2026-09-10 官方回传，相对 v230 +90/−1s）。下一轮按[计划入口](superpowers/plans/README.md)指定的[局部代价修正与运行成本优化](superpowers/plans/2026-09-10-linear-correctness-and-runtime-plan.md)推进：L-QF1公式修正（**已完成，归档v232，官方TIMEOUT**） → L-TF1首遍梯度复用（**已完成，归档v233，官方同分快4s，取代v230为回退根**） → 单项架构降时（**§4 定位已拆到编码器，§4.3 固定卡 L-AD1 已完成并归档 v235，官方 `unregistered/NA`，根未切换**）。**最直接的未兑现项：把已官方定价的 L-TF1 移植到当前根 v231（v233 只测了 K=1 的 v230 根）；本轮的 v235 已经建在 v231 上，但它做的是另一件事（L-AD1），不含 L-TF1。**
 
 **v232 Linear L-QF1已完成并归档**（`20260910_v232_linear-qf1-quadratic-cost_scoreNA_timeNA`，
 候选`447f815ac7bee74950a352cac64e1489cef39fa4c52102c1f902f940579684ca`，自v230根`0f1af6db`纯追加）：
@@ -46,6 +46,14 @@ control抓到后修正）。侧隔离探针`standard-linear_v234-attn`与归档�
 继 C76.4（+84）、A1（+60）后 Attention 第三大官方正向机制，表达力梯度获官方确认；完整包形态
 未提交（v234 父 v230 现为回退根，当前根已晋级 v231），侧隔离分不直接晋级。见
 [侧隔离回传](../logs/execution/2026-09-10-v234-agr1-side-official.md)。编号v233被Linear L-TF1占用，故取v234。
+
+**A-GR2（真目标训练）NO_EFFECT，不占版本号**：A-GR1 的 M=I+N 训练目标从 amax 尺度比代理换成
+gate 同款真实部署 MSE，其余全镜像（父为 v231 归档 `ea79a1c1`）。真实 4B attempted 6/6、
+accepted 0/6，六 shard 72 case 与父逐位相同。机制性结论：STE 穿完整部署编码的梯度量级
+~1e-15，被 Adam eps=1e-8 吞掉（初版 N 恒为 0；归一化修正后 32 步仍三升三降不稳定），
+**A-GR1 的 amax 代理目标是承重的**，"代理目标错位"假设在该自由度上被否定；本实现关闭，
+不重试邻域。计划卡 `docs/superpowers/plans/parallel/2026-09-10-attention-agr2-trueobjective-plan.md`，
+执行日志 `logs/execution/2026-09-10-attention-agr2-trueobjective.md`（commit 12d7c7d）。
 
 **v233 Linear L-TF1已完成并归档**（`20260910_v233_linear-tf1-gradient-reuse_scoreNA_timeNA`，
 候选`0ec89710087d061bf9608196ad4d53a1c6be98c8a5595596a071ecd05a6821eb`，自v230根`0f1af6db`纯追加）：
@@ -83,6 +91,31 @@ K=2投毒对照证明偏移恰为2且输出逐位相同，即保护没有把重�
 按真实调用点，2560-gram层占动态激活宽度76%（120/168），故热点取gram层那条。
 计划§4.3已收敛为一张固定卡：去掉该枚举的整数物化，候选一个不减、要求逐位等价
 （共享助手须对全部调用者证明），不再保留"待定位"状态。
+
+**v235 Linear L-AD1已完成并归档**（`20260910_v235_linear-ad1-adaround-materialization_scoreNA_timeNA`，
+候选`fe8aec1989189ad9c20cdc9e9c3717ad509c98da987cb556b1e1428fc13bc702`，自v231根`ea79a1c1`纯追加+4903 B）：
+`_adaround_mantissa`的16模式枚举里，`[K,N,8,2]`的码原本被**以int64物化成16倍**中间张量、
+再整块转float32乘0.25。候选把float转换与`*0.25`移到**两个小操作数**上（`floor_mant`/`ceil_mant`），
+`torch.where`直接在float上选；两条int64码表达式**逐字未动**；只依赖device的掩码提到调用外缓存。
+**16个候选一个不减**，选中的模式、loss、`argmin`、`gather`、覆盖率、refine轮数、接受判据全不变。
+**逐位等价先于任何测量**：逐元素算子与`where`的交换是定义上的相等，**对任意输入成立、不需任何精度假设**
+（非有限输入经int64转换的值两侧相同）。实测是该论证的对照：单元**403组0差异0抛错**
+（5形状×4dtype×10取值×2scale，含非连续布局）、真实激活**4/4组**（q有gram/o无gram×128/512行）五字段逐位相同、
+真实权重校准**2/2个state**逐位相同；weight段另计调用次数，layer0/q父子均511次且`group_gram`次次非空
+（改动确实被走到），layer0/o两侧0次（无gram路径不经过）。
+六shard **336/336精确零**（0/0/336，`min=median=max=0.0`，逐role全0）；配对脚本核对两侧记录的
+`source_sha256`（同侧跨shard必须一致、两侧必须不同），基线侧确为v231根。
+**时间**：三臂成对（含同字节sham null）31轮，有gram整调用**+23.35 ms/128行（+4.26%）、+41.41 ms/512行（+4.63%）**，
+为null的**33.9×/52.4×**，24/30轮一致；**无gram的`o`两行是本卡自带的阴性对照且按预期为零**
+（0.19×/0.86× null，15–16/31轮，抛硬币）——`o`路径根本不调用被改的函数。
+六shard的`hif4_dynamic_quantize_activation`跨进程差−3.682 s（−11.0 ms/调用）方向一致，
+但**六个shard里两个为正**且本轮无sham臂，只记为"不矛盾"，时间结论只由三臂配对支撑。
+单文件导入检查另把**六个API在脱离仓库的`python -I`空目录里全部跑起来**，
+再交由评测器自己的`validate_state`/`validate_hif4_params`校验（4/4 state、5/5参数通过）。
+官方**`unregistered/NA`，不写本地秒数预测**，根未切换（工作区仍是v231，505762 B）。
+**动机是v231的9s余量而非分数**。**本卡中途rebase**：初稿对着v230写，v231晋级后重建于v231——
+否则会把官方刚用1s换来的K=2那一臂悄悄回退并报成本卡收益（标定缓存键改为从父根现算、
+基线换成记录`source_sha256`即v231的那次运行）。**v235是v231的后代（含K=2），与v233（v230后代）不可相加。**
 
 v231 Linear已完成六shard（相对v230根+0.027507，286/0/50），官方 **18518/291s，RETAINED并晋级为新完整根**；v232 Linear L-QF1官方TIMEOUT(>300s)，REJECTED，只关闭该实现。v230 Attention A-FIX1官方TIMEOUT(>300s)，REJECTED，训练/部署对齐路线关闭（重试须先消除校准期对齐前向成本）。v229完整包TIMEOUT、标准Linear侧14424/245s（−2/+2s），不再列入后续优化。L-EM4侦察完成；旧L-DD1只有计划与侦察，无实施结果。
 

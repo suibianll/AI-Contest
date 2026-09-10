@@ -2,6 +2,7 @@
 
 > 当前完整根：[v231 Linear L-EM3 K=2](20260910_v231_linear-em3-k2-arm_scoreNA_timeNA/result.md)，**18518/291s**，SHA `EA79A1C12DC667142C620975AAB188920FAE7B29988C804F41C1A696CC5754F1`；相对 v230 +90/−1s，余量9s。
 > 回退根：[v233 Linear L-TF1](20260910_v233_linear-tf1-gradient-reuse_scoreNA_timeNA/result.md)，**18428/288s**，SHA `0EC89710087D061BF9608196AD4D53A1C6BE98C8A5595596A071ECD05A6821EB`；相对 v230 同分快 4s，严格占优。**L-TF1 尚未并入当前根 v231。**
+> 官方待回传：[v235 Linear L-AD1](20260910_v235_linear-ad1-adaround-materialization_scoreNA_timeNA/result.md)，`fe8aec19…`，自 v231 根纯追加；官方 `unregistered/NA`，不写本地秒数预测。**是 v231 的后代（含 K=2），与 v233 不可相加。**
 > 以下旧根晋级描述为历史事实，不覆盖当前根。
 > L28 `4611/286s` 与其他侧结果降为历史机制证据，不再形成并行父线。
 > [L28 回传记录](../logs/execution/2026-09-08-l28-official-result.md)、
@@ -83,6 +84,7 @@
 | [v231（Linear L-EM3）](20260910_v231_linear-em3-k2-arm_scoreNA_timeNA/result.md) | groupstep K=2，完整候选；旧v202父、与v230同父构建 | **RETAINED 18518/291s**，相对 v230 +90/−1s；当前根；六shard对v230 +0.027507（286/0/50），SHA `ea79a1c1…5754f1` |
 | [v232（Linear L-QF1）](20260910_v232_linear-qf1-quadratic-cost_scoreNA_timeNA/result.md) | 局部二次代价修正（`krba→krbi`，实现 `δᵀGδ`）；v230 根 + 一个 einsum 下标 | **官方 TIMEOUT (>300s)，REJECTED**（2026-09-10 用户回传），精确秒数/分数未知；本地六 shard +0.013739（284/4/48）、零可测时间成本未转化为官方计时；只关闭该实现 |
 | [v230（Attention A-FIX1）](20260910_v230_attention-afix1-train-deploy-align_rejected_scoreNA_timeNA/result.md) | A-FIX1 训练/部署前向对齐（`_a2_train_rotation` 训练前向 Q/K 量化从裸 `_dense_to_hif4` 换成完整部署编码 `hif4_dynamic_quantize_q/k`，STE 反向不变；参数化/步数/lr/窗口/gate 全部与根相同） | **官方 TIMEOUT (>300s)，REJECTED**（2026-09-10 用户回传），精确秒数/分数未知；六 shard 等权 `-0.004884`（29/31/12）保留为诊断，未获官方精度定价；对齐前向约 1.4× 校准成本与 v229 同成本类，只关闭该实现，不缩步/缩窗重试；层15 重训 rotation 再次受损 `-0.013820`（继 v227 后第二次）；注意与并行 Linear 线 L-EM2 的 v230 编号冲突，引用须写全目录名 |
+| [v235（Linear L-AD1）](20260910_v235_linear-ad1-adaround-materialization_scoreNA_timeNA/result.md) | 去掉 `_adaround_mantissa` 16 模式枚举里的 int64 物化（两条 int64 码表达式逐字不动；float 转换与 `*0.25` 从 16 倍展开张量移到两个小操作数上，`where` 直接在 float 上选；只依赖 device 的掩码提到调用外缓存）；v231 根 + 影子定义 | **官方 `unregistered/NA`，待用户评测**，不写本地秒数预测。六 shard **336/336 精确零**（0/0/336）；等价性由"逐元素算子与 `where` 交换"对**任意输入**证明，实测对照为 403 单元组 / 4 真实激活组 / 2 真实权重 state 全逐位相同；三臂配对（含同字节 sham null）有 gram 整调用 **+4.26%/+4.63%（null 的 33.9×/52.4×）**，无 gram 的 `o` 路径自带阴性对照按预期为零（0.19×/0.86×）；**动机是 v231 的 9s 余量而非分数**。纯追加 +4903 B，父根字节一个未动。**是 v231 的后代（含 K=2），与 v233 不可相加**；中途 rebase 见日志 §0 |
 | [v234（Attention A-GR1）](20260910_v234_attention-agr1-general-reciprocal_scoreNA_timeNA/result.md) | A-GR1 一般非对称互逆矩阵残差（v192 单变量推广：对称零迹 S→一般 M=I+N，Q@M、K@M⁻ᵀ 校准期精确求逆；fit 0-2/gate 3-4、32 步 Adam、逐层全窗口严格改善门、center 同步编译，全部镜像 v192；冻结根 state） | **侧隔离官方正向：`standard-linear_v234-attn` = `14455/263.7s`，相对 v195 侧基准 `14426/243s` 为 +29/+20.7s**（相对 R3 基线 +50）——继 C76.4（+84）、A1（+60）后 Attention 第三大官方正向机制，表达力梯度（对角 0 < 三角 0 < 对称全矩阵 +22 < 一般矩阵 +29）获官方确认；完整包形态未提交（父 v230 现为回退根，根已晋级 v231）；本地六 shard `+0.003845`（21/3/48），层15/22 接受；候选 SHA `4f27fb59…13a9267`；编号 v233 被 Linear L-TF1 占用故取 v234 |
 
 ### 标准 Linear + Attention 侧隔离官方分（2026-09-09 回传）

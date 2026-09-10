@@ -1,0 +1,131 @@
+{
+  "run_id": "linear-ad1-adaround-materialization",
+  "version": "v235",
+  "version_note": "v235 is the highest number under solutions/ at archive time (v234 is the Attention A-GR1 archive). The Attention line shares the numbering space, so quote the full directory name when a renumber is needed. Registered serially, checked for conflicts at archive time; A-GR2 concluded NO_EFFECT and correctly took no number.",
+  "mechanism": "L-AD1: remove the int64 materialization inside the 16-pattern enumeration of _adaround_mantissa. The two int64 code expressions are left byte-for-byte as they were; the float scaling they both feed (.to(torch.float32) * 0.25) is moved off the 16-fold expanded tensor onto the two small (K, N, 8, 2) operands, so the expansion happens in float where torch.where can select it directly. The 16-pattern mask, which depends only on the device, is hoisted out of the call and cached. No candidate is removed: the enumeration is still all 16 floor/ceil patterns.",
+  "mechanism_type": "pure time change with an exact output-equivalence obligation: fewer/cheaper operators, bit-identical results",
+  "plan": "docs/superpowers/plans/2026-09-10-linear-correctness-and-runtime-plan.md",
+  "plan_section": "section 4.3 (the fixed L-AD1 card)",
+  "log": "logs/execution/2026-09-10-linear-ad1-adaround-materialization.md",
+  "parent": "v231 complete root: Linear L-EM3 groupstep K=2 + v195 Attention",
+  "parent_sha256": "ea79a1c12dc667142c620975aab188920fae7b29988c804f41c1a696cc5754f1",
+  "parent_bytes": 505762,
+  "parent_official": "18518 / 291s (RETAINED; the only officially measured root this candidate descends from)",
+  "candidate_sha256": "fe8aec1989189ad9c20cdc9e9c3717ad509c98da987cb556b1e1428fc13bc702",
+  "candidate_bytes": 510664,
+  "implementation_sha256": "fe8aec1989189ad9c20cdc9e9c3717ad509c98da987cb556b1e1428fc13bc702",
+  "implementation_bytes": 510664,
+  "candidate_count": 1,
+  "implementation_note": "unlike v231-v234, this card's implementation IS the complete candidate file: the edit is an in-place substitution of a six-statement block plus an appended helper, so there is no separate implementation module. implementation_sha256 therefore equals candidate_sha256 by construction, and build.json's appended_bytes (4903) measures the shadow block, not a module.",
+  "build": "append-only onto the parent, shadow-definition style: parent bytes + separator + an appended module of exactly 3 statements (_AD1_PATTERN_MASK_CACHE assignment, _AD1_pattern_masks, and a second _adaround_mantissa). The appended definition wins at call time by ordinary module-global resolution, so no hook and no rebinding are needed. Every parent byte is reproduced unchanged; the parent's own _adaround_mantissa remains in the file, byte-identical, dead.",
+  "build_is_derived_not_handwritten": {
+    "what": "build.py does not hand-write the replacement. It cuts the parent's own _adaround_mantissa out of the parent bytes and substitutes one block (876 bytes replaced, 1400 written); the appended shadow is that edited text plus the new cached-mask helper. The 'sole change' claim is therefore measured rather than asserted.",
+    "statements_in_parent_module": 473,
+    "statements_appended": 3,
+    "appended_definitions": ["_AD1_pattern_masks", "_adaround_mantissa"],
+    "parent_module_prefix_ast_identical": true,
+    "function_statement_count": 17,
+    "function_prefix_identical": 4,
+    "function_suffix_identical": 7,
+    "function_changed_statement_indices": [4, 5, 6, 7, 8, 9],
+    "substitutions_performed": 1,
+    "block_bytes_replaced": 876,
+    "block_bytes_written": 1400,
+    "statement_count_unchanged": "6 statements replaced 6 statements: this card moves operands and hoists one expression, it does not add or remove a statement from the enumeration's own body.",
+    "names_removed_and_added": "bits_all and all_codes now occur 0 times in the candidate's function; floor_mant and ceil_mant each occur exactly twice (one binding, one read)",
+    "refusal_rules": "build.py exits non-zero unless the parent SHA256 and byte count match the registered values, the substituted block occurs exactly once in the parent function, the parent module's 473 statements are AST-identical in the candidate with exactly 3 appended, the function's 4-statement prefix and 7-statement suffix are identical with the change confined to the contiguous window 4..9, the removed names occur zero times and the added names twice each, and the candidate starts with the parent's bytes.",
+    "rebase_note": "this card was drafted against the previous root v230 (0f1af6db) and rebuilt on v231 after the official 18518/291s promotion. Building on v230 would have silently reverted the L-EM3 K=2 arm the official run had just paid 1s for, and the local pairing would have reported that reversion as this card's gain. The v230 build (previous_parent_sha256 in build.json) produced the same appended byte count and the same structural numbers, so the two builds are an independent reproduction of each other."
+  },
+  "the_change": {
+    "parent_form": "floor_code = torch.floor(raw_code).clamp(0, 6).to(torch.int64)\nceil_code  = torch.ceil(raw_code).clamp(0, 7).to(torch.int64)\n...\nmasks = ((bits_all.unsqueeze(1) >> torch.arange(4, device=...)) & 1).bool()\n...\nall_codes    = torch.where(mask_expanded, ceil_code.unsqueeze(0), floor_code.unsqueeze(0))\nall_mantissa = all_codes.to(torch.float32) * 0.25",
+    "candidate_form": "floor_code = torch.floor(raw_code).clamp(0, 6).to(torch.int64)   # byte-for-byte unchanged\nceil_code  = torch.ceil(raw_code).clamp(0, 7).to(torch.int64)    # byte-for-byte unchanged\nfloor_mant = floor_code.to(torch.float32) * 0.25                 # on the small tensor\nceil_mant  = ceil_code.to(torch.float32) * 0.25                  # on the small tensor\nmasks = _AD1_pattern_masks(x_abs.device)                         # input-independent, cached\nall_mantissa = torch.where(mask_expanded, ceil_mant.unsqueeze(0), floor_mant.unsqueeze(0))",
+    "why_bit_identical_before_any_measurement": "the two int64 code expressions are unchanged character for character. The only thing that moved is the position of two elementwise operators relative to one torch.where. `.to(torch.float32)` and `* 0.25` are both elementwise, and an elementwise operator commutes with `where` by definition -- selection first picks one value per position, then applies the function to that value -- so the two forms agree for every int64 pair and every mask. No precision assumption about the conversion is needed, and non-finite inputs behave the same because both sides receive the same value through the same elementwise conversion.",
+    "why_this_is_not_a_candidate_reduction": "the enumeration still visits all 16 patterns. The masks are still the full 2^4 floor/ceil set; only the tensor they are applied to changed shape-from and dtype-from. Candidate count, loss, argmin, gather, coverage ratio, refine rounds, and the acceptance rule are all untouched.",
+    "why_the_cache_is_not_a_semantic_shortcut": "the mask depends only on the device (via torch.arange on that device and the 4-bit shift pattern), not on the input, so caching it cannot change any value. It is read-only: the only operation performed on it is .reshape, which returns a view, and nothing writes through it."
+  },
+  "fixed_choices_inherited_unchanged": {
+    "candidate_set": "the parent's 16 floor/ceil mantissa patterns, unchanged -- this card removes work inside the enumeration, never a candidate",
+    "gram_weighting": "the parent's Gram-weighted pattern cost, unchanged",
+    "loss_and_selection": "the parent's argmin, gather, coverage ratio, refine rounds and acceptance rule, unchanged",
+    "call_sites": "every caller of _adaround_mantissa -- the dynamic activation path and the weight calibration path -- is unchanged; the helper is shared",
+    "linear_arm": "_EM1_PASSES = 2 at the root, unchanged; this card is not the L-EM3 arm and does not touch it",
+    "attention": "the four Attention APIs are the parent's bytes, unchanged"
+  },
+  "what_the_change_does_to_execution": {
+    "where_the_cost_was_localized": "the previous card (workbench/full_solution/linear-parent-path-split/) localized the cost to the encoder _dense_to_hif4 (69.8-90.8% of one dynamic call), then to the 16-pattern enumeration inside the Gram layers' _adaround_mantissa (51-68% of that encoder's time). The cause is operator count, not FLOPs: 425 aten ops per encoder call at 1060-1068 per dynamic call, independent of row count.",
+    "what_is_removed": "the int64 tensor is no longer expanded 16-fold and then converted wholesale to float32. The parent converts and scales 16x more elements than the candidate does, and carries an int64 intermediate 16x the size of the input through the where.",
+    "measured": "timing.py times the helper directly and the real dynamic call, both with a byte-identical sham arm as the empirical null (see time/paired_measurement_with_a_null_control)."
+  },
+  "local_result": {
+    "protocol": "proxy-v3, Qwen3.5-4B proxy-v2, linear-only, six shards, 336 cases",
+    "artifacts_candidate": "artifacts/proxy_v3/linear-ad1-cand-only/candidate/candidate-linear-shard*.json (six-shard candidate-only process)",
+    "artifacts_baseline": "artifacts/proxy_v3/linear-em3-cand/candidate/candidate-linear-shard*.json (the run whose recorded source_sha256 is the v231 root ea79a1c1)",
+    "method": "two single-side eval.py processes (no in-process pairing); per-case delta = candidate.gain - baseline.gain keyed by case_id, computed by workbench/full_solution/linear-ad1-adaround-materialization/pair_sixshard.py. The pairing script refuses files whose recorded source_sha256 disagree across shards or agree between sides.",
+    "same_basis_check": "the baseline side's recorded source_sha256 is ea79a1c12dc66714... on all six shards, i.e. exactly the v231 root this candidate is built on. This is what rules out the rebase contamination described in build_is_derived_not_handwritten.rebase_note: an older baseline would have folded the L-EM3 K=2 arm's own delta into this card's reading.",
+    "equal_shard_mean_delta_gain": 0.0,
+    "shard_delta_gain_mean": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+    "positive_cases": 0,
+    "negative_cases": 0,
+    "zero_cases": 336,
+    "case_count": 336,
+    "delta_extremes": {"min": 0.0, "median": 0.0, "max": 0.0},
+    "delta_by_role_six_shards": {
+      "o": 0.0,
+      "k": 0.0,
+      "q": 0.0,
+      "v": 0.0,
+      "fc_gate": 0.0,
+      "fc_up": 0.0,
+      "proj": 0.0
+    },
+    "equivalence_is_exact_not_tolerance_based": "every one of the 336 cases reports a gain delta of exactly 0.0, with min 0.0 and max 0.0 -- not a |delta| <= epsilon claim. Behind it, verify.py compares raw output bytes (uint8 views, not torch.equal, so NaN payloads are compared too) field by field.",
+    "equivalence_scope_note": "proj (9216 channels) is outside the metric's scope and is bit-identical for that reason in both arms. The six-shard panel exercises q, k, v, o, fc_gate and fc_up at 2560 and 4096 channels, test lengths 128 and 512, layer groups {0,6,12,18} / {2,8,14,20} / {4,10,16,22} across the three shard pairings.",
+    "what_this_result_means": "a zero delta is the intended result, not a failed screen. The change is proven equal for arbitrary input by the elementwise-commutes-with-where identity, and the 336 cases are the empirical control on that proof. A non-zero delta would have been a defect."
+  },
+  "time": {
+    "claim": "the candidate performs strictly less work per call: the 16-fold-expanded tensor is no longer materialized as int64, and the float32 conversion plus scaling is applied to 16x fewer elements.",
+    "claim_is_not": "a claim about the official seconds. The official 300s hard limit is the only time gate and the official score and seconds are returned by the user's own submission run; no projection is recorded here.",
+    "paired_measurement_with_a_null_control": {
+      "how": "timing.py, three arms -- parent (the v231 root), candidate, and sham (the very same parent file loaded a second time, byte-identical). Three-arm pairing with the arm order rotated every round so no arm is always last; torch.cuda.Event, no profiler, no replay; untimed warmup per arm; 31 rounds.",
+      "why_the_sham_matters": "the sham's paired difference is what this method reports when nothing has changed -- the empirical null on this machine, at this time, under this thermal drift. An effect is only readable as a multiple of that.",
+      "helper_function": [
+        {"shape": "[6,128,8,2,4] (batched solve)", "parent_ms": 0.9134, "effect_ms": 0.0391, "percent_of_parent": 4.28, "null_ms": -0.0017, "effect_over_null": 22.7, "rounds_parent_slower": "31/31"},
+        {"shape": "[6,509,8,2,4] (batched solve, N=509)", "parent_ms": 3.4023, "effect_ms": 0.2246, "percent_of_parent": 6.60, "null_ms": -0.0055, "effect_over_null": 40.7, "rounds_parent_slower": "31/31"},
+        {"shape": "[1,128,8,2,4] (edge expansion)", "parent_ms": 0.4663, "effect_ms": 0.0632, "percent_of_parent": 13.56, "null_ms": 0.0053, "effect_over_null": 11.9, "rounds_parent_slower": "29/31"}
+      ],
+      "whole_call": [
+        {"call": "layer0/q 2560ch, 128 rows (has Gram)", "parent_ms": 548.00, "effect_ms": 23.35, "percent_of_parent": 4.26, "null_ms": 0.69, "effect_over_null": 33.9, "rounds_parent_slower": "24/31"},
+        {"call": "layer0/q 2560ch, 512 rows (has Gram)", "parent_ms": 894.46, "effect_ms": 41.41, "percent_of_parent": 4.63, "null_ms": 0.79, "effect_over_null": 52.4, "rounds_parent_slower": "30/31"},
+        {"call": "layer0/o 4096ch, 128 rows (no Gram)", "parent_ms": 495.56, "effect_ms": 0.59, "percent_of_parent": 0.12, "null_ms": 3.09, "effect_over_null": 0.19, "rounds_parent_slower": "16/31"},
+        {"call": "layer0/o 4096ch, 512 rows (no Gram)", "parent_ms": 557.13, "effect_ms": -0.78, "percent_of_parent": -0.14, "null_ms": -0.90, "effect_over_null": 0.86, "rounds_parent_slower": "15/31"}
+      ],
+      "the_built_in_negative_control": "the two no-Gram rows are this card's own negative control and they behave as required: layer0/o never calls _adaround_mantissa (verify.py counts 0 calls on both sides), so no effect must be measurable there, and none is -- 0.19x and 0.86x of the null, with 15-16 of 31 rounds going the parent's way, i.e. a coin flip. The two has-Gram rows are 34-52x the null with 24-30 of 31 rounds agreeing.",
+      "order_of_magnitude_check": "about 367 _adaround_mantissa calls per dynamic call (40 blocks x 9.18 calls/block, where 9.18 = 1 + 3 + 3 edge expansions); at 0.04-0.22 ms saved per call that is 25-40 ms, the same magnitude as the 41.4 ms measured on 512 rows."
+    },
+    "shard_level_timings_disagree_with_each_other": {
+      "cross_process_six_shards": {
+        "candidate_dynamic_s": 257.3741250000603,
+        "baseline_dynamic_s": 261.0561782999721,
+        "difference_s": -3.6820532999118,
+        "per_case_ms": -10.96
+      },
+      "cross_process_per_shard_difference_s": [-2.642, -1.778, 2.143, -0.936, -0.978, 0.508],
+      "reading": "the six-shard cross-process difference points the same way as the paired in-process timing (-11.0 ms/call) but two of the six shards are positive, and this run has no sham arm, so it cannot resolve at this granularity. It is recorded as not-contradictory, not as this card's time evidence.",
+      "api_total_seconds_is_not_comparable": "api_total_seconds includes hif4_calibration_and_quantize_weight, which costs about 128-202 s on a calibration-cache miss and 0.0 s on a hit; the candidate side's shard-4 reading is a 201.96 s outlier for exactly that reason. Only hif4_dynamic_quantize_activation is comparable -- 56 calls per shard on both sides, no calibration."
+    },
+    "official_seconds": null,
+    "official_seconds_note": "plan section 4.3's acceptance condition is 'the official seconds drop by a resolvable amount'. Official status is recorded as unregistered/NA at archive time, with no local-seconds prediction, per the archive rule that an unknown official result is never estimated from local wall clock."
+  },
+  "lineage_note": {
+    "relationship_to_v231": "v235 is the v231 root plus this one shadow definition; it carries the L-EM3 K=2 arm (because v231 does) and every other v231 choice byte for byte.",
+    "relationship_to_v233": "v233 (L-TF1) also descends from v230, not from v231, and is the fallback root rather than the root. v235 is not a descendant of v233 and the two are not additively stackable without a rebuild.",
+    "build_choice": "append-only with a shadow definition rather than a rewrite, so the parent's own helper is still present and byte-identical inside the candidate and the change is auditable as a diff-of-append rather than as a whole-file difference."
+  },
+  "declared_deviations": "the mask cache _AD1_PATTERN_MASK_CACHE is new module-level state: keyed by device string, only ever added to, read-only within a process. The change is therefore not side-effect-free in the strict functional sense even though the value it replaces was bit-identical and input-independent.",
+  "local_decision": "LOCAL_OUTPUT_EQUIVALENT_LESS_WORK_PENDING_OFFICIAL",
+  "local_decision_note": "all 336 paired cases report a gain delta of exactly 0.0; the equality is proven for arbitrary input by an elementwise-commutes-with-where identity and measured by verify.py's raw-byte comparison; the work removed is measured directly at 4.26%/4.63% of the has-Gram dynamic call against a 34-52x null, with the no-Gram path reproducing zero as required.",
+  "official_status": "unregistered/NA",
+  "official_score": null,
+  "official_time_s": null,
+  "root_unchanged": "solution.py in the working tree remains the v231 root ea79a1c1 (505762 B); this archive does not switch the root. v231 scores 18518/291s against a 300s hard limit, so this card's motive is the 9s margin, not the score."
+}

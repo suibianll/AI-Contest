@@ -1,0 +1,12 @@
+unit: parent vs candidate _adaround_mantissa
+  403 combinations, 0 differing, 0 raising on both sides
+activation: the real dynamic path, five fields
+  activation layer0/q rows=128: 5/5 fields bit-identical (channels=2560, gram=True)
+  activation layer0/q rows=512: 5/5 fields bit-identical (channels=2560, gram=True)
+  activation layer0/o rows=128: 5/5 fields bit-identical (channels=4096, gram=False)
+  activation layer0/o rows=512: 5/5 fields bit-identical (channels=4096, gram=False)
+weight: the real calibration path, all five fields
+  weight layer0/q: weight params bit-identical, state bit-identical, _adaround_mantissa calls parent={'all': 511, 'with_gram': 511} candidate={'all': 511, 'with_gram': 511}
+  weight layer0/o: weight params bit-identical, state bit-identical, _adaround_mantissa calls parent={'all': 0, 'with_gram': 0} candidate={'all': 0, 'with_gram': 0}
+
+EQUIVALENT -- wrote verify.cpu.json

@@ -1,0 +1,32 @@
+unit: parent vs candidate _adaround_mantissa
+  403 combinations, 0 differing, 0 raising on both sides
+activation: the real dynamic path, five fields
+[L-EM2] dynamic arm=applied groups=640 passes=2 accepted_steps=32 accepted_groups=67405 changed=55717 rows=128 grad_mean=3.277e-02 error=-
+[L-EM2] dynamic arm=applied groups=640 passes=2 accepted_steps=32 accepted_groups=67405 changed=55717 rows=128 grad_mean=3.277e-02 error=-
+  activation layer0/q rows=128: 5/5 fields bit-identical (channels=2560, gram=True)
+[L-EM2] dynamic arm=applied groups=640 passes=2 accepted_steps=32 accepted_groups=269836 changed=222862 rows=512 grad_mean=3.278e-02 error=-
+[L-EM2] dynamic arm=applied groups=640 passes=2 accepted_steps=32 accepted_groups=269836 changed=222862 rows=512 grad_mean=3.278e-02 error=-
+  activation layer0/q rows=512: 5/5 fields bit-identical (channels=2560, gram=True)
+[L-EM2] dynamic arm=applied groups=1024 passes=2 accepted_steps=32 accepted_groups=152258 changed=129007 rows=128 grad_mean=1.087e-03 error=-
+[L-EM2] dynamic arm=applied groups=1024 passes=2 accepted_steps=32 accepted_groups=152258 changed=129007 rows=128 grad_mean=1.087e-03 error=-
+  activation layer0/o rows=128: 5/5 fields bit-identical (channels=4096, gram=False)
+[L-EM2] dynamic arm=applied groups=1024 passes=2 accepted_steps=32 accepted_groups=611604 changed=518526 rows=512 grad_mean=1.093e-03 error=-
+[L-EM2] dynamic arm=applied groups=1024 passes=2 accepted_steps=32 accepted_groups=611604 changed=518526 rows=512 grad_mean=1.093e-03 error=-
+  activation layer0/o rows=512: 5/5 fields bit-identical (channels=4096, gram=False)
+weight: the real calibration path, all five fields
+[L-R2] rank2 reachable=1 vtu_cross_max=2.095e-09
+[COMBINED-LINEAR-SAMPLE-ENERGY] reachable=1 blocks=40
+[L-EM2] compile arm=compiled in=2560 gram_diag_mean=6.659655e-01 h_norm=9.7824e+01
+[L-R2] rank2 reachable=1 vtu_cross_max=2.095e-09
+[COMBINED-LINEAR-SAMPLE-ENERGY] reachable=1 blocks=40
+[L-EM2] compile arm=compiled in=2560 gram_diag_mean=6.659655e-01 h_norm=9.7824e+01
+  weight layer0/q: weight params bit-identical, state bit-identical, _adaround_mantissa calls parent={'all': 511, 'with_gram': 511} candidate={'all': 511, 'with_gram': 511}
+[L-R2] rank2 reachable=1 vtu_cross_max=4.191e-09
+[COMBINED-LINEAR-SAMPLE-ENERGY] reachable=1 blocks=64
+[L-EM2] compile arm=compiled in=4096 gram_diag_mean=5.011898e-01 h_norm=1.2444e+02
+[L-R2] rank2 reachable=1 vtu_cross_max=4.191e-09
+[COMBINED-LINEAR-SAMPLE-ENERGY] reachable=1 blocks=64
+[L-EM2] compile arm=compiled in=4096 gram_diag_mean=5.011898e-01 h_norm=1.2444e+02
+  weight layer0/o: weight params bit-identical, state bit-identical, _adaround_mantissa calls parent={'all': 0, 'with_gram': 0} candidate={'all': 0, 'with_gram': 0}
+
+EQUIVALENT -- wrote workbench/full_solution/linear-ad1-adaround-materialization/verify.json
