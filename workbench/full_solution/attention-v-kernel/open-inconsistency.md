@@ -44,7 +44,28 @@ apply_W(rev) vs _vk_shifted(rev)   max|gap| = 3.553e-15   OK
 **拟合口径一致。** 候选 `_vk_fit` 已改为与 vk3_rule 逐字同口径（48 行 linspace 散布 + 完整 key 轴 +
 同一 `totals/counts` 归一化）。**结果仍为 +98.19%，符号未翻。**
 
-## 剩下的唯一未对照量
+## 已排除（再两条）
+
+**核数值一致。** 同口径（`VK3_RADIUS=7`）dump 两边核对比：
+```
+max|w_cand - w_diag| = 3.133e-03   (核量级 6.320e-01, rel 4.96e-03)
+cand h0: [0.01967, 0.02602, 0.02831, 0.02649, 0.03234, 0.03623, 0.06816, ...]
+diag h0: [0.01963, 0.02594, 0.02857, 0.02742, 0.03244, 0.03631, 0.07098, ...]
+```
+（第一次对比报出 `(16,16)` vs `(16,32)` 是**我 dump 时忘了设 `VK3_RADIUS=7`** 的对照错误。）
+
+**码合法、收益不是未校验造成的。** vk3_rule 的 `true_mse` 原本走手写步长模型 `to_dense`，
+**绕过了 `reference_hif4.validate_hif4_params`**——一个产生非法 mantissa 的规则会被静默打分。
+已改为经 `dequantize_hif4`（带校验）解码，**−1.8096% 一字不变**。
+
+## 剩下的唯一动作
+
+在同一进程里并排 dump 中间量：`residual` → `sig` → `grad` → `qii` → `best_row/best_dir` → 最终码，
+逐项 `allclose`。四条外围已全部排除，分歧必然在其中一项的**输入**上（最可能是 `pv` 的来源：
+vk3_rule 用根 `solution.py` 的校准 state，isolate 用**候选的**校准 state——候选的
+`hif4_calibration_attention` 会往 `v_state` 里写 `vk_kernel` 等键）。
+
+## 原"剩下的唯一未对照量"（已被上面两条取代）
 
 **核的数值本身。** 两条路径的核从未 dump 出来对比过。
 

@@ -178,6 +178,10 @@ def main() -> int:
                         if h == 0:
                             counts[b] += float(sel.sum())
         w = (totals / counts.clamp_min(1.0)[None, :]).contiguous()
+        if os.environ.get("VK3_DUMP"):
+            torch.save(w.cpu(), os.environ["VK3_DUMP"])
+            print(f"dumped kernel to {os.environ['VK3_DUMP']}", flush=True)
+            return 0
 
         for w_index in EVAL_WINDOWS:
             entry = windows[w_index]
@@ -338,8 +342,24 @@ def main() -> int:
                 flush=True,
             )
 
+            def _validated(codes):
+                """Decode through the real, VALIDATING decoder.
+
+                `to_dense` is a hand-written step model that bypasses
+                `reference_hif4.validate_hif4_params`, so a rule that produced an
+                illegal mantissa would still be scored and could look like a gain.
+                Routing through dequantize_hif4 makes that impossible.
+                """
+                out = {k: v.clone() for k, v in pv.items()}
+                mm = (codes / 4.0).to(pv["mant"].dtype).reshape(pv["mant"].shape)
+                out["mant"] = mm
+                out["sign"] = torch.where(
+                    mm == 0, torch.zeros_like(pv["sign"]), pv["sign"]
+                ).to(pv["sign"].dtype)
+                return v2.dequantize_hif4(v2._cpu_params(out), shapes[2]).to(torch.float64).to(device)
+
             def true_mse(codes):
-                out = attention(qd.reshape(tokens, -1), kd.reshape(tokens, -1), to_dense(codes))
+                out = attention(qd.reshape(tokens, -1), kd.reshape(tokens, -1), _validated(codes))
                 return float((out - target).square().mean())
 
             mse_par = true_mse(base_code)
