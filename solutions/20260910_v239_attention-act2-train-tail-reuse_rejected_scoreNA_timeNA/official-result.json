@@ -2,13 +2,13 @@
   "version": "v239",
   "candidate_sha256": "55103e8ba530bf2cc03fc07bf24358ada4bda8d54ccc976468f5cbd985ecdac9",
   "parent_sha256": "ea79a1c12dc667142c620975aab188920fae7b29988c804f41c1a696cc5754f1",
-  "official_status": "unregistered/NA",
+  "official_status": "unregistered/NA -- NOT SUBMITTED",
   "official_score": null,
   "official_time_s": null,
   "official_time_display": null,
   "reported_by": null,
   "reported_at": null,
-  "decision": "PENDING a submission decision. The local evidence is implementation equivalence with the same-parent A-GR1 (72/72 paired cases exactly zero, byte-identical calibration states on all six real attention layers) plus a proven reduction of 6 of 204 calls in the training tail.",
+  "decision": "NOT SUBMITTED. The user declined to spend a submission slot on this candidate. Basis: v238 (A-CT1) returned an official TIMEOUT on 2026-09-10, and v238 is the same family -- bitwise-equivalent output, and it removes strictly MORE executed work than A-CT2 does (the gate's per-window duplication versus this card's six calls in the tail of the trainer). A strictly larger reduction was measured to exceed 300 s, so the smaller one was not submitted.",
   "magnitude_note": "The equivalence is proven and the saving is measured, but the saving is far too small to change an official outcome, and that is recorded here rather than implied away. A-CT1's whole A-GR1 de-duplication direction was measured at roughly 0.2 s against the roughly 12 s the mechanism would need; A-CT2 removes 6 of 204 calls in one function's tail, so it is smaller still. The stall diagnostic (docs/attention-stall-analysis-2026-09-10.md, section 6.3 item 4) concludes that this direction should stop and that A-CT2 is not worth a card. The user directed that the card be run to completion and archived anyway, with that assessment attached.",
   "local_projection_seconds": null,
   "local_projection_margin_seconds": null,
@@ -18,5 +18,8 @@
   "archive_sha256": "55103e8ba530bf2cc03fc07bf24358ada4bda8d54ccc976468f5cbd985ecdac9",
   "note": "v239 is a descendant of the v231 root and is not additive with v234, v236, v238, v233, v235 or v237. A-GR1's official record -- side isolation +29, complete package TIMEOUT on both v234 and v236 -- stands separately and is not inherited.",
   "candidate_type": "complete Attention A-CT2 candidate (v231 root + A-GR1 + the training-tail carry); the only v239 under solutions/ at archive time",
-  "execution_log": "logs/execution/2026-09-10-attention-act2-train-tail-reuse.md"
+  "execution_log": "logs/execution/2026-09-10-attention-act2-train-tail-reuse.md",
+  "why_this_is_not_a_locally_vetoed_candidate": "AGENTS section 2 forbids using a LOCAL reading to veto a pure time candidate (v233 and v237 both proved the local clock cannot resolve these changes and both landed officially). This decision does not rest on a local reading: it rests on an official result about a candidate that removes strictly more work. That is a decision about where to spend a submission slot, not a claim that the mechanism was measured and failed.",
+  "directory_name_caveat": "The archive directory carries the `_rejected` suffix, which this repository uses for candidates that were rejected. This candidate was NEVER SUBMITTED, so that suffix records the user's decision not to submit, not an official outcome. The status in this file is the authoritative one: unregistered/NA.",
+  "family_note": "The A-GR1 family is now closed by official results rather than by inference: v234 (on v230), v236 (on v231) and v238 (A-CT1, the reduced-cost variant, on v231) each returned TIMEOUT, and v239 was not submitted. A-GR1's side-isolation reading of +29 stands throughout -- it scores a smaller package and measures the mechanism's value, not its cost."
 }

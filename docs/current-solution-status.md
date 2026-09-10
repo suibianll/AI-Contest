@@ -144,7 +144,7 @@ K=2投毒对照证明偏移恰为2且输出逐位相同，即保护没有把重�
 否则会把官方刚用1s换来的K=2那一臂悄悄回退并报成本卡收益（标定缓存键改为从父根现算、
 基线换成记录`source_sha256`即v231的那次运行）。**v235是v231的后代（含K=2），与v233（v230后代）不可相加。**
 
-**v239 Attention A-CT2已完成并归档**（`20260910_v239_attention-act2-train-tail-reuse_scoreNA_timeNA`，候选`55103e8ba530bf2cc03fc07bf24358ada4bda8d54ccc976468f5cbd985ecdac9`，531018 B）：
+**v239 Attention A-CT2已完成并归档**（`20260910_v239_attention-act2-train-tail-reuse_rejected_scoreNA_timeNA`，候选`55103e8ba530bf2cc03fc07bf24358ada4bda8d54ccc976468f5cbd985ecdac9`，531018 B）：
 `_agr1_train`收尾时`final_loss`循环已为每个fold用`m`(q)/`p`(k)各算过一次`_agr1_scale_loss_grad(...)[0]`，
 而`info`里的`agr1_q_scale_ratio2`/`agr1_k_scale_ratio2`又把同一批调用做了一遍、只取回第一次丢掉的标量。
 候选在`final_loss`循环里带上两个按角色的标量和，两个ratio由它们算出，删掉第二次遍历
