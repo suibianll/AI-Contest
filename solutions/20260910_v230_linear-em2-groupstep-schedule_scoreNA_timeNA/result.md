@@ -1,8 +1,6 @@
 # v230 — Linear group-major exact-metric descent (L-EM2)
 
-Status: `PENDING` official (no official evaluation run; the user runs batched official
-evaluations). Local six-shard result is positive; the local diagnostic tool reports
-`reject` on its L1 trend screen, which is not a mechanism failure — see below.
+Status: **RETAINED — official 18428 / 292s**, reported by the user on 2026-09-10. +375 points / +11s versus the complete v202 root; 8s below the 300s limit. Promoted byte-for-byte to root solution.py. This is v230 Linear L-EM2, not v230 Attention A-FIX1.
 
 - Parent: v202 Linear + v195 Attention complete root `solution.py`
 - Parent SHA256: `56DC805D6E5A3AEF896DB8021045740292735725D688B48E3D4393E55EFCB2BD` (485072 B)
@@ -211,5 +209,4 @@ Recorded as the L-EM3 candidate.
 
 ## Official result
 
-None. `official_status: PENDING`; score and time are `null`. No official submission has been
-made for v230 — the user runs batched official evaluations.
+User reported **18428 / 292s** on 2026-09-10. RETAINED; official scored SHA and archive SHA: `0f1af6dbc207ff32b2c6be16987e9c4fe50f3f10747de26782ef52a6f2fab7bc`. Bound to the explicitly identified v230-linear archive; no independent upload hash supplied. Root copied byte-for-byte. Historical local timing predictions above are diagnostic records, not valid gates or evidence that a timing model is correct.

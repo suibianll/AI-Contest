@@ -1,13 +1,8 @@
-# 当前状态：v202 Linear + v195 Attention 18053 / 281s
+# 当前状态：v230 Linear (L-EM2) + v195 Attention 18428 / 292s
 
-> 当前根 `solution.py` 已切换为 v202 Linear + v195 Attention，与 v202 候选归档逐位一致，SHA256
-> `56DC805D6E5A3AEF896DB8021045740292735725D688B48E3D4393E55EFCB2BD`。用户官方回传为
-> `18053/281s`，相对 v195 `18053/289s` 同分快 8s；官方硬限 `300s`，当前通过，余量 19s。
-
-> 上一根 v195（current Linear + v195 Attention）仍保留为可回退对照，SHA256
-> `839ADB1E617C3115C6B55071A34B281C5DB0FF2AA070ADBBC71FD1549E761D7F`。
-> 再上一根 compiled sample-energy 仍保留为可回退对照，SHA256
-> `D66128A62E7E068EDC50C91F4D8E212F586A6EDCAEE5BEA7D3564166E258B0F6`。
+> v230 Linear（L-EM2）+ v195 Attention 已由用户官方回传 **18428 / 292s**，相对 v202 完整根 **+375 / +11s**，硬限余量 **8s**。根与归档逐位一致，SHA256 `0F1AF6DBC207FF32B2C6BE16987E9C4FE50F3F10747DE26782EF52A6F2FAB7BC`。回退根 v202 保留 `18053/281s`。同编号 v230 Attention A-FIX1 官方状态不受本次回传影响。
+> 回退根 SHA256 `56DC805D6E5A3AEF896DB8021045740292735725D688B48E3D4393E55EFCB2BD`。详见[官方晋级记录](../logs/execution/2026-09-10-v230-linear-official-result.md)。
+> 下文旧根数值均为历史实验快照，不覆盖本页当前根。
 
 > 当前测试按[4B指引](4b-panel-testing-guide.md)执行。本文历史0.5B、OOD、跨模型和时间预测结果仅作证据，不构成新测试命令或门禁。
 > 当前规则优先级为 `AGENTS.md` → 4B 指引 → [计划入口](superpowers/plans/README.md)
@@ -24,6 +19,9 @@
 > [`stale-information-inventory-2026-09-05.md`](stale-information-inventory-2026-09-05.md)。
 
 ## 0.1 当前计划状态（2026-09-10）
+
+v230 Linear（L-EM2）+ v195 Attention 已由用户官方回传 **18428 / 292s**，相对 v202 完整根 **+375 / +11s**，硬限余量 **8s**。根与归档逐位一致，SHA256 `0F1AF6DBC207FF32B2C6BE16987E9C4FE50F3F10747DE26782EF52A6F2FAB7BC`。回退根 v202 保留 `18053/281s`。同编号 v230 Attention A-FIX1 官方状态不受本次回传影响。 新正式候选从该完整根构建；已在旧父上进行的候选保留原 parent，不自动继承此结果。
+
 
 09-09 旧计划三卡（L-RB1/A-RB1/L-JRB1）已全部关闭并归档，见
 [归档版计划](superpowers/archive/plans/2026-09-09-output-aware-rounding-and-joint-aw-plan-completed.md)。

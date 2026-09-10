@@ -1,11 +1,8 @@
 # HiF4 优化实验仓库
 
-当前最优已知可复现完整方案为 v202 Linear + v195 Attention：用户官方回传 `18053 / 281s`，根
-`solution.py` 与归档逐位一致，SHA256 `56DC805D6E5A3AEF896DB8021045740292735725D688B48E3D4393E55EFCB2BD`。
-相对 v195 同分快 8 秒；上一完整根 current Linear + v195 Attention 为 `18053 / 289s`，再上一根
-current Linear + R3 Attention 为 `18032 / 280s`。官方硬限 300s，提交次数无限制。
+v230 Linear（L-EM2）+ v195 Attention 已由用户官方回传 **18428 / 292s**，相对 v202 完整根 **+375 / +11s**，硬限余量 **8s**。根与归档逐位一致，SHA256 `0F1AF6DBC207FF32B2C6BE16987E9C4FE50F3F10747DE26782EF52A6F2FAB7BC`。回退根 v202 保留 `18053/281s`。同编号 v230 Attention A-FIX1 官方状态不受本次回传影响。 官方提交次数无限制。
 
-最新官方回传：v229（A-MC1）`TIMEOUT (>300s)`，已拒绝归档，当前根不变；见[回传记录](logs/execution/2026-09-10-v229-official-timeout.md)。
+最新官方回传见[v230 Linear 晋级记录](logs/execution/2026-09-10-v230-linear-official-result.md)；此前 v229 官方超时保留。
 
 ## 工作入口
 

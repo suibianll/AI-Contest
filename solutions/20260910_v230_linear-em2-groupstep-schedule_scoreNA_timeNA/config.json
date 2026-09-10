@@ -29,7 +29,14 @@
     "candidate_mean": 0.6087197596041865,
     "baseline_mean": 0.5292658476834804,
     "equal_shard_mean_delta_gain": 0.079453912,
-    "shard_delta_gain_mean": [0.088372493, 0.086232458, 0.07193649, 0.077731499, 0.072229114, 0.080221418],
+    "shard_delta_gain_mean": [
+      0.088372493,
+      0.086232458,
+      0.07193649,
+      0.077731499,
+      0.072229114,
+      0.080221418
+    ],
     "positive_cases": 288,
     "negative_cases": 0,
     "zero_cases": 48,
@@ -59,7 +66,7 @@
   },
   "local_decision": "reject (all six shards)",
   "local_decision_note": "the tool's local_trend_gate is `delta_mean > 0 and L1 < 0.02`, an eligibility screen for small local trends; the tool's own policy states 'local eligibility is not promotion'. A mechanism that deliberately makes a large change exceeds that L1 by design. The signal that matters here is 288 positive / 0 negative / 48 zero out of 336.",
-  "official_status": "PENDING",
-  "official_score": null,
-  "official_time_s": null
+  "official_status": "RETAINED",
+  "official_score": 18428,
+  "official_time_s": 292
 }

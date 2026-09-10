@@ -15,8 +15,8 @@
 
 | 用途 | 版本 | 官方分数 / 时间 | SHA256 |
 |---|---|---|---|
-| 当前完整父 | v202 Linear + v195 Attention | 18053 / 281s | `56DC805D6E5A3AEF896DB8021045740292735725D688B48E3D4393E55EFCB2BD` |
-| 回退根 | current Linear + v195 Attention | 18053 / 289s | `839ADB1E617C3115C6B55071A34B281C5DB0FF2AA070ADBBC71FD1549E761D7F` |
+| 当前完整父 | v230 Linear (L-EM2) + v195 Attention | 18428 / 292s | `0F1AF6DBC207FF32B2C6BE16987E9C4FE50F3F10747DE26782EF52A6F2FAB7BC` |
+| 回退根 | v202 Linear + v195 Attention | 18053 / 281s | `56DC805D6E5A3AEF896DB8021045740292735725D688B48E3D4393E55EFCB2BD` |
 
 - 每个正式候选从当前最高分完整根构建，保留六 API；一个机制、一个固定配置、固定候选数量。侧隔离只作诊断，不建立侧父或侧晋级线，不机械组合历史侧结果。
 - 官方分数提高且时间 `<300s` 才晋级，先绑定计分源码 SHA；本地正向不替换根。组合从已确认的较高分完整父重建，并由完整官方结果裁决。
@@ -28,6 +28,7 @@
 
 - 正式提交为根 `solution.py`，单文件自包含、脱离仓库可导入六 API：`hif4_calibration_and_quantize_weight`、`hif4_dynamic_quantize_activation`、`hif4_calibration_attention`、`hif4_dynamic_quantize_q`、`hif4_dynamic_quantize_k`、`hif4_dynamic_quantize_v`。
 - 不从其他 Python 文件、仓库/归档路径或 importlib 加载提交实现；编码器、解码器、E6M2、层级与状态逻辑留在模块内，通过 `evaluator/reference_hif4.py` 合法状态检查。独立导入验证脚本不受此提交实现限制。
+- 已官方确认的 v230 根原样保留其动态度量求逆；该已计分实现是现存例外，后续优先移出动态路径，不为规则整理改写已计分源码。新候选不得新增完整动态求逆。
 - 动态 API 只执行校准编译的规则，不带入校准搜索、完整矩阵求逆或未限制的 Python 候选循环。Attention 动态 API 另禁止 Gram contraction 和候选循环；复杂计算放校准阶段。
 - Linear 优化实际输出误差 `XW^T - Q(XR)Q(WR^{-T})^T`；变换保持连续乘积不变，Gram/Hessian 与最终部署坐标一致。operand MSE、连续代理下降不能替代真实硬编码输出证据。
 - Linear 使用全部 Qwen3.5-4B 校准数据做 A@W 低维拟合，不拆 fit/select，不以泛化、独立窗口负向否决探索。Attention 参数学习使用 calibration folds，按固定多折规则聚合，学习/选择/独立验证职责明确；holdout 不参与选参或提交否决。

@@ -49,22 +49,44 @@
     "protocol": "proxy-v3, Qwen3.5-4B proxy-v2, linear-only",
     "six_shard": {
       "cases": 336,
-      "positive_negative_zero": [288, 0, 48],
+      "positive_negative_zero": [
+        288,
+        0,
+        48
+      ],
       "the_48_zeros": "the out-of-scope proj role, 6 shards x 8 cases; bit-identical to the parent",
       "equal_shard_mean_delta_gain": 0.079453912,
-      "shard_delta_gain_mean": [0.088372493, 0.086232458, 0.07193649, 0.077731499, 0.072229114, 0.080221418],
-      "shard_decision": ["reject", "reject", "reject", "reject", "reject", "reject"],
+      "shard_delta_gain_mean": [
+        0.088372493,
+        0.086232458,
+        0.07193649,
+        0.077731499,
+        0.072229114,
+        0.080221418
+      ],
+      "shard_decision": [
+        "reject",
+        "reject",
+        "reject",
+        "reject",
+        "reject",
+        "reject"
+      ],
       "decision_note": "the tool's local_trend_gate is `delta_mean > 0 and L1 < 0.02` -- an eligibility screen for small local trends. A mechanism that deliberately makes a large change exceeds it by design; the tool's own policy states 'local eligibility is not promotion'. The signal that matters here is 288/0/48, not the gate.",
       "candidate_scoring_seconds": 263.3,
       "baseline_scoring_seconds": 250.7,
       "cross_process_delta_per_case": 0.0376,
-      "paired_prediction_per_case": 0.0400
+      "paired_prediction_per_case": 0.04
     },
     "shard0": {
       "linear_mean_baseline": 0.517349,
       "linear_mean_candidate": 0.605721,
       "delta_mean": 0.088372,
-      "positive_negative_zero": [48, 0, 8]
+      "positive_negative_zero": [
+        48,
+        0,
+        8
+      ]
     },
     "em1_comparison": "L-EM1's full sequential descent scored +0.107791 on the same shard0 panel; L-EM2 at K=1 captures 82% of that gain with 1/40 the sequential iterations, matching the probe frontier's 88% (in=2560) prediction in direction.",
     "cross_process_validation": "shard0 alone showed +0.064 s/call against a paired prediction of +0.040, a 1.6x gap traced to thermal drift (the local baseline scores off a calibration cache hit; the candidate scores right after 140s of calibration). Across all six shards, where baselines and candidates alternate, the gap collapses: +0.0376 s/call measured against +0.0400 predicted, a 6% agreement that independently reproduces the paired measurement on 336 cases."
@@ -100,13 +122,16 @@
         "note": "single in=4096 case; its +0.1142 overshot the 4-case value +0.0844, which is why the column was widened",
         "k1_projected_added_seconds": 7.78,
         "k2_projected_added_seconds": 11.56,
-        "in2560_k1_median": 0.0420,
+        "in2560_k1_median": 0.042,
         "in2560_k2_median": 0.0642
       },
       "out_of_scope_control": "layer0/proj (in=9216) changed_mantissa=0, delta +0.0030s (k1) / +0.0193s (k2): the noise floor",
       "per_case_spread_seconds": "0.020-0.069 within a single case at 8 repeats, i.e. comparable to the deltas; the two estimators bracketing the same answer is the evidence, see below",
       "estimator_agreement": "both columns now average independent cases and the two estimators agree: in=2560 +0.0385 median vs +0.0369 min (4 cases), in=4096 +0.0844 vs +0.0796 (4 cases, layers 0/6/12/18).",
-      "official_linear_calls": {"in2560": 120, "in4096": 24}
+      "official_linear_calls": {
+        "in2560": 120,
+        "in4096": 24
+      }
     },
     "calibration_api": {
       "script": "profile_compile_hook.py",
@@ -144,5 +169,8 @@
     "why_not_done": "storing gram as the metric instead of rebuilding it from h_inv would remove the inverse from both hooks, but costs +n^2 host RAM: approx +4.76 GB across the 144 in-scope states on top of the approx 4.76 GB of H already held. The parent already holds h_inv for all 168 (layer, role) including proj's 340 MB each, so the official box's headroom is not known to me. Not worth risking an OOM for ~5s.",
     "candidate_for": "L-EM3"
   },
-  "next": "shard0 paired accuracy, then the fixed six-shard Linear run, then archive v230"
+  "next": "shard0 paired accuracy, then the fixed six-shard Linear run, then archive v230",
+  "official_status": "RETAINED",
+  "official_score": 18428,
+  "official_time_s": 292
 }

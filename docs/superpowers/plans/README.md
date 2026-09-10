@@ -6,18 +6,12 @@
 不再运行 0.5B、逐候选 OOD、GPT-2/opt 或 fresh-default 计时；本地时间公式和 280s 门退役。
 官方提交无限制，官方硬限 300s。评估实现说明见 [proxy-v3](../../proxy-v3.md)。
 
+> 当前完整父：v230 Linear L-EM2，18428/292s，SHA `0f1af6dbc207ff32b2c6be16987e9c4fe50f3f10747de26782ef52a6f2fab7bc`；下方历史 R0= v202 记录仅适用于原实验。
+
 **当前唯一活动总计划（Linear）：**
 [Linear 精确度量 Activation 码序下降与双线协调计划（L-EM1）](2026-09-10-linear-exact-metric-refinement-plan.md)。
 
-承接卡 [L-EM2 组号主序调度](2026-09-10-linear-groupstep-schedule-plan.md) 已完成并归档为
-**v230**（`solutions/20260910_v230_linear-em2-groupstep-schedule_scoreNA_timeNA/`，
-`official_status: PENDING`，未提交官方）。六 shard `288/0/48`、等权均值 `+0.079454`；
-K 按预注册的回退规则降为 1，两种折算口径把官方时间夹在 **`286.5 ~ 294 s`**（朴素可加 vs
-本项目 2026-09-04 分解回归），两者都在门内但余量差一倍。本地 `Decision: reject` 来自 `L1 < 0.02`
-的小趋势资格筛（工具策略：local eligibility is not promotion），不构成机制失效。
-官方时间的先例互相矛盾（v222 `+12 s → 293 s` 过门；v229 近零成本却 TIMEOUT），
-故本卡记录风险而不声称余量充裕。见
-[执行记录](../../../logs/execution/2026-09-10-linear-groupstep-schedule.md)。
+承接卡 [L-EM2 组号主序调度](2026-09-10-linear-groupstep-schedule-plan.md) 已官方 **RETAINED 18428/292s**。v230 Linear（L-EM2）+ v195 Attention 已由用户官方回传 **18428 / 292s**，相对 v202 完整根 **+375 / +11s**，硬限余量 **8s**。根与归档逐位一致，SHA256 `0F1AF6DBC207FF32B2C6BE16987E9C4FE50F3F10747DE26782EF52A6F2FAB7BC`。回退根 v202 保留 `18053/281s`。同编号 v230 Attention A-FIX1 官方状态不受本次回传影响。 详见[回传记录](../../../logs/execution/2026-09-10-v230-linear-official-result.md)。原有本地时间折算不成为有效门禁；新候选从晋级完整根构建，已在运行的旧父候选保持原始 parent/SHA，不机械拼接。
 
 **Attention 执行附录：**
 [A2 训练/部署前向对齐计划（A-FIX1）](parallel/2026-09-10-attention-train-deploy-align-plan.md)

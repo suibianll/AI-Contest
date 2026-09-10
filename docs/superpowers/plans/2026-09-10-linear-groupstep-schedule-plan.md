@@ -1,6 +1,6 @@
 # Linear 精确度量下降的组号主序调度（L-EM2）
 
-> 状态：COMPLETED，2026-09-10。已归档为 **v230**
+> 状态：CLOSED / RETAINED，v230 Linear 官方18428/292s，2026-09-10。
 > （`solutions/20260910_v230_linear-em2-groupstep-schedule_scoreNA_timeNA/`，
 > `official_status: PENDING`）。执行记录见
 > [L-EM2 执行记录](../../../logs/execution/2026-09-10-linear-groupstep-schedule.md)。
@@ -119,3 +119,7 @@ shard0 配对 linear mean `+0.107791`（48/0/8 over layers 0/6/12/18），单 ca
 - 官方定价与组合顺序沿用 L-EM1 卡 §6.2：Linear 与 Attention 两条线各自独立消融，
   组合顺序以官方实测为准；
 - calibration cache 继续按 SHA 修剪，`--min-age-hours 2`。
+
+## 官方裁决（2026-09-10）
+
+v230 Linear（L-EM2）+ v195 Attention 已由用户官方回传 **18428 / 292s**，相对 v202 完整根 **+375 / +11s**，硬限余量 **8s**。根与归档逐位一致，SHA256 `0F1AF6DBC207FF32B2C6BE16987E9C4FE50F3F10747DE26782EF52A6F2FAB7BC`。回退根 v202 保留 `18053/281s`。同编号 v230 Attention A-FIX1 官方状态不受本次回传影响。 计分/归档 SHA `0f1af6dbc207ff32b2c6be16987e9c4fe50f3f10747de26782ef52a6f2fab7bc`；根原样晋级，既有控制与六 shard 结果复用，未重跑评测。历史时间预测不据此恢复为门禁。

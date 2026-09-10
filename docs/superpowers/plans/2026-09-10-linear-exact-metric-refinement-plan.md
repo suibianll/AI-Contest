@@ -1,6 +1,7 @@
 # Linear 精确度量 Activation 码序下降与双线协调计划（L-EM1）
 
 > 状态：ACTIVE，总协调计划，2026-09-10。
+> 最新官方裁决：v230 Linear L-EM2 已以18428/292s晋级完整根，SHA `0f1af6dbc207ff32b2c6be16987e9c4fe50f3f10747de26782ef52a6f2fab7bc`。下文v202是既有实验冻结父；新候选以计划入口的新根为准。
 > 当前完整根：v202 Linear + v195 Attention，官方 `18053/281s`，SHA256
 > `56DC805D6E5A3AEF896DB8021045740292735725D688B48E3D4393E55EFCB2BD`。
 > 本计划负责 Linear 执行和两条优化线的统一父版本、版本登记、组合顺序与最终归档；Attention 算法见
