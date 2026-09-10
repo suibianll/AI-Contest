@@ -1,0 +1,136 @@
+{
+  "run_id": "linear-tf1-gradient-reuse",
+  "version": "v233",
+  "version_note": "v233 is the (at archive time) highest Linear number and the only v233 under solutions/. The Attention line shares the numbering space, so quote the full directory name when a renumber is needed. Registered serially, checked for conflicts at archive time.",
+  "mechanism": "L-TF1: the first descent pass reuses the gradient the parent computed and checked before the loop, instead of recomputing it. The in-loop recomputation is guarded with `if _pass:`. Nothing else changes; every other fixed choice is the parent's own code, byte for byte.",
+  "mechanism_type": "pure time change with an exact output-equivalence obligation: strictly fewer operations, identical results",
+  "plan": "docs/superpowers/plans/2026-09-10-linear-correctness-and-runtime-plan.md",
+  "plan_section": "section 3 (second card)",
+  "log": "logs/execution/2026-09-10-linear-tf1-gradient-reuse.md",
+  "parent": "v230 Linear L-EM2 + v195 Attention complete root",
+  "parent_sha256": "0f1af6dbc207ff32b2c6be16987e9c4fe50f3f10747de26782ef52a6f2fab7bc",
+  "parent_bytes": 505496,
+  "parent_official": "18428 / 292s (promoted; the only officially measured root this candidate descends from)",
+  "candidate_sha256": "0ec89710087d061bf9608196ad4d53a1c6be98c8a5595596a071ecd05a6821eb",
+  "candidate_bytes": 515985,
+  "implementation_sha256": "dd5e436ebc6952f5441349ae418e9ecbe7d8fe645d3b8e3e41767a68db0ce3bf",
+  "implementation_bytes": 10487,
+  "candidate_count": 1,
+  "build": "append-only onto the parent: parent bytes + fixed separator + implementation module. Every parent byte, both hooks, the Attention four APIs and all shared helpers are byte-identical; the only dead code is the parent's now-shadowed _em1_dynamic_descent.",
+  "build_is_derived_not_handwritten": {
+    "what": "build.py does not hand-write the override. It cuts the parent's own _em1_dynamic_descent source out of the parent bytes, substitutes one substring (the unguarded loop head for the guarded one), and appends that text. The 'sole change' claim is therefore measured rather than asserted.",
+    "extracted_parent_function_bytes": 7999,
+    "substitutions_performed": 1,
+    "extracted_function_changed_lines": 5,
+    "extracted_function_byte_delta": 34,
+    "ast_identical_after_dissolving_pass_guard": true,
+    "positional_byte_diff_note": "build.py deliberately does not report a positional 'differing byte count' for this card. The edit inserts a line, so everything after it shifts and a positional byte-by-byte zip reports the entire tail as differing -- a number that looks like evidence and is not. The two real measures are reported instead: the substring-substitution count and the line/byte delta, plus the AST equality below.",
+    "ast_claim": "parsing both descents and dissolving the single inserted `if _pass:` node back into its parent block reproduces the parent's statement tree exactly (ast.dump equality). That is a stronger statement than a byte count: the executed statement tree is unchanged apart from the guard. build.py computes it, and verify.py's control A recomputes it independently so the archive does not rest on the builder's own say-so.",
+    "refusal_rules": "build.py exits non-zero unless the parent SHA256 and byte count match the registered values, the unguarded loop head occurs exactly once and the guarded one zero times, the AST equality holds, the generated module is exactly HEADER + function and holds exactly one `if _pass:` guard, the candidate holds exactly 2 definitions of _em1_dynamic_descent and exactly 1 call site, and the candidate starts with the parent's bytes."
+  },
+  "the_change": {
+    "parent_form": "    for _pass in range(_EM1_PASSES):\n        gradient = (deployed - reference).mm(metric) + reference.mm(h_matrix)\n        if not torch.isfinite(gradient).all():\n            aborted = True\n            break",
+    "candidate_form": "    for _pass in range(_EM1_PASSES):\n        if _pass:\n            gradient = (deployed - reference).mm(metric) + reference.mm(h_matrix)\n            if not torch.isfinite(gradient).all():\n                aborted = True\n                break",
+    "why_the_parent_recomputes": "the gradient is needed twice: once before the loop, where the parent checks it for finiteness and then discards it, and again as the first statement of the single pass, where the name is rebound. At _EM1_PASSES = 1 both evaluations run on every call, and the first result is thrown away.",
+    "why_the_two_evaluations_are_equal": "the same expression on the same tensors. premise.py confirms it statically: walking every statement between the two assignments finds exactly one rebinding of a watched name -- `deployed = deployed.clone()`, which preserves every element exactly -- and no in-place mutation of `deployed` or `reference`. verify.py's control C confirms it at runtime: the two products of the pre-loop gradient are bit-identical to the two products of the pass-0 recomputation, on both the synthetic layer and the real layer-0/q state.",
+    "why_the_guard_is_not_a_hoist": "the pass body mutates deployed and gradient in place (`deployed.add_(row_delta.mul_(keep_scale))` and `gradient.add_(g_delta.mul_(keep_scale))`), so from the first pass onward the tensors the gradient was built from no longer exist. Lifting the whole expression out of the loop would change every pass after the first. The guard is `if _pass:` precisely so that pass 0 reuses and every later pass still recomputes, in the parent's own order. premise.py reports this as verdict P4; verify.py's control F exercises the K = 2 arm and confirms the later passes still recompute and still agree byte for byte."
+  },
+  "fixed_choices_inherited_unchanged": {
+    "metric": "the parent's inverse-of-h_inv with the ridge taken off the diagonal, unchanged",
+    "candidate_set": "the parent's eight single-coordinate +/-1 code steps, unchanged",
+    "schedule": "the parent's sixteen group-major steps per pass, unchanged",
+    "local_cost": "the parent's exact row-joint acceptance, unchanged (this card does not carry or depend on the L-QF1 quadratic correction, which lives in v232)",
+    "finiteness_paths": "the pre-loop finiteness check and its nonfinite-gradient diagnostic, unchanged; the in-loop check is unchanged for every pass that still recomputes",
+    "pass_count": "_EM1_PASSES = 1 at the root, unchanged; the card removes an evaluation, not a pass"
+  },
+  "what_the_change_does_to_execution": {
+    "mm_products_per_call": "the parent issues 2 products before the loop and 18 per pass (2 gradient + 16 step products). At K = 1 that is 20 products for the parent and 18 for the candidate: exactly the two products of the pass-0 gradient are gone, and nothing else.",
+    "measured": "verify.py control D records the complete Tensor.mm sequence for both arms and checks that the candidate's sequence equals the parent's with products 2 and 3 removed, at both K = 1 and K = 2, on the synthetic layer and on the real layer-0/q state.",
+    "flops_removed": "2 * 2 * rows * channels^2 floating-point operations per call: 3.36 GFLOP at 128 rows / 2560 channels, 13.4 GFLOP at 512 rows."
+  },
+  "local_result": {
+    "protocol": "proxy-v3, Qwen3.5-4B proxy-v2, linear-only, six shards, 336 cases",
+    "artifacts_candidate": "artifacts/proxy_v3/linear-tf1-cand-only/candidate/candidate-linear-shard*.json (six-shard candidate-only process) plus the shard-0 and shard-1 in-process pairs in artifacts/proxy_v3/linear-tf1-cand/candidate/",
+    "artifacts_baseline": "artifacts/proxy_v3/linear-em3-v230base/candidate/candidate-linear-shard*.json",
+    "method": "shards 0 and 1 completed in-process paired inside one eval.py invocation (that invocation then stopped early after two shards, `stopped_early: true`, so the in-process path is not available for the whole panel). Shards 0-5 were then also run as a single candidate-side eval.py process and paired out of process by workbench/full_solution/linear-tf1-gradient-reuse/pair_sixshard.py. The pairing script refuses files whose recorded source_sha256 disagree or agree.",
+    "same_basis_check": "the in-process shard-0 and shard-1 baselines (source 0f1af6db) and the archived linear-em3-v230base files for the same shards (source 0f1af6db) agree on all 56 cases each, bit for bit (max |gain difference| 0.0). Pairing the candidate's six shards against that archive is therefore the same basis v231's and v232's own six-shard evidence used.",
+    "equal_shard_mean_delta_gain": 0.0,
+    "shard_delta_gain_mean": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+    "positive_cases": 0,
+    "negative_cases": 0,
+    "zero_cases": 336,
+    "case_count": 336,
+    "delta_extremes": {
+      "min": 0.0,
+      "median": 0.0,
+      "max": 0.0
+    },
+    "equivalence_is_exact_not_tolerance_based": "every one of the 336 cases reports a gain delta of exactly 0.0, with min 0.0 and max 0.0. This is not a |delta| <= epsilon claim: the evaluator's own paired statistic, which is not a bit comparison, lands on exact zero everywhere. verify.py's control B goes further on the raw tensors and compares the five HiF4 output fields byte by byte on the compiled synthetic layer, on a state with no metric payload, on the out-of-scope bypass and on 128 real rows of the cached layer-0/q state.",
+    "equivalence_scope_note": "the six-shard panel exercises every in-scope role (q, k, v, o, fc_gate, fc_up at 2560 and 4096 channels) at test lengths 128 and 512, layer groups {0,6,12,18} and {2,8,14,20} and {4,10,16,22} across the three shard pairings, on the train/validation/test splits. proj (9216 channels) is out of the metric's scope and is bit-identical for that reason in both arms.",
+    "what_this_result_means": "a zero delta is the intended result, not a failed screen. The mechanism cannot change a gain: it removes an operation whose result is discarded. A non-zero delta here would have been a defect, and the card's whole value is that there is none."
+  },
+  "time": {
+    "claim": "the candidate executes strictly fewer operations: exactly two matrix products per call, measured at 0.386 ms per 128-row / 2560-channel call and 2.032 ms per 512-row call.",
+    "claim_is_not": "a claim that the difference is measurable on this machine. It is not, and the measurements below are reported so that this is visible rather than argued away.",
+    "removed_work_measured_directly": {
+      "how": "workbench/full_solution/linear-tf1-gradient-reuse/where_the_time_goes.py times the descent's own operations in isolation on the same device and shapes, warm, with CUDA events.",
+      "gradient_two_mm_128_rows_ms": 0.386,
+      "gradient_two_mm_512_rows_ms": 2.0316,
+      "one_step_mm_128_rows_ms": 0.1861,
+      "one_step_mm_512_rows_ms": 0.8571,
+      "sixteen_step_mm_128_rows_ms": 5.0504,
+      "sixteen_step_mm_512_rows_ms": 16.9072,
+      "metric_cholesky_inverse_128_rows_ms": 20.3827,
+      "metric_cholesky_inverse_512_rows_ms": 19.1066
+    },
+    "removed_share_of_a_call": {
+      "call_128_rows_ms": 534.0,
+      "call_512_rows_ms": 873.6,
+      "removed_percent_128_rows": 0.072,
+      "removed_percent_512_rows": 0.233,
+      "note": "the two products the card removes are the whole of `gradient_two_mm`, which is itself 0.07% / 0.23% of a dynamic call."
+    },
+    "paired_measurement_with_a_null_control": {
+      "how": "workbench/full_solution/linear-tf1-gradient-reuse/timing.py runs three arms in every round -- parent, candidate, and a sham that is solution.py loaded a second time, hence byte-identical to the parent -- on the same state and activation, with CUDA events (no profiler, no replay), rotating the order each round. 31 rounds, 3 warm-up calls per arm, RTX 3060 Ti.",
+      "why_the_sham_matters": "the sham's paired difference against the parent is what this estimator reports when there is nothing to measure. Every candidate number below has to be read against it.",
+      "rows": [
+        {"state": "layer0/q/128", "parent_median_ms": 516.138, "effect_median_ms": 3.028, "effect_percent": 0.587, "effect_p25_p75": [-10.55, 18.99], "null_median_ms": 0.324, "null_p25_p75": [-13.865, 17.79], "rounds_parent_slower_effect": 19, "rounds_parent_slower_null": 16, "rounds": 31},
+        {"state": "layer0/q/512", "parent_median_ms": 864.229, "effect_median_ms": 7.608, "effect_percent": 0.880, "effect_p25_p75": [-12.716, 17.798], "null_median_ms": 6.939, "null_p25_p75": [-11.703, 21.314], "rounds_parent_slower_effect": 17, "rounds_parent_slower_null": 20, "rounds": 31},
+        {"state": "layer0/o/128", "parent_median_ms": 489.817, "effect_median_ms": -8.387, "effect_percent": -1.712, "effect_p25_p75": [-27.095, 20.536], "null_median_ms": -5.172, "null_p25_p75": [-14.561, 12.155], "rounds_parent_slower_effect": 13, "rounds_parent_slower_null": 13, "rounds": 31},
+        {"state": "layer0/o/512", "parent_median_ms": 529.109, "effect_median_ms": -9.333, "effect_percent": -1.764, "effect_p25_p75": [-17.236, 12.558], "null_median_ms": 0.943, "null_p25_p75": [-17.153, 11.211], "rounds_parent_slower_effect": 13, "rounds_parent_slower_null": 17, "rounds": 31}
+      ],
+      "reading": "the effect's sign is not consistent across the four states, its magnitude (3 to 9 ms) is two orders above the work the card actually removes (0.4 to 2.0 ms), and the null's own paired median moves by up to 6.9 ms. The estimator cannot resolve this effect, so no wall-clock saving is claimed from it."
+    },
+    "shard_level_timings_disagree_with_each_other": {
+      "in_process_paired_shard0": {"candidate_dynamic_s": 41.9098, "baseline_dynamic_s": 43.9954, "difference_s": -2.0856},
+      "in_process_paired_shard1": {"candidate_dynamic_s": 41.4343, "baseline_dynamic_s": 42.5994, "difference_s": -1.1651},
+      "cross_process_six_shards": {"candidate_dynamic_s": 253.7036, "baseline_dynamic_s": 251.0651, "difference_s": 2.6385, "per_call_ms": 7.853},
+      "cross_process_per_shard_difference_s": [0.8973, -0.178, 0.9225, 2.6025, 0.8805, -2.4861],
+      "reading": "the same quantity, measured two ways, gives the candidate 2.1 s faster on shard 0 in-process and 0.9 s slower on shard 0 cross-process. The per-shard cross-process differences span -2.49 s to +2.60 s. None of this is attributable to the mechanism, whose entire isolated cost is 0.386 ms per 128-row call -- 336 calls cannot produce a 2.6 s difference. For scale, v232's own in-process shard-0 pairing reported a 0.89 s difference for a change that provably executes identically (one character inside a subscript string).",
+      "conclusion": "these timings are recorded as evidence of the measurement's resolution, not as evidence about the candidate."
+    },
+    "where_the_call_time_actually_goes": {
+      "how": "workbench/full_solution/linear-tf1-gradient-reuse/attribute.py measures the whole call and then re-measures it with one component stubbed out. The stubs change the computed values, so no number from that script is a candidate measurement; what it produces is the denominator that says how much of a call the card can possibly reach.",
+      "rows": [
+        {"rows": 128, "full_ms": 534.0, "descent_off_ms": 480.6, "metric_stub_ms": 516.697, "mm_stub_ms": 522.033, "parent_dynamic_api_share_percent": 90.0, "descent_share_percent": 10.0, "metric_build_share_percent": 3.24, "all_mm_products_share_percent": 2.24, "wall_clock_over_event": 0.981},
+        {"rows": 512, "full_ms": 873.597, "descent_off_ms": 814.286, "metric_stub_ms": 843.189, "mm_stub_ms": 849.021, "parent_dynamic_api_share_percent": 93.21, "descent_share_percent": 6.79, "metric_build_share_percent": 3.48, "all_mm_products_share_percent": 2.81, "wall_clock_over_event": 0.991}
+      ],
+      "reading": "the parent's own dynamic activation API is 90-93% of a dynamic call. The descent this card edits is 7-10% of it, and every matrix product in the descent together is under 3%. A card that removes two of the eighteen products inside that 7-10% cannot be worth more than about a tenth of a percent of a call.",
+      "wall_clock_cross_check": "an independent perf_counter measurement around a synchronised call agrees with the CUDA event figure to within 2% (0.981x and 0.991x), so the ~500-870 ms per call is real and not an artifact of the event clock."
+    },
+    "official_seconds": null,
+    "official_seconds_note": "no official-seconds figure is recorded, not even a projection. The plan retires local time prediction and the official 300 s hard limit is the only time gate. The honest statement is that this candidate should cost the root's 292 s and slightly less in expectation, by an amount this machine cannot measure."
+  },
+  "lineage_note": {
+    "relationship_to_v230": "v233 is a direct descendant of the promoted v230 root (0f1af6db), the same parent v231 and v232 descend from.",
+    "relationship_to_v231_and_v232": "v233 does not carry v231's K = 2 arm and does not carry v232's L-QF1 quadratic correction. It is the root plus one guarded line. The three pending candidates are siblings, not a stack, and their local deltas must not be added together or read as a sequence.",
+    "build_choice": "the card was built on the confirmed root and not on the pending v232, exactly as the plan's section 3 directs ('if QF1 is still awaiting its official reading, still build on the confirmed root; do not fold an unpriced correction into this card')."
+  },
+  "declared_deviations": "none",
+  "local_decision": "no_effect (the local tool's own screen)",
+  "local_decision_note": "the evaluator's paired screen reports `effect: no_effect` with 336/336 zero deltas. That is the *intended* result for an output-equivalent candidate and not a rejection: the screen is looking for a gain change and this mechanism cannot produce one by construction. The screen's verdict is recorded verbatim rather than reinterpreted.",
+  "official_status": "PENDING",
+  "official_score": null,
+  "official_time_s": null,
+  "root_unchanged": "the root solution.py was not modified; this candidate lives only under solutions/ and workbench/"
+}

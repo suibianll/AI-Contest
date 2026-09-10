@@ -1,0 +1,80 @@
+{
+  "device": "NVIDIA GeForce RTX 3060 Ti",
+  "rounds": 21,
+  "states": [
+    {
+      "layer": 0,
+      "role": "q",
+      "rows": 128,
+      "channels": 2560,
+      "parts": {
+        "metric_cholesky_inverse": {
+          "median_ms": 20.382720947265625,
+          "min_ms": 18.91209602355957,
+          "max_ms": 26.1713924407959
+        },
+        "group_gram_index": {
+          "median_ms": 0.20582400262355804,
+          "min_ms": 0.023552000522613525,
+          "max_ms": 0.4904960095882416
+        },
+        "gradient_two_mm": {
+          "median_ms": 0.38604798913002014,
+          "min_ms": 0.3850240111351013,
+          "max_ms": 0.38809600472450256
+        },
+        "one_step_mm": {
+          "median_ms": 0.18611200153827667,
+          "min_ms": 0.18534399569034576,
+          "max_ms": 0.18636800348758698
+        },
+        "sixteen_step_mm": {
+          "median_ms": 5.050367832183838,
+          "min_ms": 4.612095832824707,
+          "max_ms": 6.28223991394043
+        }
+      },
+      "share_of_steps_plus_gradient": {
+        "gradient_two_mm": 0.07101149025732935,
+        "sixteen_step_mm": 0.9289885097426707
+      }
+    },
+    {
+      "layer": 0,
+      "role": "q",
+      "rows": 512,
+      "channels": 2560,
+      "parts": {
+        "metric_cholesky_inverse": {
+          "median_ms": 19.106624603271484,
+          "min_ms": 17.628896713256836,
+          "max_ms": 21.634048461914062
+        },
+        "group_gram_index": {
+          "median_ms": 0.2027519941329956,
+          "min_ms": 0.022495999932289124,
+          "max_ms": 0.7301120162010193
+        },
+        "gradient_two_mm": {
+          "median_ms": 2.031615972518921,
+          "min_ms": 1.9335039854049683,
+          "max_ms": 2.7412478923797607
+        },
+        "one_step_mm": {
+          "median_ms": 0.857088029384613,
+          "min_ms": 0.8243839740753174,
+          "max_ms": 1.018880009651184
+        },
+        "sixteen_step_mm": {
+          "median_ms": 16.907167434692383,
+          "min_ms": 15.797247886657715,
+          "max_ms": 19.67308807373047
+        }
+      },
+      "share_of_steps_plus_gradient": {
+        "gradient_two_mm": 0.10727278140502648,
+        "sixteen_step_mm": 0.8927272185949735
+      }
+    }
+  ]
+}

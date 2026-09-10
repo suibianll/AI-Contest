@@ -1,0 +1,58 @@
+function extracted from solution.py:12066 (7999 bytes)
+gradient expressions found in the function: 2
+  pre-loop   at line 53: (deployed - reference).mm(metric) + reference.mm(h_matrix)
+  in-loop    at line 94: (deployed - reference).mm(metric) + reference.mm(h_matrix)
+  in-loop statement index inside the pass loop: 0 (0 means it runs first each pass)
+  the loop iterates `_pass` over `range(_EM1_PASSES)`
+
+P1/P2 -- statements between the two gradient assignments: 22
+  value-preserving rebindings of deployed or reference: 1
+  line 86: rebinds `deployed` -- value-preserving: deployed = deployed.clone()
+  value-destroying rebindings or in-place mutations: 0
+
+  every statement between them, in order:
+    line 54: if not torch.isfinite(gradient).all():
+    diagnostics['em1_dynamic_arm'] = 'nonfinite-gradient'
+   
+    line 58: sign_v = sign.to(device=device, dtype=torch.float32).reshape(rows, blocks, 16, 4)
+    line 59: scale_v = (scale_factor.to(device=device, dtype=torch.float32).reshape(rows, blocks, 1, 1, 1) * scal
+    line 64: code_v = torch.round(mant.to(device=device, dtype=torch.float32).reshape(rows, blocks, 16, 4) / _EM1
+    line 69: element_index = torch.arange(4, device=device).reshape(4, 1).expand(4, 2).reshape(8)
+    line 70: step_values = torch.tensor([-1.0, 1.0], device=device).reshape(1, 2).expand(4, 2).reshape(8)
+    line 71: element_mask = torch.zeros(8, 4, dtype=torch.bool, device=device)
+    line 72: element_mask[torch.arange(8, device=device), element_index] = True
+    line 73: step_column = step_values.reshape(8, 1, 1, 1)
+    line 74: mask_row = element_mask.reshape(8, 1, 1, 4)
+    line 76: metric6 = metric.reshape(blocks, _EM1_GROUPS_PER_BLOCK, 4, blocks, _EM1_GROUPS_PER_BLOCK, 4)
+    line 77: block_index = torch.arange(blocks, device=device).reshape(blocks, 1, 1, 1)
+    line 78: group_index = torch.arange(_EM1_GROUPS_PER_BLOCK, device=device).reshape(1, _EM1_GROUPS_PER_BLOCK, 1
+    line 81: group_gram = metric6[:, :, :, :, :, :][block_index, group_index, :, block_index, group_index, :].res
+    line 85: deployed_before = deployed
+    line 86: deployed = deployed.clone()
+    line 87: code_orig = code_v.clone()
+    line 88: accepted_moves = torch.zeros((), device=device, dtype=torch.float32)
+    line 89: accepted_rows = torch.zeros((), device=device, dtype=torch.float32)
+    line 90: accepted_steps = 0
+    line 91: predicted_cost = torch.zeros((), device=device, dtype=torch.float32)
+    line 92: aborted = False
+
+P3 -- negative evidence: in-place operations anywhere in the function
+  accepted_moves: lines [142]
+  accepted_rows: lines [143]
+  accepted_steps: lines [144]
+  code_g: lines [140]
+  deployed: lines [131]  <-- WATCHED
+  diagnostics: lines [42, 50, 55]
+  element_mask: lines [72]
+  g_delta: lines [132]
+  gradient: lines [132]
+  predicted_cost: lines [141]
+  row_delta: lines [131]
+
+P1 nothing between the two gradients changes the value of deployed or reference: True
+P2 the in-loop gradient is the first statement of the `_pass` loop, so at _pass == 0 it evaluates the same expression on the same tensors: True
+P4 the pass body mutates deployed/gradient in place, so the reuse must be limited to pass 0: True
+  line 131: `deployed` mutated in place: deployed.add_(row_delta.mul_(keep_scale))
+  line 132: `gradient` mutated in place: gradient.add_(g_delta.mul_(keep_scale))
+
+PREMISE HOLDS. Reusing the pre-loop gradient for pass 0 is exactly output-equivalent, it removes one of the two gradient expressions the K=1 root executes per call, and the in-place mutations inside the pass body are what make the reuse unsafe for any pass after the first.

@@ -1,0 +1,20 @@
+{
+  "version": "v233",
+  "candidate_sha256": "0ec89710087d061bf9608196ad4d53a1c6be98c8a5595596a071ecd05a6821eb",
+  "parent_sha256": "0f1af6dbc207ff32b2c6be16987e9c4fe50f3f10747de26782ef52a6f2fab7bc",
+  "official_status": "PENDING",
+  "official_score": null,
+  "official_time_s": null,
+  "official_time_display": null,
+  "reported_by": null,
+  "reported_at": null,
+  "decision": "PENDING: submitted to the user's batched official evaluation queue. The plan's section 3 fixes this outcome in advance -- 'this card permits a candidate that is output-equivalent but executes differently; 官方同分且更快可作为完整工作父，官方分数下降或超时则不晋级'. Both halves of that rule are recorded here so the reading is decided by the number and not after the fact: an equal official score with a faster official time promotes this candidate to a working parent; a lower score or a timeout does not.",
+  "local_projection_seconds": null,
+  "local_projection_margin_seconds": null,
+  "local_projection_basis": null,
+  "projection_note": "no projection is recorded. The mechanism removes exactly two matrix products per dynamic call -- measured at 0.386 ms on 128 rows and 2.032 ms on 512 rows, against calls that cost 534 ms and 874 ms, i.e. 0.072% and 0.233% -- and its sign could not be resolved locally: the three-arm paired estimator with a byte-identical sham arm reported effects of +3.0 / +7.6 / -8.4 / -9.3 ms across four states while the sham's own median drifted by up to +6.9 ms, and the six-shard and in-process timings disagree with each other in sign. The honest statement is that this candidate should cost the root's 292 s and slightly less in expectation, by an amount no clock on this machine can resolve. Local measurement cannot settle official seconds and the plan retires local time prediction, so the field is left null rather than filled with an estimate.",
+  "note": "The recorded official baseline is the promoted v230 root at 18428 / 292s. v233 is a descendant of that root, not of the pending v231 or v232; it carries neither the K=2 arm nor the L-QF1 quadratic correction, so an official reading here measures the two removed products at K=1 and is not expected to be additive with any v231 or v232 result. Every output field is bit-identical to the root, so any score difference would be a difference in the encoder's own arithmetic, not in the mechanism.",
+  "official_scored_sha256": null,
+  "archive_sha256": "0ec89710087d061bf9608196ad4d53a1c6be98c8a5595596a071ecd05a6821eb",
+  "candidate_type": "complete Linear L-TF1 candidate (v230 root plus one guarded loop head); the only v233 under solutions/ at archive time"
+}

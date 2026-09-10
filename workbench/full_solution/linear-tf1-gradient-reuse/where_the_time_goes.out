@@ -1,0 +1,16 @@
+
+=== layer0/q  rows=128  channels=2560 ===
+     metric_cholesky_inverse    20.3827 ms   [18.9121, 26.1714]
+            group_gram_index     0.2058 ms   [0.0236, 0.4905]
+             gradient_two_mm     0.3860 ms   [0.3850, 0.3881]
+                 one_step_mm     0.1861 ms   [0.1853, 0.1864]
+             sixteen_step_mm     5.0504 ms   [4.6121, 6.2822]
+
+=== layer0/q  rows=512  channels=2560 ===
+     metric_cholesky_inverse    19.1066 ms   [17.6289, 21.6340]
+            group_gram_index     0.2028 ms   [0.0225, 0.7301]
+             gradient_two_mm     2.0316 ms   [1.9335, 2.7412]
+                 one_step_mm     0.8571 ms   [0.8244, 1.0189]
+             sixteen_step_mm    16.9072 ms   [15.7972, 19.6731]
+
+wrote where_the_time_goes.json
