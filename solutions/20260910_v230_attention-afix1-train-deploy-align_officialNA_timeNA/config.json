@@ -1,0 +1,13 @@
+{
+  "run_id": "attention-afix1-train-deploy-align",
+  "version": "v230",
+  "mechanism": "A-FIX1 train/deploy forward alignment: inside _a2_train_rotation, Q/K quantization in the training forward switched from bare _dense_to_hif4 to the full deployment encoding (same hif4_dynamic_quantize_q/k path as the gate, player state carrying current rotation/center); STE backward unchanged; parameterization/steps/lr/windows/gate identical to root",
+  "parent": "v202 Linear + v195 Attention complete root",
+  "parent_sha256": "56dc805d6e5a3aef896db8021045740292735725d688b48e3d4393e55efcb2bd",
+  "candidate_sha256": "c2ff4ea0d6a3823e29351b616c330fa9358b588934e73019c382183130dfcd6f",
+  "fit_data": "same as root: Adam 32 steps on the calibration window, single-window true deployment-path gate per layer; only the training forward quantizer changed",
+  "coordinate": "same (R, c) manifold as root; changed objective fidelity only, no new transform family, no new parameters",
+  "solver": "root Adam (lr/beta/clip from root _A2_TRAIN_* constants); 32 steps",
+  "candidate_count": 1,
+  "official_status": "unregistered/NA"
+}

@@ -20,7 +20,14 @@ K 按预注册的回退规则降为 1，两种折算口径把官方时间夹在 
 [执行记录](../../../logs/execution/2026-09-10-linear-groupstep-schedule.md)。
 
 **Attention 执行附录：**
-[A2 训练/部署前向对齐计划（A-FIX1）](parallel/2026-09-10-attention-train-deploy-align-plan.md)。
+[A2 训练/部署前向对齐计划（A-FIX1）](parallel/2026-09-10-attention-train-deploy-align-plan.md)
+已执行完成：归档 v230（本地净负、官方待定，`solutions/20260910_v230_attention-afix1-train-deploy-align_officialNA_timeNA/`）。
+六 shard 等权 `-0.004884`（29/31/12，72 case）；机制可达、非等价（种子探针证明对齐前向把
+训练推向流形上不同的点）；层15 重训 rotation 再次受损 `-0.013820`（继 v227 后第二次），
+确认根的 rotation 臂不宜重训；按新执行规则本地负向不截断官方探索，官方 `unregistered/NA`，
+待用户统一评测。执行记录见
+[执行记录](../../../logs/execution/2026-09-10-attention-afix1-train-deploy-align.md)。
+注意与 L-EM2 的 v230 编号冲突，引用须写全目录名。
 依据[推进瓶颈审计](../optimization-stall-analysis-2026-09-10.md) §1/§5.3：训练前向裸
 `_dense_to_hif4` 与 gate 完整部署路径不一致（代码已核实）。
 注：审计 §3 指出"规则级空间全部裁决完毕"的表述证据不足，此处更正为"规则级已盘点方向均有

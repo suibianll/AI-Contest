@@ -1,0 +1,41 @@
+[L-R2] rank2 reachable=1 vtu_cross_max=1.863e-09
+[COMBINED-LINEAR-SAMPLE-ENERGY] reachable=1 blocks=2
+[L-R2] rank2 reachable=1 vtu_cross_max=1.863e-09
+[COMBINED-LINEAR-SAMPLE-ENERGY] reachable=1 blocks=2
+========================================================================
+[control1_zero_step_bitwise] pass=True
+    same_arm: True
+    q_bitwise: True
+    k_bitwise: True
+    v_bitwise: True
+    final_output_bitwise: True
+[control2_forward_consistency] pass=True
+    recorded_q_calls: 8
+    recorded_k_calls: 8
+    expected_calls_2steps_x_windows: 8
+    call_count_ok: True
+    direct_call_bitwise: True
+    player_state_shapes_ok: True
+    subsampled_tokens_match: True
+    rotation_updates_between_calls: True
+    train_loss_first_final: (1.0000872611999512, 1.0000488758087158)
+[control3_standalone_import] pass=True
+    missing_apis: []
+    standalone_end_to_end_finite: True
+[control3b_validate_state] pass=True
+    state_legal: True
+    deployed_params_legal: True
+[control4_v_and_linear] pass=True
+    v_bitwise: True
+    linear_weight_bitwise: True
+    linear_activation_bitwise: True
+[control5_records] pass=True
+    root_audit: {'a2_arm': 'rotation', 'a2_gate_loss_identity': 1.0, 'a2_gate_loss_rotation': 0.9999929242794987, 'a2_first_train_loss': None, 'a2_train_loss': 1.0000336170196533, 'a2_steps': 32, 'a2_ortho_error': 3.5762786865234375e-07}
+    cand_audit: {'a2_arm': 'identity', 'a2_gate_loss_identity': 1.0, 'a2_gate_loss_rotation': 1.0000408462047121, 'a2_first_train_loss': 1.0000965595245361, 'a2_train_loss': 1.0000464916229248, 'a2_steps': 32, 'a2_ortho_error': 3.5762786865234375e-07}
+    rotation_diff_frobenius: None
+    center_diff_frobenius: None
+    calib_seconds_root: 2.596
+    calib_seconds_candidate: 4.661
+    device: cuda
+========================================================================
+OVERALL: PASS

@@ -1,6 +1,6 @@
 # Attention A2 训练/部署前向对齐计划（A-FIX1）
 
-> 状态：ACTIVE 执行附录，2026-09-10。
+> 状态：已执行完成——本地净负、官方待定（v230），2026-09-10。
 > 从属于当前活动总计划（Linear 线）。当前完整根为 v202 Linear + v195 Attention，官方 `18053/281s`。
 > 本文件只负责 Attention A-FIX1；版本登记、组合与根切换由总协调线处理。
 > 依据：[推进瓶颈审计](../../optimization-stall-analysis-2026-09-10.md) §1 与 §5.3——
@@ -49,3 +49,24 @@ rotation/center 被优化到"简化路径下好"的点，部署路径下不一�
 工作目录：`workbench/full_solution/attention-afix1-train-deploy-align/`。
 日志：`logs/execution/2026-09-10-attention-afix1-train-deploy-align.md`。
 输出：`artifacts/proxy_v3/attention-afix1-<run-id>/`。
+
+## 5. 执行结果（2026-09-10，v230）
+
+- 归档：`solutions/20260910_v230_attention-afix1-train-deploy-align_officialNA_timeNA/`，候选
+  SHA256 `c2ff4ea0d6a3823e29351b616c330fa9358b588934e73019c382183130dfcd6f`；执行日志
+  `logs/execution/2026-09-10-attention-afix1-train-deploy-align.md`。
+- Control 全部 PASS：0 步逐位恢复父；训练前向与直接调用部署 API 逐位一致（8 次 Q + 8 次 K
+  录制核对）；六 API 独立导入；`validate_state` 通过；V/Linear 逐位不变。种子探针证明候选
+  与根非等价（对齐前向把训练推向 (R, c) 流形上不同的点）。
+- 六 shard（72 case，`--stop-after-nonpositive 6` 跑满）等权均值 `-0.004884`（29/31/12）：
+  层0 `-0.000133`（7/5/0）、层1 `-0.004687`（8/4/0）、层8 `+0.000000`（0/0/12）、
+  层15 `-0.013820`（4/8/0）、层22 `+0.001307`（7/5/0）、层5 `-0.011968`（3/9/0）。
+  candidate overall `+0.529114` vs baseline `+0.533998`；API total（诊断，1 次校准缓存命中）
+  34.475s；shard0 校准 API 11.017s（根约 8s，对齐前向约 1.4× 校准开销，§2 已声明）。
+- 解读：机制可达、非等价但本地净负；层15 在 v227 与本卡两次重训 rotation 都明显变差，而
+  层15 在根中接受 rotation（gate +2.43%）——「冻结父 rotation 叠加增量」与「重训 rotation」
+  的对照证据再次确认根的 rotation 臂不宜重训。
+- 裁决：本地净负按新规则只作诊断，不标 REJECTED；官方状态 `unregistered/NA`，待用户统一
+  官方评测。根保持 v202 Linear + v195 Attention（`18053/281s`）不变。
+- 版本号注意：与并行 Linear 线 L-EM2 的 v230 构成编号冲突（继 v204/v205 后第二次），按
+  既有先例不重命名目录，引用须写全目录名。
