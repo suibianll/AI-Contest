@@ -96,6 +96,7 @@
 | [standard-linear_v192-attn](20260908_standard-linear_v192-attn_scoreNA_timeNA/) | 全对称零迹矩阵残差 | `14427 / 272s` | **+22** | 有效但 +34s，完整包 TIMEOUT，不可部署 |
 | [standard-linear_v194-attn-speed](20260908_standard-linear_v194-attn-speed_scoreNA_timeNA/) | A2/R3 校准等价提速 | `14405 / 234s` | **0** | 侧隔离 −4s 但完整包 `285s`（+5s），提速路线不成立 |
 | [standard-linear_v195-attn](20260908_standard-linear_v195-attn_scoreNA_timeNA/) | K-center 梯度聚合修复 | `14426 / 243s` | **+21** | 与完整包 `18053−18032=+21` 交叉验证，已在根上兑现 |
+| [standard-linear_v229-attn](20260910_standard-linear_v229-attn_scoreNA_timeNA/) | A-MC1 K per-call 均值再定心（v195 系根 Attention + recenter） | `unregistered/NA` | 待定 | 本地六 shard 与 v229 逐位一致（组合完整性核验通过）；对照基准为本表 v195 行 `14426/243s`，正向差值即 A-MC1 的官方侧价值；完整包 TIMEOUT 是否由 Linear 校准占用导致可由此判读 |
 
 **Attention Correctness Hardening（2026-09-08）：** [AC0](continuous_attention_ac0-correctness-hardened/result.md)
 （`F817E4C2…`，父 R3 `A5C679D7…`）保留为 Attention 正确性参考：原子 Q/K-pair

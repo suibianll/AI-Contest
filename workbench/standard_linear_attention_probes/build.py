@@ -78,6 +78,18 @@ CANDIDATES = (
         / "solutions"
         / "20260908_standard-linear_v195-attn_scoreNA_timeNA",
     },
+    {
+        "name": "standard-linear_v229-attn",
+        "attention_source": (
+            ROOT
+            / "solutions"
+            / "20260910_v229_attention-amc1-k-mean-recenter_rejected_scoreNA_timeNA"
+            / "solution.py"
+        ),
+        "output_dir": ROOT
+        / "solutions"
+        / "20260910_standard-linear_v229-attn_scoreNA_timeNA",
+    },
 )
 
 

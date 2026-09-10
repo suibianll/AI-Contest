@@ -62,3 +62,17 @@
   不受 v227/v228 的窗口过拟合失败模式影响。**层5 如实记录：gate 接受（全 folds 真实 MSE
   严格改善）但 eval 窗口净负 `-0.009628`（4/8/0），属 gate/evals 口径差异。**
 - 根不变：v202 Linear + v195 Attention，官方 `18053/281s`。
+
+## 附：标准 Linear 侧隔离组合（2026-09-10，用户指示）
+
+- 组合：`solutions/20260910_standard-linear_v229-attn_scoreNA_timeNA/solution.py`
+  （v229 attention 源码 + v162 标准 Linear 尾块，构建器
+  `workbench/standard_linear_attention_probes/build.py`，SHA256
+  `ffe736a3face76defe06fc4b66c63b09364359ad524c27bd7a7cede4e7eea931`）。
+- 静态核验：verify.py PASS（组成 + 六 API）。
+- 运行时核验：`artifacts/proxy_v3/standard-linear-v229-attn-equiv-20260910/`，
+  组合 vs v229 归档做 attention-only 六 shard 配对，72 case 全部逐位一致
+  （delta 全零，overall `+0.548920` 与 v229 精确一致）——组合未改变 attention 行为。
+- 用途：完整包 v229 官方 TIMEOUT；侧隔离形态剥离 Linear 校准（侧基线 238s 口径），
+  官方侧分对照 `standard-linear_v195-attn` 的 `14426/243s`，正向差值即 A-MC1 官方侧价值，
+  同时判读 TIMEOUT 是否由完整包 Linear 校准占用导致。官方评测待用户统一进行。
