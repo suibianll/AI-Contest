@@ -19,6 +19,9 @@
   饱和"或"A@W 拟合族无效"（`logs/execution/2026-09-08-lc1-lc2-method-audit.md`）。
   L-C3（objective-only）官方 `18031/293s`（−1/+13s）REJECTED
   （`logs/execution/2026-09-08-lc3-official-result.md`）。
+- **⚠ 2026-09-11 说明：A@W 禁令已全面失效**（`logs/execution/2026-09-11-aw-restriction-lifted.md`）。
+  下面这条 A@W 拟合族的关闭**依据是数学论证、与禁令无关**，**不因禁令解除而重开**；
+  若要重开，必须给出与"自适应 scale 吸收增益 / 重编码整数码必劣于父"不同的机制。
 - A@W 拟合族增益/additive 形态（v197 官方 `17277/285s` −776、AW1–7、AW9）结构性自闭：
   自适应 scale 吸收增益，重编码整数码必劣于父，与数据无关，不再注册该形态；无结构逐码贪心
   （AW8）过拟合校准窗口。归因见 `logs/execution/2026-09-09-aw-fitting-family-analysis.md`。

@@ -1,0 +1,20 @@
+device=auto
+[L 0] samples so far 48
+[L 1] samples so far 96
+[L 5] samples so far 144
+[L 8] samples so far 192
+[L15] samples so far 240
+[L22] samples so far 288
+
+INDEPENDENT CHECK  analytic (1/d)||dq G_t||^2  vs  measured row ||dO[t]||^2:
+  n=288  ratio mean=0.996935  range=[0.853480, 1.347049]   (1.000 = agree)
+
+samples=288  distinct TRUE values=288
+TRUE mean=3.038552e+00
+  spearman(  pred_head, TRUE) = +0.6677
+  spearman(pred_metric, TRUE) = +0.6462
+  spearman(  pred_diag, TRUE) = +0.6628
+  spearman( pred_ident, TRUE) = +0.4664
+
+pre-registered criterion: spearman(Mbar, TRUE) >= 0.5 AND > both baselines  ->  FAIL
+wrote D:\工作内容\AI竞赛\workbench\full_solution\attention-compiled-metric\cm1-correlation.json

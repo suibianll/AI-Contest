@@ -2000,6 +2000,10 @@ C38 后 cap-oracle 复跑（CUDA amax6 offset0）：
 - C29/C30 专用前置探针及生成 JSON 已从活跃 `evaluator/` 删除；历史
   数值保留在本日志和 v029 solution archive。通用真实评测、合规 guard、
   holdout、误差分解、cap-oracle 和 Attention 安全矩阵继续保留。
+> **⚠ 2026-09-11 失效标注**：本行所述"禁止以 `A@W` 拟合/反推 `Q(A)`"**已失效**；
+> 下方 2026-08-28 的收窄版口径**一并失效**。`A@W` 现无任何限制。
+> 见 `logs/execution/2026-09-11-aw-restriction-lifted.md`。原文保留不改。
+
 - 后续只有四类硬约束：禁止以 `A@W` 拟合/反推 `Q(A)`、输出/API/state
   合法、最终官方时间严格小于 300 秒、不得使用 holdout/官方反馈调参。
 - oracle 与局部 proxy 只用于诊断；不能替代真实部署路径评测，也不能凭
@@ -2013,6 +2017,10 @@ C38 后 cap-oracle 复跑（CUDA amax6 offset0）：
   当时判断，不是当前执行指令或数学结论。
 
 ## 2026-08-28：`A@W` 离线校准口径更正
+
+> **⚠ 2026-09-11 失效标注：本节口径（"不得用 `A@W` 信息优化激活侧、不得写入 `activation_state`"）
+> 已失效**，用户确认 `A@W` 现无任何限制。原文保留以供追溯。
+> 见 `logs/execution/2026-09-11-aw-restriction-lifted.md`。
 
 此前本日志中“删除全部 Linear 输出监督”以及“`A@W` 红线”的表述，记录的是
 当时采用的保守实现策略，不应继续解释为官方禁止所有离线 `A@W`。根据官方

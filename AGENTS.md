@@ -32,6 +32,7 @@
 - 已官方确认的 v231 根原样保留其动态度量求逆；该已计分实现是现存例外，后续优先移出动态路径，不为规则整理改写已计分源码。新候选不得新增完整动态求逆。
 - 动态 API 只执行校准编译的规则，不带入校准搜索、完整矩阵求逆或未限制的 Python 候选循环。Attention 动态 API 另禁止 Gram contraction 和候选循环；复杂计算放校准阶段。
 - Linear 优化实际输出误差 `XW^T - Q(XR)Q(WR^{-T})^T`；变换保持连续乘积不变，Gram/Hessian 与最终部署坐标一致。operand MSE、连续代理下降不能替代真实硬编码输出证据。
+- **`A@W` 无任何限制（2026-09-11 用户确认）。** `赛事说明书.txt:191` 的"A@W 反解 `Q(A)`"禁令**已失效**，2026-08-28 的收窄版（"不得用 `A@W` 优化激活侧、不得写入 `activation_state`"）**一并失效**。`A@W` 及其输出/残差可用于任何离线量化器优化，并可写入任何 state。**不得再以这条禁令为由关闭任何机制。** 全仓清点见 `logs/execution/2026-09-11-aw-restriction-lifted.md`。注意：`docs/closed-mechanism-evidence.md` 中 A@W 拟合族的关闭依据是**数学性的**（自适应 scale 吸收增益、重编码整数码必劣于父、与数据无关），**不因禁令解除而重开**。
 - Linear 使用全部 Qwen3.5-4B 校准数据做 A@W 低维拟合，不拆 fit/select，不以泛化、独立窗口负向否决探索。Attention 参数学习使用 calibration folds，按固定多折规则聚合，学习/选择/独立验证职责明确；holdout 不参与选参或提交否决。
 - 记录 attempted/accepted、硬码变化及最终输出变化，验证真实分支可达；死分支、no-op、单个近似求解器失败不证明整族饱和。
 - 新机制先按需查[已关闭机制与证据边界](docs/closed-mechanism-evidence.md)，保留具体实现及其参数邻域关闭约束。不扫 threshold/seed/alpha/offset/fold/coverage/候选数量，不增加模型/layer/role 专属路由。修复已证实错误或改变目标/求解算法须说明实质差异，不能只换名称。

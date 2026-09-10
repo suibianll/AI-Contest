@@ -1,0 +1,361 @@
+{
+  "scope": "six real attention layers, root's own parent encoding; CPU only",
+  "layers": [
+    0,
+    1,
+    5,
+    8,
+    15,
+    22
+  ],
+  "max_tokens": 96,
+  "max_windows": 4,
+  "scales": [
+    0.0,
+    0.25,
+    0.5,
+    0.75,
+    1.0,
+    1.5,
+    2.0,
+    4.0
+  ],
+  "rows": [
+    {
+      "layer": 0,
+      "window": 0,
+      "tokens": 10,
+      "grad_norm": 0.0003256029317724953,
+      "theta_norm": 0.28590462949941714,
+      "theta_grad_cos": -0.34114904392058065,
+      "relaxed_parent": 0.0015871362783397252,
+      "relaxed_theta": 0.001555363062778143,
+      "parent_hard_mse": 0.0015871362783397252,
+      "scan": [
+        {
+          "scale": 0.0,
+          "hard_mse": 0.0015871362783397252,
+          "changed": 0
+        },
+        {
+          "scale": 0.25,
+          "hard_mse": 0.0015871362783397252,
+          "changed": 0
+        },
+        {
+          "scale": 0.5,
+          "hard_mse": 0.0015871362783397252,
+          "changed": 0
+        },
+        {
+          "scale": 0.75,
+          "hard_mse": 0.0015871362783397252,
+          "changed": 0
+        },
+        {
+          "scale": 1.0,
+          "hard_mse": 0.0015871362783397252,
+          "changed": 0
+        },
+        {
+          "scale": 1.5,
+          "hard_mse": 0.0015871362783397252,
+          "changed": 0
+        },
+        {
+          "scale": 2.0,
+          "hard_mse": 0.0016459560613182414,
+          "changed": 80
+        },
+        {
+          "scale": 4.0,
+          "hard_mse": 0.002046649243143532,
+          "changed": 5468
+        }
+      ],
+      "best_scale": 0.0,
+      "best_hard_mse": 0.0015871362783397252,
+      "best_changed": 0
+    },
+    {
+      "layer": 1,
+      "window": 0,
+      "tokens": 10,
+      "grad_norm": 0.002381702887081447,
+      "theta_norm": 0.16849187135969101,
+      "theta_grad_cos": -0.3668670065417241,
+      "relaxed_parent": 0.005246853785243796,
+      "relaxed_theta": 0.005098788239912609,
+      "parent_hard_mse": 0.005246853785243796,
+      "scan": [
+        {
+          "scale": 0.0,
+          "hard_mse": 0.005246853785243796,
+          "changed": 0
+        },
+        {
+          "scale": 0.25,
+          "hard_mse": 0.005246853785243796,
+          "changed": 0
+        },
+        {
+          "scale": 0.5,
+          "hard_mse": 0.005246853785243796,
+          "changed": 0
+        },
+        {
+          "scale": 0.75,
+          "hard_mse": 0.005246853785243796,
+          "changed": 0
+        },
+        {
+          "scale": 1.0,
+          "hard_mse": 0.005246853785243796,
+          "changed": 0
+        },
+        {
+          "scale": 1.5,
+          "hard_mse": 0.005246853785243796,
+          "changed": 0
+        },
+        {
+          "scale": 2.0,
+          "hard_mse": 0.005246853785243796,
+          "changed": 0
+        },
+        {
+          "scale": 4.0,
+          "hard_mse": 0.01374158843803076,
+          "changed": 4962
+        }
+      ],
+      "best_scale": 0.0,
+      "best_hard_mse": 0.005246853785243796,
+      "best_changed": 0
+    },
+    {
+      "layer": 5,
+      "window": 0,
+      "tokens": 10,
+      "grad_norm": 0.0010001686423156838,
+      "theta_norm": 0.17064008198733904,
+      "theta_grad_cos": -0.5064718424997129,
+      "relaxed_parent": 0.005187935237040616,
+      "relaxed_theta": 0.005100452454313911,
+      "parent_hard_mse": 0.005187935237040616,
+      "scan": [
+        {
+          "scale": 0.0,
+          "hard_mse": 0.005187935237040616,
+          "changed": 0
+        },
+        {
+          "scale": 0.25,
+          "hard_mse": 0.005187935237040616,
+          "changed": 0
+        },
+        {
+          "scale": 0.5,
+          "hard_mse": 0.005187935237040616,
+          "changed": 0
+        },
+        {
+          "scale": 0.75,
+          "hard_mse": 0.005187935237040616,
+          "changed": 0
+        },
+        {
+          "scale": 1.0,
+          "hard_mse": 0.005187935237040616,
+          "changed": 0
+        },
+        {
+          "scale": 1.5,
+          "hard_mse": 0.005187935237040616,
+          "changed": 0
+        },
+        {
+          "scale": 2.0,
+          "hard_mse": 0.005187935237040616,
+          "changed": 0
+        },
+        {
+          "scale": 4.0,
+          "hard_mse": 0.0066434900147119445,
+          "changed": 1880
+        }
+      ],
+      "best_scale": 0.0,
+      "best_hard_mse": 0.005187935237040616,
+      "best_changed": 0
+    },
+    {
+      "layer": 8,
+      "window": 0,
+      "tokens": 10,
+      "grad_norm": 0.011444265065280351,
+      "theta_norm": 0.3348478554776077,
+      "theta_grad_cos": -0.5936442532975176,
+      "relaxed_parent": 0.012238517549389585,
+      "relaxed_theta": 0.009967986585506494,
+      "parent_hard_mse": 0.012238517549389585,
+      "scan": [
+        {
+          "scale": 0.0,
+          "hard_mse": 0.012238517549389585,
+          "changed": 0
+        },
+        {
+          "scale": 0.25,
+          "hard_mse": 0.012238517549389585,
+          "changed": 0
+        },
+        {
+          "scale": 0.5,
+          "hard_mse": 0.012238517549389585,
+          "changed": 0
+        },
+        {
+          "scale": 0.75,
+          "hard_mse": 0.012238517549389585,
+          "changed": 0
+        },
+        {
+          "scale": 1.0,
+          "hard_mse": 0.012238517549389585,
+          "changed": 0
+        },
+        {
+          "scale": 1.5,
+          "hard_mse": 0.01307684257048966,
+          "changed": 321
+        },
+        {
+          "scale": 2.0,
+          "hard_mse": 0.018079654540530107,
+          "changed": 1382
+        },
+        {
+          "scale": 4.0,
+          "hard_mse": 0.021127213232483125,
+          "changed": 6641
+        }
+      ],
+      "best_scale": 0.0,
+      "best_hard_mse": 0.012238517549389585,
+      "best_changed": 0
+    },
+    {
+      "layer": 15,
+      "window": 0,
+      "tokens": 10,
+      "grad_norm": 0.00043098795574441533,
+      "theta_norm": 0.14455046296373852,
+      "theta_grad_cos": -0.5371393469766532,
+      "relaxed_parent": 0.004256887302836328,
+      "relaxed_theta": 0.004223223037197327,
+      "parent_hard_mse": 0.004256887302836328,
+      "scan": [
+        {
+          "scale": 0.0,
+          "hard_mse": 0.004256887302836328,
+          "changed": 0
+        },
+        {
+          "scale": 0.25,
+          "hard_mse": 0.004256887302836328,
+          "changed": 0
+        },
+        {
+          "scale": 0.5,
+          "hard_mse": 0.004256887302836328,
+          "changed": 0
+        },
+        {
+          "scale": 0.75,
+          "hard_mse": 0.004256887302836328,
+          "changed": 0
+        },
+        {
+          "scale": 1.0,
+          "hard_mse": 0.004256887302836328,
+          "changed": 0
+        },
+        {
+          "scale": 1.5,
+          "hard_mse": 0.004256887302836328,
+          "changed": 0
+        },
+        {
+          "scale": 2.0,
+          "hard_mse": 0.004256887302836328,
+          "changed": 0
+        },
+        {
+          "scale": 4.0,
+          "hard_mse": 0.005340144035238405,
+          "changed": 313
+        }
+      ],
+      "best_scale": 0.0,
+      "best_hard_mse": 0.004256887302836328,
+      "best_changed": 0
+    },
+    {
+      "layer": 22,
+      "window": 0,
+      "tokens": 10,
+      "grad_norm": 0.004789822724526246,
+      "theta_norm": 0.37447855722101314,
+      "theta_grad_cos": -0.6031027473930014,
+      "relaxed_parent": 0.03145668518846567,
+      "relaxed_theta": 0.03034206390029536,
+      "parent_hard_mse": 0.03145668518846567,
+      "scan": [
+        {
+          "scale": 0.0,
+          "hard_mse": 0.03145668518846567,
+          "changed": 0
+        },
+        {
+          "scale": 0.25,
+          "hard_mse": 0.03145668518846567,
+          "changed": 0
+        },
+        {
+          "scale": 0.5,
+          "hard_mse": 0.03145668518846567,
+          "changed": 0
+        },
+        {
+          "scale": 0.75,
+          "hard_mse": 0.03145668518846567,
+          "changed": 0
+        },
+        {
+          "scale": 1.0,
+          "hard_mse": 0.03146089338382135,
+          "changed": 117
+        },
+        {
+          "scale": 1.5,
+          "hard_mse": 0.030887216906253834,
+          "changed": 2263
+        },
+        {
+          "scale": 2.0,
+          "hard_mse": 0.03149362756872189,
+          "changed": 4516
+        },
+        {
+          "scale": 4.0,
+          "hard_mse": 0.035936851124656846,
+          "changed": 14210
+        }
+      ],
+      "best_scale": 1.5,
+      "best_hard_mse": 0.030887216906253834,
+      "best_changed": 2263
+    }
+  ]
+}
