@@ -104,13 +104,19 @@ L-XR1 的归因是明确的：块外 `G` 分量主导 `offblock_rel` 中位 0.82
 ### 4.1 校准编译（`hif4_calibration_and_quantize_weight` 后处理）
 
 1. 完整执行父校准/Weight 编码，取得最终 `W_hat` 与父状态（`h_inv` 已在父状态中）；
-2. 用父的 smooth/permutation 口径重建 dense `W`，计算 `C = W^T W_hat`、`G = W_hat^T W_hat`、
-   `H = G - C`；
+2. `W` 取输入 weight 对的 nvfp4 解码（评测器 `ref_weight = dequantize_nvfp4(*weights[...])`
+   的同一口径），计算 `C = W^T W_hat`、`G = W_hat^T W_hat`、`H = G - C`；
+   **口径判据（2026-09-10 实测，替换原“按父 smooth/permutation 重建 dense W”的写法）**：
+   父对 Weight 做变换、对 Activation 做逆变换，两侧解码后仍在模型口径下，
+   故 `L` 的参考权重就是原始 nvfp4 解码。实测 `_em1_reconstruct_dense_weight`
+   （还原到部署口径）与 `W_raw` 相差 141%，用它建 `J` 时 `L - J` 不是常数
+   （`X` 微扰下 −4.0959e6 → −4.0848e6），用 `W_raw` 时恒为常数（±2e-11）。
+   `verify.py` 的 `predicted_cost vs true_dL` 与梯度有限差分两项 control 覆盖该口径；
 3. 由 `h_inv` 与 `W_hat` 求 `c = mean(diag(h_inv^{-1} - G))`，只保存标量 `c` 与矩阵 `H`（fp32）；
 4. 仅对 `in_features <= 4096` 的层保存 `H`；宽层保持父实现（无新状态）；
 5. 不搜索 rank、阻尼、层名单、覆盖率、接受阈值；不保存 `G`（动态阶段重建）。
 
-新增状态字段只有 `em1_h`（`in x in` fp32）、`em1_ridge`（标量）、`em1_version`。
+新增状态字段只有 `state["em1"] = {"h": in x in fp32, "ridge": 标量, "channels", "version"}`。
 Weight 五字段、Linear transform、permutation 和父 activation state 其他字段保持不变。
 每 shard 新增约 `(5 x 26 + 68) x 4 = 0.79 GB`（相对父状态 2.15 GB 为 +37%），
 磁盘校准缓存由 6.0 GB 增至约 6.8 GB。

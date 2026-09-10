@@ -1,0 +1,40 @@
+{
+  "run_id": "linear-em1-exact-metric-refinement",
+  "version": "unassigned",
+  "mechanism": "exact-metric sequential activation mantissa code descent on the ideal output-achievable target",
+  "plan": "docs/superpowers/plans/2026-09-10-linear-exact-metric-refinement-plan.md",
+  "parent": "solution.py",
+  "parent_sha256": "56dc805d6e5a3aef896db8021045740292735725d688b48e3d4393e55efcb2bd",
+  "candidate_sha256": "d9bffd7b2953b74a93550b27a2d577e6e4555e42799cd5c7bcce9802707affe2",
+  "build": "append-only: parent bytes + fixed separator + implementation module",
+  "hooks": [
+    "hif4_calibration_and_quantize_weight (post-processor: store H = (W_hat-W)^T W_hat and the parent ridge c)",
+    "hif4_dynamic_quantize_activation (post-processor: rebuild G and run one exact sequential descent pass)"
+  ],
+  "untouched": [
+    "parent weight encoder and every shared HiF4 helper (byte-identical)",
+    "hif4_calibration_attention / hif4_dynamic_quantize_q / _k / _v (byte-identical)"
+  ],
+  "fixed_choices": {
+    "target": "ideal J(X) = ||(X - T) W_hat^T||^2 with T = X_ref C G^{-1}; L - J is independent of X",
+    "metric": "G = h_inv^{-1} - c I rebuilt from the parent state, no rank truncation, no low-rank sketch",
+    "ridge": "c = mean(diag(h_inv^{-1} - W_hat^T W_hat)), stored as a scalar at calibration",
+    "cross_matrix": "H = (W_hat - W)^T W_hat stored fp32 per layer, W = nvfp4 decode of the weight pair (the evaluator's ref_weight frame; a parent-frame reconstruction is rejected by the L-J invariance test)",
+    "candidate_set": "one element of one natural 4-element group, mantissa code +-1 at fixed scale_factor/lv2/lv3",
+    "candidates_per_group": 8,
+    "groups_per_64block": 16,
+    "block_order": "ascending natural 64-channel blocks, groups 0..15 in order",
+    "passes": 1,
+    "gradient_refresh": "exact after every accepted move: g += delta G[sl, :]",
+    "accept_rule": "exact quadratic 2 <delta, g_cur> + delta^T G_gg delta < 0",
+    "layers": "in_features <= 4096 (q/k/v/o/fc_gate/fc_up); proj (9216) deferred to L-EM2"
+  },
+  "candidate_count": 1,
+  "verify": {
+    "script": "verify.py",
+    "controls": "A append-only+isolated import, B parent-off bit identity+wide bypass, C H/ridge/G recovery, D monotonicity+predicted-cost+gradient finite difference, E determinism+state round-trip",
+    "real_case": "layer0/q window1 rows128: dL=-21.8002% (probe ideal/seq -21.8002%), predicted vs true gap 8.8e-7, gradient rel 1.1e-5, H_gap 0, G_rel 1.2e-6",
+    "status": "all controls passed on CPU"
+  },
+  "official_status": "unregistered/NA"
+}
