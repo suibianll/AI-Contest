@@ -47,6 +47,13 @@ _VK_RADIUS = 7
 _VK_NBUCKET = 2 * _VK_RADIUS + 1
 _VK_NPARAM = _VK_NBUCKET + 1          # 31 banded weights + 1 shared far bucket -> 16
 _VK_SWEEPS = 6
+# +/-1 only.  Trying +/-1/2/3 was measured and REJECTED: the closed form
+# dJ = g*d + Q_ii*d^2 is exact for ONE element, but each sweep applies one
+# step per channel using g computed at the OLD codes, so a larger step makes
+# the stale-gradient error worse.  Accepted-layer gate total fell from
+# 3.679 to 2.627 (L0 stopped being accepted, L5 started), so the bottleneck
+# is not the action space.  See verify3.out.
+_VK_STEPS = (-1.0, 1.0)
 _VK_FIT_WINDOWS = 3                   # fit on windows[0:3]
 _VK_GATE_WINDOW = 3                   # accept only if window 3 improves
 _VK_FIT_TOKENS = 48                   # rows sampled per fit window (matches the diagnostic)
@@ -196,23 +203,34 @@ def _vk_correct(params, kernel, v_quant, v_scale, kv_heads, head_dim):
 
         n_chan = kv_heads * head_dim
         flat_grad = grad.reshape(tokens, n_chan)
+        # Each element may jump to the best INTEGER code within its range, not
+        # just +-1: the objective is exactly quadratic in a single element, so
+        # the optimal real step is -g/(2 Q_ii) and the best legal code is that
+        # clipped and rounded.  Trying the whole small candidate set costs only
+        # elementwise work -- the banded operators, which are the expensive part,
+        # still run once per sweep.  The previous +-1-only rule moved ~5 of 1024
+        # tokens per channel over six sweeps, which is why the V-side gain was
+        # only ~1%.
         best_gain = torch.full((n_chan,), float("inf"), dtype=torch.float64, device=dev)
         best_row = torch.zeros(n_chan, dtype=torch.long, device=dev)
-        best_dir = torch.zeros(n_chan, dtype=torch.float64, device=dev)
-        for direction in (1.0, -1.0):
-            eps = direction * flat_step
+        best_step = torch.zeros(n_chan, dtype=torch.float64, device=dev)
+        codes_t = codes
+        for k in _VK_STEPS:
+            cand = codes_t + k
+            legal = movable & (cand >= 0.0) & (cand <= 7.0)
+            eps = k * flat_step
             change = flat_grad * eps + (eps ** 2) * qii[:, None]
-            change = torch.where(movable, change, torch.full_like(change, float("inf")))
+            change = torch.where(legal, change, torch.full_like(change, float("inf")))
             gain, arg = change.min(dim=0)
             take = gain < best_gain
             best_gain = torch.where(take, gain, best_gain)
             best_row = torch.where(take, arg, best_row)
-            best_dir = torch.where(take, torch.full_like(best_gain, direction), best_dir)
+            best_step = torch.where(take, torch.full_like(best_gain, k), best_step)
         if not bool((best_gain < 0).any()):
             break
         improved = best_gain < 0
         cols = torch.arange(n_chan, device=dev)
-        updated = (codes[best_row, cols] + best_dir).clamp(0.0, 7.0)
+        updated = (codes[best_row, cols] + best_step).clamp(0.0, 7.0)
         codes[best_row, cols] = torch.where(improved, updated, codes[best_row, cols])
 
     out = {key: value.clone() for key, value in params.items()}
