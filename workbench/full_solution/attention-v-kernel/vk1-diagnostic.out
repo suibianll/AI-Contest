@@ -1,0 +1,41 @@
+device=cuda
+[L 0] kernel fitted; head0 |r|<=3: [0.0324, 0.0363, 0.071, 0.0615, 0.028, 0.0207, 0.0147]  far=0.0018
+  [L 0/w3 T=1024] true=8.993309e+02  trueA/true=1.0000  kernel/true=0.2540 (raw 1.0958)  uniform/true=0.0637  surr_rel_err=0.7305
+  [L 0/w4 T=1024] true=9.746541e+02  trueA/true=1.0000  kernel/true=0.2394 (raw 1.0184)  uniform/true=0.0557  surr_rel_err=0.7423
+[L 1] kernel fitted; head0 |r|<=3: [0.0401, 0.0418, 0.0396, 0.07, 0.0228, 0.0206, 0.0132]  far=0.0018
+  [L 1/w3 T=1024] true=2.442026e+03  trueA/true=1.0000  kernel/true=0.1042 (raw 0.4868)  uniform/true=0.0301  surr_rel_err=0.9011
+  [L 1/w4 T=1024] true=2.309467e+03  trueA/true=1.0000  kernel/true=0.1072 (raw 0.4956)  uniform/true=0.0281  surr_rel_err=0.8864
+[L 5] kernel fitted; head0 |r|<=3: [0.0313, 0.0251, 0.0393, 0.0756, 0.0273, 0.029, 0.0181]  far=0.0018
+  [L 5/w3 T=1024] true=2.123909e+03  trueA/true=1.0000  kernel/true=0.1022 (raw 0.5011)  uniform/true=0.0323  surr_rel_err=0.8982
+  [L 5/w4 T=1024] true=1.956440e+03  trueA/true=1.0000  kernel/true=0.1102 (raw 0.5391)  uniform/true=0.0347  surr_rel_err=0.8800
+[L 8] kernel fitted; head0 |r|<=3: [0.0197, 0.0162, 0.0269, 0.0436, 0.0708, 0.0502, 0.0407]  far=0.0018
+  [L 8/w3 T=1024] true=5.454851e+03  trueA/true=1.0000  kernel/true=0.1074 (raw 0.4162)  uniform/true=0.0185  surr_rel_err=0.8892
+  [L 8/w4 T=1024] true=5.510518e+03  trueA/true=1.0000  kernel/true=0.1060 (raw 0.4108)  uniform/true=0.0172  surr_rel_err=0.8627
+[L15] kernel fitted; head0 |r|<=3: [0.016, 0.0175, 0.0285, 0.0902, 0.129, 0.0505, 0.0364]  far=0.0016
+  [L15/w3 T=1024] true=3.772981e+03  trueA/true=1.0000  kernel/true=0.1185 (raw 0.6041)  uniform/true=0.0632  surr_rel_err=0.8902
+  [L15/w4 T=1024] true=3.888015e+03  trueA/true=1.0000  kernel/true=0.1121 (raw 0.5724)  uniform/true=0.0619  surr_rel_err=0.8900
+[L22] kernel fitted; head0 |r|<=3: [0.0113, 0.0108, 0.0147, 0.0273, 0.1363, 0.0445, 0.0247]  far=0.0022
+  [L22/w3 T=1024] true=5.626823e+04  trueA/true=1.0000  kernel/true=0.5554 (raw 1.6132)  uniform/true=0.1513  surr_rel_err=0.5153
+  [L22/w4 T=1024] true=5.608384e+04  trueA/true=1.0000  kernel/true=0.5541 (raw 1.6632)  uniform/true=0.1590  surr_rel_err=0.5143
+
+INDEPENDENT CHECK  true_a / true (must be ~1.000 if the A used is the scored attention):
+  mean=1.000000  range=[1.000000, 1.000000]  n=12
+
+predictor / TRUE, per window (1.000 = perfect):
+  KERNEL   mean=0.2059  range=[0.1022, 0.5554]
+  UNIFORM  mean=0.0596  range=[0.0172, 0.1590]
+
+kernel fit error  ||(W-A)dV|| / ||A dV||  (0 = the kernel reproduces A exactly):
+  mean=0.8000  range=[0.5143, 0.9011]
+
+per layer:
+  L 0  trueA/true=1.0000  kernel/true=0.2467  uniform/true=0.0597
+  L 1  trueA/true=1.0000  kernel/true=0.1057  uniform/true=0.0291
+  L 5  trueA/true=1.0000  kernel/true=0.1062  uniform/true=0.0335
+  L 8  trueA/true=1.0000  kernel/true=0.1067  uniform/true=0.0179
+  L15  trueA/true=1.0000  kernel/true=0.1153  uniform/true=0.0625
+  L22  trueA/true=1.0000  kernel/true=0.5548  uniform/true=0.1552
+
+NO THRESHOLD IS APPLIED (plan section 6.1). These numbers describe the
+fixed-kernel approximation on the sampled windows and nothing more.
+wrote D:\工作内容\AI竞赛\workbench\full_solution\attention-v-kernel\vk1-diagnostic.json
