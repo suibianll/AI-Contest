@@ -60,7 +60,9 @@ FIT_TOKENS = int(os.environ.get("VK3_FIT_TOKENS", "48"))
 # the full run; smoke on windows 0/1 with a small cap instead.
 MAX_TOKENS = int(os.environ.get("VK3_TOKENS", "1024"))
 SWEEPS = int(os.environ.get("VK3_SWEEPS", "6"))
-KERNEL_RADIUS = 15
+# The fitted kernels put their mass within |r| <= 3 (VK-1), so the support
+# radius is a cost knob, not an accuracy knob: the deploy cost is O(T*C*(2R+1)).
+KERNEL_RADIUS = int(os.environ.get("VK3_RADIUS", "15"))
 NBUCKET = 2 * KERNEL_RADIUS + 1        # offsets -R..+R
 NFAR = NBUCKET                          # index of the shared far bucket
 NPARAM = NBUCKET + 1                    # 32
