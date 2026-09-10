@@ -2,13 +2,13 @@
   "version": "v238",
   "candidate_sha256": "146bb7151f5f2a041b2f1fdbc94e5b370815fb91fa94d58db79384bb7a54fbc7",
   "parent_sha256": "ea79a1c12dc667142c620975aab188920fae7b29988c804f41c1a696cc5754f1",
-  "official_status": "unregistered/NA",
+  "official_status": "TIMEOUT (>300s) REJECTED",
   "official_score": null,
   "official_time_s": null,
   "official_time_display": null,
-  "reported_by": null,
-  "reported_at": null,
-  "decision": "PENDING user submission. The local evidence is implementation equivalence with the same-parent A-GR1 (72/72 paired cases exactly zero, byte-identical calibration states on all six real attention layers) plus a proven reduction in the gate's executed work.",
+  "reported_by": "user",
+  "reported_at": "2026-09-10",
+  "decision": "REJECTED. Nothing is retried: no step/window/candidate-count change, and the same SHA is not resubmitted. A candidate re-stacking this mechanism on the v237 root would be a different candidate with 2s more headroom; no seconds are predicted from that and it is not proposed here.",
   "local_projection_seconds": null,
   "local_projection_margin_seconds": null,
   "local_projection_basis": null,
@@ -17,5 +17,18 @@
   "archive_sha256": "146bb7151f5f2a041b2f1fdbc94e5b370815fb91fa94d58db79384bb7a54fbc7",
   "note": "A-GR1's official record stands separately and is not inherited: side isolation +29 (14455/263.7s against the v195-side baseline), complete package TIMEOUT. v238 is a descendant of the v231 root and is not additive with v234, v233, v235 or v237.",
   "candidate_type": "complete Attention A-CT1 candidate (v231 root + A-GR1 + the gate pair call); the only v238 under solutions/ at archive time",
-  "execution_log": "logs/execution/2026-09-10-attention-act1-gate-reuse.md"
+  "execution_log": "logs/execution/2026-09-10-v238-attention-act1-official-timeout.md",
+  "complete_package_official": {
+    "package": "v231 Linear (L-EM3 K=2) complete root + A-GR1 + the A-CT1 gate reuse",
+    "submitted_sha256": "146bb7151f5f2a041b2f1fdbc94e5b370815fb91fa94d58db79384bb7a54fbc7",
+    "result": "TIMEOUT",
+    "hard_limit_s": 300,
+    "exact_seconds": null,
+    "score": null,
+    "note": "Exact seconds and score unknown; no prediction is written. Parent v231 read 291s against the limit."
+  },
+  "what_this_answers": "v238 is not a repeat of v236: it is A-GR1's reduced-cost variant, bitwise-identical in output to v236 (72/72 paired cases exactly zero, six-layer calibration states byte-identical) and with strictly less work in the gate (attention forwards 4->3, reference decodes 12->8, V quantisations 2->1 per window). v236 timed out; so did v238. The measured reduction (gate window pair +13.5/+9.7 ms against a 15.3x/16.6x null; whole calibration +0.55-0.58%, about 0.2 s over six layers) did not bring the package inside 300 s. The de-duplication branch is therefore closed by an official result rather than by inference.",
+  "what_is_not_claimed": "The overshoot beyond 300s is unknown; the official channel returned only 'timeout'. The only measured figure remains a lower bound: on the v231 parent, A-GR1's complete-package cost exceeds 9s. The stall diagnostic's '~12s' was derived by adding the side-isolation cost to the root time, which the plan forbids.",
+  "side_isolation_status": "A-GR1's side-isolation reading of +29 (14455/263.7s against the v195-side baseline) stands and is untouched: it scores a smaller package and measures the mechanism's value, not its cost.",
+  "family_note": "Third complete-package timeout in the A-GR1 family (v234 on v230, v236 on v231, v238 on v231). The new fact this one carries is that removing the gate's duplicated work is not enough to make the package fit."
 }

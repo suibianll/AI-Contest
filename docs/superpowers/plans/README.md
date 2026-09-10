@@ -20,7 +20,7 @@
 | 候选 | 开发结果 | 官方状态 |
 |---|---|---|
 | v237 L-TF2 | 当前K=2父首遍梯度复用；336例输出相同 | **RETAINED，18518/289s；同分快2s，已晋级为当前完整根** |
-| v238 A-CT1 | gate复用；同父A-GR1六层state/72例相同 | unregistered/NA |
+| v238 A-CT1 | gate复用；同父A-GR1六层state/72例相同 | **TIMEOUT（>300s）REJECTED**——降本版仍超时，**去重方向由官方结果关闭** |
 | v239 A-CT2 | 训练尾部复用；204→198次调用，同父六层state/72例相同 | unregistered/NA |
 | v235 / v236 | 各自实现关闭，不晋级 | TIMEOUT |
 
