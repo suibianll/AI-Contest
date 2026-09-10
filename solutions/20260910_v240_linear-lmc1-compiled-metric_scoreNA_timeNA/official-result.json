@@ -1,0 +1,23 @@
+{
+  "version": "v240",
+  "candidate_sha256": "2c344722e3cbf2a32b72c89319309c47a54b9fcd16dd36111491f60248d01994",
+  "parent_sha256": "ecb1f9e510b5507e1a2dc8b95f8a84e9b51864a420b3828537a328813e2ce554",
+  "official_status": "unregistered/NA",
+  "official_score": null,
+  "official_time_s": null,
+  "official_time_display": null,
+  "reported_by": null,
+  "reported_at": null,
+  "decision": "PENDING a submission decision. The local evidence is bitwise equivalence on CUDA (336/336 paired cases exactly zero, nine dynamic calls on three layer/role pairs with byte-identical five fields, and the stored G equal to the rebuilt G) plus a measured cost accounting on both sides of the move.",
+  "does_this_card_reduce_work": "It MOVES work rather than removing it, so the answer depends on the call ratio and not on the mechanism alone: calibration gains one Cholesky inverse per (layer, role) and the dynamic path loses one per call. Measured on 4096 channels, calibration pays +50.0 ms and each dynamic call saves 28.3 ms, so the break-even is about 255 dynamic calls. Locally (144 calibrations, 288 dynamic) that is a net saving of about 0.95 s.",
+  "missing_fact": "The number of dynamic calls in the official evaluation is not recorded anywhere in this repository. With 50 the card costs about 5.8 s officially; with a full-model pass per sample it saves far more. The sign is therefore undetermined locally, and it is registered as a missing fact rather than assumed.",
+  "local_projection_seconds": null,
+  "local_projection_margin_seconds": null,
+  "local_projection_basis": null,
+  "projection_note": "no projection is recorded: the official 300 s gate is the only time gate and this machine's wall clock cannot be converted into the official machine's.",
+  "official_scored_sha256": null,
+  "archive_sha256": "2c344722e3cbf2a32b72c89319309c47a54b9fcd16dd36111491f60248d01994",
+  "note": "v240 descends from the v237 root and is not additive with v233, v235, v237, v238 or v239.",
+  "candidate_type": "complete Linear L-MC1 candidate (v237 root plus two appended shadows); the only v240 under solutions/ at archive time",
+  "execution_log": "logs/execution/2026-09-10-linear-lmc1-compiled-metric.md"
+}

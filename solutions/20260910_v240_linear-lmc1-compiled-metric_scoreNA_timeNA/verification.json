@@ -1,0 +1,62 @@
+{
+  "version": "v240",
+  "mechanism": "L-MC1: build G once in weight calibration and store it (ridge already applied), and load it in the dynamic path instead of rebuilding it with cholesky_inverse(cholesky(h_inv)) on every call",
+  "formal_parent_sha256": "ecb1f9e510b5507e1a2dc8b95f8a84e9b51864a420b3828537a328813e2ce554",
+  "candidate_sha256": "2c344722e3cbf2a32b72c89319309c47a54b9fcd16dd36111491f60248d01994",
+  "candidate_bytes": 524220,
+  "implementation_sha256": "60d1b754e9ce5df1662181b89517841009b74ba094050465d1b2dae295a55ebc",
+  "root_sha256_at_archive_time": "ecb1f9e510b5507e1a2dc8b95f8a84e9b51864a420b3828537a328813e2ce554",
+  "sole_change_measured": {
+    "byte_level": "three substring substitutions, each asserted unique; the shadows are derived from the parent's own text and appended",
+    "substitutions_performed": 3,
+    "substitution_sites": [
+      "_em1_compile_metric: store the metric",
+      "_em1_compile_metric: add the metric key to the payload",
+      "_em1_metric: load the metric instead of rebuilding it"
+    ],
+    "changed_lines": 52,
+    "byte_delta": 983
+  },
+  "single_file_import": "verify.py control A imports the six APIs from a bare temporary directory",
+  "attention_and_encoder_bytecode_identical": true,
+  "shadows_live": "both appended definitions shadow the parent's (co_firstlineno) and are resolved by name",
+  "protocol": "proxy-v3",
+  "panel": "qwen35-4b-panel-v1 (336 Linear cases)",
+  "scope": "linear-only, six shards, target side",
+  "hard_output_changed": false,
+  "equivalence_is_exact_not_tolerance_based": "the five HiF4 fields are compared as raw bytes on CUDA, and the stored G is compared byte for byte against the G the parent rebuilds at call time",
+  "call_counts": {
+    "base_calibration_inverses_both_sides": 2,
+    "break_even_dynamic_calls_per_calibration": 1,
+    "parent_calibration_inverses": 2,
+    "parent_dynamic_inverses": 4,
+    "candidate_calibration_inverses": 3,
+    "candidate_dynamic_inverses": 0,
+    "dynamic_calls": 4
+  },
+  "equal_shard_mean_delta_gain": 0.0,
+  "shard_delta_gain_mean": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+  ],
+  "positive_cases": 0,
+  "negative_cases": 0,
+  "zero_cases": 336,
+  "case_count": 336,
+  "shard_decision": "no_effect (the evaluator's own small-trend filter)",
+  "shard_decision_note": "336 exactly zero is the predicted reading for a bitwise-equivalent candidate; a non-zero delta would be the defect",
+  "pairing_method": "one eval.py process carrying both sides; per-case delta re-derived here as candidate.gain - baseline.gain keyed by case_id",
+  "stopped_early_flag": {
+    "manifest_value": true,
+    "is_a_truncation": false,
+    "why": "the stop check runs after a shard's results are appended, and this candidate is bitwise-equivalent to its parent, so delta_mean == 0 on every shard and the counter reaches --stop-after-nonpositive 6 exactly on the last requested shard.",
+    "independent_coverage_check": "candidate-linear-shard{0..5}.json: 6 files, 336 cases, statuses ok"
+  },
+  "official_status": "unregistered/NA",
+  "official_score": null,
+  "official_seconds": null
+}

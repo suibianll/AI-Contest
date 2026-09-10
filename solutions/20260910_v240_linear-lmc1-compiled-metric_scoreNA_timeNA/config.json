@@ -1,0 +1,84 @@
+{
+  "run_id": "linear-lmc1-compiled-metric",
+  "version": "v240",
+  "version_note": "v240 is the next free number after v239 at archive time.",
+  "mechanism": "L-MC1: build G once in weight calibration and store it (ridge already applied), and load it in the dynamic path instead of rebuilding it with cholesky_inverse(cholesky(h_inv)) on every call",
+  "mechanism_type": "pure time change that MOVES a computation rather than removing it: calibration gains one Cholesky inverse per (layer, role), the dynamic path loses one per call",
+  "plan": "docs/superpowers/plans/2026-09-10-compiled-metric-and-attention-factor-reuse-plan.md",
+  "plan_section": "4 (Linear L-MC1)",
+  "log": "logs/execution/2026-09-10-linear-lmc1-compiled-metric.md",
+  "formal_parent": "solutions/20260910_v237_linear-tf2-first-pass-gradient-reuse_scoreNA_timeNA/solution.py",
+  "formal_parent_sha256": "ecb1f9e510b5507e1a2dc8b95f8a84e9b51864a420b3828537a328813e2ce554",
+  "formal_parent_official": {
+    "score": 18518,
+    "seconds": 289,
+    "limit_seconds": 300,
+    "margin_seconds": 11
+  },
+  "candidate_sha256": "2c344722e3cbf2a32b72c89319309c47a54b9fcd16dd36111491f60248d01994",
+  "candidate_bytes": 524220,
+  "build": "build.py",
+  "build_is_derived_not_handwritten": true,
+  "the_change": "build G once in calibration and store it (ridge applied); load it in the dynamic path instead of rebuilding it",
+  "equivalence": {
+    "bar": "bitwise identity, on CUDA (CPU and CUDA cholesky_inverse are not bitwise equal)",
+    "result": "passed",
+    "dynamic_calls_compared": 9,
+    "layer_role_pairs": 3,
+    "five_fields_bitwise": true,
+    "stored_metric_equals_rebuilt_metric_bitwise": "3/3 pairs",
+    "no_mutation": "three calls sharing one state dict give identical fields and leave the stored metric untouched",
+    "coverage": "out-of-scope width, no em1 payload, no stored metric, determinism"
+  },
+  "the_layout_finding": "The first implementation passed 'stored G == rebuilt G bitwise' yet still differed in the five fields: scale_factor/scale_lv2/scale_lv3 matched and sign/mant did not. The values were identical but the strides were not -- cholesky_inverse returns a transposed-stride tensor (stride (1, n), the LAPACK layout) and _cpu_state_tensor's .contiguous() flattened it, so the downstream .mm() took a different cuBLAS path and rounded differently. Storing without forcing contiguity fixes it; nan_to_num and the CPU<->CUDA round trip both preserve strides. The plan said 'build G by the original expression and float32 order' -- right, but it names the order and not the layout.",
+  "local_result": {
+    "six_shard_run": "artifacts/proxy_v3/linear-lmc1-sixshard-20260910",
+    "shard0_run": "artifacts/proxy_v3/linear-lmc1-shard0-20260910",
+    "baseline_used": "v237 root (this card's immediate parent)",
+    "equal_shard_mean_delta_gain": 0.0,
+    "case_count": 336,
+    "positive_cases": 0,
+    "negative_cases": 0,
+    "zero_cases": 336
+  },
+  "cost_accounting": {
+    "counts": {
+      "base_calibration_inverses_both_sides": 2,
+      "break_even_dynamic_calls_per_calibration": 1,
+      "parent_calibration_inverses": 2,
+      "parent_dynamic_inverses": 4,
+      "candidate_calibration_inverses": 3,
+      "candidate_dynamic_inverses": 0,
+      "dynamic_calls": 4
+    },
+    "timed_layers": "layer0/o",
+    "measured": {
+      "layer0/o/calibration": {
+        "parent_median_ms": 1151.0302734375,
+        "candidate_paired_median_ms": -50.044677734375,
+        "percent_of_parent": -4.347815942748302,
+        "null_paired_median_ms": -12.311279296875,
+        "abs_effect_over_abs_null": 4.064945366569496,
+        "rounds_candidate_faster": 1,
+        "rounds": 15
+      },
+      "layer0/o/dynamic": {
+        "parent_median_ms": 484.59368896484375,
+        "candidate_paired_median_ms": 28.301116943359375,
+        "percent_of_parent": 5.840174477677228,
+        "null_paired_median_ms": 2.457000732421875,
+        "abs_effect_over_abs_null": 11.518562680875904,
+        "rounds_candidate_faster": 14,
+        "rounds": 15
+      }
+    },
+    "break_even": "calibration +50.0 ms versus dynamic -28.3 ms on 4096 channels, so the break-even is about 255 dynamic calls, i.e. each calibration must serve about 1.77 dynamic calls. 144 calibrations x 50.0 ms = 7.21 s added against 288 local dynamic calls x 28.3 ms = 8.15 s saved, a local net of about +0.95 s saved.",
+    "correction": "An earlier draft of the execution log stated the break-even as one dynamic call per calibration. That was wrong: it assumed the two sides' inverses cost the same. They do not, and the correction is recorded in the log rather than silently fixed."
+  },
+  "missing_fact": "How many times the official evaluation calls hif4_dynamic_quantize_activation. The repository records '50 Linear' samples but never states whether a sample is a (layer, role, window) triple or a full-model pass. With 50 the card adds about 5.8 s officially; with 7200 it saves far more. The threshold is now 255 dynamic calls.",
+  "lineage_note": "v240 is a descendant of the v237 root; it carries L-TF2 plus this change. It does not contain v238/v239 (old parent v231) or v233/v235, and scores and seconds do not add across any of those.",
+  "declared_deviations": [],
+  "official_status": "unregistered/NA",
+  "official_score": null,
+  "official_seconds": null
+}

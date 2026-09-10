@@ -1,0 +1,86 @@
+[A] parent=516697B (ecb1f9e5) candidate=524220B (2c344722) | append-only, Attention and dynamic-activation bytecode identical, both shadows live
+[real] channels={'q': 2560, 'k': 2560, 'v': 2560, 'o': 4096, 'fc_gate': 2560, 'fc_up': 2560, 'proj': 9216} in-scope=['q', 'k', 'v', 'o', 'fc_gate', 'fc_up'] cases=[(0, 'q'), (0, 'k'), (0, 'o')]
+[L-R2] rank2 reachable=1 vtu_cross_max=2.095e-09
+[COMBINED-LINEAR-SAMPLE-ENERGY] reachable=1 blocks=40
+[L-EM2] compile arm=compiled in=2560 gram_diag_mean=6.659655e-01 h_norm=9.7824e+01
+[L-R2] rank2 reachable=1 vtu_cross_max=2.095e-09
+[COMBINED-LINEAR-SAMPLE-ENERGY] reachable=1 blocks=40
+[L-EM2] compile arm=compiled in=2560 gram_diag_mean=6.659655e-01 h_norm=9.7824e+01
+[L-EM2] dynamic arm=applied groups=640 passes=2 accepted_steps=32 accepted_groups=67405 changed=55717 rows=128 grad_mean=3.277e-02 error=-
+[L-EM2] dynamic arm=applied groups=640 passes=2 accepted_steps=32 accepted_groups=67405 changed=55717 rows=128 grad_mean=3.277e-02 error=-
+[L-EM2] dynamic arm=applied groups=640 passes=2 accepted_steps=32 accepted_groups=270116 changed=222882 rows=512 grad_mean=3.121e-02 error=-
+[L-EM2] dynamic arm=applied groups=640 passes=2 accepted_steps=32 accepted_groups=270116 changed=222882 rows=512 grad_mean=3.121e-02 error=-
+[L-EM2] dynamic arm=applied groups=640 passes=2 accepted_steps=32 accepted_groups=67710 changed=55638 rows=128 grad_mean=3.172e-02 error=-
+[L-EM2] dynamic arm=applied groups=640 passes=2 accepted_steps=32 accepted_groups=67710 changed=55638 rows=128 grad_mean=3.172e-02 error=-
+[L-R2] rank2 reachable=1 vtu_cross_max=7.916e-09
+[COMBINED-LINEAR-SAMPLE-ENERGY] reachable=1 blocks=40
+[L-EM2] compile arm=compiled in=2560 gram_diag_mean=1.743948e-01 h_norm=3.5061e+01
+[L-R2] rank2 reachable=1 vtu_cross_max=7.916e-09
+[COMBINED-LINEAR-SAMPLE-ENERGY] reachable=1 blocks=40
+[L-EM2] compile arm=compiled in=2560 gram_diag_mean=1.743948e-01 h_norm=3.5061e+01
+[L-EM2] dynamic arm=applied groups=640 passes=2 accepted_steps=32 accepted_groups=90903 changed=78917 rows=128 grad_mean=8.827e-03 error=-
+[L-EM2] dynamic arm=applied groups=640 passes=2 accepted_steps=32 accepted_groups=90903 changed=78917 rows=128 grad_mean=8.827e-03 error=-
+[L-EM2] dynamic arm=applied groups=640 passes=2 accepted_steps=32 accepted_groups=364754 changed=315260 rows=512 grad_mean=8.338e-03 error=-
+[L-EM2] dynamic arm=applied groups=640 passes=2 accepted_steps=32 accepted_groups=364754 changed=315260 rows=512 grad_mean=8.338e-03 error=-
+[L-EM2] dynamic arm=applied groups=640 passes=2 accepted_steps=32 accepted_groups=91225 changed=78902 rows=128 grad_mean=8.498e-03 error=-
+[L-EM2] dynamic arm=applied groups=640 passes=2 accepted_steps=32 accepted_groups=91225 changed=78902 rows=128 grad_mean=8.498e-03 error=-
+[L-R2] rank2 reachable=1 vtu_cross_max=4.191e-09
+[COMBINED-LINEAR-SAMPLE-ENERGY] reachable=1 blocks=64
+[L-EM2] compile arm=compiled in=4096 gram_diag_mean=5.011898e-01 h_norm=1.2444e+02
+[L-R2] rank2 reachable=1 vtu_cross_max=4.191e-09
+[COMBINED-LINEAR-SAMPLE-ENERGY] reachable=1 blocks=64
+[L-EM2] compile arm=compiled in=4096 gram_diag_mean=5.011898e-01 h_norm=1.2444e+02
+[L-EM2] dynamic arm=applied groups=1024 passes=2 accepted_steps=32 accepted_groups=152258 changed=129007 rows=128 grad_mean=1.087e-03 error=-
+[L-EM2] dynamic arm=applied groups=1024 passes=2 accepted_steps=32 accepted_groups=152258 changed=129007 rows=128 grad_mean=1.087e-03 error=-
+[L-EM2] dynamic arm=applied groups=1024 passes=2 accepted_steps=32 accepted_groups=562556 changed=480770 rows=512 grad_mean=1.072e-03 error=-
+[L-EM2] dynamic arm=applied groups=1024 passes=2 accepted_steps=32 accepted_groups=562556 changed=480770 rows=512 grad_mean=1.072e-03 error=-
+[L-EM2] dynamic arm=applied groups=1024 passes=2 accepted_steps=32 accepted_groups=152851 changed=129829 rows=128 grad_mean=1.057e-03 error=-
+[L-EM2] dynamic arm=applied groups=1024 passes=2 accepted_steps=32 accepted_groups=152851 changed=129829 rows=128 grad_mean=1.057e-03 error=-
+[B] on CUDA, 9 dynamic calls over 3 (layer, role) pairs: five HiF4 fields byte-identical; stored G equals the rebuilt G bitwise on 3/3 pairs; per dynamic call the parent pays 1 cholesky_inverse and the candidate 0
+[L-R2] rank2 reachable=1 vtu_cross_max=2.095e-09
+[COMBINED-LINEAR-SAMPLE-ENERGY] reachable=1 blocks=40
+[L-EM2] compile arm=compiled in=2560 gram_diag_mean=6.659655e-01 h_norm=9.7824e+01
+[L-EM2] dynamic arm=applied groups=640 passes=2 accepted_steps=32 accepted_groups=67405 changed=55717 rows=128 grad_mean=3.277e-02 error=-
+[L-EM2] dynamic arm=applied groups=640 passes=2 accepted_steps=32 accepted_groups=270116 changed=222882 rows=512 grad_mean=3.121e-02 error=-
+[L-EM2] dynamic arm=applied groups=640 passes=2 accepted_steps=32 accepted_groups=67710 changed=55638 rows=128 grad_mean=3.172e-02 error=-
+[L-EM2] dynamic arm=applied groups=640 passes=2 accepted_steps=32 accepted_groups=269193 changed=222484 rows=512 grad_mean=2.982e-02 error=-
+[L-R2] rank2 reachable=1 vtu_cross_max=2.095e-09
+[COMBINED-LINEAR-SAMPLE-ENERGY] reachable=1 blocks=40
+[L-EM2] compile arm=compiled in=2560 gram_diag_mean=6.659655e-01 h_norm=9.7824e+01
+[L-EM2] dynamic arm=applied groups=640 passes=2 accepted_steps=32 accepted_groups=67405 changed=55717 rows=128 grad_mean=3.277e-02 error=-
+[L-EM2] dynamic arm=applied groups=640 passes=2 accepted_steps=32 accepted_groups=270116 changed=222882 rows=512 grad_mean=3.121e-02 error=-
+[L-EM2] dynamic arm=applied groups=640 passes=2 accepted_steps=32 accepted_groups=67710 changed=55638 rows=128 grad_mean=3.172e-02 error=-
+[L-EM2] dynamic arm=applied groups=640 passes=2 accepted_steps=32 accepted_groups=269193 changed=222484 rows=512 grad_mean=2.982e-02 error=-
+[C] 4 dynamic calls: parent calibration 2 + dynamic 4 = 6 inverses; candidate calibration 3 + dynamic 0 = 3. The base calibration pays 2 on both sides; this card's marginal effect is +1 per calibration and -1 per dynamic call, so break-even is one dynamic call per calibration
+[L-R2] rank2 reachable=1 vtu_cross_max=2.095e-09
+[COMBINED-LINEAR-SAMPLE-ENERGY] reachable=1 blocks=40
+[L-EM2] compile arm=compiled in=2560 gram_diag_mean=6.659655e-01 h_norm=9.7824e+01
+[L-EM2] dynamic arm=applied groups=640 passes=2 accepted_steps=32 accepted_groups=67405 changed=55717 rows=128 grad_mean=3.277e-02 error=-
+[L-EM2] dynamic arm=applied groups=640 passes=2 accepted_steps=32 accepted_groups=67405 changed=55717 rows=128 grad_mean=3.277e-02 error=-
+[L-EM2] dynamic arm=applied groups=640 passes=2 accepted_steps=32 accepted_groups=67405 changed=55717 rows=128 grad_mean=3.277e-02 error=-
+[D] three dynamic calls sharing one state dict return byte-identical fields and leave the stored metric untouched -- the ridge is applied exactly once
+[L-R2] rank2 reachable=1 vtu_cross_max=4.657e-09
+[COMBINED-LINEAR-SAMPLE-ENERGY] reachable=1 blocks=144
+[L-EM2] compile arm=out-of-scope in=9216 gram_diag_mean=0.000000e+00 h_norm=0.0000e+00
+[L-R2] rank2 reachable=1 vtu_cross_max=4.657e-09
+[COMBINED-LINEAR-SAMPLE-ENERGY] reachable=1 blocks=144
+[L-EM2] compile arm=out-of-scope in=9216 gram_diag_mean=0.000000e+00 h_norm=0.0000e+00
+[E] out-of-scope width (proj, 9216) stores nothing in both arms
+[L-R2] rank2 reachable=1 vtu_cross_max=2.095e-09
+[COMBINED-LINEAR-SAMPLE-ENERGY] reachable=1 blocks=40
+[L-EM2] compile arm=compiled in=2560 gram_diag_mean=6.659655e-01 h_norm=9.7824e+01
+[L-EM2] dynamic arm=no-metric groups=None passes=None accepted_steps=None accepted_groups=None changed=None rows=None grad_mean=0.000e+00 error=-
+[L-EM2] dynamic arm=no-metric groups=None passes=None accepted_steps=None accepted_groups=None changed=None rows=None grad_mean=0.000e+00 error=-
+[E] a state with no em1 payload falls through identically
+[L-EM2] dynamic arm=no-metric groups=None passes=None accepted_steps=None accepted_groups=None changed=None rows=None grad_mean=0.000e+00 error=-
+[L-EM2] dynamic arm=no-metric groups=None passes=None accepted_steps=None accepted_groups=None changed=None rows=None grad_mean=0.000e+00 error=-
+[E] a state without a stored metric: parent arm='no-metric', candidate arm='no-metric' (both decline to build a metric at call time)
+[L-R2] rank2 reachable=1 vtu_cross_max=2.095e-09
+[COMBINED-LINEAR-SAMPLE-ENERGY] reachable=1 blocks=40
+[L-EM2] compile arm=compiled in=2560 gram_diag_mean=6.659655e-01 h_norm=9.7824e+01
+[L-R2] rank2 reachable=1 vtu_cross_max=2.095e-09
+[COMBINED-LINEAR-SAMPLE-ENERGY] reachable=1 blocks=40
+[L-EM2] compile arm=compiled in=2560 gram_diag_mean=6.659655e-01 h_norm=9.7824e+01
+[F] calibration is deterministic: two runs store a byte-identical metric
+
+ALL L-MC1 CONTROLS PASSED

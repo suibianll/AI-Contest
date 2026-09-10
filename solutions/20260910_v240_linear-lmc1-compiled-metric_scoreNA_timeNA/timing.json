@@ -1,0 +1,123 @@
+{
+  "device": "NVIDIA GeForce RTX 3060 Ti",
+  "rounds_per_arm": 15,
+  "warmup_calls_per_arm": 2,
+  "ordering": "rotated each round so no arm is always last",
+  "clock": "torch.cuda.Event, no profiler, no replay",
+  "parent_sha256": "ecb1f9e510b5507e1a2dc8b95f8a84e9b51864a420b3828537a328813e2ce554",
+  "candidate_sha256": "2c344722e3cbf2a32b72c89319309c47a54b9fcd16dd36111491f60248d01994",
+  "sham": "the parent archive loaded a second time; byte-identical to it",
+  "layer": 0,
+  "role": "o",
+  "note": "the dynamic arm uses each arm's own calibrated state: the parent's cached states carry no stored metric, so timing against one would measure the deactivated arm rather than the change",
+  "results": [
+    {
+      "label": "layer0/o/calibration",
+      "rounds": 15,
+      "arms_ms": {
+        "parent": {
+          "median": 1151.0302734375,
+          "min": 1098.443603515625,
+          "max": 1185.459716796875,
+          "p25": 1119.8245849609375,
+          "p75": 1180.0614013671875,
+          "stdev": 30.228067948293912
+        },
+        "candidate": {
+          "median": 1193.5531005859375,
+          "min": 1145.688232421875,
+          "max": 1245.142578125,
+          "p25": 1170.049560546875,
+          "p75": 1219.626708984375,
+          "stdev": 30.76171412617828
+        },
+        "sham": {
+          "median": 1161.6993408203125,
+          "min": 1097.0130615234375,
+          "max": 1233.4853515625,
+          "p25": 1134.70068359375,
+          "p75": 1179.765380859375,
+          "stdev": 34.549812731937074
+        }
+      },
+      "paired_effects_ms": {
+        "candidate": {
+          "median": -50.044677734375,
+          "min": -82.2530517578125,
+          "max": 17.4742431640625,
+          "p25": -66.458984375,
+          "p75": -38.72314453125,
+          "stdev": 24.67657387311333,
+          "percent_of_parent_median": -4.347815942748302,
+          "rounds_parent_slower": 1,
+          "rounds": 15
+        },
+        "sham": {
+          "median": -12.311279296875,
+          "min": -101.708251953125,
+          "max": 68.893310546875,
+          "p25": -25.9898681640625,
+          "p75": 8.880126953125,
+          "stdev": 35.90850174501454,
+          "percent_of_parent_median": -1.0695877928655968,
+          "rounds_parent_slower": 5,
+          "rounds": 15
+        }
+      }
+    },
+    {
+      "label": "layer0/o/dynamic",
+      "rounds": 15,
+      "arms_ms": {
+        "parent": {
+          "median": 484.59368896484375,
+          "min": 465.93597412109375,
+          "max": 528.2184448242188,
+          "p25": 475.3275451660156,
+          "p75": 502.5009460449219,
+          "stdev": 17.550628455443523
+        },
+        "candidate": {
+          "median": 453.2463684082031,
+          "min": 429.9665222167969,
+          "max": 485.9831237792969,
+          "p25": 446.37139892578125,
+          "p75": 461.8138732910156,
+          "stdev": 15.627751795461116
+        },
+        "sham": {
+          "median": 487.47320556640625,
+          "min": 462.35089111328125,
+          "max": 523.2670288085938,
+          "p25": 477.39947509765625,
+          "p75": 516.639404296875,
+          "stdev": 20.29475985544373
+        }
+      },
+      "paired_effects_ms": {
+        "candidate": {
+          "median": 28.301116943359375,
+          "min": -14.850128173828125,
+          "max": 61.52862548828125,
+          "p25": 24.97515869140625,
+          "p75": 54.15985107421875,
+          "stdev": 20.284925950442744,
+          "percent_of_parent_median": 5.840174477677228,
+          "rounds_parent_slower": 14,
+          "rounds": 15
+        },
+        "sham": {
+          "median": 2.457000732421875,
+          "min": -50.70343017578125,
+          "max": 31.69921875,
+          "p25": -24.683349609375,
+          "p75": 12.976654052734375,
+          "stdev": 24.731665234010535,
+          "percent_of_parent_median": 0.5070228499406078,
+          "rounds_parent_slower": 9,
+          "rounds": 15
+        }
+      }
+    }
+  ]
+}
