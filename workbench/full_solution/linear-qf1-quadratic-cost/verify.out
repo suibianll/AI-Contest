@@ -1,0 +1,56 @@
+[A] parent=505496B (0f1af6db) candidate=515031B (447f815a) shared prefix=505496B attention bytecode identical descent source differs only at the contraction
+[Q1] general delta: corrected-vs-d^T G d rel=0.000e+00 parent-vs-(sum d)*colsum rel=1.127e-16 max|corrected-parent|=1.014e+02 min_eig(G)=5.8589e-01 off_diag/|G|=0.561
+[Q2] single-coordinate delta = c * e_m (block 0 shown)
+     m=0: corrected=+2.562979 =G[m,m]=+2.562979 | parent=+2.490223 =colsum[m]=+2.490223
+     m=1: corrected=+1.796586 =G[m,m]=+1.796586 | parent=+2.245028 =colsum[m]=+2.245028
+     m=2: corrected=+1.468662 =G[m,m]=+1.468662 | parent=-0.022381 =colsum[m]=-0.022381
+     m=3: corrected=+7.577358 =G[m,m]=+7.577358 | parent=+3.150308 =colsum[m]=+3.150308
+[Q3] 2*linear + quadratic vs J(x+d) - J(x): corrected rel=4.767e-15  parent rel=5.439e-02
+[Q4] G=[[2,1],[1,3]] d=[1,0]: parent=3.000000 corrected=2.000000 truth=2.0
+[Q5] G=[[1,-2],[-2,10]] eig=[[0.5755710991019477, 10.424428900898052]] PD=True colsum[0]=-1.0000 -> parent=-1.0000 corrected=+1.0000
+     true cost=+0.2000 (accept=False) parent cost=-1.8000 (accept=True)
+[Q6] group-block pricing equals full-metric pricing: rel=1.122e-16
+[Q] the correction reproduces the true quadratic; the parent does not
+[L-R2] rank2 reachable=1 vtu_cross_max=3.725e-09
+[COMBINED-LINEAR-SAMPLE-ENERGY] reachable=1 blocks=40
+[L-EM2] compile arm=compiled in=2560 gram_diag_mean=6.621316e+01 h_norm=3.0080e+04
+[L-R2] rank2 reachable=1 vtu_cross_max=3.725e-09
+[COMBINED-LINEAR-SAMPLE-ENERGY] reachable=1 blocks=40
+[L-EM2] compile arm=compiled in=2560 gram_diag_mean=6.621316e+01 h_norm=3.0080e+04
+[L-EM2] dynamic arm=applied groups=640 passes=1 accepted_steps=16 accepted_groups=2586 changed=2586 rows=12 grad_mean=7.386e+00 error=-
+[L-EM2] dynamic arm=applied groups=640 passes=1 accepted_steps=16 accepted_groups=2586 changed=2586 rows=12 grad_mean=7.386e+00 error=-
+[L-EM2] dynamic arm=applied groups=640 passes=1 accepted_steps=16 accepted_groups=2288 changed=2288 rows=12 grad_mean=7.346e+00 error=-
+[B] synthetic layer reachable: changed_mantissa=2288 accepted_groups=2288
+[L-EM2] dynamic arm=no-metric groups=None passes=None accepted_steps=None accepted_groups=None changed=None rows=None grad_mean=0.000e+00 error=-
+[L-EM2] dynamic arm=no-metric groups=None passes=None accepted_steps=None accepted_groups=None changed=None rows=None grad_mean=0.000e+00 error=-
+[L-R2] rank2 reachable=1 vtu_cross_max=7.451e-09
+[COMBINED-LINEAR-SAMPLE-ENERGY] reachable=1 blocks=65
+[L-EM2] compile arm=out-of-scope in=4160 gram_diag_mean=0.000000e+00 h_norm=0.0000e+00
+[B] correction-off reproduces the parent bit for bit; parent-off state and the out-of-scope bypass match
+[L-R2] rank2 reachable=1 vtu_cross_max=3.260e-09
+[COMBINED-LINEAR-SAMPLE-ENERGY] reachable=1 blocks=40
+[L-EM2] compile arm=compiled in=2560 gram_diag_mean=6.660735e+01 h_norm=3.0218e+04
+[C:synthetic] channels=2560 ridge=6.660622e+00 H_gap/|G|=0.000e+00 G_rel=1.397e-05 diag_gap=0.000e+00 path_rel=0.000e+00 path_h_rel=0.000e+00
+[L-EM2] dynamic arm=applied groups=640 passes=1 accepted_steps=16 accepted_groups=2351 changed=2351 rows=12 grad_mean=7.430e+00 error=-
+[F:synthetic] passes=1 accepted_steps=16 (cap 16) accepted_group_moves=2351
+[L-EM2] dynamic arm=applied groups=640 passes=1 accepted_steps=16 accepted_groups=2512 changed=2512 rows=12 grad_mean=7.623e+00 error=-
+[L-EM2] dynamic arm=applied groups=640 passes=1 accepted_steps=16 accepted_groups=2351 changed=2351 rows=12 grad_mean=7.430e+00 error=-
+[D:synthetic] rows=12 parent_groups=2512 candidate_groups=2351 parent_rows=72 candidate_rows=67 parent_changed=2512 candidate_changed=2351 mantissa_entries_differing=2342
+[D:synthetic] L_base=6.824616e+03 L_parent=1.064005e+03 L_candidate=1.012268e+03 parent_rel=-84.4093% candidate_rel=-85.1674% candidate_vs_parent_rel=-4.8625%
+[L-EM2] dynamic arm=applied groups=640 passes=1 accepted_steps=16 accepted_groups=2351 changed=2351 rows=12 grad_mean=7.430e+00 error=-
+[L-EM2] dynamic arm=applied groups=640 passes=1 accepted_steps=16 accepted_groups=2351 changed=2351 rows=12 grad_mean=7.430e+00 error=-
+[L-EM2] dynamic arm=applied groups=640 passes=1 accepted_steps=16 accepted_groups=2351 changed=2351 rows=12 grad_mean=7.430e+00 error=-
+[E:synthetic] determinism and state round-trip hold
+[C:real/layer0/q] channels=2560 ridge=6.659651e-02 H_gap/|G|=0.000e+00 G_rel=1.541e-06 diag_gap=0.000e+00 path_rel=0.000e+00 path_h_rel=0.000e+00
+[L-EM2] dynamic arm=applied groups=640 passes=1 accepted_steps=16 accepted_groups=39652 changed=39652 rows=128 grad_mean=3.600e-02 error=-
+[F:real/layer0/q] passes=1 accepted_steps=16 (cap 16) accepted_group_moves=39652
+[L-EM2] dynamic arm=applied groups=640 passes=1 accepted_steps=16 accepted_groups=40167 changed=40167 rows=128 grad_mean=3.679e-02 error=-
+[L-EM2] dynamic arm=applied groups=640 passes=1 accepted_steps=16 accepted_groups=39652 changed=39652 rows=128 grad_mean=3.600e-02 error=-
+[D:real/layer0/q] rows=128 parent_groups=40167 candidate_groups=39652 parent_rows=2044 candidate_rows=2048 parent_changed=40167 candidate_changed=39652 mantissa_entries_differing=20932
+[D:real/layer0/q] L_base=1.936444e+03 L_parent=1.566425e+03 L_candidate=1.546029e+03 parent_rel=-19.1081% candidate_rel=-20.1614% candidate_vs_parent_rel=-1.3021%
+[D:real/layer0/q] proposal ranking: 4864/81920 slots picked a different candidate (5.94%); accept decision differed in 5491; local grams with a negative column sum: 0/2560
+[L-EM2] dynamic arm=applied groups=640 passes=1 accepted_steps=16 accepted_groups=39652 changed=39652 rows=128 grad_mean=3.600e-02 error=-
+[L-EM2] dynamic arm=applied groups=640 passes=1 accepted_steps=16 accepted_groups=39652 changed=39652 rows=128 grad_mean=3.600e-02 error=-
+[L-EM2] dynamic arm=applied groups=640 passes=1 accepted_steps=16 accepted_groups=39652 changed=39652 rows=128 grad_mean=3.600e-02 error=-
+[E:real/layer0/q] determinism and state round-trip hold
+ALL L-QF1 CONTROLS PASSED

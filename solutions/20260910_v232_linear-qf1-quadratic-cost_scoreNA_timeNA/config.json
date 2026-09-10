@@ -1,0 +1,139 @@
+{
+  "run_id": "linear-qf1-quadratic-cost",
+  "version": "v232",
+  "version_note": "at archive time v232 is the only v232 under solutions/ and the highest Linear number. v230 is shared between the Linear and Attention lines, so quote the full directory name when the attention line reuses a number. Registered serially, checked for conflicts at archive time.",
+  "mechanism": "L-QF1: the local proposal quadratic in _em1_dynamic_descent is corrected from the non-contracting form \"krba,bij,krbj->krb\" to \"krbi,bij,krbj->krb\", so the local cost is delta^T G delta rather than (sum_a delta_a) * sum_j (sum_i G_ij) delta_j. Every other fixed choice is the parent's own code, byte for byte.",
+  "plan": "docs/superpowers/plans/2026-09-10-linear-correctness-and-runtime-plan.md",
+  "plan_section": "section 2 (first card)",
+  "log": "logs/execution/2026-09-10-linear-qf1-quadratic-cost.md",
+  "parent": "v230 Linear L-EM2 + v195 Attention complete root",
+  "parent_sha256": "0f1af6dbc207ff32b2c6be16987e9c4fe50f3f10747de26782ef52a6f2fab7bc",
+  "parent_bytes": 505496,
+  "parent_official": "18428 / 292s (promoted; the only officially measured root this candidate descends from)",
+  "candidate_sha256": "447f815ac7bee74950a352cac64e1489cef39fa4c52102c1f902f940579684ca",
+  "candidate_bytes": 515031,
+  "implementation_sha256": "daddc5bbc19a3b16217164281d8d404284655dd59f7dd954dbd6ef5161842ade",
+  "implementation_bytes": 9533,
+  "candidate_count": 1,
+  "build": "append-only onto the parent: parent bytes + fixed separator + implementation module. Every parent byte, both hooks, the Attention four APIs and all shared helpers are byte-identical; the only dead code is the parent's now-shadowed _em1_dynamic_descent.",
+  "build_is_derived_not_handwritten": {
+    "what": "build.py does not hand-write the override. It cuts the parent's own _em1_dynamic_descent source out of the parent bytes, substitutes one substring, and appends that text. The 'sole change' claim is therefore measured rather than asserted.",
+    "extracted_parent_function_bytes": 7999,
+    "extracted_function_differing_bytes": 1,
+    "refusal_rule": "build.py exits non-zero unless the differing-byte count is exactly 1, the parent SHA256 and byte count match the registered values, the generated module is exactly HEADER + function, the function holds the corrected string exactly once and the buggy one never, the candidate holds exactly 2 definitions and exactly 1 call site, and the candidate starts with the parent's bytes."
+  },
+  "the_defect": {
+    "parent_form": "quadratic = torch.einsum(\"krba,bij,krbj->krb\", delta, local_gram, delta)",
+    "corrected_form": "quadratic = torch.einsum(\"krbi,bij,krbj->krb\", delta, local_gram, delta)",
+    "why_the_parent_form_is_wrong": "the first operand's summed index `a` appears only in the first operand and the second operand's summed index `i` only in the second (only `j` is shared), so the two sums never meet and the contraction evaluates to (sum_a delta_a) * sum_j (sum_i G_ij) delta_j -- the column sums of G against the total displacement, not delta^T G delta.",
+    "not_an_equivalent_reassociation": "changing which index couples is a formula change, not a reassociation of the same sum. It is priced as a mechanism change and is the sole behavioural edit in this candidate.",
+    "it_is_the_file_s_own_idiom": "the parent root already contracts a quadratic form correctly at solution.py:1983, using \"krbi,bij,krbj->krb\" for e^T H e in the weight encoder. The corrected string is copied from the file, not invented.",
+    "degenerate_form_on_the_real_candidate_set": "all 8 pm1 candidates are single-coordinate (element_index=[0,0,1,1,2,2,3,3], one true entry per row mask), so delta = c * e_m with c = +-0.25 and the two spellings reduce exactly to c^2 * colsum(G)[m] (parent) against c^2 * G[m,m] (corrected). The parent was ranking candidates by a column sum."
+  },
+  "fixed_choices_inherited_unchanged": {
+    "passes": "K = 1 (the parent's _EM1_PASSES)",
+    "candidate_set": "one element of one natural 4-element group, mantissa code +-1, at fixed scale_factor/lv2/lv3",
+    "schedule": "group-index-major, groups 0..15 in order, _EM1_GROUPS_PER_BLOCK = 16",
+    "coverage": "in_features <= 4096 for layers; proj (9216) stays out of scope",
+    "scale_hierarchy_sign_semantics": "unchanged",
+    "accept_rule": "the parent's exact whole-row joint acceptance, unchanged",
+    "linear_term": "the parent's gradient expression, unchanged",
+    "metric": "the parent's exact metric G, cross matrix H and ideal target J(X), unchanged"
+  },
+  "what_the_fix_does_to_the_accept_test": {
+    "claim": "J(X) = ||(X - T) W_hat^T||^2 is quadratic in X, so J(x+d) - J(x) = 2 * grad J . d + d^T G d is an identity and not a second-order approximation. After the fix the accept test's cost equals the true objective difference; before it, it did not.",
+    "independent_reference": "verify.py evaluates J at two points in float64 dense matmul and differences them; the subject under test is the subscript string read out of the shipped source by regex, so the control cannot drift from what ships.",
+    "measured": {"corrected_relative_error": 4.767e-15, "parent_relative_error": 5.439e-02}
+  },
+  "local_result": {
+    "protocol": "proxy-v3, Qwen3.5-4B proxy-v2, linear-only, six shards, 336 cases",
+    "artifacts_candidate": "artifacts/proxy_v3/linear-qf1-cand/candidate/manifest.json (shards 1-5) plus the shard-0 in-process pair in the same directory",
+    "artifacts_baseline": "artifacts/proxy_v3/linear-em3-v230base/candidate/candidate-linear-shard*.json",
+    "method": "shard 0 was run in-process paired; shards 1-5 were run as a single candidate-side eval.py process and paired out of process by workbench/full_solution/linear-qf1-quadratic-cost/pair_sixshard.py. The pairing script refuses files whose recorded source_sha256 disagree or agree.",
+    "same_basis_check": "the in-process shard-0 baseline (source 0f1af6db) and the archived linear-em3-v230base shard-0 file (source 0f1af6db) agree on all 56 cases bit-for-bit (max |gain difference| 0.0), so pairing the candidate's six shards against that archive is the same basis v231's own six-shard evidence used.",
+    "equal_shard_mean_delta_gain": 0.013738539524423535,
+    "shard_delta_gain_mean": [
+      0.012377990820650447,
+      0.013525057715898504,
+      0.012194417480188763,
+      0.015397973967989064,
+      0.01411738528130114,
+      0.014818411880513289
+    ],
+    "positive_cases": 284,
+    "negative_cases": 4,
+    "zero_cases": 48,
+    "case_count": 336,
+    "delta_extremes": {"min": -0.002186, "median": 0.008496, "max": 0.081882},
+    "sum_of_positives": 4.6198,
+    "sum_of_negatives": -0.0037,
+    "negative_over_positive": 0.0008,
+    "zero_case_note": "the 48 zeros are exactly the out-of-scope proj role (6 shards x 8 cases), bit-identical to the parent; every gain comes from the mechanism and none from the wrapper.",
+    "negative_case_note": "the 4 regressing cases are shard2/case1 (layer 2, q, len 128, validation, -0.000071), shard2/case5 (layer 2, v, len 128, validation, -0.000213), shard4/case46 (layer 22, v, len 512, validation, -0.002186) and shard4/case47 (layer 22, v, len 512, test, -0.001225). They are recorded, not smoothed: the mechanism is not monotone in generalization, and their combined magnitude is 0.08% of the combined gains. All four are validation-heavy and v-heavy.",
+    "delta_by_role_six_shards": {
+      "o": 0.033131,
+      "k": 0.018454,
+      "fc_gate": 0.013106,
+      "q": 0.012754,
+      "v": 0.011493,
+      "fc_up": 0.007231,
+      "proj": 0.0
+    },
+    "delta_by_role_case_counts": {"o": "48/0/0", "k": "48/0/0", "fc_gate": "48/0/0", "q": "47/1/0", "v": "45/3/0", "fc_up": "48/0/0", "proj": "0/0/48"},
+    "magnitude_note": "the six-shard equal-shard mean is +0.013739 against the v231 K=2 arm's +0.027507 over the same root and the same six shards. Roughly half the local magnitude of the K=2 arm, with 4 regressions where the K=2 arm had none."
+  },
+  "real_data_mechanism_probe": {
+    "why": "verify.py control D runs the shipped descent on a real activation from the calibration cache, so the candidate's effect is measured on real data and not only on synthetic grams.",
+    "case": "layer 0 / q, 128 rows",
+    "proposal_ranking": "4864 of 81920 proposal slots (5.94%) picked a different candidate; the accept decision differed in 5491 places",
+    "accepted_group_moves": {"parent": 40167, "candidate": 39652},
+    "accepted_rows": {"parent": 2044, "candidate": 2048},
+    "mantissa_entries_differing_between_the_two_arms": 20932,
+    "objective": {"L_base": "1.936444e+03", "L_parent": "1.566425e+03", "L_candidate": "1.546029e+03", "parent_rel": -0.191081, "candidate_rel": -0.201614, "candidate_vs_parent_rel": -0.013021},
+    "synthetic_case": {"L_base": "6.824616e+03", "parent_rel": -0.844093, "candidate_rel": -0.851674, "candidate_vs_parent_rel": -0.048625, "mantissa_entries_differing": 2342}
+  },
+  "honest_scoping_of_the_failure_mode": {
+    "what_the_defect_can_do": "a positive-definite Gram can have a negative column sum -- verify.py control Q5 uses G=[[1,-2],[-2,10]], eigenvalues 0.5756/10.4244, column sum of column 0 = -1.0 -- so the parent form can report a benefit for a move that actually costs, i.e. a sign flip that accepts a loss.",
+    "what_it_actually_did_here": "on real layer-0/q data, 0 of 2560 local grams had a negative column sum. The observed consequence is a magnitude mis-ranking, not a sign flip.",
+    "why_both_are_recorded": "the counterexample is the evidence that the formula is wrong; the 0/2560 count is the evidence that it was not already causing spurious accepts on this data. Reporting only the counterexample would overstate the defect; reporting only the count would understate it."
+  },
+  "verification": {
+    "script": "workbench/full_solution/linear-qf1-quadratic-cost/verify.py",
+    "log": "verify.out in this directory, ending 'ALL L-QF1 CONTROLS PASSED'",
+    "controls": "A lineage + six-API isolated import + Attention source identity; Q1-Q6 the quadratic itself against an independent reference; B correction-off bit-identity with the parent plus the out-of-scope bypass; C H/gram_diag_mean/G recovery and the real _em1_metric code path; D real proposal and acceptance counts, mantissa changes and objective on synthetic and real data; E determinism and state round-trip; F schedule shape",
+    "control_q_detail": {
+      "Q1": "general delta: corrected vs independent delta^T G delta rel=0.000e+00; parent vs (sum delta) * colsum rel=1.127e-16",
+      "Q2": "single-coordinate delta=c*e_m printed per m: corrected equals G[m,m] exactly, parent equals colsum[m] exactly; at m=2 the column sum is -0.022381, i.e. negative on a positive-definite Gram",
+      "Q3": "2*linear + quadratic vs J(x+d) - J(x): corrected 4.767e-15, parent 5.439e-02",
+      "Q4": "G=[[2,1],[1,3]], delta=[1,0]: parent 3.0, corrected 2.0, truth 2.0",
+      "Q5": "G=[[1,-2],[-2,10]] positive definite, colsum[0]=-1: parent reports -1.0 and accepts, true cost is +1.0 and should be rejected",
+      "Q6": "group-block pricing equals full-metric pricing: rel=1.122e-16"
+    },
+    "control_b_is_the_reverse_proof": "correction_off_path() writes the parent's own descent back out unsubstituted as a whole solution; its dynamic output is bit-identical to the parent, which is what makes the one byte the cause of every difference rather than a coincidence.",
+    "control_a_note": "the Attention four APIs are byte-identical to the live root's source and their code objects' bytecode compares equal. This is stronger than a random-shape smoke test, because the candidate is a pure byte-append of the unchanged root: the Attention code objects are the root's own.",
+    "all_outputs_finite": true,
+    "reasonableness_issues": 0,
+    "status": "ALL L-QF1 CONTROLS PASSED (CPU)"
+  },
+  "time": {
+    "claim": "L-QF1 adds no measurable time. The change is one character inside a subscript string; the einsum operand shapes, the step count and the loop structure are unchanged, and build.json records exactly one differing byte in the function text as the mechanical evidence.",
+    "controlled_measurement": "shard 0 in-process paired, both arms alternating inside the timed region under one shared calibration: candidate dynamic API 42.2156s / 56 calls against baseline 43.1058s / 56 calls, i.e. the candidate is 0.89s faster and in any case not slower.",
+    "cross_process_bracket": "against the archived linear-em3-v230base run the candidate reads 42.2156s against 41.934s, i.e. 0.28s slower. The two comparisons bracket zero.",
+    "noise": "per-shard cross-process dynamic differences across the six shards span -3.22s to +2.16s over ~42s of work; the process-to-process noise is an order of magnitude larger than any difference attributable to this change.",
+    "not_comparable": "the candidate-side api_total includes a cold calibration cache for the new SHA while the archived baseline served its calibration from cache, so absolute api_total figures are not a controlled comparison and are not used as timing evidence.",
+    "official_projection": null,
+    "official_projection_note": "no projection is recorded. The change is time-neutral by construction and measurement, so the honest statement is that this candidate should cost the root's 292s, but local measurement cannot settle official seconds and the plan retires local time prediction."
+  },
+  "lineage_note": {
+    "relationship_to_v231": "v231 (L-EM3, K=2) descends from the v202 root 56dc805d; v232 descends from the v230 root 0f1af6db, which is itself an append of 56dc805d. So v231 is a sibling of v230 and v232 is a descendant of v230. v232 does NOT contain the K=2 mechanism: its local delta is the QF1 correction measured at K=1, and it is not additive with v231's +0.027507 as an official prediction.",
+    "why_not_built_on_v231": "the plan fixes that each card starts from the highest-scoring complete root at the time it starts, that a candidate awaiting official evaluation may not be used as a parent, and that archival candidates are not mechanically combined. At this card's start the confirmed highest root was v230 at 18428.",
+    "no_attention_change": "the Attention half of the root is untouched; this candidate carries v195 Attention exactly as the parent does."
+  },
+  "declared_deviations": "none. The candidate is the parent's bytes plus one appended module whose text is the parent's own function with a single substituted substring. No comment, constant, ordering or whitespace edit was made anywhere else, and the dead parent definition was left in place rather than removed so that the append remains the only edit.",
+  "local_decision": "reject (the local tool's own screen)",
+  "local_decision_note": "the tool's gate is `delta_mean > 0 and L1 < 0.02`, an eligibility screen for small local trends; the tool's own policy states that local eligibility is not promotion. L1 here is 0.013739. The signal that matters is 284 positive / 4 negative / 48 out-of-scope-zero of 336, with every shard positive, and the mechanism being a correctness fix that makes the accept test exact.",
+  "official_status": "PENDING",
+  "official_score": null,
+  "official_time_s": null,
+  "root_unchanged": "the root solution.py is not modified by this card and remains the v230 candidate at 0f1af6db."
+}

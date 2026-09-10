@@ -20,7 +20,16 @@
 
 ## 0.1 当前计划状态（2026-09-10）
 
-本轮开发已结束，根保持v230 Linear L-EM2 **18428/292s**。下一轮只按[计划入口](superpowers/plans/README.md)指定的[局部代价修正与运行成本优化](superpowers/plans/2026-09-10-linear-correctness-and-runtime-plan.md)推进：L-QF1公式修正 → L-TF1首遍梯度复用 → 单项架构降时。
+本轮开发已结束，根保持v230 Linear L-EM2 **18428/292s**。下一轮按[计划入口](superpowers/plans/README.md)指定的[局部代价修正与运行成本优化](superpowers/plans/2026-09-10-linear-correctness-and-runtime-plan.md)推进：L-QF1公式修正（**已完成，归档v232**） → L-TF1首遍梯度复用 → 单项架构降时。
+
+**v232 Linear L-QF1已完成并归档**（`20260910_v232_linear-qf1-quadratic-cost_scoreNA_timeNA`，
+候选`447f815ac7bee74950a352cac64e1489cef39fa4c52102c1f902f940579684ca`，自v230根`0f1af6db`纯追加）：
+`_em1_dynamic_descent`的局部代价从`krba,bij,krbj->krb`改为`krbi,bij,krbj->krb`，即`δᵀGδ`。
+改动**由机器测量**：父函数文本与追加文本逐字节差异数`= 1`（`build.json`）。
+六shard相对当前根等权`+0.013739`（**284/4/48**，336 case），六shard全正，4个回退case合计为正增益的0.08%；
+与v231的`+0.027507`（286/0/48）同口径。**零可测时间成本**（同进程配对42.2156s vs 43.1058s，跨进程夹住零）。
+修正后接受判决的代价与真实目标差一致到fp精度（`4.767e-15` vs 父`5.439e-02`，因`J`对`X`二次）。
+官方**PENDING**，分数/秒数`null`，不写预测。**v232是v230的后代，不含v231的K=2机制，两者Δ不可相加。**
 
 v231 Linear已完成六shard，相对当前根+0.027507（286/0/50），官方PENDING；v230 Attention A-FIX1官方未知。v229完整包TIMEOUT、标准Linear侧14424/245s（−2/+2s），不再列入后续优化。L-EM4侦察完成；旧L-DD1只有计划与侦察，无实施结果。
 
