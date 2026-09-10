@@ -1,0 +1,57 @@
+[A] parent=505762B (ea79a1c1) candidate=516697B (ecb1f9e5) shared prefix=505762B attention bytecode identical AST identical once the single `if _pass:` guard is dissolved shipped K=2
+[L-R2] rank2 reachable=1 vtu_cross_max=3.725e-09
+[COMBINED-LINEAR-SAMPLE-ENERGY] reachable=1 blocks=40
+[L-EM2] compile arm=compiled in=2560 gram_diag_mean=6.621316e+01 h_norm=3.0080e+04
+[L-R2] rank2 reachable=1 vtu_cross_max=3.725e-09
+[COMBINED-LINEAR-SAMPLE-ENERGY] reachable=1 blocks=40
+[L-EM2] compile arm=compiled in=2560 gram_diag_mean=6.621316e+01 h_norm=3.0080e+04
+[L-EM2] dynamic arm=applied groups=640 passes=2 accepted_steps=32 accepted_groups=2906 changed=2871 rows=12 grad_mean=6.802e+00 error=-
+[L-EM2] dynamic arm=applied groups=640 passes=2 accepted_steps=32 accepted_groups=2906 changed=2871 rows=12 grad_mean=6.802e+00 error=-
+[L-EM2] dynamic arm=no-metric groups=None passes=None accepted_steps=None accepted_groups=None changed=None rows=None grad_mean=0.000e+00 error=-
+[L-EM2] dynamic arm=no-metric groups=None passes=None accepted_steps=None accepted_groups=None changed=None rows=None grad_mean=0.000e+00 error=-
+[L-R2] rank2 reachable=1 vtu_cross_max=7.451e-09
+[COMBINED-LINEAR-SAMPLE-ENERGY] reachable=1 blocks=65
+[L-EM2] compile arm=out-of-scope in=4160 gram_diag_mean=0.000000e+00 h_norm=0.0000e+00
+[B] parent and candidate agree byte for byte on the compiled layer (32 steps, 2906 group moves, 2871 mantissa codes changed), on a state with no em1 payload, and on the out-of-scope bypass
+[L-EM2] dynamic arm=applied groups=640 passes=2 accepted_steps=32 accepted_groups=2906 changed=2871 rows=12 grad_mean=6.802e+00 error=-
+[C:synthetic] the two gradient products are bit-identical across the two evaluations (shapes (12, 2560)@(2560, 2560), (12, 2560)@(2560, 2560)); product 0 identical: True, product 1 identical: True
+[L-EM2] dynamic arm=applied groups=640 passes=2 accepted_steps=32 accepted_groups=2906 changed=2871 rows=12 grad_mean=6.802e+00 error=-
+[L-EM2] dynamic arm=applied groups=640 passes=2 accepted_steps=32 accepted_groups=2906 changed=2871 rows=12 grad_mean=6.802e+00 error=-
+[D:synthetic] K=2: parent 38 mm products, candidate 36; the candidate's sequence equals the parent's with products 2 and 3 removed and no other change -- pass 1's gradient products are still present in both
+[L-EM2] dynamic arm=nonfinite-gradient groups=None passes=None accepted_steps=None accepted_groups=None changed=None rows=None grad_mean=0.000e+00 error=-
+[L-EM2] dynamic arm=nonfinite-gradient groups=None passes=None accepted_steps=None accepted_groups=None changed=None rows=None grad_mean=0.000e+00 error=-
+[E1] a NaN reference takes the parent's own `nonfinite-gradient` path in both arms, and both return the result untouched, byte for byte
+[L-EM2] dynamic arm=applied groups=640 passes=2 accepted_steps=32 accepted_groups=2906 changed=2871 rows=12 grad_mean=6.802e+00 error=-
+[F:synthetic] passes=2 accepted_steps=32 (cap 32) accepted_group_moves=2906
+[L-EM2] dynamic arm=applied groups=640 passes=2 accepted_steps=32 accepted_groups=2906 changed=2871 rows=12 grad_mean=6.802e+00 error=-
+[L-EM2] dynamic arm=applied groups=640 passes=2 accepted_steps=32 accepted_groups=2906 changed=2871 rows=12 grad_mean=6.802e+00 error=-
+[L-EM2] dynamic arm=applied groups=640 passes=2 accepted_steps=32 accepted_groups=2906 changed=2871 rows=12 grad_mean=6.802e+00 error=-
+[F:synthetic] determinism and state round-trip hold
+[L-EM2] dynamic arm=applied groups=640 passes=1 accepted_steps=16 accepted_groups=2586 changed=2586 rows=12 grad_mean=7.386e+00 error=-
+[L-EM2] dynamic arm=applied groups=640 passes=1 accepted_steps=16 accepted_groups=2586 changed=2586 rows=12 grad_mean=7.386e+00 error=-
+[F:synthetic] K=1 (set in memory only, restored to 2): the guard is inert, no pass-1 recomputation is expected, and both arms agree byte for byte -- v233's shipped shape still holds
+[L-EM2] dynamic arm=applied groups=640 passes=2 accepted_steps=32 accepted_groups=67413 changed=55744 rows=128 grad_mean=3.275e-02 error=-
+[L-EM2] dynamic arm=applied groups=640 passes=2 accepted_steps=32 accepted_groups=67413 changed=55744 rows=128 grad_mean=3.275e-02 error=-
+[B:real/layer0/q] parent and candidate agree byte for byte on 128 real rows of the cached layer-0/q state (32 steps, 67413 group moves, 4046 rows kept, 55744 mantissa codes changed)
+[L-EM2] dynamic arm=applied groups=640 passes=2 accepted_steps=32 accepted_groups=67413 changed=55744 rows=128 grad_mean=3.275e-02 error=-
+[C:real/layer0/q] the two gradient products are bit-identical across the two evaluations (shapes (128, 2560)@(2560, 2560), (128, 2560)@(2560, 2560)); product 0 identical: True, product 1 identical: True
+[L-EM2] dynamic arm=applied groups=640 passes=2 accepted_steps=32 accepted_groups=67413 changed=55744 rows=128 grad_mean=3.275e-02 error=-
+[L-EM2] dynamic arm=applied groups=640 passes=2 accepted_steps=32 accepted_groups=67413 changed=55744 rows=128 grad_mean=3.275e-02 error=-
+[D:real/layer0/q] K=2: parent 38 mm products, candidate 36; the candidate's sequence equals the parent's with products 2 and 3 removed and no other change -- pass 1's gradient products are still present in both
+[L-EM2] dynamic arm=nonfinite-gradient groups=None passes=None accepted_steps=None accepted_groups=None changed=None rows=None grad_mean=0.000e+00 error=-
+[L-EM2] dynamic arm=nonfinite-gradient groups=None passes=None accepted_steps=None accepted_groups=None changed=None rows=None grad_mean=0.000e+00 error=-
+[E1] a NaN reference takes the parent's own `nonfinite-gradient` path in both arms, and both return the result untouched, byte for byte
+[L-EM2] dynamic arm=applied groups=640 passes=2 accepted_steps=32 accepted_groups=67413 changed=55744 rows=128 grad_mean=3.275e-02 error=-
+[F:real/layer0/q] passes=2 accepted_steps=32 (cap 32) accepted_group_moves=67413
+[L-EM2] dynamic arm=applied groups=640 passes=2 accepted_steps=32 accepted_groups=67413 changed=55744 rows=128 grad_mean=3.275e-02 error=-
+[L-EM2] dynamic arm=applied groups=640 passes=2 accepted_steps=32 accepted_groups=67413 changed=55744 rows=128 grad_mean=3.275e-02 error=-
+[L-EM2] dynamic arm=applied groups=640 passes=2 accepted_steps=32 accepted_groups=67413 changed=55744 rows=128 grad_mean=3.275e-02 error=-
+[F:real/layer0/q] determinism and state round-trip hold
+[L-EM2] dynamic arm=applied groups=640 passes=2 accepted_steps=16 accepted_groups=40167 changed=40167 rows=128 grad_mean=nan error=-
+[L-EM2] dynamic arm=applied groups=640 passes=2 accepted_steps=16 accepted_groups=40167 changed=40167 rows=128 grad_mean=nan error=-
+[E2:real/layer0/q] K=2 with a non-finite gradient at the second pass: parent issues 22 products (abort at index 21) and candidate 20 (abort at index 19) -- both stop before any second-pass group step, and their outputs are byte-identical
+[L-EM2] dynamic arm=applied groups=640 passes=1 accepted_steps=16 accepted_groups=40167 changed=40167 rows=128 grad_mean=3.679e-02 error=-
+[L-EM2] dynamic arm=applied groups=640 passes=1 accepted_steps=16 accepted_groups=40167 changed=40167 rows=128 grad_mean=3.679e-02 error=-
+[F:real/layer0/q] K=1 (set in memory only, restored to 2): the guard is inert, no pass-1 recomputation is expected, and both arms agree byte for byte -- v233's shipped shape still holds
+
+ALL L-TF2 CONTROLS PASSED

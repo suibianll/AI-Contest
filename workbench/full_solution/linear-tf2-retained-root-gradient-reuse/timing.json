@@ -1,0 +1,259 @@
+{
+  "device": "NVIDIA GeForce RTX 3060 Ti",
+  "rounds_per_arm": 31,
+  "warmup_calls_per_arm": 3,
+  "ordering": "rotated each round so no arm is always last",
+  "clock": "torch.cuda.Event, no profiler, no replay",
+  "parent_path": "solutions/20260910_v231_linear-em3-k2-arm_scoreNA_timeNA/solution.py",
+  "parent_sha256": "ea79a1c12dc667142c620975aab188920fae7b29988c804f41c1a696cc5754f1",
+  "candidate_sha256": "ecb1f9e510b5507e1a2dc8b95f8a84e9b51864a420b3828537a328813e2ce554",
+  "sham": "the retained root archive loaded a second time; byte-identical to the parent",
+  "k": 2,
+  "removed_mm_per_call": 2,
+  "results": [
+    {
+      "label": "layer0/q/128",
+      "rows": 128,
+      "channels": 2560,
+      "rounds": 31,
+      "arms_ms": {
+        "parent": {
+          "median": 532.0900268554688,
+          "min": 509.0299072265625,
+          "max": 582.1958618164062,
+          "p25": 525.7103881835938,
+          "p75": 548.1825561523438,
+          "stdev": 16.609939319285253
+        },
+        "candidate": {
+          "median": 539.8584594726562,
+          "min": 516.9254760742188,
+          "max": 566.7936401367188,
+          "p25": 525.3148193359375,
+          "p75": 553.1890258789062,
+          "stdev": 14.1684813049962
+        },
+        "sham": {
+          "median": 538.0465698242188,
+          "min": 512.7072143554688,
+          "max": 575.8169555664062,
+          "p25": 525.8491821289062,
+          "p75": 553.192138671875,
+          "stdev": 17.127310718938556
+        }
+      },
+      "paired_effects_ms": {
+        "candidate": {
+          "median": -4.10577392578125,
+          "min": -44.737060546875,
+          "max": 45.18206787109375,
+          "p25": -21.6146240234375,
+          "p75": 12.46856689453125,
+          "stdev": 22.121531536668567,
+          "percent_of_parent_median": -0.771631438019134,
+          "rounds_parent_slower": 13,
+          "rounds": 31
+        },
+        "sham": {
+          "median": -7.773681640625,
+          "min": -45.28143310546875,
+          "max": 56.3466796875,
+          "p25": -20.1141357421875,
+          "p75": 13.98565673828125,
+          "stdev": 24.964556433576877,
+          "percent_of_parent_median": -1.4609711229818934,
+          "rounds_parent_slower": 13,
+          "rounds": 31
+        }
+      },
+      "removed_flops_per_call": 3355443200,
+      "null_paired_median_ms": -7.773681640625,
+      "null_paired_dispersion_ms": 34.09979248046875,
+      "candidate_paired_median_ms": -4.10577392578125,
+      "candidate_paired_dispersion_ms": 34.08319091796875
+    },
+    {
+      "label": "layer0/q/512",
+      "rows": 512,
+      "channels": 2560,
+      "rounds": 31,
+      "arms_ms": {
+        "parent": {
+          "median": 889.2003784179688,
+          "min": 860.0944213867188,
+          "max": 962.4935302734375,
+          "p25": 875.493896484375,
+          "p75": 898.5257568359375,
+          "stdev": 19.110482152098548
+        },
+        "candidate": {
+          "median": 890.0864868164062,
+          "min": 868.8556518554688,
+          "max": 916.739013671875,
+          "p25": 881.881103515625,
+          "p75": 894.1590576171875,
+          "stdev": 11.40053542912696
+        },
+        "sham": {
+          "median": 884.0462036132812,
+          "min": 869.59521484375,
+          "max": 911.9891967773438,
+          "p25": 877.53857421875,
+          "p75": 893.5640869140625,
+          "stdev": 10.167499879956985
+        }
+      },
+      "paired_effects_ms": {
+        "candidate": {
+          "median": -0.7567138671875,
+          "min": -46.4732666015625,
+          "max": 76.5499267578125,
+          "p25": -13.61572265625,
+          "p75": 12.01959228515625,
+          "stdev": 23.035046200507107,
+          "percent_of_parent_median": -0.08510048865856494,
+          "rounds_parent_slower": 13,
+          "rounds": 31
+        },
+        "sham": {
+          "median": 1.4671630859375,
+          "min": -32.8427734375,
+          "max": 79.03155517578125,
+          "p25": -6.213134765625,
+          "p75": 14.24932861328125,
+          "stdev": 19.84739156673485,
+          "percent_of_parent_median": 0.16499802761530763,
+          "rounds_parent_slower": 17,
+          "rounds": 31
+        }
+      },
+      "removed_flops_per_call": 13421772800,
+      "null_paired_median_ms": 1.4671630859375,
+      "null_paired_dispersion_ms": 20.46246337890625,
+      "candidate_paired_median_ms": -0.7567138671875,
+      "candidate_paired_dispersion_ms": 25.63531494140625
+    },
+    {
+      "label": "layer0/o/128",
+      "rows": 128,
+      "channels": 4096,
+      "rounds": 31,
+      "arms_ms": {
+        "parent": {
+          "median": 483.431884765625,
+          "min": 463.08331298828125,
+          "max": 514.1337890625,
+          "p25": 477.925537109375,
+          "p75": 496.72955322265625,
+          "stdev": 13.473102377592264
+        },
+        "candidate": {
+          "median": 488.37359619140625,
+          "min": 472.3597106933594,
+          "max": 571.1934814453125,
+          "p25": 481.0096435546875,
+          "p75": 508.4519958496094,
+          "stdev": 23.377461483082495
+        },
+        "sham": {
+          "median": 494.1390380859375,
+          "min": 469.39239501953125,
+          "max": 544.1488647460938,
+          "p25": 488.7955322265625,
+          "p75": 502.8375549316406,
+          "stdev": 17.34144409907888
+        }
+      },
+      "paired_effects_ms": {
+        "candidate": {
+          "median": -10.07122802734375,
+          "min": -88.27603149414062,
+          "max": 24.135223388671875,
+          "p25": -17.269805908203125,
+          "p75": 10.68463134765625,
+          "stdev": 26.95019258875614,
+          "percent_of_parent_median": -2.0832775711983564,
+          "rounds_parent_slower": 10,
+          "rounds": 31
+        },
+        "sham": {
+          "median": -9.038238525390625,
+          "min": -48.421234130859375,
+          "max": 25.3382568359375,
+          "p25": -27.175384521484375,
+          "p75": 2.3092041015625,
+          "stdev": 19.613393703990734,
+          "percent_of_parent_median": -1.869599174198553,
+          "rounds_parent_slower": 8,
+          "rounds": 31
+        }
+      },
+      "removed_flops_per_call": 8589934592,
+      "null_paired_median_ms": -9.038238525390625,
+      "null_paired_dispersion_ms": 29.484588623046875,
+      "candidate_paired_median_ms": -10.07122802734375,
+      "candidate_paired_dispersion_ms": 27.954437255859375
+    },
+    {
+      "label": "layer0/o/512",
+      "rows": 512,
+      "channels": 4096,
+      "rounds": 31,
+      "arms_ms": {
+        "parent": {
+          "median": 559.735107421875,
+          "min": 529.4783935546875,
+          "max": 616.9495239257812,
+          "p25": 547.6185913085938,
+          "p75": 575.6031494140625,
+          "stdev": 21.44858202297978
+        },
+        "candidate": {
+          "median": 554.6221313476562,
+          "min": 526.8198852539062,
+          "max": 588.4826049804688,
+          "p25": 544.640625,
+          "p75": 562.3737182617188,
+          "stdev": 14.240808816199172
+        },
+        "sham": {
+          "median": 554.1265258789062,
+          "min": 524.5551147460938,
+          "max": 574.293701171875,
+          "p25": 542.8267822265625,
+          "p75": 558.5894165039062,
+          "stdev": 12.802801344763408
+        }
+      },
+      "paired_effects_ms": {
+        "candidate": {
+          "median": 9.50506591796875,
+          "min": -47.74151611328125,
+          "max": 69.21820068359375,
+          "p25": -11.1876220703125,
+          "p75": 28.177490234375,
+          "stdev": 27.828387693976747,
+          "percent_of_parent_median": 1.6981364563228543,
+          "rounds_parent_slower": 17,
+          "rounds": 31
+        },
+        "sham": {
+          "median": 9.5274658203125,
+          "min": -28.031982421875,
+          "max": 61.72998046875,
+          "p25": -2.64520263671875,
+          "p75": 28.24005126953125,
+          "stdev": 22.27188485029481,
+          "percent_of_parent_median": 1.7021383318612537,
+          "rounds_parent_slower": 23,
+          "rounds": 31
+        }
+      },
+      "removed_flops_per_call": 34359738368,
+      "null_paired_median_ms": 9.5274658203125,
+      "null_paired_dispersion_ms": 30.88525390625,
+      "candidate_paired_median_ms": 9.50506591796875,
+      "candidate_paired_dispersion_ms": 39.3651123046875
+    }
+  ]
+}

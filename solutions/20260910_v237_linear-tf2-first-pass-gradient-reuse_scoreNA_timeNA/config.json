@@ -1,0 +1,108 @@
+{
+  "run_id": "linear-tf2-retained-root-gradient-reuse",
+  "version": "v237",
+  "version_note": "v237 is the next free number after v236; no v237 existed under solutions/ at archive time.",
+  "mechanism": "L-TF2: the first descent pass reuses the gradient the parent computed and checked before the loop, instead of recomputing it as the first statement of pass 0. Same edit as L-TF1 (v233), re-derived on the K=2 root.",
+  "mechanism_type": "pure time change with an exact output-equivalence obligation: strictly fewer operations, identical results",
+  "plan": "docs/superpowers/plans/2026-09-10-retained-root-gradient-reuse-plan.md",
+  "plan_section": "2 (Linear L-TF2)",
+  "log": "logs/execution/2026-09-10-linear-tf2-retained-root-gradient-reuse.md",
+  "parent": "solutions/20260910_v231_linear-em3-k2-arm_scoreNA_timeNA/solution.py",
+  "parent_identity": "v231 Linear (L-EM3 K=2) + v195 Attention",
+  "parent_sha256": "ea79a1c12dc667142c620975aab188920fae7b29988c804f41c1a696cc5754f1",
+  "parent_bytes": 505762,
+  "parent_official": {
+    "score": 18518,
+    "seconds": 291,
+    "limit_seconds": 300,
+    "margin_seconds": 9
+  },
+  "candidate_sha256": "ecb1f9e510b5507e1a2dc8b95f8a84e9b51864a420b3828537a328813e2ce554",
+  "candidate_bytes": 516697,
+  "implementation_sha256": "07afe39ac9c36d9f7d663ce533fa74044ffcb2ad17b3760c52a9e2a42482c358",
+  "implementation_bytes": 10933,
+  "build": "build.py",
+  "build_is_derived_not_handwritten": true,
+  "the_change": "one substring substitution inside the parent's own _em1_dynamic_descent: the loop head becomes `if _pass:` and the in-loop gradient recomputation moves inside it. 5 changed lines, +34 bytes in the extracted function.",
+  "fixed_choices_inherited_unchanged": [
+    "_EM1_PASSES = 2 (K is asserted, not read back)",
+    "_EM1_GROUPS_PER_BLOCK = 16",
+    "the metric and its ridge",
+    "the candidate set and the 16-step group-major schedule",
+    "the coverage rule and the whole-row joint acceptance",
+    "the pre-loop finiteness check and the nonfinite-gradient diagnostic",
+    "every Attention API (asserted byte-identical in bytecode)"
+  ],
+  "what_the_change_does_to_execution": "at K=2 the candidate issues 36 Tensor.mm products per descent call against the parent's 38; the candidate's recorded product sequence equals the parent's with products 2 and 3 removed and nothing else changed, so pass 1 still recomputes",
+  "local_result": {
+    "six_shard_run": "artifacts/proxy_v3/linear-tf2-sixshard-20260910",
+    "shard0_run": "artifacts/proxy_v3/linear-tf2-shard0-20260910",
+    "equal_shard_mean_delta_gain": 0.0,
+    "case_count": 336,
+    "positive_cases": 0,
+    "negative_cases": 0,
+    "zero_cases": 336,
+    "delta_min": 0.0,
+    "delta_max": 0.0,
+    "reasonableness_issues": 0
+  },
+  "time": {
+    "verdict": "the wall-clock effect is below this machine's resolution; recorded with a null control rather than quoted with a sign",
+    "operators_removed_per_call": 2,
+    "operators_parent_per_call": 38,
+    "operators_candidate_per_call": 36,
+    "paired_three_arm": {
+      "layer0/q/128": {
+        "candidate_paired_median_ms": -4.10577392578125,
+        "null_paired_median_ms": -7.773681640625,
+        "candidate_dispersion_p25_p75_ms": [
+          34.08319091796875
+        ],
+        "abs_effect_over_abs_null": 0.5281633742658836,
+        "rounds_candidate_faster": 13,
+        "rounds_null_faster": 13,
+        "rounds": 31
+      },
+      "layer0/q/512": {
+        "candidate_paired_median_ms": -0.7567138671875,
+        "null_paired_median_ms": 1.4671630859375,
+        "candidate_dispersion_p25_p75_ms": [
+          25.63531494140625
+        ],
+        "abs_effect_over_abs_null": 0.5157667027206922,
+        "rounds_candidate_faster": 13,
+        "rounds_null_faster": 17,
+        "rounds": 31
+      },
+      "layer0/o/128": {
+        "candidate_paired_median_ms": -10.07122802734375,
+        "null_paired_median_ms": -9.038238525390625,
+        "candidate_dispersion_p25_p75_ms": [
+          27.954437255859375
+        ],
+        "abs_effect_over_abs_null": 1.1142910202083298,
+        "rounds_candidate_faster": 10,
+        "rounds_null_faster": 8,
+        "rounds": 31
+      },
+      "layer0/o/512": {
+        "candidate_paired_median_ms": 9.50506591796875,
+        "null_paired_median_ms": 9.5274658203125,
+        "candidate_dispersion_p25_p75_ms": [
+          39.3651123046875
+        ],
+        "abs_effect_over_abs_null": 0.9976489128624326,
+        "rounds_candidate_faster": 17,
+        "rounds_null_faster": 23,
+        "rounds": 31
+      }
+    }
+  },
+  "lineage_note": "v237 is a descendant of v231 (contains K=2) and of v230 (contains L-EM2/L-EM3); it is NOT a descendant of v233 (L-TF1 on the K=1 v230 root) and does not contain v232's L-QF1 or v235's L-AD1. Scores and seconds do not add across these.",
+  "declared_deviations": [],
+  "local_decision": "archive and submit once for official adjudication",
+  "local_decision_note": "a pure time candidate with proven-identical output may take one official verification; it is not a repeated equivalent A/B",
+  "official_status": "unregistered/NA",
+  "official_score": null,
+  "official_seconds": null
+}

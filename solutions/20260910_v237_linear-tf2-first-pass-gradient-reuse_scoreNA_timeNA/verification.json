@@ -1,0 +1,72 @@
+{
+  "version": "v237",
+  "mechanism": "L-TF2: the first descent pass reuses the gradient the parent computed and checked before the loop, instead of recomputing it as the first statement of pass 0. Same edit as L-TF1 (v233), re-derived on the K=2 root.",
+  "parent_sha256": "ea79a1c12dc667142c620975aab188920fae7b29988c804f41c1a696cc5754f1",
+  "parent_bytes": 505762,
+  "candidate_sha256": "ecb1f9e510b5507e1a2dc8b95f8a84e9b51864a420b3828537a328813e2ce554",
+  "candidate_bytes": 516697,
+  "implementation_sha256": "07afe39ac9c36d9f7d663ce533fa74044ffcb2ad17b3760c52a9e2a42482c358",
+  "root_sha256_at_archive_time": "ea79a1c12dc667142c620975aab188920fae7b29988c804f41c1a696cc5754f1",
+  "sole_change_measured": {
+    "byte_level": "one substring substitution; +34 B in the extracted function; 5 changed lines",
+    "syntax_level": "AST identical to the parent once the single `if _pass:` guard is dissolved",
+    "ast_identical_after_dissolving_pass_guard": true,
+    "substitutions_performed": 1,
+    "shared_prefix_bytes": 505762
+  },
+  "single_file_import": "the six APIs import and run from a bare temporary directory holding nothing else (verify.py control A, single_file_import)",
+  "attention_apis_bytecode_identical": true,
+  "shipped_passes": 2,
+  "protocol": "proxy-v3",
+  "panel": "qwen35-4b-panel-v1 (336 Linear cases)",
+  "scope": "linear-only, six shards, target side",
+  "hard_output_changed": false,
+  "equivalence_is_exact_not_tolerance_based": "the five HiF4 fields are compared as raw bytes on the compiled synthetic layer, on 128 real rows of the cached layer-0/q state, on a state with no eml payload and on the out-of-scope bypass; no tolerance is used anywhere",
+  "equal_shard_mean_delta_gain": 0.0,
+  "delta_reference": "candidate.gain - baseline.gain, per case, keyed by case_id",
+  "shard_delta_gain_mean": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+  ],
+  "positive_cases": 0,
+  "negative_cases": 0,
+  "zero_cases": 336,
+  "case_count": 336,
+  "delta_extremes": {
+    "min": 0.0,
+    "max": 0.0
+  },
+  "delta_by_role_six_shards": {
+    "fc_gate": 0.0,
+    "fc_up": 0.0,
+    "k": 0.0,
+    "o": 0.0,
+    "proj": 0.0,
+    "q": 0.0,
+    "v": 0.0
+  },
+  "shard_decision": "no_effect (the evaluator's own small-trend filter)",
+  "shard_decision_note": "336 of 336 paired cases are exactly zero; the evaluator's own paired statistic lands on zero everywhere, which is the predicted reading for a constructively output-equivalent candidate",
+  "pairing_method": "one eval.py process carrying both sides; per-case delta re-derived here as candidate.gain - baseline.gain keyed by case_id",
+  "in_process_shards": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "stopped_early_flag": {
+    "manifest_value": true,
+    "is_a_truncation": false,
+    "why": "the stop check runs after the shard's results are appended, and at K=2 a constructively output-equivalent candidate yields delta_mean == 0 on every shard, so the six-shard counter reaches --stop-after-nonpositive 6 exactly on the last requested shard. All six shards are recorded (6 results, status ok, 56 cases each, 336 total) with six analysis files; no shard was skipped and no coverage was lost.",
+    "independent_coverage_check": "candidate-linear-shard{0..5}.json: 6 files, status ok, 56 cases each, 336 total, source_sha256 ecb1f9e5 consistent across shards"
+  },
+  "official_status": "unregistered/NA",
+  "official_score": null,
+  "official_seconds": null
+}

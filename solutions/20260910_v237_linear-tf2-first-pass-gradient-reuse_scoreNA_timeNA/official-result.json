@@ -1,0 +1,23 @@
+{
+  "version": "v237",
+  "candidate_sha256": "ecb1f9e510b5507e1a2dc8b95f8a84e9b51864a420b3828537a328813e2ce554",
+  "parent_sha256": "ea79a1c12dc667142c620975aab188920fae7b29988c804f41c1a696cc5754f1",
+  "official_status": "unregistered/NA",
+  "official_score": null,
+  "official_time_s": null,
+  "official_time_display": null,
+  "reported_by": null,
+  "reported_at": null,
+  "decision": "PENDING user submission. Not yet measured officially, so nothing is claimed and nothing is projected. The local evidence is an exact-output equivalence (336/336 paired cases exactly zero, and the five HiF4 fields compared as raw bytes on synthetic and real states) plus a proven reduction of exactly two Tensor.mm products per descent call (38 -> 36, with pass 1 shown to still recompute).",
+  "promotion_rule_pre_registered": "Plan section 2, fixed before the run: an equal official score with a resolvable official speed-up and a time under 300s promotes this candidate to a working parent; an equal score without a speed-up does not; a lower score or a timeout does not and leaves the root at v231.",
+  "local_projection_seconds": null,
+  "local_projection_margin_seconds": null,
+  "local_projection_basis": null,
+  "projection_note": "no projection was recorded, and none is warranted. The three-arm paired estimator with a byte-identical sham arm put the candidate effect at -4.106 / -0.757 / -10.071 / +9.505 ms against a sham whose own median moved by -7.774 / +1.467 / -9.038 / +9.527 ms -- |effect|/|null| between 0.52x and 1.11x, with the sign flipping between rows and the faster-round count at 10-17 of 31. Nothing on this machine resolved the effect. Local wall-clock resolution was the limit, and this archive does not convert it into official seconds.",
+  "official_scored_sha256": null,
+  "archive_sha256": "ecb1f9e510b5507e1a2dc8b95f8a84e9b51864a420b3828537a328813e2ce554",
+  "note": "The official baseline for a future reading is the v231 root at 18518 / 291s against a 300s hard limit. v237 is a descendant of that root and carries the L-EM3 K=2 arm, so a reading here is against v231 and is not additive with the v233 (L-TF1) fallback-root reading, which was priced against v230 at K=1. The mechanism is the same edit v233 carried, but re-derived on the K=2 root: v233's parent shipped K=1, where the guarded branch never executes, so that reading priced a branch that could not run. On this root pass 1 does execute it.",
+  "context_at_submission": "On the same root, v232, v234 (complete package) and v235 have all returned official TIMEOUT. v235 was the only Linear candidate whose local speed-up was resolvable (34-52x the sham null) and it still timed out. This candidate's local effect is one to two orders of magnitude smaller and is not resolvable here, so no claim is made that it would show a resolvable official difference. It qualifies under AGENTS section 2 as a pure time candidate with a real execution-cost change, which may take one official verification rather than being treated as a repeated equivalent A/B.",
+  "candidate_type": "complete Linear L-TF2 candidate (v231 root plus one shadow definition of _em1_dynamic_descent carrying the `if _pass:` guard); the only v237 under solutions/ at archive time",
+  "execution_log": "logs/execution/2026-09-10-linear-tf2-retained-root-gradient-reuse.md"
+}

@@ -1,0 +1,41 @@
+{
+  "card": "L-TF2 -- first-pass gradient reuse ported to the retained K=2 root",
+  "plan": "docs/superpowers/plans/2026-09-10-retained-root-gradient-reuse-plan.md",
+  "plan_section": "2",
+  "registered": "2026-09-10",
+  "parent_role": "current complete root (highest official score)",
+  "parent_identity": "v231 Linear (L-EM3 K=2) + v195 Attention",
+  "parent_archive_path": "solutions/20260910_v231_linear-em3-k2-arm_scoreNA_timeNA/solution.py",
+  "parent_sha256": "ea79a1c12dc667142c620975aab188920fae7b29988c804f41c1a696cc5754f1",
+  "parent_bytes": 505762,
+  "parent_official_score": 18518,
+  "parent_official_seconds": 291,
+  "parent_official_limit_seconds": 300,
+  "parent_official_margin_seconds": 9,
+  "parent_official_status": "returned by the user 2026-09-10",
+  "live_root_cross_check": {
+    "path": "solution.py",
+    "sha256": "ea79a1c12dc667142c620975aab188920fae7b29988c804f41c1a696cc5754f1",
+    "bytes": 505762,
+    "matches_parent_archive": true,
+    "note": "verified at card start; the build binds the immutable archive, not this file"
+  },
+  "fallback_root": {
+    "identity": "v233 Linear (L-TF1 gradient reuse) + v195 Attention",
+    "sha256": "0ec89710087d061bf9608196ad4d53a1c6be98c8a5595596a071ecd05a6821eb",
+    "official_score": 18428,
+    "official_seconds": 288,
+    "note": "same score as v230 but 4s faster; L-TF1 was measured on the K=1 parent only"
+  },
+  "shipped_passes": 2,
+  "card_change": "guard the in-loop gradient recomputation with `if _pass:` so pass 0 reuses the pre-loop gradient",
+  "expected_mm_per_call": {
+    "parent": 38,
+    "candidate": 36,
+    "saved": 2,
+    "derivation": "2 pre-loop + 2 passes * (2 gradient + 16 group steps); the candidate's pass 0 costs the 16 steps alone"
+  },
+  "official_unknowns_are_null": true,
+  "candidate_version": null,
+  "candidate_official_status": "unregistered/NA"
+}
