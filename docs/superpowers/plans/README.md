@@ -23,7 +23,7 @@ Attention没有新活动卡；已归档结果保留，后续方向须有具体�
 | v230 Linear L-EM2 | RETAINED，官方18428/292s，当前根 |
 | v231 Linear L-EM3 K=2 | 开发完成；六shard相对当前根+0.027507（286/0/50）；官方PENDING |
 | v232 Linear L-QF1 局部代价修正 | 开发完成；六shard相对当前根+0.013739（284/4/48）；零可测时间成本；官方PENDING。**是v230的后代，不含v231的K=2机制** |
-| v230 Attention A-FIX1 | 开发完成；本地−0.004884；官方未知，与Linear同编号分开绑定 |
+| v230 Attention A-FIX1 | **官方 TIMEOUT (>300s)，REJECTED**（2026-09-10 用户回传），精确秒数/分数未知；本地−0.004884保留为诊断；对齐前向~1.4×校准成本与v229同成本类，只关闭该实现，不缩步/缩窗重试；与Linear同编号分开绑定；见[回传记录](../../../logs/execution/2026-09-10-v230-attention-afix1-official-timeout.md) |
 | v229 Attention A-MC1 | 完整包TIMEOUT；标准Linear侧14424/245s，相对同口径基准−2/+2s；关闭 |
 | A-QC1 | NO_EFFECT，未提交 |
 | L-EM4 / L-DD1 | 侦察完成；未发现DD1实施候选。旧卡已被新计划取代 |

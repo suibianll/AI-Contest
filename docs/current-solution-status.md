@@ -31,7 +31,7 @@
 修正后接受判决的代价与真实目标差一致到fp精度（`4.767e-15` vs 父`5.439e-02`，因`J`对`X`二次）。
 官方**PENDING**，分数/秒数`null`，不写预测。**v232是v230的后代，不含v231的K=2机制，两者Δ不可相加。**
 
-v231 Linear已完成六shard，相对当前根+0.027507（286/0/50），官方PENDING；v230 Attention A-FIX1官方未知。v229完整包TIMEOUT、标准Linear侧14424/245s（−2/+2s），不再列入后续优化。L-EM4侦察完成；旧L-DD1只有计划与侦察，无实施结果。
+v231 Linear已完成六shard，相对当前根+0.027507（286/0/50），官方PENDING；v230 Attention A-FIX1官方TIMEOUT(>300s)，REJECTED，训练/部署对齐路线关闭（重试须先消除校准期对齐前向成本）。v229完整包TIMEOUT、标准Linear侧14424/245s（−2/+2s），不再列入后续优化。L-EM4侦察完成；旧L-DD1只有计划与侦察，无实施结果。
 
 [本轮总结](optimization-round-summary-2026-09-10.md)取代此前“朴素时间公式已证实”“官方带缓存”“整API计数归因于局部einsum”“DD1仅等价提速”等解释；CPU/GPU测量口径修正仍保留。原入口补记已保存历史快照。官方未知不填预测秒数。
 
@@ -65,14 +65,19 @@ A-QC1（Q 侧 per-call 数据中心化，A-MC1 同构移到 Q 侧）已关闭 `N
 K 平移类正式关闭；至此 Attention 规则级已盘点方向均有裁决记录（不构成完备性证明），
 Attention 侧无存活卡片；后续执行以计划入口为准，有限卡片的关闭不证明整个机制空间耗尽。
 
-A-FIX1 已实现并归档为 v230（本地净负，官方待定）：训练/部署前向对齐——`_a2_train_rotation`
+A-FIX1 已实现并归档为 v230（**官方 TIMEOUT (>300s)，REJECTED**，2026-09-10 用户回传
+"v230-attention也超时了"）：训练/部署前向对齐——`_a2_train_rotation`
 训练前向 Q/K 量化从裸 `_dense_to_hif4` 换成完整部署编码（与 gate 相同的
 `hif4_dynamic_quantize_q/k` 路径），STE 反向不变，参数化/步数/lr/窗口/gate 全部与根相同。
-六 shard 等权 `-0.004884`（29/31/12，72 case），candidate overall `+0.529114` vs 基线
-`+0.533998`；机制可达、非等价（种子探针证明对齐前向把训练推向流形上不同的点）。层15 在
+六 shard 等权 `-0.004884`（29/31/12，72 case）保留为诊断，未获官方精度定价；
+机制可达、非等价（种子探针证明对齐前向把训练推向流形上不同的点）。层15 在
 v227 和本卡两次重训 rotation 都明显变差（本次 `-0.013820`），而层15 在根中接受 rotation
-（gate +2.43%）——再次确认根的 rotation 臂不宜重训。按 2026-09-10 新执行规则与瓶颈审计 §4，
-本地负向不截断官方探索，本候选不标 REJECTED，官方 `unregistered/NA`，待用户统一评测；根不变。
+（gate +2.43%）——再次确认根的 rotation 臂不宜重训。对齐前向约 1.4× 校准成本与 v229
+校准期 gate 前向同成本类，官方机上不可行；只关闭该实现，不缩步/缩窗重试，训练/部署对齐
+路线重试前须先消除校准期成本。计分/归档 SHA
+`c2ff4ea0d6a3823e29351b616c330fa9358b588934e73019c382183130dfcd6f`，归档目录
+`20260910_v230_attention-afix1-train-deploy-align_rejected_scoreNA_timeNA`。见
+[官方回传记录](../logs/execution/2026-09-10-v230-attention-afix1-official-timeout.md)。
 注意：与并行 Linear 线 L-EM2 的 v230 构成编号冲突，引用须写全目录名
 （`20260910_v230_attention-afix1-...` vs `20260910_v230_linear-em2-...`）。
 

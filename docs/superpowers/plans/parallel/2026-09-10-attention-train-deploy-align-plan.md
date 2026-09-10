@@ -1,7 +1,7 @@
 # Attention A2 训练/部署前向对齐计划（A-FIX1）
 
-> 状态：已执行完成——本地净负、官方待定（v230），2026-09-10。
-> 从属于当前活动总计划（Linear 线）。当前完整根为 v202 Linear + v195 Attention，官方 `18053/281s`。
+> 状态：CLOSED / 官方 TIMEOUT (>300s)，REJECTED，2026-09-10 用户回传。
+> 从属于当前活动总计划（Linear 线）。当前完整根为 v230 Linear (L-EM2) + v195 Attention，官方 `18428/292s`。
 > 本文件只负责 Attention A-FIX1；版本登记、组合与根切换由总协调线处理。
 > 依据：[推进瓶颈审计](../../optimization-stall-analysis-2026-09-10.md) §1 与 §5.3——
 > 「重点处理训练与部署量化路径不一致，冻结已证实有效的父 rotation」。
@@ -52,7 +52,7 @@ rotation/center 被优化到"简化路径下好"的点，部署路径下不一�
 
 ## 5. 执行结果（2026-09-10，v230）
 
-- 归档：`solutions/20260910_v230_attention-afix1-train-deploy-align_officialNA_timeNA/`，候选
+- 归档：`solutions/20260910_v230_attention-afix1-train-deploy-align_rejected_scoreNA_timeNA/`，候选
   SHA256 `c2ff4ea0d6a3823e29351b616c330fa9358b588934e73019c382183130dfcd6f`；执行日志
   `logs/execution/2026-09-10-attention-afix1-train-deploy-align.md`。
 - Control 全部 PASS：0 步逐位恢复父；训练前向与直接调用部署 API 逐位一致（8 次 Q + 8 次 K
@@ -66,7 +66,10 @@ rotation/center 被优化到"简化路径下好"的点，部署路径下不一�
 - 解读：机制可达、非等价但本地净负；层15 在 v227 与本卡两次重训 rotation 都明显变差，而
   层15 在根中接受 rotation（gate +2.43%）——「冻结父 rotation 叠加增量」与「重训 rotation」
   的对照证据再次确认根的 rotation 臂不宜重训。
-- 裁决：本地净负按新规则只作诊断，不标 REJECTED；官方状态 `unregistered/NA`，待用户统一
-  官方评测。根保持 v202 Linear + v195 Attention（`18053/281s`）不变。
+- 裁决：2026-09-10 用户回传 **官方 TIMEOUT (>300s)**，REJECTED，精确秒数与分数未知；
+  本地净负未获官方精度定价。对齐前向约 1.4× 校准成本与 v229 校准期 gate 前向同成本类，
+  官方机上不可行；只关闭该实现，不缩步/缩窗重试，训练/部署对齐路线重试前须先消除
+  校准期成本。见[官方回传](../../../../logs/execution/2026-09-10-v230-attention-afix1-official-timeout.md)。
+  根保持 v230 Linear (L-EM2) + v195 Attention（`18428/292s`）不变。
 - 版本号注意：与并行 Linear 线 L-EM2 的 v230 构成编号冲突（继 v204/v205 后第二次），按
   既有先例不重命名目录，引用须写全目录名。

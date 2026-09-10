@@ -52,16 +52,17 @@
 
 ## 4. 结果与裁决
 
-- 裁决：**本地净负（记录为本地诊断），归档 v230，官方待定**，官方状态 `unregistered/NA`。
-  按 2026-09-10 新执行规则与[瓶颈审计](../docs/optimization-stall-analysis-2026-09-10.md) §4，
-  本地负向不再截断官方探索，本候选不标 REJECTED，由用户统一官方评测。
-- 归档：`solutions/20260910_v230_attention-afix1-train-deploy-align_officialNA_timeNA/`
-  （目录名不带 `rejected`），候选 SHA256
-  `c2ff4ea0d6a3823e29351b616c330fa9358b588934e73019c382183130dfcd6f`。
+- 裁决：**官方 TIMEOUT (>300s)，REJECTED**（2026-09-10 用户回传"v230-attention也超时了"），
+  精确秒数与分数未知；本地 `−0.004884` 保留为诊断，未获官方精度定价。见
+  [官方回传记录](2026-09-10-v230-attention-afix1-official-timeout.md)。
+- 归档：`solutions/20260910_v230_attention-afix1-train-deploy-align_rejected_scoreNA_timeNA/`，
+  计分/归档 SHA256 `c2ff4ea0d6a3823e29351b616c330fa9358b588934e73019c382183130dfcd6f`。
+- 时间归因：校准约 1.4× 的对齐前向成本与 v229 的校准期 gate 前向同成本类，在官方机上
+  不可行；只关闭该实现，训练/部署对齐路线重试前必须先消除该校准成本，不缩步/缩窗重试。
 - 解读：机制可达、非等价；但本地净负。层15 在 v227 和本卡两次重训 rotation 都明显变差
   （本次 `-0.013820`），而层15 在根中接受 rotation（gate +2.43%）——「冻结父 rotation 叠加
   增量」（A-MC1 式）与「重训 rotation」（本卡）的对照证据再次确认：根的 rotation 臂不宜重训。
 - 版本号注意：并行 Linear 线 L-EM2 已登记 v230
   （`solutions/20260910_v230_linear-em2-groupstep-schedule_scoreNA_timeNA/`），构成第二次
   编号冲突（继 v204/v205）；按既有先例不重命名目录，引用时写全目录名。
-- 根不变：v202 Linear + v195 Attention，官方 `18053/281s`。
+- 根不变：v230 Linear（L-EM2）+ v195 Attention，官方 `18428/292s`（余量 8s）。

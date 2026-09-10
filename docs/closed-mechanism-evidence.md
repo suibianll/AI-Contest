@@ -65,8 +65,11 @@
   为 −2，K 平移类正式关闭（`logs/execution/2026-09-10-v229-side-isolation-official.md`）。
   Q·K 不变量四类结构变换（对角 scale/置换/正交/K 平移）与两侧 per-call
   定心规则均有定论，且 K 平移已有官方负向定价；scale/hierarchy/mantissa 搜索距穷举 oracle
-  仅 0.015–0.08%。不注册 gauge/偏置/中心变体（mean/midrange/中位数/trimmed）重试；
-  Attention 后续只由官方回传或 21071 锚点源码绑定驱动。
+  仅 0.015–0.08%；v230（A-FIX1 训练/部署前向对齐，校准约 1.4×）官方 `TIMEOUT(>300s)`
+  （`logs/execution/2026-09-10-v230-attention-afix1-official-timeout.md`），本地 `−0.004884`
+  未获官方精度定价，只关闭该实现，训练/部署对齐路线重试前须先消除校准期对齐前向成本。
+  不注册 gauge/偏置/中心变体（mean/midrange/中位数/trimmed）重试；Attention 后续只由官方回传或
+  21071 锚点源码绑定驱动。
 
 ### 全局
 

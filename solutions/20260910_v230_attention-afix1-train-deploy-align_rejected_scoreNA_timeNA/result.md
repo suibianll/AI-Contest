@@ -1,8 +1,11 @@
 # v230（Attention A-FIX1）— A2 训练/部署前向对齐（训练前向换完整部署编码，STE 不变）
 
-Status: local six-shard net negative (recorded as local diagnostic only); official status
-`unregistered/NA` (per the 2026-09-10 execution rules and the optimization-stall audit §4, a local
-negative no longer blocks official exploration; the user runs the official evaluation).
+Status: REJECTED / official TIMEOUT (>300s), reported by the user on 2026-09-10. Exact elapsed
+time and score are unavailable. Official scored SHA and archive SHA:
+`c2ff4ea0d6a3823e29351b616c330fa9358b588934e73019c382183130dfcd6f` (bound to the unique
+registered v230 Attention candidate; the same-numbered v230 Linear L-EM2 is a different
+candidate). Local six-shard was net negative and is kept as a diagnostic only. See
+`logs/execution/2026-09-10-v230-attention-afix1-official-timeout.md`.
 
 - Parent: retained v202 Linear + v195 Attention complete root, SHA256
   `56dc805d6e5a3aef896db8021045740292735725d688b48e3d4393e55efcb2bd`.
@@ -50,7 +53,9 @@ different point on the (R, c) manifold. Locally it is net negative (`-0.004884`)
 regressed markedly both times a card retrained the rotation (v227 and this card, here
 `-0.013820`), while layer 15 accepts its rotation in the root (gate +2.43%) — the contrast between
 "freeze the parent rotation and add an increment" (A-MC1 style) and "retrain the rotation" (this
-card) once again indicates that the root's rotation arm should not be retrained. Per the new
-2026-09-10 execution rules this candidate is not labeled REJECTED; it is archived as
-official-pending (`unregistered/NA`) for the user's batched official evaluation. The root remains
-v202 Linear + v195 Attention at `18053/281s`.
+card) once again indicates that the root's rotation arm should not be retrained. The official
+verdict is TIMEOUT (>300s): the ~1.4× calibration cost of the aligned forward is infeasible on the
+official machine (same cost class as v229's calibration-time gate forwards), so the local accuracy
+question was never priced. This closes this implementation; the train/deploy alignment route may
+only be retried after its calibration-time cost is eliminated, not by shrinking steps or windows.
+The root is now v230 Linear (L-EM2) + v195 Attention at `18428/292s`.

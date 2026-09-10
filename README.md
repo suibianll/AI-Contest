@@ -2,7 +2,7 @@
 
 v230 Linear（L-EM2）+ v195 Attention 已由用户官方回传 **18428 / 292s**，相对 v202 完整根 **+375 / +11s**，硬限余量 **8s**。根与归档逐位一致，SHA256 `0F1AF6DBC207FF32B2C6BE16987E9C4FE50F3F10747DE26782EF52A6F2FAB7BC`。回退根 v202 保留 `18053/281s`。同编号 v230 Attention A-FIX1 官方状态不受本次回传影响。 官方提交次数无限制。
 
-最新官方回传见[v230 Linear 晋级记录](logs/execution/2026-09-10-v230-linear-official-result.md)；此前 v229 官方超时保留，其标准 Linear 侧隔离官方 `14424/245s`（相对 v195 侧基准 −2），K 平移类已关闭。
+最新官方回传见[v230 Linear 晋级记录](logs/execution/2026-09-10-v230-linear-official-result.md)；此前 v229 官方超时保留，其标准 Linear 侧隔离官方 `14424/245s`（相对 v195 侧基准 −2），K 平移类已关闭；v230 Attention A-FIX1 官方 TIMEOUT（>300s）REJECTED，见[回传记录](logs/execution/2026-09-10-v230-attention-afix1-official-timeout.md)。
 
 ## 工作入口
 
