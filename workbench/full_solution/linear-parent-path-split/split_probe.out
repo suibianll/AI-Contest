@@ -1,0 +1,46 @@
+
+=== layer0/q  rows=128  channels=2560 ===
+   full call  gpu   539.810 ms
+       dense  gpu    0.756 ms (  0.1%)   wall    0.724 ms   calls/round 1
+       order  gpu    0.243 ms (  0.0%)   wall    0.219 ms   calls/round 1
+        gptq  gpu  504.013 ms ( 93.4%)   wall  503.953 ms   calls/round 1
+    residual  gpu   34.799 ms (  6.4%)   = hook + state copy + fallback + CPU gaps
+    inside gptq (504.0 ms, 93.4% of the call):
+       encoder  gpu  471.981 ms ( 93.6% of gptq,  87.4% of the call)   calls/round 40
+         solve  gpu   12.837 ms (  2.5% of gptq,   2.4% of the call)   calls/round 39
+          rest  gpu   19.195 ms (  3.8% of gptq,   3.6% of the call)   = index_select gathers + the compensation matmul
+
+=== layer0/q  rows=512  channels=2560 ===
+   full call  gpu   899.031 ms
+       dense  gpu    0.804 ms (  0.1%)   wall    0.772 ms   calls/round 1
+       order  gpu    0.237 ms (  0.0%)   wall    0.216 ms   calls/round 1
+        gptq  gpu  851.169 ms ( 94.7%)   wall  851.071 ms   calls/round 1
+    residual  gpu   46.821 ms (  5.2%)   = hook + state copy + fallback + CPU gaps
+    inside gptq (851.2 ms, 94.7% of the call):
+       encoder  gpu  816.760 ms ( 96.0% of gptq,  90.8% of the call)   calls/round 40
+         solve  gpu   13.325 ms (  1.6% of gptq,   1.5% of the call)   calls/round 39
+          rest  gpu   21.084 ms (  2.5% of gptq,   2.3% of the call)   = index_select gathers + the compensation matmul
+
+=== layer0/o  rows=128  channels=4096 ===
+   full call  gpu   498.530 ms
+       dense  gpu    0.801 ms (  0.2%)   wall    0.750 ms   calls/round 1
+       order  gpu    0.233 ms (  0.0%)   wall    0.215 ms   calls/round 1
+        gptq  gpu  428.928 ms ( 86.0%)   wall  428.873 ms   calls/round 1
+    residual  gpu   68.568 ms ( 13.8%)   = hook + state copy + fallback + CPU gaps
+    inside gptq (428.9 ms, 86.0% of the call):
+       encoder  gpu  374.855 ms ( 87.4% of gptq,  75.2% of the call)   calls/round 64
+         solve  gpu   21.848 ms (  5.1% of gptq,   4.4% of the call)   calls/round 63
+          rest  gpu   32.225 ms (  7.5% of gptq,   6.5% of the call)   = index_select gathers + the compensation matmul
+
+=== layer0/o  rows=512  channels=4096 ===
+   full call  gpu   530.235 ms
+       dense  gpu    0.965 ms (  0.2%)   wall    0.908 ms   calls/round 1
+       order  gpu    0.257 ms (  0.0%)   wall    0.237 ms   calls/round 1
+        gptq  gpu  424.827 ms ( 80.1%)   wall  424.700 ms   calls/round 1
+    residual  gpu  104.186 ms ( 19.6%)   = hook + state copy + fallback + CPU gaps
+    inside gptq (424.8 ms, 80.1% of the call):
+       encoder  gpu  370.046 ms ( 87.1% of gptq,  69.8% of the call)   calls/round 64
+         solve  gpu   21.047 ms (  5.0% of gptq,   4.0% of the call)   calls/round 63
+          rest  gpu   33.734 ms (  7.9% of gptq,   6.4% of the call)   = index_select gathers + the compensation matmul
+
+wrote D:\工作内容\AI竞赛\workbench\full_solution\linear-parent-path-split\split_probe.json

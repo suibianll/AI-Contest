@@ -1,0 +1,365 @@
+{
+  "device": "NVIDIA GeForce RTX 3060 Ti",
+  "parent_sha256_prefix": "0f1af6dbc207ff32",
+  "rounds": 15,
+  "purpose": "one split of the 90-93% bucket; not a timing claim about any candidate",
+  "parts": [
+    "dense",
+    "order",
+    "gptq"
+  ],
+  "states": [
+    {
+      "rounds": 15,
+      "full_ms": 539.8097534179688,
+      "full_unordered_ms": {
+        "min": 524.4212036132812,
+        "max": 567.826171875,
+        "stdev": 12.486756485720711
+      },
+      "calls_per_round": {
+        "dense": 1,
+        "order": 1,
+        "gptq": 1,
+        "encoder": 40,
+        "solve": 39
+      },
+      "part_gpu": {
+        "dense": {
+          "median_ms": 0.7555840015411377,
+          "min_ms": 0.7080640196800232,
+          "max_ms": 1.8274240493774414
+        },
+        "order": {
+          "median_ms": 0.2425599992275238,
+          "min_ms": 0.21644799411296844,
+          "max_ms": 0.5592960119247437
+        },
+        "gptq": {
+          "median_ms": 504.012939453125,
+          "min_ms": 489.40338134765625,
+          "max_ms": 526.1066284179688
+        },
+        "encoder": {
+          "median_ms": 11.63095998764038,
+          "min_ms": 8.244223594665527,
+          "max_ms": 20.111488342285156
+        },
+        "solve": {
+          "median_ms": 0.3022400140762329,
+          "min_ms": 0.23423999547958374,
+          "max_ms": 1.3605120182037354
+        }
+      },
+      "part_wall": {
+        "dense": {
+          "median_ms": 0.7240999984787777,
+          "min_ms": 0.6773999994038604,
+          "max_ms": 1.7469000013079494
+        },
+        "order": {
+          "median_ms": 0.2190000013797544,
+          "min_ms": 0.1967999996850267,
+          "max_ms": 0.5289000037009828
+        },
+        "gptq": {
+          "median_ms": 503.95299999945564,
+          "min_ms": 489.34100000042235,
+          "max_ms": 525.5150000011781
+        },
+        "encoder": {
+          "median_ms": 11.590199999773176,
+          "min_ms": 8.31109999853652,
+          "max_ms": 20.060899994859938
+        },
+        "solve": {
+          "median_ms": 0.2753000007942319,
+          "min_ms": 0.21130000095581636,
+          "max_ms": 1.3162999966880307
+        }
+      },
+      "encoder_calls_per_round": 40,
+      "inner_gpu_ms": {
+        "encoder": 471.9805717468262,
+        "solve": 12.837151885032654
+      },
+      "layer": 0,
+      "role": "q",
+      "rows": 128,
+      "channels": 2560,
+      "named_gpu_ms": 505.01108345389366,
+      "gptq_inner_share_percent": {
+        "encoder": 93.6445346540001,
+        "solve": 2.546988555286199
+      },
+      "gptq_remainder_gpu_ms": 19.195215821266174,
+      "gptq_remainder_percent_of_call": 3.5559223781574634,
+      "residual_gpu_ms": 34.79866996407509,
+      "residual_gpu_percent": 6.44646928732517
+    },
+    {
+      "rounds": 15,
+      "full_ms": 899.0309448242188,
+      "full_unordered_ms": {
+        "min": 884.3576049804688,
+        "max": 927.4720458984375,
+        "stdev": 10.089760714322308
+      },
+      "calls_per_round": {
+        "dense": 1,
+        "order": 1,
+        "gptq": 1,
+        "encoder": 40,
+        "solve": 39
+      },
+      "part_gpu": {
+        "dense": {
+          "median_ms": 0.8043519854545593,
+          "min_ms": 0.7405760288238525,
+          "max_ms": 1.0592319965362549
+        },
+        "order": {
+          "median_ms": 0.23654399812221527,
+          "min_ms": 0.22416000068187714,
+          "max_ms": 0.7976959943771362
+        },
+        "gptq": {
+          "median_ms": 851.1692504882812,
+          "min_ms": 835.6041259765625,
+          "max_ms": 878.9329833984375
+        },
+        "encoder": {
+          "median_ms": 20.2673921585083,
+          "min_ms": 16.505279541015625,
+          "max_ms": 30.503807067871094
+        },
+        "solve": {
+          "median_ms": 0.3044799864292145,
+          "min_ms": 0.25407999753952026,
+          "max_ms": 1.292415976524353
+        }
+      },
+      "part_wall": {
+        "dense": {
+          "median_ms": 0.7722000009380281,
+          "min_ms": 0.7075999965309165,
+          "max_ms": 1.0231999985990115
+        },
+        "order": {
+          "median_ms": 0.21559999731834978,
+          "min_ms": 0.20260000019334257,
+          "max_ms": 0.2832999962265603
+        },
+        "gptq": {
+          "median_ms": 851.0711999988416,
+          "min_ms": 835.5089000033331,
+          "max_ms": 879.3790000054287
+        },
+        "encoder": {
+          "median_ms": 20.211099999869475,
+          "min_ms": 16.39739999518497,
+          "max_ms": 30.44130000489531
+        },
+        "solve": {
+          "median_ms": 0.276099999609869,
+          "min_ms": 0.22799999715061858,
+          "max_ms": 1.1903999984497204
+        }
+      },
+      "encoder_calls_per_round": 40,
+      "inner_gpu_ms": {
+        "encoder": 816.7601909637451,
+        "solve": 13.32502394914627
+      },
+      "layer": 0,
+      "role": "q",
+      "rows": 512,
+      "channels": 2560,
+      "named_gpu_ms": 852.210146471858,
+      "gptq_inner_share_percent": {
+        "encoder": 95.95743625550418,
+        "solve": 1.5654963970446825
+      },
+      "gptq_remainder_gpu_ms": 21.084035575389862,
+      "gptq_remainder_percent_of_call": 2.3451957573620867,
+      "residual_gpu_ms": 46.820798352360725,
+      "residual_gpu_percent": 5.207918439505469
+    },
+    {
+      "rounds": 15,
+      "full_ms": 498.53033447265625,
+      "full_unordered_ms": {
+        "min": 477.1932678222656,
+        "max": 550.0595092773438,
+        "stdev": 18.893712339157872
+      },
+      "calls_per_round": {
+        "dense": 1,
+        "order": 1,
+        "gptq": 1,
+        "encoder": 64,
+        "solve": 63
+      },
+      "part_gpu": {
+        "dense": {
+          "median_ms": 0.8008000254631042,
+          "min_ms": 0.7390080094337463,
+          "max_ms": 2.0575358867645264
+        },
+        "order": {
+          "median_ms": 0.23347200453281403,
+          "min_ms": 0.20479999482631683,
+          "max_ms": 0.9049919843673706
+        },
+        "gptq": {
+          "median_ms": 428.9280090332031,
+          "min_ms": 406.2359619140625,
+          "max_ms": 465.0045471191406
+        },
+        "encoder": {
+          "median_ms": 5.5894880294799805,
+          "min_ms": 4.038047790527344,
+          "max_ms": 15.737855911254883
+        },
+        "solve": {
+          "median_ms": 0.30611199140548706,
+          "min_ms": 0.23443199694156647,
+          "max_ms": 1.4950079917907715
+        }
+      },
+      "part_wall": {
+        "dense": {
+          "median_ms": 0.7503000015276484,
+          "min_ms": 0.6900000007590279,
+          "max_ms": 1.9941999998991378
+        },
+        "order": {
+          "median_ms": 0.21459999697981402,
+          "min_ms": 0.18950000230688602,
+          "max_ms": 0.4181000040262006
+        },
+        "gptq": {
+          "median_ms": 428.8732999993954,
+          "min_ms": 406.18689999973867,
+          "max_ms": 465.4246999998577
+        },
+        "encoder": {
+          "median_ms": 5.552900001930539,
+          "min_ms": 4.1075999979511835,
+          "max_ms": 15.673000001697801
+        },
+        "solve": {
+          "median_ms": 0.2803999959724024,
+          "min_ms": 0.2103000006172806,
+          "max_ms": 1.4501000041491352
+        }
+      },
+      "encoder_calls_per_round": 64,
+      "inner_gpu_ms": {
+        "encoder": 374.8545608520508,
+        "solve": 21.848095953464508
+      },
+      "layer": 0,
+      "role": "o",
+      "rows": 128,
+      "channels": 4096,
+      "named_gpu_ms": 429.96228106319904,
+      "gptq_inner_share_percent": {
+        "encoder": 87.39335108867499,
+        "solve": 5.093651030789472
+      },
+      "gptq_remainder_gpu_ms": 32.225352227687836,
+      "gptq_remainder_percent_of_call": 6.464070488664588,
+      "residual_gpu_ms": 68.5680534094572,
+      "residual_gpu_percent": 13.754038353952577
+    },
+    {
+      "rounds": 15,
+      "full_ms": 530.2347412109375,
+      "full_unordered_ms": {
+        "min": 507.51068115234375,
+        "max": 554.37255859375,
+        "stdev": 13.257063590312606
+      },
+      "calls_per_round": {
+        "dense": 1,
+        "order": 1,
+        "gptq": 1,
+        "encoder": 64,
+        "solve": 63
+      },
+      "part_gpu": {
+        "dense": {
+          "median_ms": 0.9646080136299133,
+          "min_ms": 0.8070080280303955,
+          "max_ms": 1.7743680477142334
+        },
+        "order": {
+          "median_ms": 0.2573759853839874,
+          "min_ms": 0.20787200331687927,
+          "max_ms": 0.5070719718933105
+        },
+        "gptq": {
+          "median_ms": 424.8268737792969,
+          "min_ms": 401.5237121582031,
+          "max_ms": 445.0641784667969
+        },
+        "encoder": {
+          "median_ms": 5.508656024932861,
+          "min_ms": 3.666271924972534,
+          "max_ms": 13.816831588745117
+        },
+        "solve": {
+          "median_ms": 0.3031040132045746,
+          "min_ms": 0.23497599363327026,
+          "max_ms": 1.4326399564743042
+        }
+      },
+      "part_wall": {
+        "dense": {
+          "median_ms": 0.9079000010387972,
+          "min_ms": 0.7607000006828457,
+          "max_ms": 1.7374000017298386
+        },
+        "order": {
+          "median_ms": 0.23739999596728012,
+          "min_ms": 0.1919999995152466,
+          "max_ms": 0.7841999977244996
+        },
+        "gptq": {
+          "median_ms": 424.70049999974435,
+          "min_ms": 401.75989999988815,
+          "max_ms": 444.9492999992799
+        },
+        "encoder": {
+          "median_ms": 5.480550000356743,
+          "min_ms": 4.079500002262648,
+          "max_ms": 13.759100002062041
+        },
+        "solve": {
+          "median_ms": 0.2773999949567951,
+          "min_ms": 0.21190000552451238,
+          "max_ms": 1.3842999978805892
+        }
+      },
+      "encoder_calls_per_round": 64,
+      "inner_gpu_ms": {
+        "encoder": 370.0462398529053,
+        "solve": 21.047039926052094
+      },
+      "layer": 0,
+      "role": "o",
+      "rows": 512,
+      "channels": 4096,
+      "named_gpu_ms": 426.0488577783108,
+      "gptq_inner_share_percent": {
+        "encoder": 87.10518629881902,
+        "solve": 4.954262836250399
+      },
+      "gptq_remainder_gpu_ms": 33.73359400033951,
+      "gptq_remainder_percent_of_call": 6.36201127132853,
+      "residual_gpu_ms": 104.18588343262672,
+      "residual_gpu_percent": 19.649011152058705
+    }
+  ]
+}
