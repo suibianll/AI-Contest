@@ -362,6 +362,10 @@ def main() -> int:
                 out = attention(qd.reshape(tokens, -1), kd.reshape(tokens, -1), _validated(codes))
                 return float((out - target).square().mean())
 
+            if os.environ.get("VK3_DUMP_CODE"):
+                torch.save({"par": base_code.cpu(), "ker": ker_code.cpu()},
+                           os.environ["VK3_DUMP_CODE"])
+                print(f"dumped codes L{layer}/w{w_index} moved={int((ker_code!=base_code).sum())}", flush=True)
             mse_par = true_mse(base_code)
             mse_ker = true_mse(ker_code)
             mse_uni = true_mse(uni_code)
