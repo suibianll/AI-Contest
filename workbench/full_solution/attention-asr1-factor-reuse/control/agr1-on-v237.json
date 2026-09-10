@@ -1,0 +1,22 @@
+{
+  "role": "local same-parent control for A-SR1; not submitted",
+  "construction": "v237 bytes + the A-GR1 block taken byte-for-byte from v236",
+  "v237_path": "solutions/20260910_v237_linear-tf2-first-pass-gradient-reuse_scoreNA_timeNA/solution.py",
+  "v237_sha256": "ecb1f9e510b5507e1a2dc8b95f8a84e9b51864a420b3828537a328813e2ce554",
+  "v237_bytes": 516697,
+  "v231_root_prefix_bytes": 505762,
+  "agr1_block_source": "solutions/20260910_v236_attention-agr1-on-v231_scoreNA_timeNA/solution.py",
+  "agr1_block_sha256": "70071cd345ccc08f35e34dfa166934236b030976b551f46a5305477c89690c31",
+  "agr1_block_bytes": 15193,
+  "control_path": "workbench/full_solution/attention-asr1-factor-reuse/control/agr1-on-v237.py",
+  "control_sha256": "30a1a1a24f64ae86450c846a12dffb76398c6567002d41c5569dda4245271008",
+  "control_bytes": 531890,
+  "carries_ltf2_shadow": true,
+  "definitions": {
+    "hif4_calibration_attention": 3,
+    "_agr1_train": 1,
+    "_agr1_project": 1,
+    "_em1_dynamic_descent": 2
+  },
+  "note": "v236 is A-GR1 on the OLD parent v231 and is not a same-parent control for anything built on v237; it is kept as the cost-risk evidence for the original A-GR1 implementation, not as this card's baseline."
+}
