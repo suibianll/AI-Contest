@@ -1,0 +1,1306 @@
+{
+  "protocol": "proxy-v3",
+  "scenario": "attention",
+  "run_dir": "D:\\\u5de5\u4f5c\u5185\u5bb9\\AI\u7ade\u8d5b\\artifacts\\proxy_v3\\attention-act2-sixshard-20260910\\candidate",
+  "candidate_prefix": "candidate",
+  "baseline_prefix": "baseline",
+  "shards": [
+    {
+      "shard": 0,
+      "cases": 12,
+      "delta_mean": 0.0,
+      "delta_median": 0.0,
+      "delta_min": 0.0,
+      "delta_max": 0.0,
+      "positive_cases": 0,
+      "negative_cases": 0,
+      "zero_cases": 12,
+      "delta_by_layer": {
+        "0": 0.0
+      },
+      "candidate_timing": {
+        "api_seconds": {
+          "hif4_calibration_and_quantize_weight": 0.0,
+          "hif4_dynamic_quantize_activation": 0.0,
+          "hif4_calibration_attention": 0.0,
+          "hif4_dynamic_quantize_q": 0.15734609997889493,
+          "hif4_dynamic_quantize_k": 0.11972690001130104,
+          "hif4_dynamic_quantize_v": 0.08645489999616984
+        },
+        "api_total_seconds": 0.3635278999863658,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 0,
+          "hif4_dynamic_quantize_activation": 0,
+          "hif4_calibration_attention": 0,
+          "hif4_dynamic_quantize_q": 12,
+          "hif4_dynamic_quantize_k": 12,
+          "hif4_dynamic_quantize_v": 12
+        },
+        "scoring_wall_seconds": 1.8302162000036333,
+        "calibration_wall_seconds": 0.0,
+        "calibration_cache_load_seconds": 0.0040492999978596345,
+        "calibration_api_seconds": 0.0,
+        "scoring_api_seconds": 0.3635278999863658,
+        "calibration_cache_hit": true,
+        "calibration_artifact": "D:\\\u5de5\u4f5c\u5185\u5bb9\\AI\u7ade\u8d5b\\artifacts\\official_eval\\cache\\proxy-v3-calibration\\55103e8ba530bf2c-attention-dfe3d214cf65c876465a.pt",
+        "calibration_identity": {
+          "protocol": "proxy-v3",
+          "solution_sha256": "55103e8ba530bf2cc03fc07bf24358ada4bda8d54ccc976468f5cbd985ecdac9",
+          "model_revision": "Qwen/Qwen3.5-4B@modelscope-download-2026-09-07",
+          "calibration_train_sha256": "e83889baabc497075506f91975be5fac0d45c5290b6b20582c8cd1e853d0c9f7",
+          "data_sha256": {
+            "train": "e83889baabc497075506f91975be5fac0d45c5290b6b20582c8cd1e853d0c9f7",
+            "validation": "204929b7ff9d6184953f867dedb860e40aa69c078fc1e54b3baaa8fb28511c4c",
+            "test": "5f1bea067869d04849c0f975a2b29c4ff47d867f484f5010ea5e861eab246d91"
+          },
+          "calibration_window_keys": [
+            [
+              "train",
+              "train:26530:= = = = Sprints = = = =",
+              484,
+              494
+            ],
+            [
+              "train",
+              "train:16975:= = = Federer vs. Hewitt = = =",
+              103,
+              231
+            ],
+            [
+              "train",
+              "train:15278:= = Far East = =",
+              383,
+              895
+            ],
+            [
+              "train",
+              "train:7588:= = Composition of the raiding force = =",
+              0,
+              1024
+            ],
+            [
+              "train",
+              "train:20279:= = = Introducing Raffles : 1898 \u2013 1914 = = =",
+              136,
+              1160
+            ]
+          ],
+          "input_codec": "e4m3-subnormal-ceil-v1",
+          "nvfp4_mode": "amax6",
+          "scenario": "attention",
+          "linear_calibration_indices": [
+            0,
+            1
+          ],
+          "linear_state_keys": [],
+          "attention_state_layers": [
+            0
+          ],
+          "q_heads": 16,
+          "kv_heads": 4,
+          "head_dim": 256,
+          "hidden_size": 2560,
+          "roles": [
+            "q",
+            "k",
+            "v",
+            "o",
+            "fc_gate",
+            "fc_up",
+            "proj"
+          ],
+          "device_type": "cuda",
+          "device": "cuda",
+          "torch_version": "2.6.0+cu124"
+        },
+        "calibration_timing_measured": false,
+        "official_time_predictable": false,
+        "note": "shard/cache timings are diagnostic only; use fresh default official_eval for time audit"
+      },
+      "baseline_timing": {
+        "api_seconds": {
+          "hif4_calibration_and_quantize_weight": 0.0,
+          "hif4_dynamic_quantize_activation": 0.0,
+          "hif4_calibration_attention": 0.0,
+          "hif4_dynamic_quantize_q": 0.4113056999849505,
+          "hif4_dynamic_quantize_k": 0.12066819999745348,
+          "hif4_dynamic_quantize_v": 0.08238270001311321
+        },
+        "api_total_seconds": 0.6143565999955172,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 0,
+          "hif4_dynamic_quantize_activation": 0,
+          "hif4_calibration_attention": 0,
+          "hif4_dynamic_quantize_q": 12,
+          "hif4_dynamic_quantize_k": 12,
+          "hif4_dynamic_quantize_v": 12
+        },
+        "scoring_wall_seconds": 2.1143586999969557,
+        "calibration_wall_seconds": 0.0,
+        "calibration_cache_load_seconds": 0.0032831999997142702,
+        "calibration_api_seconds": 0.0,
+        "scoring_api_seconds": 0.6143565999955172,
+        "calibration_cache_hit": true,
+        "calibration_artifact": "D:\\\u5de5\u4f5c\u5185\u5bb9\\AI\u7ade\u8d5b\\artifacts\\official_eval\\cache\\proxy-v3-calibration\\3319fc354af1ff0f-attention-91bf3fede35b9094d815.pt",
+        "calibration_identity": {
+          "protocol": "proxy-v3",
+          "solution_sha256": "3319fc354af1ff0f35075498f26886bdf43a078d32a27852f575a4c50d32ba07",
+          "model_revision": "Qwen/Qwen3.5-4B@modelscope-download-2026-09-07",
+          "calibration_train_sha256": "e83889baabc497075506f91975be5fac0d45c5290b6b20582c8cd1e853d0c9f7",
+          "data_sha256": {
+            "train": "e83889baabc497075506f91975be5fac0d45c5290b6b20582c8cd1e853d0c9f7",
+            "validation": "204929b7ff9d6184953f867dedb860e40aa69c078fc1e54b3baaa8fb28511c4c",
+            "test": "5f1bea067869d04849c0f975a2b29c4ff47d867f484f5010ea5e861eab246d91"
+          },
+          "calibration_window_keys": [
+            [
+              "train",
+              "train:26530:= = = = Sprints = = = =",
+              484,
+              494
+            ],
+            [
+              "train",
+              "train:16975:= = = Federer vs. Hewitt = = =",
+              103,
+              231
+            ],
+            [
+              "train",
+              "train:15278:= = Far East = =",
+              383,
+              895
+            ],
+            [
+              "train",
+              "train:7588:= = Composition of the raiding force = =",
+              0,
+              1024
+            ],
+            [
+              "train",
+              "train:20279:= = = Introducing Raffles : 1898 \u2013 1914 = = =",
+              136,
+              1160
+            ]
+          ],
+          "input_codec": "e4m3-subnormal-ceil-v1",
+          "nvfp4_mode": "amax6",
+          "scenario": "attention",
+          "linear_calibration_indices": [
+            0,
+            1
+          ],
+          "linear_state_keys": [],
+          "attention_state_layers": [
+            0
+          ],
+          "q_heads": 16,
+          "kv_heads": 4,
+          "head_dim": 256,
+          "hidden_size": 2560,
+          "roles": [
+            "q",
+            "k",
+            "v",
+            "o",
+            "fc_gate",
+            "fc_up",
+            "proj"
+          ],
+          "device_type": "cuda",
+          "device": "cuda",
+          "torch_version": "2.6.0+cu124"
+        },
+        "calibration_timing_measured": false,
+        "official_time_predictable": false,
+        "note": "shard/cache timings are diagnostic only; use fresh default official_eval for time audit"
+      }
+    },
+    {
+      "shard": 1,
+      "cases": 12,
+      "delta_mean": 0.0,
+      "delta_median": 0.0,
+      "delta_min": 0.0,
+      "delta_max": 0.0,
+      "positive_cases": 0,
+      "negative_cases": 0,
+      "zero_cases": 12,
+      "delta_by_layer": {
+        "1": 0.0
+      },
+      "candidate_timing": {
+        "api_seconds": {
+          "hif4_calibration_and_quantize_weight": 0.0,
+          "hif4_dynamic_quantize_activation": 0.0,
+          "hif4_calibration_attention": 6.279330299999856,
+          "hif4_dynamic_quantize_q": 0.1275347999908263,
+          "hif4_dynamic_quantize_k": 0.11553069997171406,
+          "hif4_dynamic_quantize_v": 0.08990980000089621
+        },
+        "api_total_seconds": 6.6123055999632925,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 0,
+          "hif4_dynamic_quantize_activation": 0,
+          "hif4_calibration_attention": 1,
+          "hif4_dynamic_quantize_q": 12,
+          "hif4_dynamic_quantize_k": 12,
+          "hif4_dynamic_quantize_v": 12
+        },
+        "scoring_wall_seconds": 1.751961100002518,
+        "calibration_wall_seconds": 6.297622000005504,
+        "calibration_cache_load_seconds": 0.0,
+        "calibration_api_seconds": 6.279330299999856,
+        "scoring_api_seconds": 0.33297529996343656,
+        "calibration_cache_hit": false,
+        "calibration_artifact": "D:\\\u5de5\u4f5c\u5185\u5bb9\\AI\u7ade\u8d5b\\artifacts\\official_eval\\cache\\proxy-v3-calibration\\55103e8ba530bf2c-attention-5710fdddedeebc391d7f.pt",
+        "calibration_identity": {
+          "protocol": "proxy-v3",
+          "solution_sha256": "55103e8ba530bf2cc03fc07bf24358ada4bda8d54ccc976468f5cbd985ecdac9",
+          "model_revision": "Qwen/Qwen3.5-4B@modelscope-download-2026-09-07",
+          "calibration_train_sha256": "e83889baabc497075506f91975be5fac0d45c5290b6b20582c8cd1e853d0c9f7",
+          "data_sha256": {
+            "train": "e83889baabc497075506f91975be5fac0d45c5290b6b20582c8cd1e853d0c9f7",
+            "validation": "204929b7ff9d6184953f867dedb860e40aa69c078fc1e54b3baaa8fb28511c4c",
+            "test": "5f1bea067869d04849c0f975a2b29c4ff47d867f484f5010ea5e861eab246d91"
+          },
+          "calibration_window_keys": [
+            [
+              "train",
+              "train:26530:= = = = Sprints = = = =",
+              484,
+              494
+            ],
+            [
+              "train",
+              "train:16975:= = = Federer vs. Hewitt = = =",
+              103,
+              231
+            ],
+            [
+              "train",
+              "train:15278:= = Far East = =",
+              383,
+              895
+            ],
+            [
+              "train",
+              "train:7588:= = Composition of the raiding force = =",
+              0,
+              1024
+            ],
+            [
+              "train",
+              "train:20279:= = = Introducing Raffles : 1898 \u2013 1914 = = =",
+              136,
+              1160
+            ]
+          ],
+          "input_codec": "e4m3-subnormal-ceil-v1",
+          "nvfp4_mode": "amax6",
+          "scenario": "attention",
+          "linear_calibration_indices": [
+            0,
+            1
+          ],
+          "linear_state_keys": [],
+          "attention_state_layers": [
+            1
+          ],
+          "q_heads": 16,
+          "kv_heads": 4,
+          "head_dim": 256,
+          "hidden_size": 2560,
+          "roles": [
+            "q",
+            "k",
+            "v",
+            "o",
+            "fc_gate",
+            "fc_up",
+            "proj"
+          ],
+          "device_type": "cuda",
+          "device": "cuda",
+          "torch_version": "2.6.0+cu124"
+        },
+        "calibration_timing_measured": true,
+        "official_time_predictable": false,
+        "note": "shard/cache timings are diagnostic only; use fresh default official_eval for time audit"
+      },
+      "baseline_timing": {
+        "api_seconds": {
+          "hif4_calibration_and_quantize_weight": 0.0,
+          "hif4_dynamic_quantize_activation": 0.0,
+          "hif4_calibration_attention": 0.0,
+          "hif4_dynamic_quantize_q": 0.14348460000474006,
+          "hif4_dynamic_quantize_k": 0.10761389999242965,
+          "hif4_dynamic_quantize_v": 0.08414980001543881
+        },
+        "api_total_seconds": 0.3352483000126085,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 0,
+          "hif4_dynamic_quantize_activation": 0,
+          "hif4_calibration_attention": 0,
+          "hif4_dynamic_quantize_q": 12,
+          "hif4_dynamic_quantize_k": 12,
+          "hif4_dynamic_quantize_v": 12
+        },
+        "scoring_wall_seconds": 1.7688639000043622,
+        "calibration_wall_seconds": 0.0,
+        "calibration_cache_load_seconds": 0.0046245999983511865,
+        "calibration_api_seconds": 0.0,
+        "scoring_api_seconds": 0.3352483000126085,
+        "calibration_cache_hit": true,
+        "calibration_artifact": "D:\\\u5de5\u4f5c\u5185\u5bb9\\AI\u7ade\u8d5b\\artifacts\\official_eval\\cache\\proxy-v3-calibration\\3319fc354af1ff0f-attention-d161185b8f424d1960db.pt",
+        "calibration_identity": {
+          "protocol": "proxy-v3",
+          "solution_sha256": "3319fc354af1ff0f35075498f26886bdf43a078d32a27852f575a4c50d32ba07",
+          "model_revision": "Qwen/Qwen3.5-4B@modelscope-download-2026-09-07",
+          "calibration_train_sha256": "e83889baabc497075506f91975be5fac0d45c5290b6b20582c8cd1e853d0c9f7",
+          "data_sha256": {
+            "train": "e83889baabc497075506f91975be5fac0d45c5290b6b20582c8cd1e853d0c9f7",
+            "validation": "204929b7ff9d6184953f867dedb860e40aa69c078fc1e54b3baaa8fb28511c4c",
+            "test": "5f1bea067869d04849c0f975a2b29c4ff47d867f484f5010ea5e861eab246d91"
+          },
+          "calibration_window_keys": [
+            [
+              "train",
+              "train:26530:= = = = Sprints = = = =",
+              484,
+              494
+            ],
+            [
+              "train",
+              "train:16975:= = = Federer vs. Hewitt = = =",
+              103,
+              231
+            ],
+            [
+              "train",
+              "train:15278:= = Far East = =",
+              383,
+              895
+            ],
+            [
+              "train",
+              "train:7588:= = Composition of the raiding force = =",
+              0,
+              1024
+            ],
+            [
+              "train",
+              "train:20279:= = = Introducing Raffles : 1898 \u2013 1914 = = =",
+              136,
+              1160
+            ]
+          ],
+          "input_codec": "e4m3-subnormal-ceil-v1",
+          "nvfp4_mode": "amax6",
+          "scenario": "attention",
+          "linear_calibration_indices": [
+            0,
+            1
+          ],
+          "linear_state_keys": [],
+          "attention_state_layers": [
+            1
+          ],
+          "q_heads": 16,
+          "kv_heads": 4,
+          "head_dim": 256,
+          "hidden_size": 2560,
+          "roles": [
+            "q",
+            "k",
+            "v",
+            "o",
+            "fc_gate",
+            "fc_up",
+            "proj"
+          ],
+          "device_type": "cuda",
+          "device": "cuda",
+          "torch_version": "2.6.0+cu124"
+        },
+        "calibration_timing_measured": false,
+        "official_time_predictable": false,
+        "note": "shard/cache timings are diagnostic only; use fresh default official_eval for time audit"
+      }
+    },
+    {
+      "shard": 2,
+      "cases": 12,
+      "delta_mean": 0.0,
+      "delta_median": 0.0,
+      "delta_min": 0.0,
+      "delta_max": 0.0,
+      "positive_cases": 0,
+      "negative_cases": 0,
+      "zero_cases": 12,
+      "delta_by_layer": {
+        "8": 0.0
+      },
+      "candidate_timing": {
+        "api_seconds": {
+          "hif4_calibration_and_quantize_weight": 0.0,
+          "hif4_dynamic_quantize_activation": 0.0,
+          "hif4_calibration_attention": 5.974994700001844,
+          "hif4_dynamic_quantize_q": 0.136177200016391,
+          "hif4_dynamic_quantize_k": 0.10602810001000762,
+          "hif4_dynamic_quantize_v": 0.08435100000497187
+        },
+        "api_total_seconds": 6.301551000033214,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 0,
+          "hif4_dynamic_quantize_activation": 0,
+          "hif4_calibration_attention": 1,
+          "hif4_dynamic_quantize_q": 12,
+          "hif4_dynamic_quantize_k": 12,
+          "hif4_dynamic_quantize_v": 12
+        },
+        "scoring_wall_seconds": 1.7267989999963902,
+        "calibration_wall_seconds": 5.989221999996516,
+        "calibration_cache_load_seconds": 0.0,
+        "calibration_api_seconds": 5.974994700001844,
+        "scoring_api_seconds": 0.3265563000313705,
+        "calibration_cache_hit": false,
+        "calibration_artifact": "D:\\\u5de5\u4f5c\u5185\u5bb9\\AI\u7ade\u8d5b\\artifacts\\official_eval\\cache\\proxy-v3-calibration\\55103e8ba530bf2c-attention-7da3281a9118e646a972.pt",
+        "calibration_identity": {
+          "protocol": "proxy-v3",
+          "solution_sha256": "55103e8ba530bf2cc03fc07bf24358ada4bda8d54ccc976468f5cbd985ecdac9",
+          "model_revision": "Qwen/Qwen3.5-4B@modelscope-download-2026-09-07",
+          "calibration_train_sha256": "e83889baabc497075506f91975be5fac0d45c5290b6b20582c8cd1e853d0c9f7",
+          "data_sha256": {
+            "train": "e83889baabc497075506f91975be5fac0d45c5290b6b20582c8cd1e853d0c9f7",
+            "validation": "204929b7ff9d6184953f867dedb860e40aa69c078fc1e54b3baaa8fb28511c4c",
+            "test": "5f1bea067869d04849c0f975a2b29c4ff47d867f484f5010ea5e861eab246d91"
+          },
+          "calibration_window_keys": [
+            [
+              "train",
+              "train:26530:= = = = Sprints = = = =",
+              484,
+              494
+            ],
+            [
+              "train",
+              "train:16975:= = = Federer vs. Hewitt = = =",
+              103,
+              231
+            ],
+            [
+              "train",
+              "train:15278:= = Far East = =",
+              383,
+              895
+            ],
+            [
+              "train",
+              "train:7588:= = Composition of the raiding force = =",
+              0,
+              1024
+            ],
+            [
+              "train",
+              "train:20279:= = = Introducing Raffles : 1898 \u2013 1914 = = =",
+              136,
+              1160
+            ]
+          ],
+          "input_codec": "e4m3-subnormal-ceil-v1",
+          "nvfp4_mode": "amax6",
+          "scenario": "attention",
+          "linear_calibration_indices": [
+            0,
+            1
+          ],
+          "linear_state_keys": [],
+          "attention_state_layers": [
+            8
+          ],
+          "q_heads": 16,
+          "kv_heads": 4,
+          "head_dim": 256,
+          "hidden_size": 2560,
+          "roles": [
+            "q",
+            "k",
+            "v",
+            "o",
+            "fc_gate",
+            "fc_up",
+            "proj"
+          ],
+          "device_type": "cuda",
+          "device": "cuda",
+          "torch_version": "2.6.0+cu124"
+        },
+        "calibration_timing_measured": true,
+        "official_time_predictable": false,
+        "note": "shard/cache timings are diagnostic only; use fresh default official_eval for time audit"
+      },
+      "baseline_timing": {
+        "api_seconds": {
+          "hif4_calibration_and_quantize_weight": 0.0,
+          "hif4_dynamic_quantize_activation": 0.0,
+          "hif4_calibration_attention": 0.0,
+          "hif4_dynamic_quantize_q": 0.13923340000474127,
+          "hif4_dynamic_quantize_k": 0.10799020002014004,
+          "hif4_dynamic_quantize_v": 0.08244170000398299
+        },
+        "api_total_seconds": 0.3296653000288643,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 0,
+          "hif4_dynamic_quantize_activation": 0,
+          "hif4_calibration_attention": 0,
+          "hif4_dynamic_quantize_q": 12,
+          "hif4_dynamic_quantize_k": 12,
+          "hif4_dynamic_quantize_v": 12
+        },
+        "scoring_wall_seconds": 1.7372028000027058,
+        "calibration_wall_seconds": 0.0,
+        "calibration_cache_load_seconds": 0.0022619999945163727,
+        "calibration_api_seconds": 0.0,
+        "scoring_api_seconds": 0.3296653000288643,
+        "calibration_cache_hit": true,
+        "calibration_artifact": "D:\\\u5de5\u4f5c\u5185\u5bb9\\AI\u7ade\u8d5b\\artifacts\\official_eval\\cache\\proxy-v3-calibration\\3319fc354af1ff0f-attention-1844474cb0bf6c70e75a.pt",
+        "calibration_identity": {
+          "protocol": "proxy-v3",
+          "solution_sha256": "3319fc354af1ff0f35075498f26886bdf43a078d32a27852f575a4c50d32ba07",
+          "model_revision": "Qwen/Qwen3.5-4B@modelscope-download-2026-09-07",
+          "calibration_train_sha256": "e83889baabc497075506f91975be5fac0d45c5290b6b20582c8cd1e853d0c9f7",
+          "data_sha256": {
+            "train": "e83889baabc497075506f91975be5fac0d45c5290b6b20582c8cd1e853d0c9f7",
+            "validation": "204929b7ff9d6184953f867dedb860e40aa69c078fc1e54b3baaa8fb28511c4c",
+            "test": "5f1bea067869d04849c0f975a2b29c4ff47d867f484f5010ea5e861eab246d91"
+          },
+          "calibration_window_keys": [
+            [
+              "train",
+              "train:26530:= = = = Sprints = = = =",
+              484,
+              494
+            ],
+            [
+              "train",
+              "train:16975:= = = Federer vs. Hewitt = = =",
+              103,
+              231
+            ],
+            [
+              "train",
+              "train:15278:= = Far East = =",
+              383,
+              895
+            ],
+            [
+              "train",
+              "train:7588:= = Composition of the raiding force = =",
+              0,
+              1024
+            ],
+            [
+              "train",
+              "train:20279:= = = Introducing Raffles : 1898 \u2013 1914 = = =",
+              136,
+              1160
+            ]
+          ],
+          "input_codec": "e4m3-subnormal-ceil-v1",
+          "nvfp4_mode": "amax6",
+          "scenario": "attention",
+          "linear_calibration_indices": [
+            0,
+            1
+          ],
+          "linear_state_keys": [],
+          "attention_state_layers": [
+            8
+          ],
+          "q_heads": 16,
+          "kv_heads": 4,
+          "head_dim": 256,
+          "hidden_size": 2560,
+          "roles": [
+            "q",
+            "k",
+            "v",
+            "o",
+            "fc_gate",
+            "fc_up",
+            "proj"
+          ],
+          "device_type": "cuda",
+          "device": "cuda",
+          "torch_version": "2.6.0+cu124"
+        },
+        "calibration_timing_measured": false,
+        "official_time_predictable": false,
+        "note": "shard/cache timings are diagnostic only; use fresh default official_eval for time audit"
+      }
+    },
+    {
+      "shard": 3,
+      "cases": 12,
+      "delta_mean": 0.0,
+      "delta_median": 0.0,
+      "delta_min": 0.0,
+      "delta_max": 0.0,
+      "positive_cases": 0,
+      "negative_cases": 0,
+      "zero_cases": 12,
+      "delta_by_layer": {
+        "15": 0.0
+      },
+      "candidate_timing": {
+        "api_seconds": {
+          "hif4_calibration_and_quantize_weight": 0.0,
+          "hif4_dynamic_quantize_activation": 0.0,
+          "hif4_calibration_attention": 6.038397199998144,
+          "hif4_dynamic_quantize_q": 0.13864649998868117,
+          "hif4_dynamic_quantize_k": 0.11008910000964534,
+          "hif4_dynamic_quantize_v": 0.0823610999941593
+        },
+        "api_total_seconds": 6.36949389999063,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 0,
+          "hif4_dynamic_quantize_activation": 0,
+          "hif4_calibration_attention": 1,
+          "hif4_dynamic_quantize_q": 12,
+          "hif4_dynamic_quantize_k": 12,
+          "hif4_dynamic_quantize_v": 12
+        },
+        "scoring_wall_seconds": 1.78018560000055,
+        "calibration_wall_seconds": 6.05402150000009,
+        "calibration_cache_load_seconds": 0.0,
+        "calibration_api_seconds": 6.038397199998144,
+        "scoring_api_seconds": 0.3310966999924858,
+        "calibration_cache_hit": false,
+        "calibration_artifact": "D:\\\u5de5\u4f5c\u5185\u5bb9\\AI\u7ade\u8d5b\\artifacts\\official_eval\\cache\\proxy-v3-calibration\\55103e8ba530bf2c-attention-7b8bb895b45b28bf33ab.pt",
+        "calibration_identity": {
+          "protocol": "proxy-v3",
+          "solution_sha256": "55103e8ba530bf2cc03fc07bf24358ada4bda8d54ccc976468f5cbd985ecdac9",
+          "model_revision": "Qwen/Qwen3.5-4B@modelscope-download-2026-09-07",
+          "calibration_train_sha256": "e83889baabc497075506f91975be5fac0d45c5290b6b20582c8cd1e853d0c9f7",
+          "data_sha256": {
+            "train": "e83889baabc497075506f91975be5fac0d45c5290b6b20582c8cd1e853d0c9f7",
+            "validation": "204929b7ff9d6184953f867dedb860e40aa69c078fc1e54b3baaa8fb28511c4c",
+            "test": "5f1bea067869d04849c0f975a2b29c4ff47d867f484f5010ea5e861eab246d91"
+          },
+          "calibration_window_keys": [
+            [
+              "train",
+              "train:26530:= = = = Sprints = = = =",
+              484,
+              494
+            ],
+            [
+              "train",
+              "train:16975:= = = Federer vs. Hewitt = = =",
+              103,
+              231
+            ],
+            [
+              "train",
+              "train:15278:= = Far East = =",
+              383,
+              895
+            ],
+            [
+              "train",
+              "train:7588:= = Composition of the raiding force = =",
+              0,
+              1024
+            ],
+            [
+              "train",
+              "train:20279:= = = Introducing Raffles : 1898 \u2013 1914 = = =",
+              136,
+              1160
+            ]
+          ],
+          "input_codec": "e4m3-subnormal-ceil-v1",
+          "nvfp4_mode": "amax6",
+          "scenario": "attention",
+          "linear_calibration_indices": [
+            0,
+            1
+          ],
+          "linear_state_keys": [],
+          "attention_state_layers": [
+            15
+          ],
+          "q_heads": 16,
+          "kv_heads": 4,
+          "head_dim": 256,
+          "hidden_size": 2560,
+          "roles": [
+            "q",
+            "k",
+            "v",
+            "o",
+            "fc_gate",
+            "fc_up",
+            "proj"
+          ],
+          "device_type": "cuda",
+          "device": "cuda",
+          "torch_version": "2.6.0+cu124"
+        },
+        "calibration_timing_measured": true,
+        "official_time_predictable": false,
+        "note": "shard/cache timings are diagnostic only; use fresh default official_eval for time audit"
+      },
+      "baseline_timing": {
+        "api_seconds": {
+          "hif4_calibration_and_quantize_weight": 0.0,
+          "hif4_dynamic_quantize_activation": 0.0,
+          "hif4_calibration_attention": 0.0,
+          "hif4_dynamic_quantize_q": 0.14133520000905264,
+          "hif4_dynamic_quantize_k": 0.11374820001219632,
+          "hif4_dynamic_quantize_v": 0.07848309999099001
+        },
+        "api_total_seconds": 0.333566500012239,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 0,
+          "hif4_dynamic_quantize_activation": 0,
+          "hif4_calibration_attention": 0,
+          "hif4_dynamic_quantize_q": 12,
+          "hif4_dynamic_quantize_k": 12,
+          "hif4_dynamic_quantize_v": 12
+        },
+        "scoring_wall_seconds": 1.747158700003638,
+        "calibration_wall_seconds": 0.0,
+        "calibration_cache_load_seconds": 0.0034927000015159138,
+        "calibration_api_seconds": 0.0,
+        "scoring_api_seconds": 0.333566500012239,
+        "calibration_cache_hit": true,
+        "calibration_artifact": "D:\\\u5de5\u4f5c\u5185\u5bb9\\AI\u7ade\u8d5b\\artifacts\\official_eval\\cache\\proxy-v3-calibration\\3319fc354af1ff0f-attention-26f02f87260db90d9514.pt",
+        "calibration_identity": {
+          "protocol": "proxy-v3",
+          "solution_sha256": "3319fc354af1ff0f35075498f26886bdf43a078d32a27852f575a4c50d32ba07",
+          "model_revision": "Qwen/Qwen3.5-4B@modelscope-download-2026-09-07",
+          "calibration_train_sha256": "e83889baabc497075506f91975be5fac0d45c5290b6b20582c8cd1e853d0c9f7",
+          "data_sha256": {
+            "train": "e83889baabc497075506f91975be5fac0d45c5290b6b20582c8cd1e853d0c9f7",
+            "validation": "204929b7ff9d6184953f867dedb860e40aa69c078fc1e54b3baaa8fb28511c4c",
+            "test": "5f1bea067869d04849c0f975a2b29c4ff47d867f484f5010ea5e861eab246d91"
+          },
+          "calibration_window_keys": [
+            [
+              "train",
+              "train:26530:= = = = Sprints = = = =",
+              484,
+              494
+            ],
+            [
+              "train",
+              "train:16975:= = = Federer vs. Hewitt = = =",
+              103,
+              231
+            ],
+            [
+              "train",
+              "train:15278:= = Far East = =",
+              383,
+              895
+            ],
+            [
+              "train",
+              "train:7588:= = Composition of the raiding force = =",
+              0,
+              1024
+            ],
+            [
+              "train",
+              "train:20279:= = = Introducing Raffles : 1898 \u2013 1914 = = =",
+              136,
+              1160
+            ]
+          ],
+          "input_codec": "e4m3-subnormal-ceil-v1",
+          "nvfp4_mode": "amax6",
+          "scenario": "attention",
+          "linear_calibration_indices": [
+            0,
+            1
+          ],
+          "linear_state_keys": [],
+          "attention_state_layers": [
+            15
+          ],
+          "q_heads": 16,
+          "kv_heads": 4,
+          "head_dim": 256,
+          "hidden_size": 2560,
+          "roles": [
+            "q",
+            "k",
+            "v",
+            "o",
+            "fc_gate",
+            "fc_up",
+            "proj"
+          ],
+          "device_type": "cuda",
+          "device": "cuda",
+          "torch_version": "2.6.0+cu124"
+        },
+        "calibration_timing_measured": false,
+        "official_time_predictable": false,
+        "note": "shard/cache timings are diagnostic only; use fresh default official_eval for time audit"
+      }
+    },
+    {
+      "shard": 4,
+      "cases": 12,
+      "delta_mean": 0.0,
+      "delta_median": 0.0,
+      "delta_min": 0.0,
+      "delta_max": 0.0,
+      "positive_cases": 0,
+      "negative_cases": 0,
+      "zero_cases": 12,
+      "delta_by_layer": {
+        "22": 0.0
+      },
+      "candidate_timing": {
+        "api_seconds": {
+          "hif4_calibration_and_quantize_weight": 0.0,
+          "hif4_dynamic_quantize_activation": 0.0,
+          "hif4_calibration_attention": 6.0530737999943085,
+          "hif4_dynamic_quantize_q": 0.11960370001906995,
+          "hif4_dynamic_quantize_k": 0.10696540000208188,
+          "hif4_dynamic_quantize_v": 0.08363300000928575
+        },
+        "api_total_seconds": 6.363275900024746,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 0,
+          "hif4_dynamic_quantize_activation": 0,
+          "hif4_calibration_attention": 1,
+          "hif4_dynamic_quantize_q": 12,
+          "hif4_dynamic_quantize_k": 12,
+          "hif4_dynamic_quantize_v": 12
+        },
+        "scoring_wall_seconds": 1.7265486999967834,
+        "calibration_wall_seconds": 6.069357399996079,
+        "calibration_cache_load_seconds": 0.0,
+        "calibration_api_seconds": 6.0530737999943085,
+        "scoring_api_seconds": 0.3102021000304376,
+        "calibration_cache_hit": false,
+        "calibration_artifact": "D:\\\u5de5\u4f5c\u5185\u5bb9\\AI\u7ade\u8d5b\\artifacts\\official_eval\\cache\\proxy-v3-calibration\\55103e8ba530bf2c-attention-e728d4d7507fe408d296.pt",
+        "calibration_identity": {
+          "protocol": "proxy-v3",
+          "solution_sha256": "55103e8ba530bf2cc03fc07bf24358ada4bda8d54ccc976468f5cbd985ecdac9",
+          "model_revision": "Qwen/Qwen3.5-4B@modelscope-download-2026-09-07",
+          "calibration_train_sha256": "e83889baabc497075506f91975be5fac0d45c5290b6b20582c8cd1e853d0c9f7",
+          "data_sha256": {
+            "train": "e83889baabc497075506f91975be5fac0d45c5290b6b20582c8cd1e853d0c9f7",
+            "validation": "204929b7ff9d6184953f867dedb860e40aa69c078fc1e54b3baaa8fb28511c4c",
+            "test": "5f1bea067869d04849c0f975a2b29c4ff47d867f484f5010ea5e861eab246d91"
+          },
+          "calibration_window_keys": [
+            [
+              "train",
+              "train:26530:= = = = Sprints = = = =",
+              484,
+              494
+            ],
+            [
+              "train",
+              "train:16975:= = = Federer vs. Hewitt = = =",
+              103,
+              231
+            ],
+            [
+              "train",
+              "train:15278:= = Far East = =",
+              383,
+              895
+            ],
+            [
+              "train",
+              "train:7588:= = Composition of the raiding force = =",
+              0,
+              1024
+            ],
+            [
+              "train",
+              "train:20279:= = = Introducing Raffles : 1898 \u2013 1914 = = =",
+              136,
+              1160
+            ]
+          ],
+          "input_codec": "e4m3-subnormal-ceil-v1",
+          "nvfp4_mode": "amax6",
+          "scenario": "attention",
+          "linear_calibration_indices": [
+            0,
+            1
+          ],
+          "linear_state_keys": [],
+          "attention_state_layers": [
+            22
+          ],
+          "q_heads": 16,
+          "kv_heads": 4,
+          "head_dim": 256,
+          "hidden_size": 2560,
+          "roles": [
+            "q",
+            "k",
+            "v",
+            "o",
+            "fc_gate",
+            "fc_up",
+            "proj"
+          ],
+          "device_type": "cuda",
+          "device": "cuda",
+          "torch_version": "2.6.0+cu124"
+        },
+        "calibration_timing_measured": true,
+        "official_time_predictable": false,
+        "note": "shard/cache timings are diagnostic only; use fresh default official_eval for time audit"
+      },
+      "baseline_timing": {
+        "api_seconds": {
+          "hif4_calibration_and_quantize_weight": 0.0,
+          "hif4_dynamic_quantize_activation": 0.0,
+          "hif4_calibration_attention": 0.0,
+          "hif4_dynamic_quantize_q": 0.14238509999995586,
+          "hif4_dynamic_quantize_k": 0.10828560001391452,
+          "hif4_dynamic_quantize_v": 0.07974069999181665
+        },
+        "api_total_seconds": 0.33041140000568703,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 0,
+          "hif4_dynamic_quantize_activation": 0,
+          "hif4_calibration_attention": 0,
+          "hif4_dynamic_quantize_q": 12,
+          "hif4_dynamic_quantize_k": 12,
+          "hif4_dynamic_quantize_v": 12
+        },
+        "scoring_wall_seconds": 1.7693654999966384,
+        "calibration_wall_seconds": 0.0,
+        "calibration_cache_load_seconds": 0.003543899998476263,
+        "calibration_api_seconds": 0.0,
+        "scoring_api_seconds": 0.33041140000568703,
+        "calibration_cache_hit": true,
+        "calibration_artifact": "D:\\\u5de5\u4f5c\u5185\u5bb9\\AI\u7ade\u8d5b\\artifacts\\official_eval\\cache\\proxy-v3-calibration\\3319fc354af1ff0f-attention-bfa14c59ff3b291d81bd.pt",
+        "calibration_identity": {
+          "protocol": "proxy-v3",
+          "solution_sha256": "3319fc354af1ff0f35075498f26886bdf43a078d32a27852f575a4c50d32ba07",
+          "model_revision": "Qwen/Qwen3.5-4B@modelscope-download-2026-09-07",
+          "calibration_train_sha256": "e83889baabc497075506f91975be5fac0d45c5290b6b20582c8cd1e853d0c9f7",
+          "data_sha256": {
+            "train": "e83889baabc497075506f91975be5fac0d45c5290b6b20582c8cd1e853d0c9f7",
+            "validation": "204929b7ff9d6184953f867dedb860e40aa69c078fc1e54b3baaa8fb28511c4c",
+            "test": "5f1bea067869d04849c0f975a2b29c4ff47d867f484f5010ea5e861eab246d91"
+          },
+          "calibration_window_keys": [
+            [
+              "train",
+              "train:26530:= = = = Sprints = = = =",
+              484,
+              494
+            ],
+            [
+              "train",
+              "train:16975:= = = Federer vs. Hewitt = = =",
+              103,
+              231
+            ],
+            [
+              "train",
+              "train:15278:= = Far East = =",
+              383,
+              895
+            ],
+            [
+              "train",
+              "train:7588:= = Composition of the raiding force = =",
+              0,
+              1024
+            ],
+            [
+              "train",
+              "train:20279:= = = Introducing Raffles : 1898 \u2013 1914 = = =",
+              136,
+              1160
+            ]
+          ],
+          "input_codec": "e4m3-subnormal-ceil-v1",
+          "nvfp4_mode": "amax6",
+          "scenario": "attention",
+          "linear_calibration_indices": [
+            0,
+            1
+          ],
+          "linear_state_keys": [],
+          "attention_state_layers": [
+            22
+          ],
+          "q_heads": 16,
+          "kv_heads": 4,
+          "head_dim": 256,
+          "hidden_size": 2560,
+          "roles": [
+            "q",
+            "k",
+            "v",
+            "o",
+            "fc_gate",
+            "fc_up",
+            "proj"
+          ],
+          "device_type": "cuda",
+          "device": "cuda",
+          "torch_version": "2.6.0+cu124"
+        },
+        "calibration_timing_measured": false,
+        "official_time_predictable": false,
+        "note": "shard/cache timings are diagnostic only; use fresh default official_eval for time audit"
+      }
+    },
+    {
+      "shard": 5,
+      "cases": 12,
+      "delta_mean": 0.0,
+      "delta_median": 0.0,
+      "delta_min": 0.0,
+      "delta_max": 0.0,
+      "positive_cases": 0,
+      "negative_cases": 0,
+      "zero_cases": 12,
+      "delta_by_layer": {
+        "5": 0.0
+      },
+      "candidate_timing": {
+        "api_seconds": {
+          "hif4_calibration_and_quantize_weight": 0.0,
+          "hif4_dynamic_quantize_activation": 0.0,
+          "hif4_calibration_attention": 5.949345000000903,
+          "hif4_dynamic_quantize_q": 0.13369710000552004,
+          "hif4_dynamic_quantize_k": 0.103050500023528,
+          "hif4_dynamic_quantize_v": 0.07788259999506408
+        },
+        "api_total_seconds": 6.2639752000250155,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 0,
+          "hif4_dynamic_quantize_activation": 0,
+          "hif4_calibration_attention": 1,
+          "hif4_dynamic_quantize_q": 12,
+          "hif4_dynamic_quantize_k": 12,
+          "hif4_dynamic_quantize_v": 12
+        },
+        "scoring_wall_seconds": 1.7248756999979378,
+        "calibration_wall_seconds": 5.964646400003403,
+        "calibration_cache_load_seconds": 0.0,
+        "calibration_api_seconds": 5.949345000000903,
+        "scoring_api_seconds": 0.3146302000241121,
+        "calibration_cache_hit": false,
+        "calibration_artifact": "D:\\\u5de5\u4f5c\u5185\u5bb9\\AI\u7ade\u8d5b\\artifacts\\official_eval\\cache\\proxy-v3-calibration\\55103e8ba530bf2c-attention-b5ae70b0891ae468801c.pt",
+        "calibration_identity": {
+          "protocol": "proxy-v3",
+          "solution_sha256": "55103e8ba530bf2cc03fc07bf24358ada4bda8d54ccc976468f5cbd985ecdac9",
+          "model_revision": "Qwen/Qwen3.5-4B@modelscope-download-2026-09-07",
+          "calibration_train_sha256": "e83889baabc497075506f91975be5fac0d45c5290b6b20582c8cd1e853d0c9f7",
+          "data_sha256": {
+            "train": "e83889baabc497075506f91975be5fac0d45c5290b6b20582c8cd1e853d0c9f7",
+            "validation": "204929b7ff9d6184953f867dedb860e40aa69c078fc1e54b3baaa8fb28511c4c",
+            "test": "5f1bea067869d04849c0f975a2b29c4ff47d867f484f5010ea5e861eab246d91"
+          },
+          "calibration_window_keys": [
+            [
+              "train",
+              "train:26530:= = = = Sprints = = = =",
+              484,
+              494
+            ],
+            [
+              "train",
+              "train:16975:= = = Federer vs. Hewitt = = =",
+              103,
+              231
+            ],
+            [
+              "train",
+              "train:15278:= = Far East = =",
+              383,
+              895
+            ],
+            [
+              "train",
+              "train:7588:= = Composition of the raiding force = =",
+              0,
+              1024
+            ],
+            [
+              "train",
+              "train:20279:= = = Introducing Raffles : 1898 \u2013 1914 = = =",
+              136,
+              1160
+            ]
+          ],
+          "input_codec": "e4m3-subnormal-ceil-v1",
+          "nvfp4_mode": "amax6",
+          "scenario": "attention",
+          "linear_calibration_indices": [
+            0,
+            1
+          ],
+          "linear_state_keys": [],
+          "attention_state_layers": [
+            5
+          ],
+          "q_heads": 16,
+          "kv_heads": 4,
+          "head_dim": 256,
+          "hidden_size": 2560,
+          "roles": [
+            "q",
+            "k",
+            "v",
+            "o",
+            "fc_gate",
+            "fc_up",
+            "proj"
+          ],
+          "device_type": "cuda",
+          "device": "cuda",
+          "torch_version": "2.6.0+cu124"
+        },
+        "calibration_timing_measured": true,
+        "official_time_predictable": false,
+        "note": "shard/cache timings are diagnostic only; use fresh default official_eval for time audit"
+      },
+      "baseline_timing": {
+        "api_seconds": {
+          "hif4_calibration_and_quantize_weight": 0.0,
+          "hif4_dynamic_quantize_activation": 0.0,
+          "hif4_calibration_attention": 0.0,
+          "hif4_dynamic_quantize_q": 0.14606579999235692,
+          "hif4_dynamic_quantize_k": 0.11073769998620264,
+          "hif4_dynamic_quantize_v": 0.07727719999093097
+        },
+        "api_total_seconds": 0.3340806999694905,
+        "api_calls": {
+          "hif4_calibration_and_quantize_weight": 0,
+          "hif4_dynamic_quantize_activation": 0,
+          "hif4_calibration_attention": 0,
+          "hif4_dynamic_quantize_q": 12,
+          "hif4_dynamic_quantize_k": 12,
+          "hif4_dynamic_quantize_v": 12
+        },
+        "scoring_wall_seconds": 1.739563499999349,
+        "calibration_wall_seconds": 0.0,
+        "calibration_cache_load_seconds": 0.004162700002780184,
+        "calibration_api_seconds": 0.0,
+        "scoring_api_seconds": 0.3340806999694905,
+        "calibration_cache_hit": true,
+        "calibration_artifact": "D:\\\u5de5\u4f5c\u5185\u5bb9\\AI\u7ade\u8d5b\\artifacts\\official_eval\\cache\\proxy-v3-calibration\\3319fc354af1ff0f-attention-9020c5e9484deb310842.pt",
+        "calibration_identity": {
+          "protocol": "proxy-v3",
+          "solution_sha256": "3319fc354af1ff0f35075498f26886bdf43a078d32a27852f575a4c50d32ba07",
+          "model_revision": "Qwen/Qwen3.5-4B@modelscope-download-2026-09-07",
+          "calibration_train_sha256": "e83889baabc497075506f91975be5fac0d45c5290b6b20582c8cd1e853d0c9f7",
+          "data_sha256": {
+            "train": "e83889baabc497075506f91975be5fac0d45c5290b6b20582c8cd1e853d0c9f7",
+            "validation": "204929b7ff9d6184953f867dedb860e40aa69c078fc1e54b3baaa8fb28511c4c",
+            "test": "5f1bea067869d04849c0f975a2b29c4ff47d867f484f5010ea5e861eab246d91"
+          },
+          "calibration_window_keys": [
+            [
+              "train",
+              "train:26530:= = = = Sprints = = = =",
+              484,
+              494
+            ],
+            [
+              "train",
+              "train:16975:= = = Federer vs. Hewitt = = =",
+              103,
+              231
+            ],
+            [
+              "train",
+              "train:15278:= = Far East = =",
+              383,
+              895
+            ],
+            [
+              "train",
+              "train:7588:= = Composition of the raiding force = =",
+              0,
+              1024
+            ],
+            [
+              "train",
+              "train:20279:= = = Introducing Raffles : 1898 \u2013 1914 = = =",
+              136,
+              1160
+            ]
+          ],
+          "input_codec": "e4m3-subnormal-ceil-v1",
+          "nvfp4_mode": "amax6",
+          "scenario": "attention",
+          "linear_calibration_indices": [
+            0,
+            1
+          ],
+          "linear_state_keys": [],
+          "attention_state_layers": [
+            5
+          ],
+          "q_heads": 16,
+          "kv_heads": 4,
+          "head_dim": 256,
+          "hidden_size": 2560,
+          "roles": [
+            "q",
+            "k",
+            "v",
+            "o",
+            "fc_gate",
+            "fc_up",
+            "proj"
+          ],
+          "device_type": "cuda",
+          "device": "cuda",
+          "torch_version": "2.6.0+cu124"
+        },
+        "calibration_timing_measured": false,
+        "official_time_predictable": false,
+        "note": "shard/cache timings are diagnostic only; use fresh default official_eval for time audit"
+      }
+    }
+  ],
+  "equal_shard_mean_delta_gain": 0.0,
+  "shard_delta_gain_mean": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+  ],
+  "positive_cases": 0,
+  "negative_cases": 0,
+  "zero_cases": 72,
+  "case_count": 72,
+  "candidate_source_sha256": "55103e8ba530bf2cc03fc07bf24358ada4bda8d54ccc976468f5cbd985ecdac9",
+  "baseline_source_sha256": "3319fc354af1ff0f35075498f26886bdf43a078d32a27852f575a4c50d32ba07",
+  "method": "one eval.py process carrying both sides; per-case delta re-derived here as candidate.gain - baseline.gain keyed by case_id",
+  "candidate_api_total_seconds_six_shards": 32.274129500023264,
+  "baseline_api_total_seconds_six_shards": 2.2773288000244065,
+  "delta_api_total_seconds_six_shards": 29.996800699998857,
+  "calibration_attention_seconds": {
+    "candidate": 0.0,
+    "baseline": 0.0,
+    "delta": 0.0,
+    "note": "calibration seconds are cache-identity dependent; a cold candidate and a warm baseline are not comparable and the delta is reported as a diagnostic only"
+  }
+}

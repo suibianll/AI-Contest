@@ -1,0 +1,23 @@
+[A] root=505762B (ea79a1c1) assembly=520955B (3319fc35) candidate=531018B (55103e8b) | both shared prefixes hold, Linear and Attention and Q/K/V bytecode identical, the shadow _agr1_train is live
+[real] pack loaded: heads=(16, 4, 256) attention_layers=[0, 1, 5, 8, 15, 22]
+[B:real/layer0] full calibration is byte-identical between the two arms (arm='accepted', final_loss=0.9746926574111759, q_ratio=0.568821539481481, k_ratio=0.40586987137794495)
+[C:real/layer0] _agr1_scale_loss_grad 204 -> 198 and _a2_apply_group_rotation 476 -> 470; the 192 training-step calls are untouched and the tail drops from 12 to 6
+[B:real/layer1] full calibration is byte-identical between the two arms (arm='parent', final_loss=0.9555971376053058, q_ratio=0.5515822768211365, k_ratio=0.40401366353034973)
+[C:real/layer1] _agr1_scale_loss_grad 204 -> 198 and _a2_apply_group_rotation 476 -> 470; the 192 training-step calls are untouched and the tail drops from 12 to 6
+[B:real/layer5] full calibration is byte-identical between the two arms (arm='parent', final_loss=0.9185586671991429, q_ratio=0.5263485610485077, k_ratio=0.39220888415972394)
+[C:real/layer5] _agr1_scale_loss_grad 204 -> 198 and _a2_apply_group_rotation 476 -> 470; the 192 training-step calls are untouched and the tail drops from 12 to 6
+[B:real/layer8] full calibration is byte-identical between the two arms (arm='parent', final_loss=0.9115051057631305, q_ratio=0.5234599908192953, k_ratio=0.38804395993550617)
+[C:real/layer8] _agr1_scale_loss_grad 204 -> 198 and _a2_apply_group_rotation 466 -> 460; the 192 training-step calls are untouched and the tail drops from 12 to 6
+[B:real/layer15] full calibration is byte-identical between the two arms (arm='parent', final_loss=0.8667637025327422, q_ratio=0.49953414003054303, k_ratio=0.367228423555692)
+[C:real/layer15] _agr1_scale_loss_grad 204 -> 198 and _a2_apply_group_rotation 476 -> 470; the 192 training-step calls are untouched and the tail drops from 12 to 6
+[B:real/layer22] full calibration is byte-identical between the two arms (arm='accepted', final_loss=1.1270737637759498, q_ratio=0.7296549081802368, k_ratio=0.3974175651868184)
+[C:real/layer22] _agr1_scale_loss_grad 204 -> 198 and _a2_apply_group_rotation 476 -> 470; the 192 training-step calls are untouched and the tail drops from 12 to 6
+[D:coverage] accepted and rejected both occur on real data: {0: 'accepted', 1: 'parent', 5: 'parent', 8: 'parent', 15: 'parent', 22: 'accepted'}
+[B:real/M=I] full calibration is byte-identical between the two arms (arm='parent'); call counts not asserted on a patched run
+[D:coverage] the identity-parent arm (M = I) agrees
+[D:coverage] the ineligible path agrees
+[B:real/fallback] full calibration is byte-identical between the two arms (arm='fallback'); call counts not asserted on a patched run
+[D:coverage] the exception fallback path agrees
+[B:assembly-vs-itself] full calibration is byte-identical between the two arms (arm='accepted'); call counts not asserted on a patched run
+
+ALL A-CT2 CONTROLS PASSED

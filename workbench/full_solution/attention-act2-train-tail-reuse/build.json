@@ -1,0 +1,22 @@
+{
+  "assembly_path": "solutions/20260910_v236_attention-agr1-on-v231_scoreNA_timeNA/solution.py",
+  "assembly_sha256": "3319fc354af1ff0f35075498f26886bdf43a078d32a27852f575a4c50d32ba07",
+  "assembly_bytes": 520955,
+  "root_sha256": "ea79a1c12dc667142c620975aab188920fae7b29988c804f41c1a696cc5754f1",
+  "root_bytes": 505762,
+  "assembly_starts_with_root": true,
+  "implementation_sha256": "9867c355f6d90f617ca2c983129583cf10758cc15094fd4f7e002951b66cbda5",
+  "implementation_bytes": 10061,
+  "candidate_sha256": "55103e8ba530bf2cc03fc07bf24358ada4bda8d54ccc976468f5cbd985ecdac9",
+  "candidate_bytes": 531018,
+  "extracted_agr1_train_bytes": 6857,
+  "substitutions_performed": 2,
+  "substitution_sites": [
+    "the final_loss loop",
+    "the two ratio entries of the info dict"
+  ],
+  "extracted_function_changed_lines": 36,
+  "extracted_function_byte_delta": -74,
+  "reconstruction_identity_holds": true,
+  "edit": "carry the per-role sums out of the final_loss loop and compute the two scale ratios from them, deleting the second walk of the prepared folds"
+}

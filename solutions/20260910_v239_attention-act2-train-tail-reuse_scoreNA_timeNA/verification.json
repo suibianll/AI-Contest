@@ -1,0 +1,87 @@
+{
+  "version": "v239",
+  "mechanism": "A-CT2: the tail of _agr1_train carries the per-role scalar sums out of the final_loss loop and computes the two agr1_*_scale_ratio2 entries from them, deleting a second walk over the same prepared folds that recomputed the same rotation and the same loss and kept only the scalar the first walk discarded",
+  "formal_parent_sha256": "ea79a1c12dc667142c620975aab188920fae7b29988c804f41c1a696cc5754f1",
+  "assembly_sha256": "3319fc354af1ff0f35075498f26886bdf43a078d32a27852f575a4c50d32ba07",
+  "candidate_sha256": "55103e8ba530bf2cc03fc07bf24358ada4bda8d54ccc976468f5cbd985ecdac9",
+  "candidate_bytes": 531018,
+  "implementation_sha256": "9867c355f6d90f617ca2c983129583cf10758cc15094fd4f7e002951b66cbda5",
+  "root_sha256_at_archive_time": "ea79a1c12dc667142c620975aab188920fae7b29988c804f41c1a696cc5754f1",
+  "audit": {
+    "result": "DUPLICATION CONFIRMED",
+    "method": "structural comparison of the two expressions, plus an instrumented real _agr1_train call on every full-attention layer",
+    "calls_per_train": 204,
+    "duplicated_calls": 6,
+    "bit_identical_duplicates": "6/6 on all six layers",
+    "rebuilt_ratios_exact": "bit-identical to the reported values on all six layers",
+    "force_zero_reachable": false
+  },
+  "sole_change_measured": {
+    "byte_level": "two substring substitutions, both asserted unique and both asserted absent afterwards; the candidate text must equal the parent with those two blocks replaced, which given uniqueness is the statement that nothing else changed",
+    "substitutions_performed": 2,
+    "substitution_sites": [
+      "the final_loss loop",
+      "the two ratio entries of the info dict"
+    ],
+    "extracted_function_changed_lines": 36,
+    "extracted_function_byte_delta": -74,
+    "shared_prefix_root_bytes": 505762,
+    "shared_prefix_assembly_bytes": 520955
+  },
+  "single_file_import": "verify.py control A imports the six APIs from a bare temporary directory",
+  "linear_attention_and_qkv_bytecode_identical_to_parent": true,
+  "protocol": "proxy-v3",
+  "panel": "qwen35-4b-panel-v1 (72 Attention cases)",
+  "scope": "attention-only, six shards, target side",
+  "hard_output_changed": false,
+  "equivalence_is_exact_not_tolerance_based": "the returned q/k/v states of the full calibration are compared as raw bytes, which is strictly stronger than comparing the three floats at stake (agr1_final_loss, agr1_q_scale_ratio2, agr1_k_scale_ratio2) -- both were checked",
+  "call_counts_per_train": {
+    "agr1_scale_loss_grad": [
+      204,
+      198
+    ],
+    "a2_apply_group_rotation": [
+      476,
+      470
+    ],
+    "training_step_calls_unchanged": 192,
+    "tail_calls": [
+      12,
+      6
+    ],
+    "method": "independent invocation counters over the module's own names"
+  },
+  "coverage": {
+    "accepted_and_rejected_on_real_layers": true,
+    "identity_parent_arm": true,
+    "ineligible_short_window_list": true,
+    "exception_fallback": true,
+    "determinism": "the assembly compared against itself is byte-identical",
+    "passed": "ALL A-CT2 CONTROLS PASSED"
+  },
+  "equal_shard_mean_delta_gain": 0.0,
+  "shard_delta_gain_mean": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+  ],
+  "positive_cases": 0,
+  "negative_cases": 0,
+  "zero_cases": 72,
+  "case_count": 72,
+  "shard_decision": "no_effect (the evaluator's own small-trend filter)",
+  "shard_decision_note": "exactly zero everywhere is the predicted reading for a candidate that reproduces its control; a non-zero delta would be the defect",
+  "pairing_method": "one eval.py process carrying both sides; per-case delta re-derived here as candidate.gain - baseline.gain keyed by case_id",
+  "stopped_early_flag": {
+    "manifest_value": true,
+    "is_a_truncation": false,
+    "why": "the stop check runs after the shard's results are appended, and this candidate reproduces its control exactly, so delta_mean == 0 on every shard and the counter reaches --stop-after-nonpositive 6 exactly on the last requested shard.",
+    "independent_coverage_check": "candidate-attention-shard{0..5}.json: 6 files, statuses ['ok'], 72 cases, source_sha256 ['55103e8b']"
+  },
+  "official_status": "unregistered/NA",
+  "official_score": null,
+  "official_seconds": null
+}

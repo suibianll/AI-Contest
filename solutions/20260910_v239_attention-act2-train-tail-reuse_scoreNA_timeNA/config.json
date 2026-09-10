@@ -1,0 +1,103 @@
+{
+  "run_id": "attention-act2-train-tail-reuse",
+  "version": "v239",
+  "version_note": "v239 is the next free number after v238 at archive time.",
+  "mechanism": "A-CT2: the tail of _agr1_train carries the per-role scalar sums out of the final_loss loop and computes the two agr1_*_scale_ratio2 entries from them, deleting a second walk over the same prepared folds that recomputed the same rotation and the same loss and kept only the scalar the first walk discarded",
+  "mechanism_type": "pure time change with an exact output-equivalence obligation; validated by a static audit before any card was registered",
+  "plan": "docs/superpowers/plans/2026-09-10-retained-root-gradient-reuse-plan.md",
+  "plan_section": "4 (the A-CT2 fixed implementation card)",
+  "log": "logs/execution/2026-09-10-attention-act2-train-tail-reuse.md",
+  "audit": "workbench/full_solution/attention-act2-train-tail-reuse/audit.py",
+  "formal_parent": "solutions/20260910_v231_linear-em3-k2-arm_scoreNA_timeNA/solution.py",
+  "formal_parent_sha256": "ea79a1c12dc667142c620975aab188920fae7b29988c804f41c1a696cc5754f1",
+  "formal_parent_official": {
+    "score": 18518,
+    "seconds": 291,
+    "limit_seconds": 300,
+    "margin_seconds": 9
+  },
+  "assembly": "solutions/20260910_v236_attention-agr1-on-v231_scoreNA_timeNA/solution.py",
+  "assembly_sha256": "3319fc354af1ff0f35075498f26886bdf43a078d32a27852f575a4c50d32ba07",
+  "assembly_note": "v236 is the v231 root plus the A-GR1 block byte for byte, so it is both the A-GR1 assembly and the same-parent implementation control. It is NOT a promoted parent; nothing is inherited from it, including its official outcome.",
+  "candidate_sha256": "55103e8ba530bf2cc03fc07bf24358ada4bda8d54ccc976468f5cbd985ecdac9",
+  "candidate_bytes": 531018,
+  "implementation_sha256": "9867c355f6d90f617ca2c983129583cf10758cc15094fd4f7e002951b66cbda5",
+  "build": "build.py",
+  "build_is_derived_not_handwritten": true,
+  "the_change": "carry the per-role sums out of the final_loss loop and compute the two scale ratios from them, deleting the second walk of the prepared folds",
+  "what_the_change_does_to_execution": "per _agr1_train call: _agr1_scale_loss_grad 204 -> 198 and _a2_apply_group_rotation 476 -> 470 (layer 0; the delta is 6 everywhere). The 192 training-step calls are untouched, the tail drops from 12 to 6.",
+  "local_result": {
+    "six_shard_run": "artifacts/proxy_v3/attention-act2-sixshard-20260910",
+    "shard0_run": "artifacts/proxy_v3/attention-act2-shard0-20260910",
+    "baseline_used": "v236 (same-parent A-GR1 old implementation)",
+    "equal_shard_mean_delta_gain": 0.0,
+    "case_count": 72,
+    "positive_cases": 0,
+    "negative_cases": 0,
+    "zero_cases": 72
+  },
+  "mechanism_change_vs_formal_parent": {
+    "note": "A-GR1's change against the v231 root is inherited by transitivity: the per-case pairing above is exactly zero on all 72 cases. Cited from v236's own archived run, not re-measured.",
+    "reference_run": "artifacts/proxy_v3/attention-agr1-on-v231-sixshard-20260910",
+    "reference_cases": 72
+  },
+  "time": {
+    "verdict": "accounting figure, not a speed-up claim: see timing.json.  The card removes 6 of 204 calls in the tail of one function inside a ~6 s calibration, and the whole-calibration reading is reported against a byte-identical sham null",
+    "removed_calls_per_train": 6,
+    "total_calls_per_train": 204,
+    "paired_three_arm": {
+      "layer0/whole-calibration": {
+        "assembly_median_ms": 6005.4345703125,
+        "candidate_paired_median_ms": 17.94775390625,
+        "percent_of_assembly": 0.29885853714856253,
+        "null_paired_median_ms": 31.1826171875,
+        "abs_effect_over_abs_null": 0.5755691960790454,
+        "rounds_candidate_faster": 10,
+        "rounds_null_faster": 10,
+        "rounds": 15
+      },
+      "layer0/agr1-train": {
+        "assembly_median_ms": 1304.1917724609375,
+        "candidate_paired_median_ms": 1.1043701171875,
+        "percent_of_assembly": 0.08467850668185208,
+        "null_paired_median_ms": -3.4400634765625,
+        "abs_effect_over_abs_null": 0.3210319009261559,
+        "rounds_candidate_faster": 11,
+        "rounds_null_faster": 7,
+        "rounds": 15
+      },
+      "layer22/whole-calibration": {
+        "assembly_median_ms": 6008.9853515625,
+        "candidate_paired_median_ms": 19.9814453125,
+        "percent_of_assembly": 0.3325261112061836,
+        "null_paired_median_ms": 8.439453125,
+        "abs_effect_over_abs_null": 2.367623235362185,
+        "rounds_candidate_faster": 9,
+        "rounds_null_faster": 9,
+        "rounds": 15
+      },
+      "layer22/agr1-train": {
+        "assembly_median_ms": 1328.064208984375,
+        "candidate_paired_median_ms": 3.994873046875,
+        "percent_of_assembly": 0.300804209604447,
+        "null_paired_median_ms": 0.201416015625,
+        "abs_effect_over_abs_null": 19.833939393939392,
+        "rounds_candidate_faster": 9,
+        "rounds_null_faster": 8,
+        "rounds": 15
+      }
+    }
+  },
+  "magnitude_is_known_insufficient": {
+    "recorded": true,
+    "why": "The card's bitwise-equivalent baseline v236 returned an official TIMEOUT on this same root, and the stall diagnostic (docs/attention-stall-analysis-2026-09-10.md, section 6.3 item 4) measures the whole A-CT1 de-duplication direction at roughly 0.2 s against the roughly 12 s the mechanism would need to fit inside the 300 s limit, and states that A-CT2 is smaller still and not worth opening a card.  The user directed that the card nevertheless be run to completion and archived, so it is archived with that assessment attached rather than presented as a candidate expected to change an outcome.",
+    "no_official_outcome_claim": true
+  },
+  "lineage_note": "v239 is a descendant of v231 (formal parent) and of v236 (the A-GR1 assembly on that parent). It carries A-GR1 plus the training-tail change. It does not contain v237's L-TF2, v238's A-CT1, v233's L-TF1, v232's L-QF1 or v235's L-AD1, and scores and seconds do not add across any of those.",
+  "declared_deviations": [],
+  "local_decision": "archive and submit at most once for official adjudication",
+  "local_decision_note": "A pure time candidate with a real execution-cost change may take one official verification under AGENTS section 2. This one is archived with the prior assessment that its magnitude is far below what would matter.",
+  "official_status": "unregistered/NA",
+  "official_score": null,
+  "official_seconds": null
+}

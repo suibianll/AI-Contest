@@ -1,0 +1,46 @@
+Q1: `_agr1_scale_loss_grad` call sites inside _agr1_train: 4
+    line 77: _agr1_scale_loss_grad(transformed, denominator)
+    line 113: _agr1_scale_loss_grad(_a2_apply_group_rotation(coordinate, int(heads), matrix), denominator)
+    line 143: _agr1_scale_loss_grad(_a2_apply_group_rotation(fold[0][0], int(fold[0][2]), m), fold[0][1])
+    line 152: _agr1_scale_loss_grad(_a2_apply_group_rotation(fold[1][0], int(fold[1][2]), p), fold[1][1])
+    inside the `for fold in prepared` final_loss loop: 1
+    inside the two ratio expressions: 2
+    the generic call sits under `for ((coordinate, denominator, heads), matrix) in zip(fold, (m, p))`
+      -> iteration i binds coordinate/denominator/heads to fold[i] and matrix to (m, p)[i]
+      loop call args: ['_a2_apply_group_rotation(coordinate, int(heads), matrix)', 'denominator']
+      q ratio args: ['_a2_apply_group_rotation(fold[0][0], int(fold[0][2]), m)', 'fold[0][1]']
+      k ratio args: ['_a2_apply_group_rotation(fold[1][0], int(fold[1][2]), p)', 'fold[1][1]']
+    -> structurally the same expression: the loop's generic call at iteration i is the ratio's role-i call, on the same fold entry and the same matrix
+Q2 [real/layer0]: 204 `_agr1_scale_loss_grad` calls total = 32 training steps x 2 roles x 3 folds = 192, plus 6 in the final_loss loop, plus 6 in the two ratio expressions
+    every one of the 6 ratio calls repeats a final_loss call with bit-identical inputs and returns a bit-identical scalar (6/6)
+Q3 [real/layer0]: rebuilt q ratio 0.5692018767197927 vs reported 0.5692018767197927 -> exact: True; k ratio 0.4066774547100067 vs 0.4066774547100067 -> exact: True
+    final_loss - (q_ratio + k_ratio) = 1.244362e-06 (the regulariser term; not zero, and not expected to be)
+Q2 [real/layer1]: 204 `_agr1_scale_loss_grad` calls total = 32 training steps x 2 roles x 3 folds = 192, plus 6 in the final_loss loop, plus 6 in the two ratio expressions
+    every one of the 6 ratio calls repeats a final_loss call with bit-identical inputs and returns a bit-identical scalar (6/6)
+Q3 [real/layer1]: rebuilt q ratio 0.5532708565394083 vs reported 0.5532708565394083 -> exact: True; k ratio 0.4056701064109802 vs 0.4056701064109802 -> exact: True
+    final_loss - (q_ratio + k_ratio) = 1.200388e-06 (the regulariser term; not zero, and not expected to be)
+Q2 [real/layer5]: 204 `_agr1_scale_loss_grad` calls total = 32 training steps x 2 roles x 3 folds = 192, plus 6 in the final_loss loop, plus 6 in the two ratio expressions
+    every one of the 6 ratio calls repeats a final_loss call with bit-identical inputs and returns a bit-identical scalar (6/6)
+Q3 [real/layer5]: rebuilt q ratio 0.5260512232780457 vs reported 0.5260512232780457 -> exact: True; k ratio 0.39257344603538513 vs 0.39257344603538513 -> exact: True
+    final_loss - (q_ratio + k_ratio) = 1.221183e-06 (the regulariser term; not zero, and not expected to be)
+Q2 [real/layer8]: 204 `_agr1_scale_loss_grad` calls total = 32 training steps x 2 roles x 3 folds = 192, plus 6 in the final_loss loop, plus 6 in the two ratio expressions
+    every one of the 6 ratio calls repeats a final_loss call with bit-identical inputs and returns a bit-identical scalar (6/6)
+Q3 [real/layer8]: rebuilt q ratio 0.5250513553619385 vs reported 0.5250513553619385 -> exact: True; k ratio 0.3890601396560669 vs 0.3890601396560669 -> exact: True
+    final_loss - (q_ratio + k_ratio) = 1.152696e-06 (the regulariser term; not zero, and not expected to be)
+Q2 [real/layer15]: 204 `_agr1_scale_loss_grad` calls total = 32 training steps x 2 roles x 3 folds = 192, plus 6 in the final_loss loop, plus 6 in the two ratio expressions
+    every one of the 6 ratio calls repeats a final_loss call with bit-identical inputs and returns a bit-identical scalar (6/6)
+Q3 [real/layer15]: rebuilt q ratio 0.5004772444566091 vs reported 0.5004772444566091 -> exact: True; k ratio 0.3685832917690277 vs 0.3685832917690277 -> exact: True
+    final_loss - (q_ratio + k_ratio) = 1.139538e-06 (the regulariser term; not zero, and not expected to be)
+Q2 [real/layer22]: 204 `_agr1_scale_loss_grad` calls total = 32 training steps x 2 roles x 3 folds = 192, plus 6 in the final_loss loop, plus 6 in the two ratio expressions
+    every one of the 6 ratio calls repeats a final_loss call with bit-identical inputs and returns a bit-identical scalar (6/6)
+Q3 [real/layer22]: rebuilt q ratio 0.7298488616943359 vs reported 0.7298488616943359 -> exact: True; k ratio 0.3970208168029785 vs 0.3970208168029785 -> exact: True
+    final_loss - (q_ratio + k_ratio) = 1.292428e-06 (the regulariser term; not zero, and not expected to be)
+FACTS:
+    dtypes: eye/zeros are torch.float32; coordinates and denominators are built in float32 by _agr1_train; _a2_apply_group_rotation casts the rotation to float32 and _agr1_scale_loss_grad returns float32 -> the ratio expressions and the loop agree on dtype by construction (same helper, same args)
+    _agr1_train calls inside its own body: 0
+    _agr1_train call sites across solutions/: 5; of those, passing force_zero: 0
+    -> force_zero is unreachable from every archived call site, so the branch that skips the final_loss loop cannot occur; the reuse is safe on that count
+
+AUDIT CONCLUSION: the tail of _agr1_train evaluates the same expression on the same folds twice. The second walk is 6 calls per layer (2 roles x 3 folds) out of 204 total, and every one of them returns a bit-identical scalar that the loop already had.
+The reusable per-fold scalars are the two `_agr1_scale_loss_grad(...)[0]` values the final_loss loop already computes for m and p; the ratios are their fold sums divided by len(prepared), and the loop's own per-fold values are summed in the same order the ratio expressions use.
+DUPLICATION CONFIRMED -- an implementation card is warranted.

@@ -1,0 +1,22 @@
+{
+  "version": "v239",
+  "candidate_sha256": "55103e8ba530bf2cc03fc07bf24358ada4bda8d54ccc976468f5cbd985ecdac9",
+  "parent_sha256": "ea79a1c12dc667142c620975aab188920fae7b29988c804f41c1a696cc5754f1",
+  "official_status": "unregistered/NA",
+  "official_score": null,
+  "official_time_s": null,
+  "official_time_display": null,
+  "reported_by": null,
+  "reported_at": null,
+  "decision": "PENDING a submission decision. The local evidence is implementation equivalence with the same-parent A-GR1 (72/72 paired cases exactly zero, byte-identical calibration states on all six real attention layers) plus a proven reduction of 6 of 204 calls in the training tail.",
+  "magnitude_note": "The equivalence is proven and the saving is measured, but the saving is far too small to change an official outcome, and that is recorded here rather than implied away. A-CT1's whole A-GR1 de-duplication direction was measured at roughly 0.2 s against the roughly 12 s the mechanism would need; A-CT2 removes 6 of 204 calls in one function's tail, so it is smaller still. The stall diagnostic (docs/attention-stall-analysis-2026-09-10.md, section 6.3 item 4) concludes that this direction should stop and that A-CT2 is not worth a card. The user directed that the card be run to completion and archived anyway, with that assessment attached.",
+  "local_projection_seconds": null,
+  "local_projection_margin_seconds": null,
+  "local_projection_basis": null,
+  "projection_note": "no projection is recorded, and none is warranted: the official 300 s gate is the only time gate, and this machine's wall clock cannot be converted into the official machine's.",
+  "official_scored_sha256": null,
+  "archive_sha256": "55103e8ba530bf2cc03fc07bf24358ada4bda8d54ccc976468f5cbd985ecdac9",
+  "note": "v239 is a descendant of the v231 root and is not additive with v234, v236, v238, v233, v235 or v237. A-GR1's official record -- side isolation +29, complete package TIMEOUT on both v234 and v236 -- stands separately and is not inherited.",
+  "candidate_type": "complete Attention A-CT2 candidate (v231 root + A-GR1 + the training-tail carry); the only v239 under solutions/ at archive time",
+  "execution_log": "logs/execution/2026-09-10-attention-act2-train-tail-reuse.md"
+}

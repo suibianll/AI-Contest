@@ -144,6 +144,20 @@ K=2投毒对照证明偏移恰为2且输出逐位相同，即保护没有把重�
 否则会把官方刚用1s换来的K=2那一臂悄悄回退并报成本卡收益（标定缓存键改为从父根现算、
 基线换成记录`source_sha256`即v231的那次运行）。**v235是v231的后代（含K=2），与v233（v230后代）不可相加。**
 
+**v239 Attention A-CT2已完成并归档**（`20260910_v239_attention-act2-train-tail-reuse_scoreNA_timeNA`，候选`55103e8ba530bf2cc03fc07bf24358ada4bda8d54ccc976468f5cbd985ecdac9`，531018 B）：
+`_agr1_train`收尾时`final_loss`循环已为每个fold用`m`(q)/`p`(k)各算过一次`_agr1_scale_loss_grad(...)[0]`，
+而`info`里的`agr1_q_scale_ratio2`/`agr1_k_scale_ratio2`又把同一批调用做了一遍、只取回第一次丢掉的标量。
+候选在`final_loss`循环里带上两个按角色的标量和，两个ratio由它们算出，删掉第二次遍历
+（展开成两角色是必需的——float不可变，走`zip`只会重绑定局部名）。两次子串替换、36行、−74 B。
+**审计先于开发**（计划要求）：AST上按`zip(fold,(m,p))`位置对应证明是同一表达式；仪器化实测每次共204次调用
+（192训练+6 final_loss+6 ratio），六层**6/6的ratio调用入参逐位相同、返回标量逐位相同**；用循环内标量重建ratio与上报值**精确相等**；`force_zero`全部调用点不可达。
+**等价性**：六层真实数据全量校准**q/k/v state逐字节相同**（比只比那三个float更强，因三字段就在state里）；
+`_agr1_scale_loss_grad`204→198、`_a2_apply_group_rotation`476→470，**训练段192次未动**；覆盖接受(0/22)/拒绝(1/5/8/15)/M=I/ineligible/异常回退/确定性。
+六shard对同父A-GR1旧实现v236为**72/72精确零**；`stopped_early`同v237/v238结构性标注，六shard全记录、无截断。
+**时间：本机测不出**——四行效应均落在同字节sham null内，层22的19.83×伴随**9/15轮**（比值大只因null中位贴近0），不当作效应证据。
+**量级已测定不足**：逐位等价基线v236同根官方TIMEOUT，停滞诊断把去重方向合计测为约0.2s vs 机制需要的约12s，并写了A-CT2更小、不值得开卡；
+本卡按**用户指示**照计划跑完并归档，**归档不主张改善官方结局**，不回收诊断结论。官方`unregistered/NA`，根未切换。
+
 **v238 Attention A-CT1已完成并归档**（`20260910_v238_attention-act1-gate-reuse_scoreNA_timeNA`，候选`146bb7151f5f2a041b2f1fdbc94e5b370815fb91fa94d58db79384bb7a54fbc7`，528204 B）：
 A-GR1的gate每窗连续两次`_agr1_gate_loss`（父臂、候选臂），而两臂**只差**`q_state.learned_rotation`/`k_state.learned_rotation`/`k_state.learned_center`，
 `v_state`是拷贝、值相等。候选把每窗两次调用换成一次`_act1_gate_pair`：dense参考Q/K/V、参考`target`、父侧V五字段各算一次，
