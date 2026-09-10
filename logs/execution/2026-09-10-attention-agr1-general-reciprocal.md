@@ -72,3 +72,13 @@ inverse_error ~1e-6。所有层训练损失 2.0 → 0.87~1.12（真实下降）�
   （solution.py 与评测候选逐位一致；config.json、result.md、official-result.json、
   verification.json）。官方 `unregistered/NA`，用户统一评测。
 - 登记：solutions/README.md、plans/README.md、current-solution-status.md。
+
+## 官方回传（2026-09-10）
+
+侧隔离探针 `standard-linear_v234-attn` 官方 **14455/263.7s**（用户回传）：相对 v195 侧基准
+`14426/243s` 为 **+29/+20.7s**（相对 R3 基线 14405 为 +50）。A-GR1 官方侧价值 +29，
+继 C76.4（+84）、A1（+60）后 Attention 第三大官方正向机制；表达力梯度
+（对角 0 < 三角 0 < 对称全矩阵 +22 < 一般矩阵 +29）获官方确认。本地 +0.003845（2/6 层
+gate 接受）与官方 +29 再次确认本地 proxy 不预测官方（校准在官方隐藏数据上重跑）。
+完整包形态未提交；侧隔离分不直接晋级。登记见
+`logs/execution/2026-09-10-v234-agr1-side-official.md`。

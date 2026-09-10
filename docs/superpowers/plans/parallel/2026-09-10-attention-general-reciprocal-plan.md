@@ -1,6 +1,6 @@
 # Attention 一般非对称互逆矩阵残差计划（A-GR1）
 
-> 状态：ACTIVE 执行附录，2026-09-10。
+> 状态：CLOSED / **侧隔离官方正向 +29**（14455/263.7s，2026-09-10 用户回传），完整包未提交。
 > 从属于当前活动总计划。当前完整根为 v230 Linear (L-EM2) + v195 Attention，
 > 官方 `18428/292s`，SHA256 `0F1AF6DBC207FF32…`。本文件只负责 Attention A-GR1；
 > 版本登记、组合与根切换由总协调线处理。
@@ -85,6 +85,11 @@ attention-only 六 shard 逐位配对）。
 - 侧隔离探针 `standard-linear_v234-attn`：build+verify PASS；与归档候选六 shard
   72/72 精确零（逐位一致）。
 - 归档 v234（v233 被 Linear L-TF1 占用，按规则取下一空闲号）：
-  `solutions/20260910_v234_attention-agr1-general-reciprocal_scoreNA_timeNA/`，
-  官方 **unregistered/NA**，待用户统一评测。
+  `solutions/20260910_v234_attention-agr1-general-reciprocal_scoreNA_timeNA/`。
+- **官方回传（2026-09-10）：侧隔离探针 `standard-linear_v234-attn` = `14455/263.7s`，
+  相对 v195 侧基准 `14426/243s` 为 +29/+20.7s（相对 R3 基线 +50）**——A-GR1 官方侧
+  价值 +29，继 C76.4（+84）、A1（+60）后 Attention 第三大官方正向机制；表达力梯度
+  （对角 0 < 三角 0 < 对称全矩阵 +22 < 一般矩阵 +29）获官方确认。完整包形态未提交；
+  侧隔离分不直接晋级，完整包落地需另测时间（侧 +20.7s 不外推）。见
+  [侧隔离回传](../../../../logs/execution/2026-09-10-v234-agr1-side-official.md)。
 - 执行日志：`logs/execution/2026-09-10-attention-agr1-general-reciprocal.md`。
