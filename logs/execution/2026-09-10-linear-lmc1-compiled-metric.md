@@ -60,7 +60,7 @@ metric  = inverse; metric.diagonal().sub_(ridge)
 被官方 −2s 证伪。此处若按"官方只跑 50 个样例"推断净亏并据此关闭，是同一类错误——
 而且这次连测量都没有，只有口径假设。故按计划 §5 登记缺失证据，交用户裁决。
 
-## 3. 另外两个已测到的成本（与上面的口径问题无关）
+## 3. 与口径无关的已测边界（三项）
 
 **3.1 设备/dtype 边界（已实测，结论：可行但有契约条件）**
 `h_inv` 由 `_cpu_state_tensor` 存为 **CPU float32**；动态路径在 `_em1_metric` 里
@@ -76,18 +76,18 @@ metric  = inverse; metric.diagonal().sub_(ridge)
 （AGENTS §5），所以该条件在当前口径下自动成立；但必须写进契约——若某一流程出现校准 CPU / 动态 CUDA，
 预存的 G 会与现路径差 ~1e-6，逐位等价即不成立。
 
-**3.3 原地修改风险（静态发现，实现时必须处理）**
+**3.2 原地修改风险（静态发现，实现时必须处理）**
 `_em1_metric` 现在对 `inverse` 做的是**原地** `metric.diagonal().sub_(ridge)`。若 G 改为从 state 读出，
 而同一次运行里同一个 state dict 被多个 case 复用（评测器每 case 调一次动态 API），
 第二次调用会把 ridge **再减一遍**——这正是计划 §4 点名的"使用方不得原地修改持久G……避免每次再减ridge"。
 最干净的解法是把**已减 ridge 的最终 G** 存进 state，使动态端只读。
 
-**3.4 `validate_state` 接受度（已核对）**
+**3.3 `validate_state` 接受度（已核对）**
 `evaluator/reference_hif4.validate_state` 是通用遍历：tensor 须为 **CPU**、strided、无梯度、实数、
 dtype 在允许集内、有限，且深度 ≤8、节点 ≤4096。新增一个 CPU float32 的 `metric` 张量**可以通过**
 （每 state 只 +1 节点）。注意"必须 CPU"这一条，正是 3.1 里"存 CPU 副本"的来源。
 
-**3.2 state 体积接近翻倍（已测）**
+**3.4 state 体积接近翻倍（已测）**
 `metric` 与已存的 `h` 同为 channels² float32，故每个在范围内 state 的 em1 载荷翻倍：
 
 | role | channels | 单个新增 | ×24 层 |
