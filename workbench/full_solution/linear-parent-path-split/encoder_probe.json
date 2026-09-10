@@ -1,0 +1,1854 @@
+{
+  "device": "NVIDIA GeForce RTX 3060 Ti",
+  "parent_sha256_prefix": "0f1af6dbc207ff32",
+  "rounds": 15,
+  "purpose": "last localization layer: inside _dense_to_hif4, the candidate exact solve versus the rest, as plan section 4.2 requires",
+  "states": [
+    {
+      "rounds": 15,
+      "encoder_calls_per_round": 40,
+      "encoder_gpu_ms": 499.6007995605469,
+      "encoder_wall_ms": 500.8640999949421,
+      "encoder_thread_ms": 468.75,
+      "batched_solve": {
+        "calls_per_round": 40,
+        "gpu_ms_per_round": 133.50278306007385
+      },
+      "edge_solve": {
+        "calls_per_round": 69,
+        "gpu_ms_per_round": 181.67356848716736
+      },
+      "adaround": {
+        "calls_per_round": 367,
+        "gpu_ms_per_round": 255.08739237487316
+      },
+      "rest_ms": -70.6629443615675,
+      "torch_op_counts_per_round": {
+        "round": 40,
+        "clamp": 0,
+        "einsum": 734,
+        "minimum": 218,
+        "where": 945,
+        "stack": 109,
+        "gather": 109,
+        "floor": 407,
+        "ceil": 367,
+        "arange": 774,
+        "nonzero": 109,
+        "topk": 0,
+        "index_select": 0,
+        "cat": 0,
+        "tensor": 40,
+        "zeros": 40,
+        "full": 0,
+        "sign": 40,
+        "nan_to_num": 120,
+        "quantile": 0
+      },
+      "shapes": {
+        "adaround_ndim5": {
+          "shapes": [
+            [
+              128,
+              1,
+              8,
+              2,
+              4
+            ],
+            [
+              6,
+              128,
+              8,
+              2,
+              4
+            ]
+          ]
+        },
+        "solve_ndim5": {
+          "shapes": [
+            [
+              6,
+              128,
+              8,
+              2,
+              4
+            ]
+          ]
+        },
+        "adaround_ndim4": {
+          "shapes": [
+            [
+              54,
+              8,
+              2,
+              4
+            ],
+            [
+              44,
+              8,
+              2,
+              4
+            ],
+            [
+              2,
+              8,
+              2,
+              4
+            ],
+            [
+              53,
+              8,
+              2,
+              4
+            ],
+            [
+              49,
+              8,
+              2,
+              4
+            ],
+            [
+              59,
+              8,
+              2,
+              4
+            ],
+            [
+              1,
+              8,
+              2,
+              4
+            ],
+            [
+              55,
+              8,
+              2,
+              4
+            ],
+            [
+              48,
+              8,
+              2,
+              4
+            ],
+            [
+              3,
+              8,
+              2,
+              4
+            ],
+            [
+              42,
+              8,
+              2,
+              4
+            ],
+            [
+              52,
+              8,
+              2,
+              4
+            ],
+            [
+              63,
+              8,
+              2,
+              4
+            ],
+            [
+              57,
+              8,
+              2,
+              4
+            ],
+            [
+              67,
+              8,
+              2,
+              4
+            ],
+            [
+              47,
+              8,
+              2,
+              4
+            ],
+            [
+              56,
+              8,
+              2,
+              4
+            ],
+            [
+              5,
+              8,
+              2,
+              4
+            ],
+            [
+              50,
+              8,
+              2,
+              4
+            ],
+            [
+              51,
+              8,
+              2,
+              4
+            ],
+            [
+              43,
+              8,
+              2,
+              4
+            ],
+            [
+              61,
+              8,
+              2,
+              4
+            ],
+            [
+              4,
+              8,
+              2,
+              4
+            ],
+            [
+              58,
+              8,
+              2,
+              4
+            ],
+            [
+              62,
+              8,
+              2,
+              4
+            ]
+          ]
+        },
+        "solve_ndim4": {
+          "shapes": [
+            [
+              54,
+              8,
+              2,
+              4
+            ],
+            [
+              44,
+              8,
+              2,
+              4
+            ],
+            [
+              2,
+              8,
+              2,
+              4
+            ],
+            [
+              53,
+              8,
+              2,
+              4
+            ],
+            [
+              49,
+              8,
+              2,
+              4
+            ],
+            [
+              59,
+              8,
+              2,
+              4
+            ],
+            [
+              1,
+              8,
+              2,
+              4
+            ],
+            [
+              55,
+              8,
+              2,
+              4
+            ],
+            [
+              48,
+              8,
+              2,
+              4
+            ],
+            [
+              3,
+              8,
+              2,
+              4
+            ],
+            [
+              42,
+              8,
+              2,
+              4
+            ],
+            [
+              52,
+              8,
+              2,
+              4
+            ],
+            [
+              63,
+              8,
+              2,
+              4
+            ],
+            [
+              57,
+              8,
+              2,
+              4
+            ],
+            [
+              67,
+              8,
+              2,
+              4
+            ],
+            [
+              47,
+              8,
+              2,
+              4
+            ],
+            [
+              56,
+              8,
+              2,
+              4
+            ],
+            [
+              5,
+              8,
+              2,
+              4
+            ],
+            [
+              50,
+              8,
+              2,
+              4
+            ],
+            [
+              51,
+              8,
+              2,
+              4
+            ],
+            [
+              43,
+              8,
+              2,
+              4
+            ],
+            [
+              61,
+              8,
+              2,
+              4
+            ],
+            [
+              4,
+              8,
+              2,
+              4
+            ],
+            [
+              58,
+              8,
+              2,
+              4
+            ],
+            [
+              62,
+              8,
+              2,
+              4
+            ]
+          ]
+        }
+      },
+      "layer": 0,
+      "role": "q",
+      "rows": 128,
+      "channels": 2560,
+      "has_gram": true,
+      "max_refine_ratio": 0.9936594202898551,
+      "max_refine_blocks": 32768,
+      "num_offsets": 5,
+      "aten_ops": {
+        "rounds": 2,
+        "encoder_calls_per_round": 40.0,
+        "ops_per_round": 42399.0,
+        "ops_per_encoder_call": 1059.975,
+        "top_ops_per_round": [
+          {
+            "op": "aten.permute.default",
+            "count": 13212
+          },
+          {
+            "op": "aten.unsqueeze.default",
+            "count": 12668
+          },
+          {
+            "op": "aten.view.default",
+            "count": 12508
+          },
+          {
+            "op": "aten.mul.Tensor",
+            "count": 7108
+          },
+          {
+            "op": "aten._to_copy.default",
+            "count": 5342
+          },
+          {
+            "op": "aten.bmm.default",
+            "count": 2936
+          },
+          {
+            "op": "aten.clamp.default",
+            "count": 2304
+          },
+          {
+            "op": "aten.clone.default",
+            "count": 2094
+          },
+          {
+            "op": "aten.sub.Tensor",
+            "count": 1926
+          },
+          {
+            "op": "aten.where.self",
+            "count": 1890
+          },
+          {
+            "op": "aten.add.Tensor",
+            "count": 1650
+          },
+          {
+            "op": "aten.index_select.default",
+            "count": 1628
+          },
+          {
+            "op": "aten.arange.default",
+            "count": 1548
+          },
+          {
+            "op": "aten._unsafe_view.default",
+            "count": 1374
+          },
+          {
+            "op": "aten.expand.default",
+            "count": 1272
+          },
+          {
+            "op": "aten.bitwise_and.Scalar",
+            "count": 1032
+          },
+          {
+            "op": "aten.index.Tensor",
+            "count": 1018
+          },
+          {
+            "op": "aten.gather.default",
+            "count": 952
+          },
+          {
+            "op": "aten.squeeze.dim",
+            "count": 952
+          },
+          {
+            "op": "aten.lt.Tensor",
+            "count": 952
+          }
+        ]
+      }
+    },
+    {
+      "rounds": 15,
+      "encoder_calls_per_round": 40,
+      "encoder_gpu_ms": 835.9227504730225,
+      "encoder_wall_ms": 837.1050999776344,
+      "encoder_thread_ms": 812.5,
+      "batched_solve": {
+        "calls_per_round": 40,
+        "gpu_ms_per_round": 443.2696952819824
+      },
+      "edge_solve": {
+        "calls_per_round": 70,
+        "gpu_ms_per_round": 188.92313742637634
+      },
+      "adaround": {
+        "calls_per_round": 370,
+        "gpu_ms_per_round": 569.7128319740295
+      },
+      "rest_ms": -365.98291420936584,
+      "torch_op_counts_per_round": {
+        "round": 40,
+        "clamp": 0,
+        "einsum": 740,
+        "minimum": 220,
+        "where": 950,
+        "stack": 110,
+        "gather": 110,
+        "floor": 410,
+        "ceil": 370,
+        "arange": 780,
+        "nonzero": 110,
+        "topk": 40,
+        "index_select": 0,
+        "cat": 0,
+        "tensor": 40,
+        "zeros": 40,
+        "full": 0,
+        "sign": 40,
+        "nan_to_num": 120,
+        "quantile": 0
+      },
+      "shapes": {
+        "adaround_ndim5": {
+          "shapes": [
+            [
+              512,
+              1,
+              8,
+              2,
+              4
+            ],
+            [
+              6,
+              509,
+              8,
+              2,
+              4
+            ]
+          ]
+        },
+        "solve_ndim5": {
+          "shapes": [
+            [
+              6,
+              509,
+              8,
+              2,
+              4
+            ]
+          ]
+        },
+        "adaround_ndim4": {
+          "shapes": [
+            [
+              213,
+              8,
+              2,
+              4
+            ],
+            [
+              173,
+              8,
+              2,
+              4
+            ],
+            [
+              8,
+              8,
+              2,
+              4
+            ],
+            [
+              209,
+              8,
+              2,
+              4
+            ],
+            [
+              196,
+              8,
+              2,
+              4
+            ],
+            [
+              236,
+              8,
+              2,
+              4
+            ],
+            [
+              4,
+              8,
+              2,
+              4
+            ],
+            [
+              217,
+              8,
+              2,
+              4
+            ],
+            [
+              192,
+              8,
+              2,
+              4
+            ],
+            [
+              12,
+              8,
+              2,
+              4
+            ],
+            [
+              168,
+              8,
+              2,
+              4
+            ],
+            [
+              202,
+              8,
+              2,
+              4
+            ],
+            [
+              252,
+              8,
+              2,
+              4
+            ],
+            [
+              222,
+              8,
+              2,
+              4
+            ],
+            [
+              268,
+              8,
+              2,
+              4
+            ],
+            [
+              218,
+              8,
+              2,
+              4
+            ],
+            [
+              188,
+              8,
+              2,
+              4
+            ],
+            [
+              216,
+              8,
+              2,
+              4
+            ],
+            [
+              199,
+              8,
+              2,
+              4
+            ],
+            [
+              205,
+              8,
+              2,
+              4
+            ],
+            [
+              224,
+              8,
+              2,
+              4
+            ],
+            [
+              14,
+              8,
+              2,
+              4
+            ],
+            [
+              197,
+              8,
+              2,
+              4
+            ],
+            [
+              210,
+              8,
+              2,
+              4
+            ],
+            [
+              220,
+              8,
+              2,
+              4
+            ],
+            [
+              208,
+              8,
+              2,
+              4
+            ],
+            [
+              225,
+              8,
+              2,
+              4
+            ],
+            [
+              1,
+              8,
+              2,
+              4
+            ],
+            [
+              172,
+              8,
+              2,
+              4
+            ],
+            [
+              238,
+              8,
+              2,
+              4
+            ],
+            [
+              16,
+              8,
+              2,
+              4
+            ],
+            [
+              229,
+              8,
+              2,
+              4
+            ],
+            [
+              242,
+              8,
+              2,
+              4
+            ],
+            [
+              186,
+              8,
+              2,
+              4
+            ],
+            [
+              212,
+              8,
+              2,
+              4
+            ],
+            [
+              200,
+              8,
+              2,
+              4
+            ],
+            [
+              244,
+              8,
+              2,
+              4
+            ],
+            [
+              190,
+              8,
+              2,
+              4
+            ],
+            [
+              175,
+              8,
+              2,
+              4
+            ],
+            [
+              219,
+              8,
+              2,
+              4
+            ]
+          ]
+        },
+        "solve_ndim4": {
+          "shapes": [
+            [
+              213,
+              8,
+              2,
+              4
+            ],
+            [
+              173,
+              8,
+              2,
+              4
+            ],
+            [
+              8,
+              8,
+              2,
+              4
+            ],
+            [
+              209,
+              8,
+              2,
+              4
+            ],
+            [
+              196,
+              8,
+              2,
+              4
+            ],
+            [
+              236,
+              8,
+              2,
+              4
+            ],
+            [
+              4,
+              8,
+              2,
+              4
+            ],
+            [
+              217,
+              8,
+              2,
+              4
+            ],
+            [
+              192,
+              8,
+              2,
+              4
+            ],
+            [
+              12,
+              8,
+              2,
+              4
+            ],
+            [
+              168,
+              8,
+              2,
+              4
+            ],
+            [
+              202,
+              8,
+              2,
+              4
+            ],
+            [
+              252,
+              8,
+              2,
+              4
+            ],
+            [
+              222,
+              8,
+              2,
+              4
+            ],
+            [
+              268,
+              8,
+              2,
+              4
+            ],
+            [
+              218,
+              8,
+              2,
+              4
+            ],
+            [
+              188,
+              8,
+              2,
+              4
+            ],
+            [
+              216,
+              8,
+              2,
+              4
+            ],
+            [
+              199,
+              8,
+              2,
+              4
+            ],
+            [
+              205,
+              8,
+              2,
+              4
+            ],
+            [
+              224,
+              8,
+              2,
+              4
+            ],
+            [
+              14,
+              8,
+              2,
+              4
+            ],
+            [
+              197,
+              8,
+              2,
+              4
+            ],
+            [
+              210,
+              8,
+              2,
+              4
+            ],
+            [
+              220,
+              8,
+              2,
+              4
+            ],
+            [
+              208,
+              8,
+              2,
+              4
+            ],
+            [
+              225,
+              8,
+              2,
+              4
+            ],
+            [
+              1,
+              8,
+              2,
+              4
+            ],
+            [
+              172,
+              8,
+              2,
+              4
+            ],
+            [
+              238,
+              8,
+              2,
+              4
+            ],
+            [
+              16,
+              8,
+              2,
+              4
+            ],
+            [
+              229,
+              8,
+              2,
+              4
+            ],
+            [
+              242,
+              8,
+              2,
+              4
+            ],
+            [
+              186,
+              8,
+              2,
+              4
+            ],
+            [
+              212,
+              8,
+              2,
+              4
+            ],
+            [
+              200,
+              8,
+              2,
+              4
+            ],
+            [
+              244,
+              8,
+              2,
+              4
+            ],
+            [
+              190,
+              8,
+              2,
+              4
+            ],
+            [
+              175,
+              8,
+              2,
+              4
+            ],
+            [
+              219,
+              8,
+              2,
+              4
+            ]
+          ]
+        }
+      },
+      "layer": 0,
+      "role": "q",
+      "rows": 512,
+      "channels": 2560,
+      "has_gram": true,
+      "max_refine_ratio": 0.9936594202898551,
+      "max_refine_blocks": 32768,
+      "num_offsets": 5,
+      "aten_ops": {
+        "rounds": 2,
+        "encoder_calls_per_round": 40.0,
+        "ops_per_round": 42730.0,
+        "ops_per_encoder_call": 1068.25,
+        "top_ops_per_round": [
+          {
+            "op": "aten.permute.default",
+            "count": 13320
+          },
+          {
+            "op": "aten.unsqueeze.default",
+            "count": 12760
+          },
+          {
+            "op": "aten.view.default",
+            "count": 12600
+          },
+          {
+            "op": "aten.mul.Tensor",
+            "count": 7160
+          },
+          {
+            "op": "aten._to_copy.default",
+            "count": 5380
+          },
+          {
+            "op": "aten.bmm.default",
+            "count": 2960
+          },
+          {
+            "op": "aten.clamp.default",
+            "count": 2320
+          },
+          {
+            "op": "aten.clone.default",
+            "count": 2100
+          },
+          {
+            "op": "aten.sub.Tensor",
+            "count": 1940
+          },
+          {
+            "op": "aten.where.self",
+            "count": 1900
+          },
+          {
+            "op": "aten.add.Tensor",
+            "count": 1660
+          },
+          {
+            "op": "aten.index_select.default",
+            "count": 1640
+          },
+          {
+            "op": "aten.arange.default",
+            "count": 1560
+          },
+          {
+            "op": "aten._unsafe_view.default",
+            "count": 1380
+          },
+          {
+            "op": "aten.expand.default",
+            "count": 1280
+          },
+          {
+            "op": "aten.bitwise_and.Scalar",
+            "count": 1040
+          },
+          {
+            "op": "aten.index.Tensor",
+            "count": 1020
+          },
+          {
+            "op": "aten.gather.default",
+            "count": 960
+          },
+          {
+            "op": "aten.squeeze.dim",
+            "count": 960
+          },
+          {
+            "op": "aten.lt.Tensor",
+            "count": 960
+          }
+        ]
+      }
+    },
+    {
+      "rounds": 15,
+      "encoder_calls_per_round": 64,
+      "encoder_gpu_ms": 381.7268476486206,
+      "encoder_wall_ms": 383.8085999886971,
+      "encoder_thread_ms": 375.0,
+      "batched_solve": {
+        "calls_per_round": 64,
+        "gpu_ms_per_round": 56.63628786802292
+      },
+      "edge_solve": {
+        "calls_per_round": 98,
+        "gpu_ms_per_round": 80.72243189811707
+      },
+      "adaround": {
+        "calls_per_round": 0,
+        "gpu_ms_per_round": 0.0
+      },
+      "rest_ms": 244.36812788248062,
+      "torch_op_counts_per_round": {
+        "round": 614,
+        "clamp": 0,
+        "einsum": 0,
+        "minimum": 324,
+        "where": 900,
+        "stack": 162,
+        "gather": 162,
+        "floor": 64,
+        "ceil": 0,
+        "arange": 64,
+        "nonzero": 162,
+        "topk": 64,
+        "index_select": 0,
+        "cat": 0,
+        "tensor": 64,
+        "zeros": 64,
+        "full": 0,
+        "sign": 64,
+        "nan_to_num": 192,
+        "quantile": 0
+      },
+      "shapes": {
+        "solve_ndim5": {
+          "shapes": [
+            [
+              6,
+              125,
+              8,
+              2,
+              4
+            ]
+          ]
+        },
+        "solve_ndim4": {
+          "shapes": [
+            [
+              1,
+              8,
+              2,
+              4
+            ],
+            [
+              58,
+              8,
+              2,
+              4
+            ],
+            [
+              57,
+              8,
+              2,
+              4
+            ],
+            [
+              56,
+              8,
+              2,
+              4
+            ],
+            [
+              61,
+              8,
+              2,
+              4
+            ],
+            [
+              54,
+              8,
+              2,
+              4
+            ],
+            [
+              65,
+              8,
+              2,
+              4
+            ],
+            [
+              27,
+              8,
+              2,
+              4
+            ],
+            [
+              80,
+              8,
+              2,
+              4
+            ],
+            [
+              60,
+              8,
+              2,
+              4
+            ],
+            [
+              59,
+              8,
+              2,
+              4
+            ],
+            [
+              55,
+              8,
+              2,
+              4
+            ],
+            [
+              64,
+              8,
+              2,
+              4
+            ],
+            [
+              2,
+              8,
+              2,
+              4
+            ],
+            [
+              53,
+              8,
+              2,
+              4
+            ],
+            [
+              62,
+              8,
+              2,
+              4
+            ],
+            [
+              63,
+              8,
+              2,
+              4
+            ],
+            [
+              72,
+              8,
+              2,
+              4
+            ],
+            [
+              69,
+              8,
+              2,
+              4
+            ],
+            [
+              66,
+              8,
+              2,
+              4
+            ],
+            [
+              47,
+              8,
+              2,
+              4
+            ],
+            [
+              43,
+              8,
+              2,
+              4
+            ],
+            [
+              70,
+              8,
+              2,
+              4
+            ],
+            [
+              71,
+              8,
+              2,
+              4
+            ],
+            [
+              74,
+              8,
+              2,
+              4
+            ],
+            [
+              52,
+              8,
+              2,
+              4
+            ],
+            [
+              3,
+              8,
+              2,
+              4
+            ],
+            [
+              68,
+              8,
+              2,
+              4
+            ]
+          ]
+        }
+      },
+      "layer": 0,
+      "role": "o",
+      "rows": 128,
+      "channels": 4096,
+      "has_gram": false,
+      "max_refine_ratio": 0.9710144927536232,
+      "max_refine_blocks": 32768,
+      "num_offsets": 5,
+      "aten_ops": {
+        "rounds": 2,
+        "encoder_calls_per_round": 64.0,
+        "ops_per_round": 27192.0,
+        "ops_per_encoder_call": 424.875,
+        "top_ops_per_round": [
+          {
+            "op": "aten.mul.Tensor",
+            "count": 8656
+          },
+          {
+            "op": "aten.unsqueeze.default",
+            "count": 6900
+          },
+          {
+            "op": "aten._to_copy.default",
+            "count": 3676
+          },
+          {
+            "op": "aten.view.default",
+            "count": 3396
+          },
+          {
+            "op": "aten.add.Tensor",
+            "count": 2516
+          },
+          {
+            "op": "aten.sum.dim_IntList",
+            "count": 2200
+          },
+          {
+            "op": "aten.index_select.default",
+            "count": 2132
+          },
+          {
+            "op": "aten.sub.Tensor",
+            "count": 1808
+          },
+          {
+            "op": "aten.where.self",
+            "count": 1800
+          },
+          {
+            "op": "aten.index.Tensor",
+            "count": 1604
+          },
+          {
+            "op": "aten.lt.Tensor",
+            "count": 1424
+          },
+          {
+            "op": "aten.clamp.default",
+            "count": 1288
+          },
+          {
+            "op": "aten.round.default",
+            "count": 1228
+          },
+          {
+            "op": "aten.pow.Tensor_Scalar",
+            "count": 1228
+          },
+          {
+            "op": "aten.clone.default",
+            "count": 1152
+          },
+          {
+            "op": "aten.reciprocal.default",
+            "count": 1100
+          },
+          {
+            "op": "aten.clamp_.default",
+            "count": 1100
+          },
+          {
+            "op": "aten.detach.default",
+            "count": 1024
+          },
+          {
+            "op": "aten.expand.default",
+            "count": 708
+          },
+          {
+            "op": "aten.minimum.default",
+            "count": 648
+          }
+        ]
+      }
+    },
+    {
+      "rounds": 15,
+      "encoder_calls_per_round": 64,
+      "encoder_gpu_ms": 381.61517000198364,
+      "encoder_wall_ms": 384.03640002798056,
+      "encoder_thread_ms": 359.375,
+      "batched_solve": {
+        "calls_per_round": 64,
+        "gpu_ms_per_round": 54.328543931245804
+      },
+      "edge_solve": {
+        "calls_per_round": 98,
+        "gpu_ms_per_round": 82.29347211122513
+      },
+      "adaround": {
+        "calls_per_round": 0,
+        "gpu_ms_per_round": 0.0
+      },
+      "rest_ms": 244.9931539595127,
+      "torch_op_counts_per_round": {
+        "round": 614,
+        "clamp": 0,
+        "einsum": 0,
+        "minimum": 324,
+        "where": 900,
+        "stack": 162,
+        "gather": 162,
+        "floor": 64,
+        "ceil": 0,
+        "arange": 64,
+        "nonzero": 162,
+        "topk": 64,
+        "index_select": 0,
+        "cat": 0,
+        "tensor": 64,
+        "zeros": 64,
+        "full": 0,
+        "sign": 64,
+        "nan_to_num": 192,
+        "quantile": 0
+      },
+      "shapes": {
+        "solve_ndim5": {
+          "shapes": [
+            [
+              6,
+              498,
+              8,
+              2,
+              4
+            ]
+          ]
+        },
+        "solve_ndim4": {
+          "shapes": [
+            [
+              4,
+              8,
+              2,
+              4
+            ],
+            [
+              230,
+              8,
+              2,
+              4
+            ],
+            [
+              228,
+              8,
+              2,
+              4
+            ],
+            [
+              224,
+              8,
+              2,
+              4
+            ],
+            [
+              242,
+              8,
+              2,
+              4
+            ],
+            [
+              216,
+              8,
+              2,
+              4
+            ],
+            [
+              258,
+              8,
+              2,
+              4
+            ],
+            [
+              108,
+              8,
+              2,
+              4
+            ],
+            [
+              318,
+              8,
+              2,
+              4
+            ],
+            [
+              238,
+              8,
+              2,
+              4
+            ],
+            [
+              234,
+              8,
+              2,
+              4
+            ],
+            [
+              220,
+              8,
+              2,
+              4
+            ],
+            [
+              256,
+              8,
+              2,
+              4
+            ],
+            [
+              8,
+              8,
+              2,
+              4
+            ],
+            [
+              214,
+              8,
+              2,
+              4
+            ],
+            [
+              246,
+              8,
+              2,
+              4
+            ],
+            [
+              244,
+              8,
+              2,
+              4
+            ],
+            [
+              232,
+              8,
+              2,
+              4
+            ],
+            [
+              286,
+              8,
+              2,
+              4
+            ],
+            [
+              248,
+              8,
+              2,
+              4
+            ],
+            [
+              6,
+              8,
+              2,
+              4
+            ],
+            [
+              240,
+              8,
+              2,
+              4
+            ],
+            [
+              270,
+              8,
+              2,
+              4
+            ],
+            [
+              262,
+              8,
+              2,
+              4
+            ],
+            [
+              186,
+              8,
+              2,
+              4
+            ],
+            [
+              174,
+              8,
+              2,
+              4
+            ],
+            [
+              10,
+              8,
+              2,
+              4
+            ],
+            [
+              278,
+              8,
+              2,
+              4
+            ],
+            [
+              284,
+              8,
+              2,
+              4
+            ],
+            [
+              264,
+              8,
+              2,
+              4
+            ],
+            [
+              300,
+              8,
+              2,
+              4
+            ],
+            [
+              280,
+              8,
+              2,
+              4
+            ],
+            [
+              250,
+              8,
+              2,
+              4
+            ],
+            [
+              206,
+              8,
+              2,
+              4
+            ],
+            [
+              254,
+              8,
+              2,
+              4
+            ],
+            [
+              12,
+              8,
+              2,
+              4
+            ],
+            [
+              266,
+              8,
+              2,
+              4
+            ],
+            [
+              2,
+              8,
+              2,
+              4
+            ],
+            [
+              236,
+              8,
+              2,
+              4
+            ]
+          ]
+        }
+      },
+      "layer": 0,
+      "role": "o",
+      "rows": 512,
+      "channels": 4096,
+      "has_gram": false,
+      "max_refine_ratio": 0.9710144927536232,
+      "max_refine_blocks": 32768,
+      "num_offsets": 5,
+      "aten_ops": {
+        "rounds": 2,
+        "encoder_calls_per_round": 64.0,
+        "ops_per_round": 27192.0,
+        "ops_per_encoder_call": 424.875,
+        "top_ops_per_round": [
+          {
+            "op": "aten.mul.Tensor",
+            "count": 8656
+          },
+          {
+            "op": "aten.unsqueeze.default",
+            "count": 6900
+          },
+          {
+            "op": "aten._to_copy.default",
+            "count": 3676
+          },
+          {
+            "op": "aten.view.default",
+            "count": 3396
+          },
+          {
+            "op": "aten.add.Tensor",
+            "count": 2516
+          },
+          {
+            "op": "aten.sum.dim_IntList",
+            "count": 2200
+          },
+          {
+            "op": "aten.index_select.default",
+            "count": 2132
+          },
+          {
+            "op": "aten.sub.Tensor",
+            "count": 1808
+          },
+          {
+            "op": "aten.where.self",
+            "count": 1800
+          },
+          {
+            "op": "aten.index.Tensor",
+            "count": 1604
+          },
+          {
+            "op": "aten.lt.Tensor",
+            "count": 1424
+          },
+          {
+            "op": "aten.clamp.default",
+            "count": 1288
+          },
+          {
+            "op": "aten.round.default",
+            "count": 1228
+          },
+          {
+            "op": "aten.pow.Tensor_Scalar",
+            "count": 1228
+          },
+          {
+            "op": "aten.clone.default",
+            "count": 1152
+          },
+          {
+            "op": "aten.reciprocal.default",
+            "count": 1100
+          },
+          {
+            "op": "aten.clamp_.default",
+            "count": 1100
+          },
+          {
+            "op": "aten.detach.default",
+            "count": 1024
+          },
+          {
+            "op": "aten.expand.default",
+            "count": 708
+          },
+          {
+            "op": "aten.minimum.default",
+            "count": 648
+          }
+        ]
+      }
+    }
+  ]
+}
