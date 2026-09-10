@@ -6,7 +6,7 @@
 > ②「不要用0.5B的，全部使用4B进行测试」（0.5B 面板退役）；
 > ③「不设本地时间门禁——本地时间根本不准」（20:26）。
 > 本文件回答「现在测试应该怎么测」；与
-> [当前唯一活动计划](superpowers/plans/2026-09-10-linear-cross-residual-correction-plan.md)冲突时以本文件为准。
+> [计划入口](superpowers/plans/README.md)冲突时以本文件为准。
 
 > 当前规则优先级：`AGENTS.md` → 本指引 → 唯一活动计划/当前工作包 → workbench 状态文件。
 > 状态文件不得新增门禁；冲突先修正文档和状态，不能在候选间临时切换口径。
@@ -56,7 +56,7 @@ Attention 时用 `--attention-only`。这些命令只减少本地检查范围，
 **第 2 步：shard0 冒烟（~3–5 分钟）。** 目标侧 API 检查 legal state、coverage true、
 无形状崩溃、机制 reachable；六 API 的导入/接口检查与非目标侧 control 单独完成，单侧运行不调用另一侧 API。
 
-**第 3 步：官方前只做目标侧 shard0。** 全六 shard 不再是提交门；仅在官方正向后做归档复核，
+**第 3 步：官方前完成目标侧 shard0。** 活动算法开发卡要求的目标侧六 shard 完成一次作为真实输出诊断，数值不作提交门；已有同口径结果不重跑。其他全量运行仅在官方正向后补必要 interaction audit，
 或在官方失败后为回答一个明确诊断问题时运行。
 
 ```powershell

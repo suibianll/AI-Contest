@@ -10,7 +10,7 @@
 > `D66128A62E7E068EDC50C91F4D8E212F586A6EDCAEE5BEA7D3564166E258B0F6`。
 
 > 当前测试按[4B指引](4b-panel-testing-guide.md)执行。本文历史0.5B、OOD、跨模型和时间预测结果仅作证据，不构成新测试命令或门禁。
-> 当前规则优先级为 `AGENTS.md` → 4B 指引 → [Linear 完整输出交叉残差纠码与双线协调计划](superpowers/plans/2026-09-10-linear-cross-residual-correction-plan.md)
+> 当前规则优先级为 `AGENTS.md` → 4B 指引 → [计划入口](superpowers/plans/README.md)
 > → workbench 状态；侧队列和工作包不得重新定义门禁。
 
 更新：2026-09-10。
@@ -27,9 +27,7 @@
 
 09-09 旧计划三卡（L-RB1/A-RB1/L-JRB1）已全部关闭并归档，见
 [归档版计划](superpowers/archive/plans/2026-09-09-output-aware-rounding-and-joint-aw-plan-completed.md)。
-当前按[Linear 精确度量 Activation 码序下降与双线协调计划（L-EM1）](superpowers/plans/2026-09-10-linear-exact-metric-refinement-plan.md)
-（含 Linear L-EM1 卡）及其 Attention 附录
-[Q 侧加性 logit 偏置补偿计划（A-QB1）](superpowers/plans/parallel/2026-09-10-attention-qk-logit-bias-plan.md)推进。
+当前执行卡及 Attention 附录只以[计划入口](superpowers/plans/README.md)为准，本页不复制活动卡片快照。
 
 A-G1 已实现并归档为 v227 `REJECTED`：本地六 shard 等权 `-0.005294`（28/32/12，72 case），
 shard2 与根逐位不变；机制可达（60/72 case 硬输出改变，s=0 逐位恢复父）但本地净负，误差集中在
