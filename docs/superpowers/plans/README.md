@@ -10,7 +10,12 @@
 [Linear 精确度量 Activation 码序下降与双线协调计划（L-EM1）](2026-09-10-linear-exact-metric-refinement-plan.md)。
 
 **Attention 执行附录：**
-[K 侧 per-call 均值再定心计划（A-MC1）](parallel/2026-09-10-attention-k-mean-recenter-plan.md)。
+[K 侧 per-call 均值再定心计划（A-MC1）](parallel/2026-09-10-attention-k-mean-recenter-plan.md)
+已完成执行：归档 v229 **本地正向，待官方**（六 shard 等权 `+0.014923`，26/10/36，3/6 层
+gate 接受，层15 全部 12 case 均匀改善约 `+0.079`；官方 `unregistered/NA`，待用户统一官方
+评测）；本计划线首个本地正向 Attention 候选，机制无校准拟合参数，不受 v227/v228 窗口
+过拟合模式影响；执行记录见
+`logs/execution/2026-09-10-attention-amc1-k-mean-recenter.md`。
 上一附录 [A-QB1](parallel/2026-09-10-attention-qk-logit-bias-plan.md)
 已关闭：归档 v228 `REJECTED`（本地六 shard 等权 `-0.053177`，3/69/0，六层全负，未提交官方）；
 归因（Q 偏置拟合到的系统性 logit 偏差是校准窗口特异而非量化器固有属性）见

@@ -1,0 +1,13 @@
+{
+  "run_id": "attention-amc1-k-mean-recenter",
+  "version": "v229",
+  "mechanism": "K-side per-call mean recentering: after the root's learned_rotation/learned_center and before _dense_to_hif4, subtract the current call's token-axis mean per head group (K -= mean_tokens(K)); pre-quantization softmax exactly invariant; no trained parameters",
+  "parent": "v202 Linear + v195 Attention complete root",
+  "parent_sha256": "56dc805d6e5a3aef896db8021045740292735725d688b48e3d4393e55efcb2bd",
+  "candidate_sha256": "d1c23fa11198e56f15ac8f64e033c00333dcd2d5660cec773598624c4b247f4d",
+  "fit_data": "no training; per-layer gate on all-5-calibration-folds window-equal-weighted true deployment-path MSE (parent vs parent+recenter), strict improvement only, writes k_state[\"k_mean_recenter\"]=1",
+  "coordinate": "per-call token-axis K mean recentering per head group; all existing root state frozen; state adds only one CPU arm flag per layer",
+  "solver": "analytic single reduce + subtract; no candidate loop, no Gram contraction, no inversion (within v165 dynamic-API bounds)",
+  "candidate_count": 1,
+  "official_status": "unregistered/NA"
+}

@@ -1,6 +1,6 @@
 # Attention K 侧 per-call 均值再定心计划（A-MC1）
 
-> 状态：ACTIVE 执行附录，2026-09-10。
+> 状态：本地正向已归档 v229，待官方裁决，2026-09-10。
 > 从属于当前活动总计划（Linear 线）。当前完整根为 v202 Linear + v195 Attention，官方 `18053/281s`。
 > 本文件只负责 Attention A-MC1；版本登记、组合与根切换由总协调线处理。
 > 前两张 Attention 卡：A-G1（v227 REJECTED）、A-QB1（v228 REJECTED），归因见各自执行日志。
@@ -67,3 +67,22 @@ GPU 串行（`nvidia-smi` 显存 <2GiB 才启动）；先 shard0 排除接口错
 - 本地非负：归档并等待用户统一官方评测；
 - 完成后本文件归档。若本卡关闭，Attention 侧规则级与平移类自由度全部耗尽，后续只剩绑定
   21071 锚点源码或官方裁决驱动的新证据。
+
+## 7. 执行结果（2026-09-10，v229）
+
+- 归档：`solutions/20260910_v229_attention-amc1-k-mean-recenter_officialNA_timeNA/`，候选
+  SHA256 `d1c23fa11198e56f15ac8f64e033c00333dcd2d5660cec773598624c4b247f4d`；执行日志
+  `logs/execution/2026-09-10-attention-amc1-k-mean-recenter.md`。
+- Control 全部 PASS：arm 关闭逐位恢复父；arm 开启+偏移输入 K 五字段变化且 dense softmax
+  max|Δ|=1.86e-9（精确不变）、Q/V/Linear 逐位不变；六 API 独立导入；`validate_state` 通过；
+  gate 接受/回退双路验证；`root_rotation_frozen=True`。
+- 六 shard（72 case，`--stop-after-nonpositive 6` 跑满）等权均值 `+0.014923`（26/10/36）：
+  层0 `+0.000000`（0/0/12）、层1 `+0.020038`（10/2/0）、层8 `+0.000000`（0/0/12）、
+  层15 `+0.079126`（12/0/0）、层22 `+0.000000`（0/0/12）、层5 `-0.009628`（4/8/0）。
+  candidate overall `+0.548920` vs baseline `+0.533998`；API total（诊断，1 次校准缓存命中）
+  29.725s。3/6 层 gate 接受（层1/5/15），层0/8/22 回退逐位不变。
+- 解读：本计划线首个本地正向 Attention 候选；机制无校准拟合参数，不受 v227/v228 窗口
+  过拟合模式影响；层15 收益集中且均匀（12/12 case 约 +0.079），与"纠正窗口统计漂移"假设
+  一致；层5 gate 接受但 eval 净负（gate/evals 口径差异，如实记录）。
+- 裁决：**本地非负分支**——按 §6 归档 v229，官方状态 `unregistered/NA`，等待用户统一官方
+  评测。根保持 v202 Linear + v195 Attention（`18053/281s`）不变。
