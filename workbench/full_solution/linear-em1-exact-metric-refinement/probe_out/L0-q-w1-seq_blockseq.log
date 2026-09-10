@@ -1,0 +1,14 @@
+[decompose] layer0/q w1 rows=128 ch=2560
+  L0=1.932880e+03  |A|^2=7.448684e+02 ( 0.385)  |B|^2=1.185662e+03 ( 0.613)  2<A,B>=2.349001e+00 ( 0.001)  residual=-9.155e-08
+[cand] pm1  candidates/group=8  moved_elements=296743
+[dense/seq/pm1] accepted_groups=19890 dL_true=-1.247353e+02 rel=-6.4533%
+Traceback (most recent call last):
+  File "D:\工作内容\AI竞赛\workbench\full_solution\linear-em1-exact-metric-refinement\probe_headroom.py", line 332, in <module>
+    main()
+    ~~~~^^
+  File "D:\工作内容\AI竞赛\workbench\full_solution\linear-em1-exact-metric-refinement\probe_headroom.py", line 236, in main
+    quad = torch.einsum("kri,rij,krj->kr", delta, gii, delta)
+  File "C:\Users\chuzhaole\AppData\Local\Programs\Python\Python314\Lib\site-packages\torch\functional.py", line 372, in einsum
+    return _VF.einsum(equation, operands)  # type: ignore[attr-defined]
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+RuntimeError: einsum(): the number of subscripts in the equation (3) does not match the number of dimensions (4) for operand 0 and no ellipsis was given

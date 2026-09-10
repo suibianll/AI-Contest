@@ -7,7 +7,7 @@
 官方提交无限制，官方硬限 300s。评估实现说明见 [proxy-v3](../../proxy-v3.md)。
 
 **当前唯一活动总计划（Linear）：**
-[Linear 完整输出交叉残差纠码与双线协调计划](2026-09-10-linear-cross-residual-correction-plan.md)。
+[Linear 精确度量 Activation 码序下降与双线协调计划（L-EM1）](2026-09-10-linear-exact-metric-refinement-plan.md)。
 
 **Attention 执行附录：**
 [Q 侧加性 logit 偏置补偿计划（A-QB1）](parallel/2026-09-10-attention-qk-logit-bias-plan.md)。
@@ -17,6 +17,11 @@
 归档 v227 `REJECTED`（本地六 shard 等权 `-0.005294`，未提交官方）；归因（gauge 窗口特异收益被
 单窗口 gate 反定价、联合训练拖垮 rotation）见
 `workbench/full_solution/attention-ag1-joint-affine-gauge/diag/diag_report.md`。
+上一张 Linear 卡 [L-XR1](../archive/plans/2026-09-10-linear-cross-residual-correction-plan-rejected.md)
+已关闭：本地 `REJECTED`（shard0 配对 `delta_mean=-0.040082`，40/40 被触及 case 变差；归因：块外
+`G` 分量主导 `offblock_rel` 中位 0.82，固定 rank-4 只捕获 39%，冻结梯度低估纠码代价）。L-EM1 以
+精确 `G`（无截断）、精确序贯梯度刷新和 ideal 输出可达目标承接，CPU 只读探测测得真实重算 `dL`
+为 layer0/q `-21.80%`、layer0/o `-42.06%`、layer2/q `-37.69%`。
 
 当前根保持 v202 Linear + v195 Attention，官方 `18053/281s`。上一份
 [输出感知舍入边界与 A/W 联合量化计划](../archive/plans/2026-09-09-output-aware-rounding-and-joint-aw-plan-completed.md)
