@@ -1,0 +1,26 @@
+device=cuda
+  [L 0/w3 T=1024 n=16] rho(W,A)=+0.824  rho(U,A)=+0.668  rho(I,A)=+0.841  tok~203
+  [L 0/w4 T=1024 n=16] rho(W,A)=+0.685  rho(U,A)=+0.729  rho(I,A)=+0.826  tok~207
+  [L 1/w3 T=1024 n=16] rho(W,A)=+0.550  rho(U,A)=+0.353  rho(I,A)=+0.565  tok~200
+  [L 1/w4 T=1024 n=16] rho(W,A)=+0.535  rho(U,A)=+0.432  rho(I,A)=+0.591  tok~205
+  [L 5/w3 T=1024 n=16] rho(W,A)=+0.303  rho(U,A)=+0.374  rho(I,A)=+0.362  tok~204
+  [L 5/w4 T=1024 n=16] rho(W,A)=+0.697  rho(U,A)=+0.524  rho(I,A)=+0.612  tok~202
+  [L 8/w3 T=1024 n=16] rho(W,A)=+0.629  rho(U,A)=+0.562  rho(I,A)=+0.506  tok~206
+  [L 8/w4 T=1024 n=16] rho(W,A)=-0.100  rho(U,A)=-0.088  rho(I,A)=-0.094  tok~194
+  [L15/w3 T=1024 n=16] rho(W,A)=+0.650  rho(U,A)=+0.468  rho(I,A)=+0.629  tok~206
+  [L15/w4 T=1024 n=16] rho(W,A)=+0.376  rho(U,A)=+0.382  rho(I,A)=+0.424  tok~202
+  [L22/w3 T=1024 n=16] rho(W,A)=+0.909  rho(U,A)=+0.468  rho(I,A)=+0.850  tok~206
+  [L22/w4 T=1024 n=16] rho(W,A)=+0.824  rho(U,A)=+0.724  rho(I,A)=+0.824  tok~202
+
+within-window Spearman against A_true (1.000 = same ordering as the scored A):
+  KERNEL   mean=+0.5735  range=[-0.1000, +0.9088]  n=12
+  UNIFORM  mean=+0.4662  range=[-0.0882, +0.7294]  n=12
+  OPERAND  mean=+0.5779  range=[-0.0941, +0.8500]  n=12
+
+magnitude-controlled (shape only) -- does the weighting add anything
+beyond how big the perturbation is?  Spearman(pred/operand, A_true/operand):
+  KERNEL   mean=+0.0309  range=[-0.3588, +0.4941]  n=12
+  UNIFORM  mean=-0.0132  range=[-0.4118, +0.4265]  n=12
+
+NO THRESHOLD IS APPLIED (plan section 6.1).
+wrote D:\工作内容\AI竞赛\workbench\full_solution\attention-v-kernel\vk2-ranking.json

@@ -1,0 +1,46 @@
+device=cuda
+  [L 0/w3] banded-vs-Toeplitz max|gap| = 7.494e-16
+  [L 0/w3] parent-code reconstruction max|gap| = 0.000e+00
+  [L 0/w3 T=1024] parent=2.144172e-04  kernel -1.8584% (moved 3297)  uniform +157.6302% (moved 1492)
+  [L 0/w4] banded-vs-Toeplitz max|gap| = 8.327e-16
+  [L 0/w4] parent-code reconstruction max|gap| = 0.000e+00
+  [L 0/w4 T=1024] parent=2.323756e-04  kernel -1.2578% (moved 3410)  uniform +132.1750% (moved 1563)
+  [L 1/w3] banded-vs-Toeplitz max|gap| = 9.992e-16
+  [L 1/w3] parent-code reconstruction max|gap| = 0.000e+00
+  [L 1/w3 T=1024] parent=5.822244e-04  kernel -1.1610% (moved 4338)  uniform +835.8086% (moved 1532)
+  [L 1/w4] banded-vs-Toeplitz max|gap| = 7.216e-16
+  [L 1/w4] parent-code reconstruction max|gap| = 0.000e+00
+  [L 1/w4 T=1024] parent=5.506198e-04  kernel -2.0173% (moved 4398)  uniform +595.0487% (moved 1550)
+  [L 5/w3] banded-vs-Toeplitz max|gap| = 9.992e-16
+  [L 5/w3] parent-code reconstruction max|gap| = 0.000e+00
+  [L 5/w3 T=1024] parent=5.063794e-04  kernel +0.2305% (moved 4254)  uniform +270.0178% (moved 1518)
+  [L 5/w4] banded-vs-Toeplitz max|gap| = 9.437e-16
+  [L 5/w4] parent-code reconstruction max|gap| = 0.000e+00
+  [L 5/w4 T=1024] parent=4.664517e-04  kernel -0.0387% (moved 4365)  uniform +314.2602% (moved 1539)
+  [L 8/w3] banded-vs-Toeplitz max|gap| = 6.661e-16
+  [L 8/w3] parent-code reconstruction max|gap| = 0.000e+00
+  [L 8/w3 T=1024] parent=1.300538e-03  kernel -0.7469% (moved 4005)  uniform +2569.9219% (moved 1586)
+  [L 8/w4] banded-vs-Toeplitz max|gap| = 9.437e-16
+  [L 8/w4] parent-code reconstruction max|gap| = 0.000e+00
+  [L 8/w4 T=1024] parent=1.313810e-03  kernel -0.4241% (moved 4111)  uniform +1370.7205% (moved 1568)
+  [L15/w3] banded-vs-Toeplitz max|gap| = 1.055e-15
+  [L15/w3] parent-code reconstruction max|gap| = 0.000e+00
+  [L15/w3 T=1024] parent=8.995487e-04  kernel -2.1848% (moved 5275)  uniform +161.6031% (moved 1697)
+  [L15/w4] banded-vs-Toeplitz max|gap| = 1.443e-15
+  [L15/w4] parent-code reconstruction max|gap| = 0.000e+00
+  [L15/w4 T=1024] parent=9.269751e-04  kernel -1.4418% (moved 5272)  uniform +610.8107% (moved 1715)
+  [L22/w3] banded-vs-Toeplitz max|gap| = 9.437e-16
+  [L22/w3] parent-code reconstruction max|gap| = 0.000e+00
+  [L22/w3 T=1024] parent=1.341539e-02  kernel -1.3408% (moved 1270)  uniform +56.9464% (moved 1290)
+  [L22/w4] banded-vs-Toeplitz max|gap| = 1.998e-15
+  [L22/w4] parent-code reconstruction max|gap| = 0.000e+00
+  [L22/w4 T=1024] parent=1.337143e-02  kernel -1.8515% (moved 1322)  uniform +68.4965% (moved 1263)
+
+independent check: max banded-vs-Toeplitz gap over windows = 1.998e-15
+
+relative change in TRUE attention output MSE vs the parent codes:
+  KERNEL   mean=-1.1744%  range=[-2.1848%, +0.2305%]  n=12
+  UNIFORM  mean=+595.2866%  range=[+56.9464%, +2569.9219%]  n=12
+
+NO THRESHOLD IS APPLIED (plan section 6.1).
+wrote D:\工作内容\AI竞赛\workbench\full_solution\attention-v-kernel\vk3-rule.json
