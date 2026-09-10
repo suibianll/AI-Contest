@@ -1,0 +1,49 @@
+{
+  "question": "With the surrogate taken in the deployed gauge, is the attention loss's gradient w.r.t. Q_hat aligned with a quantity the Q API can compute?",
+  "results": [
+    {
+      "layer": 22,
+      "windows": 12,
+      "mean_loss": 0.0189920737563322,
+      "mean_cos_raw_q": 0.040053982908527054,
+      "mean_cos_raw_k": 0.03049861725109319,
+      "mean_cos_raw_v": 0.5228346015016238,
+      "mean_cos_gauge_q": 0.0418355466487507,
+      "mean_cos_gauge_k": 0.030544450506567955,
+      "mean_cos_gauge_v": 0.5228346015016238
+    },
+    {
+      "layer": 15,
+      "windows": 12,
+      "mean_loss": 0.00253512656975848,
+      "mean_cos_raw_q": -0.009513176822414001,
+      "mean_cos_raw_k": -0.0076249957298083855,
+      "mean_cos_raw_v": 0.36667485535144806,
+      "mean_cos_gauge_q": -0.011849649987804392,
+      "mean_cos_gauge_k": -0.007863706306428261,
+      "mean_cos_gauge_v": 0.36667485535144806
+    },
+    {
+      "layer": 1,
+      "windows": 12,
+      "mean_loss": 0.002291008160682395,
+      "mean_cos_raw_q": 0.0021690416421430805,
+      "mean_cos_raw_k": 0.000773738228114477,
+      "mean_cos_raw_v": 0.2881342942516009,
+      "mean_cos_gauge_q": 0.00293184669862967,
+      "mean_cos_gauge_k": 0.0025807196191938906,
+      "mean_cos_gauge_v": 0.2881342942516009
+    },
+    {
+      "layer": 0,
+      "windows": 12,
+      "mean_loss": 0.000656633730007646,
+      "mean_cos_raw_q": -0.01677638307834665,
+      "mean_cos_raw_k": -0.018453253704744082,
+      "mean_cos_raw_v": 0.41709497570991516,
+      "mean_cos_gauge_q": -0.017237066562908392,
+      "mean_cos_gauge_k": -0.020525277010165155,
+      "mean_cos_gauge_v": 0.41709497570991516
+    }
+  ]
+}
