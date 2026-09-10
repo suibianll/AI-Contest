@@ -75,4 +75,4 @@ v234 的 A-GR1 侧隔离官方 **+29** 是 Attention 侧唯一"已定价但未�
 AGENTS → [4B测试指引](../../4b-panel-testing-guide.md) → 本入口指定的活动计划。此目录除README外只保留一份活动总计划，子步骤写入该计划，不再并列多份ACTIVE。
 官方无限次、硬限300s；不同执行成本的等输出实现可作一次正式提速验证，同SHA或同执行路径不重复提交估计噪声。
 新候选从当时最高分完整根构建；已有候选保留原父和SHA，不机械组合、不继承未评测分数。版本号归档时串行登记，避免Linear/Attention重号。
-**六 shard 必须显式传 `--stop-after-nonpositive 6`**：评测器默认值是 `2`（`evaluator/eval_system.py:846`、`evaluator/proxy_v3_runner.py:287`），连续两个非正 shard 即停。Attention 候选普遍有多层 gate parent（逐位精确零），这个默认值会**系统性藏掉唯二两个 arm 的层**——v236 首跑因此只出 2 条记录（已显式传 6 跑满）。判据是 manifest 的 `stopped_early` 与记录数是否等于请求 shard 数（`.md` 也打印）；历史上 19 次运行命中过该默认值，结论层已全部改用重跑或显式标注，但**每次新六 shard 都要自己确认**。
+**六 shard 必须显式传 `--stop-after-nonpositive 6`**：评测器默认值是 `2`（`evaluator/eval_system.py:846`、`evaluator/proxy_v3_runner.py:287`），连续两个非正 shard 即停。Attention 候选普遍有多层 gate parent（逐位精确零），这个默认值会**系统性藏掉唯二两个 arm 的层**——v236 首跑因此只出 2 条记录（已显式传 6 跑满）。判据是 manifest 的 `stopped_early` 与记录数是否等于请求 shard 数（`.md` 也打印）；历史上 19 次运行命中过该默认值，结论层已全部改用重跑或显式标注，但**每次新六 shard 都要自己确认**。若仍发生截断，**必须在该卡的 result.md 显式标注 `stopped_early=true`，且该次运行不得用于下结论**（v222 先例）——这条义务与"记得传 6"同等重要，是历史 19 次命中里结论层零受损的真正原因，不是默认值无害。
