@@ -49,6 +49,7 @@ _VK_NPARAM = _VK_NBUCKET + 1          # 31 banded weights + 1 shared far bucket 
 _VK_SWEEPS = 6
 _VK_FIT_WINDOWS = 3                   # fit on windows[0:3]
 _VK_GATE_WINDOW = 3                   # accept only if window 3 improves
+_VK_FIT_TOKENS = 48                   # rows sampled per fit window (matches the diagnostic)
 
 _VK_PARENT_V = hif4_dynamic_quantize_v
 
@@ -120,8 +121,8 @@ def _vk_fit(windows, states, q_heads, kv_heads, head_dim, device):
         # relative-offset bucket averages over -- most of all the shared far
         # bucket -- and the fitted kernel is the whole mechanism.
         keep = (
-            list(range(tokens)) if tokens <= 128
-            else sorted({int(round(x)) for x in torch.linspace(0, tokens - 1, 128).tolist()})
+            list(range(tokens)) if tokens <= _VK_FIT_TOKENS
+            else sorted({int(round(x)) for x in torch.linspace(0, tokens - 1, _VK_FIT_TOKENS).tolist()})
         )
         offs = torch.arange(tokens)
         idx_full = offs[None, :] - offs[:, None]

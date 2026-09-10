@@ -32,7 +32,28 @@ CANDID  : +98.4623%
 
 → 拟合口径不是全部原因。
 
-## 剩下的两个可能
+## 已排除（新增两条）
+
+**积木一致。** `helpers_crosscheck.py` 在同一随机输入上对撞两组：
+```
+apply_W      vs _vk_shifted        max|gap| = 1.776e-15   OK
+row_energy   vs _vk_row_energy     max|gap| = 0.000e+00   OK
+apply_W(rev) vs _vk_shifted(rev)   max|gap| = 3.553e-15   OK
+```
+
+**拟合口径一致。** 候选 `_vk_fit` 已改为与 vk3_rule 逐字同口径（48 行 linspace 散布 + 完整 key 轴 +
+同一 `totals/counts` 归一化）。**结果仍为 +98.19%，符号未翻。**
+
+## 剩下的唯一未对照量
+
+**核的数值本身。** 两条路径的核从未 dump 出来对比过。
+
+下一步（一句可执行的话）：在候选 `_vk_fit` 与 vk3_rule 的拟合循环里各加一行
+`torch.save(w, ...)`，同一层同一 fit 窗跑一次，`assert torch.allclose(w_cand, w_diag, atol=1e-6)`。
+不成立 → 差异就在这两个拟合循环的某行；成立 → 说明"同一核给出相反符号"，
+那是不可能的，必然是某处输入不同（此时逐项对照 `qd/kd` 与 `keep`）。
+
+## 原诊断（保留）
 
 1. **核仍不同**：vk3_rule 用 `FIT_TOKENS=48` 散布行；候选用 128 行。行数差异本身不该翻转符号，
    但两条 fit 代码的**桶累加细节**（`counts` 只按 h==0 累加、`totals/counts` 的归一化）从未逐位对照过。
