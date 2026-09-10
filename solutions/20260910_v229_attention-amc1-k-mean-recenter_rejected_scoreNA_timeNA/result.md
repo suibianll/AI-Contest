@@ -54,5 +54,5 @@ calibration-fitted parameters (the recentering mean comes from the current call)
 subject to the v227/v228 calibration-window overfitting pattern; the gains are concentrated and
 uniform (layer 15: 12/12 cases, ≈+0.079 each), consistent with the mechanism hypothesis of
 correcting calibration-vs-eval window statistic drift. Layer 5 was accepted by the gate yet is net
-negative on the eval window; this gate/eval scope discrepancy is recorded honestly. The local gain did not receive an official accuracy result: the complete candidate timed out. This closes this implementation, not all K-centering mechanisms. See `logs/execution/2026-09-10-v229-official-timeout.md`.
+negative on the eval window; this gate/eval scope discrepancy is recorded honestly. The complete candidate timed out officially (>300s); the standard-Linear side-isolated probe then received an official result of `14424/245s` vs the v195-attention side baseline `14426/243s` (−2/+2s), so the local gain did not transfer to the official side score and the K-translation (per-call mean recentering) class is now closed on both time and accuracy grounds. See `logs/execution/2026-09-10-v229-official-timeout.md` and `logs/execution/2026-09-10-v229-side-isolation-official.md`.
 The root remains v202 Linear + v195 Attention at `18053/281s`.

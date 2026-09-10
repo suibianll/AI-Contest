@@ -60,10 +60,13 @@
   仿射 gauge）本地六 shard `−0.005294` REJECTED（gauge 收益窗口特异、gate 反定价）；v228（A-QB1
   Q 侧加性偏置）六层全负 `−0.053177` REJECTED；A-QC1（Q 侧 per-call 数据中心化）`NO_EFFECT`
   （6/6 层 gate 全拒、逐位相同，不占版本号）；v229（A-MC1 K 侧 per-call 均值再定心）本地正向
-  `+0.014923`、待官方。Q·K 不变量四类结构变换（对角 scale/置换/正交/K 平移）与两侧 per-call
-  定心规则均有定论；scale/hierarchy/mantissa 搜索距穷举 oracle 仅 0.015–0.08%。不注册
-  gauge/偏置/中心变体（mean/midrange/中位数/trimmed）重试；Attention 后续只由官方回传或
-  21071 锚点源码绑定驱动。
+  `+0.014923`，完整包官方 TIMEOUT（>300s），标准 Linear 侧隔离官方 `14424/245s`
+  （相对 v195 侧基准 `14426/243s` 为 **−2/+2s**）——本地正向未迁移官方，A-MC1 官方侧价值
+  为 −2，K 平移类正式关闭（`logs/execution/2026-09-10-v229-side-isolation-official.md`）。
+  Q·K 不变量四类结构变换（对角 scale/置换/正交/K 平移）与两侧 per-call
+  定心规则均有定论，且 K 平移已有官方负向定价；scale/hierarchy/mantissa 搜索距穷举 oracle
+  仅 0.015–0.08%。不注册 gauge/偏置/中心变体（mean/midrange/中位数/trimmed）重试；
+  Attention 后续只由官方回传或 21071 锚点源码绑定驱动。
 
 ### 全局
 

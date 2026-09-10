@@ -46,12 +46,13 @@ head 分组 `K -= mean_tokens(K)`；量化前 softmax 精确不变；无训练�
 全 folds 真实 MSE 逐层 gate 严格改善才 arm）。六 shard 等权 `+0.014923`（26/10/36，72 case），
 candidate overall `+0.548920` vs 基线 `+0.533998`；3/6 层 gate 接受（层1/5/15），层0/8/22
 回退逐位不变；层15 全部 12 case 均匀改善约 `+0.079`；层5 gate 接受但 eval 净负 `-0.009628`
-（gate/evals 口径差异，如实记录）。2026-09-10 用户回传官方 `TIMEOUT (>300s)`，精确秒数与分数未知；计分/归档 SHA `d1c23fa11198e56f15ac8f64e033c00333dcd2d5660cec773598624c4b247f4d`。该实现关闭，本地改善未获官方精度定价，根保持 `18053/281s`。见[回传记录](../logs/execution/2026-09-10-v229-official-timeout.md)。
+（gate/evals 口径差异，如实记录）。2026-09-10 用户回传官方 `TIMEOUT (>300s)`，精确秒数与分数未知；计分/归档 SHA `d1c23fa11198e56f15ac8f64e033c00333dcd2d5660cec773598624c4b247f4d`。同日用户回传标准 Linear 侧隔离官方 **`14424/245s`**，相对 v195 侧基准 `14426/243s` 为 **−2/+2s**：本地 `+0.014923` 未迁移官方（方向反转），A-MC1 官方侧价值为 −2，K 平移类正式关闭；侧隔离未超时，完整包 TIMEOUT 不由 A-MC1 per-call 成本单独解释（侧隔离时间对完整包时间无预测力）。见[超时回传](../logs/execution/2026-09-10-v229-official-timeout.md)与[侧隔离回传](../logs/execution/2026-09-10-v229-side-isolation-official.md)。
 
 A-QC1（Q 侧 per-call 数据中心化，A-MC1 同构移到 Q 侧）已关闭 `NO_EFFECT`：机制可达
 （control 证明五字段可变）但 6/6 层全 folds gate 全拒，六 shard 72 case 与根逐位相同，
-不占版本号、未提交官方。至此 Attention 规则级空间全部裁决完毕，Attention 侧无存活卡片；
-v229 已官方超时；后续执行以计划入口为准，有限卡片的关闭不证明整个机制空间耗尽。
+不占版本号、未提交官方。v229 完整包官方 TIMEOUT，侧隔离官方 `14424/245s`（−2 vs v195 侧），
+K 平移类正式关闭；至此 Attention 规则级已盘点方向均有裁决记录（不构成完备性证明），
+Attention 侧无存活卡片；后续执行以计划入口为准，有限卡片的关闭不证明整个机制空间耗尽。
 
 A-FIX1 已实现并归档为 v230（本地净负，官方待定）：训练/部署前向对齐——`_a2_train_rotation`
 训练前向 Q/K 量化从裸 `_dense_to_hif4` 换成完整部署编码（与 gate 相同的

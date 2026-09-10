@@ -1,6 +1,6 @@
 # Attention K 侧 per-call 均值再定心计划（A-MC1）
 
-> 状态：CLOSED / OFFICIAL TIMEOUT (>300s)，REJECTED，2026-09-10 用户回传。
+> 状态：CLOSED / 官方完整包 TIMEOUT (>300s) + 侧隔离 14424/245s（−2 vs v195 侧基准），REJECTED，2026-09-10 用户回传。K 平移类正式关闭。
 > 从属于当前活动总计划（Linear 线）。当前完整根为 v202 Linear + v195 Attention，官方 `18053/281s`。
 > 本文件只负责 Attention A-MC1；版本登记、组合与根切换由总协调线处理。
 > 前两张 Attention 卡：A-G1（v227 REJECTED）、A-QB1（v228 REJECTED），归因见各自执行日志。
@@ -84,4 +84,11 @@ GPU 串行（`nvidia-smi` 显存 <2GiB 才启动）；先 shard0 排除接口错
 - 解读：本计划线首个本地正向 Attention 候选；机制无校准拟合参数，不受 v227/v228 窗口
   过拟合模式影响；层15 收益集中且均匀（12/12 case 约 +0.079），与"纠正窗口统计漂移"假设
   一致；层5 gate 接受但 eval 净负（gate/evals 口径差异，如实记录）。
-- 裁决：2026-09-10 用户回传 **官方 TIMEOUT (>300s)**，REJECTED。精确秒数与分数未知；计分 SHA 与归档 SHA 均为上述候选 SHA。本地改善未获官方精度定价，只关闭该完整实现，不证明 K 定心族无效。根保持 `18053/281s`。见[回传记录](../../../../logs/execution/2026-09-10-v229-official-timeout.md)。
+- 裁决：2026-09-10 用户回传 **官方 TIMEOUT (>300s)**，REJECTED。精确秒数与分数未知；计分 SHA 与归档 SHA 均为上述候选 SHA。见[超时回传](../../../../logs/execution/2026-09-10-v229-official-timeout.md)。
+- **侧隔离官方定价（2026-09-10 用户回传）**：标准 Linear + v229 Attention 探针官方
+  **`14424/245s`**，相对 `standard-linear_v195-attn` 基准 `14426/243s` 为 **−2/+2s**——
+  本地 `+0.014923` 未迁移官方（方向反转），A-MC1 官方侧价值为 −2。侧隔离未超时，完整包
+  TIMEOUT 不由 A-MC1 的 per-call 成本单独解释（再次确认侧隔离时间对完整包时间无预测力）。
+  **K 平移类正式关闭**（精度与时间两个维度均有官方裁决），不以
+  mean/midrange/中位数/trimmed 变体或降成本 gate 重试。见
+  [侧隔离回传](../../../../logs/execution/2026-09-10-v229-side-isolation-official.md)。

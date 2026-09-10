@@ -39,7 +39,7 @@
 上一附录 [A-QC1](parallel/2026-09-10-attention-q-mean-center-plan.md)
 已关闭 `NO_EFFECT`：6/6 层 gate 全拒，六 shard 72 case 与根逐位相同，不占版本号、未提交官方。
 上一附录 [A-MC1](parallel/2026-09-10-attention-k-mean-recenter-plan.md)
-已关闭：v229 **官方 TIMEOUT (>300s)，REJECTED**（2026-09-10 用户回传）。六 shard 本地 `+0.014923`（26/10/36）未获官方精度定价；精确秒数与分数未知，根保持 `18053/281s`。计分/归档 SHA `d1c23fa11198e56f15ac8f64e033c00333dcd2d5660cec773598624c4b247f4d`。见[官方回传记录](../../../logs/execution/2026-09-10-v229-official-timeout.md)。
+已关闭：v229 **官方 TIMEOUT (>300s)，REJECTED**（2026-09-10 用户回传）。六 shard 本地 `+0.014923`（26/10/36）；同日标准 Linear 侧隔离官方 **`14424/245s`**（相对 v195 侧基准 `14426/243s` 为 **−2/+2s**），本地正向未迁移官方，A-MC1 官方侧价值 −2，K 平移类正式关闭；侧隔离未超时，完整包 TIMEOUT 不由 per-call 成本单独解释。计分/归档 SHA `d1c23fa11198e56f15ac8f64e033c00333dcd2d5660cec773598624c4b247f4d`。见[超时回传](../../../logs/execution/2026-09-10-v229-official-timeout.md)与[侧隔离回传](../../../logs/execution/2026-09-10-v229-side-isolation-official.md)。
 上一附录 [A-QB1](parallel/2026-09-10-attention-qk-logit-bias-plan.md)
 已关闭：归档 v228 `REJECTED`（本地六 shard 等权 `-0.053177`，3/69/0，六层全负，未提交官方）；
 归因（Q 偏置拟合到的系统性 logit 偏差是校准窗口特异而非量化器固有属性）见
