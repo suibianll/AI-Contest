@@ -1,9 +1,20 @@
 {
   "version": "v234",
   "candidate_sha256": "4f27fb59252de95c7d8a65db9d742af1bc2ce16cd7ca513d49e8fbc7813a9267",
-  "official_status": "side-isolated POSITIVE (full package not submitted)",
+  "official_status": "TIMEOUT (>300s) on the complete package; REJECTED",
   "official_score": null,
   "official_time_s": null,
+  "complete_package_official": {
+    "package": "v230 Linear (L-EM2) complete root + A-GR1 Attention, v195 Attention body unchanged",
+    "submitted_sha256": "4f27fb59252de95c7d8a65db9d742af1bc2ce16cd7ca513d49e8fbc7813a9267",
+    "result": "TIMEOUT",
+    "hard_limit_s": 300,
+    "exact_seconds": null,
+    "score": null,
+    "reported_by": "user",
+    "reported_at": "2026-09-10",
+    "note": "Exact seconds and score unknown; no prediction is written. Parent v230 official reading was 292s against the 300s limit (8s of headroom)."
+  },
   "side_isolation_official": {
     "probe": "solutions/20260910_standard-linear_v234-attn_scoreNA_timeNA/solution.py",
     "score": 14455,
@@ -12,11 +23,19 @@
     "delta_vs_v195_side": "+29 / +20.7s",
     "delta_vs_r3_base_14405": "+50",
     "reported_by": "user",
-    "reported_at": "2026-09-10"
+    "reported_at": "2026-09-10",
+    "still_stands": true,
+    "scope": "Measures score on the side isolation panel (a smaller package). The complete-package timeout does not falsify this reading; it closes deployability, not the +29 score claim."
   },
-  "decision": "A-GR1 officially positive in side isolation (+29 over the v195 side baseline); third-largest official Attention mechanism gain after C76.4 (+84) and A1 (+60). Side isolation measures score only; full-package landing requires separate official time measurement. Root unchanged.",
-  "official_scored_sha256": "4f27fb59252de95c7d8a65db9d742af1bc2ce16cd7ca513d49e8fbc7813a9267",
+  "decision": "REJECTED for deployment: the complete package timed out (>300s), so A-GR1 cannot land on a complete root as implemented. Its score is not refuted - the side-isolation reading (+29 over the v195 side baseline, third-largest official Attention mechanism gain after C76.4 +84 and A1 +60) stands, and the expressivity gradient (diagonal 0 < triangular 0 < symmetric +22 < general +29) remains officially confirmed. What is now priced is the cost: A-GR1's extra time is calibration-side training (6 layers x 32 Adam steps; the deployed dynamic path adds nothing), which is a property of the mechanism, not of the Linear parent. With a parent at 292s and only 8s of headroom, the side-measured +20.7s could not fit. Closes this implementation only; no step/window shrinking and no candidate-count reduction as a retry. Root unchanged (v231, 18518/291s). See logs/execution/2026-09-10-v234-agr1-side-official.md and logs/execution/2026-09-10-v234-agr1-official-timeout.md.",
+  "consequence_for_v236": {
+    "object": "solutions/20260910_v236_attention-agr1-on-v231_scoreNA_timeNA (A-GR1 rehung on the v231 root; sole change is the parent swap)",
+    "why_it_transfers": "The A-GR1 cost is calibration-side and therefore essentially parent-independent, while v231 is only 1s faster than v230 (291s vs 292s). A full-package timeout on v234 therefore bears directly on v236: v236's expected total is roughly v234's minus 1s, so v236 can only fit if v234's overrun was at most ~1s.",
+    "not_a_prediction": "The exact overrun is unknown, so no seconds are predicted for v236. v236's own pre-registered promotion rule (an official score above the current root's 18518 inside 300s promotes it; a timeout or a lower score does not) now has a known answer on the timeout branch. v236's archive and registration are handled serially by that card's owner.",
+    "recorded_by": "v234 owner, after the user reported the v234 timeout"
+  },
   "archive_sha256": "4f27fb59252de95c7d8a65db9d742af1bc2ce16cd7ca513d49e8fbc7813a9267",
   "binding_basis": "probe attention behavior verified bit-identical (72/72 cases) to this archived candidate; user identified v234",
-  "log": "logs/execution/2026-09-10-v234-agr1-side-official.md"
+  "log": "logs/execution/2026-09-10-v234-agr1-official-timeout.md",
+  "prior_log": "logs/execution/2026-09-10-v234-agr1-side-official.md"
 }
