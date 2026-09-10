@@ -77,9 +77,26 @@ L-EM4 侦察**推翻了这个数**：钩子真实成本约 **+2.56 s**（折 144
 1. **建立基线**：在真实 state 上跑 `profile_dynamic_api.py`，记录每调用的
    `as_strided / view / permute / unsqueeze / reshape / copy_ / bmm / einsum` 计数与 wall 中位。
    基线已存在于 `FINDINGS.md` §3。
-2. **定位派发源**：读 `_em1_dynamic_descent`（solution.py），找出产生最大计数的那几个循环与
-   布局中转。优先找 `permute/unsqueeze/reshape` 链——它们本身不算，但每次都会派发并可能触发
-   `as_strided`/`copy_`。
+2. **定位派发源**（已初定位，见下）。`_em1_dynamic_descent`（solution.py:12070）的内层是
+   `for _pass in range(2): for step in range(16):`，共 **32 步**。L-EM3 卡片 §3 已实测单步
+   稠密路径在 in=2560/rows=128 下 **9.47 ms**，即 **32 × 9.47 ≈ 303 ms/call**，与本次实测的
+   ~0.50 s/call 吻合（其余为 setup/梯度/反量化）。
+
+   单步内约 35 个 Python 级算子，但 profiler 记到 **1 504 次 `bmm`/call ≈ 47 次/步**、
+   **752 次 `einsum`/call ≈ 23.5 次/步**——派发量远超算子数，来源是
+
+   ```python
+   quadratic = torch.einsum("krba,bij,krbj->krb", delta, local_gram, delta)
+   ```
+
+   `k=8, b=40` 的广播把这一句拆成几十次微型 `bmm`。等价改写为
+   `(delta @ local_gram * delta).sum(dim=-1)`（一次广播 `bmm` 加两次逐元素）
+   预计把 ~47 次 `bmm` 降到 1 次，是单步内最大的一处派发削减。
+   **该改写是同一表达式的重结合，不保证逐位相同**——按 §2 走精度回退条款。
+
+   > 已排除的方向：L-EM3 卡片 §3 已实测"稠密 `row_delta` 换成列积"在 rows=128 下**更慢**
+   > （1.10×，官方面板以 rows=128 为主），该卡已据此决定不做。本卡不重开该方向，
+   > 原因是它**增加**而非减少派发。
 3. **改写**：以"同一批张量、同一个数学、更少的算子"为唯一目标。逐步骤做，每步后重跑计数，
    记录该步的计数下降与 wall 变化。
 4. **精度验证**：六 shard，与 v231 候选逐 case 比对。首选逐位相同；不逐位则按 §2 回退并披露。
