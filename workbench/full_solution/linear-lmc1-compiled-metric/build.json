@@ -1,0 +1,18 @@
+{
+  "parent_path": "solutions/20260910_v237_linear-tf2-first-pass-gradient-reuse_scoreNA_timeNA/solution.py",
+  "parent_sha256": "ecb1f9e510b5507e1a2dc8b95f8a84e9b51864a420b3828537a328813e2ce554",
+  "parent_bytes": 516697,
+  "implementation_sha256": "60d1b754e9ce5df1662181b89517841009b74ba094050465d1b2dae295a55ebc",
+  "implementation_bytes": 7521,
+  "candidate_sha256": "2c344722e3cbf2a32b72c89319309c47a54b9fcd16dd36111491f60248d01994",
+  "candidate_bytes": 524220,
+  "substitutions_performed": 3,
+  "substitution_sites": [
+    "_em1_compile_metric: store the metric",
+    "_em1_compile_metric: add the metric key to the payload",
+    "_em1_metric: load the metric instead of rebuilding it"
+  ],
+  "changed_lines": 52,
+  "byte_delta": 983,
+  "edit": "build G once in calibration and store it (ridge applied); load it in the dynamic path instead of rebuilding it"
+}

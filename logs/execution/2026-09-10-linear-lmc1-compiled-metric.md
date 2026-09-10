@@ -3,7 +3,7 @@
 计划卡：[`docs/superpowers/plans/2026-09-10-compiled-metric-and-attention-factor-reuse-plan.md`](../../docs/superpowers/plans/2026-09-10-compiled-metric-and-attention-factor-reuse-plan.md) §4。
 工作目录：`workbench/full_solution/linear-lmc1-compiled-metric/`。设备：CPU（未用 GPU）。
 
-**状态：审计未完成，卡未关闭也未开工。** 阻塞点是一个仓库没有记录的事实（见 §2），
+**状态：审计完成、实现完成、验证全过（2026-09-10）。** 阻塞点是一个仓库没有记录的事实（见 §2），
 按计划 §5 的纪律"登记最小缺失证据"处理，不拿口径推测关卡。
 
 ## 1. 前提成立（依赖那一半）
@@ -112,7 +112,68 @@ dtype 在允许集内、有限，且深度 ≤8、节点 ≤4096。新增一个 
 - 峰值内存与 state 搬运次数的实测（磁盘侧已给：+4.75 GB / 现 38.05 GB）；
 - 逐位等价实测（需先有实现）；本记录只给可行性的充分条件与三条边界。
 
-## 6. 产物
+## 6. 实现与验证（已完成）
+
+**实现**（`build.py`）：两个追加影子，父字节一个未动。
+`_em1_compile_metric` 在校准端算出并存入最终 G（已减 ridge）；`_em1_metric` 动态端只加载，无 Cholesky、无求逆、无写入。
+候选 `2c344722…`，524220 B。
+
+**验证**（`verify.py`，CUDA，真实权重）——**全部通过**：
+
+| 控制 | 结果 |
+|---|---|
+| A | 纯追加；Attention 与动态激活字节码相同；两个影子都是活定义 |
+| B | **3 个 (layer,role) × 3 次动态调用，五字段逐字节相同**；存储的 G 与父每次重建的 G **逐位相同**（3/3） |
+| C | 详见 §7 的次数账 |
+| D | 同一 state dict 连调三次，字段逐字节相同，**存储的 G 未被改动**（ridge 只减一次） |
+| E | 超范围宽度（proj 9216）两侧都不存；无 em1 载荷两侧同样穿透；无 metric 的 state 两侧 arm 同为 `no-metric` |
+| F | 校准确定性：两次运行存的 G 逐字节相同 |
+
+### 6.1 最隐蔽的一处：内存布局也是等价性的一部分
+
+第一版实现**通过了"存储的 G 与父重建的 G 逐位相同"这一条，但五字段仍然不同**——`scale_factor`/`scale_lv2`/`scale_lv3` 全同，只有 `sign`/`mant` 不同。逐步定位后：
+
+| | 存储的 G | 父重建的 G |
+|---|---|---|
+| 数值字节 | **相同** | **相同** |
+| stride | `(2560, 1)` 行主序 | **`(1, 2560)` 列主序** |
+| contiguous | True | **False** |
+
+**`torch.cholesky_inverse` 返回的是转置 stride 的张量（LAPACK 惯例）**，而 `_cpu_state_tensor` 里的 `.contiguous()` 把它拍成了行主序。
+数值完全一样，但下游 `(deployed - reference).mm(metric)` 面对不同 stride 会走不同的 cuBLAS 路径，舍入因此不同——
+足以改变离散的 mantissa 码分配。
+
+修法：存 G 时**不强制 contiguous**（`nan_to_num` 与 CPU↔CUDA 往返都保 stride，已实测），
+动态端 `.to(device)` 把 stride 一并带回来。
+
+**这条值得单独记**：计划 §4 写的是"按原表达式、原float32顺序构建G"——方向对，但只说到了"顺序"，
+没说**布局**。本案里只保数值不保布局，等价性会以一个非常隐蔽的方式失败（前三个字段全对，只有离散码不同）。
+
+## 7. 次数账与盈亏平衡（实测，非口径推测）
+
+`verify.py` 控制的实测（1 次校准 + 4 次动态调用）：
+
+| | 校准端求逆 | 动态端求逆 | 合计 |
+|---|---:|---:|---:|
+| 父 | 2 | 4 | 6 |
+| 候选 | 3 | 0 | 3 |
+
+父的校准端本来就有 2 次求逆（底层校准路径自带，与本卡无关），两侧共有。
+**本卡的边际效果是"每校准 +1、每动态 −1"，故盈亏平衡点是每个校准对应 1 次动态调用。**
+
+这把 §2 的"符号未知"变成了一个可判定的条件：**只要每个被校准的 state 至少被一次动态调用用到，
+本卡就不亏**；只有在"校准了一大批 state 却只用了其中少数"的官方形状下才会翻转为净亏。
+本地面板是 144 校准 / 288 动态（每个 state 用 2 次）→ 省 144 次求逆。
+**官方那 50 个样例是否覆盖全部 144 个 state，仍是缺失事实**——但条件已经写清楚了，
+不再需要猜测，只需回答"官方有多少次动态调用"。
+
+## 8. 产物
 
 - `workbench/full_solution/linear-lmc1-compiled-metric/audit.py` / `audit.json`（本地面板计数与官方口径引用）。
 - 本记录；未占版本号、未跑 shard、未产出候选。
+
+- `workbench/full_solution/linear-lmc1-compiled-metric/`
+  （`audit.py` / `audit.json` / `build.py` / `build.json` / `candidate/solution.py` /
+  `implementation.generated.py` / `verify.py` / `verify.json`）。
+- `logs/execution/linear-lmc1-sixshard.out`、`artifacts/proxy_v3/linear-lmc1-{shard0,sixshard}-20260910/`。
+- 归档见 `solutions/`（版本号在归档时分配）。
