@@ -1,4 +1,6 @@
-# 闸门 0 结论：Q/K 子空间不可压缩 —— A-JC1 主线记 API_INCOMPATIBLE
+# 闸门 0：一种 operand 梯度与输出梯度的对齐度（**裁决 API_INCOMPATIBLE 已撤回**）
+
+> **⚠ 2026-09-10 更正**：本文件据"一种 operand surrogate 与输出梯度近乎正交"裁定了 `API_INCOMPATIBLE`，**依据不足**：(a) 只比了一种 surrogate，不能否定其他输入条件化规则；(b) "梯度住在 K 的行空间"不蕴含与 Q 误差正交——K 满列秩时该空间即整个通道空间。真正该查的参数方向 `g_θ = J_θᵀ r` 与编译规则的实际硬码变化**均未检查**。对齐度读数保留，裁决作废。见 `report-080-verdict.md` §5.2。
 
 > 计划 §3 第 0 项（第一道闸门）。执行：[`gate0_compressibility.py`](gate0_compressibility.py) / `gate0.json`。
 > 2026-09-10。**未训练、未跑 shard**：每窗口一次前向 + 一次反向。

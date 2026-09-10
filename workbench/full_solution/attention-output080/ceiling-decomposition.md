@@ -1,4 +1,6 @@
-# 0.80 可行性：缺口住在 V 里，而 V 是已关闭方向
+# 0.80 可行性：operand 反事实读数（**标题原为「缺口住在 V 里」，含义已撤回**）
+
+> **⚠ 2026-09-10 更正**：本文件的读数把"把某个 operand 换成无损参考"当成了该侧的**优化上界**，该推理**不成立**——Q/K 的职责是让最终输出接近参考、不是接近参考 Q/K 本身；固定量化 V 时改变注意力概率可以补偿 V 的误差。故 `0.7204` / `0.8115` 只是两组特定替换下的**读数**，不是界。见 `report-080-verdict.md` §5.1。读数本身保留，结论作废。
 
 > 执行：[`ceiling_decomposition.py`](ceiling_decomposition.py) / `ceiling.json`。2026-09-10。
 > 72 例全部实测，复用评测器自己的打分路径（`_attention` / `_score_details` / `encode/decode_standard_hif4`）
