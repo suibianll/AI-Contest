@@ -1,0 +1,48 @@
+[L-R2] rank2 reachable=1 vtu_cross_max=1.863e-09
+[COMBINED-LINEAR-SAMPLE-ENERGY] reachable=1 blocks=2
+[L-EM2] compile arm=compiled in=128 gram_diag_mean=1.961338e-01 h_norm=2.8827e-01
+[L-R2] rank2 reachable=1 vtu_cross_max=1.863e-09
+[COMBINED-LINEAR-SAMPLE-ENERGY] reachable=1 blocks=2
+[L-EM2] compile arm=compiled in=128 gram_diag_mean=1.961338e-01 h_norm=2.8827e-01
+[L-EM2] dynamic arm=applied groups=32 passes=1 accepted_steps=16 accepted_groups=590 changed=590 rows=32 grad_mean=5.017e-04 error=-
+[L-EM2] dynamic arm=applied groups=32 passes=1 accepted_steps=16 accepted_groups=590 changed=590 rows=32 grad_mean=5.017e-04 error=-
+========================================================================
+[control1_zero_step_bitwise] pass=True
+    zero_step_arm: parent
+    q_bitwise: True
+    k_bitwise: True
+    v_bitwise: True
+    final_output_bitwise: True
+[control2_reciprocity] pass=True
+    compiled_pair_reciprocity_max_abs: 2.3424361828006113e-07
+    train_info_inverse_error_fp32: 2.980232238769531e-07
+    dense_logit_max_abs_diff_fp64: 1.2956124827503968e-08
+    logit_invariant_lt_1e-6: True
+    singular_range: (0.7071081399917603, 1.4142333269119263)
+    n_norm: 7.170688152313232
+    initial_vs_final_loss: (2.0, 1.2170225067317175)
+[control3_standalone_import] pass=True
+    missing_apis: []
+    standalone_end_to_end_finite: True
+[control3b_validate_state] pass=True
+    state_legal: True
+    deployed_params_legal: True
+    cand_audit: {'agr1_arm': 'parent', 'agr1_attempted': 1, 'agr1_accepted': 0, 'agr1_gate_parent_mse': 8.100908033270571e-08, 'agr1_gate_candidate_mse': 8.10089808567227e-08, 'agr1_initial_loss': 2.0, 'agr1_final_loss': 1.2170225067317175, 'agr1_inverse_error': 2.980232238769531e-07, 'agr1_n_norm': 7.170688152313232, 'agr1_singular_min': 0.7071081399917603, 'agr1_singular_max': 1.4142333269119263, 'agr1_parent_arm': 'identity', 'agr1_center_compiled': False, 'a2_arm': 'identity'}
+[control4_v_linear_reachability] pass=True
+    v_bitwise: True
+    linear_weight_bitwise: True
+    linear_activation_bitwise: True
+    {'seed': 0, 'agr1_arm': 'parent', 'attempted': 1, 'accepted': 0, 'gate_parent': 8.100908033270571e-08, 'gate_candidate': 8.10089808567227e-08, 'init_loss': 2.0, 'final_loss': 1.2170225067317175, 'n_norm': 7.170688152313232}
+    {'seed': 1, 'agr1_arm': 'parent', 'attempted': 1, 'accepted': 0, 'gate_parent': 8.569437071059838e-08, 'gate_candidate': 8.569519849288554e-08, 'init_loss': 2.0, 'final_loss': 1.2139679056938426, 'n_norm': 7.129666328430176}
+    {'seed': 2, 'agr1_arm': 'parent', 'attempted': 1, 'accepted': 0, 'gate_parent': 7.855140182755349e-08, 'gate_candidate': 7.855393846512015e-08, 'init_loss': 2.0, 'final_loss': 1.2167267063440135, 'n_norm': 7.106608867645264}
+    {'seed': 3, 'agr1_arm': 'parent', 'attempted': 1, 'accepted': 0, 'gate_parent': 9.302842585157123e-08, 'gate_candidate': 9.302825887402832e-08, 'init_loss': 2.0, 'final_loss': 1.2054296453585849, 'n_norm': 7.144333362579346}
+    {'seed': 4, 'agr1_arm': 'parent', 'attempted': 1, 'accepted': 0, 'gate_parent': 9.334841877262079e-08, 'gate_candidate': 9.335003881005832e-08, 'init_loss': 2.0, 'final_loss': 1.2059476870110568, 'n_norm': 5.698150634765625}
+    {'seed': 5, 'agr1_arm': 'parent', 'attempted': 1, 'accepted': 0, 'gate_parent': 9.184385163507613e-08, 'gate_candidate': 9.184543614537688e-08, 'init_loss': 2.0, 'final_loss': 1.2128699938071272, 'n_norm': 5.742381572723389}
+    {'seed': 6, 'agr1_arm': 'parent', 'attempted': 1, 'accepted': 0, 'gate_parent': 1.0341733513996587e-07, 'gate_candidate': 1.0342226630655205e-07, 'init_loss': 2.0, 'final_loss': 1.211820133501043, 'n_norm': 7.15343713760376}
+    {'seed': 7, 'agr1_arm': 'parent', 'attempted': 1, 'accepted': 0, 'gate_parent': 8.425869424399934e-08, 'gate_candidate': 8.426254538562716e-08, 'init_loss': 2.0, 'final_loss': 1.213496431980127, 'n_norm': 7.1062397956848145}
+    arms_seen: ['parent']
+    attempted_all: True
+    loss_decreased_seeds: 8
+    accepted_seeds: 0
+========================================================================
+OVERALL: PASS

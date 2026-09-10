@@ -1,0 +1,13 @@
+{
+  "run_id": "attention-agr1-general-reciprocal",
+  "version": "v234",
+  "mechanism": "General asymmetric reciprocal matrix residual: per KV group M = I + N (N unconstrained 256x256), Q-side multiplied by M, K-side by exactly inverted M^{-T}; v192's single-variable generalization (symmetric zero-trace S -> general N); compiled into the root's existing learned_rotation/learned_center fields (tq = R_q @ M, tk = R_k @ M^{-T}, c' = c @ M^{-T}) so the dynamic path is a single matmul and never inverts",
+  "parent": "v230 Linear (L-EM2) + v195 Attention complete root",
+  "parent_sha256": "0f1af6dbc207ff32b2c6be16987e9c4fe50f3f10747de26782ef52a6f2fab7bc",
+  "candidate_sha256": "4f27fb59252de95c7d8a65db9d742af1bc2ce16cd7ca513d49e8fbc7813a9267",
+  "fit_data": "fit windows 0,1,2 of the 5 calibration folds; gate windows 3,4 (v192 window split unchanged); root states frozen (no rotation/center retrain)",
+  "coordinate": "root final deployed coordinate (v189 stack + learned_rotation + learned_center); per-64-block amax scale-ratio loss (v192 objective unchanged); analytic gradient grad_N = G_q - P @ G_k^T @ P with P = M^{-T} (finite-difference verified, worst relerr 5.3e-8); per-step singular value clamp of M to [1/sqrt(2), sqrt(2)] (v192 spectral box analog)",
+  "solver": "32-step Adam (lr 0.01, betas 0.9/0.999, clip 1.0, reg 1e-3) on N; exact inverse computed once at compile time (calibration only); per-layer gate requires strict improvement on ALL gate windows (v192 rule)",
+  "candidate_count": 1,
+  "official_status": "unregistered/NA"
+}

@@ -90,6 +90,18 @@ CANDIDATES = (
         / "solutions"
         / "20260910_standard-linear_v229-attn_scoreNA_timeNA",
     },
+    {
+        "name": "standard-linear_v234-attn",
+        "attention_source": (
+            ROOT
+            / "solutions"
+            / "20260910_v234_attention-agr1-general-reciprocal_scoreNA_timeNA"
+            / "solution.py"
+        ),
+        "output_dir": ROOT
+        / "solutions"
+        / "20260910_standard-linear_v234-attn_scoreNA_timeNA",
+    },
 )
 
 

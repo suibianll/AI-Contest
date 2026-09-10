@@ -31,6 +31,18 @@
 修正后接受判决的代价与真实目标差一致到fp精度（`4.767e-15` vs 父`5.439e-02`，因`J`对`X`二次）。
 官方**PENDING**，分数/秒数`null`，不写预测。**v232是v230的后代，不含v231的K=2机制，两者Δ不可相加。**
 
+**v234 Attention A-GR1已完成并归档**（`20260910_v234_attention-agr1-general-reciprocal_scoreNA_timeNA`，
+候选`4f27fb59252de95c7d8a65db9d742af1bc2ce16cd7ca513d49e8fbc7813a9267`，自v230根`0f1af6db`纯追加）：
+v192（互逆残差族唯一官方正向成员，侧隔离+22）的单变量推广——对称零迹S（exp(S)必正定）推广为一般
+M=I+N（N无约束），Q@M、K@精确求逆的M⁻ᵀ，校准期编译进既有`learned_rotation`/`learned_center`
+（center同步编译），动态路径只有一次matmul无求逆；fit 0-2/gate 3-4、32步Adam、逐层全窗口严格改善门
+全部镜像v192，冻结根state不重训rotation/center。六shard等权`+0.003845`（21/3/48），层15`+0.017449`、
+层22`+0.005618`接受，其余四层gate parent；attempted 6/6、accepted 2/6；互逆性2.3e-7、量化前logits
+不变1.3e-8、0步逐位恢复根。api时间delta约+5.5s/六shard（诊断记录；根官方余量8s，v229/v230-attn均有
+TIMEOUT先例）。解析梯度`grad_N=G_q−P·G_k^T·P`经有限差分验证（worst relerr 5.3e-8；初版缺转置被
+control抓到后修正）。侧隔离探针`standard-linear_v234-attn`与归档候选72/72逐位一致。
+官方**unregistered/NA**（用户统一评测）。编号v233被Linear L-TF1占用，故取v234。
+
 **v233 Linear L-TF1已完成并归档**（`20260910_v233_linear-tf1-gradient-reuse_scoreNA_timeNA`，
 候选`0ec89710087d061bf9608196ad4d53a1c6be98c8a5595596a071ecd05a6821eb`，自v230根`0f1af6db`纯追加）：
 父根在进入pass循环**之前**先算一次梯度只做有限性检查，随后循环体第一句把同一表达式**再算一遍**，`K=1`时两遍都跑。

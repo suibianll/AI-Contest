@@ -1,0 +1,30 @@
+{
+  "version": "v234",
+  "parent": "v230 Linear (L-EM2) + v195 Attention",
+  "parent_sha256": "0f1af6dbc207ff32b2c6be16987e9c4fe50f3f10747de26782ef52a6f2fab7bc",
+  "candidate_sha256": "4f27fb59252de95c7d8a65db9d742af1bc2ce16cd7ca513d49e8fbc7813a9267",
+  "protocol": "proxy-v3",
+  "panel": "qwen35-4b-panel-v1",
+  "scope": "attention-only shards 0-5; 72 cases (six-shard run to completion with --stop-after-nonpositive 6)",
+  "shard_layer_map": {"0": 0, "1": 1, "2": 8, "3": 15, "4": 22, "5": 5},
+  "mechanism": "General asymmetric reciprocal matrix residual M = I + N per KV group; Q @ M, K @ M^{-T} (exact inverse at calibration compile); v192 single-variable generalization; compiled into existing learned_rotation/learned_center fields (center compiled as c @ M^{-T}); frozen root states; per-layer all-gate-windows strict-improvement gate",
+  "fit_data": "fit windows 0,1,2; gate windows 3,4 (v192 split unchanged)",
+  "hard_output_changed": true,
+  "equal_shard_mean_delta_gain": 0.003845,
+  "shard_delta_gain_mean": [0.0, 0.0, 0.0, 0.017449, 0.005618, 0.0],
+  "case_pos_neg_zero": [21, 3, 48],
+  "gate_attempted_layers": 6,
+  "gate_accepted_layers": 2,
+  "gate_accepted_layer_ids": [15, 22],
+  "control": {
+    "zero_step_bitwise": true,
+    "reciprocity_max_abs_fp64": 2.34e-07,
+    "dense_logit_max_abs_diff": 1.3e-08,
+    "standalone_import": true,
+    "validate_state": true,
+    "v_linear_bitwise": true,
+    "reachability": "8/8 synthetic seeds attempted=1, train loss 2.0 -> ~1.21; 6/6 real 4B layers attempted"
+  },
+  "api_time_delta_sixshard_s": 5.47,
+  "official_status": "unregistered/NA"
+}
