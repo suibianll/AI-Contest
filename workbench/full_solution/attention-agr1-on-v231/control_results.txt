@@ -1,0 +1,19 @@
+[L-R2] rank2 reachable=1 vtu_cross_max=1.863e-09
+[COMBINED-LINEAR-SAMPLE-ENERGY] reachable=1 blocks=2
+[L-EM2] compile arm=compiled in=128 gram_diag_mean=1.961338e-01 h_norm=2.8827e-01
+[L-R2] rank2 reachable=1 vtu_cross_max=1.863e-09
+[COMBINED-LINEAR-SAMPLE-ENERGY] reachable=1 blocks=2
+[L-EM2] compile arm=compiled in=128 gram_diag_mean=1.961338e-01 h_norm=2.8827e-01
+[L-EM2] dynamic arm=applied groups=32 passes=2 accepted_steps=32 accepted_groups=945 changed=840 rows=32 grad_mean=4.276e-04 error=-
+[L-EM2] dynamic arm=applied groups=32 passes=2 accepted_steps=32 accepted_groups=945 changed=840 rows=32 grad_mean=4.276e-04 error=-
+========================================================================
+[control1_standalone_import] pass=True
+    missing_apis: []
+[control2_calibration_and_state] pass=True
+    state_legal: True
+    deployed_params_legal: True
+    audit: {'a2_arm': 'identity', 'agr1_arm': 'parent', 'agr1_attempted': 1, 'agr1_accepted': 0, 'agr1_initial_loss': 2.0, 'agr1_final_loss': 1.2170225067317175, 'agr1_inverse_error': 2.980232238769531e-07}
+[control3_linear_bitwise_vs_v231] pass=True
+    linear_weight_bitwise: True
+    linear_activation_bitwise: True
+OVERALL: PASS

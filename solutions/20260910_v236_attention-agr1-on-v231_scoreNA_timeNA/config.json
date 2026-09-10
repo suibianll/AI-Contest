@@ -1,0 +1,18 @@
+{
+  "run_id": "attention-agr1-on-v231",
+  "version": "v236",
+  "mechanism": "A-GR1 (general asymmetric reciprocal matrix residual) rebuilt on the v231 complete root. The mechanism itself is byte-identical to v234: per KV group M = I + N (N unconstrained), Q-side multiplied by M, K-side by exactly inverted M^{-T}; compiled into the root's existing learned_rotation/learned_center fields (tq = R_q @ M, tk = R_k @ M^{-T}, c' = c @ M^{-T}) so the dynamic path is a single matmul and never inverts. This card's ONLY change from v234 is the parent swap v230 -> v231.",
+  "parent": "v231 Linear (L-EM3 K=2) + v195 Attention complete root",
+  "parent_sha256": "ea79a1c12dc667142c620975aab188920fae7b29988c804f41c1a696cc5754f1",
+  "candidate_sha256": "3319fc354af1ff0f35075498f26886bdf43a078d32a27852f575a4c50d32ba07",
+  "candidate_bytes": 520955,
+  "parent_bytes": 505762,
+  "append_bytes": 15193,
+  "prefix_equality": "first 505762 bytes of the candidate are byte-identical to the v231 root (cmp); the candidate is a pure append of the A-GR1 block (15193 B)",
+  "equivalence_to_v234": "diff(candidate, v234 archived candidate) is byte-identical to diff(v231 root, v230 root): one hunk only, the Linear constant _EM1_PASSES = 1 -> 2 plus its comment. _EM1_PASSES is referenced only in the Linear path (the pass loop and an audit field), so the Attention section is provably identical to v234's.",
+  "fit_data": "fit windows 0,1,2 of the 5 calibration folds; gate windows 3,4 (v192/v234 window split unchanged); root states frozen (no rotation/center retrain)",
+  "coordinate": "root final deployed coordinate (v189 stack + learned_rotation + learned_center); per-64-block amax scale-ratio loss (v192 objective unchanged); analytic gradient grad_N = G_q - P @ G_k^T @ P with P = M^{-T} (finite-difference verified in v234, worst relerr 5.3e-8); per-step singular value clamp of M to [1/sqrt(2), sqrt(2)]",
+  "solver": "32-step Adam (lr 0.01, betas 0.9/0.999, clip 1.0, reg 1e-3) on N; exact inverse computed once at compile time (calibration only); per-layer gate requires strict improvement on ALL gate windows",
+  "candidate_count": 1,
+  "official_status": "unregistered/NA"
+}

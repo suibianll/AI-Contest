@@ -1,0 +1,13 @@
+======================================================================================================================
+shape                             parent              mech-ref(v234)            candidate                 verdict
+qh=4 kv=2 hd=64 tok=96 win=5      ok                  accepted                  accepted                  ok: finite, branch reached, accepted=1, inv_err=5.36e-07
+qh=16 kv=4 hd=256 tok=40 win=5    ok                  parent                    parent                    ok: finite, branch reached, accepted=0, inv_err=1.07e-06
+qh=8 kv=8 hd=64 tok=17 win=6      ok                  parent                    parent                    ok: finite, branch reached, accepted=0, inv_err=5.36e-07
+qh=2 kv=1 hd=64 tok=5 win=5       ok                  parent                    parent                    ok: finite, branch reached, accepted=0, inv_err=3.58e-07
+qh=16 kv=4 hd=64 tok=128 win=5    ok                  parent                    parent                    ok: finite, branch reached, accepted=0, inv_err=4.77e-07
+qh=4 kv=2 hd=128 tok=64 win=5     ok                  parent                    parent                    ok: finite, branch reached, accepted=0, inv_err=7.15e-07
+qh=6 kv=2 hd=64 tok=64 win=5      ok                  parent                    parent                    ok: finite, branch reached, accepted=0, inv_err=2.98e-07
+qh=6 kv=3 hd=32 tok=200 win=5     ValueError          ValueError                ValueError                ok: parent and reference both reject (ValueError) -- inherited constraint
+qh=16 kv=4 hd=32 tok=64 win=5     ok                  fallback                  fallback                  ok: inherited mechanism fallback -- ValueError: Residual training requires a 64-divisible head dimension
+====================================================================================================
+OVERALL: PASS

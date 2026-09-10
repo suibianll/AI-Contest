@@ -1,0 +1,37 @@
+{
+  "version": "v236",
+  "parent": "v231 Linear (L-EM3 K=2) + v195 Attention",
+  "parent_sha256": "ea79a1c12dc667142c620975aab188920fae7b29988c804f41c1a696cc5754f1",
+  "candidate_sha256": "3319fc354af1ff0f35075498f26886bdf43a078d32a27852f575a4c50d32ba07",
+  "protocol": "proxy-v3",
+  "panel": "qwen35-4b-panel-v1",
+  "scope": "attention-only shards 0-5; 72 cases (six-shard run to completion; --stop-after-nonpositive 6, because the evaluator default of 2 stops after shards 0 and 1 are exactly zero and would hide the two armed layers)",
+  "shard_layer_map": {"0": 0, "1": 1, "2": 8, "3": 15, "4": 22, "5": 5},
+  "mechanism": "A-GR1 general asymmetric reciprocal matrix residual M = I + N per KV group; Q @ M, K @ M^{-T} (exact inverse at calibration compile); v192 single-variable generalization; compiled into existing learned_rotation/learned_center fields (center compiled as c @ M^{-T}); frozen root states; per-layer all-gate-windows strict-improvement gate. Byte-identical to v234; only the parent changed.",
+  "build_controls": {
+    "prefix_byte_equality_vs_v231_root": "pass (first 505762 B identical, cmp)",
+    "append_only": "pass (+15193 B, no other edit)",
+    "diff_vs_v234_candidate": "one hunk only, identical to the v230->v231 Linear diff (_EM1_PASSES 1->2 + comment); Attention section provably identical",
+    "em1_passes_active": 2,
+    "control1_standalone_import": "pass (six APIs import outside the repo tree)",
+    "control2_calibration_and_state": "pass (validate_state + validate_hif4_params legal; agr1_attempted=1; training reachable, loss 2.0 -> 1.2170; inverse error 2.98e-07)",
+    "control3_linear_bitwise_vs_v231": "pass (weight_params and dynamic activation bitwise equal to the v231 parent)"
+  },
+  "local_six_shard": {
+    "scope": "attention-only, 72 cases, equal weight across the six shards",
+    "delta_mean": 0.0038445,
+    "plus_zero_minus": [21, 48, 3],
+    "shards": {
+      "0": {"layer": 0, "delta_mean": 0.0, "plus_zero_minus": [0, 12, 0], "verdict": "gate parent, bit-identical"},
+      "1": {"layer": 1, "delta_mean": 0.0, "plus_zero_minus": [0, 12, 0], "verdict": "gate parent, bit-identical"},
+      "2": {"layer": 8, "delta_mean": 0.0, "plus_zero_minus": [0, 12, 0], "verdict": "gate parent, bit-identical"},
+      "3": {"layer": 15, "delta_mean": 0.017449, "l1": 0.021696, "delta_tail": 0.027302, "plus_zero_minus": [10, 0, 2], "verdict": "accepted"},
+      "4": {"layer": 22, "delta_mean": 0.005618, "l1": 0.005659, "delta_tail": 0.012536, "plus_zero_minus": [11, 0, 1], "verdict": "accepted"},
+      "5": {"layer": 5, "delta_mean": 0.0, "plus_zero_minus": [0, 12, 0], "verdict": "gate parent, bit-identical"}
+    },
+    "candidate_absolute_attention": {"cases": 72, "mean": 0.5378421258784798, "median": 0.556856985578591, "min": 0.24300402270016125, "max": 0.7970722527829799},
+    "reproduces_v234_exactly": "every per-shard delta, L1, delta_tail, count and the 72-case absolute distribution are identical to the v234 six-shard run (attention-agr1-sixshard-full-20260910). This was predicted by construction -- attention-only evaluation calls no Linear API -- and is recorded as an independent confirmation, not as new evidence about the mechanism."
+  },
+  "runtime_note": "the calibration artifact was a cache hit (calibration_api_seconds = 0.0), so this run's api seconds are scoring-only and are not comparable across cache states (AGENTS section 5). v234's diagnostic six-shard delta was about +5.5s; the side-isolation probe measured +20.7s against the v195 side. Side time has no predictive power for the full package (v194 and v229 precedents, both directions wrong), so no official seconds are predicted here.",
+  "official_status": "unregistered/NA"
+}
