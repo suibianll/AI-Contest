@@ -52,6 +52,7 @@
 
 | 版本 | 机制 | 当前结果 |
 |---|---|---|
+| [v243（A-TF1）](20260911_v243_attention-atf1-cayley-hoist_scoreNA_timeNA/result.md) | **`_a2_train_rotation` 窗口循环的循环不变量外提**：`theta` 在 `for item in prepared` 内只读（只在本步末尾的 Adam 更新里被写），故 `c = _m_cayley_pair(theta)` 与 `rotation = einsum(base, c)` 对同一步内每个窗口取值相同；父每窗口重算一次，每层 128 次 → 32 次 | 官方 **`unregistered/NA`**，未提交。SHA `86169fd5…2ea`（517135 B），自 v237 根**单一 hunk、区间外逐字节相同** +438 B（head/tail 核验）。**等价性：6/6 attention 层 state 与动态 q/k/v 输出逐字节相同**（24 层中其余 18 层为 Linear-only，qkv 槽为 None，非排除）。**时间**（GPU，配对三臂含同字节 null，三臂各 18 次）：父 `18.2882s` / null `18.2342s` / 候选 `18.0733s`，null 跨度 `0.0540s`，候选 − 父 **−0.2149s（−1.18%）= 噪声底 4.0×**，可分辨。**口径限制**：GPU 秒数，官方是鲲鹏 920B CPU，**不预测官方秒数**；本项本地约 1.0s/次、6 层约 6s，故 −1.18% 折合约 **0.07s 本地**，大概率官方分辨不出——**本卡定位是余量不是分数**。过程自查出缺陷 **#37**（编辑器写回把尾部 713 行 LF 改成 CRLF，已用字节级替换重做） |
 | [v199](20260909_v199_attn-gqa-hard-reciprocal_scoreNA_timeNA/result.md) | GQA × 64-block hard reciprocal，真实 hard-output 选择 | 4/6 层产生接受状态，但六 shard 代理 `−0.0000729515`；`REJECTED`，官方 `TIMEOUT` |
 | [v201](20260909_v201_attn-hard-logit-residual_scoreNA_timeNA/result.md) | hard-logit residual + softmax Jacobian/V 加权候选排序 | 4/6 层产生接受状态，但六 shard 代理 `−0.0001206117`；`REJECTED`，官方 `TIMEOUT` |
 | [v202](20260909_v202_linear-sample-energy-fusion_scoreNA_timeNA/result.md) | Linear sample-energy 编译与首次校准解码融合 | 336 case 逐位等价；官方 `18053/281s`，同分快 8s，`RETAINED` 并切换根 |

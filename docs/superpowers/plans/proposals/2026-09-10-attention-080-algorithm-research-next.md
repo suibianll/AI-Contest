@@ -345,12 +345,20 @@ Attention 的父/候选选择可作为预先固定的校准折内算法组成部
 | Linear | **0.6356**（shard0；fc_gate 0.5228 / fc_up 0.4268 / proj 0.4846 / v 0.6958 / o 0.7460 / q 0.7555 / k 0.8178） | 0.80 | −0.164 |
 | Attention | **0.5385**（0.5340 + 0.0046） | 0.80 | −0.262 |
 
-### 已归档候选（均未提交官方）
+### 已归档候选 —— **两件都官方 TIMEOUT 被拒**（本条原写"均未提交官方"，是错的）
 
 - **v241** `solutions/20260911_v241_attention-vk-kernel_scoreNA_timeNA/`，SHA `8D364B3D…86CD`
   面板六 shard 均值 **+0.004547**（六片全正），V API Δ +0.0666 s/次
-- **v242**（可提交形态）`solutions/20260911_v242_attention-vk-kernel-shared_scoreNA_timeNA/`，
+- **v242**（当时被定位为"可提交形态"）`solutions/20260911_v242_attention-vk-kernel-shared_scoreNA_timeNA/`，
   SHA `B11BA4F2…9227`，面板 **+0.004602**，V API Δ **+0.0117 s/次**
+- **官方：两张均 TIMEOUT（>300 s）REJECTED**（2026-09-11 用户回传）。
+  见 [`logs/execution/2026-09-11-v241-v242-vk-official-timeout.md`](../../../../logs/execution/2026-09-11-v241-v242-vk-official-timeout.md)。
+  v242 的"落进 11 s 余量"算术有三个支点，**只有"一 case 一次 V 调用"这一条可靠**：
+  case 数 250 出自一份 `SOURCE_UNBOUND` 的用户报告、且与另一处记录的 200 Attention 冲突；
+  +0.0117 s 是 **GPU 实测**，而官方判题是**鲲鹏 920B CPU**。
+- **因此本计划的硬约束改写为：根余量 11 s（v237 官方 18518 / 289 s），任何增加部署期开销的
+  机制都不得立项。** 原定的"加大 VK 核"方向（本文件 §6.1 的后续）**作废**——
+  它只会让开销更大。VK 这条线整体关闭。
 
 机制：每 KV 组 32 参数相对位置核编译进 `v_state`，代替均匀加权选 V 的 HiF4 码。
 

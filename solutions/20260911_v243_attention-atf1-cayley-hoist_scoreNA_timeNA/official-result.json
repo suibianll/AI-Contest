@@ -1,0 +1,55 @@
+{
+  "version": "v243",
+  "candidate_sha256": "86169fd57b417e73cba307c1d5c8ecb326d480e25cc447f643da2c79cc8d82ea",
+  "candidate_bytes": 517135,
+  "parent_sha256": "ecb1f9e510b5507e1a2dc8b95f8a84e9b51864a420b3828537a328813e2ce554",
+  "parent_bytes": 516697,
+  "delta_bytes": 438,
+  "official_status": "unregistered/NA",
+  "official_score": null,
+  "official_time_s": null,
+  "official_time_display": null,
+  "submitted": false,
+  "mechanism": "A-TF1: in _a2_train_rotation, the pair (c, rotation) = (_m_cayley_pair(theta), einsum(base, c)) is loop-invariant with respect to the `for item in prepared` window loop -- theta is written only by the Adam update at the end of each step -- yet the parent recomputes it once per window. Hoisting it out of the window loop reduces the per-layer call count from len(prepared) * _A2_TRAIN_STEPS (4 * 32 = 128) to _A2_TRAIN_STEPS (32). No output changes.",
+  "why_this_form_was_chosen": "The project's validated useful category of Attention-side work is the byte-equivalence-plus-faster card: v233 (L-TF1) and v237 (L-TF2) both took official RETAINED at the same score and fewer seconds. The root sits at 289s against a hard 300s limit (11s of headroom), so recoverable seconds are the binding resource for every mechanism that carries score. The loop-invariant hoist is the same class of edit and its correctness is provable from the source, not fitted.",
+  "equivalence": {
+    "criterion": "byte-for-byte equality of hif4_calibration_attention state AND of the dynamic q/k/v outputs",
+    "script": "workbench/full_solution/attention-calib-hoist/atf1_verify.py",
+    "raw_output": "verification.out",
+    "layers_tested": [0, 1, 5, 8, 15, 22],
+    "layers_byte_identical": 6,
+    "layers_total": 6,
+    "state_diffs": 0,
+    "dynamic_diffs": 0,
+    "note": "The pack has 24 layers; only 6 carry calibration QKV. The other 18 are Linear-only and were skipped because their qkv slots are None, not because they were excluded."
+  },
+  "timing": {
+    "device": "cuda",
+    "rounds": 3,
+    "calls_per_arm": 18,
+    "parent_median_s": 18.2882,
+    "null_median_s": 18.2342,
+    "candidate_median_s": 18.0733,
+    "null_spread_s": 0.0540,
+    "candidate_minus_parent_s": -0.2149,
+    "relative": -0.0118,
+    "ratio_to_null_spread": 3.98,
+    "verdict": "distinguishable on this machine",
+    "caveat": "GPU seconds. The official judge is a Kunpeng 920B CPU. Absolute seconds are NOT predicted or extrapolated. Per-call this function is about 1.0s locally, so the 1.18% cut is roughly 0.07s local over the 6 attention layers -- a magnitude that will most likely NOT be distinguishable officially. This card is margin, not score."
+  },
+  "append_check": {
+    "head_identical": true,
+    "tail_identical": true,
+    "note": "candidate == parent with ONE contiguous region replaced; everything outside it is byte-identical. +438 B."
+  },
+  "self_caught_defect": {
+    "id": 37,
+    "what": "The first build was produced with the editor, which rewrote 713 trailing lines from LF to CRLF line endings (the parent file has mixed endings). That violates the project's 'parent bytes untouched' rule.",
+    "fix": "Rebuilt by byte-level replacement with a uniqueness assert, plus head/tail byte-identity checks."
+  },
+  "not_done": [
+    "not submitted officially",
+    "Linear panel not re-run (no Linear path is touched; the diff is confined to _a2_train_rotation)",
+    "CPU timing not measured"
+  ]
+}

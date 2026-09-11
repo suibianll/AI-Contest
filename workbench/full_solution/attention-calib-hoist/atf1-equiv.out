@@ -1,0 +1,12 @@
+device=cuda q_heads=16 kv_heads=4 head_dim=256 splits=5
+attention layers: [0, 1, 5, 8, 15, 22]  (skipped 18 Linear-only)
+layer   0: state diffs=0 dynamic diffs=0  IDENTICAL
+layer   1: state diffs=0 dynamic diffs=0  IDENTICAL
+layer   5: state diffs=0 dynamic diffs=0  IDENTICAL
+layer   8: state diffs=0 dynamic diffs=0  IDENTICAL
+layer  15: state diffs=0 dynamic diffs=0  IDENTICAL
+layer  22: state diffs=0 dynamic diffs=0  IDENTICAL
+
+equivalence: 6/6 layers byte-identical
+
+(ATF1_SKIP_TIMING set -- equivalence only, timing not re-measured)
