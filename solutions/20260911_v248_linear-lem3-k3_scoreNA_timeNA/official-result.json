@@ -1,0 +1,102 @@
+{
+  "version": "v248",
+  "candidate_sha256": "aa9658d8da7dc07041c15b785c66ecdadb9b774b50247f43bd52ab1f8e0b7d11",
+  "candidate_bytes": 519790,
+  "parent_sha256": "738d2b3617a3fa287524c9f9558a0a43b3af11076bc94a00d0e38a112e45521f",
+  "parent_label": "v245 A-TR1",
+  "parent_bytes": 519334,
+  "delta_bytes": 456,
+  "official_status": "unregistered/NA",
+  "official_score": null,
+  "official_time_s": null,
+  "submitted": false,
+  "mechanism": "L-EM K=3: _EM1_PASSES 2 -> 3. The exact-metric group-major activation descent runs one more pass. No other change.",
+  "why": "_EM1_PASSES = 2 was fixed by the time argument written next to it in the source, not because the descent had converged. K = 1 -> 2 measured +0.027507 on the local six-shard panel and +90 official. The three Attention cards (v243-v245) recovered roughly a quarter of one Attention calibration call, and this card spends part of that margin on the Linear side, where the measured value per unit is an order of magnitude larger than any Attention mechanism.",
+  "panel": {
+    "protocol": "proxy-v3",
+    "scenario": "linear",
+    "shards": 6,
+    "cases_total": 336,
+    "mean_delta": 0.013399536427632008,
+    "positive_cases": 286,
+    "negative_cases": 0,
+    "zero_cases": 50,
+    "per_shard": [
+      {
+        "shard": 0,
+        "cases": 56,
+        "delta_mean": 0.014454210783323897,
+        "positive": 48,
+        "negative": 0,
+        "zero": 8,
+        "min_delta": null,
+        "max_delta": null
+      },
+      {
+        "shard": 1,
+        "cases": 56,
+        "delta_mean": 0.014000923528819615,
+        "positive": 48,
+        "negative": 0,
+        "zero": 8,
+        "min_delta": null,
+        "max_delta": null
+      },
+      {
+        "shard": 2,
+        "cases": 56,
+        "delta_mean": 0.011937104958154813,
+        "positive": 46,
+        "negative": 0,
+        "zero": 10,
+        "min_delta": null,
+        "max_delta": null
+      },
+      {
+        "shard": 3,
+        "cases": 56,
+        "delta_mean": 0.01342683326603469,
+        "positive": 48,
+        "negative": 0,
+        "zero": 8,
+        "min_delta": null,
+        "max_delta": null
+      },
+      {
+        "shard": 4,
+        "cases": 56,
+        "delta_mean": 0.012541607256816415,
+        "positive": 48,
+        "negative": 0,
+        "zero": 8,
+        "min_delta": null,
+        "max_delta": null
+      },
+      {
+        "shard": 5,
+        "cases": 56,
+        "delta_mean": 0.01403653877264262,
+        "positive": 48,
+        "negative": 0,
+        "zero": 8,
+        "min_delta": null,
+        "max_delta": null
+      }
+    ],
+    "baseline_linear_gain": 0.6362,
+    "projected_linear_gain": 0.649599536427632,
+    "note": "ZERO negative cases across all 336. The 50 zeros are proj, which is excluded from L-EM by _EM1_MAX_CHANNELS = 4096 (in_features 9216), exactly as expected."
+  },
+  "timing": {
+    "path": "GPU, proxy-v3 shard manifests, hif4_dynamic_quantize_activation",
+    "k2_ms_per_call": 785.45,
+    "k3_ms_per_call": 818.25,
+    "delta_ms_per_call": 32.8,
+    "relative": 0.0418,
+    "note": "The third pass accepts far fewer moves than the first two, so it costs about 4% of that API, not 50%. No official seconds are predicted (the official judge is a Kunpeng 920B CPU)."
+  },
+  "not_done": [
+    "not submitted officially",
+    "no Attention-side panel for this card (the edit is one Linear constant; the Attention path is byte-identical to v245)"
+  ]
+}
