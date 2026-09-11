@@ -176,3 +176,58 @@ during DYNAMIC q/k:            {'apply_rotation': 2}       block_hadamard: 一�
 **三者必须在同一次运行里读取**，才能判断 A/B 矛盾是"两次运行不同"还是"读取点不同"。
 
 **`solution.py` 未改动（v250 / K=6）。本卡仍未发货。**
+
+---
+
+## 矛盾已解决：部署的旋转用 `block_smooth_size`，不是 `rotation_block`
+
+同一次运行里读三处，矛盾当场消失：
+
+```
+AFTER calibration (same run):
+   rotation            = None
+   rotation_block      = None      <- 空转的旧字段
+   k_state rotation_block = None
+first block passed into _apply_attention_rotation during dynamic q = 8
+   q.get("rotation_block") right after = None
+```
+
+**block 实参是 8 而 `rotation_block` 是 None ⇒ 有另一个调用点。找到了，在部署端
+`solution.py:4226-4239`：**
+
+```python
+    if int(block_smooth_size) != 0:
+        if attention_block_signs is not None:
+            ...
+            dense = _apply_attention_rotation(
+                dense,
+                int(rotation_num_heads),
+                int(block_signs.shape[1]),
+                block_signs,
+                int(block_smooth_size),          # <-- 部署时这里是 8
+            )
+        else:
+            dense = _block_hadamard_transform(dense, int(block_smooth_size), int(block_smooth_seed))
+```
+
+**所以：**
+- 部署的旋转 = **`_apply_attention_rotation`** + **`block_smooth_signs`** + **`block_smooth_size`**；
+- `_block_hadamard_transform` 只是 **signs 缺失时的回退**（部署端确实一次没被调用，与插桩一致）；
+- `rotation` / `rotation_block` 是**空转的旧字段**。
+
+**我上一节的困惑是我自己的转储缺陷**：我只打印了 tensor/list 型的字段，
+**把 int 型的 `block_smooth_size` 整个漏掉了**，却一直盯着空转的 `rotation_block`。
+（这类"读错了对象"与缺陷 #16/#25 同族。）
+
+## 正确的实现（尚未重做）
+
+**函数打对了（`_apply_attention_rotation`，hunk1 可复用），字段打错了。** 正确做法：
+
+1. C76.4 择优循环里改成**逐 KV 组**取 argmin（探针已证明 4/6 层各组最优 block 不同）；
+2. 把结果写进 **`block_smooth_size`**（由 int 改为长度 kv_heads 的 list）——
+   `block_smooth_signs` 已经是 `(kv_heads, head_dim)`，逐组 signs 天然支持；
+3. 消费点 `4237` 的 `int(block_smooth_size)` 要能接受 list（hunk1 已让
+   `_apply_attention_rotation` 支持逐组，只需调用方别再 `int()` 它）；
+4. `_block_hadamard_transform` 的回退分支保持 int 形式不变。
+
+**`solution.py` 未改动（v250 / K=6）。本卡仍未发货 —— 但这次方向是确定的。**
