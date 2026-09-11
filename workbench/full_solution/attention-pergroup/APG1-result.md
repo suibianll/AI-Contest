@@ -68,3 +68,32 @@ mse = (1/(T·qh·hd)) Σ_h Σ_t Σ_d (out − ref)²
 - **本地面板对 Attention 无符号预测力（#43）**，所以 `+0.004~0.006` 是**预期**不是保证；
   但**代价为零**这一条与面板无关，是确定的。
 - 未实现、未跑面板、未发货。
+
+---
+
+## 实现尝试（2026-09-11，**未发货**）
+
+按上述要点实现了六个字节级 hunk（`apg1_build.py`，每处带唯一性断言与 head/tail 核验）：
+
+1. `_apply_attention_rotation` 支持逐组 block（int 路径逐字节不变，向后兼容）；
+2. 新增 `_attention_deployed_mse_grouped`（同一次前向附带逐组 causal MSE）；
+3. 择优循环里跟踪 `group_best_mse` / `group_best_row`；
+4. 用分组版替换原调用；
+5. 末尾按逐组选择组装 state；
+6. `_build_qk_states` 的 `int(rotation_block)` 改为接受 list。
+
+`AST OK`，六处 hunk 全部落在目标循环（Loop B，A-TR1 的 block×seed 循环）上。
+
+**面板读数：`delta_mean = 0.0`，12/12 恰好为零 —— 与探针预测不符**（探针说层 0 各组应选
+`[32, 64, 64, 16]`）。
+
+**第一层诊断**：直接跑校准并打印 `q_state["rotation_block"]`，三层（0/1/22）**全是 `None`**。
+即 `_build_qk_states` 里 `rotation_state is None` —— **C76.4 的旋转没有走 `state["rotation"]` /
+`state["rotation_block"]` 这条路径**。所以本实现整条链没有被触达，12/12 零变化由此解释。
+
+**下一步（未做，留给接手者）**：先查清 C76.4 选择的 `signs` 与 `block` 最终**存进了哪个 state 字段、
+由哪个函数消费**（线索：`state["rotation"]`、`state["block_smooth_signs"]`、以及 A2 包装器写的
+`state["learned_rotation"]` 三者之间谁在部署路径上真正生效）。**在查清之前不要重做本实现** ——
+否则会再写一遍一条不生效的链。
+
+**结论：`solution.py` 已回退到 v250（K=6）并核对 SHA。本卡不发货（零增益）。**
