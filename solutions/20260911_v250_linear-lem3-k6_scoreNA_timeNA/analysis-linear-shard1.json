@@ -1,0 +1,326 @@
+{
+  "policy": {
+    "score_prediction": "forbidden",
+    "local_trend_gate": "delta_mean > 0 and L1 < 0.02",
+    "ood_gate": "diagnostic only; abs(delta(in_dist - ood)) > 0.01 warns, never blocks",
+    "official_promotion": "requires official score/time and source identity; local eligibility is not promotion",
+    "official_time_gate": "official 300s only; local timing is diagnostic"
+  },
+  "mechanism_type": "analytic",
+  "decision": "continue_next_shard",
+  "blockers": [],
+  "warnings": [],
+  "sides": {
+    "linear": {
+      "cases": 56,
+      "delta_mean": 0.017037898410996455,
+      "delta_median": 0.016005062248555135,
+      "l1": 0.017037898410996455,
+      "linf": 0.04525162123375326,
+      "delta_tail": 0.003412412810963994,
+      "positive_cases": 48,
+      "negative_cases": 0,
+      "zero_cases": 8,
+      "worst_groups": [
+        {
+          "dimension": "role_family",
+          "value": "proj",
+          "cases": 8,
+          "mean_delta": 0.0,
+          "negative_cases": 0,
+          "min_delta": 0.0
+        },
+        {
+          "dimension": "role",
+          "value": "proj",
+          "cases": 8,
+          "mean_delta": 0.0,
+          "negative_cases": 0,
+          "min_delta": 0.0
+        },
+        {
+          "dimension": "role",
+          "value": "fc_up",
+          "cases": 8,
+          "mean_delta": 0.006137911480963348,
+          "negative_cases": 0,
+          "min_delta": 0.004581484786347123
+        },
+        {
+          "dimension": "role_family",
+          "value": "fc",
+          "cases": 16,
+          "mean_delta": 0.007589339073714604,
+          "negative_cases": 0,
+          "min_delta": 0.004581484786347123
+        },
+        {
+          "dimension": "role",
+          "value": "fc_gate",
+          "cases": 8,
+          "mean_delta": 0.00904076666646586,
+          "negative_cases": 0,
+          "min_delta": 0.008435794189262213
+        },
+        {
+          "dimension": "shape_bucket",
+          "value": "hidden_to_wide",
+          "cases": 40,
+          "mean_delta": 0.01651637709261191,
+          "negative_cases": 0,
+          "min_delta": 0.004581484786347123
+        },
+        {
+          "dimension": "layer",
+          "value": "13",
+          "cases": 14,
+          "mean_delta": 0.016713166368801328,
+          "negative_cases": 0,
+          "min_delta": 0.0
+        },
+        {
+          "dimension": "split",
+          "value": "test",
+          "cases": 28,
+          "mean_delta": 0.016762550317667577,
+          "negative_cases": 0,
+          "min_delta": 0.0
+        },
+        {
+          "dimension": "layer",
+          "value": "7",
+          "cases": 14,
+          "mean_delta": 0.016838963692108754,
+          "negative_cases": 0,
+          "min_delta": 0.0
+        },
+        {
+          "dimension": "layer",
+          "value": "1",
+          "cases": 14,
+          "mean_delta": 0.01689905023249867,
+          "negative_cases": 0,
+          "min_delta": 0.0
+        },
+        {
+          "dimension": "length",
+          "value": "128",
+          "cases": 28,
+          "mean_delta": 0.01696311731561981,
+          "negative_cases": 0,
+          "min_delta": 0.0
+        },
+        {
+          "dimension": "length",
+          "value": "512",
+          "cases": 28,
+          "mean_delta": 0.0171126795063731,
+          "negative_cases": 0,
+          "min_delta": 0.0
+        }
+      ],
+      "worst_cases": [
+        {
+          "delta": 0.0,
+          "baseline_gain": 0.45152867135094893,
+          "candidate_gain": 0.45152867135094893,
+          "layer": 1,
+          "role": "proj",
+          "role_family": "proj",
+          "shape_bucket": "wide_to_hidden",
+          "split": "validation",
+          "length": 512
+        },
+        {
+          "delta": 0.0,
+          "baseline_gain": 0.4731401885354279,
+          "candidate_gain": 0.4731401885354279,
+          "layer": 1,
+          "role": "proj",
+          "role_family": "proj",
+          "shape_bucket": "wide_to_hidden",
+          "split": "test",
+          "length": 512
+        },
+        {
+          "delta": 0.0,
+          "baseline_gain": 0.4740605250229172,
+          "candidate_gain": 0.4740605250229172,
+          "layer": 7,
+          "role": "proj",
+          "role_family": "proj",
+          "shape_bucket": "wide_to_hidden",
+          "split": "test",
+          "length": 128
+        },
+        {
+          "delta": 0.0,
+          "baseline_gain": 0.47572786952809915,
+          "candidate_gain": 0.47572786952809915,
+          "layer": 7,
+          "role": "proj",
+          "role_family": "proj",
+          "shape_bucket": "wide_to_hidden",
+          "split": "validation",
+          "length": 128
+        },
+        {
+          "delta": 0.0,
+          "baseline_gain": 0.47817147674147387,
+          "candidate_gain": 0.47817147674147387,
+          "layer": 13,
+          "role": "proj",
+          "role_family": "proj",
+          "shape_bucket": "wide_to_hidden",
+          "split": "validation",
+          "length": 512
+        },
+        {
+          "delta": 0.0,
+          "baseline_gain": 0.4968144764982388,
+          "candidate_gain": 0.4968144764982388,
+          "layer": 13,
+          "role": "proj",
+          "role_family": "proj",
+          "shape_bucket": "wide_to_hidden",
+          "split": "test",
+          "length": 512
+        },
+        {
+          "delta": 0.0,
+          "baseline_gain": 0.49146339758259183,
+          "candidate_gain": 0.49146339758259183,
+          "layer": 19,
+          "role": "proj",
+          "role_family": "proj",
+          "shape_bucket": "wide_to_hidden",
+          "split": "test",
+          "length": 128
+        },
+        {
+          "delta": 0.0,
+          "baseline_gain": 0.5181252422997626,
+          "candidate_gain": 0.5181252422997626,
+          "layer": 19,
+          "role": "proj",
+          "role_family": "proj",
+          "shape_bucket": "wide_to_hidden",
+          "split": "validation",
+          "length": 128
+        },
+        {
+          "delta": 0.004581484786347123,
+          "baseline_gain": 0.47908314186071993,
+          "candidate_gain": 0.48366462664706705,
+          "layer": 7,
+          "role": "fc_up",
+          "role_family": "fc",
+          "shape_bucket": "hidden_to_wide",
+          "split": "test",
+          "length": 512
+        },
+        {
+          "delta": 0.004767010646398562,
+          "baseline_gain": 0.45498849480114156,
+          "candidate_gain": 0.4597555054475401,
+          "layer": 7,
+          "role": "fc_up",
+          "role_family": "fc",
+          "shape_bucket": "hidden_to_wide",
+          "split": "validation",
+          "length": 512
+        },
+        {
+          "delta": 0.006271322042540828,
+          "baseline_gain": 0.41235313045670197,
+          "candidate_gain": 0.4186244524992428,
+          "layer": 1,
+          "role": "fc_up",
+          "role_family": "fc",
+          "shape_bucket": "hidden_to_wide",
+          "split": "test",
+          "length": 128
+        },
+        {
+          "delta": 0.006318868456489102,
+          "baseline_gain": 0.4014338427218179,
+          "candidate_gain": 0.407752711178307,
+          "layer": 1,
+          "role": "fc_up",
+          "role_family": "fc",
+          "shape_bucket": "hidden_to_wide",
+          "split": "validation",
+          "length": 128
+        }
+      ],
+      "component_delta_mean": {},
+      "component_signal": []
+    }
+  },
+  "focus_linear_roles": [],
+  "focus": {
+    "enabled": false,
+    "reason": "no focus role/family supplied"
+  },
+  "control": {
+    "enabled": false,
+    "reason": "no focus role/family supplied"
+  },
+  "ood_delta_gap": {},
+  "ood_delta_gain": {},
+  "runtime": {
+    "api_total_seconds": 183.26457400005893,
+    "calibration_wall_seconds": 141.21123999998963,
+    "calibration_api_seconds": 133.15121480001835,
+    "calibration_cache_load_seconds": 0.0,
+    "scoring_api_seconds": 50.11335920004058,
+    "scoring_wall_seconds": 73.81726250000065,
+    "ranked_apis": [
+      {
+        "api": "hif4_calibration_and_quantize_weight",
+        "seconds": 133.15121480001835,
+        "share": 0.7265518473852756,
+        "calls": 28
+      },
+      {
+        "api": "hif4_dynamic_quantize_activation",
+        "seconds": 50.11335920004058,
+        "share": 0.27344815261472444,
+        "calls": 56
+      },
+      {
+        "api": "hif4_calibration_attention",
+        "seconds": 0.0,
+        "share": 0.0,
+        "calls": 0
+      },
+      {
+        "api": "hif4_dynamic_quantize_q",
+        "seconds": 0.0,
+        "share": 0.0,
+        "calls": 0
+      },
+      {
+        "api": "hif4_dynamic_quantize_k",
+        "seconds": 0.0,
+        "share": 0.0,
+        "calls": 0
+      },
+      {
+        "api": "hif4_dynamic_quantize_v",
+        "seconds": 0.0,
+        "share": 0.0,
+        "calls": 0
+      }
+    ],
+    "timing_faithful": true,
+    "default_panel": false,
+    "predicted_official_seconds": null,
+    "under_280_gate": null,
+    "time_policy": "record_only; official 300s limit; local prediction retired"
+  },
+  "recommended_actions": [
+    "profile Weight calibration candidate loops, matrix factorizations, and repeated quantization",
+    "inspect linear role_family=proj first (mean delta=+0.000000, min delta=+0.000000)"
+  ]
+}

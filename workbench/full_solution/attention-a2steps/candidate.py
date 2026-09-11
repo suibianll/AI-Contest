@@ -10498,20 +10498,8 @@ def hif4_calibration_attention(
             block = int(block_size)
             if block < 4 or head_dim % block != 0:
                 continue
-            # A-TR1: _attention_rotation_signs depends ONLY on the seed, but the
-            # loop is over (block_size, seed).  At this shape seeds 0, 1 and 2
-            # produce the identical sign vector and only seed 3 differs, so each
-            # block re-scores the same candidate three times.  The candidate state
-            # is a function of (signs, block) and not of the seed, and the
-            # selection below is a strict `<` on a score that is therefore also
-            # identical, so a duplicate iteration can never change the argmax.
-            # Skipping duplicates leaves every result bit-identical.
-            distinct_signs: list = []
             for seed in _ATTN_ROTATION_SEEDS:
                 signs = _attention_rotation_signs(kv_num_heads, head_dim, int(seed))
-                if any(torch.equal(signs, seen) for seen in distinct_signs):
-                    continue
-                distinct_signs.append(signs)
                 rotation_q_state, rotation_k_state = _build_qk_states(
                     final_d,
                     int(final_center),
@@ -11224,7 +11212,12 @@ _standard_params_branch = _branch_standard_params
 # frozen A2 config and deployment is gated per layer on the true path.
 # ---------------------------------------------------------------------------
 
-_A2_TRAIN_STEPS = 32
+# A-TS1: the A2 rotation trainer's step count, like the L-EM pass count, was
+# fixed by a cost argument rather than by the optimiser stopping.  The gate
+# accepts 5 of 6 layers at 32 steps (layer 8 rejects), so more steps can both
+# improve the accepted rotations and change which layers accept.  The trainer
+# is about 7% of one Attention calibration call, so doubling it is affordable.
+_A2_TRAIN_STEPS = 64
 _A2_TRAIN_LR = 0.01
 _A2_TRAIN_CLIP = 1.0
 _A2_REG_WEIGHT = 1e-3
@@ -11995,25 +11988,7 @@ _EM1_GROUPS_PER_BLOCK = 16
 # Local measurement cannot settle which convention holds, so L-EM3 ships this
 # arm -- the L-EM2 card's own pre-registered primary -- and lets the official
 # machine decide.  No fixed choice of the mechanism changes; only the pass count.
-# A-LK6: the descent had not converged at K = 2 -- the source note above shows
-# that pass count was fixed by a time argument, not by the descent stopping.
-# Measured on shard 0 against the K = 3 root, with the per-call cost of
-# hif4_dynamic_quantize_activation from the same runs:
-#
-#     K   panel delta   ms/call   cost     gain per unit cost
-#     4     +0.008368    836.55    +6.5%    1.29
-#     5     +0.013761    864.67   +10.1%    1.36
-#     6     +0.017493    885.93   +12.8%    1.37   <- this card
-#     8     +0.022256    921.35   +17.3%    1.29
-#    12     +0.026883    997.87   +27.1%    0.99
-#    16     +0.028908   1084.53   +38.1%    0.76
-#    24     +0.030156   1272.28   +62.0%    0.49
-#
-# K = 6 is the peak of gain per unit cost, not a tuned value: the curve rises
-# to it and falls away on both sides.  Local cost is measured; NO official
-# seconds are predicted here, and the local panel does not price the official
-# run (see the v244 timing-spread note).
-_EM1_PASSES = 6
+_EM1_PASSES = 2
 
 
 @torch.no_grad()

@@ -1,0 +1,127 @@
+{
+  "version": "v250",
+  "candidate_sha256": "b1726cd9350390cacb5075c16172a34f0c816c98d7e3abdcae2a279afd1201be",
+  "candidate_bytes": 520313,
+  "parent_sha256": "aa9658d8da7dc07041c15b785c66ecdadb9b774b50247f43bd52ab1f8e0b7d11",
+  "parent_label": "v248 L-EM K=3",
+  "parent_bytes": 519790,
+  "delta_bytes": 523,
+  "official_status": "unregistered/NA",
+  "official_score": null,
+  "official_time_s": null,
+  "submitted": false,
+  "mechanism": "_EM1_PASSES 3 -> 6. The exact-metric group-major activation descent runs three more passes.",
+  "why": "The source note at _EM1_PASSES records that the pass count was fixed by a time argument, not by the descent stopping. A shard-0 sweep measured the panel delta AND the per-call cost of hif4_dynamic_quantize_activation at each K, giving gain per unit cost: K=4 +0.008368/+6.5%=1.29, K=5 +0.013761/+10.1%=1.36, K=6 +0.017493/+12.8%=1.37, K=8 +0.022256/+17.3%=1.29, K=12 +0.026883/+27.1%=0.99, K=16 +0.028908/+38.1%=0.76, K=24 +0.030156/+62.0%=0.49. The curve peaks at K=6 and falls away on both sides, so K=6 is the peak of gain per unit cost, not a tuned value.",
+  "k_sweep": {
+    "baseline": "v248 (K=3)",
+    "shard": 0,
+    "cases": 56,
+    "readings": [
+      {
+        "K": 4,
+        "delta": 0.008368,
+        "ms_per_call": 836.55
+      },
+      {
+        "K": 5,
+        "delta": 0.013761,
+        "ms_per_call": 864.67
+      },
+      {
+        "K": 6,
+        "delta": 0.017493,
+        "ms_per_call": 885.93
+      },
+      {
+        "K": 8,
+        "delta": 0.022256,
+        "ms_per_call": 921.35
+      },
+      {
+        "K": 12,
+        "delta": 0.026883,
+        "ms_per_call": 997.87
+      },
+      {
+        "K": 16,
+        "delta": 0.028908,
+        "ms_per_call": 1084.53
+      },
+      {
+        "K": 24,
+        "delta": 0.030156,
+        "ms_per_call": 1272.28
+      }
+    ],
+    "k2_baseline_ms_per_call": 785.45
+  },
+  "panel": {
+    "protocol": "proxy-v3",
+    "scenario": "linear",
+    "shards": 6,
+    "cases_total": 336,
+    "mean_delta": 0.016661302211897096,
+    "positive_cases": 286,
+    "negative_cases": 0,
+    "zero_cases": 50,
+    "per_shard": [
+      {
+        "shard": 0,
+        "cases": 56,
+        "delta_mean": 0.01749288917924366,
+        "positive": 48,
+        "negative": 0,
+        "zero": 8
+      },
+      {
+        "shard": 1,
+        "cases": 56,
+        "delta_mean": 0.017037898410996455,
+        "positive": 48,
+        "negative": 0,
+        "zero": 8
+      },
+      {
+        "shard": 2,
+        "cases": 56,
+        "delta_mean": 0.015110484555897133,
+        "positive": 46,
+        "negative": 0,
+        "zero": 10
+      },
+      {
+        "shard": 3,
+        "cases": 56,
+        "delta_mean": 0.016988681640889163,
+        "positive": 48,
+        "negative": 0,
+        "zero": 8
+      },
+      {
+        "shard": 4,
+        "cases": 56,
+        "delta_mean": 0.015533515313297833,
+        "positive": 48,
+        "negative": 0,
+        "zero": 8
+      },
+      {
+        "shard": 5,
+        "cases": 56,
+        "delta_mean": 0.017804344171058337,
+        "positive": 48,
+        "negative": 0,
+        "zero": 8
+      }
+    ],
+    "cumulative_vs_v245_root": 0.030061302211897095,
+    "linear_gain_before": 0.6362,
+    "linear_gain_after": 0.666261302211897,
+    "note": "ZERO negative cases across all 336, as in v248. The 50 zeros are proj, excluded from L-EM by _EM1_MAX_CHANNELS = 4096."
+  },
+  "timing_caveat": "LOCAL cost only: +12.8% on hif4_dynamic_quantize_activation relative to K=2, measured on GPU. NO official seconds are predicted and no local-to-official factor is derived. In particular the earlier argument that \"an extra L-EM pass cost about 0s officially\" (v230 292s -> v231 291s) has been WITHDRAWN: a peer session showed the official single-run spread on one tree is 276-292s, i.e. 16s, which is larger than the -1s that argument rested on. Timing is therefore an open risk, not an established free lunch.",
+  "not_done": [
+    "not submitted officially",
+    "no Attention-side panel for this card"
+  ]
+}
