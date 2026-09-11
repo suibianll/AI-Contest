@@ -375,7 +375,7 @@ v244 的计分内容，切回只会丢掉其后的工作，故只登记晋级判
 
 | 读数 | 值 |
 |---|---|
-| ~~Attention 误差分解~~ | **已撤回，无有效读数。** 原写"V 侧占 78%（V perfect 0.2194 / only-V 0.7862）"三处都不成立：78% 是可加模型的**分配假设**而非测量（`docs/attention-stall-analysis-2026-09-10.md:375` 早已标注"不是测量…来源文档自己标注顶端换算不可靠"，且其锚点文档已丢失）；0.7862 与 0.2194 在仓库中分别为 `gain_qk_only`（`artifacts/official_eval/s1-gram-refine-attn-default.json:4575`）与 `qk_interaction_gain`（`v170-attn-default.json:1916`），**与 V 无关，标签互换**。评测器自有口径（`official_eval.py:1719-1728`：`gain_v_only=(e000−e001)/e000`）需 `--decomposition` 才产出，而本轮全部面板为 `error_source_decomposition: false`（`proxy_v3_eval.py:570` 写死），**当前候选根本没有 v_only/qk_only 读数** |
+| **Attention 误差分解（AD-1，首次在计分口径下实测）** | **Q/K 贡献玩家增益的 86.2%、V 只有 12.1%**（`gain_qk_only` +0.4603 / `gain_v_only` +0.0645 / `gain` +0.5340，72 例）。`gain_q_only` −36.0、`gain_k_only` −36.1 → **Q 与 K 只有在成对时才有意义**，"分别优化 Q"或"分别优化 K"在结构上不存在。自检：本卡算出的 `gain` 均值与面板 0.5340 **完全一致**。这也解释了 VK 为何官方 `−307`：在只占 12% 份额的一侧做需要跨 API 信息的事。见 `workbench/full_solution/attention-decomposition/AD1-result.md` |
 | Attention 分解（旧档，仅存疑存档） | 旧 `*-attn-default.json` 口径下 `gain_v_only` ≈ 0.008–0.13、`gain_qk_only` ≈ 0.18–0.94，**方向与"V 占 78%"相反**。但这些是小型 smoke 档（`mse_standard` ~2e-4，`gain_both` 0.31–0.94），**不属 72 例面板口径**，不可外推 |
 | 机制↔面板对账 | 0.98% vs VK-3 预测 0.986% |
 | Attention 规则族上限 | 拟合核 −1.58% vs 真实 A −8.82%（**兑现 18%**） |
