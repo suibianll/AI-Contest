@@ -1,0 +1,68 @@
+{
+  "version": "v246",
+  "candidate_sha256": "0cc6119a2149b343008ffa8f4302ab8b262b92967d03c9432b2f696bfe0f1edc",
+  "candidate_bytes": 534530,
+  "parent_sha256": "738d2b3617a3fa287524c9f9558a0a43b3af11076bc94a00d0e38a112e45521f",
+  "parent_label": "v245 A-TR1",
+  "parent_bytes": 519334,
+  "delta_bytes": 15196,
+  "donor": "solutions/20260910_v236_attention-agr1-on-v231_scoreNA_timeNA/solution.py (A-GR1 block, pure append of 15191 B)",
+  "official_status": "unregistered/NA",
+  "official_score": null,
+  "official_time_s": null,
+  "submitted": false,
+  "mechanism": "A-GR1 (general asymmetric reciprocal matrix residual, M = I + N per KV group, K receives M^-T, singular values clamped to [1/sqrt2, sqrt2], 32-step Adam on the amax scale loss, strict all-gate-window improvement rule, compiled into the existing learned_rotation/learned_center fields) composed onto the v245 root.",
+  "why": "A-GR1 is the only Attention mechanism with an official POSITIVE side-isolation reading (+50 vs R3 14405, +29 vs v195) that failed only on time: v234 timed out with 8s of headroom and v236 with 9s, and v236 recorded the conclusion that no Linear-parent swap could help. That conclusion assumed the parent cost was fixed. The three v243-v245 cards change that assumption: they cut one attention calibration call by about 22% (GPU) / 29% (CPU tensor) with byte-identical output. This card tests whether that is enough.",
+  "composition": {
+    "method": "append the v236 A-GR1 block to v245",
+    "basis": "diff -u v231 v236 is a single hunk @@ -12323,3 +12323,409 @@ -- a pure tail append that ends by rebinding hif4_calibration_attention to a wrapper calling _AGR1_PARENT_CALIBRATION",
+    "alias_capture": "the alias therefore captures the v245 wrapper, which carries A-TF1/A-TG1/A-TR1",
+    "bytes_outside_append_unchanged": true,
+    "common_prefix_bytes": 519333
+  },
+  "equivalence": {
+    "criterion": "the composed attention state must be BYTE-IDENTICAL to v236 -- A-GR1 trains on a parent that the three cards proved equivalent, so any difference is a composition defect",
+    "layers_identical": 6,
+    "layers_total": 6,
+    "agr1_arms": {
+      "0": "parent",
+      "1": "parent",
+      "5": "parent",
+      "8": "parent",
+      "15": "accepted",
+      "22": "accepted"
+    },
+    "note": "the arm distribution matches the v234/v236 records (layers 15 and 22 accept)"
+  },
+  "timing": {
+    "path": "CPU tensor path (the configuration closest to the official judge)",
+    "rounds": 1,
+    "calls_per_arm": 6,
+    "v236_median_s": 22.5724,
+    "null_median_s": 22.6659,
+    "v246_median_s": 17.0688,
+    "null_spread_s": 0.0934,
+    "delta_s": -5.5036,
+    "relative": -0.2438,
+    "ratio_to_null": 58.9,
+    "per_layer_s": -5.5036,
+    "six_layers_s": -33.0,
+    "note": "Both arms run the SAME A-GR1 block and produce byte-identical states, so this difference IS the margin the three cards recovered."
+  },
+  "comparison_caveat": {
+    "agr1_cost": "+20.7 s, measured on the SIDE-ISOLATION package (standard Linear + candidate Attention, baseline 14426/243s), not on the full package",
+    "full_package_consequence": "> 8 s (v236 timed out; its parent had 9 s of headroom)",
+    "recovered": "~33 s, measured LOCALLY on the CPU tensor path",
+    "warning": "The three figures have different scopes and were measured on different machines. They must NOT be subtracted from one another. No official seconds are predicted and no local-to-official factor is derived. Only an official submission can settle this card."
+  },
+  "risks": [
+    "may still time out -- recovering 24% locally does not mean 24% officially",
+    "v246 Linear side is v245 (v237 L-TF2, official RETAINED 18518/289s) rather than v236 (v231); that difference is officially endorsed (same score, -2s) but is a variable",
+    "A-GR1 calibration cost is independent of the Linear parent (measured in v236), so that is not a new risk"
+  ],
+  "not_done": [
+    "not submitted officially",
+    "no panel run (this card changes A-GR1 cost, not its accuracy)",
+    "no GPU path timing"
+  ]
+}

@@ -1,0 +1,12 @@
+device=cpu layers=[0, 1, 5, 8, 15, 22] rounds=1
+  v236  n=  6 median=22.5724s min=22.5032s
+  null  n=  6 median=22.6659s min=22.5443s
+  v246  n=  6 median=17.0688s min=16.9679s
+
+  null spread (v236 vs same-byte null) = 0.0934s
+  v246 vs v236                         = -5.5036s (-24.38%)
+  ratio to null spread                 = 58.9x
+
+  v246's parent has A-TF1+A-TG1+A-TR1; v236's does not.  Both run the
+  same A-GR1 block and produce identical states, so this difference IS
+  the margin the three cards recovered.
