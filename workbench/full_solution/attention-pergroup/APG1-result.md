@@ -135,3 +135,44 @@ mse = (1/(T·qh·hd)) Σ_h Σ_t Σ_d (out − ref)²
    而 state 里两项都在 `_build_qk_states` 内写入）。**重做前先把这一行找到。**
 
 **`solution.py` 保持 v250（K=6），未改动。**
+
+---
+
+## 插桩结果：两个事实互相矛盾（**未解决，不要据此改代码**）
+
+对 `_apply_attention_rotation` 与 `_block_hadamard_transform` 同时插桩，跑 layer 0：
+
+```
+during CALIBRATION (layer 0): {'apply_rotation': 358}      block_hadamard: 一次未调用
+  apply_rotation 的 block 实参样例: [4, 4, 4, 4, 4, 4]
+during DYNAMIC q/k:            {'apply_rotation': 2}       block_hadamard: 一次未调用
+  apply_rotation 的 block 实参样例: [8, 8]
+```
+
+**事实 A（支持"打对了函数"）**：部署路径**确实**调用 `_apply_attention_rotation`，
+`_block_hadamard_transform` 在部署端**一次都没被调用**。
+所以上一节"应该改 `_block_hadamard_transform`"的结论**是错的**，撤回。
+
+**事实 B（与转储矛盾）**：转储 `q_state` 显示 `rotation_block = None`；
+而插桩显示动态调用时 block 实参是 **8**（即 `state.get("rotation_block")` 非 None）。
+**同一个字段、同一层、两次运行给出不同结果** —— 这个矛盾**没有解决**。
+
+**可能的解释（都未验证，不要采信）**：
+- 转储那次与插桩那次读的不是同一个 state 对象（例如包装器在返回后又写了一轮）；
+- 或 `block_size` 的 8 来自 `_apply_attention_rotation` 内部对 `_ATTN_H64_BLOCK` 的默认，
+  而我的插桩把默认值也记录了（**最可疑**：插桩打印的是"实参"，`None` 会被打印成 `None`，
+  但打印出的是 8，所以这条解释站不住，除非另有调用点**）；
+- 或两次运行的 `hif4_calibration_attention` 走了不同分支（本地面板对 Attention 有已知的
+  设备/路径敏感性，见缺陷 #38）。
+
+## 结论：**停下来，先解决矛盾**
+
+**不解决这个矛盾就继续改代码，等于在没有确认目标的情况下再写一遍。**
+本轮已经出现过一次"打在空转的链上"（12/12 零变化），**第二次同类错误应当避免**。
+
+**下一步（唯一一件事）**：写一个探针，在**同一次运行**里
+①调用 `hif4_calibration_attention`，②立刻转储 `q_state` 的 `rotation` / `rotation_block`，
+③再调用 `hif4_dynamic_quantize_q` 并打印传进 `_apply_attention_rotation` 的 block。
+**三者必须在同一次运行里读取**，才能判断 A/B 矛盾是"两次运行不同"还是"读取点不同"。
+
+**`solution.py` 未改动（v250 / K=6）。本卡仍未发货。**
