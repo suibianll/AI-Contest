@@ -268,3 +268,54 @@ first block passed into _apply_attention_rotation during dynamic q = 8
 > **diff 出循环到底改了什么**。那才是它真正的产出。
 
 `solution.py` 已回退到 v250（K=6）并核对 SHA。
+
+---
+
+## 答案（第三次诊断，用 monkeypatch，**未改 `solution.py`**）
+
+在 C76.4 候选评估期间逐次快照 `q_state` 的键集，与最终返回的 state 对比：
+
+```
+calls seen inside the C76.4 candidates: 10
+  DISTINCT key-set: 14 fields: {'block_smooth_size': 'int'}
+  DISTINCT key-set: 11 fields: {}
+  DISTINCT key-set: 16 fields: {'rotation': 'Tensor', 'rotation_block': 'int', 'block_smooth_size': 'int'}   <-- 循环确实构建了
+  DISTINCT key-set: 15 fields: {'block_smooth_size': 'int'}
+
+FINAL q_state keys: 23
+  final fields: {'block_smooth_size': 'int', 'learned_rotation': 'Tensor', 'logit_gain': 'Tensor'}   <-- 没有 rotation
+```
+
+**C76.4 循环构建了带 `rotation`/`rotation_block` 的 state，但它们不在最终 state 里
+（被后续阶段重建成不带这两个字段的版本）。**
+
+**而最终 state 的 `block_smooth_size` = 8 / 16 / 16，正落在
+`_ATTN_BLOCK_SMOOTH_SIZES = (4, 8, 16)` 内。**
+
+### 结论（这才是"C76.4 的选择去哪了"的答案）
+
+**C76.4 真正部署的是「块平滑尺寸搜索」，搜索空间是 `_ATTN_BLOCK_SMOOTH_SIZES = (4, 8, 16)`，
+结果落在 `block_smooth_size` + `block_smooth_signs` + `block_smooth_seed`，
+由部署端 `solution.py:4237` 消费。**
+
+而 `_ATTN_ROTATION_BLOCKS = (16, 32, 64)` 那个 `rotation`/`rotation_block` 循环
+**构建了 state 但产出不进最终 state —— 是一条未部署的旧路。**
+
+### 这条同时**推翻**了 A-RB1 的解释（要更正）
+
+A-RB1（向 `_ATTN_ROTATION_BLOCKS` 加 4, 8）当时得到**恰好 0**，我把它解释为
+"4/8 恰是 lv3/lv2 组宽、块内变换被组标度吸收"。**那个解释是错的。**
+**真实原因是：那条循环根本不生效，加什么进去都不会有变化。**
+
+同样，A-RB2（加 128, 256）得到的 `+0.000653` 需要重新审视 —— 它不可能来自一条不部署的
+循环；要么那条循环**部分**生效，要么该读数是别的东西。**未查清，不得引用。**
+
+### 对下一轮的意义
+
+**A-PG1（逐 KV 组择优）的正确落点是 `_ATTN_BLOCK_SMOOTH_SIZES` 那条搜索**，
+即 `best_block_smooth_size`（`solution.py:8737`）到 `block_smooth_size`/`block_smooth_signs`
+这条链；**不是** `_ATTN_ROTATION_BLOCKS`。逐组择优的机会仍然成立
+（"MSE 逐 head 精确可加 ⇒ 逐组 MSE 免费"这个理由是数学，与哪条链无关），
+但它要接在**块平滑搜索**上。
+
+**`solution.py` 未改动（v250 / K=6）。**
