@@ -231,3 +231,40 @@ first block passed into _apply_attention_rotation during dynamic q = 8
 4. `_block_hadamard_transform` 的回退分支保持 int 形式不变。
 
 **`solution.py` 未改动（v250 / K=6）。本卡仍未发货 —— 但这次方向是确定的。**
+
+---
+
+## 第二次实现尝试：**又打偏了，停手**（2026-09-11）
+
+第二轮按"字段应该是 `block_smooth_size`"实现了 7 处 hunk（逐组旋转、部署分支不再
+`int()`、分组版 MSE、逐组择优、写回 `block_smooth_size`/`block_smooth_signs`）。
+`AST OK`，构建通过。
+
+**实测否证：六层的 `block_smooth_size` 全是标量（8 / 16 / 16 / None / None / 16），
+没有一层变成 list。** 而且 **`8` 根本不在 C76.4 的候选集 `(16, 32, 64)` 里**。
+
+**结论：`block_smooth_size` 来自基准栈自己的块平滑选择（`solution.py:8737` 的
+`best_block_smooth_size`），C76.4 的择优循环根本不写它。** 所以第二轮的前提也是错的。
+
+### 两次下来的事实清单（这是真正的产出）
+
+| 字段 | 谁写 | 部署端是否消费 |
+|---|---|---|
+| `block_smooth_size` + `block_smooth_signs` | **基准栈的块平滑选择**（`8737`） | **是**（`4237`，实测 block 实参 = `block_smooth_size`） |
+| `rotation` + `rotation_block` | C76.4 择优循环（经 `_build_qk_states`） | **否**（实测 `None`，部署端不读） |
+| `learned_rotation` | A2 包装器 | 是（`_a2_apply_group_rotation`） |
+| `logit_gain` | A1 / v168 | 是 |
+
+**所以"C76.4 的选择存进哪个字段、由谁消费"这个问题，本轮两次尝试都没有答上来。**
+已确定的是它**不**在 `rotation`/`rotation_block`，也**不**在 `block_smooth_size`。
+
+### 为什么停手
+
+本轮两次实现都打在空转的链上。**第三次在没有先答出上面那个问题之前不该动手。**
+下一轮的第一件事**不是写代码**，而是：
+
+> 在 C76.4 择优循环的**末尾**（`best_rotation_states` 被采用处）打印
+> `q_state`/`k_state` 的**全部键**，并与基准栈返回的 state 逐键对比 ——
+> **diff 出循环到底改了什么**。那才是它真正的产出。
+
+`solution.py` 已回退到 v250（K=6）并核对 SHA。
