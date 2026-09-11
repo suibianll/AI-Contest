@@ -1,0 +1,31 @@
+===== A-TF1 (v243 vs v237) on the HARNESS GPU path =====
+device=cuda q_heads=16 kv_heads=4 head_dim=256 splits=5
+attention layers: [0, 1, 5, 8, 15, 22]  (skipped 18 Linear-only)
+layer   0: state diffs=0 dynamic diffs=0  IDENTICAL
+layer   1: state diffs=0 dynamic diffs=0  IDENTICAL
+layer   5: state diffs=0 dynamic diffs=0  IDENTICAL
+layer   8: state diffs=0 dynamic diffs=0  IDENTICAL
+layer  15: state diffs=0 dynamic diffs=0  IDENTICAL
+layer  22: state diffs=0 dynamic diffs=0  IDENTICAL
+
+equivalence: 6/6 layers byte-identical
+
+  par   n= 18  median=4.7823s  min=4.6514s  mean=4.7662s
+  nul   n= 18  median=4.7772s  min=4.6450s  mean=4.7539s
+  cand  n= 18  median=4.4874s  min=4.3424s  mean=4.4817s
+
+  null spread (par vs nul, same bytes) = 0.0052s
+  candidate vs parent                   = -0.2950s (-6.17%)
+  VERDICT: distinguishable on this machine (GPU seconds; official is CPU).
+
+===== A-TG1 (v244 vs v243) on CPU (the official judge device) =====
+device=cpu q_heads=16 kv_heads=4 head_dim=256 splits=5
+attention layers: [0, 1, 5, 8, 15, 22]
+layer   0: arm=rotation state diffs=0 dynamic diffs=0  IDENTICAL
+layer   1: arm=rotation state diffs=0 dynamic diffs=0  IDENTICAL
+layer   5: arm=rotation state diffs=0 dynamic diffs=0  IDENTICAL
+layer   8: arm=identity state diffs=0 dynamic diffs=0  IDENTICAL
+layer  15: arm=rotation state diffs=0 dynamic diffs=0  IDENTICAL
+layer  22: arm=rotation state diffs=0 dynamic diffs=0  IDENTICAL
+
+equivalence: 6/6 layers byte-identical

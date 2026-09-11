@@ -1,0 +1,18 @@
+device=cuda q_heads=16 kv_heads=4 head_dim=256 splits=5
+attention layers: [0, 1, 5, 8, 15, 22]
+layer   0: arm=rotation state diffs=0 dynamic diffs=0  IDENTICAL
+layer   1: arm=rotation state diffs=0 dynamic diffs=0  IDENTICAL
+layer   5: arm=rotation state diffs=0 dynamic diffs=0  IDENTICAL
+layer   8: arm=identity state diffs=0 dynamic diffs=0  IDENTICAL
+layer  15: arm=rotation state diffs=0 dynamic diffs=0  IDENTICAL
+layer  22: arm=rotation state diffs=0 dynamic diffs=0  IDENTICAL
+
+equivalence: 6/6 layers byte-identical
+
+  par   n= 18  median=4.4667s  min=4.3362s  mean=4.4728s
+  nul   n= 18  median=4.4772s  min=4.2935s  mean=4.4541s
+  cand  n= 18  median=4.4208s  min=4.2448s  mean=4.4228s
+
+  null spread (par vs nul, same bytes) = 0.0105s
+  candidate vs parent                   = -0.0459s (-1.03%)
+  VERDICT: distinguishable, 4.4x the null spread (GPU seconds; official is CPU).

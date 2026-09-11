@@ -1,0 +1,31 @@
+device=cuda q_heads=16 kv_heads=4 head_dim=256 splits=5
+attention layers: [0, 1, 5, 8, 15, 22]
+calibration window token counts (layer 0): [10, 128, 512, 1024, 1024]
+gate window = split 4 -> 1024 tokens
+
+layer |   trainer   gate_id  gate_rot |     total | gate share
+    0 |     1.700     1.188     1.197 |     4.086 |  58.4%
+        loss_identity=1.0  bit==1.0: True   loss_rotation=0.9546699968720022  arm=rotation
+    1 |     1.363     1.157     1.157 |     3.678 |  62.9%
+        loss_identity=1.0  bit==1.0: True   loss_rotation=0.8823217041101233  arm=rotation
+    5 |     1.335     1.226     1.205 |     3.766 |  64.5%
+        loss_identity=1.0  bit==1.0: True   loss_rotation=0.9294062740795778  arm=rotation
+    8 |     1.354     1.216     1.204 |     3.773 |  64.1%
+        loss_identity=1.0  bit==1.0: True   loss_rotation=1.0286508062164725  arm=identity
+   15 |     1.360     1.144     1.167 |     3.670 |  63.0%
+        loss_identity=1.0  bit==1.0: True   loss_rotation=0.9754544762523407  arm=rotation
+   22 |     1.372     1.166     1.159 |     3.696 |  62.9%
+        loss_identity=1.0  bit==1.0: True   loss_rotation=0.9955921670640943  arm=rotation
+
+gate share of calibration: median 62.9%
+
+identity-arm bit check (player_mse vs standard_mse):
+  layer   0: identity-player=0.00045395680353976786  standard=0.00045395680353976786  bit-equal=True
+  layer   1: identity-player=0.0016832130495458841  standard=0.0016832130495458841  bit-equal=True
+  layer   5: identity-player=0.0012931065866723657  standard=0.0012931065866723657  bit-equal=True
+  layer   8: identity-player=0.0035925854463130236  standard=0.0035925854463130236  bit-equal=True
+  layer  15: identity-player=0.002293975558131933  standard=0.002293975558131933  bit-equal=True
+  layer  22: identity-player=0.014409424737095833  standard=0.014409424737095833  bit-equal=True
+
+If the identity-player and standard arms are bit-equal on every layer, then
+loss_identity is exactly x/max(x,1e-12) and the identity player arm is redundant.

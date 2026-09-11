@@ -16,7 +16,14 @@
     "criterion": "byte-for-byte equality of hif4_calibration_attention state AND of the dynamic q/k/v outputs",
     "script": "workbench/full_solution/attention-calib-hoist/atf1_verify.py",
     "raw_output": "verification.out",
-    "layers_tested": [0, 1, 5, 8, 15, 22],
+    "layers_tested": [
+      0,
+      1,
+      5,
+      8,
+      15,
+      22
+    ],
     "layers_byte_identical": 6,
     "layers_total": 6,
     "state_diffs": 0,
@@ -30,12 +37,13 @@
     "parent_median_s": 18.2882,
     "null_median_s": 18.2342,
     "candidate_median_s": 18.0733,
-    "null_spread_s": 0.0540,
+    "null_spread_s": 0.054,
     "candidate_minus_parent_s": -0.2149,
     "relative": -0.0118,
     "ratio_to_null_spread": 3.98,
     "verdict": "distinguishable on this machine",
-    "caveat": "GPU seconds. The official judge is a Kunpeng 920B CPU. Absolute seconds are NOT predicted or extrapolated. Per-call this function is about 1.0s locally, so the 1.18% cut is roughly 0.07s local over the 6 attention layers -- a magnitude that will most likely NOT be distinguishable officially. This card is margin, not score."
+    "caveat": "GPU seconds. The official judge is a Kunpeng 920B CPU. Absolute seconds are NOT predicted or extrapolated. Per-call this function is about 1.0s locally, so the 1.18% cut is roughly 0.07s local over the 6 attention layers -- a magnitude that will most likely NOT be distinguishable officially. This card is margin, not score.",
+    "note": "SUPERSEDED as the headline figure by timing_gpu_path_corrected. This entry is the CPU-tensor path (calibration tensors left on cpu), which is a valid configuration but is neither the panel path nor the official path. Defect #38: the probe did not pin the device, so this number corresponds to a mixed path."
   },
   "append_check": {
     "head_identical": true,
@@ -51,5 +59,21 @@
     "not submitted officially",
     "Linear panel not re-run (no Linear path is touched; the diff is confined to _a2_train_rotation)",
     "CPU timing not measured"
-  ]
+  ],
+  "timing_gpu_path_corrected": {
+    "device": "cuda, calibration tensors moved to the device as the harness _move_qkv does",
+    "calls_per_arm": 18,
+    "parent_median_s": 4.7823,
+    "null_median_s": 4.7772,
+    "candidate_median_s": 4.4874,
+    "null_spread_s": 0.0052,
+    "delta_s": -0.295,
+    "relative": -0.0617,
+    "ratio_to_null": 56.7,
+    "verdict": "distinguishable"
+  },
+  "defect_38": {
+    "what": "Probe did not pin the device; the reported -1.18% came from the CPU-tensor path. On the panel GPU path the same change is -6.17%. Both are real; they save different costs (Python dispatch vs attention forward), and they rank A-TF1 and A-TG1 in OPPOSITE order.",
+    "fix": "Both paths are now reported; probes set the device explicitly."
+  }
 }

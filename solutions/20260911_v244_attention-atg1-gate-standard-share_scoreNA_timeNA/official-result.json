@@ -1,0 +1,86 @@
+{
+  "version": "v244",
+  "candidate_sha256": "cdb9a823c6fe754e1d66ab0cfa7c9638dbf804efdc4b33e41fcbb02432a5686f",
+  "candidate_bytes": 518506,
+  "parent_sha256": "86169fd57b417e73cba307c1d5c8ecb326d480e25cc447f643da2c79cc8d82ea",
+  "parent_label": "v243 A-TF1",
+  "parent_bytes": 517135,
+  "delta_bytes": 1371,
+  "official_status": "unregistered/NA",
+  "official_score": null,
+  "official_time_s": null,
+  "official_time_display": null,
+  "submitted": false,
+  "mechanism": "A-TG1: the A2 gate evaluated four full-window arms per layer; two are provably redundant. The identity arm passes learned_rotation=None, and the dynamic quantizers test `if learned_rotation is not None`, so its player arm and its own standard arm are the same computation on the same state -- measured bit-equal on all six real attention layers, which makes loss_identity exactly x/max(x,1e-12) for x the standard arm. The inner _run closure is lifted to a module-level _a2_gate_arm_mse, _a2_true_path_gate_loss gains an optional standard_mse parameter, and the gate evaluates the standard arm once and shares it. Four arms become two.",
+  "why_this_form_was_chosen": "The root sits at 289s against a 300s hard limit. The project's validated Attention-side category is the byte-equivalence-plus-faster card (v233 L-TF1 and v237 L-TF2 both took official RETAINED at the same score and fewer seconds). This card is the same class, is provable from the source rather than fitted, and -- unlike a new mechanism -- carries no risk of the local/official direction reversal that killed A-MC1 and VK.",
+  "equivalence": {
+    "criterion": "byte-for-byte equality of hif4_calibration_attention state AND of the dynamic q/k/v outputs; plus an exact-zero panel delta",
+    "check_1_in_process_gpu": {
+      "script": "workbench/full_solution/attention-gate-share/atg1_verify.py",
+      "raw_output": "verification-gpu-timing.out",
+      "layers_byte_identical": 6,
+      "layers_total": 6,
+      "arms": {"0": "rotation", "1": "rotation", "5": "rotation", "8": "identity", "15": "rotation", "22": "rotation"}
+    },
+    "check_2_in_process_cpu": {
+      "raw_output": "verification-cpu-path-timing.out",
+      "layers_byte_identical": 6,
+      "layers_total": 6,
+      "arms": {"0": "rotation", "1": "rotation", "5": "rotation", "8": "identity", "15": "rotation", "22": "rotation"}
+    },
+    "check_3_panel_shard0": {
+      "raw_output": "panel-shard0-manifest.json",
+      "command": "evaluator/eval.py --solution solution.py --baseline-solution <v243> --attention-only --shards 0 --algorithm-device cuda",
+      "cases": 12,
+      "positive_cases": 0,
+      "negative_cases": 0,
+      "zero_cases": 12,
+      "note": "12/12 exactly zero is the expected reading for an equivalent change; any non-zero would be a defect."
+    },
+    "critical_layer": "layer 8 is the only layer whose rotation arm LOSES the gate (loss_rotation 1.0286 > loss_identity 1.0). It is the layer that would expose a changed comparison, and it reproduces arm=identity exactly."
+  },
+  "timing": {
+    "note": "Two device paths were measured and they disagree by 6x, in OPPOSITE directions relative to v243 A-TF1. Both are real; they save different costs. Neither is exactly the official path.",
+    "gpu_path_harness_default": {
+      "device": "cuda, calibration tensors moved to the device as _move_qkv does",
+      "calls_per_arm": 18,
+      "parent_median_s": 4.4667,
+      "null_median_s": 4.4772,
+      "candidate_median_s": 4.4208,
+      "null_spread_s": 0.0105,
+      "delta_s": -0.0459,
+      "relative": -0.0103,
+      "ratio_to_null": 4.4,
+      "verdict": "distinguishable"
+    },
+    "cpu_tensor_path": {
+      "device": "cuda selected by the script, calibration tensors left on cpu",
+      "calls_per_arm": 18,
+      "parent_median_s": 18.3155,
+      "null_median_s": 18.3088,
+      "candidate_median_s": 17.1598,
+      "null_spread_s": 0.0067,
+      "delta_s": -1.1557,
+      "relative": -0.0631,
+      "ratio_to_null": 171.9,
+      "verdict": "distinguishable"
+    },
+    "official_device": "Kunpeng 920B CPU. On the official machine torch.cuda.is_available() is false, so the base stack, the trainer and the gate ALL run on CPU -- a configuration this machine cannot reproduce exactly, because here the trainer still selects cuda when the calibration tensors are on cpu.",
+    "no_extrapolation": "No official seconds are predicted and no local-to-official conversion factor is derived. The claim is limited to: on this machine, on the same device path, the candidate is faster and the difference exceeds the same-byte null."
+  },
+  "append_check": {
+    "method": "byte-level replacement with a uniqueness assert per hunk, head/tail byte-identity per hunk, plus a segment comparison across all three hunks",
+    "segments_identical_outside_hunks": true,
+    "segment_lengths_parent": [469792, 79, 1507, 43516],
+    "segment_lengths_candidate": [469792, 79, 1507, 43516]
+  },
+  "defect_38": {
+    "what": "The first version of this card reported the CPU-tensor figure and then 'corrected' it as if the GPU figure were the only true one. That framing was wrong. The real defect is that the probes did not pin the device, so the measurement corresponded to a mixed path that is neither the panel's nor the official machine's. The two paths also RANK the two mechanisms oppositely, so an unpinned measurement cannot even order them correctly.",
+    "fix": "Probes now set the device explicitly; both paths are reported."
+  },
+  "not_done": [
+    "not submitted officially",
+    "no pure-CPU measurement with torch.cuda.is_available() forced false -- the path closest to the official judge, and the most valuable one still missing",
+    "Linear side not touched (no Linear path is modified)"
+  ]
+}

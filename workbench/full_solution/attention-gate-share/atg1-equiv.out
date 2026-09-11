@@ -1,0 +1,12 @@
+device=cuda q_heads=16 kv_heads=4 head_dim=256 splits=5
+attention layers: [0, 1, 5, 8, 15, 22]
+layer   0: arm=rotation state diffs=0 dynamic diffs=0  IDENTICAL
+layer   1: arm=rotation state diffs=0 dynamic diffs=0  IDENTICAL
+layer   5: arm=rotation state diffs=0 dynamic diffs=0  IDENTICAL
+layer   8: arm=identity state diffs=0 dynamic diffs=0  IDENTICAL
+layer  15: arm=rotation state diffs=0 dynamic diffs=0  IDENTICAL
+layer  22: arm=rotation state diffs=0 dynamic diffs=0  IDENTICAL
+
+equivalence: 6/6 layers byte-identical
+
+(ATG1_SKIP_TIMING set -- equivalence only)

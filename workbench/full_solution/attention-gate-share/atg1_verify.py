@@ -1,24 +1,26 @@
-"""A-TF1: hoist the loop-invariant Cayley pair out of the A2 training window loop.
+"""A-TG1: does sharing the standard gate arm change anything, and is it faster?
 
-Claim under test, in two independent halves:
+EQUIVALENCE is the only release condition and it is byte equality, not a
+tolerance.  The edit rewrites the gate as
 
-  EQUIVALENCE  the candidate's hif4_calibration_attention must return states that
-               are BYTE-FOR-BYTE identical to the parent's, on every real
-               attention layer, and the dynamic q/k/v outputs must be
-               byte-for-byte identical too.  The edit only moves two
-               computations to where their inputs are already fixed, so any
-               non-zero here is a defect, not a tolerance question.
+    standard_mse = arm(q_state, k_state)
+    loss_identity = standard_mse / max(standard_mse, 1e-12)
+    loss_rotation = arm(q_with_rotation, k_with_rotation) / max(standard_mse, 1e-12)
 
-  TIME         the calibration call is timed paired against a SAME-BYTE null
-               (the parent module loaded a second time under another name).
-               The null gives this machine's noise floor; a change smaller than
-               the null is reported as "not distinguishable", not as a win.
+where the parent evaluated four full-window arms.  Two things have to hold for
+that to be exact, and both were measured before the edit (`atg1_probe.py`):
+the identity arm's player and standard arms are bit-equal on every layer, and
+`loss_identity` is exactly 1.0.  The layer whose rotation arm LOSES the gate
+(layer 8, loss_rotation 1.0286 > 1.0) is the one that would expose a changed
+comparison, so a state mismatch there is the expected failure signature.
 
-Local seconds here are GPU seconds.  The official judge is a Kunpeng 920B CPU,
-so the ratio between the two arms is the only thing this file claims -- never a
-predicted official second count.
+TIMING is paired against a same-byte null (the parent loaded a second time
+under another name), so a change smaller than this machine's noise floor is
+reported as "not distinguishable" rather than as a win.  Local seconds are GPU
+seconds; the official judge is a Kunpeng 920B CPU, so only the RATIO between
+arms is claimed here.
 
-    ATF1_DEVICE=cuda .venv/Scripts/python.exe atf1_verify.py
+    ATG1_DEVICE=cuda .venv/Scripts/python.exe atg1_verify.py
 """
 
 from __future__ import annotations
@@ -34,7 +36,7 @@ import torch
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[2]
-PARENT = ROOT / "solutions" / "20260910_v237_linear-tf2-first-pass-gradient-reuse_scoreNA_timeNA" / "solution.py"
+PARENT = ROOT / "solutions" / "20260911_v243_attention-atf1-cayley-hoist_scoreNA_timeNA" / "solution.py"
 
 
 def load(name: str, path: Path):
@@ -69,53 +71,45 @@ def diff(a, b):
 def main() -> int:
     torch.set_num_threads(4)
     torch.set_grad_enabled(False)
-    # the candidate under test is the v243 ARCHIVE, not the working copy
-    root = load("atf1_cand", ROOT / "solutions" / "20260911_v243_attention-atf1-cayley-hoist_scoreNA_timeNA" / "solution.py")
-    par = load("atf1_par", PARENT)
-    nul = load("atf1_nul", PARENT)          # same bytes, second module -> null
+    cand = load("atg1_cand", ROOT / "solution.py")
+    par = load("atg1_par", PARENT)
+    nul = load("atg1_nul", PARENT)
     sys.path.insert(0, str(ROOT / "evaluator"))
     import official_eval as v2  # noqa: PLC0415
 
-    dev = torch.device(os.environ.get("ATF1_DEVICE", "cuda" if torch.cuda.is_available() else "cpu"))
-    rounds = int(os.environ.get("ATF1_ROUNDS", "3"))
+    dev = torch.device(os.environ.get("ATG1_DEVICE", "cuda" if torch.cuda.is_available() else "cpu"))
+    rounds = int(os.environ.get("ATG1_ROUNDS", "3"))
     pack = torch.load(
         ROOT / "artifacts/official_eval/cache/qwen3.5-4b-proxy-v2.pt",
         map_location="cpu", mmap=True, weights_only=False,
     )
     qh = int(pack["q_heads"]); kvh = int(pack["kv_heads"]); hd = int(pack["head_dim"])
     splits = len(pack["calibration_qkv"])
-    all_layers = list(range(len(pack["calibration_qkv"][0])))
-    # only layers that actually carry calibration QKV are attention layers; the
-    # rest of the pack's depth is Linear-only and its qkv slots are None.
-    layers = [
-        l for l in all_layers
-        if all(pack["calibration_qkv"][s][l] is not None for s in range(splits))
-    ]
+    layers = [l for l in range(len(pack["calibration_qkv"][0]))
+              if all(pack["calibration_qkv"][s][l] is not None for s in range(splits))]
     print(f"device={dev} q_heads={qh} kv_heads={kvh} head_dim={hd} splits={splits}", flush=True)
-    print(f"attention layers: {layers}  (skipped {len(all_layers) - len(layers)} Linear-only)", flush=True)
+    print(f"attention layers: {layers}", flush=True)
 
     def calib_list(layer):
-        # Harness construction (_move_qkv): encode with _pair, then move to the
-        # algorithm device.  The earlier version left these on CPU and encoded
-        # from float32, which pinned the base stack calibration to the CPU and
-        # inflated every timing ~3.6x.  See the v244 card for the correction.
+        # EXACTLY the harness construction (_move_qkv): encode with _pair, then
+        # move to the algorithm device.  Leaving these on CPU -- as the earlier
+        # probes did -- makes the base stack calibration run on CPU and inflates
+        # the whole call ~3.6x, so the timings stop representing the panel.
         return [
             {r: tuple(t.to(dev) for t in v2._pair(pack["calibration_qkv"][s][layer][i]))
              for i, r in enumerate(("q", "k", "v"))}
             for s in range(splits)
         ]
 
-    # --- equivalence, on every real attention layer
     bad = 0
     for layer in layers:
         cl = calib_list(layer)
-        sc = root.hif4_calibration_attention(cl, qh, kvh, hd)
+        sc = cand.hif4_calibration_attention(cl, qh, kvh, hd)
         sp = par.hif4_calibration_attention(cl, qh, kvh, hd)
         d = diff(canon(sc), canon(sp))
-        # dynamic path too: same window, same state
         w = cl[0]
         outs = []
-        for mod, st in ((root, sc), (par, sp)):
+        for mod, st in ((cand, sc), (par, sp)):
             outs.append(canon({
                 "q": mod.hif4_dynamic_quantize_q(*w["q"], qh, hd, st["q_state"]),
                 "k": mod.hif4_dynamic_quantize_k(*w["k"], kvh, hd, st["k_state"]),
@@ -124,25 +118,26 @@ def main() -> int:
         dd = diff(outs[0], outs[1])
         ok = not d and not dd
         bad += (not ok)
-        print(f"layer {layer:>3}: state diffs={len(d)} dynamic diffs={len(dd)}  {'IDENTICAL' if ok else '*** DIFFERS ***'}"
+        arm = sc["q_state"].get("a2_arm")
+        print(f"layer {layer:>3}: arm={arm:<8} state diffs={len(d)} dynamic diffs={len(dd)}  "
+              f"{'IDENTICAL' if ok else '*** DIFFERS ***'}"
               + (f"  e.g. {d[:3]}" if d else "") + (f"  e.g. {dd[:3]}" if dd else ""), flush=True)
     print(f"\nequivalence: {len(layers) - bad}/{len(layers)} layers byte-identical", flush=True)
     if bad:
-        print("VERDICT: NOT equivalent -- the hoist changed behaviour. Do not ship.")
+        print("VERDICT: NOT equivalent -- sharing the standard arm changed behaviour. Do not ship.")
         return 1
 
-    if os.environ.get("ATF1_SKIP_TIMING"):
-        print("\n(ATF1_SKIP_TIMING set -- equivalence only, timing not re-measured)")
+    if os.environ.get("ATG1_SKIP_TIMING"):
+        print("\n(ATG1_SKIP_TIMING set -- equivalence only)")
         return 0
 
-    # --- timing, paired against the same-byte null
     times = {"cand": [], "par": [], "nul": []}
     if dev.type == "cuda":
         torch.cuda.synchronize()
-    for layer in layers[:1] if os.environ.get("ATF1_LAYER0_ONLY") else layers:
+    for layer in layers:
         cl = calib_list(layer)
         for _ in range(rounds):
-            for name, mod in (("par", par), ("cand", root), ("nul", nul)):
+            for name, mod in (("par", par), ("cand", cand), ("nul", nul)):
                 if dev.type == "cuda":
                     torch.cuda.synchronize()
                 t0 = time.perf_counter()
@@ -154,16 +149,14 @@ def main() -> int:
     for name in ("par", "nul", "cand"):
         v = times[name]
         print(f"  {name:<5} n={len(v):>3}  median={statistics.median(v):.4f}s  min={min(v):.4f}s  mean={statistics.mean(v):.4f}s")
-    pc = statistics.median(times["par"])
-    nn = statistics.median(times["nul"])
-    cd = statistics.median(times["cand"])
+    pc, nn, cd = (statistics.median(times[k]) for k in ("par", "nul", "cand"))
     print(f"\n  null spread (par vs nul, same bytes) = {abs(pc - nn):.4f}s")
-    print(f"  candidate vs parent                   = {cd - pc:+.4f}s "
-          f"({(cd / pc - 1.0) * 100:+.2f}%)")
+    print(f"  candidate vs parent                   = {cd - pc:+.4f}s ({(cd / pc - 1.0) * 100:+.2f}%)")
     if abs(cd - pc) <= abs(pc - nn):
         print("  VERDICT: not distinguishable from this machine's noise floor.")
     else:
-        print("  VERDICT: distinguishable on this machine (GPU seconds; official is CPU).")
+        print(f"  VERDICT: distinguishable, {abs(cd - pc) / max(abs(pc - nn), 1e-9):.1f}x the null spread "
+              f"(GPU seconds; official is CPU).")
     return 0
 
 
