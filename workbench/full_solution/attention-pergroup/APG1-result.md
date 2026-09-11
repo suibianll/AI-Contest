@@ -97,3 +97,41 @@ mse = (1/(T·qh·hd)) Σ_h Σ_t Σ_d (out − ref)²
 否则会再写一遍一条不生效的链。
 
 **结论：`solution.py` 已回退到 v250（K=6）并核对 SHA。本卡不发货（零增益）。**
+
+---
+
+## 前置问题已查清：C76.4 的选择**不走** `state["rotation"]`
+
+这是上一节要求的"查清之后再做"的那件事。做法：直接跑校准，转储 `q_state` 的全部字段。
+
+**三层（0 / 1 / 22）一致：**
+
+| 字段 | 形状 | 是什么 |
+|---|---|---|
+| `learned_rotation` | (4, 256, 256) | **A2 包装器**训练出的正交矩阵 |
+| **`block_smooth_signs`** | **(4, 256)** | **正是 `_attention_rotation_signs` 的输出形状** |
+| `logit_gain` | (4,) | A1（v168）机制 |
+| `pair_transform` | (16, 128, 2, 2) | 成对变换 |
+| **`rotation`** | **`None`** | ← 未启用 |
+| **`rotation_block`** | **`None`** | ← 未启用 |
+
+**结论：C76.4 选的 `signs` 与 `block` 走的是 `block_smooth_size` / `block_smooth_signs`，
+由 `_block_hadamard_transform` 应用；`state["rotation"]` / `state["rotation_block"]`
+（即 `_apply_attention_rotation` 那条路，`solution.py:3026`）在部署路径上**是空转的旧路**。**
+
+所以上一节的六处 hunk **打在了不生效的链上** —— 12/12 零变化由此**完全解释**，
+不需要再怀疑实现细节。
+
+## 重做的正确做法（未做）
+
+1. `_block_hadamard_transform(dense, block_size: int, seed=0)` 现在吃**单个** size；
+   逐组需要**每 KV 组一个 size**，或按组切片分别调用后拼回。
+2. state 的 `block_smooth_size` 由 **int 改为长度 kv_heads 的 list**（`block_smooth_signs`
+   已是 (kv_heads, head_dim)，逐组 signs 天然支持）。
+3. 消费点：`solution.py:2978`（动态端读 `block_smooth_signs`）、`10768`、`10802`
+   （`attention_block_signs=state.get("block_smooth_signs")`）。
+4. **仍未验证的一环**：C76.4 的择优循环里，`signs` 与 `block` 究竟在**哪一行**被写入
+   `block_smooth_size` / `block_smooth_signs`（候选是每层一个 (block, seed)，
+   而 state 里两项都在 `_build_qk_states` 内写入）。**重做前先把这一行找到。**
+
+**`solution.py` 保持 v250（K=6），未改动。**
