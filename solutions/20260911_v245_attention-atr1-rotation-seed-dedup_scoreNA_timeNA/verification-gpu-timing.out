@@ -1,0 +1,39 @@
+===== A-TR1 (v245 vs v244) — GPU path =====
+device=cuda q_heads=16 kv_heads=4 head_dim=256 splits=5
+attention layers: [0, 1, 5, 8, 15, 22]
+layer   0: arm=rotation state diffs=0 dynamic diffs=0  IDENTICAL
+layer   1: arm=rotation state diffs=0 dynamic diffs=0  IDENTICAL
+layer   5: arm=rotation state diffs=0 dynamic diffs=0  IDENTICAL
+layer   8: arm=identity state diffs=0 dynamic diffs=0  IDENTICAL
+layer  15: arm=rotation state diffs=0 dynamic diffs=0  IDENTICAL
+layer  22: arm=rotation state diffs=0 dynamic diffs=0  IDENTICAL
+
+equivalence: 6/6 layers byte-identical
+
+  par   n= 18  median=4.4156s  min=4.2428s  mean=4.3976s
+  nul   n= 18  median=4.3920s  min=4.2669s  mean=4.3838s
+  cand  n= 18  median=3.7047s  min=3.6732s  mean=3.7147s
+
+  null spread (par vs nul, same bytes) = 0.0236s
+  candidate vs parent                   = -0.7108s (-16.10%)
+  VERDICT: distinguishable, 30.2x the null spread (GPU seconds; official is CPU).
+
+===== A-TR1 (v245 vs v244) — CPU tensor path =====
+device=cpu q_heads=16 kv_heads=4 head_dim=256 splits=5
+attention layers: [0, 1, 5, 8, 15, 22]
+layer   0: arm=rotation state diffs=0 dynamic diffs=0  IDENTICAL
+layer   1: arm=rotation state diffs=0 dynamic diffs=0  IDENTICAL
+layer   5: arm=rotation state diffs=0 dynamic diffs=0  IDENTICAL
+layer   8: arm=identity state diffs=0 dynamic diffs=0  IDENTICAL
+layer  15: arm=rotation state diffs=0 dynamic diffs=0  IDENTICAL
+layer  22: arm=rotation state diffs=0 dynamic diffs=0  IDENTICAL
+
+equivalence: 6/6 layers byte-identical
+
+  par   n=  6  median=17.1139s  min=16.9556s  mean=17.1678s
+  nul   n=  6  median=17.1365s  min=16.9512s  mean=17.2080s
+  cand  n=  6  median=13.0737s  min=12.9259s  mean=13.1111s
+
+  null spread (par vs nul, same bytes) = 0.0226s
+  candidate vs parent                   = -4.0401s (-23.61%)
+  VERDICT: distinguishable, 178.7x the null spread (GPU seconds; official is CPU).

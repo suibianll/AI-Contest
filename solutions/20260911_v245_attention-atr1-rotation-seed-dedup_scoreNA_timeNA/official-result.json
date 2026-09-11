@@ -1,0 +1,92 @@
+{
+  "version": "v245",
+  "candidate_sha256": "738d2b3617a3fa287524c9f9558a0a43b3af11076bc94a00d0e38a112e45521f",
+  "candidate_bytes": 519334,
+  "parent_sha256": "cdb9a823c6fe754e1d66ab0cfa7c9638dbf804efdc4b33e41fcbb02432a5686f",
+  "parent_label": "v244 A-TG1",
+  "parent_bytes": 518506,
+  "delta_bytes": 828,
+  "official_status": "unregistered/NA",
+  "official_score": null,
+  "official_time_s": null,
+  "submitted": false,
+  "mechanism": "A-TR1: _attention_rotation_signs takes only the seed, but the call sits inside a for block_size in (16,32,64) x for seed in (0,1,2,3) double loop. At this shape seeds 0, 1 and 2 produce the identical sign vector (sha256 prefix 6c4b415a) and only seed 3 differs (5bb2a9c6), so each block re-scored the same candidate three times. The candidate state is a function of (signs, block) and not of the seed, and the selection is a strict `<` on a score that is therefore also identical, so a duplicate can never change the argmax. Skipping duplicates is exact.",
+  "why_this_form_was_chosen": "This card was found by profiling rather than by guessing a mechanism. The profile showed _dense_to_hif4 is 75.9% of one attention calibration call, 10.33s of that reached through hif4_dynamic_quantize_q/k, and 6.95s of THAT through one line, _attention_deployed_mse:2891. Content-hashing every call's (q_state, k_state) together with its line number showed 7 of 16 calls recomputing an already-scored state pair.",
+  "methodology": {
+    "how_found": "perf profile -> call-site attribution -> content-hash duplicate detection",
+    "profile_script": "workbench/full_solution/attention-base-profile/abp1_profile.py",
+    "redundancy_rule": "same call site AND identical arguments AND identical state -- see defect #39 for why all three are required"
+  },
+  "equivalence": {
+    "criterion": "byte-for-byte equality of hif4_calibration_attention state AND of the dynamic q/k/v outputs",
+    "gpu_path": {
+      "layers_byte_identical": 6,
+      "layers_total": 6
+    },
+    "cpu_path": {
+      "layers_byte_identical": 6,
+      "layers_total": 6
+    },
+    "arms": {
+      "0": "rotation",
+      "1": "rotation",
+      "5": "rotation",
+      "8": "identity",
+      "15": "rotation",
+      "22": "rotation"
+    },
+    "panel_zero_delta_check": "not done for this card"
+  },
+  "timing": {
+    "note": "Both device paths measured; unlike v243/v244 they AGREE in direction, because this card removes real computation (duplicate candidate encodings) rather than moving cost between device-bound and dispatch-bound work.",
+    "gpu_path": {
+      "parent_median_s": 4.4156,
+      "null_median_s": 4.392,
+      "candidate_median_s": 3.7047,
+      "null_spread_s": 0.0236,
+      "delta_s": -0.7108,
+      "relative": -0.161,
+      "ratio_to_null": 30.2
+    },
+    "cpu_tensor_path": {
+      "parent_median_s": 17.1139,
+      "null_median_s": 17.1365,
+      "candidate_median_s": 13.0737,
+      "null_spread_s": 0.0226,
+      "delta_s": -4.0401,
+      "relative": -0.2361,
+      "ratio_to_null": 178.7
+    },
+    "calls_per_arm": {
+      "gpu_path": 18,
+      "cpu_tensor_path": 6
+    },
+    "no_extrapolation": "No official seconds predicted, no local-to-official factor derived. The official judge is a Kunpeng 920B CPU whose torch.cuda.is_available() is false; neither local path reproduces it exactly."
+  },
+  "cumulative_over_v237": {
+    "gpu_path_relative": -0.221,
+    "cpu_tensor_path_relative": -0.292,
+    "note": "product of the three successive per-parent ratios, not a sum; each card was measured against its own parent"
+  },
+  "purity": {
+    "method": "byte-level replacement, uniqueness assert, head/tail byte-identity, segment comparison across the hunk",
+    "segments_identical_outside_hunk": true,
+    "segment_lengths_parent": [
+      429381,
+      88920
+    ],
+    "segment_lengths_candidate": [
+      429381,
+      88920
+    ]
+  },
+  "defect_39": {
+    "what": "The card's first draft also claimed lines 10217/10647 were a duplicate. That was wrong: the redundancy signature hashed only (q_state,k_state) and not the other arguments, and those two sites pass different ones (full lists vs a validation_* subset).",
+    "fix": "Claim withdrawn; rule recorded -- a redundancy signature must cover the function's complete argument list."
+  },
+  "not_done": [
+    "not submitted officially",
+    "no panel zero-delta check for this card",
+    "no pure-CPU run with torch.cuda.is_available() forced false"
+  ]
+}
