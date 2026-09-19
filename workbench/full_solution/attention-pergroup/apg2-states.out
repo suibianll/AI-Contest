@@ -1,0 +1,81 @@
+device=cuda q_heads=16 kv_heads=4 head_dim=256 layers=[0, 1, 5, 8, 15, 22]
+
+layer 0
+  parent wall 4.138s  control wall 3.953s  active wall 3.936s
+  CONTROL (per-group off) vs parent diffs: IDENTICAL
+  q_state: changed fields vs parent = ['pg_rotation_accepted_groups', 'pg_rotation_candidates', 'pg_rotation_arm']
+  k_state: changed fields vs parent = []
+  v_state: changed fields vs parent = []
+    pg_rotation_arm = base
+    pg_rotation_candidates = 6
+    pg_rotation_accepted_groups = 0
+    rotation_block = None
+
+layer 1
+  parent wall 3.740s  control wall 3.790s  active wall 3.861s
+  CONTROL (per-group off) vs parent diffs: IDENTICAL
+  q_state: changed fields vs parent = ['pg_rotation_accepted_groups', 'pg_rotation_candidates', 'pg_rotation_arm']
+  k_state: changed fields vs parent = []
+  v_state: changed fields vs parent = []
+    pg_rotation_arm = base
+    pg_rotation_candidates = 6
+    pg_rotation_accepted_groups = 0
+    rotation_block = None
+
+layer 5
+  parent wall 3.767s  control wall 3.731s  active wall 3.785s
+  CONTROL (per-group off) vs parent diffs: IDENTICAL
+  q_state: changed fields vs parent = ['pg_rotation_accepted_groups', 'pg_rotation_candidates', 'pg_rotation_arm']
+  k_state: changed fields vs parent = []
+  v_state: changed fields vs parent = []
+    pg_rotation_arm = base
+    pg_rotation_candidates = 6
+    pg_rotation_accepted_groups = 0
+    rotation_block = None
+
+layer 8
+  parent wall 3.642s  control wall 3.694s  active wall 3.913s
+  CONTROL (per-group off) vs parent diffs: IDENTICAL
+  q_state: changed fields vs parent = ['pg_rotation_accepted_groups', 'multiplier', 'pg_rotation_candidates', 'a2_arm', 'rotation', 'pg_rotation_arm', 'pair_transform', 'importance', 'rotation_block', 'a2_gate_loss_rotation', 'learned_rotation', 'logit_gain']
+  k_state: changed fields vs parent = ['multiplier', 'a2_arm', 'rotation', 'pair_transform', 'learned_center', 'importance', 'rotation_block', 'a2_gate_loss_rotation', 'learned_rotation', 'logit_gain']
+  v_state: changed fields vs parent = []
+    pg_rotation_arm = composite
+    pg_rotation_candidates = 6
+    pg_rotation_accepted_groups = 2
+    rotation_block = [0, 64, 0, 64]
+    dynamic q: keys=['mant', 'scale_factor', 'scale_lv2', 'scale_lv3', 'sign'] finite=True
+    dynamic k: keys=['mant', 'scale_factor', 'scale_lv2', 'scale_lv3', 'sign'] finite=True
+    dynamic v: keys=['mant', 'scale_factor', 'scale_lv2', 'scale_lv3', 'sign'] finite=True
+    validate_state: OK
+
+layer 15
+  parent wall 3.721s  control wall 3.704s  active wall 3.862s
+  CONTROL (per-group off) vs parent diffs: IDENTICAL
+  q_state: changed fields vs parent = ['pg_rotation_accepted_groups', 'multiplier', 'pg_rotation_candidates', 'pg_rotation_arm', 'rotation_block', 'a2_gate_loss_rotation', 'logit_gain']
+  k_state: changed fields vs parent = ['multiplier', 'rotation_block', 'a2_gate_loss_rotation', 'logit_gain']
+  v_state: changed fields vs parent = []
+    pg_rotation_arm = composite
+    pg_rotation_candidates = 6
+    pg_rotation_accepted_groups = 2
+    rotation_block = [0, 0, 32, 32]
+    dynamic q: keys=['mant', 'scale_factor', 'scale_lv2', 'scale_lv3', 'sign'] finite=True
+    dynamic k: keys=['mant', 'scale_factor', 'scale_lv2', 'scale_lv3', 'sign'] finite=True
+    dynamic v: keys=['mant', 'scale_factor', 'scale_lv2', 'scale_lv3', 'sign'] finite=True
+    validate_state: OK
+
+layer 22
+  parent wall 3.646s  control wall 3.735s  active wall 3.991s
+  CONTROL (per-group off) vs parent diffs: IDENTICAL
+  q_state: changed fields vs parent = ['pg_rotation_accepted_groups', 'multiplier', 'pg_rotation_candidates', 'rotation', 'pg_rotation_arm', 'rotation_block', 'a2_gate_loss_rotation', 'logit_gain']
+  k_state: changed fields vs parent = ['multiplier', 'rotation', 'rotation_block', 'a2_gate_loss_rotation', 'logit_gain']
+  v_state: changed fields vs parent = []
+    pg_rotation_arm = composite
+    pg_rotation_candidates = 6
+    pg_rotation_accepted_groups = 1
+    rotation_block = [32, 0, 0, 0]
+    dynamic q: keys=['mant', 'scale_factor', 'scale_lv2', 'scale_lv3', 'sign'] finite=True
+    dynamic k: keys=['mant', 'scale_factor', 'scale_lv2', 'scale_lv3', 'sign'] finite=True
+    dynamic v: keys=['mant', 'scale_factor', 'scale_lv2', 'scale_lv3', 'sign'] finite=True
+    validate_state: OK
+
+CONTROL OVERALL: PASS

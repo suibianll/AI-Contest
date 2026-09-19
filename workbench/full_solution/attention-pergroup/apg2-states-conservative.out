@@ -1,0 +1,77 @@
+device=cuda q_heads=16 kv_heads=4 head_dim=256 layers=[0, 1, 5, 8, 15, 22]
+
+layer 0
+  parent wall 3.885s  control wall 3.435s  active wall 3.565s
+  CONTROL (per-group off) vs parent diffs: IDENTICAL
+  q_state: changed fields vs parent = ['pg_rotation_candidates', 'pg_rotation_arm', 'pg_rotation_accepted_groups']
+  k_state: changed fields vs parent = []
+  v_state: changed fields vs parent = []
+    pg_rotation_arm = base
+    pg_rotation_candidates = 0
+    pg_rotation_accepted_groups = 0
+    rotation_block = None
+
+layer 1
+  parent wall 3.510s  control wall 3.495s  active wall 3.560s
+  CONTROL (per-group off) vs parent diffs: IDENTICAL
+  q_state: changed fields vs parent = ['pg_rotation_candidates', 'pg_rotation_arm', 'pg_rotation_accepted_groups']
+  k_state: changed fields vs parent = []
+  v_state: changed fields vs parent = []
+    pg_rotation_arm = base
+    pg_rotation_candidates = 0
+    pg_rotation_accepted_groups = 0
+    rotation_block = None
+
+layer 5
+  parent wall 3.691s  control wall 3.502s  active wall 3.621s
+  CONTROL (per-group off) vs parent diffs: IDENTICAL
+  q_state: changed fields vs parent = ['pg_rotation_candidates', 'pg_rotation_arm', 'pg_rotation_accepted_groups']
+  k_state: changed fields vs parent = []
+  v_state: changed fields vs parent = []
+    pg_rotation_arm = base
+    pg_rotation_candidates = 0
+    pg_rotation_accepted_groups = 0
+    rotation_block = None
+
+layer 8
+  parent wall 3.440s  control wall 3.514s  active wall 3.754s
+  CONTROL (per-group off) vs parent diffs: IDENTICAL
+  q_state: changed fields vs parent = ['multiplier', 'pair_transform', 'importance', 'pg_rotation_candidates', 'a2_gate_loss_rotation', 'learned_rotation', 'pg_rotation_arm', 'rotation_block', 'pg_rotation_accepted_groups', 'rotation', 'a2_arm', 'logit_gain']
+  k_state: changed fields vs parent = ['multiplier', 'pair_transform', 'importance', 'a2_gate_loss_rotation', 'learned_rotation', 'learned_center', 'rotation_block', 'rotation', 'a2_arm', 'logit_gain']
+  v_state: changed fields vs parent = []
+    pg_rotation_arm = composite
+    pg_rotation_candidates = 3
+    pg_rotation_accepted_groups = 2
+    rotation_block = [0, 64, 0, 64]
+    dynamic q: keys=['mant', 'scale_factor', 'scale_lv2', 'scale_lv3', 'sign'] finite=True
+    dynamic k: keys=['mant', 'scale_factor', 'scale_lv2', 'scale_lv3', 'sign'] finite=True
+    dynamic v: keys=['mant', 'scale_factor', 'scale_lv2', 'scale_lv3', 'sign'] finite=True
+    validate_state: OK
+
+layer 15
+  parent wall 3.618s  control wall 3.483s  active wall 3.738s
+  CONTROL (per-group off) vs parent diffs: IDENTICAL
+  q_state: changed fields vs parent = ['multiplier', 'pg_rotation_candidates', 'a2_gate_loss_rotation', 'pg_rotation_arm', 'rotation_block', 'pg_rotation_accepted_groups', 'logit_gain']
+  k_state: changed fields vs parent = ['multiplier', 'a2_gate_loss_rotation', 'rotation_block', 'logit_gain']
+  v_state: changed fields vs parent = []
+    pg_rotation_arm = composite
+    pg_rotation_candidates = 3
+    pg_rotation_accepted_groups = 2
+    rotation_block = [0, 0, 32, 32]
+    dynamic q: keys=['mant', 'scale_factor', 'scale_lv2', 'scale_lv3', 'sign'] finite=True
+    dynamic k: keys=['mant', 'scale_factor', 'scale_lv2', 'scale_lv3', 'sign'] finite=True
+    dynamic v: keys=['mant', 'scale_factor', 'scale_lv2', 'scale_lv3', 'sign'] finite=True
+    validate_state: OK
+
+layer 22
+  parent wall 3.531s  control wall 3.531s  active wall 3.518s
+  CONTROL (per-group off) vs parent diffs: IDENTICAL
+  q_state: changed fields vs parent = ['pg_rotation_candidates', 'pg_rotation_arm', 'pg_rotation_accepted_groups']
+  k_state: changed fields vs parent = []
+  v_state: changed fields vs parent = []
+    pg_rotation_arm = base
+    pg_rotation_candidates = 0
+    pg_rotation_accepted_groups = 0
+    rotation_block = None
+
+CONTROL OVERALL: PASS
