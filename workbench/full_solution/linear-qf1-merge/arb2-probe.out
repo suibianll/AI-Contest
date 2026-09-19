@@ -1,0 +1,24 @@
+v250: blocks=(16, 32, 64)
+c2: blocks=(16, 32, 64, 128, 256)
+v252: blocks=(16, 32, 64)
+v253: blocks=(16, 32, 64, 128, 256)
+
+layer 0
+  v250: rotation_block=None rotation=no arm=None blocks_evaluated=[16, 32, 64]
+  c2: rotation_block=256 rotation=yes arm=None blocks_evaluated=[16, 32, 64, 128, 256]
+  v252: rotation_block=None rotation=no arm=parent blocks_evaluated=[16, 32, 64]
+  v253: rotation_block=256 rotation=yes arm=accepted blocks_evaluated=[16, 32, 64, 128, 256]
+  diff v250->c2 q_state: [".a2_arm <'rotation' vs 'identity'>", '.a2_gate_loss_rotation <0.9545958526479192 vs 1.012360548183122>', '.importance <bytes>', '.learned_rotation <missing-right>', '.logit_gain <bytes>', '.multiplier <bytes>', '.pair_transform <bytes>', '.rotation <missing-left>', '.rotation_block <missing-left>']
+  diff v250->v252 q_state: ['.agr1_accepted <missing-left>', '.agr1_arm <missing-left>', '.agr1_attempted <missing-left>', '.agr1_attempted_groups <missing-left>', '.agr1_center_compiled <missing-left>', '.agr1_final_loss <missing-left>', '.agr1_fit_windows <missing-left>', '.agr1_gate_candidate_mse <missing-left>', '.agr1_gate_parent_mse <missing-left>', '.agr1_gate_windows <missing-left>', '.agr1_initial_loss <missing-left>', '.agr1_inverse_error <missing-left>']
+  diff c2->v253 q_state: ['.agr1_accepted <missing-left>', '.agr1_arm <missing-left>', '.agr1_attempted <missing-left>', '.agr1_attempted_groups <missing-left>', '.agr1_center_compiled <missing-left>', '.agr1_final_loss <missing-left>', '.agr1_fit_windows <missing-left>', '.agr1_gate_candidate_mse <missing-left>', '.agr1_gate_parent_mse <missing-left>', '.agr1_gate_windows <missing-left>', '.agr1_initial_loss <missing-left>', '.agr1_inverse_error <missing-left>']
+  diff v252->v253 q_state: [".a2_arm <'rotation' vs 'identity'>", '.a2_gate_loss_rotation <0.9545958526479192 vs 1.012360548183122>', '.agr1_accepted <0 vs 1>', ".agr1_arm <'parent' vs 'accepted'>", '.agr1_center_compiled <True vs False>', '.agr1_final_loss <0.978861733258081 vs 1.011302966476651>', '.agr1_gate_candidate_mse <0.000405300670536235 vs 0.0004033413715660572>', '.agr1_gate_parent_mse <0.0004092341259820387 vs 0.0004075474716955796>', '.agr1_inverse_error <1.0728836059570312e-06 vs 1.0521031299504102e-06>', '.agr1_k_scale_ratio2 <0.40676748752593994 vs 0.39822307229042053>', '.agr1_n_max_abs <0.44855791330337524 vs 0.4702603816986084>', '.agr1_n_norm <18.070898056030273 vs 18.247440338134766>']
+
+layer 5
+  v250: rotation_block=None rotation=no arm=None blocks_evaluated=[16, 32, 64]
+  c2: rotation_block=256 rotation=yes arm=None blocks_evaluated=[16, 32, 64, 128, 256]
+  v252: rotation_block=None rotation=no arm=parent blocks_evaluated=[16, 32, 64]
+  v253: rotation_block=256 rotation=yes arm=parent blocks_evaluated=[16, 32, 64, 128, 256]
+  diff v250->c2 q_state: ['.a2_gate_loss_rotation <0.9293746933336935 vs 0.9479921545086984>', '.importance <bytes>', '.logit_gain <bytes>', '.multiplier <bytes>', '.pair_transform <missing-right>', '.rotation <missing-left>', '.rotation_block <missing-left>']
+  diff v250->v252 q_state: ['.agr1_accepted <missing-left>', '.agr1_arm <missing-left>', '.agr1_attempted <missing-left>', '.agr1_attempted_groups <missing-left>', '.agr1_center_compiled <missing-left>', '.agr1_final_loss <missing-left>', '.agr1_fit_windows <missing-left>', '.agr1_gate_candidate_mse <missing-left>', '.agr1_gate_parent_mse <missing-left>', '.agr1_gate_windows <missing-left>', '.agr1_initial_loss <missing-left>', '.agr1_inverse_error <missing-left>']
+  diff c2->v253 q_state: ['.agr1_accepted <missing-left>', '.agr1_arm <missing-left>', '.agr1_attempted <missing-left>', '.agr1_attempted_groups <missing-left>', '.agr1_center_compiled <missing-left>', '.agr1_final_loss <missing-left>', '.agr1_fit_windows <missing-left>', '.agr1_gate_candidate_mse <missing-left>', '.agr1_gate_parent_mse <missing-left>', '.agr1_gate_windows <missing-left>', '.agr1_initial_loss <missing-left>', '.agr1_inverse_error <missing-left>']
+  diff v252->v253 q_state: ['.a2_gate_loss_rotation <0.9293746933336935 vs 0.9479921545086984>', '.agr1_final_loss <0.919447442731432 vs 1.031465427498954>', '.agr1_gate_candidate_mse <0.0012889900244772434 vs 0.0012479907600209117>', '.agr1_gate_parent_mse <0.0012467200285755098 vs 0.0012161468621343374>', '.agr1_inverse_error <1.0132789611816406e-06 vs 1.0728836059570312e-06>', '.agr1_k_scale_ratio2 <0.3917198181152344 vs 0.39438121517499286>', '.agr1_n_max_abs <0.5437679290771484 vs 0.5529634952545166>', '.agr1_n_norm <17.90339469909668 vs 18.160316467285156>', '.agr1_q_scale_ratio2 <0.5277264018853506 vs 0.6370829542477926>', '.agr1_singular_max <1.4143530130386353 vs 1.414350152015686>', '.agr1_singular_min <0.7071401476860046 vs 0.7071340084075928>', '.importance <bytes>']
