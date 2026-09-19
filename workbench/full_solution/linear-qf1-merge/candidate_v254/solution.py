@@ -13265,8 +13265,3 @@ _ATTN_ROTATION_BLOCKS = (16, 32, 64, 128, 256)
 # K=6 (+0.017493/12.8%), K=8 (+0.022256/17.3%), K=12 (+0.026883/27.1%).
 # The descent had not converged, so the local-only objective takes the K=12 step.
 _EM1_PASSES = 12
-
-
-# Experiment: extend the C86 block-smooth candidate set with 32/64.
-# The C86 search (4, 8, 16) feeds block_smooth_size/_signs on the deployed path.
-_ATTN_BLOCK_SMOOTH_SIZES = (4, 8, 16, 32, 64)

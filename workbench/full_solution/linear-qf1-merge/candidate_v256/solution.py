@@ -13267,6 +13267,5 @@ _ATTN_ROTATION_BLOCKS = (16, 32, 64, 128, 256)
 _EM1_PASSES = 12
 
 
-# Experiment: extend the C86 block-smooth candidate set with 32/64.
-# The C86 search (4, 8, 16) feeds block_smooth_size/_signs on the deployed path.
-_ATTN_BLOCK_SMOOTH_SIZES = (4, 8, 16, 32, 64)
+# Experiment: full legal rotation block set (A-RB1 retest on the v254 chain).
+_ATTN_ROTATION_BLOCKS = (4, 8, 16, 32, 64, 128, 256)
