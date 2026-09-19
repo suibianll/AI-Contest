@@ -30,6 +30,7 @@ block-smooth 扩展 +0.014202）；408 例组合 overall `≈ +0.667556`（对 v
 | v266 | `_ADAPTIVE_ACT_GPTQ_REG=True` | Linear shard0 **−0.000975** | 关闭（负） |
 | v267 | `_ADAPTIVE_OFFSETS=True` | Linear shard0 **+0.000017** | 关闭（≈0） |
 | **v268** | **`_BLOCK_SWAP_ROUNDS=1`**（64-block 通道交换局部搜索） | Linear 六 shard **+0.001031** | **采纳（新根）** |
+| v269 | `_V_IMPORTANCE_CANDIDATES=True`（A3 V importance 候选） | 六 shard **−0.000009** | 关闭（≈0） |
 
 v268 逐 role：fc_up +0.0026 / v +0.0021 / fc_gate +0.0014 / q +0.0010 / proj +0.0003 /
 o +0.0003 / k −0.0005。机制：`_block_swap_optimize`（校准期、只接受精确加权损失改善、动态端零成本）。
