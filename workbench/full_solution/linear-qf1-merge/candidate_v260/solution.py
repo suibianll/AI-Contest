@@ -13272,5 +13272,5 @@ _EM1_PASSES = 12
 _ATTN_BLOCK_SMOOTH_SIZES = (4, 8, 16, 32, 64)
 
 
-# Experiment: enable one block-swap round (16 candidates).
-_BLOCK_SWAP_ROUNDS = 1
+# Experiment: enable C76.1 output-aware independent Q-only/K-only head permutations.
+_ATTN_OUTPUT_HEADWISE_PERMUTATION = True
